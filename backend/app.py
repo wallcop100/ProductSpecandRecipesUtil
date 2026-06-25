@@ -1,5 +1,5 @@
 """
-app.py — Flask backend for Recipe Builder (Ideaworks).
+app.py — Flask backend for Recipe Builder.
 
 Routes
 ------

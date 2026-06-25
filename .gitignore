@@ -9,3 +9,4 @@ backend/__pycache__/
 release/
 out/
 tests/fixtures/*.xlsx
+BUILD_CHECKLIST.md

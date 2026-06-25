@@ -198,7 +198,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
       <Card style={{ width: 600, boxShadow: '0 4px 24px rgba(0,0,0,0.10)' }}>
         <Card.Body className="p-4">
           <h4 className="mb-1">Recipe Builder</h4>
-          <p className="text-muted mb-4">Open a project folder containing your Ideaworks Excel files.</p>
+          <p className="text-muted mb-4">Open a project folder containing your Excel files.</p>
 
           {/* Step 1: Select folder */}
           <div className="mb-4">

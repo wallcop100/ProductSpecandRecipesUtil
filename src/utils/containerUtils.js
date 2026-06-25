@@ -1,13 +1,12 @@
 /**
  * Utilities for DL/LIN virtual container ElementTypes.
  *
- * A container ET is one whose Product Spec entry is always Idaaworks / N/A.
- * Detection priority:
+ * A container ET is a virtual assembly element (DL or LIN) whose contents are
+ * the real deliverable items. Detection priority:
  *  1. Manual overrides (stored in SQLite project_prefs)
- *  2. PS rows where Manufacturer=Idaaworks AND ProductCode=N/A
- *  3. Naming convention: ElementTypeRef matches ET-DL-* or ET-LIN-* pattern
- *     (second hyphen-segment is 'DL' or 'LIN') — catches containers before a PS
- *     row exists. User can remove the "container" designation to override false positives.
+ *  2. Naming convention: ElementTypeRef matches ET-DL-* or ET-LIN-* pattern
+ *     (second hyphen-segment is 'DL' or 'LIN').
+ *     User can remove the "container" designation to override false positives.
  */
 
 /** Returns true if the ref looks like a DL or LIN virtual container by naming convention. */
@@ -18,22 +17,11 @@ export function looksLikeContainer(ref) {
 }
 
 /**
- * Build the effective set of container ET refs from all three sources.
+ * Build the effective set of container ET refs from manual overrides and naming convention.
  * Returns a Set of lowercased ET refs.
  */
 export function buildContainerETSet(psRows, manualRefs = [], allRefs = []) {
   const set = new Set(manualRefs.map(r => r.toLowerCase()))
-
-  // From PS: Idaaworks/N/A signal
-  for (const row of psRows) {
-    const ref = (row.ElementTypeRef || row.elementTypeRef || '').toLowerCase()
-    const mfr = (row.Manufacturer || row.manufacturer || '').toLowerCase().trim()
-    const code = (row.ProductCode || row.productCode || '').toLowerCase().trim()
-    if (!ref) continue
-    if (mfr === 'idaaworks' && code === 'n/a') {
-      set.add(ref)
-    }
-  }
 
   // From naming convention: ET-DL-* or ET-LIN-*
   for (const ref of allRefs) {
@@ -69,7 +57,7 @@ export function getUsedIn(etRef, recipes, currentPosRef) {
  * sequential ref.
  *
  * Example: existing = ['ET-DL-SPOT-01', 'ET-DL-SPOT-02', 'ET-DL-SPOT-03']
- *          → 'ET-DL-SPOT-04'
+ *          →  'ET-DL-SPOT-04'
  */
 export function getNextAvailableRef(etRef, elementTypes) {
   if (!etRef) return null

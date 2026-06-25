@@ -1,7 +1,7 @@
 {
   "name": "recipe-builder",
   "version": "0.1.0",
-  "description": "Product Spec & Recipes Builder for Ideaworks",
+  "description": "Product Spec & Recipes Builder",
   "main": "electron/main.js",
   "scripts": {
     "dev": "concurrently \"vite\" \"electron .\"",

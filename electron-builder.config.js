@@ -1,5 +1,5 @@
 module.exports = {
-  appId: 'com.ideaworks.recipe-builder',
+  appId: 'com.recipebuilder.app',
   productName: 'Recipe Builder',
   directories: { output: 'dist-electron' },
   files: ['dist/**/*', 'electron/**/*', 'backend/**/*'],

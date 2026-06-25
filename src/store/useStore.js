@@ -145,7 +145,7 @@ const useStore = create((set, get) => ({
   // Position UI (from SQLite)
   positionUI: {},        // { [positionTypeRef]: { tags, tagSource, tagConfidence, userNotes } }
 
-  // Container ElementTypes — auto-detected from PS (Idaaworks/N/A) + manual overrides
+  // Container ElementTypes — auto-detected from naming convention + manual overrides
   containerETRefs: new Set(),        // Set<string> of lowercased ET refs (derived)
   containerETManualRefs: [],         // string[] — persisted to SQLite project_prefs
 
@@ -643,7 +643,7 @@ const useStore = create((set, get) => ({
       ],
     })
 
-    // Auto-create PS row with Idaaworks/N/A defaults for container ETs
+    // Auto-create PS row with N/A defaults for container ETs
     if (etRef) {
       const { containerETRefs, psRows: currentPsRows } = get()
       const isContainer = containerETRefs.has(etRef.toLowerCase()) || looksLikeContainer(etRef)
@@ -651,7 +651,7 @@ const useStore = create((set, get) => ({
         r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === etRef.toLowerCase()
       )
       if (isContainer && !hasPsRow) {
-        get().addPSRow(etRef, { Manufacturer: 'Idaaworks', ProductCode: 'N/A' })
+        get().addPSRow(etRef, { Manufacturer: '', ProductCode: 'N/A' })
       }
     }
 
