@@ -9,6 +9,7 @@ jobs:
   release:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
 
@@ -29,7 +30,10 @@ jobs:
         run: pip install -r backend/requirements.txt
 
       - name: Install Node deps
-        run: npm ci
+        run: npm ci --ignore-scripts
+
+      - name: Rebuild native modules
+        run: npx electron-rebuild -f -w better-sqlite3
 
       - name: Build React
         run: npm run build
