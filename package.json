@@ -12,7 +12,7 @@
     "release": "standard-version && git push --follow-tags",
     "test": "vitest run",
     "test:watch": "vitest",
-    "postinstall": "electron-rebuild -f -w better-sqlite3"
+    "postinstall": "electron-builder install-app-deps"
   },
   "devDependencies": {
     "@electron/rebuild": "^3.7.2",
