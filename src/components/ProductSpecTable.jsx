@@ -99,7 +99,8 @@ export default function ProductSpecTable({ showDeleted = false, etUsedIn = {}, s
             </tr>
           </thead>
           <tbody>
-            {/* Ghost rows: ETs in recipes with no PS entry */}
+            {/* Ghost rows: ETs in recipes with no PS entry.
+                Editing any cell creates the spec row with that value. */}
             {missingETs.map(ref => (
               <tr key={`missing-${ref}`} style={{ background: '#fff8e1' }}>
                 <td style={{ fontWeight: 500, fontSize: 11 }}>
@@ -118,10 +119,17 @@ export default function ProductSpecTable({ showDeleted = false, etUsedIn = {}, s
                     not in spec
                   </span>
                 </td>
-                <td className="text-muted fst-italic small" style={{ fontSize: 11 }}>—</td>
-                <td className="text-muted fst-italic small" style={{ fontSize: 11 }}>—</td>
-                <td className="text-muted fst-italic small" style={{ fontSize: 11 }}>—</td>
-                <td />
+                <EditableCell value="" onChange={val => addPSRow(ref, { ProductCode: val })} placeholder="add code…" />
+                <EditableCell value="" onChange={val => addPSRow(ref, { Manufacturer: val })} placeholder="add maker…" />
+                <EditableCell value="" onChange={val => addPSRow(ref, { ComponentDescription: val })} placeholder="add description…" />
+                <td className="text-center">
+                  <FlagPill
+                    label="TBC"
+                    value={null}
+                    onChange={val => addPSRow(ref, { IsTBC: val })}
+                    activeVariant="danger"
+                  />
+                </td>
                 <td className="text-center">
                   <Button
                     variant="link"
@@ -245,7 +253,7 @@ export default function ProductSpecTable({ showDeleted = false, etUsedIn = {}, s
   )
 }
 
-function EditableCell({ value, onChange, style }) {
+function EditableCell({ value, onChange, style, placeholder }) {
   const [editing, setEditing] = useState(false)
   const [local, setLocal] = useState(value)
 
@@ -253,7 +261,8 @@ function EditableCell({ value, onChange, style }) {
 
   function handleBlur() {
     setEditing(false)
-    if (local !== value) onChange(local)
+    const trimmed = (local ?? '').trim()
+    if (trimmed !== value) onChange(trimmed)
   }
 
   if (editing) {
@@ -262,6 +271,7 @@ function EditableCell({ value, onChange, style }) {
         <Form.Control
           size="sm"
           value={local}
+          placeholder={placeholder}
           onChange={e => setLocal(e.target.value)}
           onBlur={handleBlur}
           onKeyDown={e => {
@@ -277,11 +287,13 @@ function EditableCell({ value, onChange, style }) {
 
   return (
     <td
-      onClick={() => { setLocal(value); setEditing(true) }}
+      onDoubleClick={() => { setLocal(value); setEditing(true) }}
       style={{ cursor: 'text', ...style }}
-      title="Click to edit"
+      title="Double-click to edit"
     >
-      {value || <span className="text-muted fst-italic" style={{ fontSize: 11 }}>—</span>}
+      {value
+        ? value
+        : <span className="text-muted fst-italic" style={{ fontSize: 11 }}>{placeholder || '—'}</span>}
     </td>
   )
 }

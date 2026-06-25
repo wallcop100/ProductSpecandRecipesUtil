@@ -17,12 +17,15 @@ import { FLASK_PORT, DIM_QTY_COMPONENTS, AUTO_CONTRACT_ITEMS } from '../utils/co
 
 const API = `http://localhost:${FLASK_PORT}`
 
+// Max number of undo snapshots retained.
+const HISTORY_LIMIT = 50
+
 // ---------------------------------------------------------------------------
 // Container ET helpers
 // ---------------------------------------------------------------------------
 
 /** Collects all ET refs from elementTypes, psRows, and recipes into an array. */
-function collectAllETRefs(elementTypes = [], psRows = [], recipes = []) {
+export function collectAllETRefs(elementTypes = [], psRows = [], recipes = []) {
   const set = new Set()
   for (const et of elementTypes) { const r = et.ElementTypeRef || et.elementTypeRef; if (r) set.add(r) }
   for (const row of psRows)      { const r = row.ElementTypeRef || row.elementTypeRef; if (r) set.add(r) }
@@ -150,6 +153,7 @@ const useStore = create((set, get) => ({
   containerETManualRefs: [],         // string[] — persisted to SQLite project_prefs
 
   // UI state
+  rootView: 'positions',               // 'positions' | 'elements' — top-level browse mode
   activePositionRef: null,
   activeContextType: 'PositionType',  // 'PositionType' | 'ElementType'
   activeETRef: null,                   // ET ref being edited in canvas
@@ -161,6 +165,10 @@ const useStore = create((set, get) => ({
   // Dirty tracking
   psChanges: [],
   rsChanges: [],
+
+  // Undo/redo history — snapshots of { recipes, psRows, rsChanges, psChanges }
+  past: [],
+  future: [],
 
   // Loading state
   isLoading: false,
@@ -211,6 +219,8 @@ const useStore = create((set, get) => ({
       // Reset transient state
       psChanges: [],
       rsChanges: [],
+      past: [],
+      future: [],
       validationResults: [],
       fileWatchAlert: null,
       activePositionRef: null,
@@ -272,6 +282,8 @@ const useStore = create((set, get) => ({
         positionUI: mergedPositionUI,
         containerETRefs: buildContainerETSet(stampedPsRows, containerETManualRefs, collectAllETRefs(elementTypes, stampedPsRows, stampedRecipes)),
         paths,
+        past: [],
+        future: [],
         isLoading: false,
       })
 
@@ -286,6 +298,49 @@ const useStore = create((set, get) => ({
       set({ isLoading: false, loadError: err.message ?? String(err) })
       throw err
     }
+  },
+
+  /**
+   * _pushHistory()
+   * Snapshots the current editable data onto the undo stack and clears redo.
+   * Called at the start of every recipe/PS-mutating action.
+   */
+  _pushHistory() {
+    const { recipes, psRows, rsChanges, psChanges, past } = get()
+    const snapshot = { recipes, psRows, rsChanges, psChanges }
+    const nextPast = [...past, snapshot]
+    if (nextPast.length > HISTORY_LIMIT) nextPast.shift()
+    set({ past: nextPast, future: [] })
+  },
+
+  /**
+   * undo() — restore the previous snapshot, pushing the current state onto redo.
+   */
+  undo() {
+    const { past, future, recipes, psRows, rsChanges, psChanges } = get()
+    if (past.length === 0) return
+    const previous = past[past.length - 1]
+    const current = { recipes, psRows, rsChanges, psChanges }
+    set({
+      ...previous,
+      past: past.slice(0, -1),
+      future: [...future, current],
+    })
+  },
+
+  /**
+   * redo() — re-apply the next snapshot, pushing the current state onto undo.
+   */
+  redo() {
+    const { past, future, recipes, psRows, rsChanges, psChanges } = get()
+    if (future.length === 0) return
+    const next = future[future.length - 1]
+    const current = { recipes, psRows, rsChanges, psChanges }
+    set({
+      ...next,
+      past: [...past, current],
+      future: future.slice(0, -1),
+    })
   },
 
   /**
@@ -332,6 +387,8 @@ const useStore = create((set, get) => ({
     const template = templates.find(t => t.id === templateId)
     if (!template) return
 
+    get()._pushHistory()
+
     const mappings = slotMappings[templateId] || {}
     const elementTypeRefs = elementTypes.map(et => et.ElementTypeRef)
 
@@ -376,6 +433,8 @@ const useStore = create((set, get) => ({
     )
 
     if (rowIndex === -1) return
+
+    get()._pushHistory()
 
     const oldRow = recipes[rowIndex]
     const updatedRow = {
@@ -485,6 +544,8 @@ const useStore = create((set, get) => ({
     const template = templates.find(t => t.id === templateId)
     if (!template) return
 
+    get()._pushHistory()
+
     // Gather existing slot resolutions from current recipe rows for this position
     const existingRows = recipes.filter(
       r => (r.PositionTypeRef || r.positionTypeRef) === posRef
@@ -529,8 +590,10 @@ const useStore = create((set, get) => ({
    * addRecipeRow(posRef, section, ingredientData)
    * Adds a new recipe row from a palette drop.
    */
-  addRecipeRow(posRef, section, ingredientData) {
+  addRecipeRow(posRef, section, ingredientData, { recordHistory = true } = {}) {
     const { recipes, rsChanges, activeContextType, activeETRef } = get()
+
+    if (recordHistory) get()._pushHistory()
 
     // === ET MODE: add rows for all positions that use this ET ===
     if (activeContextType === 'ElementType' && activeETRef) {
@@ -643,19 +706,46 @@ const useStore = create((set, get) => ({
       ],
     })
 
-    // Auto-create PS row with N/A defaults for container ETs
-    if (etRef) {
-      const { containerETRefs, psRows: currentPsRows } = get()
-      const isContainer = containerETRefs.has(etRef.toLowerCase()) || looksLikeContainer(etRef)
-      const hasPsRow = currentPsRows.some(
-        r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === etRef.toLowerCase()
-      )
-      if (isContainer && !hasPsRow) {
-        get().addPSRow(etRef, { Manufacturer: '', ProductCode: 'N/A' })
-      }
-    }
+    // Register the assigned element type in the Product Spec if it isn't already.
+    if (etRef) get().ensurePSRow(etRef)
 
     return newRow
+  },
+
+  /**
+   * ensurePSRow(etRef)
+   * Make sure a Product Spec row exists for etRef (the DB ElementTypes sheet is
+   * read-only, so a PS row is how a newly-assigned element type is registered).
+   * Container ETs default to ProductCode 'N/A'; others are left blank for fill-in.
+   * Idempotent; never records its own history (callers own that).
+   */
+  ensurePSRow(etRef) {
+    if (!etRef) return null
+    const { containerETRefs, psRows } = get()
+    const exists = psRows.some(
+      r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === etRef.toLowerCase()
+    )
+    if (exists) return null
+    const isContainer = containerETRefs.has(etRef.toLowerCase()) || looksLikeContainer(etRef)
+    const defaults = isContainer ? { Manufacturer: '', ProductCode: 'N/A' } : {}
+    return get().addPSRow(etRef, defaults, { recordHistory: false })
+  },
+
+  /**
+   * addConnection(posRef, parts)
+   * Insert a set of recipe rows (a wired connection) in one undoable step.
+   * parts: [{ section: 'position'|'dl_internal'|'lin_internal', elementTypeRef }]
+   * Skips parts with no elementTypeRef. PS rows are auto-registered via addRecipeRow.
+   */
+  addConnection(posRef, parts) {
+    const valid = (parts || []).filter(p => p && p.elementTypeRef && p.section)
+    if (!posRef || valid.length === 0) return
+    get()._pushHistory()
+    for (const part of valid) {
+      const ingredient = { elementTypeRef: part.elementTypeRef }
+      if (part.quantity != null) ingredient.quantity = part.quantity
+      get().addRecipeRow(posRef, part.section, ingredient, { recordHistory: false })
+    }
   },
 
   /**
@@ -665,6 +755,8 @@ const useStore = create((set, get) => ({
    */
   updateRecipeRow(posRef, rowId, updates) {
     const { recipes, rsChanges, activeContextType, activeETRef } = get()
+
+    get()._pushHistory()
 
     let updatedRecipes = recipes.map(row => {
       if (row._id !== rowId) return row
@@ -704,6 +796,8 @@ const useStore = create((set, get) => ({
   removeRecipeRow(posRef, rowId) {
     const { recipes, rsChanges, activeContextType, activeETRef } = get()
 
+    get()._pushHistory()
+
     const removedRow = recipes.find(r => r._id === rowId)
     let filteredRecipes = recipes.filter(r => r._id !== rowId)
     const newChanges = [{ _id: rowId, positionTypeRef: posRef, action: 'delete' }]
@@ -735,6 +829,8 @@ const useStore = create((set, get) => ({
    */
   reorderIngredients(posRef, section, oldIndex, newIndex) {
     const { recipes, rsChanges } = get()
+
+    get()._pushHistory()
 
     // Separate section rows from the rest
     const sectionRows = recipes.filter(
@@ -774,6 +870,8 @@ const useStore = create((set, get) => ({
 
     const sourceSection = sectionOfRow(rowToMove)
     if (sourceSection === targetSection) return
+
+    get()._pushHistory()
 
     const { contextType, contextRef } = contextForSection(targetSection, posRef, recipes)
 
@@ -841,6 +939,8 @@ const useStore = create((set, get) => ({
   updatePSRow(elementTypeRef, updates) {
     const { psRows, psChanges, containerETManualRefs, elementTypes, recipes } = get()
 
+    get()._pushHistory()
+
     const updatedPsRows = psRows.map(row => {
       const ref = row.ElementTypeRef || row.elementTypeRef
       if (ref !== elementTypeRef) return row
@@ -861,7 +961,7 @@ const useStore = create((set, get) => ({
    * addPSRow(elementTypeRef)
    * Creates a new blank PS row and queues it for export (appended to Excel).
    */
-  addPSRow(elementTypeRef, defaults = {}) {
+  addPSRow(elementTypeRef, defaults = {}, { recordHistory = true } = {}) {
     const { psRows, psChanges, containerETManualRefs, elementTypes, recipes } = get()
 
     const trimmed = (elementTypeRef || '').trim()
@@ -872,16 +972,18 @@ const useStore = create((set, get) => ({
     )
     if (alreadyExists) return null
 
+    if (recordHistory) get()._pushHistory()
+
     const newRow = {
       ElementTypeRef: trimmed,
       elementTypeRef: trimmed,
       ProductCode: defaults.ProductCode ?? null,
       Manufacturer: defaults.Manufacturer ?? null,
-      ComponentDescription: null,
+      ComponentDescription: defaults.ComponentDescription ?? null,
       InternalNotesText: null,
-      IsTBC: null,
+      IsTBC: defaults.IsTBC ?? null,
       IsDeleted: null,
-      IsPropertiesTBC: null,
+      IsPropertiesTBC: defaults.IsPropertiesTBC ?? null,
       _id: uuidv4(),
       _row_num: null,
     }
@@ -896,9 +998,11 @@ const useStore = create((set, get) => ({
           elementTypeRef: trimmed,
           updates: {
             ElementTypeRef: trimmed,
-            ProductCode: defaults.ProductCode ?? null,
-            Manufacturer: defaults.Manufacturer ?? null,
-            ComponentDescription: null,
+            ProductCode: newRow.ProductCode,
+            Manufacturer: newRow.Manufacturer,
+            ComponentDescription: newRow.ComponentDescription,
+            IsTBC: newRow.IsTBC,
+            IsPropertiesTBC: newRow.IsPropertiesTBC,
           },
           _isNew: true,
         },
@@ -939,6 +1043,15 @@ const useStore = create((set, get) => ({
   },
 
   /**
+   * setRootView(view)
+   * view: 'positions' | 'elements'. Switching away from an open ET editor
+   * closes it so the chosen root view is shown cleanly.
+   */
+  setRootView(view) {
+    set({ rootView: view, activeContextType: 'PositionType', activeETRef: null })
+  },
+
+  /**
    * openETRecipe(etRef)
    * Switches the canvas to show/edit the internal recipe of an ElementType.
    */
@@ -955,14 +1068,13 @@ const useStore = create((set, get) => ({
   },
 
   /**
-   * duplicateET(etRef)
-   * Creates a copy of an ET's internal recipe under the next sequential ref,
-   * replicating rows for all positions that use the source ET.
+   * suggestNextETRef(etRef)
+   * Returns the next available sequential ref for etRef, considering both
+   * element types and refs already used as recipe ContextRefs. Pure helper for
+   * the Duplicate ET modal — does not mutate state.
    */
-  duplicateET(etRef) {
-    const { recipes, elementTypes, activePositionRef, rsChanges } = get()
-
-    // Build a combined list so we don't suggest a ref that already exists as a ContextRef
+  suggestNextETRef(etRef) {
+    const { recipes, elementTypes } = get()
     const recipeETRefs = [...new Set(
       recipes
         .filter(r => (r.ContextType || r.contextType) === 'ElementType')
@@ -970,8 +1082,20 @@ const useStore = create((set, get) => ({
         .filter(Boolean)
     )]
     const allKnownETs = [...elementTypes, ...recipeETRefs.map(ref => ({ ElementTypeRef: ref }))]
-    const nextRef = getNextAvailableRef(etRef, allKnownETs)
-    if (!nextRef) return
+    return getNextAvailableRef(etRef, allKnownETs)
+  },
+
+  /**
+   * duplicateET(etRef, newRef, posRef)
+   * Forks the source ET's internal recipe under newRef for a SINGLE position
+   * (posRef) — the position the user is working on. Other positions that use
+   * the source ET are untouched. Opens the new ET for editing.
+   */
+  duplicateET(etRef, newRef, posRef) {
+    const { recipes, activePositionRef } = get()
+    const targetPos = posRef || activePositionRef
+    const trimmedRef = (newRef || '').trim()
+    if (!etRef || !trimmedRef || !targetPos) return
 
     // Collect unique internal rows for the source ET (deduplicate across position copies)
     const allETRows = recipes.filter(r =>
@@ -985,28 +1109,20 @@ const useStore = create((set, get) => ({
       seen.add(key); return true
     })
 
-    // Positions to create copies for
-    const sourcePosRefs = [...new Set(allETRows.map(r => r.PositionTypeRef || r.positionTypeRef).filter(Boolean))]
-    if (sourcePosRefs.length === 0 && activePositionRef) sourcePosRefs.push(activePositionRef)
-
-    const newRows = []
-    for (const pRef of sourcePosRefs) {
-      for (const row of uniqueRows) {
-        newRows.push({
-          ...row,
-          ContextRef: nextRef, contextRef: nextRef,
-          PositionTypeRef: pRef, positionTypeRef: pRef,
-          _id: uuidv4(),
-        })
-      }
-    }
+    const newRows = uniqueRows.map(row => ({
+      ...row,
+      ContextRef: trimmedRef, contextRef: trimmedRef,
+      PositionTypeRef: targetPos, positionTypeRef: targetPos,
+      _id: uuidv4(),
+    }))
 
     const newChanges = newRows.map(row => ({
       _id: row._id, positionTypeRef: row.PositionTypeRef, action: 'upsert', row,
     }))
 
+    get()._pushHistory()
     set(s => ({ recipes: [...s.recipes, ...newRows], rsChanges: [...s.rsChanges, ...newChanges] }))
-    get().openETRecipe(nextRef)
+    get().openETRecipe(trimmedRef)
   },
 
   /**

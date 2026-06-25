@@ -52,6 +52,33 @@ export function getUsedIn(etRef, recipes, currentPosRef) {
 }
 
 /**
+ * Returns the unique internal items of a container ET as [{ ref, name }].
+ * Internal items are recipe rows whose ContextType is ElementType and whose
+ * ContextRef matches etRef. Names are resolved from elementTypes when available.
+ */
+export function getInternalItems(etRef, recipes, elementTypes = []) {
+  const key = (etRef || '').toLowerCase()
+  if (!key) return []
+  const etMap = new Map(elementTypes.map(et => [
+    (et.ElementTypeRef || et.elementTypeRef || '').toLowerCase(),
+    et,
+  ]))
+  const items = []
+  const seen = new Set()
+  for (const row of recipes) {
+    const ct = row.ContextType || row.contextType
+    const cr = (row.ContextRef || row.contextRef || '').toLowerCase()
+    const er = row.ElementTypeRef || row.elementTypeRef
+    if (ct !== 'ElementType' || cr !== key || !er) continue
+    if (seen.has(er)) continue
+    seen.add(er)
+    const info = etMap.get(er.toLowerCase())
+    items.push({ ref: er, name: info?.Name || info?.name || null })
+  }
+  return items
+}
+
+/**
  * Given an ET ref like 'ET-DL-SPOT-03', strips the trailing numeric suffix,
  * finds all existing ETs with the same base prefix, and returns the next
  * sequential ref.

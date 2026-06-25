@@ -352,6 +352,23 @@ describe('runValidation — valid recipe', () => {
         isDesign: null,
         dimQtyMultiplier: null,
       }),
+      // Local first-fix kit: site strain relief + driver (so Rule 7 is satisfied)
+      makeRsRow({
+        positionTypeRef: 'PT-DL-LOCAL-01',
+        contextType: 'PositionType',
+        contextRef: 'PT-DL-LOCAL-01',
+        elementTypeRef: 'ET-SR-DALI-01',
+        isDesign: null,
+        dimQtyMultiplier: null,
+      }),
+      makeRsRow({
+        positionTypeRef: 'PT-DL-LOCAL-01',
+        contextType: 'ElementType',
+        contextRef: 'ET-DL-SPOT-01',
+        elementTypeRef: 'ET-DRIVER-CC-01',
+        isDesign: null,
+        dimQtyMultiplier: null,
+      }),
       // LIN position — IsDesign=Y, has a lever, TAPE with mult=1
       makeRsRow({
         positionTypeRef: 'PT-LIN-01',
@@ -378,5 +395,97 @@ describe('runValidation — valid recipe', () => {
 
     const issues = runValidation(dbData, psRows, rsRows, ui)
     expect(issues).toHaveLength(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// LOCAL_DRIVER_REQUIREMENTS (Rule 7)
+// ---------------------------------------------------------------------------
+describe('LOCAL_DRIVER_REQUIREMENTS', () => {
+  const localUI = { 'PT-DL-LOCAL-01': { tags: ['DL', 'Local'] } }
+
+  test('warns when a Local position lacks driver, site socket, and strain relief', () => {
+    const rsRows = [makeRsRow({ elementTypeRef: 'ET-DL-SPOT-01', isDesign: 'Y' })]
+    const issues = runValidation(dbData, [], rsRows, localUI)
+    const rules = issues.map(i => i.rule)
+    expect(rules).toContain('LOCAL_MISSING_DRIVER')
+    expect(rules).toContain('LOCAL_MISSING_SITE_SOCKET')
+    expect(rules).toContain('LOCAL_MISSING_STRAIN_RELIEF')
+    expect(issues.every(i => i.severity === 'warning' || i.rule === 'MISSING_IS_DESIGN' || i.severity === 'error')).toBe(true)
+  })
+
+  test('clean Local assembly produces none of the Rule 7 warnings', () => {
+    const rsRows = [
+      makeRsRow({ elementTypeRef: 'ET-DL-SPOT-01', isDesign: 'Y' }),
+      makeRsRow({ elementTypeRef: 'ET-SOCK-5P-01' }),
+      makeRsRow({ elementTypeRef: 'ET-SR-DALI-01' }),
+      makeRsRow({ contextType: 'ElementType', contextRef: 'ET-DL-SPOT-01', elementTypeRef: 'ET-DRIVER-CC-01' }),
+    ]
+    const issues = runValidation(dbData, [], rsRows, localUI)
+    const rule7 = issues.filter(i => i.rule.startsWith('LOCAL_'))
+    expect(rule7).toHaveLength(0)
+  })
+
+  test('does not apply the downlight first-fix rules to LIN positions', () => {
+    const rsRows = [
+      makeRsRow({ positionTypeRef: 'PT-LIN-01', contextRef: 'PT-LIN-01', elementTypeRef: 'ET-LIN-PROF-01', isDesign: 'Y' }),
+      makeRsRow({ positionTypeRef: 'PT-LIN-01', contextRef: 'PT-LIN-01', elementTypeRef: 'ET-LLOCK-ALU-01' }),
+    ]
+    const issues = runValidation(dbData, [], rsRows, { 'PT-LIN-01': { tags: ['LIN', 'Local'] } })
+    expect(issues.some(i => i.rule.startsWith('LOCAL_'))).toBe(false)
+  })
+
+  test('does not warn for an empty recipe (covered by MISSING_IS_DESIGN)', () => {
+    const issues = runValidation(dbData, [], [], localUI)
+    expect(issues.some(i => i.rule.startsWith('LOCAL_'))).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// REMOTE_HAS_SITE_SOCKET (Rule 8)
+// ---------------------------------------------------------------------------
+describe('REMOTE_HAS_SITE_SOCKET', () => {
+  test('warns when a Remote-CC position has a site socket at position level', () => {
+    const rsRows = [
+      makeRsRow({ positionTypeRef: 'PT-DL-CC-01', contextRef: 'PT-DL-CC-01', elementTypeRef: 'ET-DL-SPOT-01', isDesign: 'Y' }),
+      makeRsRow({ positionTypeRef: 'PT-DL-CC-01', contextRef: 'PT-DL-CC-01', elementTypeRef: 'ET-SOCK-5P-01' }),
+    ]
+    const issues = runValidation(dbData, [], rsRows, { 'PT-DL-CC-01': { tags: ['DL', 'Remote-CC'] } })
+    const found = issues.filter(i => i.rule === 'REMOTE_HAS_SITE_SOCKET')
+    expect(found).toHaveLength(1)
+    expect(found[0].severity).toBe('warning')
+  })
+
+  test('no warning when a Remote-CC position has no site socket', () => {
+    const rsRows = [
+      makeRsRow({ positionTypeRef: 'PT-DL-CC-01', contextRef: 'PT-DL-CC-01', elementTypeRef: 'ET-DL-SPOT-01', isDesign: 'Y' }),
+    ]
+    const issues = runValidation(dbData, [], rsRows, { 'PT-DL-CC-01': { tags: ['DL', 'Remote-CC'] } })
+    expect(issues.some(i => i.rule === 'REMOTE_HAS_SITE_SOCKET')).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// EXTERIOR_NON_IP_CONNECTOR (Rule 9)
+// ---------------------------------------------------------------------------
+describe('EXTERIOR_NON_IP_CONNECTOR', () => {
+  test('warns when an Exterior position has a non-IP connector', () => {
+    const rsRows = [
+      makeRsRow({ positionTypeRef: 'PT-EXT-01', contextRef: 'PT-EXT-01', elementTypeRef: 'ET-DL-SPOT-01', isDesign: 'Y' }),
+      makeRsRow({ positionTypeRef: 'PT-EXT-01', contextRef: 'PT-EXT-01', elementTypeRef: 'ET-SOCK-5P-01' }),
+    ]
+    const issues = runValidation(dbData, [], rsRows, { 'PT-EXT-01': { tags: ['DL', 'Exterior'] } })
+    const found = issues.filter(i => i.rule === 'EXTERIOR_NON_IP_CONNECTOR')
+    expect(found).toHaveLength(1)
+    expect(found[0].severity).toBe('warning')
+  })
+
+  test('no warning when Exterior connectors are IP-rated', () => {
+    const rsRows = [
+      makeRsRow({ positionTypeRef: 'PT-EXT-01', contextRef: 'PT-EXT-01', elementTypeRef: 'ET-DL-SPOT-01', isDesign: 'Y' }),
+      makeRsRow({ positionTypeRef: 'PT-EXT-01', contextRef: 'PT-EXT-01', elementTypeRef: 'ET-SOCK-IP-2P-01' }),
+    ]
+    const issues = runValidation(dbData, [], rsRows, { 'PT-EXT-01': { tags: ['DL', 'Exterior'] } })
+    expect(issues.some(i => i.rule === 'EXTERIOR_NON_IP_CONNECTOR')).toBe(false)
   })
 })

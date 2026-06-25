@@ -145,6 +145,12 @@ function resetStore(overrides = {}) {
     fileWatchAlert: null,
     psChanges: [],
     rsChanges: [],
+    past: [],
+    future: [],
+    activeContextType: 'PositionType',
+    activeETRef: null,
+    containerETRefs: new Set(),
+    containerETManualRefs: [],
     isLoading: false,
     loadError: null,
     ...overrides,
@@ -787,5 +793,176 @@ describe('getRecipeForPosition (exported helper)', () => {
 
     expect(grouped.linInternal).toHaveLength(1)
     expect(grouped.dlInternal).toHaveLength(0)
+  })
+})
+
+describe('duplicateET', () => {
+  // ET-DL-01 internals shared by two positions
+  const sharedETRecipes = [
+    {
+      positionTypeRef: 'PT-A', PositionTypeRef: 'PT-A',
+      contextType: 'ElementType', ContextType: 'ElementType',
+      contextRef: 'ET-DL-01', ContextRef: 'ET-DL-01',
+      elementTypeRef: 'ET-DRIVER-01', ElementTypeRef: 'ET-DRIVER-01',
+      recipeIndex: 2, RecipeIndex: 2, _id: 'a1',
+    },
+    {
+      positionTypeRef: 'PT-B', PositionTypeRef: 'PT-B',
+      contextType: 'ElementType', ContextType: 'ElementType',
+      contextRef: 'ET-DL-01', ContextRef: 'ET-DL-01',
+      elementTypeRef: 'ET-DRIVER-01', ElementTypeRef: 'ET-DRIVER-01',
+      recipeIndex: 2, RecipeIndex: 2, _id: 'b1',
+    },
+  ]
+
+  test('forks internals for the current position only, under the new ref', () => {
+    resetStore({ recipes: sharedETRecipes })
+
+    useStore.getState().duplicateET('ET-DL-01', 'ET-DL-02', 'PT-A')
+
+    const { recipes, activeContextType, activeETRef, rsChanges } = useStore.getState()
+
+    const forked = recipes.filter(r => (r.ContextRef || r.contextRef) === 'ET-DL-02')
+    expect(forked).toHaveLength(1)
+    expect(forked[0].PositionTypeRef).toBe('PT-A')
+    expect(forked[0].ElementTypeRef).toBe('ET-DRIVER-01')
+
+    // The other position keeps the original shared ET untouched
+    const ptB = recipes.filter(r => (r.PositionTypeRef || r.positionTypeRef) === 'PT-B')
+    expect(ptB).toHaveLength(1)
+    expect(ptB[0].ContextRef).toBe('ET-DL-01')
+
+    // Opens the new ET for editing
+    expect(activeContextType).toBe('ElementType')
+    expect(activeETRef).toBe('ET-DL-02')
+
+    // Queued for export
+    expect(rsChanges.some(c => c.action === 'upsert' && c.row?.ContextRef === 'ET-DL-02')).toBe(true)
+  })
+
+  test('does nothing without a target position or new ref', () => {
+    resetStore({ recipes: sharedETRecipes })
+    useStore.getState().duplicateET('ET-DL-01', '', 'PT-A')
+    expect(useStore.getState().recipes).toHaveLength(2)
+  })
+
+  test('suggestNextETRef proposes the next sequential ref', () => {
+    resetStore({ recipes: sharedETRecipes })
+    expect(useStore.getState().suggestNextETRef('ET-DL-01')).toBe('ET-DL-02')
+  })
+})
+
+describe('undo / redo', () => {
+  test('undo reverts a recipe mutation and redo re-applies it', () => {
+    resetStore()
+
+    useStore.getState().addRecipeRow(POS_REF, 'position', { elementTypeRef: 'ET-X' })
+    expect(useStore.getState().recipes).toHaveLength(1)
+    expect(useStore.getState().past).toHaveLength(1)
+
+    useStore.getState().undo()
+    expect(useStore.getState().recipes).toHaveLength(0)
+    expect(useStore.getState().rsChanges).toHaveLength(0)
+    expect(useStore.getState().future).toHaveLength(1)
+
+    useStore.getState().redo()
+    expect(useStore.getState().recipes).toHaveLength(1)
+    expect(useStore.getState().future).toHaveLength(0)
+  })
+
+  test('undo and redo are no-ops on empty stacks', () => {
+    resetStore()
+    expect(() => useStore.getState().undo()).not.toThrow()
+    expect(() => useStore.getState().redo()).not.toThrow()
+    expect(useStore.getState().recipes).toHaveLength(0)
+  })
+
+  test('a new mutation clears the redo stack', () => {
+    resetStore()
+    useStore.getState().addRecipeRow(POS_REF, 'position', { elementTypeRef: 'ET-X' })
+    useStore.getState().undo()
+    expect(useStore.getState().future).toHaveLength(1)
+
+    useStore.getState().addRecipeRow(POS_REF, 'position', { elementTypeRef: 'ET-Y' })
+    expect(useStore.getState().future).toHaveLength(0)
+  })
+})
+
+describe('ensurePSRow / auto-add on assignment', () => {
+  test('ensurePSRow registers a new ref once and is idempotent', () => {
+    resetStore({ psRows: [] })
+    useStore.getState().ensurePSRow('ET-SOCKET-5P-01')
+    let ps = useStore.getState().psRows
+    expect(ps).toHaveLength(1)
+    expect(ps[0].ElementTypeRef).toBe('ET-SOCKET-5P-01')
+
+    useStore.getState().ensurePSRow('ET-SOCKET-5P-01')
+    expect(useStore.getState().psRows).toHaveLength(1) // no duplicate
+  })
+
+  test('addRecipeRow registers the assigned ref in the Product Spec', () => {
+    resetStore({ psRows: [], recipes: [] })
+    useStore.getState().addRecipeRow(POS_REF, 'position', { elementTypeRef: 'ET-SOCKET-5P-01' })
+    const ps = useStore.getState().psRows
+    expect(ps.some(r => r.ElementTypeRef === 'ET-SOCKET-5P-01')).toBe(true)
+  })
+})
+
+describe('addConnection', () => {
+  // A position with a DL design element so dl_internal parts resolve their context
+  const withDesign = [
+    {
+      positionTypeRef: POS_REF, PositionTypeRef: POS_REF,
+      contextType: 'PositionType', ContextType: 'PositionType',
+      contextRef: POS_REF, ContextRef: POS_REF,
+      elementTypeRef: 'ET-DL-01', ElementTypeRef: 'ET-DL-01',
+      isDesign: 'Y', IsDesign: 'Y',
+      recipeIndex: 1, RecipeIndex: 1, _id: 'design',
+    },
+  ]
+
+  test('inserts all parts at the right sections in one undoable step', () => {
+    resetStore({ psRows: [], recipes: withDesign })
+
+    useStore.getState().addConnection(POS_REF, [
+      { section: 'position', elementTypeRef: 'ET-SOCKET-5P-01' },
+      { section: 'dl_internal', elementTypeRef: 'ET-PLUG-5P-01' },
+    ])
+
+    const { recipes, past } = useStore.getState()
+    const socket = recipes.find(r => (r.ElementTypeRef || r.elementTypeRef) === 'ET-SOCKET-5P-01')
+    const plug = recipes.find(r => (r.ElementTypeRef || r.elementTypeRef) === 'ET-PLUG-5P-01')
+
+    expect(socket.ContextType).toBe('PositionType')          // position level
+    expect(plug.ContextType).toBe('ElementType')             // inside the DL
+    expect(plug.ContextRef).toBe('ET-DL-01')
+
+    // One history entry for the whole connection
+    expect(past).toHaveLength(1)
+
+    // A single undo removes both inserted rows
+    useStore.getState().undo()
+    const after = useStore.getState().recipes
+    expect(after.some(r => (r.ElementTypeRef || r.elementTypeRef) === 'ET-SOCKET-5P-01')).toBe(false)
+    expect(after.some(r => (r.ElementTypeRef || r.elementTypeRef) === 'ET-PLUG-5P-01')).toBe(false)
+  })
+
+  test('skips parts with no elementTypeRef', () => {
+    resetStore({ psRows: [], recipes: withDesign })
+    useStore.getState().addConnection(POS_REF, [
+      { section: 'position', elementTypeRef: 'ET-SOCKET-5P-01' },
+      { section: 'position', elementTypeRef: '' },
+    ])
+    const added = useStore.getState().recipes.filter(r => (r.ElementTypeRef || r.elementTypeRef) === 'ET-SOCKET-5P-01')
+    expect(added).toHaveLength(1)
+  })
+
+  test('passes quantity through (twin-spot)', () => {
+    resetStore({ psRows: [], recipes: withDesign })
+    useStore.getState().addConnection(POS_REF, [
+      { section: 'position', elementTypeRef: 'ET-SOCKET-5P-01', quantity: 2 },
+    ])
+    const socket = useStore.getState().recipes.find(r => (r.ElementTypeRef || r.elementTypeRef) === 'ET-SOCKET-5P-01')
+    expect(socket.Quantity).toBe(2)
   })
 })

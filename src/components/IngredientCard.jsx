@@ -1,10 +1,11 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Card, Form, Button } from 'react-bootstrap'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import useStore from '../store/useStore'
 import FlagPill from './FlagPill'
-import { getUsedIn, getNextAvailableRef } from '../utils/containerUtils'
+import ETRefSelect from './ETRefSelect'
+import { getUsedIn, getNextAvailableRef, getInternalItems } from '../utils/containerUtils'
 
 /**
  * IngredientCard — a resolved recipe row with drag-to-reorder support.
@@ -18,6 +19,8 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   const updateRecipeRow = useStore(s => s.updateRecipeRow)
   const removeRecipeRow = useStore(s => s.removeRecipeRow)
   const toggleContainerET = useStore(s => s.toggleContainerET)
+  const openETRecipe = useStore(s => s.openETRecipe)
+  const ensurePSRow = useStore(s => s.ensurePSRow)
   const psRows = useStore(s => s.psRows)
   const recipes = useStore(s => s.recipes)
   const elementTypes = useStore(s => s.elementTypes)
@@ -58,6 +61,9 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   const isContainer = etRef ? containerETRefs.has(etRef.toLowerCase()) : false
   const usedIn = isContainer ? getUsedIn(etRef, recipes, posRef) : []
   const nextRef = isContainer ? getNextAvailableRef(etRef, elementTypes) : null
+  const internalItems = isContainer ? getInternalItems(etRef, recipes, elementTypes) : []
+
+  const [showContents, setShowContents] = useState(false)
 
   function handleFieldChange(field, value) {
     updateRecipeRow(posRef, rowId, { [field]: value })
@@ -105,9 +111,21 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
             <div style={{ flex: 1, minWidth: 0 }}>
               {/* ET ref + product code */}
               <div className="d-flex align-items-center gap-2 mb-1 flex-wrap">
-                <span className="fw-semibold small" style={{ wordBreak: 'break-all' }}>
-                  {etRef || <span className="text-muted fst-italic">No element type</span>}
-                </span>
+                {etRef ? (
+                  <span className="fw-semibold small" style={{ wordBreak: 'break-all' }}>
+                    {etRef}
+                  </span>
+                ) : (
+                  <div style={{ width: 220 }}>
+                    <ETRefSelect
+                      placeholder="Pick or type an element type…"
+                      onCommit={ref => {
+                        updateRecipeRow(posRef, rowId, { elementTypeRef: ref, ElementTypeRef: ref })
+                        ensurePSRow(ref)
+                      }}
+                    />
+                  </div>
+                )}
                 {isContainer && (
                   <span
                     style={{
@@ -121,6 +139,16 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                   >
                     container
                   </span>
+                )}
+                {isContainer && etRef && (
+                  <button
+                    className="btn btn-link btn-sm p-0"
+                    style={{ fontSize: 11, color: '#0d6efd', textDecoration: 'none' }}
+                    onClick={() => openETRecipe(etRef)}
+                    title="Edit this element's internal recipe"
+                  >
+                    Edit internals →
+                  </button>
                 )}
                 {productCode ? (
                   <span className="text-muted small">{productCode}</span>
@@ -177,6 +205,36 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                 </div>
               )}
 
+              {/* Container contents (read-only) */}
+              {isContainer && (
+                <div className="mb-2" style={{ fontSize: 11 }}>
+                  <button
+                    className="btn btn-link btn-sm p-0"
+                    style={{ fontSize: 11, textDecoration: 'none', color: '#555' }}
+                    onClick={() => setShowContents(v => !v)}
+                  >
+                    {showContents ? '▾' : '▸'} Contents ({internalItems.length})
+                  </button>
+                  {showContents && (
+                    internalItems.length > 0 ? (
+                      <div
+                        className="mt-1 ps-3"
+                        style={{ borderLeft: '2px solid #e9ecef', color: '#555' }}
+                      >
+                        {internalItems.map(item => (
+                          <div key={item.ref}>
+                            <span style={{ fontFamily: 'monospace' }}>{item.ref}</span>
+                            {item.name && <span className="text-muted ms-1">— {item.name}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="mt-1 ps-3 text-muted fst-italic">No internal items yet.</div>
+                    )
+                  )}
+                </div>
+              )}
+
               {/* Flag pills */}
               <div className="d-flex gap-1 mb-2 flex-wrap">
                 <FlagPill
@@ -220,6 +278,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                   width={60}
                   type="number"
                   min={0}
+                  placeholder="1"
                 />
                 <FieldInput
                   label="DimMult"
@@ -258,7 +317,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   )
 }
 
-function FieldInput({ label, value, onChange, width = 80, type = 'text', min, step }) {
+function FieldInput({ label, value, onChange, width = 80, type = 'text', min, step, placeholder }) {
   return (
     <div className="d-flex align-items-center gap-1">
       <label className="text-muted" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>{label}</label>
@@ -266,6 +325,7 @@ function FieldInput({ label, value, onChange, width = 80, type = 'text', min, st
         type={type}
         size="sm"
         value={value}
+        placeholder={placeholder}
         onChange={e => onChange(e.target.value)}
         style={{ width, padding: '2px 6px', fontSize: 12 }}
         min={min}

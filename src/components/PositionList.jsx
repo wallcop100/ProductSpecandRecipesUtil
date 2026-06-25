@@ -6,8 +6,10 @@ import { TAG_GROUPS } from '../utils/constants'
 /**
  * PositionList — scrollable list of all position types.
  * Click to set active position.
+ *
+ * @param {string} filter - case-insensitive filter on ref / name / tags
  */
-export default function PositionList() {
+export default function PositionList({ filter = '' }) {
   const positionTypes = useStore(s => s.positionTypes)
   const positionUI = useStore(s => s.positionUI)
   const activePositionRef = useStore(s => s.activePositionRef)
@@ -36,20 +38,30 @@ export default function PositionList() {
     return map
   }, [])
 
+  // Apply the filter: match on ref, name, or any tag.
+  const q = filter.trim().toLowerCase()
+  const visiblePositions = useMemo(() => {
+    if (!q) return positionTypes
+    return positionTypes.filter(pt => {
+      const ref = pt.PositionTypeRef || ''
+      const name = pt.Name || pt.name || ''
+      const tags = (positionUI[ref]?.tags) || []
+      return ref.toLowerCase().includes(q) ||
+        name.toLowerCase().includes(q) ||
+        tags.some(t => t.toLowerCase().includes(q))
+    })
+  }, [positionTypes, positionUI, q])
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div
-        className="px-3 py-2 border-bottom text-uppercase text-muted fw-bold"
-        style={{ fontSize: 10, letterSpacing: 0.8, flexShrink: 0 }}
-      >
-        Positions ({positionTypes.length})
-      </div>
-
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {positionTypes.length === 0 && (
           <div className="text-muted small p-3">No positions loaded.</div>
         )}
-        {positionTypes.map(pt => {
+        {positionTypes.length > 0 && visiblePositions.length === 0 && (
+          <div className="text-muted small p-3">No positions match “{filter}”.</div>
+        )}
+        {visiblePositions.map(pt => {
           const ref = pt.PositionTypeRef
           const isActive = ref === activePositionRef
           const ui = positionUI[ref] || {}

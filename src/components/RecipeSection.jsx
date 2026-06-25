@@ -1,0 +1,114 @@
+import React, { useState } from 'react'
+import { Button } from 'react-bootstrap'
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { useDroppable } from '@dnd-kit/core'
+import useStore from '../store/useStore'
+import IngredientCard from './IngredientCard'
+import SlotCard from './SlotCard'
+import ETRefSelect from './ETRefSelect'
+
+/**
+ * RecipeSection — a sortable, droppable section of recipe rows.
+ *
+ * Reused both by the per-position editor and by the project tree outliner, so
+ * the droppable carries its own posRef: that lets any expanded position in the
+ * tree receive palette drops and reorders independently.
+ *
+ * Props:
+ *   title, sectionKey ('position'|'dl_internal'|'lin_internal'), rows, posRef,
+ *   onOpenProductSpec, disableSorting
+ */
+export default function RecipeSection({
+  title, sectionKey, rows, posRef, onOpenProductSpec, disableSorting = false,
+}) {
+  const addRecipeRow = useStore(s => s.addRecipeRow)
+  const resolveSlot = useStore(s => s.resolveSlot)
+
+  const [adding, setAdding] = useState(false)
+
+  const { setNodeRef: setSectionDropRef, isOver: isSectionOver } = useDroppable({
+    id: `section-drop-${sectionKey}-${posRef || 'none'}`,
+    data: { type: 'section', section: sectionKey, posRef },
+  })
+
+  const sortableIds = disableSorting ? [] : rows.map(r => r._id).filter(Boolean)
+
+  function handleAdd(elementTypeRef) {
+    addRecipeRow(posRef, sectionKey, { elementTypeRef })
+    setAdding(false)
+  }
+
+  return (
+    <div className="mb-4">
+      <div
+        className="d-flex align-items-center gap-2 mb-2"
+        style={{ borderBottom: '2px solid #dee2e6', paddingBottom: 4 }}
+      >
+        <h6 className="mb-0 text-uppercase text-muted small fw-bold">{title}</h6>
+        {adding ? (
+          <div style={{ width: 240 }}>
+            <ETRefSelect
+              placeholder="Pick or type an element type…"
+              onCommit={handleAdd}
+              onCancel={() => setAdding(false)}
+            />
+          </div>
+        ) : (
+          <Button
+            variant="outline-secondary"
+            size="sm"
+            style={{ padding: '1px 8px', fontSize: 12 }}
+            onClick={() => setAdding(true)}
+          >
+            + Add row
+          </Button>
+        )}
+      </div>
+
+      <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+        <div
+          ref={setSectionDropRef}
+          style={{
+            minHeight: 48,
+            borderRadius: 4,
+            transition: 'background 0.15s',
+            background: isSectionOver ? '#eef3ff' : undefined,
+          }}
+        >
+          {rows.length === 0 && (
+            <div
+              className="text-muted small text-center py-3 border border-dashed rounded"
+              style={{ borderStyle: 'dashed' }}
+            >
+              No rows yet — drag an element here or click + Add row
+            </div>
+          )}
+          {rows.map(row => (
+            row.resolved === false
+              ? (
+                <SlotCard
+                  key={row._id || row.slotKey}
+                  slot={row}
+                  posRef={posRef}
+                  sectionKey={sectionKey}
+                  onResolve={(slotKey, entityRef) => resolveSlot(posRef, slotKey, entityRef)}
+                />
+              )
+              : (
+                <IngredientCard
+                  key={row._id}
+                  row={row}
+                  posRef={posRef}
+                  sectionKey={sectionKey}
+                  onOpenProductSpec={onOpenProductSpec}
+                />
+              )
+          ))}
+        </div>
+      </SortableContext>
+    </div>
+  )
+}

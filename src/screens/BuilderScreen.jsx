@@ -1,50 +1,50 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import {
-  Button, Alert, Nav, Spinner,
+  Button, ButtonGroup, Nav, Spinner,
 } from 'react-bootstrap'
 import {
   DndContext,
   PointerSensor,
   useSensor,
   useSensors,
-  DragOverlay,
   closestCenter,
 } from '@dnd-kit/core'
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-  arrayMove,
-} from '@dnd-kit/sortable'
-import { useDroppable } from '@dnd-kit/core'
 import useStore, { getRecipeForPosition } from '../store/useStore'
 import { getUsedIn } from '../utils/containerUtils'
-import { findBestTemplate } from '../utils/templateLoader'
-import PositionList from '../components/PositionList'
-import IngredientCard from '../components/IngredientCard'
-import SlotCard from '../components/SlotCard'
+import ProjectNavigator from '../components/ProjectNavigator'
+import ProjectTreeView from '../components/ProjectTreeView'
+import ElementTypeTreeView from '../components/ElementTypeTreeView'
+import RecipeSection from '../components/RecipeSection'
+import DuplicateETModal from '../components/DuplicateETModal'
+import ConnectorWizardModal from '../components/ConnectorWizardModal'
+import Breadcrumbs from '../components/Breadcrumbs'
 import ElementPalette from '../components/ElementPalette'
 import TagReviewSidebar from '../components/TagReviewSidebar'
 import ValidationPanel from '../components/ValidationPanel'
 import TemplatePicker from '../components/TemplatePicker'
-import ContextTreePanel from '../components/ContextTreePanel'
 
 /**
- * BuilderScreen — three-column recipe editing layout.
+ * BuilderScreen — three-column layout.
+ *
+ * The centre is the project tree outliner (the primary editing surface): every
+ * position on one scannable, collapsible surface, edited inline. The left
+ * column is a compact jump/filter index; the right column holds the palette and
+ * supporting tabs. Drilling into a container element's internal recipe swaps the
+ * centre for a focused ET editor.
  */
 export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec, onBackToSetup }) {
+  const rootView = useStore(s => s.rootView)
   const activePositionRef = useStore(s => s.activePositionRef)
   const activeContextType = useStore(s => s.activeContextType)
   const activeETRef = useStore(s => s.activeETRef)
-  const showContextTree = useStore(s => s.showContextTree)
   const recipes = useStore(s => s.recipes)
-  const templates = useStore(s => s.templates)
   const positionUI = useStore(s => s.positionUI)
   const psChanges = useStore(s => s.psChanges)
   const rsChanges = useStore(s => s.rsChanges)
-  const isLoading = useStore(s => s.isLoading)
+  const past = useStore(s => s.past)
+  const future = useStore(s => s.future)
 
-  const applyTemplate = useStore(s => s.applyTemplate)
-  const reapplyTemplate = useStore(s => s.reapplyTemplate)
+  const setRootView = useStore(s => s.setRootView)
   const addRecipeRow = useStore(s => s.addRecipeRow)
   const resolveSlot = useStore(s => s.resolveSlot)
   const reorderIngredients = useStore(s => s.reorderIngredients)
@@ -52,18 +52,18 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
   const runValidation = useStore(s => s.runValidation)
   const exportChanges = useStore(s => s.exportChanges)
   const saveAsTemplate = useStore(s => s.saveAsTemplate)
-  const openETRecipe = useStore(s => s.openETRecipe)
   const closeETRecipe = useStore(s => s.closeETRecipe)
-  const duplicateET = useStore(s => s.duplicateET)
-  const setShowContextTree = useStore(s => s.setShowContextTree)
+  const undo = useStore(s => s.undo)
+  const redo = useStore(s => s.redo)
 
+  const [showDupModal, setShowDupModal] = useState(false)
+  const [showConnModal, setShowConnModal] = useState(false)
   const [rightTab, setRightTab] = useState('palette')
   const [showDeleted, setShowDeleted] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState(null)
   const [exportSuccess, setExportSuccess] = useState(false)
-  const [skippedTemplates, setSkippedTemplates] = useState(new Set())
-  const [activeId, setActiveId] = useState(null)  // for DragOverlay
+  const [, setActiveId] = useState(null)  // drag tracking
   const [templateNameInput, setTemplateNameInput] = useState('')
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)
   // Track which template (if any) was applied to each position { [posRef]: templateId }
@@ -73,20 +73,27 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   )
 
-  // Current recipe grouped by section, optionally filtering soft-deleted rows
-  const rawRecipe = activePositionRef
-    ? getRecipeForPosition(recipes, activePositionRef)
-    : { position: [], dlInternal: [], linInternal: [] }
+  const canUndo = past.length > 0
+  const canRedo = future.length > 0
+
+  // Keyboard: Ctrl/Cmd+Z = undo, Ctrl/Cmd+Shift+Z = redo
+  useEffect(() => {
+    function onKey(e) {
+      const mod = e.ctrlKey || e.metaKey
+      if (!mod || e.key.toLowerCase() !== 'z') return
+      const tag = (e.target?.tagName || '').toLowerCase()
+      if (tag === 'input' || tag === 'textarea' || e.target?.isContentEditable) return
+      e.preventDefault()
+      if (e.shiftKey) redo()
+      else undo()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [undo, redo])
 
   function filterDeleted(rows) {
     if (showDeleted) return rows
     return rows.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
-  }
-
-  const currentRecipe = {
-    position: filterDeleted(rawRecipe.position),
-    dlInternal: filterDeleted(rawRecipe.dlInternal),
-    linInternal: filterDeleted(rawRecipe.linInternal),
   }
 
   // ET mode: deduplicated internal rows from the first position that uses this ET
@@ -110,29 +117,19 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
     return getUsedIn(activeETRef, recipes, null)
   }, [activeETRef, recipes])
 
-  const activePosUI = activePositionRef ? (positionUI[activePositionRef] || {}) : {}
-  const activeTags = activePosUI.tags || []
+  const inETMode = activeContextType === 'ElementType' && !!activeETRef
 
-  // Find best template offer
-  const bestTemplate = activePositionRef && !skippedTemplates.has(activePositionRef)
-    ? findBestTemplate(activeTags, templates)
-    : null
-
-  const hasRecipeRows =
-    currentRecipe.position.length > 0 ||
-    currentRecipe.dlInternal.length > 0 ||
-    currentRecipe.linInternal.length > 0
-
-  // Only offer template if there are no rows yet
-  const showTemplateBanner = bestTemplate && !hasRecipeRows
-
-  // Check if section contains LIN fittings
-  const isLinPosition = activeTags.includes('LIN')
-  const internalSectionLabel = isLinPosition ? 'Inside LIN Element' : 'Inside DL Element'
-  const internalSection = isLinPosition ? 'lin_internal' : 'dl_internal'
+  // Active-position context for the right-hand Tags/Templates tabs
+  const activeTags = activePositionRef ? (positionUI[activePositionRef]?.tags || []) : []
+  const activeGrouped = activePositionRef ? getRecipeForPosition(recipes, activePositionRef) : null
+  const hasRecipeRows = !!activeGrouped && (
+    activeGrouped.position.length > 0 ||
+    activeGrouped.dlInternal.length > 0 ||
+    activeGrouped.linInternal.length > 0
+  )
 
   // -------------------------------------------------------------------------
-  // Drag and drop
+  // Drag and drop — position-aware so any expanded node can receive drops
   // -------------------------------------------------------------------------
 
   function handleDragStart({ active }) {
@@ -141,95 +138,63 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
 
   function handleDragEnd({ active, over }) {
     setActiveId(null)
-    const inETMode = activeContextType === 'ElementType' && activeETRef
-    if (!over || (!activePositionRef && !inETMode)) return
+    if (!over) return
 
-    const activeDnd = active.data.current || {}
-    const overDnd = over.data.current || {}
+    const a = active.data.current || {}
+    const o = over.data.current || {}
 
-    // Palette drop onto a slot (SlotCard) — resolve the slot
-    if (activeDnd.type === 'palette-item' && overDnd.type === 'slot') {
-      resolveSlot(activePositionRef, overDnd.slotKey, activeDnd.elementTypeRef)
+    // Palette drop onto a slot — resolve it
+    if (a.type === 'palette-item' && o.type === 'slot') {
+      const pos = o.posRef || activePositionRef
+      if (pos) resolveSlot(pos, o.slotKey, a.elementTypeRef)
       return
     }
 
     // Palette drop onto a section droppable or a recipe row
-    if (activeDnd.type === 'palette-item') {
-      const targetSection = overDnd.section || 'position'
-      addRecipeRow(activePositionRef, targetSection, {
-        elementTypeRef: activeDnd.elementTypeRef,
-        ElementTypeRef: activeDnd.elementTypeRef,
-      })
-      return
-    }
-
-    // Reorder within section
-    if (
-      activeDnd.type === 'recipe-row' &&
-      overDnd.type === 'recipe-row' &&
-      activeDnd.section === overDnd.section
-    ) {
-      const section = activeDnd.section
-      const sectionRows = section === 'position'
-        ? currentRecipe.position
-        : section === 'dl_internal'
-          ? currentRecipe.dlInternal
-          : currentRecipe.linInternal
-
-      const oldIdx = sectionRows.findIndex(r => r._id === active.id)
-      const newIdx = sectionRows.findIndex(r => r._id === over.id)
-      if (oldIdx !== -1 && newIdx !== -1 && oldIdx !== newIdx) {
-        reorderIngredients(activePositionRef, section, oldIdx, newIdx)
+    if (a.type === 'palette-item') {
+      const pos = o.posRef || activePositionRef
+      const section = o.section || 'position'
+      if (pos) {
+        addRecipeRow(pos, section, {
+          elementTypeRef: a.elementTypeRef,
+          ElementTypeRef: a.elementTypeRef,
+        })
       }
       return
     }
 
-    // Cross-section move
-    if (
-      activeDnd.type === 'recipe-row' &&
-      overDnd.type === 'recipe-row' &&
-      activeDnd.section !== overDnd.section
-    ) {
-      moveIngredientAcrossSections(activePositionRef, active.id, overDnd.section)
-      return
-    }
+    // Recipe-row interactions are scoped to a single position
+    if (a.type === 'recipe-row') {
+      const pos = a.posRef
+      if (!pos) return
 
-    // Drop recipe row onto section droppable
-    if (activeDnd.type === 'recipe-row' && overDnd.section) {
-      if (activeDnd.section !== overDnd.section) {
-        moveIngredientAcrossSections(activePositionRef, active.id, overDnd.section)
+      // Reorder within the same section
+      if (o.type === 'recipe-row' && o.posRef === pos && a.section === o.section) {
+        const grouped = getRecipeForPosition(recipes, pos)
+        const rows = filterDeleted(
+          a.section === 'position' ? grouped.position
+            : a.section === 'dl_internal' ? grouped.dlInternal
+              : grouped.linInternal
+        )
+        const oldIdx = rows.findIndex(r => r._id === active.id)
+        const newIdx = rows.findIndex(r => r._id === over.id)
+        if (oldIdx !== -1 && newIdx !== -1 && oldIdx !== newIdx) {
+          reorderIngredients(pos, a.section, oldIdx, newIdx)
+        }
+        return
+      }
+
+      // Cross-section move (row → row in a different section of the same position)
+      if (o.type === 'recipe-row' && o.posRef === pos && a.section !== o.section) {
+        moveIngredientAcrossSections(pos, active.id, o.section)
+        return
+      }
+
+      // Drop a recipe row onto a section droppable of the same position
+      if (o.section && o.posRef === pos && a.section !== o.section) {
+        moveIngredientAcrossSections(pos, active.id, o.section)
       }
     }
-  }
-
-  function handleApplyTemplate() {
-    if (!bestTemplate || !activePositionRef) return
-    applyTemplate(activePositionRef, bestTemplate.id)
-    setAppliedTemplateId(prev => ({ ...prev, [activePositionRef]: bestTemplate.id }))
-  }
-
-  function handleSkipTemplate() {
-    setSkippedTemplates(prev => new Set([...prev, activePositionRef]))
-  }
-
-  function handleReapplyTemplate() {
-    if (!activePositionRef) return
-    const tplId = appliedTemplateId[activePositionRef]
-    if (!tplId) return
-    reapplyTemplate(activePositionRef, tplId)
-  }
-
-  function handleClearTemplate() {
-    if (!activePositionRef) return
-    const rows = useStore.getState().recipes.filter(
-      r => (r.PositionTypeRef || r.positionTypeRef) === activePositionRef
-    )
-    rows.forEach(r => useStore.getState().removeRecipeRow(activePositionRef, r._id))
-    setAppliedTemplateId(prev => {
-      const next = { ...prev }
-      delete next[activePositionRef]
-      return next
-    })
   }
 
   async function handleExport() {
@@ -276,6 +241,31 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
         <Button variant="outline-secondary" size="sm" onClick={() => onOpenProductSpec()}>
           Product Spec
         </Button>
+
+        <ButtonGroup size="sm" className="ms-2">
+          <Button
+            variant={rootView === 'positions' ? 'primary' : 'outline-primary'}
+            onClick={() => setRootView('positions')}
+          >
+            PositionTypes
+          </Button>
+          <Button
+            variant={rootView === 'elements' ? 'primary' : 'outline-primary'}
+            onClick={() => setRootView('elements')}
+          >
+            ElementTypes
+          </Button>
+        </ButtonGroup>
+
+        <ButtonGroup size="sm" className="ms-2">
+          <Button variant="outline-secondary" onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)">
+            ↶ Undo
+          </Button>
+          <Button variant="outline-secondary" onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)">
+            ↷ Redo
+          </Button>
+        </ButtonGroup>
+
         <div className="flex-grow-1" />
         <Button
           variant={showDeleted ? 'secondary' : 'outline-secondary'}
@@ -312,6 +302,7 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
             size="sm"
             onClick={() => setShowSaveTemplate(true)}
             disabled={!hasRecipeRows}
+            title={hasRecipeRows ? 'Save the active position as a template' : 'Select a position with rows to save as a template'}
           >
             Save as template
           </Button>
@@ -328,6 +319,11 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
         {exportError && <span className="text-danger small">{exportError}</span>}
       </div>
 
+      {/* Breadcrumb bar */}
+      <div className="px-3 py-1 border-bottom bg-light" style={{ flexShrink: 0 }}>
+        <Breadcrumbs />
+      </div>
+
       {/* Three-column body */}
       <DndContext
         sensors={sensors}
@@ -337,7 +333,7 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
       >
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
-        {/* Left panel: Position list + optional Context Tree */}
+        {/* Left panel: compact jump/filter index */}
         <div
           style={{
             width: 240,
@@ -348,144 +344,62 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
             background: '#f8f9fa',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '4px 8px', borderBottom: '1px solid #e9ecef' }}>
-            <Button
-              variant={showContextTree ? 'secondary' : 'outline-secondary'}
-              size="sm"
-              style={{ fontSize: 10, padding: '1px 7px' }}
-              onClick={() => setShowContextTree(!showContextTree)}
-              title="Toggle context tree"
-            >
-              {showContextTree ? '▲ Tree' : '▼ Tree'}
-            </Button>
-          </div>
-          <div style={{ flex: showContextTree ? '0 0 50%' : '1 1 auto', overflowY: 'auto' }}>
-            <PositionList />
-          </div>
-          {showContextTree && (
-            <div style={{ flex: '0 0 50%', borderTop: '1px solid #dee2e6', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              <div className="px-2 py-1 text-uppercase text-muted fw-bold" style={{ fontSize: 9, letterSpacing: 0.5, borderBottom: '1px solid #e9ecef', flexShrink: 0 }}>
-                Context Tree
-              </div>
-              <ContextTreePanel />
-            </div>
-          )}
+          <ProjectNavigator />
         </div>
 
-        {/* Centre: Recipe canvas */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '1rem 1.25rem' }}>
-            {activeContextType === 'ElementType' && activeETRef ? (
-              /* ET internal recipe editing mode */
-              <>
-                {/* ET mode header */}
-                <div
-                  className="d-flex align-items-center gap-2 mb-3 px-3 py-2 rounded"
-                  style={{ background: '#f0f4ff', border: '1px solid #c7d7f5', fontSize: 12, flexShrink: 0 }}
+        {/* Centre: project tree outliner (or ET internal editor) */}
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          {inETMode ? (
+            <div style={{ flex: 1, overflowY: 'auto', padding: '1rem 1.25rem' }}>
+              {/* ET mode header */}
+              <div
+                className="d-flex align-items-center gap-2 mb-3 px-3 py-2 rounded"
+                style={{ background: '#f0f4ff', border: '1px solid #c7d7f5', fontSize: 12, flexShrink: 0 }}
+              >
+                <Button variant="outline-secondary" size="sm" style={{ fontSize: 11 }} onClick={closeETRecipe}>
+                  ← Back to tree
+                </Button>
+                <span className="fw-semibold">Editing ET: {activeETRef}</span>
+                {etModeUsedIn.length > 0 && (
+                  <span className="text-muted small">— Used in: {etModeUsedIn.join(', ')}</span>
+                )}
+                <div className="flex-grow-1" />
+                <Button
+                  variant="outline-primary"
+                  size="sm"
+                  style={{ fontSize: 11 }}
+                  onClick={() => setShowConnModal(true)}
                 >
-                  <Button variant="outline-secondary" size="sm" style={{ fontSize: 11 }} onClick={closeETRecipe}>
-                    ← Back
-                  </Button>
-                  <span className="fw-semibold">Editing ET: {activeETRef}</span>
-                  {etModeUsedIn.length > 0 && (
-                    <span className="text-muted small">— Used in: {etModeUsedIn.join(', ')}</span>
-                  )}
-                  <div className="flex-grow-1" />
-                  <Button
-                    variant="outline-primary"
-                    size="sm"
-                    style={{ fontSize: 11 }}
-                    onClick={() => duplicateET(activeETRef)}
-                  >
-                    Duplicate ET
-                  </Button>
-                </div>
-
-                <RecipeSection
-                  title="ET Internal Recipe"
-                  sectionKey="position"
-                  rows={filterDeleted(etModeRows)}
-                  posRef={etModePosRef}
-                  onOpenProductSpec={onOpenProductSpec}
-                  disableSorting
-                />
-              </>
-            ) : !activePositionRef ? (
-              <div className="text-center text-muted mt-5">
-                <p>Select a position from the left panel to start editing its recipe.</p>
+                  + Connector
+                </Button>
+                <Button
+                  variant="outline-primary"
+                  size="sm"
+                  style={{ fontSize: 11 }}
+                  onClick={() => setShowDupModal(true)}
+                >
+                  Duplicate ET
+                </Button>
               </div>
-            ) : (
-              <>
-                {/* Template offer banner */}
-                {showTemplateBanner && (
-                  <Alert variant="warning" className="d-flex align-items-center gap-2 py-2">
-                    <span>
-                      Apply template: <strong>{bestTemplate.name}</strong>?
-                    </span>
-                    <Button size="sm" variant="warning" onClick={handleApplyTemplate}>
-                      Apply
-                    </Button>
-                    <Button size="sm" variant="outline-secondary" onClick={handleSkipTemplate}>
-                      Skip
-                    </Button>
-                  </Alert>
-                )}
 
-                {isLoading && (
-                  <div className="text-center py-3">
-                    <Spinner animation="border" size="sm" /> Loading…
-                  </div>
-                )}
-
-                {/* Applied template chip */}
-                {appliedTemplateId[activePositionRef] && (() => {
-                  const tpl = templates.find(t => t.id === appliedTemplateId[activePositionRef])
-                  return tpl ? (
-                    <div
-                      className="d-flex align-items-center gap-2 mb-3 px-2 py-1 rounded"
-                      style={{ background: '#f0f4ff', border: '1px solid #c7d7f5', fontSize: 12 }}
-                    >
-                      <span className="text-muted">Template:</span>
-                      <span className="fw-semibold">{tpl.name}</span>
-                      <Button
-                        variant="outline-primary"
-                        size="sm"
-                        style={{ padding: '1px 8px', fontSize: 11 }}
-                        onClick={handleReapplyTemplate}
-                      >
-                        Re-apply
-                      </Button>
-                      <Button
-                        variant="outline-danger"
-                        size="sm"
-                        style={{ padding: '1px 8px', fontSize: 11 }}
-                        onClick={handleClearTemplate}
-                      >
-                        Clear
-                      </Button>
-                    </div>
-                  ) : null
-                })()}
-
-                {/* Position Level section */}
-                <RecipeSection
-                  title="Position Level"
-                  sectionKey="position"
-                  rows={currentRecipe.position}
-                  posRef={activePositionRef}
-                  onOpenProductSpec={onOpenProductSpec}
-                />
-
-                {/* Internal element section */}
-                <RecipeSection
-                  title={internalSectionLabel}
-                  sectionKey={internalSection}
-                  rows={isLinPosition ? currentRecipe.linInternal : currentRecipe.dlInternal}
-                  posRef={activePositionRef}
-                  onOpenProductSpec={onOpenProductSpec}
-                />
-              </>
-            )}
-          </div>
+              <RecipeSection
+                title="ET Internal Recipe"
+                sectionKey="position"
+                rows={filterDeleted(etModeRows)}
+                posRef={etModePosRef}
+                onOpenProductSpec={onOpenProductSpec}
+                disableSorting
+              />
+            </div>
+          ) : rootView === 'elements' ? (
+            <ElementTypeTreeView />
+          ) : (
+            <ProjectTreeView
+              onOpenProductSpec={onOpenProductSpec}
+              showDeleted={showDeleted}
+            />
+          )}
+        </div>
 
         {/* Right panel: tabs */}
         <div
@@ -535,83 +449,20 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
         </div>
       </div>
       </DndContext>
-    </div>
-  )
-}
 
-// ---------------------------------------------------------------------------
-// RecipeSection — renders a sortable section of recipe rows
-// ---------------------------------------------------------------------------
+      <DuplicateETModal
+        show={showDupModal}
+        etRef={activeETRef}
+        posRef={etModePosRef}
+        onClose={() => setShowDupModal(false)}
+      />
 
-function RecipeSection({ title, sectionKey, rows, posRef, onOpenProductSpec, disableSorting = false }) {
-  const addRecipeRow = useStore(s => s.addRecipeRow)
-  const resolveSlot = useStore(s => s.resolveSlot)
-
-  const { setNodeRef: setSectionDropRef, isOver: isSectionOver } = useDroppable({
-    id: `section-drop-${sectionKey}-${posRef || 'none'}`,
-    data: { type: 'section', section: sectionKey },
-  })
-
-  const sortableIds = disableSorting ? [] : rows.map(r => r._id).filter(Boolean)
-
-  return (
-    <div className="mb-4">
-      <div
-        className="d-flex align-items-center gap-2 mb-2"
-        style={{ borderBottom: '2px solid #dee2e6', paddingBottom: 4 }}
-      >
-        <h6 className="mb-0 text-uppercase text-muted small fw-bold">{title}</h6>
-        <Button
-          variant="outline-secondary"
-          size="sm"
-          style={{ padding: '1px 8px', fontSize: 12 }}
-          onClick={() => addRecipeRow(posRef, sectionKey, {})}
-        >
-          + Add row
-        </Button>
-      </div>
-
-      <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
-        <div
-          ref={setSectionDropRef}
-          style={{
-            minHeight: 48,
-            borderRadius: 4,
-            transition: 'background 0.15s',
-            background: isSectionOver ? '#eef3ff' : undefined,
-          }}
-        >
-          {rows.length === 0 && (
-            <div
-              className="text-muted small text-center py-3 border border-dashed rounded"
-              style={{ borderStyle: 'dashed' }}
-            >
-              No rows yet — drag an element here or click + Add row
-            </div>
-          )}
-          {rows.map(row => (
-            row.resolved === false
-              ? (
-                <SlotCard
-                  key={row._id || row.slotKey}
-                  slot={row}
-                  posRef={posRef}
-                  sectionKey={sectionKey}
-                  onResolve={(slotKey, entityRef) => resolveSlot(posRef, slotKey, entityRef)}
-                />
-              )
-              : (
-                <IngredientCard
-                  key={row._id}
-                  row={row}
-                  posRef={posRef}
-                  sectionKey={sectionKey}
-                  onOpenProductSpec={onOpenProductSpec}
-                />
-              )
-          ))}
-        </div>
-      </SortableContext>
+      <ConnectorWizardModal
+        show={showConnModal}
+        posRef={etModePosRef}
+        context="element"
+        onClose={() => setShowConnModal(false)}
+      />
     </div>
   )
 }
