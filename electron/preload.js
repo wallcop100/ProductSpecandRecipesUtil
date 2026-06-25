@@ -1,0 +1,61 @@
+'use strict'
+
+const { contextBridge, ipcRenderer } = require('electron')
+
+contextBridge.exposeInMainWorld('electronAPI', {
+  // File dialogs
+  openFolderDialog: () => ipcRenderer.invoke('open-folder-dialog'),
+
+  // File watcher
+  startWatcher: (opts) => ipcRenderer.invoke('start-watcher', opts),
+  stopWatcher: () => ipcRenderer.invoke('stop-watcher'),
+  onFileChanged: (callback) =>
+    ipcRenderer.on('file-changed', (_event, data) => callback(data)),
+
+  // DB — Projects & all SQLite operations
+  db: {
+    upsertProject: (data) => ipcRenderer.invoke('db-upsert-project', data),
+    getProject: (folderPath) => ipcRenderer.invoke('db-get-project', { folderPath }),
+    getLastProject: () => ipcRenderer.invoke('db-get-last-project'),
+
+    // Position UI
+    upsertPositionUI: (projectId, positionTypeRef, data) =>
+      ipcRenderer.invoke('db-upsert-position-ui', { projectId, positionTypeRef, data }),
+    getAllPositionUI: (projectId) =>
+      ipcRenderer.invoke('db-get-all-position-ui', { projectId }),
+
+    // Templates
+    upsertTemplate: (template) =>
+      ipcRenderer.invoke('db-upsert-template', { template }),
+    getAllTemplates: (projectId) =>
+      ipcRenderer.invoke('db-get-all-templates', { projectId }),
+    deleteTemplate: (id) => ipcRenderer.invoke('db-delete-template', { id }),
+
+    // Slot mappings
+    upsertSlotMapping: (projectId, templateId, slotKey, entityRef) =>
+      ipcRenderer.invoke('db-upsert-slot-mapping', { projectId, templateId, slotKey, entityRef }),
+    getSlotMappings: (projectId, templateId) =>
+      ipcRenderer.invoke('db-get-slot-mappings', { projectId, templateId }),
+    getAllSlotMappings: (projectId) =>
+      ipcRenderer.invoke('db-get-all-slot-mappings', { projectId }),
+    deleteSlotMapping: (projectId, templateId, slotKey) =>
+      ipcRenderer.invoke('db-delete-slot-mapping', { projectId, templateId, slotKey }),
+
+    // Prefs
+    setPref: (projectId, key, value) =>
+      ipcRenderer.invoke('db-set-pref', { projectId, key, value }),
+    getPref: (projectId, key) =>
+      ipcRenderer.invoke('db-get-pref', { projectId, key }),
+  },
+
+  // App
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+
+  // Auto-updater
+  updater: {
+    onStatusChange: (callback) =>
+      ipcRenderer.on('update-status', (_event, data) => callback(data)),
+    checkNow: () => ipcRenderer.invoke('check-for-updates'),
+    installNow: () => ipcRenderer.invoke('install-update'),
+  },
+})

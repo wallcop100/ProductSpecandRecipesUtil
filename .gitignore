@@ -1,0 +1,11 @@
+node_modules/
+dist/
+samplefiles/
+backend/__pycache__/
+*.pyc
+*.pyo
+.env
+.env.local
+release/
+out/
+tests/fixtures/*.xlsx
