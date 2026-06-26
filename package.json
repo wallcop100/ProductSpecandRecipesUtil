@@ -2,6 +2,7 @@
   "name": "recipe-builder",
   "version": "0.1.0",
   "description": "Product Spec & Recipes Builder",
+  "author": "wallcop100 <wallcop100@gmail.com>",
   "main": "electron/main.js",
   "scripts": {
     "dev": "concurrently \"vite\" \"electron .\"",

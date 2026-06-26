@@ -11,5 +11,4 @@ module.exports = {
   },
   mac: { target: ['dmg', 'zip'] },
   win: { target: ['nsis'] },
-  linux: { target: ['AppImage'] },
 }
