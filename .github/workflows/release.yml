@@ -39,6 +39,16 @@ jobs:
       - name: Rebuild native modules for Electron
         run: npx electron-builder install-app-deps
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Build Python backend
+        run: |
+          pip install pyinstaller flask flask-cors openpyxl
+          pyinstaller --onefile --name backend-server --distpath dist-python backend/app.py
+
       - name: Build React
         run: npm run build
 

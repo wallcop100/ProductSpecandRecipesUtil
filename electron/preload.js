@@ -6,6 +6,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // File dialogs
   openFolderDialog: () => ipcRenderer.invoke('open-folder-dialog'),
 
+  // Flask status
+  onFlaskStatus: (callback) =>
+    ipcRenderer.on('flask-status', (_event, data) => callback(data)),
+
   // File watcher
   startWatcher: (opts) => ipcRenderer.invoke('start-watcher', opts),
   stopWatcher: () => ipcRenderer.invoke('stop-watcher'),

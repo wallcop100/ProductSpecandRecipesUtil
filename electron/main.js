@@ -25,6 +25,7 @@ const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
 let mainWindow = null
 let flaskProcess = null
 let watcher = null
+let flaskReady = false
 
 // ---------------------------------------------------------------------------
 // Flask management
@@ -40,18 +41,39 @@ function pingFlask() {
   })
 }
 
-async function startFlask() {
-  const scriptPath = isDev
-    ? path.join(__dirname, '..', 'backend', 'app.py')
-    : path.join(process.resourcesPath, 'backend', 'app.py')
-
-  flaskProcess = spawn('python', [scriptPath], {
-    env: { ...process.env },
+function spawnPython(pythonCmd, scriptPath) {
+  return new Promise((resolve) => {
+    const proc = spawn(pythonCmd, [scriptPath], { env: { ...process.env } })
+    // If the command doesn't exist, 'error' fires before any data
+    proc.once('error', () => resolve(null))
+    // Give it a moment; if no error, assume the process launched
+    setTimeout(() => resolve(proc), 400)
   })
+}
 
-  flaskProcess.stdout.on('data', (data) => log.info('[Flask]', data.toString()))
-  flaskProcess.stderr.on('data', (data) => log.warn('[Flask stderr]', data.toString()))
-  flaskProcess.on('exit', (code) => log.info('[Flask] exited with code', code))
+async function startFlask() {
+  let proc
+
+  if (isDev) {
+    const scriptPath = path.join(__dirname, '..', 'backend', 'app.py')
+    const candidates = ['python', 'python3', 'py']
+    for (const cmd of candidates) {
+      proc = await spawnPython(cmd, scriptPath)
+      if (proc) break
+      log.warn(`[Flask] '${cmd}' not found, trying next`)
+    }
+    if (!proc) throw new Error('Python not found. Install Python 3 to run in dev mode.')
+  } else {
+    const exeName = process.platform === 'win32' ? 'backend-server.exe' : 'backend-server'
+    const exePath = path.join(process.resourcesPath, exeName)
+    proc = spawn(exePath, [], { env: { ...process.env } })
+  }
+
+  proc.stdout.on('data', (data) => log.info('[Flask]', data.toString()))
+  proc.stderr.on('data', (data) => log.warn('[Flask stderr]', data.toString()))
+  proc.on('exit', (code) => log.info('[Flask] exited with code', code))
+  proc.on('error', (err) => log.error('[Flask] process error:', err))
+  flaskProcess = proc
 
   // Poll /ping until ready (max FLASK_TIMEOUT_MS)
   const deadline = Date.now() + FLASK_TIMEOUT_MS
@@ -83,6 +105,10 @@ function createWindow() {
   } else {
     mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'))
   }
+
+  mainWindow.webContents.on('did-finish-load', () => {
+    mainWindow.webContents.send('flask-status', { ready: flaskReady })
+  })
 
   mainWindow.on('closed', () => { mainWindow = null })
 }
@@ -253,10 +279,11 @@ app.whenReady().then(async () => {
 
   try {
     await startFlask()
+    flaskReady = true
     log.info('Flask started successfully')
   } catch (err) {
     log.error('Flask failed to start:', err)
-    // Continue anyway — user will see connection errors in UI
+    // Continue anyway — renderer will receive flask-status { ready: false }
   }
 
   createWindow()

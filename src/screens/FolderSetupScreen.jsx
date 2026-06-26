@@ -29,6 +29,16 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
   const [detectError, setDetectError] = useState(null)
   const [opening, setOpening] = useState(false)
   const [openError, setOpenError] = useState(null)
+  const [flaskError, setFlaskError] = useState(null)
+
+  // Listen for Flask startup status from main process
+  useEffect(() => {
+    window.electronAPI.onFlaskStatus(({ ready }) => {
+      if (!ready) {
+        setFlaskError('The backend service failed to start. Try restarting the application. Check the application logs for details.')
+      }
+    })
+  }, [])
 
   // On mount: try to resume last project
   useEffect(() => {
@@ -215,7 +225,8 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
             )}
           </div>
 
-          {detectError && <Alert variant="danger" className="py-2">{detectError}</Alert>}
+          {flaskError && <Alert variant="danger" className="py-2"><strong>Backend unavailable:</strong> {flaskError}</Alert>}
+          {detectError && !flaskError && <Alert variant="danger" className="py-2">{detectError}</Alert>}
 
           {/* Step 2: File detection */}
           {detectedFiles && !detecting && (
