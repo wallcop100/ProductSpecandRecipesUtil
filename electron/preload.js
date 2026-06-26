@@ -19,8 +19,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // DB — Projects & all SQLite operations
   db: {
     upsertProject: (data) => ipcRenderer.invoke('db-upsert-project', data),
-    getProject: (folderPath) => ipcRenderer.invoke('db-get-project', { folderPath }),
+    getProject: (folderPath, configName) => ipcRenderer.invoke('db-get-project', { folderPath, configName }),
+    getConfigsForFolder: (folderPath) => ipcRenderer.invoke('db-get-configs-for-folder', { folderPath }),
+    getAllProjects: () => ipcRenderer.invoke('db-get-all-projects'),
+    deleteProject: (projectId) => ipcRenderer.invoke('db-delete-project', { projectId }),
     getLastProject: () => ipcRenderer.invoke('db-get-last-project'),
+
+    // Config YAML export / import
+    exportConfigYAML: (projectId, defaultName) => ipcRenderer.invoke('config-export-yaml', { projectId, defaultName }),
+    importConfigYAML: (projectId) => ipcRenderer.invoke('config-import-yaml', { projectId }),
+
+    // Default tag palette + rules (bundled YAML)
+    getDefaultTags: () => ipcRenderer.invoke('get-default-tags'),
 
     // Position UI
     upsertPositionUI: (projectId, positionTypeRef, data) =>
@@ -50,6 +60,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('db-set-pref', { projectId, key, value }),
     getPref: (projectId, key) =>
       ipcRenderer.invoke('db-get-pref', { projectId, key }),
+
+    // ET Collections
+    upsertCollection: (projectId, collection) =>
+      ipcRenderer.invoke('db-upsert-collection', { projectId, collection }),
+    getAllCollections: (projectId) =>
+      ipcRenderer.invoke('db-get-all-collections', { projectId }),
+    deleteCollection: (collectionId) =>
+      ipcRenderer.invoke('db-delete-collection', { collectionId }),
   },
 
   // App

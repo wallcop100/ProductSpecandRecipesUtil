@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react'
 import useStore from '../store/useStore'
 import TagBadge from './TagBadge'
-import { TAG_GROUPS } from '../utils/constants'
 
 /**
  * PositionList — scrollable list of all position types.
@@ -28,15 +27,6 @@ export default function PositionList({ filter = '' }) {
     return map
   }, [validationResults])
 
-  const tagGroupMap = useMemo(() => {
-    const map = {}
-    for (const [group, tags] of Object.entries(TAG_GROUPS)) {
-      for (const tag of tags) {
-        map[tag] = group
-      }
-    }
-    return map
-  }, [])
 
   // Apply the filter: match on ref, name, or any tag.
   const q = filter.trim().toLowerCase()
@@ -99,7 +89,7 @@ export default function PositionList({ filter = '' }) {
               {tags.length > 0 && (
                 <div className="d-flex gap-1 flex-wrap mt-1">
                   {tags.slice(0, 4).map(tag => (
-                    <TagBadge key={tag} tag={tag} group={tagGroupMap[tag] || 'Special'} />
+                    <TagBadge key={tag} tag={tag} />
                   ))}
                   {tags.length > 4 && (
                     <span className="text-muted" style={{ fontSize: 10 }}>+{tags.length - 4}</span>

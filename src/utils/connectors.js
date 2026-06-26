@@ -248,26 +248,20 @@ export function connectorGaps(grouped) {
             label: `Add matching plug ${plug} in ${labelFor(target)}` })
         }
       } else if (role === 'plug') {
-        const socket = counterpartRef(ref)
-        if (socket && !has(socket)) {
+        const socket    = counterpartRef(ref)                    // legacy: PLUG → SOCKET
+        const sockAlt   = ref.replace(/PLUG/gi, 'SOCK')         // abstract: PLUG → SOCK
+        if (!has(socket) && !has(sockAlt)) {
           // a plug in the DL implies the free-issued socket at position level
-          const target = section.key === 'dl_internal' ? 'position' : section.key
-          push({ kind: 'socket', ref: socket, section: target, sourceRef: ref, optional: false,
-            label: `Add matching socket ${socket} at ${labelFor(target)}` })
+          const target     = section.key === 'dl_internal' ? 'position' : section.key
+          // Prefer SOCK form for refs using NNPin convention (abstract refs)
+          const suggestRef = /\dPIN/i.test(ref) ? sockAlt : socket
+          push({ kind: 'socket', ref: suggestRef, section: target, sourceRef: ref, optional: false,
+            label: `Add matching socket ${suggestRef} at ${labelFor(target)}` })
         }
       }
     }
-
-    // Optional strain relief: a level with connectors but no SR (never required)
-    const roles = section.rows.map(r => connectorRole(refOf(r)))
-    const hasConn = roles.some(r => r === 'socket' || r === 'plug')
-    const hasSR = roles.includes('sr')
-    if (hasConn && !hasSR) {
-      const firstConn = section.rows.find(r => ['socket', 'plug'].includes(connectorRole(refOf(r))))
-      const sr = strainReliefRef(refOf(firstConn))
-      if (sr) push({ kind: 'sr', ref: sr, section: section.key, sourceRef: refOf(firstConn), optional: true,
-        label: `Add strain relief ${sr} at ${labelFor(section.key)}` })
-    }
+    // SR hints removed: connector templates include SR explicitly, and
+    // LOCAL_MISSING_STRAIN_RELIEF validation catches genuinely absent SRs.
   }
 
   return gaps

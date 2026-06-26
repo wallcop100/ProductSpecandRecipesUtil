@@ -64,6 +64,7 @@ export function runValidation(dbData, psRows, rsRows, positionUI) {
   issues.push(...checkLocalDriverRequirements(rsRows, positionUI))
   issues.push(...checkRemoteNoSiteSocket(rsRows, positionUI))
   issues.push(...checkExteriorIPConnectors(rsRows, positionUI))
+  issues.push(...checkMissingProductSpecs(psRows))
 
   return issues
 }
@@ -331,6 +332,26 @@ function checkRemoteNoSiteSocket(rsRows, positionUI) {
   }
 
   return issues
+}
+
+// ---------------------------------------------------------------------------
+// Rule 10 — MISSING_PRODUCT_CODE (soft warning)
+// PS rows with no ProductCode and not marked TBC are likely incomplete.
+// ---------------------------------------------------------------------------
+function checkMissingProductSpecs(psRows) {
+  return psRows
+    .filter(r => {
+      if ((r.IsDeleted || r.isDeleted) === 'Y') return false
+      if ((r.IsTBC || r.isTBC) === 'Y') return false
+      const code = (r.ProductCode || r.productCode || '').trim()
+      return !code
+    })
+    .map(r => ({
+      severity: 'warning',
+      rule: 'MISSING_PRODUCT_CODE',
+      message: `"${r.ElementTypeRef || r.elementTypeRef}" has no ProductCode and is not marked TBC.`,
+      ref: null,
+    }))
 }
 
 // ---------------------------------------------------------------------------

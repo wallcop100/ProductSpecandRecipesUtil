@@ -2,6 +2,8 @@
 
 const { app, BrowserWindow, ipcMain, dialog } = require('electron')
 const path = require('path')
+const fs = require('fs')
+const yaml = require('js-yaml')
 const { spawn } = require('child_process')
 const http = require('http')
 const chokidar = require('chokidar')
@@ -225,10 +227,39 @@ ipcMain.handle('start-watcher', (event, { folderPath, psFilename, rsFilename }) 
 ipcMain.handle('stop-watcher', () => stopWatcher())
 
 // SQLite — Projects
-ipcMain.handle('db-upsert-project', (event, { folderPath, dbFilename, psFilename, rsFilename }) =>
-  db.upsertProject(folderPath, dbFilename, psFilename, rsFilename))
-ipcMain.handle('db-get-project', (event, { folderPath }) => db.getProject(folderPath))
+ipcMain.handle('db-upsert-project', (event, { folderPath, configName, projectNumber, projectLabel, dbFilename, psFilename, rsFilename }) =>
+  db.upsertProject(folderPath, configName, projectNumber, projectLabel, dbFilename, psFilename, rsFilename))
+ipcMain.handle('db-get-project', (event, { folderPath, configName }) => db.getProject(folderPath, configName))
+ipcMain.handle('db-get-configs-for-folder', (event, { folderPath }) => db.getConfigsForFolder(folderPath))
+ipcMain.handle('db-get-all-projects', () => db.getAllProjects())
+ipcMain.handle('db-delete-project', (event, { projectId }) => db.deleteProject(projectId))
 ipcMain.handle('db-get-last-project', () => db.getLastProject())
+
+// Config YAML export / import
+ipcMain.handle('config-export-yaml', async (event, { projectId, defaultName }) => {
+  const data = db.collectConfigData(projectId)
+  const result = await dialog.showSaveDialog(mainWindow, {
+    title: 'Export project config',
+    defaultPath: `${defaultName || 'project-config'}.yaml`,
+    filters: [{ name: 'YAML', extensions: ['yaml', 'yml'] }],
+  })
+  if (result.canceled || !result.filePath) return { ok: false, canceled: true }
+  fs.writeFileSync(result.filePath, yaml.dump(data, { noRefs: true }), 'utf8')
+  return { ok: true, path: result.filePath }
+})
+
+ipcMain.handle('config-import-yaml', async (event, { projectId }) => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Import project config',
+    properties: ['openFile'],
+    filters: [{ name: 'YAML', extensions: ['yaml', 'yml'] }],
+  })
+  if (result.canceled || !result.filePaths?.[0]) return { ok: false, canceled: true }
+  const raw = fs.readFileSync(result.filePaths[0], 'utf8')
+  const data = yaml.load(raw) || {}
+  db.applyConfigData(projectId, data)
+  return { ok: true, path: result.filePaths[0] }
+})
 
 // SQLite — Position UI
 ipcMain.handle('db-upsert-position-ui', (event, { projectId, positionTypeRef, data }) =>
@@ -256,6 +287,26 @@ ipcMain.handle('db-set-pref', (event, { projectId, key, value }) =>
   db.setPref(projectId, key, value))
 ipcMain.handle('db-get-pref', (event, { projectId, key }) =>
   db.getPref(projectId, key))
+
+// SQLite — ET Collections
+ipcMain.handle('db-upsert-collection', (event, { projectId, collection }) =>
+  db.upsertCollection(projectId, collection))
+ipcMain.handle('db-get-all-collections', (event, { projectId }) =>
+  db.getAllCollections(projectId))
+ipcMain.handle('db-delete-collection', (event, { collectionId }) =>
+  db.deleteCollection(collectionId))
+
+// Default tag palette + rules (bundled YAML, seeded into new configs)
+ipcMain.handle('get-default-tags', () => {
+  try {
+    const raw = fs.readFileSync(path.join(__dirname, 'default-tags.yaml'), 'utf8')
+    const data = yaml.load(raw) || {}
+    return { palette: data.palette || [], rules: data.rules || [] }
+  } catch (err) {
+    log.warn('[tags] could not read default-tags.yaml:', err.message)
+    return { palette: [], rules: [] }
+  }
+})
 
 // App info
 ipcMain.handle('get-app-version', () => app.getVersion())

@@ -18,8 +18,8 @@ import RecipeSection from '../components/RecipeSection'
 import DuplicateETModal from '../components/DuplicateETModal'
 import ConnectorWizardModal from '../components/ConnectorWizardModal'
 import Breadcrumbs from '../components/Breadcrumbs'
+import ProjectIdPill from '../components/ProjectIdPill'
 import ElementPalette from '../components/ElementPalette'
-import TagReviewSidebar from '../components/TagReviewSidebar'
 import ValidationPanel from '../components/ValidationPanel'
 import TemplatePicker from '../components/TemplatePicker'
 
@@ -32,8 +32,10 @@ import TemplatePicker from '../components/TemplatePicker'
  * supporting tabs. Drilling into a container element's internal recipe swaps the
  * centre for a focused ET editor.
  */
-export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec, onBackToSetup }) {
+export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec, onOpenConnectors, onOpenTags, onBackToSetup }) {
   const rootView = useStore(s => s.rootView)
+  const projectNumber = useStore(s => s.projectNumber)
+  const configName = useStore(s => s.configName)
   const activePositionRef = useStore(s => s.activePositionRef)
   const activeContextType = useStore(s => s.activeContextType)
   const activeETRef = useStore(s => s.activeETRef)
@@ -60,6 +62,8 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
   const [showConnModal, setShowConnModal] = useState(false)
   const [rightTab, setRightTab] = useState('palette')
   const [showDeleted, setShowDeleted] = useState(false)
+  const [leftOpen, setLeftOpen] = useState(false)
+  const [rightOpen, setRightOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState(null)
   const [exportSuccess, setExportSuccess] = useState(false)
@@ -235,11 +239,17 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
         <Button variant="outline-secondary" size="sm" onClick={onBackToSetup}>
           ← Back
         </Button>
+        {projectNumber && (
+          <ProjectIdPill number={projectNumber} configName={configName} size="sm" className="me-1" />
+        )}
         <Button variant="outline-secondary" size="sm" onClick={onOpenTemplateEditor}>
           Template Editor
         </Button>
         <Button variant="outline-secondary" size="sm" onClick={() => onOpenProductSpec()}>
           Product Spec
+        </Button>
+        <Button variant="outline-secondary" size="sm" onClick={onOpenTags}>
+          Tags
         </Button>
 
         <ButtonGroup size="sm" className="ms-2">
@@ -324,27 +334,88 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
         <Breadcrumbs />
       </div>
 
-      {/* Three-column body */}
+      {/* Main body: canvas with drawer toggles */}
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
 
-        {/* Left panel: compact jump/filter index */}
+        {/* Left drawer toggle */}
+        <button
+          onClick={() => setLeftOpen(v => !v)}
+          title={leftOpen ? 'Close navigator' : 'Open navigator'}
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            zIndex: 10,
+            background: '#f8f9fa',
+            border: '1px solid #dee2e6',
+            borderLeft: 'none',
+            borderRadius: '0 4px 4px 0',
+            padding: '8px 4px',
+            cursor: 'pointer',
+            lineHeight: 1,
+            fontSize: 13,
+            color: '#555',
+          }}
+        >
+          {leftOpen ? '◀' : '▶'}
+        </button>
+
+        {/* Right drawer toggle */}
+        <button
+          onClick={() => setRightOpen(v => !v)}
+          title={rightOpen ? 'Close palette' : 'Open palette'}
+          style={{
+            position: 'absolute',
+            right: 0,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            zIndex: 10,
+            background: '#f8f9fa',
+            border: '1px solid #dee2e6',
+            borderRight: 'none',
+            borderRadius: '4px 0 0 4px',
+            padding: '8px 4px',
+            cursor: 'pointer',
+            lineHeight: 1,
+            fontSize: 13,
+            color: '#555',
+          }}
+        >
+          {rightOpen ? '▶' : '◀'}
+        </button>
+
+        {/* Left drawer: navigator */}
         <div
           style={{
-            width: 240,
-            flexShrink: 0,
-            borderRight: '1px solid #dee2e6',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            bottom: 0,
+            width: 260,
+            zIndex: 20,
             display: 'flex',
             flexDirection: 'column',
             background: '#f8f9fa',
+            borderRight: '1px solid #dee2e6',
+            transform: leftOpen ? 'translateX(0)' : 'translateX(-100%)',
+            transition: 'transform 0.2s ease',
+            boxShadow: leftOpen ? '2px 0 8px rgba(0,0,0,0.12)' : 'none',
           }}
         >
-          <ProjectNavigator />
+          <div className="d-flex align-items-center justify-content-between px-3 py-2 border-bottom" style={{ flexShrink: 0 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#555' }}>Navigator</span>
+            <button className="btn btn-link p-0" style={{ fontSize: 16, color: '#888', lineHeight: 1 }} onClick={() => setLeftOpen(false)}>×</button>
+          </div>
+          <div style={{ flex: 1, overflow: 'hidden' }}>
+            <ProjectNavigator />
+          </div>
         </div>
 
         {/* Centre: project tree outliner (or ET internal editor) */}
@@ -396,44 +467,52 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
           ) : (
             <ProjectTreeView
               onOpenProductSpec={onOpenProductSpec}
+              onOpenConnectors={onOpenConnectors}
               showDeleted={showDeleted}
             />
           )}
         </div>
 
-        {/* Right panel: tabs */}
+        {/* Right drawer: tabbed palette */}
         <div
           style={{
-            width: 260,
-            flexShrink: 0,
-            borderLeft: '1px solid #dee2e6',
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            bottom: 0,
+            width: 280,
+            zIndex: 20,
             display: 'flex',
             flexDirection: 'column',
             background: '#fff',
+            borderLeft: '1px solid #dee2e6',
+            transform: rightOpen ? 'translateX(0)' : 'translateX(100%)',
+            transition: 'transform 0.2s ease',
+            boxShadow: rightOpen ? '-2px 0 8px rgba(0,0,0,0.12)' : 'none',
           }}
         >
-          <Nav
-            variant="tabs"
-            className="px-2 pt-2"
-            activeKey={rightTab}
-            onSelect={k => setRightTab(k)}
-          >
-            <Nav.Item>
-              <Nav.Link eventKey="palette" className="py-1 px-2 small">Elements</Nav.Link>
-            </Nav.Item>
-            <Nav.Item>
-              <Nav.Link eventKey="tags" className="py-1 px-2 small">Tags</Nav.Link>
-            </Nav.Item>
-            <Nav.Item>
-              <Nav.Link eventKey="templates" className="py-1 px-2 small">Templates</Nav.Link>
-            </Nav.Item>
-            <Nav.Item>
-              <Nav.Link eventKey="validation" className="py-1 px-2 small">Validation</Nav.Link>
-            </Nav.Item>
-          </Nav>
+          <div style={{ flexShrink: 0, borderBottom: '1px solid #dee2e6', display: 'flex', alignItems: 'center' }}>
+            <Nav
+              variant="tabs"
+              activeKey={rightTab}
+              onSelect={k => setRightTab(k)}
+              className="px-2 pt-1 flex-grow-1"
+              style={{ borderBottom: 'none' }}
+            >
+              <Nav.Item>
+                <Nav.Link eventKey="palette" className="py-1 px-2 small">Elements</Nav.Link>
+              </Nav.Item>
+              <Nav.Item>
+                <Nav.Link eventKey="templates" className="py-1 px-2 small">Templates</Nav.Link>
+              </Nav.Item>
+              <Nav.Item>
+                <Nav.Link eventKey="validation" className="py-1 px-2 small">Validation</Nav.Link>
+              </Nav.Item>
+            </Nav>
+            <button className="btn btn-link p-0 me-2" style={{ fontSize: 16, color: '#888', lineHeight: 1 }} onClick={() => setRightOpen(false)}>×</button>
+          </div>
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {rightTab === 'palette' && <ElementPalette />}
-            {rightTab === 'tags' && <TagReviewSidebar />}
             {rightTab === 'templates' && (
               <TemplatePicker
                 posRef={activePositionRef}

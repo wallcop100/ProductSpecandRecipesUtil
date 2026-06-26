@@ -1,12 +1,5 @@
 export const FLASK_PORT = 5001
 
-export const TAG_GROUPS = {
-  FittingType: ['DL', 'LIN', 'PS', 'PANEL'],
-  Driver: ['Local', 'Remote-CC', 'Remote-CV', 'No-Driver'],
-  Wiring: ['5Pin-DALI', '3Pin-TE', '4Pin-TW', 'IP-Rated'],
-  Special: ['TwinSpot', 'Exterior', 'JunctionBox'],
-}
-
 export const FLAG_COLUMNS = ['IsDesign', 'IsContractItem', 'IsTBC', 'IsPropertiesTBC']
 
 export const DIM_QTY_COMPONENTS = ['TAPE', 'PROFILE', 'DIFF', 'MOUNT', 'FLEX']

@@ -14,7 +14,58 @@ function initDb(dbPath) {
   db.pragma('journal_mode = WAL')
   db.pragma('foreign_keys = ON')
   createTables()
+  migrate()
   return db
+}
+
+/**
+ * migrate() — additive schema migrations for existing project DBs.
+ * CREATE TABLE IF NOT EXISTS can't add columns to pre-existing tables, so we
+ * check and ALTER here. Safe to run on every startup.
+ */
+function migrate() {
+  const hasColumn = (table, column) =>
+    db.prepare(`PRAGMA table_info(${table})`).all().some(c => c.name === column)
+
+  if (!hasColumn('position_ui', 'ignored')) {
+    db.exec(`ALTER TABLE position_ui ADD COLUMN ignored INTEGER DEFAULT 0`)
+  }
+  // Tag exceptions (Phase 2): per-position add/remove overrides on top of rule tags.
+  if (!hasColumn('position_ui', 'tag_add')) {
+    db.exec(`ALTER TABLE position_ui ADD COLUMN tag_add TEXT DEFAULT '[]'`)
+  }
+  if (!hasColumn('position_ui', 'tag_remove')) {
+    db.exec(`ALTER TABLE position_ui ADD COLUMN tag_remove TEXT DEFAULT '[]'`)
+  }
+
+  // projects: config-aware identity. Old schema keyed by UNIQUE(folder_path) with
+  // no config columns. Rebuild preserving `id` so overlay FKs stay valid, and
+  // switch the unique constraint to (folder_path, config_name).
+  if (!hasColumn('projects', 'config_name')) {
+    db.pragma('foreign_keys = OFF')
+    const rebuild = db.transaction(() => {
+      db.exec(`
+        CREATE TABLE projects_new (
+          id             INTEGER PRIMARY KEY AUTOINCREMENT,
+          folder_path    TEXT NOT NULL,
+          config_name    TEXT NOT NULL DEFAULT 'Base',
+          project_number TEXT,
+          project_label  TEXT,
+          db_filename    TEXT,
+          ps_filename    TEXT,
+          rs_filename    TEXT,
+          last_opened    TEXT,
+          UNIQUE(folder_path, config_name)
+        );
+        INSERT INTO projects_new (id, folder_path, config_name, db_filename, ps_filename, rs_filename, last_opened)
+          SELECT id, folder_path, 'Base', db_filename, ps_filename, rs_filename, last_opened FROM projects;
+        DROP TABLE projects;
+        ALTER TABLE projects_new RENAME TO projects;
+      `)
+    })
+    rebuild()
+    db.pragma('foreign_keys = ON')
+  }
 }
 
 function getDb() {
@@ -29,12 +80,16 @@ function getDb() {
 function createTables() {
   db.exec(`
     CREATE TABLE IF NOT EXISTS projects (
-      id           INTEGER PRIMARY KEY AUTOINCREMENT,
-      folder_path  TEXT UNIQUE NOT NULL,
-      db_filename  TEXT,
-      ps_filename  TEXT,
-      rs_filename  TEXT,
-      last_opened  TEXT
+      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      folder_path    TEXT NOT NULL,
+      config_name    TEXT NOT NULL DEFAULT 'Base',
+      project_number TEXT,
+      project_label  TEXT,
+      db_filename    TEXT,
+      ps_filename    TEXT,
+      rs_filename    TEXT,
+      last_opened    TEXT,
+      UNIQUE(folder_path, config_name)
     );
 
     CREATE TABLE IF NOT EXISTS position_ui (
@@ -44,7 +99,10 @@ function createTables() {
       tags               TEXT DEFAULT '[]',
       tag_source         TEXT DEFAULT '{}',
       tag_confidence     TEXT DEFAULT 'high',
+      tag_add            TEXT DEFAULT '[]',
+      tag_remove         TEXT DEFAULT '[]',
       user_notes         TEXT DEFAULT '',
+      ignored            INTEGER DEFAULT 0,
       UNIQUE(project_id, position_type_ref)
     );
 
@@ -78,6 +136,16 @@ function createTables() {
       value      TEXT,
       UNIQUE(project_id, key)
     );
+
+    CREATE TABLE IF NOT EXISTS et_collections (
+      CollectionId    TEXT PRIMARY KEY,
+      project_id      INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      Name            TEXT NOT NULL,
+      ApplicableTags  TEXT DEFAULT '[]',
+      Ingredients     TEXT DEFAULT '[]',
+      CreatedAt       TEXT,
+      UpdatedAt       TEXT
+    );
   `)
 }
 
@@ -106,25 +174,50 @@ function parseTemplate(row) {
 // Projects
 // ---------------------------------------------------------------------------
 
-function upsertProject(folderPath, dbFilename, psFilename, rsFilename) {
+function upsertProject(folderPath, configName = 'Base', projectNumber = null, projectLabel = null, dbFilename = null, psFilename = null, rsFilename = null) {
   const database = getDb()
   const ts = now()
+  const config = configName || 'Base'
   database
     .prepare(`
-      INSERT INTO projects (folder_path, db_filename, ps_filename, rs_filename, last_opened)
-      VALUES (@folderPath, @dbFilename, @psFilename, @rsFilename, @ts)
-      ON CONFLICT(folder_path) DO UPDATE SET
-        db_filename = excluded.db_filename,
-        ps_filename = excluded.ps_filename,
-        rs_filename = excluded.rs_filename,
-        last_opened = excluded.last_opened
+      INSERT INTO projects (folder_path, config_name, project_number, project_label, db_filename, ps_filename, rs_filename, last_opened)
+      VALUES (@folderPath, @config, @projectNumber, @projectLabel, @dbFilename, @psFilename, @rsFilename, @ts)
+      ON CONFLICT(folder_path, config_name) DO UPDATE SET
+        project_number = excluded.project_number,
+        project_label  = excluded.project_label,
+        db_filename    = excluded.db_filename,
+        ps_filename    = excluded.ps_filename,
+        rs_filename    = excluded.rs_filename,
+        last_opened    = excluded.last_opened
     `)
-    .run({ folderPath, dbFilename, psFilename, rsFilename, ts })
-  return database.prepare('SELECT * FROM projects WHERE folder_path = ?').get(folderPath)
+    .run({ folderPath, config, projectNumber, projectLabel, dbFilename, psFilename, rsFilename, ts })
+  return database.prepare('SELECT * FROM projects WHERE folder_path = ? AND config_name = ?').get(folderPath, config)
 }
 
-function getProject(folderPath) {
-  return getDb().prepare('SELECT * FROM projects WHERE folder_path = ?').get(folderPath) || null
+function getProject(folderPath, configName = 'Base') {
+  return getDb()
+    .prepare('SELECT * FROM projects WHERE folder_path = ? AND config_name = ?')
+    .get(folderPath, configName || 'Base') || null
+}
+
+/** All configs saved for a folder, most-recently-opened first. */
+function getConfigsForFolder(folderPath) {
+  return getDb()
+    .prepare('SELECT * FROM projects WHERE folder_path = ? ORDER BY last_opened DESC')
+    .all(folderPath)
+}
+
+/** Every project/config row, for the project manager. */
+function getAllProjects() {
+  return getDb()
+    .prepare('SELECT * FROM projects ORDER BY project_number, folder_path, config_name')
+    .all()
+}
+
+/** Wipe a single config (cascade deletes all its overlay data). */
+function deleteProject(projectId) {
+  getDb().prepare('DELETE FROM projects WHERE id = ?').run(projectId)
+  return true
 }
 
 function getLastProject() {
@@ -145,50 +238,55 @@ function updateLastOpened(projectId) {
 // Position UI
 // ---------------------------------------------------------------------------
 
-function upsertPositionUI(projectId, positionTypeRef, { tags = [], tagSource = {}, tagConfidence = 'high', userNotes = '' } = {}) {
+function upsertPositionUI(projectId, positionTypeRef, { tags = [], tagAdd = [], tagRemove = [], userNotes = '', ignored = false } = {}) {
   const database = getDb()
   database
     .prepare(`
-      INSERT INTO position_ui (project_id, position_type_ref, tags, tag_source, tag_confidence, user_notes)
-      VALUES (@projectId, @positionTypeRef, @tags, @tagSource, @tagConfidence, @userNotes)
+      INSERT INTO position_ui (project_id, position_type_ref, tags, tag_add, tag_remove, user_notes, ignored)
+      VALUES (@projectId, @positionTypeRef, @tags, @tagAdd, @tagRemove, @userNotes, @ignored)
       ON CONFLICT(project_id, position_type_ref) DO UPDATE SET
-        tags           = excluded.tags,
-        tag_source     = excluded.tag_source,
-        tag_confidence = excluded.tag_confidence,
-        user_notes     = excluded.user_notes
+        tags       = excluded.tags,
+        tag_add    = excluded.tag_add,
+        tag_remove = excluded.tag_remove,
+        user_notes = excluded.user_notes,
+        ignored    = excluded.ignored
     `)
     .run({
       projectId,
       positionTypeRef,
       tags: JSON.stringify(tags),
-      tagSource: JSON.stringify(tagSource),
-      tagConfidence,
+      tagAdd: JSON.stringify(tagAdd),
+      tagRemove: JSON.stringify(tagRemove),
       userNotes,
+      ignored: ignored ? 1 : 0,
     })
   return getPositionUI(projectId, positionTypeRef)
+}
+
+function parsePositionUIRow(row) {
+  if (!row) return null
+  return {
+    ...row,
+    tags: JSON.parse(row.tags || '[]'),
+    tag_add: JSON.parse(row.tag_add || '[]'),
+    tag_remove: JSON.parse(row.tag_remove || '[]'),
+    tag_source: JSON.parse(row.tag_source || '{}'),
+    ignored: !!row.ignored,
+  }
 }
 
 function getPositionUI(projectId, positionTypeRef) {
   const row = getDb()
     .prepare('SELECT * FROM position_ui WHERE project_id = ? AND position_type_ref = ?')
     .get(projectId, positionTypeRef)
-  if (!row) return null
-  return {
-    ...row,
-    tags: JSON.parse(row.tags || '[]'),
-    tag_source: JSON.parse(row.tag_source || '{}'),
-  }
+  return parsePositionUIRow(row)
 }
 
 function getAllPositionUI(projectId) {
-  const rows = getDb()
+  return getDb()
     .prepare('SELECT * FROM position_ui WHERE project_id = ?')
     .all(projectId)
-  return rows.map((row) => ({
-    ...row,
-    tags: JSON.parse(row.tags || '[]'),
-    tag_source: JSON.parse(row.tag_source || '{}'),
-  }))
+    .map(parsePositionUIRow)
 }
 
 // ---------------------------------------------------------------------------
@@ -351,6 +449,16 @@ function getPref(projectId, key) {
     .prepare('SELECT value FROM project_prefs WHERE project_id = ? AND key = ?')
     .get(projectId, key)
   return row ? row.value : null
+}
+
+/** All prefs for a project as a { key: value } map. */
+function getAllPrefs(projectId) {
+  const rows = getDb()
+    .prepare('SELECT key, value FROM project_prefs WHERE project_id = ?')
+    .all(projectId)
+  const out = {}
+  for (const r of rows) out[r.key] = r.value
+  return out
 }
 
 // ---------------------------------------------------------------------------
@@ -632,6 +740,139 @@ function seedGlobalTemplates() {
 }
 
 // ---------------------------------------------------------------------------
+// ET Collections
+// ---------------------------------------------------------------------------
+
+function parseCollection(row) {
+  if (!row) return null
+  return {
+    ...row,
+    ApplicableTags: JSON.parse(row.ApplicableTags || '[]'),
+    Ingredients:    JSON.parse(row.Ingredients    || '[]'),
+  }
+}
+
+function upsertCollection(projectId, collection) {
+  const database = getDb()
+  const ts = now()
+  const {
+    CollectionId,
+    Name,
+    ApplicableTags = [],
+    Ingredients    = [],
+    CreatedAt      = ts,
+  } = collection
+
+  database
+    .prepare(`
+      INSERT INTO et_collections (CollectionId, project_id, Name, ApplicableTags, Ingredients, CreatedAt, UpdatedAt)
+      VALUES (@CollectionId, @project_id, @Name, @ApplicableTags, @Ingredients, @CreatedAt, @UpdatedAt)
+      ON CONFLICT(CollectionId) DO UPDATE SET
+        Name           = excluded.Name,
+        ApplicableTags = excluded.ApplicableTags,
+        Ingredients    = excluded.Ingredients,
+        UpdatedAt      = excluded.UpdatedAt
+    `)
+    .run({
+      CollectionId,
+      project_id:    projectId,
+      Name,
+      ApplicableTags: JSON.stringify(ApplicableTags),
+      Ingredients:    JSON.stringify(Ingredients),
+      CreatedAt,
+      UpdatedAt: ts,
+    })
+  return parseCollection(
+    database.prepare('SELECT * FROM et_collections WHERE CollectionId = ?').get(CollectionId)
+  )
+}
+
+function getAllCollections(projectId) {
+  return getDb()
+    .prepare('SELECT * FROM et_collections WHERE project_id = ? ORDER BY CreatedAt ASC')
+    .all(projectId)
+    .map(parseCollection)
+}
+
+function deleteCollection(collectionId) {
+  getDb().prepare('DELETE FROM et_collections WHERE CollectionId = ?').run(collectionId)
+}
+
+// ---------------------------------------------------------------------------
+// Config overlay data (for YAML export/import)
+//
+// "Overlay" = everything a user adds on top of the imported dataset, scoped to
+// one config (a projects row): position UI/tags, collections, slot mappings,
+// project-scoped templates, and prefs. main.js handles YAML (de)serialisation
+// and file dialogs; these just gather/apply plain JS objects.
+// ---------------------------------------------------------------------------
+
+function collectConfigData(projectId) {
+  const database = getDb()
+  const project = database.prepare('SELECT * FROM projects WHERE id = ?').get(projectId)
+  const projectTemplates = database
+    .prepare("SELECT * FROM templates WHERE project_id = ? AND scope = 'project'")
+    .all(projectId)
+    .map(parseTemplate)
+
+  return {
+    version: 1,
+    project: project ? {
+      project_number: project.project_number,
+      project_label:  project.project_label,
+      config_name:    project.config_name,
+    } : null,
+    position_ui:   getAllPositionUI(projectId),
+    collections:   getAllCollections(projectId),
+    slot_mappings: getAllSlotMappings(projectId),   // { templateId: { slotKey: ref } }
+    templates:     projectTemplates,
+    prefs:         getAllPrefs(projectId),
+  }
+}
+
+function applyConfigData(projectId, data = {}) {
+  const database = getDb()
+  const apply = database.transaction(() => {
+    // Project metadata (number/label) — config_name stays as the target's own
+    if (data.project) {
+      database
+        .prepare('UPDATE projects SET project_number = COALESCE(@number, project_number), project_label = COALESCE(@label, project_label) WHERE id = @id')
+        .run({ id: projectId, number: data.project.project_number ?? null, label: data.project.project_label ?? null })
+    }
+
+    for (const row of (data.position_ui || [])) {
+      upsertPositionUI(projectId, row.position_type_ref, {
+        tags:      row.tags || [],
+        tagAdd:    row.tag_add || [],
+        tagRemove: row.tag_remove || [],
+        userNotes: row.user_notes || '',
+        ignored:   !!row.ignored,
+      })
+    }
+
+    for (const c of (data.collections || [])) {
+      upsertCollection(projectId, c)
+    }
+
+    for (const [templateId, slots] of Object.entries(data.slot_mappings || {})) {
+      for (const [slotKey, entityRef] of Object.entries(slots || {})) {
+        upsertSlotMapping(projectId, templateId, slotKey, entityRef)
+      }
+    }
+
+    for (const t of (data.templates || [])) {
+      upsertTemplate({ ...t, project_id: projectId, scope: 'project' })
+    }
+
+    for (const [key, value] of Object.entries(data.prefs || {})) {
+      setPref(projectId, key, value)
+    }
+  })
+  apply()
+  return true
+}
+
+// ---------------------------------------------------------------------------
 // Exports
 // ---------------------------------------------------------------------------
 
@@ -640,6 +881,9 @@ module.exports = {
   getDb,
   upsertProject,
   getProject,
+  getConfigsForFolder,
+  getAllProjects,
+  deleteProject,
   getLastProject,
   updateLastOpened,
   upsertPositionUI,
@@ -655,5 +899,11 @@ module.exports = {
   deleteSlotMapping,
   setPref,
   getPref,
+  getAllPrefs,
   seedGlobalTemplates,
+  upsertCollection,
+  getAllCollections,
+  deleteCollection,
+  collectConfigData,
+  applyConfigData,
 }

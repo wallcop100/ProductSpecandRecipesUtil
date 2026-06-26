@@ -10,10 +10,11 @@ import axios from 'axios'
 import { v4 as uuidv4 } from 'uuid'
 import { findBestTemplate, recipeToTemplate } from '../utils/templateLoader.js'
 import { resolveTemplate, applyResolvedTemplate } from '../utils/slotResolver.js'
-import { deriveTagsForAll } from '../utils/tagEngine.js'
+import { evaluateTags, effectiveTags, snapshotForPosition } from '../utils/tagRules.js'
 import { runValidation } from '../utils/validationRules.js'
 import { buildContainerETSet, looksLikeContainer, getNextAvailableRef } from '../utils/containerUtils.js'
 import { FLASK_PORT, DIM_QTY_COMPONENTS, AUTO_CONTRACT_ITEMS } from '../utils/constants.js'
+import { CONNECTOR_TEMPLATES } from '../data/connectorTemplates.js'
 
 const API = `http://localhost:${FLASK_PORT}`
 
@@ -132,6 +133,9 @@ const useStore = create((set, get) => ({
 
   // Project
   projectId: null,
+  projectNumber: null,
+  configName: null,
+  projectLabel: null,
   folderPath: null,
   paths: { db: null, ps: null, rs: null },
 
@@ -145,8 +149,26 @@ const useStore = create((set, get) => ({
   templates: [],
   slotMappings: {},      // { templateId: { slotKey: entityRef } }
 
+  // Virtual ElementType Collections (from SQLite et_collections)
+  etCollections: [],
+
+  // PositionType families flagged as ignored (persisted as project pref).
+  // Ignored families drop out of the connector matrix and high-level totals.
+  ignoredPositionFamilies: [],
+
   // Position UI (from SQLite)
-  positionUI: {},        // { [positionTypeRef]: { tags, tagSource, tagConfidence, userNotes } }
+  // { [positionTypeRef]: { tags (effective), ruleTags, tagAdd, tagRemove, userNotes, ignored } }
+  positionUI: {},
+
+  // Tag system (config-scoped). Rules derive tags from PositionType columns;
+  // palette is the free-form suggestion list. Both persisted as project prefs.
+  tagRules: [],
+  tagPalette: [],
+
+  // Drift tracking: tagSnapshots is the accepted baseline (pref 'tag_snapshots');
+  // tagDrift is the in-memory set of positions whose rule data changed on reimport.
+  tagSnapshots: {},      // { [ref]: { ruleTags, fields } }
+  tagDrift: {},          // { [ref]: { tagsBefore, tagsAfter, changedFields } }
 
   // Container ElementTypes — auto-detected from naming convention + manual overrides
   containerETRefs: new Set(),        // Set<string> of lowercased ET refs (derived)
@@ -183,11 +205,14 @@ const useStore = create((set, get) => ({
    * Sets all project data in one shot. Called from FolderSetupScreen after import.
    *
    * data: { projectId, folderPath, paths, elementTypes, positionTypes, psRows, recipes,
-   *          templates, slotMappings, positionUI }
+   *          templates, slotMappings, positionUI, etCollections }
    */
   loadProject(data) {
     const {
       projectId,
+      projectNumber,
+      configName,
+      projectLabel,
       folderPath,
       paths,
       elementTypes,
@@ -198,6 +223,12 @@ const useStore = create((set, get) => ({
       slotMappings,
       positionUI,
       manualContainerETs,
+      etCollections,
+      ignoredPositionFamilies,
+      tagRules,
+      tagPalette,
+      tagSnapshots,
+      tagDrift,
     } = data
 
     const stampedPsRows = stampIds(psRows ?? [])
@@ -205,15 +236,24 @@ const useStore = create((set, get) => ({
 
     set({
       projectId: projectId ?? null,
+      projectNumber: projectNumber ?? null,
+      configName: configName ?? null,
+      projectLabel: projectLabel ?? null,
       folderPath: folderPath ?? null,
       paths: paths ?? { db: null, ps: null, rs: null },
       elementTypes: elementTypes ?? [],
       positionTypes: positionTypes ?? [],
       psRows: stampedPsRows,
       recipes: stampIds(recipes ?? []),
-      templates: templates ?? [],
+      templates: [...(templates ?? []), ...CONNECTOR_TEMPLATES],
       slotMappings: slotMappings ?? {},
       positionUI: positionUI ?? {},
+      tagRules: tagRules ?? [],
+      tagPalette: tagPalette ?? [],
+      tagSnapshots: tagSnapshots ?? {},
+      tagDrift: tagDrift ?? {},
+      etCollections: etCollections ?? [],
+      ignoredPositionFamilies: ignoredPositionFamilies ?? [],
       containerETManualRefs: manualRefs,
       containerETRefs: buildContainerETSet(stampedPsRows, manualRefs, collectAllETRefs(elementTypes, stampedPsRows, stampIds(recipes ?? []))),
       // Reset transient state
@@ -247,25 +287,22 @@ const useStore = create((set, get) => ({
       const elementTypes = db_data?.element_types ?? []
       const positionTypes = db_data?.position_types ?? []
 
-      // Derive tags for all position types
-      const derivedTags = deriveTagsForAll(positionTypes)
-
-      // Merge with existing positionUI: SQLite manual tags override derived
+      // Re-evaluate rule tags against the (possibly changed) position data,
+      // preserving each position's add/remove exceptions.
+      const { tagRules } = get()
       const existingPositionUI = get().positionUI
       const mergedPositionUI = { ...existingPositionUI }
 
       for (const pt of positionTypes) {
         const ref = pt.PositionTypeRef
-        const derived = derivedTags[ref] || { tags: [], confidence: 'low', source: {} }
-
         const existing = existingPositionUI[ref] || {}
-        // If tagSource is 'manual', keep existing tags; otherwise use derived
-        const isManual = existing.tagSource === 'manual'
-
+        const ruleTags = evaluateTags(pt, tagRules)
         mergedPositionUI[ref] = {
-          tags: isManual ? (existing.tags || []) : derived.tags,
-          tagSource: isManual ? 'manual' : 'derived',
-          tagConfidence: isManual ? (existing.tagConfidence ?? null) : derived.confidence,
+          ...existing,
+          ruleTags,
+          tagAdd: existing.tagAdd || [],
+          tagRemove: existing.tagRemove || [],
+          tags: effectiveTags(ruleTags, existing.tagAdd || [], existing.tagRemove || []),
           userNotes: existing.userNotes ?? null,
         }
       }
@@ -359,21 +396,142 @@ const useStore = create((set, get) => ({
 
   /**
    * updatePositionUI(positionTypeRef, updates)
-   * Merges updates into positionUI[positionTypeRef] and persists to SQLite.
+   * Merges updates into positionUI[positionTypeRef], recomputes effective tags
+   * from rule tags + add/remove exceptions, and persists to SQLite.
    */
   async updatePositionUI(positionTypeRef, updates) {
-    const current = get().positionUI
-    const existing = current[positionTypeRef] || {}
+    const { positionUI, positionTypes, tagRules, projectId } = get()
+    const existing = positionUI[positionTypeRef] || {}
     const merged = { ...existing, ...updates }
 
-    set({
-      positionUI: {
-        ...current,
-        [positionTypeRef]: merged,
-      },
-    })
+    // Keep rule tags + effective tags consistent.
+    const pt = positionTypes.find(p => p.PositionTypeRef === positionTypeRef)
+    const ruleTags = pt ? evaluateTags(pt, tagRules) : (merged.ruleTags || [])
+    merged.ruleTags = ruleTags
+    merged.tagAdd = merged.tagAdd || []
+    merged.tagRemove = merged.tagRemove || []
+    merged.tags = effectiveTags(ruleTags, merged.tagAdd, merged.tagRemove)
 
-    await window.electronAPI.db.upsertPositionUI(get().projectId, positionTypeRef, merged)
+    set({ positionUI: { ...positionUI, [positionTypeRef]: merged } })
+
+    await window.electronAPI.db.upsertPositionUI(projectId, positionTypeRef, {
+      tags: merged.tags,
+      tagAdd: merged.tagAdd,
+      tagRemove: merged.tagRemove,
+      userNotes: merged.userNotes || '',
+      ignored: !!merged.ignored,
+    })
+  },
+
+  /**
+   * togglePositionTag(positionTypeRef, tag)
+   * Adds/removes a tag on one position as an exception relative to its rule tags.
+   */
+  async togglePositionTag(positionTypeRef, tag) {
+    const ui = get().positionUI[positionTypeRef] || {}
+    const ruleTags = ui.ruleTags || []
+    const add = new Set(ui.tagAdd || [])
+    const remove = new Set(ui.tagRemove || [])
+    const isOn = (ui.tags || []).includes(tag)
+
+    if (isOn) {
+      add.delete(tag)
+      if (ruleTags.includes(tag)) remove.add(tag)   // override a rule tag off
+    } else {
+      remove.delete(tag)
+      if (!ruleTags.includes(tag)) add.add(tag)      // manual addition
+    }
+    await get().updatePositionUI(positionTypeRef, { tagAdd: [...add], tagRemove: [...remove] })
+  },
+
+  /**
+   * recomputeAllTags()
+   * Re-evaluates rule tags for every position (call after rules change) and
+   * refreshes effective tags. Does not persist per-position rows (rule tags are
+   * derived; only exceptions are stored), but updates in-memory state.
+   */
+  recomputeAllTags() {
+    const { positionTypes, tagRules, positionUI } = get()
+    const next = { ...positionUI }
+    for (const pt of positionTypes) {
+      const ref = pt.PositionTypeRef
+      const ui = next[ref] || {}
+      const ruleTags = evaluateTags(pt, tagRules)
+      next[ref] = {
+        ...ui,
+        ruleTags,
+        tagAdd: ui.tagAdd || [],
+        tagRemove: ui.tagRemove || [],
+        tags: effectiveTags(ruleTags, ui.tagAdd || [], ui.tagRemove || []),
+      }
+    }
+    set({ positionUI: next })
+  },
+
+  /**
+   * setTagRules(rules) — replace the rule set, recompute all tags, persist pref.
+   * Editing rules is intentional, so we re-baseline drift snapshots (the new
+   * rule output becomes the accepted state) and clear any outstanding drift.
+   */
+  async setTagRules(rules) {
+    const { projectId, positionTypes } = get()
+    set({ tagRules: rules })
+    get().recomputeAllTags()
+
+    const tagSnapshots = {}
+    for (const pt of positionTypes) {
+      tagSnapshots[pt.PositionTypeRef] = snapshotForPosition(pt, rules)
+    }
+    set({ tagSnapshots, tagDrift: {} })
+
+    if (projectId != null) {
+      await window.electronAPI.db.setPref(projectId, 'tag_rules', JSON.stringify(rules))
+      await window.electronAPI.db.setPref(projectId, 'tag_snapshots', JSON.stringify(tagSnapshots))
+    }
+  },
+
+  /**
+   * acceptTagDrift(ref) — acknowledge a position's changed tags: re-baseline its
+   * snapshot to the current state and clear its drift flag.
+   */
+  async acceptTagDrift(ref) {
+    const { projectId, positionTypes, tagRules, tagSnapshots, tagDrift } = get()
+    const pt = positionTypes.find(p => p.PositionTypeRef === ref)
+    if (!pt) return
+    const nextSnapshots = { ...tagSnapshots, [ref]: snapshotForPosition(pt, tagRules) }
+    const nextDrift = { ...tagDrift }
+    delete nextDrift[ref]
+    set({ tagSnapshots: nextSnapshots, tagDrift: nextDrift })
+    if (projectId != null) {
+      await window.electronAPI.db.setPref(projectId, 'tag_snapshots', JSON.stringify(nextSnapshots))
+    }
+  },
+
+  /**
+   * acceptAllTagDrift() — re-baseline every drifted position at once.
+   */
+  async acceptAllTagDrift() {
+    const { projectId, positionTypes, tagRules, tagSnapshots, tagDrift } = get()
+    const nextSnapshots = { ...tagSnapshots }
+    for (const ref of Object.keys(tagDrift)) {
+      const pt = positionTypes.find(p => p.PositionTypeRef === ref)
+      if (pt) nextSnapshots[ref] = snapshotForPosition(pt, tagRules)
+    }
+    set({ tagSnapshots: nextSnapshots, tagDrift: {} })
+    if (projectId != null) {
+      await window.electronAPI.db.setPref(projectId, 'tag_snapshots', JSON.stringify(nextSnapshots))
+    }
+  },
+
+  /**
+   * setTagPalette(palette) — replace the suggestion palette, persist pref.
+   */
+  async setTagPalette(palette) {
+    const { projectId } = get()
+    set({ tagPalette: palette })
+    if (projectId != null) {
+      await window.electronAPI.db.setPref(projectId, 'tag_palette', JSON.stringify(palette))
+    }
   },
 
   /**
@@ -749,6 +907,196 @@ const useStore = create((set, get) => ({
   },
 
   /**
+   * applyConnectorTemplate(posRef, templateId)
+   * Additively inserts connector rows into an existing recipe.
+   * Uses addConnection so each ingredient goes to its declared section.
+   * Never replaces existing rows.
+   */
+  applyConnectorTemplate(posRef, templateId) {
+    const { templates } = get()
+    const template = templates.find(t => t.id === templateId)
+    if (!template || !posRef) return
+
+    const ingredients = Array.isArray(template.ingredients)
+      ? template.ingredients
+      : JSON.parse(template.ingredients || '[]')
+
+    const parts = ingredients.map(ing => ({
+      section: ing.section,
+      elementTypeRef: ing.slotLabel,
+      quantity: ing.quantity ?? 1,
+    }))
+
+    get().addConnection(posRef, parts)
+  },
+
+  // ---------------------------------------------------------------------------
+  // ET Collection actions
+  // ---------------------------------------------------------------------------
+
+  async createCollection(name, ingredients, applicableTags) {
+    const { projectId } = get()
+    if (!projectId) return null
+    const CollectionId = uuidv4()
+    const collection = {
+      CollectionId,
+      Name: name,
+      ApplicableTags: applicableTags ?? [],
+      Ingredients: ingredients ?? [],
+    }
+    const saved = await window.electronAPI.db.upsertCollection(projectId, collection)
+    set(s => ({ etCollections: [...s.etCollections, saved] }))
+    return saved
+  },
+
+  async updateCollection(collectionId, updates) {
+    const { projectId, etCollections } = get()
+    const existing = etCollections.find(c => c.CollectionId === collectionId)
+    if (!existing || !projectId) return
+    const merged = { ...existing, ...updates }
+    const saved = await window.electronAPI.db.upsertCollection(projectId, merged)
+    set(s => ({ etCollections: s.etCollections.map(c => c.CollectionId === collectionId ? saved : c) }))
+  },
+
+  async deleteCollection(collectionId) {
+    await window.electronAPI.db.deleteCollection(collectionId)
+    set(s => ({ etCollections: s.etCollections.filter(c => c.CollectionId !== collectionId) }))
+  },
+
+  applyCollection(posRef, collectionId) {
+    const { etCollections } = get()
+    const collection = etCollections.find(c => c.CollectionId === collectionId)
+    if (!collection || !posRef) return
+    const ingredients = Array.isArray(collection.Ingredients)
+      ? collection.Ingredients
+      : JSON.parse(collection.Ingredients || '[]')
+    const parts = ingredients.map(ing => ({
+      section: ing.section,
+      elementTypeRef: ing.ElementTypeRef || ing.slotLabel || '',
+      quantity: ing.quantity ?? 1,
+    }))
+    get().addConnection(posRef, parts)
+  },
+
+  swapCollection(posRef, fromCollectionId, toCollectionId) {
+    const { etCollections, recipes, rsChanges } = get()
+    const fromColl = etCollections.find(c => c.CollectionId === fromCollectionId)
+    const toColl   = etCollections.find(c => c.CollectionId === toCollectionId)
+    if (!fromColl || !toColl || !posRef) return
+
+    const fromIngredients = Array.isArray(fromColl.Ingredients)
+      ? fromColl.Ingredients
+      : JSON.parse(fromColl.Ingredients || '[]')
+    const refsToRemove = new Set(
+      fromIngredients.map(i => (i.ElementTypeRef || i.slotLabel || '').toLowerCase())
+    )
+
+    get()._pushHistory()
+
+    const newChanges = []
+    const updatedRecipes = recipes.map(row => {
+      const ptRef = row.PositionTypeRef || row.positionTypeRef
+      if (ptRef !== posRef) return row
+      const etRef = (row.ElementTypeRef || row.elementTypeRef || '').toLowerCase()
+      if (refsToRemove.has(etRef)) {
+        const updated = { ...row, IsDeleted: 'Y', isDeleted: 'Y' }
+        newChanges.push({ _id: row._id, positionTypeRef: posRef, action: 'upsert', row: updated })
+        return updated
+      }
+      return row
+    })
+
+    set({ recipes: updatedRecipes, rsChanges: [...rsChanges, ...newChanges] })
+    get().applyCollection(posRef, toCollectionId)
+  },
+
+  /**
+   * addCollectionRef(posRef, ref, section, quantity)
+   * Add a single ingredient ref to a position. If a soft-deleted row for the same
+   * ref already exists on this position, revive it instead of creating a duplicate.
+   */
+  addCollectionRef(posRef, ref, section = 'position', quantity = 1) {
+    if (!posRef || !ref) return
+    const { recipes, rsChanges } = get()
+    const target = ref.toLowerCase()
+    const revivable = recipes.find(row =>
+      (row.PositionTypeRef || row.positionTypeRef) === posRef &&
+      (row.ElementTypeRef || row.elementTypeRef || '').toLowerCase() === target &&
+      (row.IsDeleted || row.isDeleted) === 'Y'
+    )
+    if (revivable) {
+      get()._pushHistory()
+      const newChanges = []
+      const updated = recipes.map(row => {
+        if (row._id !== revivable._id) return row
+        const u = { ...row, IsDeleted: 'N', isDeleted: 'N' }
+        newChanges.push({ _id: row._id, positionTypeRef: posRef, action: 'upsert', row: u })
+        return u
+      })
+      set({ recipes: updated, rsChanges: [...rsChanges, ...newChanges] })
+      return
+    }
+    get().addConnection(posRef, [{ section, elementTypeRef: ref, quantity }])
+  },
+
+  /**
+   * removeCollectionRef(posRef, ref)
+   * Soft-delete every active position-level row matching `ref` on this position.
+   */
+  removeCollectionRef(posRef, ref) {
+    if (!posRef || !ref) return
+    const { recipes, rsChanges } = get()
+    const target = ref.toLowerCase()
+    get()._pushHistory()
+    const newChanges = []
+    const updated = recipes.map(row => {
+      const pr = row.PositionTypeRef || row.positionTypeRef
+      if (pr !== posRef) return row
+      const rRef = (row.ElementTypeRef || row.elementTypeRef || '').toLowerCase()
+      const isDel = (row.IsDeleted || row.isDeleted) === 'Y'
+      if (rRef === target && !isDel) {
+        const u = { ...row, IsDeleted: 'Y', isDeleted: 'Y' }
+        newChanges.push({ _id: row._id, positionTypeRef: posRef, action: 'upsert', row: u })
+        return u
+      }
+      return row
+    })
+    set({ recipes: updated, rsChanges: [...rsChanges, ...newChanges] })
+  },
+
+  /**
+   * removeCollection(posRef, collectionId)
+   * Soft-delete all of a collection's ingredient refs from a position in one step.
+   */
+  removeCollection(posRef, collectionId) {
+    const { etCollections, recipes, rsChanges } = get()
+    const collection = etCollections.find(c => c.CollectionId === collectionId)
+    if (!collection || !posRef) return
+    const ings = Array.isArray(collection.Ingredients)
+      ? collection.Ingredients
+      : JSON.parse(collection.Ingredients || '[]')
+    const refSet = new Set(
+      ings.map(i => (i.ElementTypeRef || i.slotLabel || '').toLowerCase()).filter(Boolean)
+    )
+    if (refSet.size === 0) return
+    get()._pushHistory()
+    const newChanges = []
+    const updated = recipes.map(row => {
+      const pr = row.PositionTypeRef || row.positionTypeRef
+      if (pr !== posRef) return row
+      const rRef = (row.ElementTypeRef || row.elementTypeRef || '').toLowerCase()
+      const isDel = (row.IsDeleted || row.isDeleted) === 'Y'
+      if (refSet.has(rRef) && !isDel) {
+        const u = { ...row, IsDeleted: 'Y', isDeleted: 'Y' }
+        newChanges.push({ _id: row._id, positionTypeRef: posRef, action: 'upsert', row: u })
+        return u
+      }
+      return row
+    })
+    set({ recipes: updated, rsChanges: [...rsChanges, ...newChanges] })
+  },
+
+  /**
    * updateRecipeRow(posRef, rowId, updates)
    * Updates a specific recipe row identified by _id.
    * In ET mode, propagates to all position copies of that row.
@@ -934,12 +1282,18 @@ const useStore = create((set, get) => ({
 
   /**
    * updatePSRow(elementTypeRef, updates)
-   * Updates a PS row and records it in psChanges.
+   * Updates a PS row and records it in psChanges (with before/after for change log).
    */
   updatePSRow(elementTypeRef, updates) {
     const { psRows, psChanges, containerETManualRefs, elementTypes, recipes } = get()
 
     get()._pushHistory()
+
+    const existingRow = psRows.find(r => (r.ElementTypeRef || r.elementTypeRef) === elementTypeRef)
+    const before = {}
+    for (const key of Object.keys(updates)) {
+      before[key] = existingRow ? (existingRow[key] ?? null) : null
+    }
 
     const updatedPsRows = psRows.map(row => {
       const ref = row.ElementTypeRef || row.elementTypeRef
@@ -952,7 +1306,7 @@ const useStore = create((set, get) => ({
       containerETRefs: buildContainerETSet(updatedPsRows, containerETManualRefs, collectAllETRefs(elementTypes, updatedPsRows, recipes)),
       psChanges: [
         ...psChanges,
-        { elementTypeRef, updates },
+        { elementTypeRef, updates, before },
       ],
     })
   },
@@ -1187,6 +1541,46 @@ const useStore = create((set, get) => ({
    */
   dismissFileWatchAlert() {
     set({ fileWatchAlert: null })
+  },
+
+  /**
+   * addLocalElementType(ref, name?, family?)
+   * Adds an ET to the in-memory elementTypes list (local only until next import/export).
+   */
+  addLocalElementType(ref, name = null, family = null) {
+    const trimmed = (ref || '').trim()
+    if (!trimmed) return
+    const { elementTypes } = get()
+    if (elementTypes.some(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === trimmed.toLowerCase())) return
+    set(s => ({
+      elementTypes: [...s.elementTypes, { ElementTypeRef: trimmed, Name: name, Family: family }],
+    }))
+  },
+
+  /**
+   * toggleIgnorePosition(posRef)
+   * Toggles the _ignore flag on positionUI[posRef] and persists to SQLite.
+   */
+  async toggleIgnorePosition(posRef) {
+    const current = get().positionUI[posRef] || {}
+    await get().updatePositionUI(posRef, { ignored: !current.ignored })
+  },
+
+  /**
+   * toggleIgnorePositionFamily(family)
+   * Toggles whether a PositionType family is flagged as ignored, and persists
+   * the list to the project_prefs table as JSON under 'ignored_position_families'.
+   */
+  async toggleIgnorePositionFamily(family) {
+    if (!family) return
+    const { ignoredPositionFamilies, projectId } = get()
+    const next = ignoredPositionFamilies.includes(family)
+      ? ignoredPositionFamilies.filter(f => f !== family)
+      : [...ignoredPositionFamilies, family]
+    set({ ignoredPositionFamilies: next })
+    if (projectId != null) {
+      await window.electronAPI.db.setPref(projectId, 'ignored_position_families', JSON.stringify(next))
+    }
   },
 
   /**

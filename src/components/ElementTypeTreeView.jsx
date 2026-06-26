@@ -1,8 +1,11 @@
 import React, { useMemo, useState } from 'react'
 import useStore from '../store/useStore'
 import FilterBar from './FilterBar'
+import MaterialIcon from './MaterialIcon'
+import ContentsBadge from './ContentsBadge'
 import { getInternalItems, getUsedIn } from '../utils/containerUtils'
 import { familyOf } from '../utils/etRef'
+import { colorsForType, ICONS } from '../utils/entityStyle'
 
 /**
  * ElementTypeTreeView — the Elements root view.
@@ -103,6 +106,7 @@ export default function ElementTypeTreeView() {
         )}
         {visible.map(c => {
           const active = c.ref === activeETRef
+          const { accent, fill } = colorsForType('ElementType')
           const usedInLabel = c.usedIn.length > 0 ? c.usedIn.join(', ') : 'not used in any position'
           return (
             <div
@@ -112,18 +116,17 @@ export default function ElementTypeTreeView() {
               style={{
                 cursor: 'pointer',
                 border: '1px solid #e5e7eb',
-                borderLeft: active ? '3px solid #0d6efd' : '3px solid #e5e7eb',
+                borderLeft: `3px solid ${accent}`,
                 borderRadius: 6,
-                background: active ? '#f0f6ff' : '#fff',
+                background: active ? fill : '#fff',
               }}
             >
               <div className="d-flex align-items-center gap-2">
+                <MaterialIcon name={ICONS.collection} size={18} style={{ color: accent }} title="Collection" />
                 <span style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 600 }}>{c.ref}</span>
                 {c.name && <span className="text-muted" style={{ fontSize: 11 }}>{c.name}</span>}
                 <div className="flex-grow-1" />
-                <span className="badge bg-warning text-dark" style={{ fontSize: 10 }} title="Internal items">
-                  {c.itemCount} inside
-                </span>
+                <ContentsBadge count={c.itemCount} title={`${c.itemCount} internal items`} />
                 <span className="badge bg-light text-dark border" style={{ fontSize: 10 }} title={usedInLabel}>
                   used in {c.usedIn.length}
                 </span>

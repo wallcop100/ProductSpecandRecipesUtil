@@ -17,6 +17,7 @@ export default function ProductSpecTable({ showDeleted = false, etUsedIn = {}, s
   const updatePSRow = useStore(s => s.updatePSRow)
   const addPSRow = useStore(s => s.addPSRow)
   const [search, setSearch] = useState('')
+  const [localScrollToRef, setLocalScrollToRef] = useState(null)
 
   const rowRefs = useRef({})
 
@@ -45,17 +46,28 @@ export default function ProductSpecTable({ showDeleted = false, etUsedIn = {}, s
     )
   }, [psRows, search, showDeleted])
 
-  // Scroll to target row when scrollToRef changes
+  // Combined scroll target: local (from ghost creation) takes priority, then the prop
+  const effectiveScrollToRef = localScrollToRef || scrollToRef
+
   useEffect(() => {
-    if (!scrollToRef || typeof scrollToRef !== 'string') return
-    const key = scrollToRef.toLowerCase()
+    if (!effectiveScrollToRef) return
+    const key = effectiveScrollToRef.toLowerCase()
     const el = rowRefs.current[key]
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' })
       el.style.outline = '2px solid #0d6efd'
-      setTimeout(() => { if (el) el.style.outline = '' }, 2000)
+      setTimeout(() => {
+        if (el) el.style.outline = ''
+        setLocalScrollToRef(null)
+      }, 2000)
     }
-  }, [scrollToRef])
+  }, [effectiveScrollToRef])
+
+  // Wrapper for ghost row creation that also triggers scroll to the new real row
+  function handleGhostCreate(ref, defaults = {}) {
+    const result = addPSRow(ref, defaults)
+    if (result) setLocalScrollToRef(ref)
+  }
 
   function getRef(row) {
     return row.ElementTypeRef || row.elementTypeRef || ''
@@ -82,17 +94,17 @@ export default function ProductSpecTable({ showDeleted = false, etUsedIn = {}, s
         <Table bordered hover size="sm" className="small mb-0" style={{ tableLayout: 'fixed' }}>
           <colgroup>
             <col style={{ width: 150 }} />
-            <col style={{ width: 110 }} />
             <col style={{ width: 120 }} />
+            <col style={{ width: 110 }} />
             <col />
             <col style={{ width: 50 }} />
-            <col style={{ width: 30 }} />
+            <col style={{ width: 60 }} />
           </colgroup>
           <thead className="table-light" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
             <tr>
               <th>ElementTypeRef</th>
-              <th>ProductCode</th>
               <th>Manufacturer</th>
+              <th>ProductCode</th>
               <th>Description</th>
               <th className="text-center">TBC</th>
               <th />
@@ -119,28 +131,40 @@ export default function ProductSpecTable({ showDeleted = false, etUsedIn = {}, s
                     not in spec
                   </span>
                 </td>
-                <EditableCell value="" onChange={val => addPSRow(ref, { ProductCode: val })} placeholder="add code…" />
-                <EditableCell value="" onChange={val => addPSRow(ref, { Manufacturer: val })} placeholder="add maker…" />
-                <EditableCell value="" onChange={val => addPSRow(ref, { ComponentDescription: val })} placeholder="add description…" />
+                <EditableCell value="" onChange={val => handleGhostCreate(ref, { Manufacturer: val })} placeholder="add maker…" />
+                <EditableCell value="" onChange={val => handleGhostCreate(ref, { ProductCode: val })} placeholder="add code…" />
+                <EditableCell value="" onChange={val => handleGhostCreate(ref, { ComponentDescription: val })} placeholder="add description…" />
                 <td className="text-center">
                   <FlagPill
                     label="TBC"
                     value={null}
-                    onChange={val => addPSRow(ref, { IsTBC: val })}
+                    onChange={val => handleGhostCreate(ref, { IsTBC: val })}
                     activeVariant="danger"
                   />
                 </td>
-                <td className="text-center">
-                  <Button
-                    variant="link"
-                    size="sm"
-                    className="p-0"
-                    style={{ fontSize: 11, color: '#b45309' }}
-                    onClick={() => addPSRow(ref)}
-                    title="Add to product spec"
-                  >
-                    + Add
-                  </Button>
+                <td className="text-center" style={{ verticalAlign: 'middle' }}>
+                  <div className="d-flex flex-column align-items-center gap-1">
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="p-0"
+                      style={{ fontSize: 11, color: '#6c757d', textDecoration: 'none' }}
+                      onClick={() => addPSRow(ref, { Manufacturer: 'Ideaworks', ProductCode: 'N/A' })}
+                      title="Set Manufacturer=Ideaworks, ProductCode=N/A"
+                    >
+                      N/A
+                    </Button>
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="p-0"
+                      style={{ fontSize: 11, color: '#b45309' }}
+                      onClick={() => handleGhostCreate(ref)}
+                      title="Add to product spec"
+                    >
+                      + Add
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -156,6 +180,9 @@ export default function ProductSpecTable({ showDeleted = false, etUsedIn = {}, s
               const isDeleted = (row.IsDeleted || row.isDeleted) === 'Y'
               const usageKey = ref.toLowerCase()
               const usage = etUsedIn[usageKey]
+              const productCode = row.ProductCode || row.productCode || ''
+              const mfr = row.Manufacturer || row.manufacturer || ''
+              const missingDefaults = !productCode || !mfr
 
               return (
                 <React.Fragment key={row._id || ref}>
@@ -168,13 +195,13 @@ export default function ProductSpecTable({ showDeleted = false, etUsedIn = {}, s
                   >
                     <td style={{ fontWeight: 500, fontSize: 11 }}>{ref}</td>
                     <EditableCell
-                      value={row.ProductCode || row.productCode || ''}
-                      onChange={val => updatePSRow(ref, { ProductCode: val })}
-                      style={{ color: dup ? '#dc3545' : undefined, fontWeight: dup ? 600 : undefined }}
+                      value={mfr}
+                      onChange={val => updatePSRow(ref, { Manufacturer: val })}
                     />
                     <EditableCell
-                      value={row.Manufacturer || row.manufacturer || ''}
-                      onChange={val => updatePSRow(ref, { Manufacturer: val })}
+                      value={productCode}
+                      onChange={val => updatePSRow(ref, { ProductCode: val })}
+                      style={{ color: dup ? '#dc3545' : undefined, fontWeight: dup ? 600 : undefined }}
                     />
                     <EditableCell
                       value={row.ComponentDescription || row.componentDescription || ''}
@@ -188,30 +215,44 @@ export default function ProductSpecTable({ showDeleted = false, etUsedIn = {}, s
                         activeVariant="danger"
                       />
                     </td>
-                    <td className="text-center">
-                      {isDeleted ? (
-                        <Button
-                          variant="link"
-                          size="sm"
-                          className="text-secondary p-0"
-                          style={{ fontSize: 11 }}
-                          onClick={() => updatePSRow(ref, { IsDeleted: null })}
-                          title="Restore row"
-                        >
-                          ↩
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="link"
-                          size="sm"
-                          className="text-danger p-0"
-                          style={{ lineHeight: 1 }}
-                          onClick={() => updatePSRow(ref, { IsDeleted: 'Y' })}
-                          title="Soft-delete row"
-                        >
-                          ×
-                        </Button>
-                      )}
+                    <td className="text-center" style={{ verticalAlign: 'middle' }}>
+                      <div className="d-flex flex-column align-items-center gap-1">
+                        {missingDefaults && !isDeleted && (
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="p-0"
+                            style={{ fontSize: 11, color: '#6c757d', textDecoration: 'none' }}
+                            onClick={() => updatePSRow(ref, { Manufacturer: 'Ideaworks', ProductCode: 'N/A' })}
+                            title="Set Manufacturer=Ideaworks, ProductCode=N/A"
+                          >
+                            N/A
+                          </Button>
+                        )}
+                        {isDeleted ? (
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="text-secondary p-0"
+                            style={{ fontSize: 11 }}
+                            onClick={() => updatePSRow(ref, { IsDeleted: null })}
+                            title="Restore row"
+                          >
+                            ↩
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="text-danger p-0"
+                            style={{ lineHeight: 1 }}
+                            onClick={() => updatePSRow(ref, { IsDeleted: 'Y' })}
+                            title="Soft-delete row"
+                          >
+                            ×
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                   {/* Used In row — only shown when used in more than one context */}

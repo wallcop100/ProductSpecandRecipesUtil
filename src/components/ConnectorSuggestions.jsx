@@ -33,13 +33,9 @@ export default function ConnectorSuggestions({ posRef }) {
   const required = gaps.filter(g => !g.optional)
   const optional = gaps.filter(g => g.optional)
 
-  if (required.length === 0 && optional.length === 0) {
-    return (
-      <div className="mb-3 px-3 py-2 rounded" style={{ background: '#e8f4e8', border: '1px solid #cfe8cf', fontSize: 12 }}>
-        ✓ Connectors paired — every socket has its plug and vice versa.
-      </div>
-    )
-  }
+  // Only surface this panel when there's something actionable. When connectors
+  // are fully paired we stay silent rather than showing an "all good" banner.
+  if (required.length === 0 && optional.length === 0) return null
 
   return (
     <div className="mb-3 px-3 py-2 rounded" style={{ background: '#fff8e1', border: '1px solid #f0e0a8', fontSize: 12 }}>

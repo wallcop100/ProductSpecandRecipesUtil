@@ -1,29 +1,43 @@
 import React, { useState, useMemo } from 'react'
+import { ButtonGroup, Button } from 'react-bootstrap'
 import { useDraggable } from '@dnd-kit/core'
 import useStore from '../store/useStore'
 import FilterBar from './FilterBar'
+import MaterialIcon from './MaterialIcon'
 import { familyOf } from '../utils/etRef'
+import { colorsForType, iconForEntity } from '../utils/entityStyle'
 
 const FLAGGED_FAMILY = '⚠ Recipe-only (not in DB or Spec)'
 
 /**
- * ElementPalette — draggable element types, grouped into collapsible families.
- *
- * Families come from the DB `Family` field, falling back to a heuristic parse of
- * the ref (familyOf). Groups are collapsed by default to cut noise; a family and
- * text filter narrow the list. ET refs found only in recipes (not in the DB or
- * Product Spec) are flagged in their own group.
+ * ElementPalette — draggable element types with two browse modes:
+ *   "ET Ref"    — grouped by family, ET ref as primary identifier (original)
+ *   "Mfr+Code"  — grouped by Manufacturer from PS rows, ProductCode as primary
  */
 export default function ElementPalette() {
   const elementTypes = useStore(s => s.elementTypes)
   const psRows = useStore(s => s.psRows)
   const recipes = useStore(s => s.recipes)
+  const addLocalElementType = useStore(s => s.addLocalElementType)
 
+  const [mode, setMode] = useState('et-ref')   // 'et-ref' | 'mfr-code'
   const [search, setSearch] = useState('')
   const [familyFilter, setFamilyFilter] = useState('')
-  const [expanded, setExpanded] = useState({})   // { [family]: true }
+  const [expanded, setExpanded] = useState({})
+  const [newETRef, setNewETRef] = useState('')
+  const [showNewET, setShowNewET] = useState(false)
 
-  // Merge all known ET refs from DB, PS, and recipes; tag a resolved family.
+  // Build a lookup: lowercase ET ref → PS row
+  const psRowByET = useMemo(() => {
+    const map = new Map()
+    for (const row of psRows) {
+      const ref = (row.ElementTypeRef || row.elementTypeRef || '').toLowerCase()
+      if (ref && !map.has(ref)) map.set(ref, row)
+    }
+    return map
+  }, [psRows])
+
+  // Merge all known ET refs from DB, PS, and recipes
   const allETs = useMemo(() => {
     const map = new Map()
     for (const et of elementTypes) {
@@ -49,46 +63,64 @@ export default function ElementPalette() {
     }
 
     return [...map.values()]
-      .map(et => ({
-        ...et,
-        _family: et._undefinedRef ? FLAGGED_FAMILY : familyOf(et.ElementTypeRef || et.elementTypeRef, et),
-      }))
+      .map(et => {
+        const ref = et.ElementTypeRef || et.elementTypeRef
+        const psRow = psRowByET.get((ref || '').toLowerCase())
+        return {
+          ...et,
+          _family: et._undefinedRef ? FLAGGED_FAMILY : familyOf(ref, et),
+          _psRow: psRow || null,
+        }
+      })
       .sort((a, b) => (a.ElementTypeRef || '').localeCompare(b.ElementTypeRef || ''))
-  }, [elementTypes, psRows, recipes])
+  }, [elementTypes, psRows, recipes, psRowByET])
 
-  // Families present (excluding the flagged group, which always sorts last)
-  const familyOptions = useMemo(() => {
-    const set = new Set()
-    for (const et of allETs) if (et._family !== FLAGGED_FAMILY) set.add(et._family)
-    return [...set].sort((a, b) => a.localeCompare(b))
-  }, [allETs])
+  // Group options depend on mode
+  const groupOptions = useMemo(() => {
+    if (mode === 'et-ref') {
+      const set = new Set()
+      for (const et of allETs) if (et._family !== FLAGGED_FAMILY) set.add(et._family)
+      return [...set].sort((a, b) => a.localeCompare(b))
+    } else {
+      const set = new Set()
+      for (const et of allETs) {
+        const mfr = et._psRow?.Manufacturer || et._psRow?.manufacturer || null
+        if (mfr) set.add(mfr)
+      }
+      return [...set].sort((a, b) => a.localeCompare(b))
+    }
+  }, [allETs, mode])
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim()
     return allETs.filter(et => {
-      if (familyFilter && et._family !== familyFilter) return false
+      const groupKey = groupKeyFor(et, mode)
+      if (familyFilter && groupKey !== familyFilter) return false
       if (!q) return true
-      return (et.ElementTypeRef || '').toLowerCase().includes(q) ||
-        (et.Name || '').toLowerCase().includes(q) ||
-        (et._family || '').toLowerCase().includes(q)
+      const ref = (et.ElementTypeRef || '').toLowerCase()
+      const name = (et.Name || '').toLowerCase()
+      const family = (et._family || '').toLowerCase()
+      const code = (et._psRow?.ProductCode || et._psRow?.productCode || '').toLowerCase()
+      const mfr = (et._psRow?.Manufacturer || et._psRow?.manufacturer || '').toLowerCase()
+      return ref.includes(q) || name.includes(q) || family.includes(q) || code.includes(q) || mfr.includes(q)
     })
-  }, [allETs, search, familyFilter])
+  }, [allETs, search, familyFilter, mode])
 
-  // Group by family; flagged group floats to the end
+  // Group by the active mode's key
   const grouped = useMemo(() => {
     const normal = new Map()
     const flagged = []
     for (const et of filtered) {
       if (et._undefinedRef) { flagged.push(et); continue }
-      if (!normal.has(et._family)) normal.set(et._family, [])
-      normal.get(et._family).push(et)
+      const key = groupKeyFor(et, mode)
+      if (!normal.has(key)) normal.set(key, [])
+      normal.get(key).push(et)
     }
-    const result = new Map(normal)
+    const result = new Map([...normal].sort(([a], [b]) => a.localeCompare(b)))
     if (flagged.length > 0) result.set(FLAGGED_FAMILY, flagged)
     return result
-  }, [filtered])
+  }, [filtered, mode])
 
-  // While searching/filtering, force groups open so matches are visible
   const forceOpen = search.trim() !== '' || familyFilter !== ''
   const isOpen = family => forceOpen || !!expanded[family]
 
@@ -100,51 +132,98 @@ export default function ElementPalette() {
     for (const family of grouped.keys()) next[family] = true
     setExpanded(next)
   }
-  function collapseAll() {
-    setExpanded({})
+  function collapseAll() { setExpanded({}) }
+
+  function handleAddET() {
+    const ref = newETRef.trim()
+    if (!ref) return
+    addLocalElementType(ref)
+    setNewETRef('')
+    setShowNewET(false)
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div className="p-2 border-bottom">
+      {/* Mode toggle */}
+      <div className="px-2 pt-2 pb-1 border-bottom">
+        <ButtonGroup size="sm" className="w-100 mb-2">
+          <Button
+            variant={mode === 'et-ref' ? 'primary' : 'outline-secondary'}
+            onClick={() => { setMode('et-ref'); setFamilyFilter('') }}
+            style={{ fontSize: 11 }}
+          >
+            ET Ref
+          </Button>
+          <Button
+            variant={mode === 'mfr-code' ? 'primary' : 'outline-secondary'}
+            onClick={() => { setMode('mfr-code'); setFamilyFilter('') }}
+            style={{ fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+          >
+            <MaterialIcon name="category_search" size={14} />
+            Mfr + Code
+          </Button>
+        </ButtonGroup>
+
         <FilterBar
           text={search}
           onText={setSearch}
-          placeholder="Search elements…"
-          familyOptions={familyOptions}
+          placeholder={mode === 'mfr-code' ? 'Search code, maker, ref…' : 'Search elements…'}
+          familyOptions={groupOptions}
           family={familyFilter}
           onFamily={setFamilyFilter}
           compact={false}
         />
-        <div className="d-flex gap-2 mt-2">
+        <div className="d-flex gap-2 mt-1 align-items-center">
           <button className="btn btn-link btn-sm p-0" style={{ fontSize: 11, textDecoration: 'none' }} onClick={expandAll}>
             Expand all
           </button>
           <button className="btn btn-link btn-sm p-0" style={{ fontSize: 11, textDecoration: 'none' }} onClick={collapseAll}>
             Collapse all
           </button>
+          <button
+            className="btn btn-link btn-sm p-0 ms-auto"
+            style={{ fontSize: 11, textDecoration: 'none', color: '#0d6efd' }}
+            onClick={() => setShowNewET(v => !v)}
+          >
+            + New ET
+          </button>
         </div>
+
+        {showNewET && (
+          <div className="d-flex gap-1 mt-2">
+            <input
+              className="form-control form-control-sm"
+              placeholder="ET ref…"
+              value={newETRef}
+              onChange={e => setNewETRef(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleAddET(); if (e.key === 'Escape') setShowNewET(false) }}
+              autoFocus
+              style={{ fontSize: 12 }}
+            />
+            <button className="btn btn-sm btn-primary" onClick={handleAddET} style={{ fontSize: 11, whiteSpace: 'nowrap' }}>Add</button>
+          </div>
+        )}
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
         {grouped.size === 0 && (
           <div className="text-muted small text-center py-3">No element types found.</div>
         )}
-        {[...grouped.entries()].map(([family, ets]) => {
-          const open = isOpen(family)
+        {[...grouped.entries()].map(([group, ets]) => {
+          const open = isOpen(group)
           return (
-            <div key={family} className="mb-2">
+            <div key={group} className="mb-2">
               <div
                 className="d-flex align-items-center gap-1 text-uppercase text-muted fw-bold mb-1"
                 style={{ fontSize: 10, letterSpacing: 0.5, cursor: 'pointer', userSelect: 'none' }}
-                onClick={() => toggle(family)}
+                onClick={() => toggle(group)}
               >
                 <span style={{ width: 10 }}>{open ? '▾' : '▸'}</span>
-                <span>{family}</span>
+                <span>{group}</span>
                 <span className="text-muted" style={{ fontWeight: 400 }}>({ets.length})</span>
               </div>
               {open && ets.map(et => (
-                <DraggableETCard key={et.ElementTypeRef || et.elementTypeRef} et={et} />
+                <DraggableETCard key={et.ElementTypeRef || et.elementTypeRef} et={et} mode={mode} />
               ))}
             </div>
           )
@@ -154,13 +233,29 @@ export default function ElementPalette() {
   )
 }
 
-function DraggableETCard({ et }) {
+function groupKeyFor(et, mode) {
+  if (mode === 'mfr-code') {
+    return et._psRow?.Manufacturer || et._psRow?.manufacturer || et._family || 'Unknown Manufacturer'
+  }
+  return et._family
+}
+
+function DraggableETCard({ et, mode }) {
   const ref = et.ElementTypeRef || et.elementTypeRef
+  const isCollection = useStore(s => ref ? s.containerETRefs.has(ref.toLowerCase()) : false)
+  const { accent } = colorsForType('ElementType')
 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `palette-${ref}`,
     data: { type: 'palette-item', elementTypeRef: ref },
   })
+
+  const productCode = et._psRow?.ProductCode || et._psRow?.productCode || null
+  const manufacturer = et._psRow?.Manufacturer || et._psRow?.manufacturer || null
+
+  const primaryLabel = mode === 'mfr-code' && productCode ? productCode : ref
+  const secondaryLabel = mode === 'mfr-code' ? ref : (et.Name || null)
+  const { fill } = colorsForType('ElementType')
 
   return (
     <div
@@ -174,16 +269,39 @@ function DraggableETCard({ et }) {
         marginBottom: 3,
         marginLeft: 10,
         border: et._undefinedRef ? '1px solid #f59e0b' : '1px solid #dee2e6',
+        borderLeft: et._undefinedRef ? '1px solid #f59e0b' : `3px solid ${accent}`,
         borderRadius: 4,
         background: et._undefinedRef ? '#fffbeb' : '#fff',
         userSelect: 'none',
         fontSize: 12,
       }}
     >
-      <div className="fw-semibold" style={{ fontSize: 12 }}>{ref}</div>
-      {et.Name && <div className="text-muted" style={{ fontSize: 11 }}>{et.Name}</div>}
+      <div className="d-flex align-items-center gap-2" style={{ fontSize: 12 }}>
+        {/* Icon in its own pill */}
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: fill,
+            borderRadius: 4,
+            padding: '2px 4px',
+            flexShrink: 0,
+          }}
+          title={isCollection ? 'Collection' : 'Element'}
+        >
+          <MaterialIcon name={iconForEntity({ type: 'ElementType', isCollection })} size={14} style={{ color: accent }} />
+        </span>
+        <span className="fw-semibold" style={{ wordBreak: 'break-all' }}>{primaryLabel}</span>
+      </div>
+      {secondaryLabel && (
+        <div className="text-muted" style={{ fontSize: 11, marginLeft: 26 }}>{secondaryLabel}</div>
+      )}
+      {mode === 'mfr-code' && manufacturer && productCode && (
+        <div style={{ fontSize: 10, color: '#888', marginLeft: 26 }}>{manufacturer}</div>
+      )}
       {et._undefinedRef && (
-        <div style={{ fontSize: 10, color: '#b45309' }}>not in DB or spec</div>
+        <div style={{ fontSize: 10, color: '#b45309', marginLeft: 26 }}>not in DB or spec</div>
       )}
     </div>
   )

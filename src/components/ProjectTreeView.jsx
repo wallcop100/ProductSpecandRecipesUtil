@@ -4,9 +4,13 @@ import useStore, { getRecipeForPosition } from '../store/useStore'
 import RecipeSection from './RecipeSection'
 import TagBadge from './TagBadge'
 import FilterBar from './FilterBar'
+import MaterialIcon from './MaterialIcon'
 import ConnectorSuggestions from './ConnectorSuggestions'
-import ConnectorWizardModal from './ConnectorWizardModal'
-import { TAG_GROUPS } from '../utils/constants'
+import CollectionBadge from './CollectionBadge'
+import EmptyPositionWizard from './EmptyPositionWizard'
+import TagDriftWizard from './TagDriftWizard'
+import { colorsForType, ICONS } from '../utils/entityStyle'
+import { positionFamilyOf } from '../utils/positionFamily'
 
 /**
  * ProjectTreeView — the PositionTypes surface.
@@ -19,29 +23,31 @@ import { TAG_GROUPS } from '../utils/constants'
  * The left index and breadcrumbs switch between positions; the back link
  * returns to the overview.
  */
-export default function ProjectTreeView({ onOpenProductSpec, showDeleted }) {
+export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, showDeleted }) {
   const positionTypes = useStore(s => s.positionTypes)
   const recipes = useStore(s => s.recipes)
   const positionUI = useStore(s => s.positionUI)
   const validationResults = useStore(s => s.validationResults)
   const activePositionRef = useStore(s => s.activePositionRef)
   const setActivePosition = useStore(s => s.setActivePosition)
+  const toggleIgnorePosition = useStore(s => s.toggleIgnorePosition)
+  const ignoredPositionFamilies = useStore(s => s.ignoredPositionFamilies)
+  const toggleIgnorePositionFamily = useStore(s => s.toggleIgnorePositionFamily)
+  const tagDrift = useStore(s => s.tagDrift)
 
   const [filter, setFilter] = useState('')
   const [activeTags, setActiveTags] = useState([])
+  const [showEmptyWizard, setShowEmptyWizard] = useState(false)
+  const [showDriftWizard, setShowDriftWizard] = useState(false)
+  const driftCount = Object.keys(tagDrift || {}).length
 
-  // Tags actually present across positions (ordered by TAG_GROUPS)
+  // Tags actually present across positions (alphabetical)
   const availableTags = useMemo(() => {
     const present = new Set()
     for (const ui of Object.values(positionUI)) {
       for (const t of (ui.tags || [])) present.add(t)
     }
-    const ordered = []
-    for (const group of Object.values(TAG_GROUPS)) {
-      for (const t of group) if (present.has(t)) ordered.push(t)
-    }
-    for (const t of present) if (!ordered.includes(t)) ordered.push(t)
-    return ordered
+    return [...present].sort((a, b) => a.localeCompare(b))
   }, [positionUI])
 
   function toggleTag(tag) {
@@ -68,13 +74,18 @@ export default function ProjectTreeView({ onOpenProductSpec, showDeleted }) {
     return map
   }, [recipes])
 
-  const tagGroupMap = useMemo(() => {
-    const map = {}
-    for (const [group, tags] of Object.entries(TAG_GROUPS)) {
-      for (const tag of tags) map[tag] = group
-    }
-    return map
-  }, [])
+  const ignoredFamilySet = useMemo(() => new Set(ignoredPositionFamilies), [ignoredPositionFamilies])
+
+  // A position is "ignored" if individually flagged, or its family is ignored.
+  const isIgnoredPt = (pt) =>
+    !!positionUI[pt.PositionTypeRef]?.ignored ||
+    (ignoredFamilySet.size > 0 && ignoredFamilySet.has(positionFamilyOf(pt)))
+
+  // Positions with no recipe rows and not ignored (individually or by family)
+  const emptyCount = useMemo(() => positionTypes.reduce((n, pt) => {
+    const ref = pt.PositionTypeRef
+    return (!countByRef[ref] && !isIgnoredPt(pt)) ? n + 1 : n
+  }, 0), [positionTypes, countByRef, positionUI, ignoredFamilySet])
 
   const activePt = activePositionRef
     ? positionTypes.find(pt => pt.PositionTypeRef === activePositionRef)
@@ -90,11 +101,11 @@ export default function ProjectTreeView({ onOpenProductSpec, showDeleted }) {
       <FocusedPositionEditor
         pt={activePt}
         tags={positionUI[activePositionRef]?.tags || []}
-        tagGroupMap={tagGroupMap}
         issues={issuesByRef[activePositionRef] || []}
         count={countByRef[activePositionRef] || 0}
         showDeleted={showDeleted}
         onOpenProductSpec={onOpenProductSpec}
+        onOpenConnectors={onOpenConnectors}
         onBack={() => setActivePosition(null)}
       />
     )
@@ -122,6 +133,27 @@ export default function ProjectTreeView({ onOpenProductSpec, showDeleted }) {
         <strong className="small text-uppercase text-muted" style={{ letterSpacing: 0.5 }}>
           Position Types
         </strong>
+        <Button
+          variant={emptyCount > 0 ? 'outline-warning' : 'outline-secondary'}
+          size="sm"
+          style={{ fontSize: 11 }}
+          disabled={emptyCount === 0}
+          onClick={() => setShowEmptyWizard(true)}
+          title="Step through positions with no recipe and flag the ones to ignore"
+        >
+          Review empty{emptyCount > 0 ? ` (${emptyCount})` : ''}
+        </Button>
+        {driftCount > 0 && (
+          <Button
+            variant="warning"
+            size="sm"
+            style={{ fontSize: 11 }}
+            onClick={() => setShowDriftWizard(true)}
+            title="Positions whose rule-derived tags changed since the last accepted baseline"
+          >
+            Tag changes ({driftCount})
+          </Button>
+        )}
         <div className="ms-auto" style={{ width: 360 }}>
           <FilterBar
             text={filter}
@@ -133,6 +165,18 @@ export default function ProjectTreeView({ onOpenProductSpec, showDeleted }) {
           />
         </div>
       </div>
+
+      <EmptyPositionWizard
+        show={showEmptyWizard}
+        onHide={() => setShowEmptyWizard(false)}
+        onOpenPosition={(ref) => { setShowEmptyWizard(false); setActivePosition(ref) }}
+      />
+
+      <TagDriftWizard
+        show={showDriftWizard}
+        onHide={() => setShowDriftWizard(false)}
+        onOpenPosition={(ref) => { setShowDriftWizard(false); setActivePosition(ref) }}
+      />
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem 0.75rem' }}>
         {visible.length === 0 && (
@@ -146,6 +190,11 @@ export default function ProjectTreeView({ onOpenProductSpec, showDeleted }) {
           const count = countByRef[ref] || 0
           const hasError = issues.some(i => i.severity === 'error')
           const hasWarning = issues.some(i => i.severity === 'warning')
+          const ownIgnored = !!positionUI[ref]?.ignored
+          const family = positionFamilyOf(pt)
+          const familyIgnored = !!family && ignoredFamilySet.has(family)
+          const isIgnored = ownIgnored || familyIgnored
+          const drifted = !!(tagDrift && tagDrift[ref])
           return (
             <div
               key={ref}
@@ -154,22 +203,66 @@ export default function ProjectTreeView({ onOpenProductSpec, showDeleted }) {
               style={{
                 cursor: 'pointer',
                 border: '1px solid #e5e7eb',
-                borderLeft: '3px solid #e5e7eb',
+                borderLeft: `3px solid ${colorsForType('PositionType').accent}`,
                 borderRadius: 6,
                 background: '#fff',
+                opacity: isIgnored ? 0.55 : 1,
               }}
             >
+              <MaterialIcon name={ICONS.position} size={18} style={{ color: colorsForType('PositionType').accent }} title="Position" />
               <span className="fw-semibold" style={{ fontSize: 13 }}>{ref}</span>
               {name && name !== ref && <span className="text-muted" style={{ fontSize: 11 }}>{name}</span>}
+              {ownIgnored && (
+                <span className="badge" style={{ background: '#fff3cd', color: '#856404', fontSize: 10, border: '1px solid #ffc107' }}>
+                  Ignore
+                </span>
+              )}
+              {family && (
+                <span
+                  className="badge"
+                  style={{
+                    background: familyIgnored ? '#fff3cd' : '#eef1f5',
+                    color: familyIgnored ? '#856404' : '#5a6472',
+                    border: `1px solid ${familyIgnored ? '#ffc107' : '#d4dae2'}`,
+                    fontSize: 10, cursor: 'pointer',
+                  }}
+                  title={familyIgnored
+                    ? `Family “${family}” is ignored — click to un-ignore the whole family`
+                    : `Click to ignore the whole “${family}” family`}
+                  onClick={e => { e.stopPropagation(); toggleIgnorePositionFamily(family) }}
+                >
+                  {familyIgnored ? `family ignored: ${family}` : `⌥ ${family}`}
+                </span>
+              )}
               {tags.slice(0, 4).map(tag => (
-                <TagBadge key={tag} tag={tag} group={tagGroupMap[tag] || 'Special'} />
+                <TagBadge key={tag} tag={tag} />
               ))}
+              {drifted && (
+                <span
+                  className="badge"
+                  style={{ background: '#fff3cd', color: '#856404', fontSize: 10, border: '1px solid #ffc107', cursor: 'pointer' }}
+                  title="Rule-derived tags changed since last accepted — click to review"
+                  onClick={e => { e.stopPropagation(); setShowDriftWizard(true) }}
+                >
+                  ⚠ tags changed
+                </span>
+              )}
+              <CollectionBadge posRef={ref} />
               <div className="flex-grow-1" />
               {count > 0
                 ? <span className="badge bg-light text-dark border" style={{ fontSize: 10 }}>{count} {count === 1 ? 'row' : 'rows'}</span>
                 : <span className="text-muted fst-italic" style={{ fontSize: 11 }}>empty</span>}
-              {hasError && <span title="Has errors" style={{ color: '#dc3545', fontSize: 13 }}>●</span>}
-              {!hasError && hasWarning && <span title="Has warnings" style={{ color: '#ffc107', fontSize: 13 }}>●</span>}
+              {!isIgnored && hasError && <span title="Has errors" style={{ color: '#dc3545', fontSize: 13 }}>●</span>}
+              {!isIgnored && !hasError && hasWarning && <span title="Has warnings" style={{ color: '#ffc107', fontSize: 13 }}>●</span>}
+              {/* Ignore toggle — stop propagation so it doesn't open the position */}
+              <button
+                className="btn btn-link p-0"
+                style={{ fontSize: 14, color: isIgnored ? '#ffc107' : '#ccc', lineHeight: 1 }}
+                title={isIgnored ? 'Remove Ignore flag' : 'Flag as no recipe needed'}
+                onClick={e => { e.stopPropagation(); toggleIgnorePosition(ref) }}
+              >
+                <MaterialIcon name={isIgnored ? 'do_not_disturb_on' : 'do_not_disturb_off'} size={16} />
+              </button>
               <span className="text-muted" style={{ fontSize: 16, lineHeight: 1 }}>›</span>
             </div>
           )
@@ -183,12 +276,11 @@ export default function ProjectTreeView({ onOpenProductSpec, showDeleted }) {
 // FocusedPositionEditor — full-surface editor for a single position
 // ---------------------------------------------------------------------------
 
-function FocusedPositionEditor({ pt, tags, tagGroupMap, issues, count, showDeleted, onOpenProductSpec, onBack }) {
+function FocusedPositionEditor({ pt, tags, issues, count, showDeleted, onOpenProductSpec, onOpenConnectors, onBack }) {
   const recipes = useStore(s => s.recipes)
   const ref = pt.PositionTypeRef
   const name = pt.Name || pt.name || ''
   const validationRun = useStore(s => s.validationResults).length > 0
-  const [showConnectors, setShowConnectors] = useState(false)
 
   const hasError = issues.some(i => i.severity === 'error')
   const hasWarning = issues.some(i => i.severity === 'warning')
@@ -209,14 +301,19 @@ function FocusedPositionEditor({ pt, tags, tagGroupMap, issues, count, showDelet
         <Button variant="outline-secondary" size="sm" style={{ fontSize: 11 }} onClick={onBack}>
           ← All position types
         </Button>
+        <MaterialIcon name={ICONS.position} size={20} style={{ color: colorsForType('PositionType').accent }} title="Position" />
         <span className="fw-semibold" style={{ fontSize: 15 }}>{ref}</span>
         {name && name !== ref && <span className="text-muted" style={{ fontSize: 12 }}>{name}</span>}
         {tags.map(tag => (
-          <TagBadge key={tag} tag={tag} group={tagGroupMap[tag] || 'Special'} />
+          <TagBadge key={tag} tag={tag} />
         ))}
         <div className="flex-grow-1" />
-        <Button variant="outline-primary" size="sm" style={{ fontSize: 11 }} onClick={() => setShowConnectors(true)}>
-          + Connector
+        <Button
+          variant="link" size="sm" style={{ fontSize: 11, textDecoration: 'none' }}
+          onClick={() => onOpenConnectors?.(ref)}
+          title="Open the Connectors screen focused on this position"
+        >
+          Manage connectors →
         </Button>
         {hasError && <span title="Has errors" style={{ color: '#dc3545', fontSize: 14 }}>● errors</span>}
         {!hasError && hasWarning && <span title="Has warnings" style={{ color: '#ffc107', fontSize: 14 }}>● warnings</span>}
@@ -230,7 +327,7 @@ function FocusedPositionEditor({ pt, tags, tagGroupMap, issues, count, showDelet
         {count === 0 && (
           <div className="text-muted small mb-3">
             No recipe yet — drag an element from the palette, use the Templates tab to apply
-            one, or add a connection with <span className="fw-semibold">+ Connector</span>.
+            one, or add connectors via <span className="fw-semibold">Manage connectors →</span>.
           </div>
         )}
         <ConnectorSuggestions posRef={ref} />
@@ -246,8 +343,6 @@ function FocusedPositionEditor({ pt, tags, tagGroupMap, issues, count, showDelet
           <span className="fw-semibold"> Edit internals → </span> to change them.
         </div>
       </div>
-
-      <ConnectorWizardModal show={showConnectors} posRef={ref} context="position" onClose={() => setShowConnectors(false)} />
     </div>
   )
 }

@@ -9,6 +9,13 @@ import useStore from '../store/useStore'
 import IngredientCard from './IngredientCard'
 import SlotCard from './SlotCard'
 import ETRefSelect from './ETRefSelect'
+import { TYPE_COLORS } from '../utils/entityStyle'
+
+const SECTION_COLOR = {
+  position:    TYPE_COLORS.PositionType.accent,  // blue
+  dl_internal: TYPE_COLORS.ElementType.accent,   // orange
+  lin_internal: TYPE_COLORS.ElementType.accent,  // orange
+}
 
 /**
  * RecipeSection — a sortable, droppable section of recipe rows.
@@ -45,7 +52,7 @@ export default function RecipeSection({
     <div className="mb-4">
       <div
         className="d-flex align-items-center gap-2 mb-2"
-        style={{ borderBottom: '2px solid #dee2e6', paddingBottom: 4 }}
+        style={{ borderBottom: `2px solid ${SECTION_COLOR[sectionKey] || '#dee2e6'}`, paddingBottom: 4 }}
       >
         <h6 className="mb-0 text-uppercase text-muted small fw-bold">{title}</h6>
         {adding ? (

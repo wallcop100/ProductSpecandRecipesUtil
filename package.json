@@ -40,6 +40,8 @@
     "dompurify": "^3.1.0",
     "electron-log": "^5.1.0",
     "electron-updater": "^6.1.0",
+    "js-yaml": "^5.1.0",
+    "material-icons": "^1.13.12",
     "react": "^18.2.0",
     "react-bootstrap": "^2.10.0",
     "react-dom": "^18.2.0",

@@ -4,21 +4,27 @@ import FolderSetupScreen from './screens/FolderSetupScreen'
 import BuilderScreen from './screens/BuilderScreen'
 import TemplateEditorScreen from './screens/TemplateEditorScreen'
 import ProductSpecScreen from './screens/ProductSpecScreen'
+import ConnectorsScreen from './screens/ConnectorsScreen'
+import TagManagerScreen from './screens/TagManagerScreen'
 import FileWatchBanner from './components/FileWatchBanner'
 import UpdateBanner from './components/UpdateBanner'
 
 /**
  * App — top-level screen router.
- * Screens: 'folder-setup' | 'builder' | 'template-editor' | 'product-spec'
+ * Screens: 'folder-setup' | 'builder' | 'template-editor' | 'product-spec' | 'connectors'
  */
 export default function App() {
   const [activeScreen, setActiveScreen] = useState('folder-setup')
   // scrollToRef: ET ref to auto-scroll to when opening Product Spec
   const [psScrollToRef, setPsScrollToRef] = useState(null)
+  // connectorsFocusRef: position ref to focus when opening the Connectors screen
+  const [connectorsFocusRef, setConnectorsFocusRef] = useState(null)
   const [updateStatus, setUpdateStatus] = useState(null)
   // updateStatus shape: { status: 'available'|'downloading'|'ready', version, percent, releaseNotes }
 
   const setFileWatchAlert = useStore(s => s.setFileWatchAlert)
+  const setActivePosition = useStore(s => s.setActivePosition)
+  const setRootView = useStore(s => s.setRootView)
 
   useEffect(() => {
     // Listen for file-changed events from the main process
@@ -55,6 +61,11 @@ export default function App() {
               setPsScrollToRef(etRef || null)
               navigateTo('product-spec')
             }}
+            onOpenConnectors={(posRef) => {
+              setConnectorsFocusRef(posRef || null)
+              navigateTo('connectors')
+            }}
+            onOpenTags={() => navigateTo('tags')}
             onBackToSetup={() => navigateTo('folder-setup')}
           />
         )}
@@ -69,6 +80,24 @@ export default function App() {
               navigateTo('builder')
             }}
           />
+        )}
+        {activeScreen === 'connectors' && (
+          <ConnectorsScreen
+            focusPosRef={connectorsFocusRef}
+            onOpenPosition={(posRef) => {
+              setRootView('positions')
+              setActivePosition(posRef)
+              setConnectorsFocusRef(null)
+              navigateTo('builder')
+            }}
+            onBack={() => {
+              setConnectorsFocusRef(null)
+              navigateTo('builder')
+            }}
+          />
+        )}
+        {activeScreen === 'tags' && (
+          <TagManagerScreen onBack={() => navigateTo('builder')} />
         )}
       </div>
 

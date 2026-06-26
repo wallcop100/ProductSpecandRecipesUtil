@@ -4,7 +4,8 @@ import {
 } from 'react-bootstrap'
 import { v4 as uuidv4 } from 'uuid'
 import useStore from '../store/useStore'
-import { TAG_GROUPS, GLOBAL_TEMPLATE_IDS } from '../utils/constants'
+import { GLOBAL_TEMPLATE_IDS } from '../utils/constants'
+import TagInput from '../components/TagInput'
 
 const SECTION_OPTIONS = ['position', 'dl_internal', 'lin_internal']
 
@@ -30,6 +31,7 @@ function parseApplicableTags(raw) {
 export default function TemplateEditorScreen({ onBack }) {
   const templates = useStore(s => s.templates)
   const projectId = useStore(s => s.projectId)
+  const tagPalette = useStore(s => s.tagPalette)
   const updateTemplate = useStore(s => s.updateTemplate)
   const deleteTemplate = useStore(s => s.deleteTemplate)
 
@@ -131,15 +133,6 @@ export default function TemplateEditorScreen({ onBack }) {
     await deleteTemplate(editState.id)
     setSelectedId(null)
     setEditState(null)
-  }
-
-  function toggleTag(tag) {
-    if (!editState) return
-    const current = editState.applicable_tags
-    const next = current.includes(tag)
-      ? current.filter(t => t !== tag)
-      : [...current, tag]
-    setEditState(s => ({ ...s, applicable_tags: next }))
   }
 
   function updateIngredient(key, field, value) {
@@ -315,27 +308,13 @@ export default function TemplateEditorScreen({ onBack }) {
             {/* Applicable tags */}
             <div className="mb-4">
               <div className="fw-semibold small mb-2">Applicable Tags</div>
-              <div className="d-flex flex-wrap gap-2">
-                {Object.entries(TAG_GROUPS).map(([group, tags]) => (
-                  <div key={group} className="d-flex flex-column gap-1">
-                    <div className="text-muted" style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>{group}</div>
-                    {tags.map(tag => {
-                      const active = editState.applicable_tags.includes(tag)
-                      return (
-                        <Form.Check
-                          key={tag}
-                          type="checkbox"
-                          label={tag}
-                          checked={active}
-                          onChange={() => !isGlobalSelected && toggleTag(tag)}
-                          disabled={isGlobalSelected}
-                          className="small"
-                        />
-                      )
-                    })}
-                  </div>
-                ))}
-              </div>
+              <TagInput
+                value={editState.applicable_tags}
+                onChange={next => setEditState(s => ({ ...s, applicable_tags: next }))}
+                palette={tagPalette}
+                disabled={isGlobalSelected}
+                placeholder="Add a tag this template applies to…"
+              />
             </div>
 
             {/* Ingredients table */}

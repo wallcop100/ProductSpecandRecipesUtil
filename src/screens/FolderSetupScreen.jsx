@@ -4,8 +4,11 @@ import {
 } from 'react-bootstrap'
 import axios from 'axios'
 import useStore from '../store/useStore'
-import { deriveTagsForAll } from '../utils/tagEngine'
+import { evaluateTags, effectiveTags, computeTagDrift } from '../utils/tagRules'
 import { FLASK_PORT } from '../utils/constants'
+import { extractProjectId } from '../utils/projectId'
+import ProjectConfirmModal from '../components/ProjectConfirmModal'
+import ProjectManager from '../components/ProjectManager'
 
 const API = `http://localhost:${FLASK_PORT}`
 
@@ -31,6 +34,10 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
   const [openError, setOpenError] = useState(null)
   const [flaskError, setFlaskError] = useState(null)
 
+  // Project confirm modal context: { suggestedNumber, existingConfigs, preselectConfig } | null
+  const [confirmCtx, setConfirmCtx] = useState(null)
+  const [showManager, setShowManager] = useState(false)
+
   // Listen for Flask startup status from main process
   useEffect(() => {
     window.electronAPI.onFlaskStatus(({ ready }) => {
@@ -52,6 +59,8 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
           setRsFilename(last.rs_filename || '')
           // Auto-detect for this folder
           await runDetect(last.folder_path)
+          // Prompt to confirm Project ID + config on startup
+          await requestOpen({ folder: last.folder_path, dbFn: last.db_filename, preselect: last.config_name })
         }
       } catch {
         // No last project — fine
@@ -93,7 +102,25 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
   const allXlsx = detectedFiles?.all_xlsx || []
   const allFound = dbFilename && psFilename && rsFilename
 
-  async function handleOpenProject() {
+  // Step 1 of opening: gather confirm context (suggested ID + existing configs)
+  // and show the confirm modal. Accepts explicit values for the resume path,
+  // where component state may not have flushed yet.
+  async function requestOpen({ folder, dbFn, preselect } = {}) {
+    const useFolder = folder || folderPath
+    const useDbFn = dbFn || dbFilename
+    if (!useFolder || !(dbFn ? true : allFound)) {
+      if (!allFound && !dbFn) return
+    }
+    let existingConfigs = []
+    try { existingConfigs = await window.electronAPI.db.getConfigsForFolder(useFolder) || [] } catch { /* none */ }
+    const fromExisting = existingConfigs.find(c => c.config_name === preselect)?.project_number
+    const suggestedNumber = fromExisting || extractProjectId(useDbFn)
+    setConfirmCtx({ suggestedNumber, existingConfigs, preselectConfig: preselect || 'Base' })
+  }
+
+  // Step 2: actually open, with the confirmed Project ID + config name.
+  async function doOpenProject({ projectNumber, configName }) {
+    setConfirmCtx(null)
     if (!allFound) return
     setOpening(true)
     setOpenError(null)
@@ -102,9 +129,12 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
       const absPs = `${folderPath}\\${psFilename}`
       const absRs = `${folderPath}\\${rsFilename}`
 
-      // 1. Upsert project in SQLite
+      // 1. Upsert project (config) in SQLite
       const project = await window.electronAPI.db.upsertProject({
         folderPath,
+        configName,
+        projectNumber,
+        projectLabel: null,
         dbFilename,
         psFilename,
         rsFilename,
@@ -120,12 +150,35 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
       const positionTypes = db_data?.position_types ?? []
 
       // 3. Load SQLite data
-      const [positionUIArr, templates, slotMappings, containerETPref] = await Promise.all([
+      const [positionUIArr, templates, slotMappings, containerETPref, etCollections, ignoredFamiliesPref, tagRulesPref, tagPalettePref, tagSnapshotsPref] = await Promise.all([
         window.electronAPI.db.getAllPositionUI(projectId),
         window.electronAPI.db.getAllTemplates(projectId),
         window.electronAPI.db.getAllSlotMappings(projectId), // already { templateId: { slotKey: ref } }
         window.electronAPI.db.getPref(projectId, 'container_ets'),
+        window.electronAPI.db.getAllCollections(projectId),
+        window.electronAPI.db.getPref(projectId, 'ignored_position_families'),
+        window.electronAPI.db.getPref(projectId, 'tag_rules'),
+        window.electronAPI.db.getPref(projectId, 'tag_palette'),
+        window.electronAPI.db.getPref(projectId, 'tag_snapshots'),
       ])
+
+      // 3b. Tag rules + palette. Seed from bundled defaults the first time a
+      // config is opened, then persist so each config owns its own copy.
+      let tagRules = []
+      let tagPalette = []
+      try { tagRules = tagRulesPref ? JSON.parse(tagRulesPref) : null } catch { tagRules = null }
+      try { tagPalette = tagPalettePref ? JSON.parse(tagPalettePref) : null } catch { tagPalette = null }
+      if (tagRules == null || tagPalette == null) {
+        const defaults = await window.electronAPI.db.getDefaultTags()
+        if (tagRules == null) {
+          tagRules = (defaults.rules || []).map((r, i) => ({ id: `r${i}`, enabled: true, ...r }))
+          await window.electronAPI.db.setPref(projectId, 'tag_rules', JSON.stringify(tagRules))
+        }
+        if (tagPalette == null) {
+          tagPalette = defaults.palette || []
+          await window.electronAPI.db.setPref(projectId, 'tag_palette', JSON.stringify(tagPalette))
+        }
+      }
 
       // 4. Build positionUI map keyed by ref
       const positionUIMap = {}
@@ -133,33 +186,47 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
         positionUIMap[row.position_type_ref] = row
       }
 
-      // 5. Derive tags
-      const derivedTags = deriveTagsForAll(positionTypes)
-
-      // 6. Merge derived tags with SQLite stored tags (SQLite wins for manual overrides)
+      // 5/6. Compute effective tags: rule tags ∪ per-position add − remove
       const mergedPositionUI = {}
       for (const pt of positionTypes) {
         const ref = pt.PositionTypeRef
-        const derived = derivedTags[ref] || { tags: [], confidence: 'low', source: {} }
         const stored = positionUIMap[ref] || {}
-        const isManual = stored.tag_source === 'manual'
+        const ruleTags = evaluateTags(pt, tagRules)
+        const tagAdd = stored.tag_add || []
+        const tagRemove = stored.tag_remove || []
         mergedPositionUI[ref] = {
-          tags: isManual ? (stored.tags || []) : derived.tags,
-          tagSource: isManual ? 'manual' : 'derived',
-          tagConfidence: isManual ? stored.tag_confidence : derived.confidence,
+          tags: effectiveTags(ruleTags, tagAdd, tagRemove),
+          ruleTags,
+          tagAdd,
+          tagRemove,
           userNotes: stored.user_notes || null,
-          derivedTags: derived.tags,
-          derivedConfidence: derived.confidence,
-          derivedSource: derived.source,
+          ignored: !!stored.ignored,
         }
+      }
+
+      // 7. Tag drift: compare current rule output against the accepted baseline.
+      // Baseline positions seen for the first time (no drift), and flag positions
+      // whose rule-relevant DB data changed since the last accepted state.
+      let tagSnapshots = {}
+      try { tagSnapshots = tagSnapshotsPref ? JSON.parse(tagSnapshotsPref) : {} } catch { tagSnapshots = {} }
+      const { drift: tagDrift, newBaselines } = computeTagDrift(positionTypes, tagRules, tagSnapshots)
+      if (Object.keys(newBaselines).length > 0) {
+        tagSnapshots = { ...tagSnapshots, ...newBaselines }
+        await window.electronAPI.db.setPref(projectId, 'tag_snapshots', JSON.stringify(tagSnapshots))
       }
 
       // 8. Load everything into the store
       let manualContainerETs = []
       try { manualContainerETs = JSON.parse(containerETPref || '[]') } catch { /* ignore */ }
 
+      let ignoredPositionFamilies = []
+      try { ignoredPositionFamilies = JSON.parse(ignoredFamiliesPref || '[]') } catch { /* ignore */ }
+
       loadProject({
         projectId,
+        projectNumber,
+        configName,
+        projectLabel: project?.project_label ?? null,
         folderPath,
         paths: { db: absDbs, ps: absPs, rs: absRs },
         elementTypes,
@@ -170,6 +237,12 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
         slotMappings,
         positionUI: mergedPositionUI,
         manualContainerETs,
+        etCollections: etCollections ?? [],
+        ignoredPositionFamilies,
+        tagRules,
+        tagPalette,
+        tagSnapshots,
+        tagDrift,
       })
 
       // 9. Start file watcher
@@ -302,11 +375,14 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
 
           {openError && <Alert variant="danger" className="py-2">{openError}</Alert>}
 
-          {/* Open Project button */}
-          <div className="d-flex justify-content-end">
+          {/* Actions */}
+          <div className="d-flex justify-content-between align-items-center">
+            <Button variant="link" className="px-0" onClick={() => setShowManager(true)}>
+              Manage projects…
+            </Button>
             <Button
               variant="primary"
-              onClick={handleOpenProject}
+              onClick={() => requestOpen()}
               disabled={!allFound || opening || detecting}
             >
               {opening ? <><Spinner size="sm" animation="border" className="me-2" />Opening…</> : 'Open Project'}
@@ -314,6 +390,20 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
           </div>
         </Card.Body>
       </Card>
+
+      <ProjectConfirmModal
+        show={!!confirmCtx}
+        suggestedNumber={confirmCtx?.suggestedNumber}
+        existingConfigs={confirmCtx?.existingConfigs || []}
+        preselectConfig={confirmCtx?.preselectConfig}
+        onCancel={() => setConfirmCtx(null)}
+        onConfirm={doOpenProject}
+      />
+
+      <ProjectManager
+        show={showManager}
+        onHide={() => setShowManager(false)}
+      />
     </Container>
   )
 }
