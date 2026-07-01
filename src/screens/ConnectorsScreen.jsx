@@ -100,7 +100,7 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
     : []
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }} data-debug-id="ConnectorsScreen">
       {/* Toolbar */}
       <div className="d-flex align-items-center gap-2 px-3 py-2 border-bottom bg-white" style={{ flexShrink: 0 }}>
         <Button variant="outline-secondary" size="sm" onClick={onBack}>← Back</Button>

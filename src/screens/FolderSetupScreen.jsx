@@ -287,6 +287,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
     <Container
       className="d-flex align-items-center justify-content-center"
       style={{ minHeight: '100vh', padding: '2rem' }}
+      data-debug-id="FolderSetupScreen"
     >
       <Card style={{ width: 600, boxShadow: '0 4px 24px rgba(0,0,0,0.10)' }}>
         <Card.Body className="p-4">

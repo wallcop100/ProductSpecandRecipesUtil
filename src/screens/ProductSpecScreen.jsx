@@ -182,7 +182,7 @@ export default function ProductSpecScreen({ onBack, scrollToRef }) {
   const pctComplete = total > 0 ? Math.round((stats.complete / total) * 100) : 0
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }} data-debug-id="ProductSpecScreen">
       {/* Header */}
       <div
         className="d-flex align-items-center gap-2 px-3 py-2 border-bottom bg-white"

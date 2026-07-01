@@ -1,6 +1,6 @@
 'use strict'
 
-const { app, BrowserWindow, ipcMain, dialog } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const yaml = require('js-yaml')
@@ -88,6 +88,34 @@ async function startFlask() {
 }
 
 // ---------------------------------------------------------------------------
+// Application menu (adds a Debug toggle that overlays UI element code IDs)
+// ---------------------------------------------------------------------------
+
+function buildAppMenu() {
+  const template = [
+    { role: 'fileMenu' },
+    { role: 'editMenu' },
+    { role: 'viewMenu' },
+    {
+      label: 'Debug',
+      submenu: [
+        {
+          id: 'debug-show-ids',
+          label: 'Show UI element IDs',
+          type: 'checkbox',
+          checked: false,
+          accelerator: 'CmdOrCtrl+Shift+D',
+          click: (item) => {
+            if (mainWindow) mainWindow.webContents.send('debug-toggle', item.checked)
+          },
+        },
+      ],
+    },
+  ]
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template))
+}
+
+// ---------------------------------------------------------------------------
 // BrowserWindow
 // ---------------------------------------------------------------------------
 
@@ -113,6 +141,8 @@ function createWindow() {
   })
 
   mainWindow.on('closed', () => { mainWindow = null })
+
+  buildAppMenu()
 }
 
 // ---------------------------------------------------------------------------

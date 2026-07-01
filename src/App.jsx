@@ -21,6 +21,7 @@ export default function App() {
   const [connectorsFocusRef, setConnectorsFocusRef] = useState(null)
   const [updateStatus, setUpdateStatus] = useState(null)
   // updateStatus shape: { status: 'available'|'downloading'|'ready', version, percent, releaseNotes }
+  const [debugIds, setDebugIds] = useState(false)
 
   const setFileWatchAlert = useStore(s => s.setFileWatchAlert)
   const setActivePosition = useStore(s => s.setActivePosition)
@@ -40,6 +41,11 @@ export default function App() {
         setUpdateStatus(data)
       })
     }
+
+    // Debug menu → toggle the UI-element-ID overlay
+    if (window.electronAPI?.onDebugToggle) {
+      window.electronAPI.onDebugToggle((on) => setDebugIds(!!on))
+    }
   }, [setFileWatchAlert])
 
   function navigateTo(screen) {
@@ -47,7 +53,7 @@ export default function App() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div className={debugIds ? 'debug-ids' : ''} style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <FileWatchBanner />
 
       <div style={{ flex: 1 }}>

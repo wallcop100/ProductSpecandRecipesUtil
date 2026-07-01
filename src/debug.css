@@ -1,0 +1,26 @@
+/*
+ * Debug UI-ID overlay. Toggled by the Debug ▸ "Show UI element IDs" menu item
+ * (Ctrl+Shift+D). When the root carries `.debug-ids`, every element tagged with
+ * a `data-debug-id` is outlined and labelled with its code identifier so issues
+ * can be pinpointed by name.
+ */
+.debug-ids [data-debug-id] {
+  position: relative;
+  outline: 1px dashed rgba(13, 110, 253, 0.6);
+  outline-offset: -1px;
+}
+
+.debug-ids [data-debug-id]::after {
+  content: attr(data-debug-id);
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: rgba(13, 110, 253, 0.92);
+  color: #fff;
+  font: 9px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  padding: 0 4px;
+  border-radius: 0 0 3px 0;
+  pointer-events: none;
+  z-index: 4000;
+  white-space: nowrap;
+}

@@ -230,11 +230,12 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
   // -------------------------------------------------------------------------
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }} data-debug-id="BuilderScreen">
       {/* Toolbar */}
       <div
         className="d-flex align-items-center gap-2 px-3 py-2 border-bottom bg-white"
         style={{ flexShrink: 0 }}
+        data-debug-id="BuilderScreen/Toolbar"
       >
         <Button variant="outline-secondary" size="sm" onClick={onBackToSetup}>
           ← Back
@@ -419,7 +420,7 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
         </div>
 
         {/* Centre: project tree outliner (or ET internal editor) */}
-        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }} data-debug-id="BuilderScreen/Centre (main surface)">
           {inETMode ? (
             <div style={{ flex: 1, overflowY: 'auto', padding: '1rem 1.25rem' }}>
               {/* ET mode header */}
@@ -483,6 +484,7 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
 
         {/* Right drawer: tabbed palette */}
         <div
+          data-debug-id="BuilderScreen/RightDrawer"
           style={{
             position: 'absolute',
             top: 0,

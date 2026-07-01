@@ -9,6 +9,7 @@ import useStore from '../store/useStore'
 import IngredientCard from './IngredientCard'
 import SlotCard from './SlotCard'
 import ETRefSelect from './ETRefSelect'
+import MaterialIcon from './MaterialIcon'
 import { TYPE_COLORS } from '../utils/entityStyle'
 
 const SECTION_COLOR = {
@@ -33,6 +34,8 @@ export default function RecipeSection({
 }) {
   const addRecipeRow = useStore(s => s.addRecipeRow)
   const resolveSlot = useStore(s => s.resolveSlot)
+  const rowClipboard = useStore(s => s.rowClipboard)
+  const pasteClipboard = useStore(s => s.pasteClipboard)
 
   const [adding, setAdding] = useState(false)
 
@@ -49,7 +52,7 @@ export default function RecipeSection({
   }
 
   return (
-    <div className="mb-4">
+    <div className="mb-4" data-debug-id={`RecipeSection:${sectionKey}`}>
       <div
         className="d-flex align-items-center gap-2 mb-2"
         style={{ borderBottom: `2px solid ${SECTION_COLOR[sectionKey] || '#dee2e6'}`, paddingBottom: 4 }}
@@ -69,8 +72,22 @@ export default function RecipeSection({
             size="sm"
             style={{ padding: '1px 8px', fontSize: 12 }}
             onClick={() => setAdding(true)}
+            title="Add a row to this section"
           >
             + Add row
+          </Button>
+        )}
+        {/* Paste affordance — appears whenever the clipboard holds rows */}
+        {rowClipboard && posRef && (
+          <Button
+            variant="primary"
+            size="sm"
+            className="d-inline-flex align-items-center gap-1"
+            style={{ padding: '1px 8px', fontSize: 12 }}
+            onClick={() => pasteClipboard(posRef, sectionKey)}
+            title={`Paste ${rowClipboard.label} into this section (Ctrl+V pastes to the whole position)`}
+          >
+            <MaterialIcon name="content_paste" size={14} /> Paste ({rowClipboard.count})
           </Button>
         )}
       </div>

@@ -73,6 +73,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // App
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
 
+  // Debug: menu toggle for the UI-element-ID overlay
+  onDebugToggle: (callback) =>
+    ipcRenderer.on('debug-toggle', (_event, on) => callback(on)),
+
   // Auto-updater
   updater: {
     onStatusChange: (callback) =>

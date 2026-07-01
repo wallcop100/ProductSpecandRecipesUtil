@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import useStore from '../store/useStore'
 import PositionList from './PositionList'
+import { positionFamilyOf } from '../utils/positionFamily'
 
 /**
  * ProjectNavigator — left-panel jump/filter index.
@@ -15,6 +16,8 @@ export default function ProjectNavigator() {
   const recipes = useStore(s => s.recipes)
   const activeETRef = useStore(s => s.activeETRef)
   const openETRecipe = useStore(s => s.openETRecipe)
+  const positionUI = useStore(s => s.positionUI)
+  const ignoredPositionFamilies = useStore(s => s.ignoredPositionFamilies)
 
   const [elFilter, setElFilter] = useState('')
 
@@ -30,14 +33,21 @@ export default function ProjectNavigator() {
   }, [recipes])
 
   // Recipe coverage: how many position types have at least one recipe row.
+  // Ignored positions/families are out-of-scope and excluded from the totals.
   const { reciped, total, coverage } = useMemo(() => {
+    const ignoredFamilies = new Set(ignoredPositionFamilies)
+    const isIgnored = (pt) =>
+      !!positionUI[pt.PositionTypeRef]?.ignored ||
+      (ignoredFamilies.size > 0 && ignoredFamilies.has(positionFamilyOf(pt)))
+
     const recipedRefs = new Set()
     for (const r of recipes) {
       const pr = r.PositionTypeRef || r.positionTypeRef
       if (pr) recipedRefs.add(pr)
     }
-    const totalCount = positionTypes.length
-    const recipedCount = positionTypes.filter(
+    const scoped = positionTypes.filter(pt => !isIgnored(pt))
+    const totalCount = scoped.length
+    const recipedCount = scoped.filter(
       pt => recipedRefs.has(pt.PositionTypeRef || pt.positionTypeRef)
     ).length
     return {
@@ -45,7 +55,7 @@ export default function ProjectNavigator() {
       total: totalCount,
       coverage: totalCount ? recipedCount / totalCount : 0,
     }
-  }, [positionTypes, recipes])
+  }, [positionTypes, recipes, positionUI, ignoredPositionFamilies])
 
   const [filter, setFilter] = useState('')
 
@@ -98,7 +108,7 @@ export default function ProjectNavigator() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }} data-debug-id="ProjectNavigator (left index)">
       {/* Header: coverage + filter */}
       <div style={{ flexShrink: 0, borderBottom: '1px solid #e9ecef' }}>
         <div className="d-flex align-items-center gap-1 px-2 pt-2">

@@ -215,7 +215,7 @@ export default function TemplateEditorScreen({ onBack }) {
   }
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }} data-debug-id="TemplateEditorScreen">
 
       {/* Left panel */}
       <div

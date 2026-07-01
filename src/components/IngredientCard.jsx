@@ -8,7 +8,7 @@ import ETRefSelect from './ETRefSelect'
 import EntityPill from './EntityPill'
 import ContentsBadge from './ContentsBadge'
 import MaterialIcon from './MaterialIcon'
-import { getUsedIn, getNextAvailableRef, getInternalItems } from '../utils/containerUtils'
+import { getUsedIn, getInternalItems } from '../utils/containerUtils'
 import { familyOf } from '../utils/etRef'
 
 /**
@@ -34,6 +34,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   const selectedRowIds = useStore(s => s.selectedRowIds)
   const toggleRowSelection = useStore(s => s.toggleRowSelection)
   const copyRows = useStore(s => s.copyRows)
+  const suggestNextETRef = useStore(s => s.suggestNextETRef)
 
   const rowId = row._id
   const isSelected = selectedRowIds.includes(rowId)
@@ -59,6 +60,8 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
 
   const etRef = row.elementTypeRef || row.ElementTypeRef || ''
   const isUnresolved = row.resolved === false
+  // Rows added in-app (paste, palette, connectors) have no source-file row yet.
+  const isNewRow = !isUnresolved && row._row_num == null
 
   // Look up PS row for product code, manufacturer, description
   const psRow = psRows.find(p => {
@@ -86,7 +89,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
       : 'No wrapper signals')
     : ''
   const usedIn = isContainer ? getUsedIn(etRef, recipes, posRef) : []
-  const nextRef = isContainer ? getNextAvailableRef(etRef, elementTypes) : null
+  const nextRef = isContainer ? suggestNextETRef(etRef) : null
   const internalItems = isContainer ? getInternalItems(etRef, recipes, elementTypes) : []
 
   const [showContents, setShowContents] = useState(false)
@@ -122,7 +125,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   const etAccent = (etRef && !isUnresolved) ? '#bf6018' : '#ffc107'
 
   return (
-    <div ref={setNodeRef} style={style}>
+    <div ref={setNodeRef} style={style} data-debug-id="IngredientCard">
       <Card
         style={{
           borderLeft: `3px solid ${isSelected ? '#0d6efd' : etAccent}`,
@@ -180,6 +183,15 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                         title={psRow ? 'Click to edit spec' : (isContainer ? 'Collection (container element)' : 'Element')}
                       />
                     </span>
+                    {isNewRow && (
+                      <span
+                        className="badge d-inline-flex align-items-center gap-1"
+                        style={{ background: '#d1e7dd', color: '#0a3622', border: '1px solid #a3cfbb', fontSize: 9, flexShrink: 0 }}
+                        title="New — added here and not yet in the source file (unsaved until you export)"
+                      >
+                        <MaterialIcon name="fiber_new" size={12} /> new
+                      </span>
+                    )}
                     <MaterialIcon name="arrow_forward" size={14} style={{ color: '#ccc', flexShrink: 0 }} />
                     {productCode ? (
                       <span

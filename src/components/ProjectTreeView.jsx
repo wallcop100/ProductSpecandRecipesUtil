@@ -218,7 +218,7 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }} data-debug-id="ProjectTreeView/Overview (main surface)">
       <div
         className="d-flex align-items-center gap-2 px-3 py-2 border-bottom bg-white"
         style={{ flexShrink: 0, position: 'sticky', top: 0, zIndex: 2 }}
@@ -343,11 +343,18 @@ function FocusedPositionEditor({ pt, tags, issues, count, showDeleted, onOpenPro
   }
 
   // Keyboard: Ctrl/Cmd+C copies the selection, Ctrl/Cmd+V pastes into this position.
-  // Ignored while typing in a field.
+  // Ignored only while typing in a TEXT field — checkboxes/buttons (e.g. the row
+  // select box) must NOT swallow the shortcut, otherwise copy fails right after
+  // ticking a row.
   useEffect(() => {
     function onKey(e) {
       const t = e.target
-      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return
+      const tag = t?.tagName
+      const type = (t?.type || '').toLowerCase()
+      const isTextField =
+        tag === 'TEXTAREA' || t?.isContentEditable ||
+        (tag === 'INPUT' && !['checkbox', 'radio', 'button', 'submit', 'reset'].includes(type))
+      if (isTextField) return
       if (!(e.ctrlKey || e.metaKey)) return
       if (e.key === 'c' && selectedRowIds.length > 0) { e.preventDefault(); doCopySelection() }
       else if (e.key === 'v' && rowClipboard) { e.preventDefault(); doPaste() }
@@ -361,7 +368,7 @@ function FocusedPositionEditor({ pt, tags, issues, count, showDeleted, onOpenPro
   useEffect(() => { clearRowSelection() /* eslint-disable-next-line */ }, [ref])
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }} data-debug-id="ProjectTreeView/FocusedEditor (main surface)">
       {/* Focused header */}
       <div
         className="d-flex align-items-center gap-2 px-3 py-2 border-bottom bg-white"

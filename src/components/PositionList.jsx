@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react'
 import useStore from '../store/useStore'
 import TagBadge from './TagBadge'
+import { positionFamilyOf } from '../utils/positionFamily'
 
 /**
  * PositionList — scrollable list of all position types.
@@ -14,6 +15,7 @@ export default function PositionList({ filter = '' }) {
   const activePositionRef = useStore(s => s.activePositionRef)
   const setActivePosition = useStore(s => s.setActivePosition)
   const validationResults = useStore(s => s.validationResults)
+  const ignoredPositionFamilies = useStore(s => s.ignoredPositionFamilies)
 
   // Index validation issues by positionTypeRef
   const issuesByRef = useMemo(() => {
@@ -28,11 +30,17 @@ export default function PositionList({ filter = '' }) {
   }, [validationResults])
 
 
-  // Apply the filter: match on ref, name, or any tag.
+  // Apply the filter: match on ref, name, or any tag. Ignored positions/families
+  // are out-of-scope and excluded from the navigator index entirely.
   const q = filter.trim().toLowerCase()
   const visiblePositions = useMemo(() => {
-    if (!q) return positionTypes
+    const ignoredFamilies = new Set(ignoredPositionFamilies)
+    const isIgnored = (pt) =>
+      !!positionUI[pt.PositionTypeRef]?.ignored ||
+      (ignoredFamilies.size > 0 && ignoredFamilies.has(positionFamilyOf(pt)))
     return positionTypes.filter(pt => {
+      if (isIgnored(pt)) return false
+      if (!q) return true
       const ref = pt.PositionTypeRef || ''
       const name = pt.Name || pt.name || ''
       const tags = (positionUI[ref]?.tags) || []
@@ -40,7 +48,7 @@ export default function PositionList({ filter = '' }) {
         name.toLowerCase().includes(q) ||
         tags.some(t => t.toLowerCase().includes(q))
     })
-  }, [positionTypes, positionUI, q])
+  }, [positionTypes, positionUI, ignoredPositionFamilies, q])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
