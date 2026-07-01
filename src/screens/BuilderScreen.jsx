@@ -431,8 +431,16 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
                   ← Back to tree
                 </Button>
                 <span className="fw-semibold">Editing ET: {activeETRef}</span>
-                {etModeUsedIn.length > 0 && (
-                  <span className="text-muted small">— Used in: {etModeUsedIn.join(', ')}</span>
+                {etModeUsedIn.length > 0 ? (
+                  <span
+                    className="badge"
+                    style={{ background: '#fff3cd', color: '#856404', border: '1px solid #ffc107', fontSize: 11 }}
+                    title={`Shared assembly — edits here apply to all ${etModeUsedIn.length} position${etModeUsedIn.length === 1 ? '' : 's'}: ${etModeUsedIn.join(', ')}`}
+                  >
+                    ⚠ Edits apply to {etModeUsedIn.length} position{etModeUsedIn.length === 1 ? '' : 's'}: {etModeUsedIn.join(', ')}
+                  </span>
+                ) : (
+                  <span className="text-muted small">— not used by any position yet</span>
                 )}
                 <div className="flex-grow-1" />
                 <Button

@@ -101,7 +101,7 @@ export default function App() {
         )}
       </div>
 
-      <UpdateBanner updateStatus={updateStatus} />
+      <UpdateBanner updateStatus={updateStatus} onDismiss={() => setUpdateStatus(null)} />
     </div>
   )
 }

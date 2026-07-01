@@ -30,8 +30,13 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   const recipes = useStore(s => s.recipes)
   const elementTypes = useStore(s => s.elementTypes)
   const containerETRefs = useStore(s => s.containerETRefs)
+  const containerReasons = useStore(s => s.containerReasons)
+  const selectedRowIds = useStore(s => s.selectedRowIds)
+  const toggleRowSelection = useStore(s => s.toggleRowSelection)
+  const copyRows = useStore(s => s.copyRows)
 
   const rowId = row._id
+  const isSelected = selectedRowIds.includes(rowId)
 
   const {
     attributes,
@@ -72,6 +77,14 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
 
   // Container ET awareness
   const isContainer = etRef ? containerETRefs.has(etRef.toLowerCase()) : false
+  const HINT_LABELS = { naming: 'DL/LIN name', ideaworksNA: 'Ideaworks/N-A spec', hasInternals: 'has internals', isCollection: 'IsCollection flag' }
+  const reason = etRef ? containerReasons?.[etRef.toLowerCase()] : null
+  const whyText = reason
+    ? (reason.forced === 'included' ? 'Manually marked as container'
+      : reason.forced === 'excluded' ? 'Manually excluded from containers'
+      : reason.hints?.length ? `Detected via: ${reason.hints.map(h => HINT_LABELS[h] || h).join(', ')}`
+      : 'No wrapper signals')
+    : ''
   const usedIn = isContainer ? getUsedIn(etRef, recipes, posRef) : []
   const nextRef = isContainer ? getNextAvailableRef(etRef, elementTypes) : null
   const internalItems = isContainer ? getInternalItems(etRef, recipes, elementTypes) : []
@@ -112,12 +125,31 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
     <div ref={setNodeRef} style={style}>
       <Card
         style={{
-          borderLeft: `3px solid ${etAccent}`,
+          borderLeft: `3px solid ${isSelected ? '#0d6efd' : etAccent}`,
           borderRadius: 6,
+          background: isSelected ? '#e7f1ff' : undefined,
+          boxShadow: isSelected ? '0 0 0 1px #0d6efd' : undefined,
         }}
       >
         <Card.Body className="py-2 px-3">
           <div className="d-flex align-items-start gap-2">
+            {/* Select for copy */}
+            <Form.Check
+              type="checkbox"
+              checked={isSelected}
+              onChange={() => toggleRowSelection(rowId)}
+              title="Select for copy"
+              style={{ paddingTop: 2 }}
+            />
+            {/* Copy this row */}
+            <button
+              className="btn btn-link p-0"
+              style={{ color: '#aaa', lineHeight: 1, paddingTop: 2 }}
+              title="Copy this row"
+              onClick={() => copyRows([rowId])}
+            >
+              <MaterialIcon name="content_copy" size={15} />
+            </button>
             {/* Drag handle */}
             <span
               {...attributes}
@@ -229,7 +261,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                     className="btn btn-link btn-sm p-0"
                     style={{ fontSize: 10, color: '#aaa', textDecoration: 'none' }}
                     onClick={() => toggleContainerET(etRef)}
-                    title="Mark as virtual container element"
+                    title={`Mark as virtual container element${whyText ? ` — ${whyText}` : ''}`}
                   >
                     Mark as container
                   </button>
@@ -239,7 +271,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                     className="btn btn-link btn-sm p-0"
                     style={{ fontSize: 10, color: '#aaa', textDecoration: 'none' }}
                     onClick={() => toggleContainerET(etRef)}
-                    title="Remove container designation"
+                    title={`Remove container designation${whyText ? ` — ${whyText}` : ''}`}
                   >
                     ✕ container
                   </button>

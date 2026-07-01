@@ -1,19 +1,44 @@
 import React, { useState } from 'react'
-import { Alert, Button, ProgressBar, Modal } from 'react-bootstrap'
+import { Spinner, Button, ProgressBar, Modal } from 'react-bootstrap'
 import DOMPurify from 'dompurify'
+
+const barStyle = (bg, border) => ({
+  position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1040,
+  background: bg, borderTop: `1px solid ${border}`,
+  padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 12,
+})
 
 /**
  * UpdateBanner — bottom-docked auto-updater status banner.
  *
  * Props:
- *   updateStatus: null | { status: 'available'|'downloading'|'ready', version?, percent?, releaseNotes? }
+ *   updateStatus: null | { status: 'checking'|'none'|'available'|'downloading'|'ready', version?, percent?, releaseNotes? }
+ *   onDismiss: () => void  — clears transient states (checking/up-to-date)
  */
-export default function UpdateBanner({ updateStatus }) {
+export default function UpdateBanner({ updateStatus, onDismiss }) {
   const [showNotes, setShowNotes] = useState(false)
 
   if (!updateStatus) return null
 
   const { status, version, percent, releaseNotes } = updateStatus
+
+  if (status === 'checking') {
+    return (
+      <div style={barStyle('#fff', '#dee2e6')}>
+        <Spinner size="sm" animation="border" />
+        <span className="small text-muted">Checking for updates…</span>
+      </div>
+    )
+  }
+
+  if (status === 'none') {
+    return (
+      <div style={barStyle('#e7f1ff', '#b6d4fe')}>
+        <span className="small text-primary">✓ You're on the latest version{version ? ` (v${version})` : ''}.</span>
+        <Button variant="link" size="sm" className="ms-auto p-0" onClick={onDismiss}>Dismiss</Button>
+      </div>
+    )
+  }
 
   if (status === 'downloading') {
     return (

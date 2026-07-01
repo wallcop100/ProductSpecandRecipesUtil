@@ -37,6 +37,11 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
   // Project confirm modal context: { suggestedNumber, existingConfigs, preselectConfig } | null
   const [confirmCtx, setConfirmCtx] = useState(null)
   const [showManager, setShowManager] = useState(false)
+  const [appVersion, setAppVersion] = useState('')
+
+  useEffect(() => {
+    window.electronAPI.getAppVersion?.().then(v => setAppVersion(v || '')).catch(() => {})
+  }, [])
 
   // Listen for Flask startup status from main process
   useEffect(() => {
@@ -150,11 +155,12 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
       const positionTypes = db_data?.position_types ?? []
 
       // 3. Load SQLite data
-      const [positionUIArr, templates, slotMappings, containerETPref, etCollections, ignoredFamiliesPref, tagRulesPref, tagPalettePref, tagSnapshotsPref] = await Promise.all([
+      const [positionUIArr, templates, slotMappings, containerETPref, containerExcludePref, etCollections, ignoredFamiliesPref, tagRulesPref, tagPalettePref, tagSnapshotsPref] = await Promise.all([
         window.electronAPI.db.getAllPositionUI(projectId),
         window.electronAPI.db.getAllTemplates(projectId),
         window.electronAPI.db.getAllSlotMappings(projectId), // already { templateId: { slotKey: ref } }
         window.electronAPI.db.getPref(projectId, 'container_ets'),
+        window.electronAPI.db.getPref(projectId, 'container_ets_exclude'),
         window.electronAPI.db.getAllCollections(projectId),
         window.electronAPI.db.getPref(projectId, 'ignored_position_families'),
         window.electronAPI.db.getPref(projectId, 'tag_rules'),
@@ -219,6 +225,9 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
       let manualContainerETs = []
       try { manualContainerETs = JSON.parse(containerETPref || '[]') } catch { /* ignore */ }
 
+      let manualContainerExcludeETs = []
+      try { manualContainerExcludeETs = JSON.parse(containerExcludePref || '[]') } catch { /* ignore */ }
+
       let ignoredPositionFamilies = []
       try { ignoredPositionFamilies = JSON.parse(ignoredFamiliesPref || '[]') } catch { /* ignore */ }
 
@@ -237,6 +246,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
         slotMappings,
         positionUI: mergedPositionUI,
         manualContainerETs,
+        manualContainerExcludeETs,
         etCollections: etCollections ?? [],
         ignoredPositionFamilies,
         tagRules,
@@ -386,6 +396,17 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
               disabled={!allFound || opening || detecting}
             >
               {opening ? <><Spinner size="sm" animation="border" className="me-2" />Opening…</> : 'Open Project'}
+            </Button>
+          </div>
+
+          {/* Version + update check */}
+          <div className="d-flex align-items-center gap-2 mt-3 pt-2 border-top">
+            <span className="text-muted small">{appVersion ? `v${appVersion}` : ''}</span>
+            <Button
+              variant="link" size="sm" className="p-0 ms-auto"
+              onClick={() => window.electronAPI.updater?.checkNow?.()}
+            >
+              Check for updates
             </Button>
           </div>
         </Card.Body>

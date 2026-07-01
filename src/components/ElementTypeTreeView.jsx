@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react'
+import { Button, Form } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import FilterBar from './FilterBar'
 import MaterialIcon from './MaterialIcon'
@@ -20,9 +21,23 @@ export default function ElementTypeTreeView() {
   const elementTypes = useStore(s => s.elementTypes)
   const activeETRef = useStore(s => s.activeETRef)
   const openETRecipe = useStore(s => s.openETRecipe)
+  const addLocalElementType = useStore(s => s.addLocalElementType)
+  const toggleContainerET = useStore(s => s.toggleContainerET)
+  const containerETRefs = useStore(s => s.containerETRefs)
 
   const [filter, setFilter] = useState('')
   const [familyFilter, setFamilyFilter] = useState('')
+  const [newWrapperRef, setNewWrapperRef] = useState(null)  // null = not creating
+
+  async function createBlankWrapper() {
+    const ref = (newWrapperRef || '').trim()
+    if (!ref) { setNewWrapperRef(null); return }
+    addLocalElementType(ref)
+    // Force it to count as a wrapper (manual include) if not already detected.
+    if (!containerETRefs.has(ref.toLowerCase())) await toggleContainerET(ref)
+    setNewWrapperRef(null)
+    openETRecipe(ref)   // jump straight into its (empty) internal recipe
+  }
 
   const etMap = useMemo(() => {
     const m = new Map()
@@ -33,14 +48,21 @@ export default function ElementTypeTreeView() {
     return m
   }, [elementTypes])
 
-  // Container ETs = unique ContextRefs used as ElementType context
+  // Container ETs = unique ContextRefs used as ElementType context, PLUS any ET
+  // flagged a container (e.g. a freshly-created blank wrapper with no internals yet).
   const containers = useMemo(() => {
-    const refs = [...new Set(
+    const set = new Set(
       recipes
         .filter(r => (r.ContextType || r.contextType) === 'ElementType')
-        .map(r => r.ContextRef || r.contextRef)
+        .map(r => (r.ContextRef || r.contextRef))
         .filter(Boolean)
-    )]
+    )
+    // Include flagged containers that don't yet have internal rows
+    for (const et of elementTypes) {
+      const r = et.ElementTypeRef || et.elementTypeRef
+      if (r && containerETRefs.has(r.toLowerCase())) set.add(r)
+    }
+    const refs = [...set]
     return refs
       .map(ref => {
         const et = etMap.get(ref.toLowerCase())
@@ -54,7 +76,7 @@ export default function ElementTypeTreeView() {
         }
       })
       .sort((a, b) => a.ref.localeCompare(b.ref))
-  }, [recipes, elementTypes, etMap])
+  }, [recipes, elementTypes, etMap, containerETRefs])
 
   const familyOptions = useMemo(
     () => [...new Set(containers.map(c => c.family))].sort((a, b) => a.localeCompare(b)),
@@ -81,6 +103,23 @@ export default function ElementTypeTreeView() {
         <strong className="small text-uppercase text-muted" style={{ letterSpacing: 0.5 }}>
           Element Types ({containers.length})
         </strong>
+        {newWrapperRef === null ? (
+          <Button variant="outline-primary" size="sm" style={{ fontSize: 11 }} onClick={() => setNewWrapperRef('')}>
+            + New wrapper
+          </Button>
+        ) : (
+          <div className="d-flex gap-1 align-items-center">
+            <Form.Control
+              size="sm" autoFocus style={{ width: 200, fontSize: 12 }}
+              placeholder="New wrapper ref (e.g. ET-DL-99)"
+              value={newWrapperRef}
+              onChange={e => setNewWrapperRef(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') createBlankWrapper(); if (e.key === 'Escape') setNewWrapperRef(null) }}
+            />
+            <Button variant="success" size="sm" style={{ fontSize: 11 }} onClick={createBlankWrapper}>Create</Button>
+            <Button variant="link" size="sm" style={{ fontSize: 11 }} onClick={() => setNewWrapperRef(null)}>Cancel</Button>
+          </div>
+        )}
         <div className="ms-auto" style={{ width: 420 }}>
           <FilterBar
             text={filter}

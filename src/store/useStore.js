@@ -12,7 +12,8 @@ import { findBestTemplate, recipeToTemplate } from '../utils/templateLoader.js'
 import { resolveTemplate, applyResolvedTemplate } from '../utils/slotResolver.js'
 import { evaluateTags, effectiveTags, snapshotForPosition } from '../utils/tagRules.js'
 import { runValidation } from '../utils/validationRules.js'
-import { buildContainerETSet, looksLikeContainer, getNextAvailableRef } from '../utils/containerUtils.js'
+import { computeContainerInfo, looksLikeContainer, getNextAvailableRef } from '../utils/containerUtils.js'
+import { positionFamilyOf } from '../utils/positionFamily.js'
 import { FLASK_PORT, DIM_QTY_COMPONENTS, AUTO_CONTRACT_ITEMS } from '../utils/constants.js'
 import { CONNECTOR_TEMPLATES } from '../data/connectorTemplates.js'
 
@@ -170,9 +171,15 @@ const useStore = create((set, get) => ({
   tagSnapshots: {},      // { [ref]: { ruleTags, fields } }
   tagDrift: {},          // { [ref]: { tagsBefore, tagsAfter, changedFields } }
 
-  // Container ElementTypes — auto-detected from naming convention + manual overrides
+  // Container ("wrapper") ElementTypes — multi-signal soft match + manual overrides
   containerETRefs: new Set(),        // Set<string> of lowercased ET refs (derived)
-  containerETManualRefs: [],         // string[] — persisted to SQLite project_prefs
+  containerETManualRefs: [],         // string[] manual INCLUDE — pref 'container_ets'
+  containerETExcludeRefs: [],        // string[] manual EXCLUDE — pref 'container_ets_exclude'
+  containerReasons: {},              // { [lowerRef]: { score, hints, forced, isContainer } }
+
+  // Copy / paste of recipe rows (in-app clipboard, not the OS clipboard)
+  selectedRowIds: [],                // recipe row _ids currently selected for copy
+  rowClipboard: null,                // { parts: [{section, elementTypeRef, quantity}], label, count }
 
   // UI state
   rootView: 'positions',               // 'positions' | 'elements' — top-level browse mode
@@ -223,6 +230,7 @@ const useStore = create((set, get) => ({
       slotMappings,
       positionUI,
       manualContainerETs,
+      manualContainerExcludeETs,
       etCollections,
       ignoredPositionFamilies,
       tagRules,
@@ -232,7 +240,13 @@ const useStore = create((set, get) => ({
     } = data
 
     const stampedPsRows = stampIds(psRows ?? [])
+    const stampedRecipes = stampIds(recipes ?? [])
     const manualRefs = manualContainerETs ?? []
+    const excludeRefs = manualContainerExcludeETs ?? []
+    const containerInfo = computeContainerInfo({
+      elementTypes: elementTypes ?? [], psRows: stampedPsRows, recipes: stampedRecipes,
+      manualInclude: manualRefs, manualExclude: excludeRefs,
+    })
 
     set({
       projectId: projectId ?? null,
@@ -244,7 +258,7 @@ const useStore = create((set, get) => ({
       elementTypes: elementTypes ?? [],
       positionTypes: positionTypes ?? [],
       psRows: stampedPsRows,
-      recipes: stampIds(recipes ?? []),
+      recipes: stampedRecipes,
       templates: [...(templates ?? []), ...CONNECTOR_TEMPLATES],
       slotMappings: slotMappings ?? {},
       positionUI: positionUI ?? {},
@@ -255,7 +269,9 @@ const useStore = create((set, get) => ({
       etCollections: etCollections ?? [],
       ignoredPositionFamilies: ignoredPositionFamilies ?? [],
       containerETManualRefs: manualRefs,
-      containerETRefs: buildContainerETSet(stampedPsRows, manualRefs, collectAllETRefs(elementTypes, stampedPsRows, stampIds(recipes ?? []))),
+      containerETExcludeRefs: excludeRefs,
+      containerETRefs: containerInfo.refs,
+      containerReasons: containerInfo.reasons,
       // Reset transient state
       psChanges: [],
       rsChanges: [],
@@ -310,14 +326,19 @@ const useStore = create((set, get) => ({
       const stampedPsRows = stampIds(ps_rows ?? [])
       const stampedRecipes = stampIds(rs_rows ?? [])
 
-      const { containerETManualRefs } = get()
+      const { containerETManualRefs, containerETExcludeRefs } = get()
+      const containerInfo = computeContainerInfo({
+        elementTypes, psRows: stampedPsRows, recipes: stampedRecipes,
+        manualInclude: containerETManualRefs, manualExclude: containerETExcludeRefs,
+      })
       set({
         elementTypes,
         positionTypes,
         psRows: stampedPsRows,
         recipes: stampedRecipes,
         positionUI: mergedPositionUI,
-        containerETRefs: buildContainerETSet(stampedPsRows, containerETManualRefs, collectAllETRefs(elementTypes, stampedPsRows, stampedRecipes)),
+        containerETRefs: containerInfo.refs,
+        containerReasons: containerInfo.reasons,
         paths,
         past: [],
         future: [],
@@ -906,6 +927,78 @@ const useStore = create((set, get) => ({
     }
   },
 
+  // ---------------------------------------------------------------------------
+  // Copy / paste of recipe rows
+  // ---------------------------------------------------------------------------
+
+  toggleRowSelection(rowId) {
+    if (!rowId) return
+    set(s => ({
+      selectedRowIds: s.selectedRowIds.includes(rowId)
+        ? s.selectedRowIds.filter(id => id !== rowId)
+        : [...s.selectedRowIds, rowId],
+    }))
+  },
+
+  clearRowSelection() { set({ selectedRowIds: [] }) },
+
+  /** Build clipboard parts from a set of recipe rows. */
+  _rowsToParts(rows) {
+    return rows
+      .filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
+      .map(r => ({
+        section: sectionOfRow(r),
+        elementTypeRef: r.ElementTypeRef || r.elementTypeRef,
+        quantity: r.Quantity ?? r.quantity ?? null,
+      }))
+      .filter(p => p.elementTypeRef)
+  },
+
+  /** Copy specific rows (by _id) into the clipboard. */
+  copyRows(rowIds) {
+    const ids = rowIds || []
+    if (ids.length === 0) return null
+    const { recipes } = get()
+    const rows = recipes.filter(r => ids.includes(r._id))
+    const parts = get()._rowsToParts(rows)
+    if (parts.length === 0) return null
+    const clip = { parts, count: parts.length, label: `${parts.length} row${parts.length === 1 ? '' : 's'}` }
+    set({ rowClipboard: clip })
+    return clip
+  },
+
+  /** Copy the currently-selected rows into the clipboard. */
+  copySelectedRows() {
+    return get().copyRows(get().selectedRowIds)
+  },
+
+  /** Copy a whole position's recipe (all sections) into the clipboard. */
+  copyPositionRecipe(posRef) {
+    const { recipes } = get()
+    const rows = recipes.filter(r => (r.PositionTypeRef || r.positionTypeRef) === posRef)
+    const parts = get()._rowsToParts(rows)
+    if (parts.length === 0) return null
+    const clip = { parts, count: parts.length, label: `recipe of ${posRef} (${parts.length} row${parts.length === 1 ? '' : 's'})` }
+    set({ rowClipboard: clip })
+    return clip
+  },
+
+  /**
+   * pasteClipboard(posRef, forceSection?)
+   * Appends the clipboard's rows to a position (additive, one undo step).
+   * forceSection overrides every part's section (e.g. "paste into this section").
+   * Returns the number of rows pasted.
+   */
+  pasteClipboard(posRef, forceSection = null) {
+    const { rowClipboard } = get()
+    if (!rowClipboard || !posRef) return 0
+    const parts = forceSection
+      ? rowClipboard.parts.map(p => ({ ...p, section: forceSection }))
+      : rowClipboard.parts
+    get().addConnection(posRef, parts)
+    return parts.length
+  },
+
   /**
    * applyConnectorTemplate(posRef, templateId)
    * Additively inserts connector rows into an existing recipe.
@@ -1285,7 +1378,7 @@ const useStore = create((set, get) => ({
    * Updates a PS row and records it in psChanges (with before/after for change log).
    */
   updatePSRow(elementTypeRef, updates) {
-    const { psRows, psChanges, containerETManualRefs, elementTypes, recipes } = get()
+    const { psRows, psChanges, containerETManualRefs, containerETExcludeRefs, elementTypes, recipes } = get()
 
     get()._pushHistory()
 
@@ -1301,9 +1394,14 @@ const useStore = create((set, get) => ({
       return { ...row, ...updates }
     })
 
+    const containerInfo = computeContainerInfo({
+      elementTypes, psRows: updatedPsRows, recipes,
+      manualInclude: containerETManualRefs, manualExclude: containerETExcludeRefs,
+    })
     set({
       psRows: updatedPsRows,
-      containerETRefs: buildContainerETSet(updatedPsRows, containerETManualRefs, collectAllETRefs(elementTypes, updatedPsRows, recipes)),
+      containerETRefs: containerInfo.refs,
+      containerReasons: containerInfo.reasons,
       psChanges: [
         ...psChanges,
         { elementTypeRef, updates, before },
@@ -1316,7 +1414,7 @@ const useStore = create((set, get) => ({
    * Creates a new blank PS row and queues it for export (appended to Excel).
    */
   addPSRow(elementTypeRef, defaults = {}, { recordHistory = true } = {}) {
-    const { psRows, psChanges, containerETManualRefs, elementTypes, recipes } = get()
+    const { psRows, psChanges, containerETManualRefs, containerETExcludeRefs, elementTypes, recipes } = get()
 
     const trimmed = (elementTypeRef || '').trim()
     if (!trimmed) return null
@@ -1343,9 +1441,14 @@ const useStore = create((set, get) => ({
     }
 
     const newPsRows = [...psRows, newRow]
+    const containerInfo = computeContainerInfo({
+      elementTypes, psRows: newPsRows, recipes,
+      manualInclude: containerETManualRefs, manualExclude: containerETExcludeRefs,
+    })
     set({
       psRows: newPsRows,
-      containerETRefs: buildContainerETSet(newPsRows, containerETManualRefs, collectAllETRefs(elementTypes, newPsRows, recipes)),
+      containerETRefs: containerInfo.refs,
+      containerReasons: containerInfo.reasons,
       psChanges: [
         ...psChanges,
         {
@@ -1368,24 +1471,47 @@ const useStore = create((set, get) => ({
 
   /**
    * toggleContainerET(etRef)
-   * Manually marks/unmarks an ET as a container. Persists to SQLite project_prefs.
+   * Flips an ET's wrapper status via manual include/exclude overrides (which win
+   * over the auto soft-match), so users can fix both false positives and false
+   * negatives. Persists both override lists to project_prefs.
    */
   async toggleContainerET(etRef) {
     if (!etRef) return
-    const { projectId, psRows, containerETManualRefs, elementTypes, recipes } = get()
+    const { projectId, psRows, containerETRefs, containerETManualRefs, containerETExcludeRefs, elementTypes, recipes } = get()
     const key = etRef.toLowerCase()
-    const idx = containerETManualRefs.findIndex(r => r.toLowerCase() === key)
-    const newManual = idx >= 0
-      ? containerETManualRefs.filter((_, i) => i !== idx)
-      : [...containerETManualRefs, etRef]
+    const isContainer = containerETRefs.has(key)
 
+    // Start from current overrides, clearing any existing override for this ref.
+    let include = containerETManualRefs.filter(r => r.toLowerCase() !== key)
+    let exclude = containerETExcludeRefs.filter(r => r.toLowerCase() !== key)
+
+    // Auto verdict without any override for this ref, to decide which list (if
+    // any) we need to flip the effective state.
+    const auto = computeContainerInfo({
+      elementTypes, psRows, recipes, manualInclude: include, manualExclude: exclude,
+    }).refs.has(key)
+
+    if (isContainer) {
+      // Turning OFF: only need an explicit exclude if auto would still say yes.
+      if (auto) exclude = [...exclude, etRef]
+    } else {
+      // Turning ON: only need an explicit include if auto would still say no.
+      if (!auto) include = [...include, etRef]
+    }
+
+    const containerInfo = computeContainerInfo({
+      elementTypes, psRows, recipes, manualInclude: include, manualExclude: exclude,
+    })
     set({
-      containerETManualRefs: newManual,
-      containerETRefs: buildContainerETSet(psRows, newManual, collectAllETRefs(elementTypes, psRows, recipes)),
+      containerETManualRefs: include,
+      containerETExcludeRefs: exclude,
+      containerETRefs: containerInfo.refs,
+      containerReasons: containerInfo.reasons,
     })
 
     if (projectId) {
-      await window.electronAPI.db.setPref(projectId, 'container_ets', JSON.stringify(newManual))
+      await window.electronAPI.db.setPref(projectId, 'container_ets', JSON.stringify(include))
+      await window.electronAPI.db.setPref(projectId, 'container_ets_exclude', JSON.stringify(exclude))
     }
   },
 
@@ -1484,14 +1610,25 @@ const useStore = create((set, get) => ({
    * Runs validation rules and stores results.
    */
   runValidation() {
-    const { elementTypes, positionTypes, psRows, recipes, positionUI } = get()
+    const { elementTypes, positionTypes, psRows, recipes, positionUI, ignoredPositionFamilies } = get()
 
     const dbData = { element_types: elementTypes, position_types: positionTypes }
     const results = runValidation(dbData, psRows, recipes, positionUI)
 
-    set({ validationResults: results })
+    // Ignored positions/families are out-of-scope — drop their issues so they
+    // don't count toward validation totals.
+    const ignoredFamilies = new Set(ignoredPositionFamilies)
+    const isIgnored = (ref) => {
+      if (!ref) return false
+      if (positionUI[ref]?.ignored) return true
+      const pt = positionTypes.find(p => p.PositionTypeRef === ref)
+      return pt ? ignoredFamilies.has(positionFamilyOf(pt)) : false
+    }
+    const filtered = results.filter(i => !isIgnored(i.ref))
 
-    return results
+    set({ validationResults: filtered })
+
+    return filtered
   },
 
   /**

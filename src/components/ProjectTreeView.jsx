@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import { Button } from 'react-bootstrap'
 import useStore, { getRecipeForPosition } from '../store/useStore'
 import RecipeSection from './RecipeSection'
@@ -39,6 +39,7 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
   const [activeTags, setActiveTags] = useState([])
   const [showEmptyWizard, setShowEmptyWizard] = useState(false)
   const [showDriftWizard, setShowDriftWizard] = useState(false)
+  const [showIgnored, setShowIgnored] = useState(false)
   const driftCount = Object.keys(tagDrift || {}).length
 
   // Tags actually present across positions (alphabetical)
@@ -124,6 +125,98 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
       tags.some(t => t.toLowerCase().includes(q))
   })
 
+  // Ignored positions/families are out-of-scope: kept out of the main list and
+  // every total, but revealed in a collapsible "Ignored" section so they stay
+  // reachable to un-ignore or edit.
+  const activeVisible = visible.filter(pt => !isIgnoredPt(pt))
+  const ignoredVisible = visible.filter(pt => isIgnoredPt(pt))
+
+  function renderPositionRow(pt) {
+    const ref = pt.PositionTypeRef
+    const name = pt.Name || pt.name || ''
+    const tags = positionUI[ref]?.tags || []
+    const issues = issuesByRef[ref] || []
+    const count = countByRef[ref] || 0
+    const hasError = issues.some(i => i.severity === 'error')
+    const hasWarning = issues.some(i => i.severity === 'warning')
+    const ownIgnored = !!positionUI[ref]?.ignored
+    const family = positionFamilyOf(pt)
+    const familyIgnored = !!family && ignoredFamilySet.has(family)
+    const isIgnored = ownIgnored || familyIgnored
+    const drifted = !!(tagDrift && tagDrift[ref])
+    return (
+      <div
+        key={ref}
+        onClick={() => setActivePosition(ref)}
+        className="d-flex align-items-center gap-2 px-2 py-2 mb-1"
+        style={{
+          cursor: 'pointer',
+          border: '1px solid #e5e7eb',
+          borderLeft: `3px solid ${colorsForType('PositionType').accent}`,
+          borderRadius: 6,
+          background: '#fff',
+          opacity: isIgnored ? 0.55 : 1,
+        }}
+      >
+        <MaterialIcon name={ICONS.position} size={18} style={{ color: colorsForType('PositionType').accent }} title="Position" />
+        <span className="fw-semibold" style={{ fontSize: 13 }}>{ref}</span>
+        {name && name !== ref && <span className="text-muted" style={{ fontSize: 11 }}>{name}</span>}
+        {ownIgnored && (
+          <span className="badge" style={{ background: '#fff3cd', color: '#856404', fontSize: 10, border: '1px solid #ffc107' }}>
+            Ignore
+          </span>
+        )}
+        {family && (
+          <span
+            className="badge"
+            style={{
+              background: familyIgnored ? '#fff3cd' : '#eef1f5',
+              color: familyIgnored ? '#856404' : '#5a6472',
+              border: `1px solid ${familyIgnored ? '#ffc107' : '#d4dae2'}`,
+              fontSize: 10, cursor: 'pointer',
+            }}
+            title={familyIgnored
+              ? `Family “${family}” is ignored — click to un-ignore the whole family`
+              : `Click to ignore the whole “${family}” family`}
+            onClick={e => { e.stopPropagation(); toggleIgnorePositionFamily(family) }}
+          >
+            {familyIgnored ? `family ignored: ${family}` : `⌥ ${family}`}
+          </span>
+        )}
+        {tags.slice(0, 4).map(tag => (
+          <TagBadge key={tag} tag={tag} />
+        ))}
+        {drifted && (
+          <span
+            className="badge"
+            style={{ background: '#fff3cd', color: '#856404', fontSize: 10, border: '1px solid #ffc107', cursor: 'pointer' }}
+            title="Rule-derived tags changed since last accepted — click to review"
+            onClick={e => { e.stopPropagation(); setShowDriftWizard(true) }}
+          >
+            ⚠ tags changed
+          </span>
+        )}
+        <CollectionBadge posRef={ref} />
+        <div className="flex-grow-1" />
+        {count > 0
+          ? <span className="badge bg-light text-dark border" style={{ fontSize: 10 }}>{count} {count === 1 ? 'row' : 'rows'}</span>
+          : <span className="text-muted fst-italic" style={{ fontSize: 11 }}>empty</span>}
+        {!isIgnored && hasError && <span title="Has errors" style={{ color: '#dc3545', fontSize: 13 }}>●</span>}
+        {!isIgnored && !hasError && hasWarning && <span title="Has warnings" style={{ color: '#ffc107', fontSize: 13 }}>●</span>}
+        {/* Ignore toggle — stop propagation so it doesn't open the position */}
+        <button
+          className="btn btn-link p-0"
+          style={{ fontSize: 14, color: isIgnored ? '#ffc107' : '#ccc', lineHeight: 1 }}
+          title={isIgnored ? 'Remove Ignore flag' : 'Flag as no recipe needed'}
+          onClick={e => { e.stopPropagation(); toggleIgnorePosition(ref) }}
+        >
+          <MaterialIcon name={isIgnored ? 'do_not_disturb_on' : 'do_not_disturb_off'} size={16} />
+        </button>
+        <span className="text-muted" style={{ fontSize: 16, lineHeight: 1 }}>›</span>
+      </div>
+    )
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div
@@ -179,94 +272,30 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
       />
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem 0.75rem' }}>
-        {visible.length === 0 && (
+        {activeVisible.length === 0 && ignoredVisible.length === 0 && (
           <div className="text-muted text-center mt-4 small">No positions match the filter.</div>
         )}
-        {visible.map(pt => {
-          const ref = pt.PositionTypeRef
-          const name = pt.Name || pt.name || ''
-          const tags = positionUI[ref]?.tags || []
-          const issues = issuesByRef[ref] || []
-          const count = countByRef[ref] || 0
-          const hasError = issues.some(i => i.severity === 'error')
-          const hasWarning = issues.some(i => i.severity === 'warning')
-          const ownIgnored = !!positionUI[ref]?.ignored
-          const family = positionFamilyOf(pt)
-          const familyIgnored = !!family && ignoredFamilySet.has(family)
-          const isIgnored = ownIgnored || familyIgnored
-          const drifted = !!(tagDrift && tagDrift[ref])
-          return (
-            <div
-              key={ref}
-              onClick={() => setActivePosition(ref)}
-              className="d-flex align-items-center gap-2 px-2 py-2 mb-1"
-              style={{
-                cursor: 'pointer',
-                border: '1px solid #e5e7eb',
-                borderLeft: `3px solid ${colorsForType('PositionType').accent}`,
-                borderRadius: 6,
-                background: '#fff',
-                opacity: isIgnored ? 0.55 : 1,
-              }}
+        {activeVisible.length === 0 && ignoredVisible.length > 0 && (
+          <div className="text-muted text-center mt-4 small">All matching positions are ignored.</div>
+        )}
+        {activeVisible.map(renderPositionRow)}
+
+        {/* Ignored positions — hidden by default to cut noise, but reachable */}
+        {ignoredVisible.length > 0 && (
+          <div className="mt-3">
+            <button
+              className="btn btn-link p-0 text-muted small text-decoration-none"
+              onClick={() => setShowIgnored(v => !v)}
             >
-              <MaterialIcon name={ICONS.position} size={18} style={{ color: colorsForType('PositionType').accent }} title="Position" />
-              <span className="fw-semibold" style={{ fontSize: 13 }}>{ref}</span>
-              {name && name !== ref && <span className="text-muted" style={{ fontSize: 11 }}>{name}</span>}
-              {ownIgnored && (
-                <span className="badge" style={{ background: '#fff3cd', color: '#856404', fontSize: 10, border: '1px solid #ffc107' }}>
-                  Ignore
-                </span>
-              )}
-              {family && (
-                <span
-                  className="badge"
-                  style={{
-                    background: familyIgnored ? '#fff3cd' : '#eef1f5',
-                    color: familyIgnored ? '#856404' : '#5a6472',
-                    border: `1px solid ${familyIgnored ? '#ffc107' : '#d4dae2'}`,
-                    fontSize: 10, cursor: 'pointer',
-                  }}
-                  title={familyIgnored
-                    ? `Family “${family}” is ignored — click to un-ignore the whole family`
-                    : `Click to ignore the whole “${family}” family`}
-                  onClick={e => { e.stopPropagation(); toggleIgnorePositionFamily(family) }}
-                >
-                  {familyIgnored ? `family ignored: ${family}` : `⌥ ${family}`}
-                </span>
-              )}
-              {tags.slice(0, 4).map(tag => (
-                <TagBadge key={tag} tag={tag} />
-              ))}
-              {drifted && (
-                <span
-                  className="badge"
-                  style={{ background: '#fff3cd', color: '#856404', fontSize: 10, border: '1px solid #ffc107', cursor: 'pointer' }}
-                  title="Rule-derived tags changed since last accepted — click to review"
-                  onClick={e => { e.stopPropagation(); setShowDriftWizard(true) }}
-                >
-                  ⚠ tags changed
-                </span>
-              )}
-              <CollectionBadge posRef={ref} />
-              <div className="flex-grow-1" />
-              {count > 0
-                ? <span className="badge bg-light text-dark border" style={{ fontSize: 10 }}>{count} {count === 1 ? 'row' : 'rows'}</span>
-                : <span className="text-muted fst-italic" style={{ fontSize: 11 }}>empty</span>}
-              {!isIgnored && hasError && <span title="Has errors" style={{ color: '#dc3545', fontSize: 13 }}>●</span>}
-              {!isIgnored && !hasError && hasWarning && <span title="Has warnings" style={{ color: '#ffc107', fontSize: 13 }}>●</span>}
-              {/* Ignore toggle — stop propagation so it doesn't open the position */}
-              <button
-                className="btn btn-link p-0"
-                style={{ fontSize: 14, color: isIgnored ? '#ffc107' : '#ccc', lineHeight: 1 }}
-                title={isIgnored ? 'Remove Ignore flag' : 'Flag as no recipe needed'}
-                onClick={e => { e.stopPropagation(); toggleIgnorePosition(ref) }}
-              >
-                <MaterialIcon name={isIgnored ? 'do_not_disturb_on' : 'do_not_disturb_off'} size={16} />
-              </button>
-              <span className="text-muted" style={{ fontSize: 16, lineHeight: 1 }}>›</span>
-            </div>
-          )
-        })}
+              {showIgnored ? '▾' : '▸'} Ignored ({ignoredVisible.length})
+            </button>
+            {showIgnored && (
+              <div className="mt-2">
+                {ignoredVisible.map(renderPositionRow)}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -282,6 +311,15 @@ function FocusedPositionEditor({ pt, tags, issues, count, showDeleted, onOpenPro
   const name = pt.Name || pt.name || ''
   const validationRun = useStore(s => s.validationResults).length > 0
 
+  // Copy / paste
+  const selectedRowIds = useStore(s => s.selectedRowIds)
+  const clearRowSelection = useStore(s => s.clearRowSelection)
+  const copySelectedRows = useStore(s => s.copySelectedRows)
+  const copyPositionRecipe = useStore(s => s.copyPositionRecipe)
+  const pasteClipboard = useStore(s => s.pasteClipboard)
+  const rowClipboard = useStore(s => s.rowClipboard)
+  const [pasteMsg, setPasteMsg] = useState(null)
+
   const hasError = issues.some(i => i.severity === 'error')
   const hasWarning = issues.some(i => i.severity === 'warning')
 
@@ -290,6 +328,37 @@ function FocusedPositionEditor({ pt, tags, issues, count, showDeleted, onOpenPro
   }
 
   const grouped = getRecipeForPosition(recipes, ref)
+
+  function flashPaste(msg) {
+    setPasteMsg(msg)
+    setTimeout(() => setPasteMsg(null), 2500)
+  }
+  function doCopySelection() {
+    const clip = copySelectedRows()
+    if (clip) flashPaste(`Copied ${clip.count} row${clip.count === 1 ? '' : 's'}`)
+  }
+  function doPaste() {
+    const n = pasteClipboard(ref)
+    if (n > 0) flashPaste(`Pasted ${n} row${n === 1 ? '' : 's'} into ${ref}`)
+  }
+
+  // Keyboard: Ctrl/Cmd+C copies the selection, Ctrl/Cmd+V pastes into this position.
+  // Ignored while typing in a field.
+  useEffect(() => {
+    function onKey(e) {
+      const t = e.target
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return
+      if (!(e.ctrlKey || e.metaKey)) return
+      if (e.key === 'c' && selectedRowIds.length > 0) { e.preventDefault(); doCopySelection() }
+      else if (e.key === 'v' && rowClipboard) { e.preventDefault(); doPaste() }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedRowIds, rowClipboard, ref])
+
+  // Clear any stale selection when switching positions
+  useEffect(() => { clearRowSelection() /* eslint-disable-next-line */ }, [ref])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -309,6 +378,22 @@ function FocusedPositionEditor({ pt, tags, issues, count, showDeleted, onOpenPro
         ))}
         <div className="flex-grow-1" />
         <Button
+          variant="outline-secondary" size="sm" style={{ fontSize: 11 }}
+          onClick={() => { const c = copyPositionRecipe(ref); if (c) flashPaste(`Copied ${c.count} row${c.count === 1 ? '' : 's'}`) }}
+          disabled={count === 0}
+          title="Copy this whole position's recipe"
+        >
+          Copy recipe
+        </Button>
+        <Button
+          variant="outline-secondary" size="sm" style={{ fontSize: 11 }}
+          onClick={doPaste}
+          disabled={!rowClipboard}
+          title={rowClipboard ? `Paste ${rowClipboard.label} (Ctrl+V)` : 'Clipboard empty'}
+        >
+          Paste{rowClipboard ? ` (${rowClipboard.count})` : ''}
+        </Button>
+        <Button
           variant="link" size="sm" style={{ fontSize: 11, textDecoration: 'none' }}
           onClick={() => onOpenConnectors?.(ref)}
           title="Open the Connectors screen focused on this position"
@@ -321,6 +406,23 @@ function FocusedPositionEditor({ pt, tags, issues, count, showDeleted, onOpenPro
           <span style={{ color: '#198754', fontSize: 13 }}>● ok</span>
         )}
       </div>
+
+      {/* Selection bar — clear about what will be copied */}
+      {selectedRowIds.length > 0 && (
+        <div
+          className="d-flex align-items-center gap-2 px-3 py-1"
+          style={{ flexShrink: 0, background: '#e7f1ff', borderBottom: '1px solid #b6d4fe', fontSize: 12 }}
+        >
+          <span className="fw-semibold text-primary">{selectedRowIds.length} row{selectedRowIds.length === 1 ? '' : 's'} selected</span>
+          <Button variant="primary" size="sm" style={{ fontSize: 11 }} onClick={doCopySelection}>Copy (Ctrl+C)</Button>
+          <Button variant="link" size="sm" style={{ fontSize: 11 }} onClick={clearRowSelection}>Clear</Button>
+        </div>
+      )}
+      {pasteMsg && (
+        <div className="px-3 py-1 text-success" style={{ flexShrink: 0, background: '#d1e7dd', fontSize: 12 }}>
+          ✓ {pasteMsg}
+        </div>
+      )}
 
       {/* Editor body */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '1rem 1.25rem' }}>

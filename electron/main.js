@@ -153,16 +153,7 @@ function stopWatcher() {
 
 function initAutoUpdater() {
   if (isDev) {
-    // Dev sim: send fake update-available after 5s for UI testing
-    setTimeout(() => {
-      if (mainWindow) {
-        mainWindow.webContents.send('update-status', {
-          status: 'available',
-          version: '99.0.0',
-          releaseNotes: '<p>Test release</p>',
-        })
-      }
-    }, 5000)
+    // Dev has no update feed; the manual "Check for updates" simulates a result.
     return
   }
 
@@ -174,14 +165,14 @@ function initAutoUpdater() {
   setTimeout(() => autoUpdater.checkForUpdates(), 3000)
   setInterval(() => autoUpdater.checkForUpdates(), AUTO_UPDATE_CHECK_INTERVAL_MS)
 
+  const send = (payload) => { if (mainWindow) mainWindow.webContents.send('update-status', payload) }
+
+  autoUpdater.on('checking-for-update', () => send({ status: 'checking' }))
+
+  autoUpdater.on('update-not-available', () => send({ status: 'none', version: app.getVersion() }))
+
   autoUpdater.on('update-available', (info) => {
-    if (mainWindow) {
-      mainWindow.webContents.send('update-status', {
-        status: 'available',
-        version: info.version,
-        releaseNotes: info.releaseNotes,
-      })
-    }
+    send({ status: 'available', version: info.version, releaseNotes: info.releaseNotes })
   })
 
   autoUpdater.on('download-progress', (progress) => {
@@ -313,7 +304,16 @@ ipcMain.handle('get-app-version', () => app.getVersion())
 
 // Auto-updater
 ipcMain.handle('check-for-updates', () => {
-  if (!isDev) autoUpdater.checkForUpdates()
+  // Immediate feedback; real events follow in prod.
+  if (mainWindow) mainWindow.webContents.send('update-status', { status: 'checking' })
+  if (!isDev) {
+    autoUpdater.checkForUpdates()
+  } else {
+    // Dev: no feed configured — simulate an "up to date" result.
+    setTimeout(() => {
+      if (mainWindow) mainWindow.webContents.send('update-status', { status: 'none', version: app.getVersion() })
+    }, 800)
+  }
 })
 ipcMain.handle('install-update', () => {
   if (!isDev) autoUpdater.quitAndInstall(false, true)

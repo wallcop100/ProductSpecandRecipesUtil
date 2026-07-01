@@ -152,10 +152,8 @@ describe('connectorGaps', () => {
     expect(gaps.filter(g => !g.optional)).toHaveLength(0)
   })
 
-  test('strain-relief gaps are flagged optional', () => {
+  test('connectorGaps does not emit strain-relief gaps (SR handled by validation)', () => {
     const gaps = connectorGaps(grouped([row('ET-SOCKET-5P-01')], [row('ET-PLUG-5P-01')]))
-    const sr = gaps.filter(g => g.kind === 'sr')
-    expect(sr.length).toBeGreaterThan(0)
-    expect(sr.every(g => g.optional)).toBe(true)
+    expect(gaps.filter(g => g.kind === 'sr')).toHaveLength(0)
   })
 })
