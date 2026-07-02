@@ -14,6 +14,7 @@ import { evaluateTags, effectiveTags, snapshotForPosition } from '../utils/tagRu
 import { runValidation } from '../utils/validationRules.js'
 import { computeContainerInfo, looksLikeContainer, getNextAvailableRef } from '../utils/containerUtils.js'
 import { positionFamilyOf } from '../utils/positionFamily.js'
+import { familyOf } from '../utils/etRef.js'
 import { FLASK_PORT, DIM_QTY_COMPONENTS, AUTO_CONTRACT_ITEMS } from '../utils/constants.js'
 import { CONNECTOR_TEMPLATES } from '../data/connectorTemplates.js'
 
@@ -180,6 +181,8 @@ const useStore = create((set, get) => ({
   // Copy / paste of recipe rows (in-app clipboard, not the OS clipboard)
   selectedRowIds: [],                // recipe row _ids currently selected for copy
   rowClipboard: null,                // { parts: [{section, elementTypeRef, quantity}], label, count }
+  pendingPaste: null,                // { posRef, forceSection } while the merge-vs-separate prompt is open
+  favorites: [],                     // cross-project user library: [{ id, kind, ref, label, data }]
 
   // UI state
   rootView: 'positions',               // 'positions' | 'elements' — top-level browse mode
@@ -232,6 +235,7 @@ const useStore = create((set, get) => ({
       manualContainerETs,
       manualContainerExcludeETs,
       etCollections,
+      favorites,
       ignoredPositionFamilies,
       tagRules,
       tagPalette,
@@ -267,6 +271,7 @@ const useStore = create((set, get) => ({
       tagSnapshots: tagSnapshots ?? {},
       tagDrift: tagDrift ?? {},
       etCollections: etCollections ?? [],
+      favorites: favorites ?? [],
       ignoredPositionFamilies: ignoredPositionFamilies ?? [],
       containerETManualRefs: manualRefs,
       containerETExcludeRefs: excludeRefs,
@@ -406,6 +411,22 @@ const useStore = create((set, get) => ({
    */
   setActivePosition(ref) {
     set({ activePositionRef: ref })
+  },
+
+  /**
+   * focusPosition(ref)
+   * Navigate the main surface to a position: switch to the PositionTypes view,
+   * exit any ET-internal editor, and select the position. Used by validation
+   * "Go fix" links so the jump works from any current view.
+   */
+  focusPosition(ref) {
+    if (!ref) return
+    set({
+      rootView: 'positions',
+      activeContextType: 'PositionType',
+      activeETRef: null,
+      activePositionRef: ref,
+    })
   },
 
   /**
@@ -690,6 +711,39 @@ const useStore = create((set, get) => ({
   },
 
   /**
+   * saveWrapperAsTemplate(components, name, { scope, archetype })
+   * Persists a LIN wrapper's component set as a Linear-tagged template.
+   * components: [{ role, etRef, dimQtyMultiplier?, quantity?, isInteger? }]
+   */
+  async saveWrapperAsTemplate(components, name, { scope = 'global', archetype } = {}) {
+    const { templates, projectId } = get()
+    const tags = ['Linear']
+    if (archetype) tags.push(archetype)
+
+    const ingredients = components.map((c, idx) => ({
+      slotKey:          c.role               || `SLOT_${idx + 1}`,
+      slotLabel:        c.etRef              || c.role || `Slot ${idx + 1}`,
+      section:          'lin_internal',
+      quantity:         c.quantity           ?? null,
+      dimQtyMultiplier: c.dimQtyMultiplier   ?? null,
+      isInteger:        c.isInteger          ?? null,
+    }))
+
+    const template = {
+      id:              uuidv4(),
+      name,
+      scope,
+      applicable_tags: JSON.stringify(tags),
+      ingredients:     JSON.stringify(ingredients),
+    }
+    if (scope === 'project') template.projectId = projectId
+
+    await window.electronAPI.db.upsertTemplate(template)
+    set({ templates: [...templates, template] })
+    return template
+  },
+
+  /**
    * updateTemplate(template)
    * Updates a template in the store and persists to SQLite.
    */
@@ -892,6 +946,65 @@ const useStore = create((set, get) => ({
   },
 
   /**
+   * addToElementTypeRecipe(containerETRef, etRef, ingredientData)
+   * Adds a row into a container ET's internal recipe WITHOUT needing to be in
+   * ET mode — mirrors the ET-mode branch of addRecipeRow but takes the container
+   * ref as a parameter, so the review/step-through modal can add to any container.
+   * Inserts across every position that shares the container's internal recipe.
+   * ponytail: mirrors addRecipeRow's ET branch; kept separate to avoid touching
+   * the in-ET-mode path and its tests.
+   */
+  addToElementTypeRecipe(containerETRef, etRef, ingredientData = {}, { recordHistory = true } = {}) {
+    if (!containerETRef || !etRef) return null
+    const { recipes, rsChanges } = get()
+    if (recordHistory) get()._pushHistory()
+
+    const etToken = etRef.toUpperCase()
+    const isDimComponent = DIM_QTY_COMPONENTS.some(t => etToken.includes(t))
+    const isAutoContract = AUTO_CONTRACT_ITEMS.some(t => etToken.includes(t))
+
+    const existingETRows = recipes.filter(r =>
+      (r.ContextType || r.contextType) === 'ElementType' &&
+      (r.ContextRef || r.contextRef) === containerETRef
+    )
+    const allPosRefs = [...new Set(existingETRows.map(r => r.PositionTypeRef || r.positionTypeRef).filter(Boolean))]
+    if (allPosRefs.length === 0) return null   // not a materialised container
+
+    const primaryRows = existingETRows.filter(r => (r.PositionTypeRef || r.positionTypeRef) === allPosRefs[0])
+    const maxIndex = primaryRows.reduce((max, r) => Math.max(max, r.RecipeIndex ?? r.recipeIndex ?? 0), 0)
+
+    const newRows = allPosRefs.map(pRef => ({
+      positionTypeRef: pRef, PositionTypeRef: pRef,
+      contextType: 'ElementType', ContextType: 'ElementType',
+      contextRef: containerETRef, ContextRef: containerETRef,
+      recipeIndex: maxIndex + 1, RecipeIndex: maxIndex + 1,
+      elementTypeRef: etRef, ElementTypeRef: etRef,
+      quantity: etToken.includes('CAP') ? 2 : (ingredientData.quantity ?? 1),
+      Quantity: etToken.includes('CAP') ? 2 : (ingredientData.quantity ?? 1),
+      dimQtyMultiplier: isDimComponent ? 1 : (ingredientData.dimQtyMultiplier ?? null),
+      Dim_QuantityMultiplier: isDimComponent ? 1 : (ingredientData.dimQtyMultiplier ?? null),
+      dimQuantity: ingredientData.dimQuantity ?? null, Dim_Quantity: ingredientData.dimQuantity ?? null,
+      isInteger: ingredientData.isInteger ?? null, IsInteger: ingredientData.isInteger ?? null,
+      isDesign: null, IsDesign: null,
+      isContractItem: isAutoContract ? 'Y' : (ingredientData.isContractItem ?? null),
+      IsContractItem: isAutoContract ? 'Y' : (ingredientData.isContractItem ?? null),
+      isTBC: ingredientData.isTBC ?? null, IsTBC: ingredientData.isTBC ?? null,
+      isPropertiesTBC: ingredientData.isPropertiesTBC ?? null, IsPropertiesTBC: ingredientData.isPropertiesTBC ?? null,
+      notes: ingredientData.notes ?? null, Notes: ingredientData.notes ?? null,
+      slotKey: null, resolved: true,
+      _id: uuidv4(),
+    }))
+
+    const newChanges = newRows.map(row => ({
+      _id: row._id, positionTypeRef: row.PositionTypeRef, action: 'upsert', row,
+    }))
+
+    set({ recipes: [...recipes, ...newRows], rsChanges: [...rsChanges, ...newChanges] })
+    get().ensurePSRow(etRef)
+    return newRows[0]
+  },
+
+  /**
    * ensurePSRow(etRef)
    * Make sure a Product Spec row exists for etRef (the DB ElementTypes sheet is
    * read-only, so a PS row is how a newly-assigned element type is registered).
@@ -916,13 +1029,36 @@ const useStore = create((set, get) => ({
    * parts: [{ section: 'position'|'dl_internal'|'lin_internal', elementTypeRef }]
    * Skips parts with no elementTypeRef. PS rows are auto-registered via addRecipeRow.
    */
-  addConnection(posRef, parts) {
+  addConnection(posRef, parts, { merge = false } = {}) {
     const valid = (parts || []).filter(p => p && p.elementTypeRef && p.section)
     if (!posRef || valid.length === 0) return
     get()._pushHistory()
     for (const part of valid) {
+      // When merging, fold a duplicate (same section + ET) into the existing
+      // row by summing quantities instead of appending a new row.
+      if (merge) {
+        const existing = get().recipes.find(r =>
+          (r.PositionTypeRef || r.positionTypeRef) === posRef &&
+          sectionOfRow(r) === part.section &&
+          (r.IsDeleted || r.isDeleted) !== 'Y' &&
+          (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === part.elementTypeRef.toLowerCase()
+        )
+        if (existing) {
+          const addQty = part.quantity != null ? Number(part.quantity) : 1
+          const curQty = Number(existing.Quantity ?? existing.quantity ?? 1)
+          const total = curQty + addQty
+          const merged = { ...existing, quantity: total, Quantity: total }
+          set(s => ({
+            recipes: s.recipes.map(r => r._id === existing._id ? merged : r),
+            rsChanges: [...s.rsChanges, { _id: existing._id, positionTypeRef: posRef, action: 'upsert', row: merged }],
+          }))
+          continue
+        }
+      }
       const ingredient = { elementTypeRef: part.elementTypeRef }
       if (part.quantity != null) ingredient.quantity = part.quantity
+      if (part.dimQtyMultiplier != null) ingredient.dimQtyMultiplier = part.dimQtyMultiplier
+      if (part.isInteger != null) ingredient.isInteger = part.isInteger
       get().addRecipeRow(posRef, part.section, ingredient, { recordHistory: false })
     }
   },
@@ -989,14 +1125,126 @@ const useStore = create((set, get) => ({
    * forceSection overrides every part's section (e.g. "paste into this section").
    * Returns the number of rows pasted.
    */
-  pasteClipboard(posRef, forceSection = null) {
+  pasteClipboard(posRef, forceSection = null, { merge = false } = {}) {
     const { rowClipboard } = get()
     if (!rowClipboard || !posRef) return 0
     const parts = forceSection
       ? rowClipboard.parts.map(p => ({ ...p, section: forceSection }))
       : rowClipboard.parts
-    get().addConnection(posRef, parts)
+    get().addConnection(posRef, parts, { merge })
     return parts.length
+  },
+
+  // ---------------------------------------------------------------------------
+  // Paste prompt: when a paste would duplicate rows already present, ask the
+  // user whether to merge quantities or keep separate rows.
+  // ---------------------------------------------------------------------------
+
+  /** Count clipboard parts that already exist (same section + ET) in a position. */
+  pasteDuplicateCount(posRef, forceSection = null) {
+    const { rowClipboard, recipes } = get()
+    if (!rowClipboard || !posRef) return 0
+    const parts = forceSection
+      ? rowClipboard.parts.map(p => ({ ...p, section: forceSection }))
+      : rowClipboard.parts
+    let dups = 0
+    for (const p of parts) {
+      const hit = recipes.some(r =>
+        (r.PositionTypeRef || r.positionTypeRef) === posRef &&
+        sectionOfRow(r) === p.section &&
+        (r.IsDeleted || r.isDeleted) !== 'Y' &&
+        (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === (p.elementTypeRef || '').toLowerCase()
+      )
+      if (hit) dups++
+    }
+    return dups
+  },
+
+  /**
+   * requestPaste(posRef, forceSection?)
+   * Pastes immediately when nothing would duplicate; otherwise opens the
+   * merge-vs-separate prompt (pendingPaste) for the UI to resolve.
+   * Returns the number of rows pasted, or null when a prompt was opened.
+   */
+  requestPaste(posRef, forceSection = null) {
+    if (!posRef || !get().rowClipboard) return 0
+    if (get().pasteDuplicateCount(posRef, forceSection) > 0) {
+      set({ pendingPaste: { posRef, forceSection } })
+      return null
+    }
+    return get().pasteClipboard(posRef, forceSection)
+  },
+
+  /** Resolve the pending paste. mode: 'merge' | 'separate'. */
+  confirmPaste(mode) {
+    const pending = get().pendingPaste
+    set({ pendingPaste: null })
+    if (!pending) return 0
+    return get().pasteClipboard(pending.posRef, pending.forceSection, { merge: mode === 'merge' })
+  },
+
+  cancelPaste() { set({ pendingPaste: null }) },
+
+  // ---------------------------------------------------------------------------
+  // Favourites — cross-project user library (tags + elements w/ spec).
+  // Favourite templates reuse the existing global-scope template mechanism.
+  // ---------------------------------------------------------------------------
+
+  isFavorite(kind, ref) {
+    if (!ref) return false
+    return get().favorites.some(f => f.kind === kind && (f.ref || '').toLowerCase() === ref.toLowerCase())
+  },
+
+  /** Add a favourite (deduped by kind + ref). data holds e.g. an element's spec. */
+  async addFavorite({ kind, ref = null, label = null, data = {} }) {
+    const dup = ref && get().favorites.find(f =>
+      f.kind === kind && (f.ref || '').toLowerCase() === ref.toLowerCase()
+    )
+    if (dup) return dup
+    const fav = { id: uuidv4(), kind, ref, label: label ?? ref, data }
+    const saved = await window.electronAPI.db.upsertFavorite(fav)
+    set(s => ({ favorites: [...s.favorites, saved || fav] }))
+    return saved || fav
+  },
+
+  async removeFavorite(id) {
+    set(s => ({ favorites: s.favorites.filter(f => f.id !== id) }))
+    await window.electronAPI.db.deleteFavorite(id)
+  },
+
+  /** Favourite an element type, snapshotting its current product spec. */
+  async favoriteElement(etRef) {
+    if (!etRef) return
+    if (get().isFavorite('element', etRef)) {
+      const existing = get().favorites.find(f => f.kind === 'element' && (f.ref || '').toLowerCase() === etRef.toLowerCase())
+      if (existing) return get().removeFavorite(existing.id)
+      return
+    }
+    const { psRows, elementTypes } = get()
+    const psRow = psRows.find(r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === etRef.toLowerCase())
+    const etObj = elementTypes.find(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === etRef.toLowerCase())
+    const data = {
+      Manufacturer: psRow?.Manufacturer || psRow?.manufacturer || '',
+      ProductCode: psRow?.ProductCode || psRow?.productCode || '',
+      ComponentDescription: psRow?.ComponentDescription || psRow?.componentDescription || '',
+      family: familyOf(etRef, etObj) || null,
+    }
+    return get().addFavorite({ kind: 'element', ref: etRef, label: etRef, data })
+  },
+
+  /** Draw a favourite element into a position, seeding its spec if the target has none. */
+  drawFavoriteElement(posRef, fav, section = 'position') {
+    if (!posRef || !fav?.ref) return
+    get().addRecipeRow(posRef, section, { elementTypeRef: fav.ref, ElementTypeRef: fav.ref })
+    const psRow = get().psRows.find(r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === fav.ref.toLowerCase())
+    const hasSpec = psRow && (psRow.ProductCode || psRow.productCode) && (psRow.Manufacturer || psRow.manufacturer)
+    if (!hasSpec && fav.data) {
+      const upd = {}
+      if (fav.data.Manufacturer) upd.Manufacturer = fav.data.Manufacturer
+      if (fav.data.ProductCode) upd.ProductCode = fav.data.ProductCode
+      if (fav.data.ComponentDescription) upd.ComponentDescription = fav.data.ComponentDescription
+      if (Object.keys(upd).length) get().updatePSRow(fav.ref, upd)
+    }
   },
 
   /**
@@ -1027,7 +1275,7 @@ const useStore = create((set, get) => ({
   // ET Collection actions
   // ---------------------------------------------------------------------------
 
-  async createCollection(name, ingredients, applicableTags) {
+  async createCollection(name, ingredients, applicableTags, excludedTags) {
     const { projectId } = get()
     if (!projectId) return null
     const CollectionId = uuidv4()
@@ -1035,6 +1283,7 @@ const useStore = create((set, get) => ({
       CollectionId,
       Name: name,
       ApplicableTags: applicableTags ?? [],
+      ExcludedTags:   excludedTags   ?? [],
       Ingredients: ingredients ?? [],
     }
     const saved = await window.electronAPI.db.upsertCollection(projectId, collection)
@@ -1237,31 +1486,57 @@ const useStore = create((set, get) => ({
   removeRecipeRow(posRef, rowId) {
     const { recipes, rsChanges, activeContextType, activeETRef } = get()
 
+    const removedRow = recipes.find(r => r._id === rowId)
+    if (!removedRow) return
+
     get()._pushHistory()
 
-    const removedRow = recipes.find(r => r._id === rowId)
-    let filteredRecipes = recipes.filter(r => r._id !== rowId)
-    const newChanges = [{ _id: rowId, positionTypeRef: posRef, action: 'delete' }]
-
-    // Propagate removal to all position copies in ET mode
-    if (activeContextType === 'ElementType' && activeETRef && removedRow) {
+    // Which rows this delete affects: the target + its ET-mode position copies
+    const affected = [removedRow]
+    if (activeContextType === 'ElementType' && activeETRef) {
       const primaryIndex = removedRow.RecipeIndex ?? removedRow.recipeIndex
       const primaryPosRef = removedRow.PositionTypeRef ?? removedRow.positionTypeRef
-      const toRemove = new Set()
-      for (const row of filteredRecipes) {
+      for (const row of recipes) {
+        if (row._id === rowId) continue
         const ct = row.ContextType || row.contextType
         const cr = row.ContextRef || row.contextRef
         const ri = row.RecipeIndex ?? row.recipeIndex
         const pr = row.PositionTypeRef ?? row.positionTypeRef
         if (ct === 'ElementType' && cr === activeETRef && ri === primaryIndex && pr !== primaryPosRef) {
-          toRemove.add(row._id)
-          newChanges.push({ _id: row._id, positionTypeRef: pr, action: 'delete' })
+          affected.push(row)
         }
       }
-      if (toRemove.size > 0) filteredRecipes = filteredRecipes.filter(r => !toRemove.has(r._id))
     }
 
-    set({ recipes: filteredRecipes, rsChanges: [...rsChanges, ...newChanges] })
+    // New rows (never synced to the source file) are hard-removed; rows that
+    // exist in the file are soft-deleted (IsDeleted=Y) so the change syncs out.
+    const hardIds = new Set()
+    const softIds = new Set()
+    for (const row of affected) {
+      if (row._row_num == null) hardIds.add(row._id)
+      else softIds.add(row._id)
+    }
+
+    const newChanges = []
+    let nextRecipes = recipes
+      .filter(r => !hardIds.has(r._id))
+      .map(r => {
+        if (!softIds.has(r._id)) return r
+        const u = { ...r, IsDeleted: 'Y', isDeleted: 'Y' }
+        newChanges.push({ _id: r._id, positionTypeRef: r.PositionTypeRef || r.positionTypeRef || posRef, action: 'upsert', row: u })
+        return u
+      })
+
+    // Drop any queued changes for hard-removed rows so export won't recreate them
+    const cleaned = rsChanges.filter(c => !hardIds.has(c._id))
+    set({ recipes: nextRecipes, rsChanges: [...cleaned, ...newChanges] })
+  },
+
+  /**
+   * restoreRecipeRow(posRef, rowId) — revive a soft-deleted row (IsDeleted=N).
+   */
+  restoreRecipeRow(posRef, rowId) {
+    get().updateRecipeRow(posRef, rowId, { IsDeleted: 'N', isDeleted: 'N' })
   },
 
   /**
@@ -1388,7 +1663,17 @@ const useStore = create((set, get) => ({
       before[key] = existingRow ? (existingRow[key] ?? null) : null
     }
 
-    const updatedPsRows = psRows.map(row => {
+    // Upsert: an ET used in a recipe may have no PS row yet (never added to the
+    // spec sheet). Create one so the edit actually persists instead of no-opping.
+    const basePsRows = existingRow ? psRows : [...psRows, {
+      ElementTypeRef: elementTypeRef,
+      elementTypeRef,
+      ProductCode: null, Manufacturer: null, ComponentDescription: null,
+      InternalNotesText: null, IsTBC: null, IsDeleted: null, IsPropertiesTBC: null,
+      _id: uuidv4(), _row_num: null,
+    }]
+
+    const updatedPsRows = basePsRows.map(row => {
       const ref = row.ElementTypeRef || row.elementTypeRef
       if (ref !== elementTypeRef) return row
       return { ...row, ...updates }
@@ -1407,6 +1692,33 @@ const useStore = create((set, get) => ({
         { elementTypeRef, updates, before },
       ],
     })
+  },
+
+  /**
+   * deletePSRow(elementTypeRef)
+   * New (unsynced) rows are hard-removed and their queued changes purged; rows
+   * that exist in the source spec are soft-deleted (IsDeleted=Y).
+   */
+  deletePSRow(elementTypeRef) {
+    const { psRows, psChanges, containerETManualRefs, containerETExcludeRefs, elementTypes, recipes } = get()
+    const row = psRows.find(r => (r.ElementTypeRef || r.elementTypeRef) === elementTypeRef)
+    if (!row) return
+    if (row._row_num == null) {
+      get()._pushHistory()
+      const newPsRows = psRows.filter(r => r._id !== row._id)
+      const containerInfo = computeContainerInfo({
+        elementTypes, psRows: newPsRows, recipes,
+        manualInclude: containerETManualRefs, manualExclude: containerETExcludeRefs,
+      })
+      set({
+        psRows: newPsRows,
+        containerETRefs: containerInfo.refs,
+        containerReasons: containerInfo.reasons,
+        psChanges: psChanges.filter(c => c.elementTypeRef !== elementTypeRef),
+      })
+    } else {
+      get().updatePSRow(elementTypeRef, { IsDeleted: 'Y' })
+    }
   },
 
   /**

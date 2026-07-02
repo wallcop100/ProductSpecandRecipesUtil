@@ -31,13 +31,16 @@ const SECTION_COLOR = {
  */
 export default function RecipeSection({
   title, sectionKey, rows, posRef, onOpenProductSpec, disableSorting = false,
+  onAddRow,   // opens right drawer in pick mode (existing ET)
+  onNewET,    // opens NewETWizardModal (brand new ET)
 }) {
   const addRecipeRow = useStore(s => s.addRecipeRow)
   const resolveSlot = useStore(s => s.resolveSlot)
   const rowClipboard = useStore(s => s.rowClipboard)
-  const pasteClipboard = useStore(s => s.pasteClipboard)
+  const requestPaste = useStore(s => s.requestPaste)
 
   const [adding, setAdding] = useState(false)
+  const [choosing, setChoosing] = useState(false)   // inline Existing / New fork
 
   const { setNodeRef: setSectionDropRef, isOver: isSectionOver } = useDroppable({
     id: `section-drop-${sectionKey}-${posRef || 'none'}`,
@@ -66,15 +69,41 @@ export default function RecipeSection({
               onCancel={() => setAdding(false)}
             />
           </div>
+        ) : choosing ? (
+          <div className="d-flex align-items-center gap-1">
+            <Button
+              variant="outline-primary" size="sm"
+              style={{ padding: '1px 8px', fontSize: 11 }}
+              onClick={() => {
+                setChoosing(false)
+                if (onAddRow) onAddRow(posRef, sectionKey)
+                else setAdding(true)
+              }}
+            >
+              Existing
+            </Button>
+            <Button
+              variant="outline-success" size="sm"
+              style={{ padding: '1px 8px', fontSize: 11 }}
+              onClick={() => {
+                setChoosing(false)
+                if (onNewET) onNewET(posRef, sectionKey)
+                else setAdding(true)
+              }}
+            >
+              New ↗
+            </Button>
+            <button className="btn btn-link btn-sm p-0 text-muted" style={{ fontSize: 11 }}
+              onClick={() => setChoosing(false)}>Cancel</button>
+          </div>
         ) : (
           <Button
-            variant="outline-secondary"
-            size="sm"
+            variant="outline-secondary" size="sm"
             style={{ padding: '1px 8px', fontSize: 12 }}
-            onClick={() => setAdding(true)}
-            title="Add a row to this section"
+            onClick={() => (onAddRow || onNewET) ? setChoosing(true) : setAdding(true)}
+            title="Add an entity into this recipe section"
           >
-            + Add row
+            + Add Entity
           </Button>
         )}
         {/* Paste affordance — appears whenever the clipboard holds rows */}
@@ -84,7 +113,7 @@ export default function RecipeSection({
             size="sm"
             className="d-inline-flex align-items-center gap-1"
             style={{ padding: '1px 8px', fontSize: 12 }}
-            onClick={() => pasteClipboard(posRef, sectionKey)}
+            onClick={() => requestPaste(posRef, sectionKey)}
             title={`Paste ${rowClipboard.label} into this section (Ctrl+V pastes to the whole position)`}
           >
             <MaterialIcon name="content_paste" size={14} /> Paste ({rowClipboard.count})

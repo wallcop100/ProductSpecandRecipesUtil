@@ -5,11 +5,13 @@ import RecipeSection from './RecipeSection'
 import TagBadge from './TagBadge'
 import FilterBar from './FilterBar'
 import MaterialIcon from './MaterialIcon'
+import IconButton from './IconButton'
+import PositionValidationBadge from './PositionValidationBadge'
 import ConnectorSuggestions from './ConnectorSuggestions'
 import CollectionBadge from './CollectionBadge'
 import EmptyPositionWizard from './EmptyPositionWizard'
 import TagDriftWizard from './TagDriftWizard'
-import { colorsForType, ICONS } from '../utils/entityStyle'
+import { colorsForType, ICONS, ACTION_ICONS } from '../utils/entityStyle'
 import { positionFamilyOf } from '../utils/positionFamily'
 
 /**
@@ -23,7 +25,7 @@ import { positionFamilyOf } from '../utils/positionFamily'
  * The left index and breadcrumbs switch between positions; the back link
  * returns to the overview.
  */
-export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, showDeleted }) {
+export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, showDeleted, onAddRow, onNewET }) {
   const positionTypes = useStore(s => s.positionTypes)
   const recipes = useStore(s => s.recipes)
   const positionUI = useStore(s => s.positionUI)
@@ -108,6 +110,8 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
         onOpenProductSpec={onOpenProductSpec}
         onOpenConnectors={onOpenConnectors}
         onBack={() => setActivePosition(null)}
+        onAddRow={onAddRow}
+        onNewET={onNewET}
       />
     )
   }
@@ -135,10 +139,7 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
     const ref = pt.PositionTypeRef
     const name = pt.Name || pt.name || ''
     const tags = positionUI[ref]?.tags || []
-    const issues = issuesByRef[ref] || []
     const count = countByRef[ref] || 0
-    const hasError = issues.some(i => i.severity === 'error')
-    const hasWarning = issues.some(i => i.severity === 'warning')
     const ownIgnored = !!positionUI[ref]?.ignored
     const family = positionFamilyOf(pt)
     const familyIgnored = !!family && ignoredFamilySet.has(family)
@@ -201,8 +202,7 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
         {count > 0
           ? <span className="badge bg-light text-dark border" style={{ fontSize: 10 }}>{count} {count === 1 ? 'row' : 'rows'}</span>
           : <span className="text-muted fst-italic" style={{ fontSize: 11 }}>empty</span>}
-        {!isIgnored && hasError && <span title="Has errors" style={{ color: '#dc3545', fontSize: 13 }}>●</span>}
-        {!isIgnored && !hasError && hasWarning && <span title="Has warnings" style={{ color: '#ffc107', fontSize: 13 }}>●</span>}
+        {!isIgnored && <PositionValidationBadge posRef={ref} size={14} />}
         {/* Ignore toggle — stop propagation so it doesn't open the position */}
         <button
           className="btn btn-link p-0"
@@ -212,7 +212,7 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
         >
           <MaterialIcon name={isIgnored ? 'do_not_disturb_on' : 'do_not_disturb_off'} size={16} />
         </button>
-        <span className="text-muted" style={{ fontSize: 16, lineHeight: 1 }}>›</span>
+        <MaterialIcon name="chevron_right" size={18} className="text-muted" />
       </div>
     )
   }
@@ -287,7 +287,7 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
               className="btn btn-link p-0 text-muted small text-decoration-none"
               onClick={() => setShowIgnored(v => !v)}
             >
-              {showIgnored ? '▾' : '▸'} Ignored ({ignoredVisible.length})
+              <MaterialIcon name={showIgnored ? ACTION_ICONS.expand : ACTION_ICONS.collapse} size={14} /> Ignored ({ignoredVisible.length})
             </button>
             {showIgnored && (
               <div className="mt-2">
@@ -305,23 +305,19 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
 // FocusedPositionEditor — full-surface editor for a single position
 // ---------------------------------------------------------------------------
 
-function FocusedPositionEditor({ pt, tags, issues, count, showDeleted, onOpenProductSpec, onOpenConnectors, onBack }) {
+function FocusedPositionEditor({ pt, tags, issues, count, showDeleted, onOpenProductSpec, onOpenConnectors, onBack, onAddRow, onNewET }) {
   const recipes = useStore(s => s.recipes)
   const ref = pt.PositionTypeRef
   const name = pt.Name || pt.name || ''
-  const validationRun = useStore(s => s.validationResults).length > 0
 
   // Copy / paste
   const selectedRowIds = useStore(s => s.selectedRowIds)
   const clearRowSelection = useStore(s => s.clearRowSelection)
   const copySelectedRows = useStore(s => s.copySelectedRows)
   const copyPositionRecipe = useStore(s => s.copyPositionRecipe)
-  const pasteClipboard = useStore(s => s.pasteClipboard)
+  const requestPaste = useStore(s => s.requestPaste)
   const rowClipboard = useStore(s => s.rowClipboard)
   const [pasteMsg, setPasteMsg] = useState(null)
-
-  const hasError = issues.some(i => i.severity === 'error')
-  const hasWarning = issues.some(i => i.severity === 'warning')
 
   function filterDeleted(rows) {
     return showDeleted ? rows : rows.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
@@ -338,7 +334,8 @@ function FocusedPositionEditor({ pt, tags, issues, count, showDeleted, onOpenPro
     if (clip) flashPaste(`Copied ${clip.count} row${clip.count === 1 ? '' : 's'}`)
   }
   function doPaste() {
-    const n = pasteClipboard(ref)
+    const n = requestPaste(ref)
+    // null → a merge-vs-separate prompt opened; the modal finishes the paste.
     if (n > 0) flashPaste(`Pasted ${n} row${n === 1 ? '' : 's'} into ${ref}`)
   }
 
@@ -374,9 +371,8 @@ function FocusedPositionEditor({ pt, tags, issues, count, showDeleted, onOpenPro
         className="d-flex align-items-center gap-2 px-3 py-2 border-bottom bg-white"
         style={{ flexShrink: 0 }}
       >
-        <Button variant="outline-secondary" size="sm" style={{ fontSize: 11 }} onClick={onBack}>
-          ← All position types
-        </Button>
+        <IconButton variant="outline-secondary" bsSize="sm" style={{ fontSize: 11 }}
+          icon={ACTION_ICONS.back} title="All position types" onClick={onBack} />
         <MaterialIcon name={ICONS.position} size={20} style={{ color: colorsForType('PositionType').accent }} title="Position" />
         <span className="fw-semibold" style={{ fontSize: 15 }}>{ref}</span>
         {name && name !== ref && <span className="text-muted" style={{ fontSize: 12 }}>{name}</span>}
@@ -384,34 +380,29 @@ function FocusedPositionEditor({ pt, tags, issues, count, showDeleted, onOpenPro
           <TagBadge key={tag} tag={tag} />
         ))}
         <div className="flex-grow-1" />
-        <Button
-          variant="outline-secondary" size="sm" style={{ fontSize: 11 }}
+        <IconButton
+          variant="outline-secondary" bsSize="sm" style={{ fontSize: 11 }}
+          icon={ACTION_ICONS.copy}
           onClick={() => { const c = copyPositionRecipe(ref); if (c) flashPaste(`Copied ${c.count} row${c.count === 1 ? '' : 's'}`) }}
           disabled={count === 0}
           title="Copy this whole position's recipe"
-        >
-          Copy recipe
-        </Button>
-        <Button
-          variant="outline-secondary" size="sm" style={{ fontSize: 11 }}
+        />
+        <IconButton
+          variant="outline-secondary" bsSize="sm" style={{ fontSize: 11 }}
+          icon={ACTION_ICONS.paste}
+          badge={rowClipboard ? rowClipboard.count : null}
           onClick={doPaste}
           disabled={!rowClipboard}
           title={rowClipboard ? `Paste ${rowClipboard.label} (Ctrl+V)` : 'Clipboard empty'}
-        >
-          Paste{rowClipboard ? ` (${rowClipboard.count})` : ''}
-        </Button>
+        />
         <Button
-          variant="link" size="sm" style={{ fontSize: 11, textDecoration: 'none' }}
+          variant="link" size="sm" className="d-inline-flex align-items-center gap-1" style={{ fontSize: 11, textDecoration: 'none' }}
           onClick={() => onOpenConnectors?.(ref)}
           title="Open the Connectors screen focused on this position"
         >
-          Manage connectors →
+          <MaterialIcon name="cable" size={14} /> Manage connectors
         </Button>
-        {hasError && <span title="Has errors" style={{ color: '#dc3545', fontSize: 14 }}>● errors</span>}
-        {!hasError && hasWarning && <span title="Has warnings" style={{ color: '#ffc107', fontSize: 14 }}>● warnings</span>}
-        {!hasError && !hasWarning && count > 0 && validationRun && (
-          <span style={{ color: '#198754', fontSize: 13 }}>● ok</span>
-        )}
+        <PositionValidationBadge posRef={ref} size={16} showOk={count > 0} />
       </div>
 
       {/* Selection bar — clear about what will be copied */}
@@ -421,13 +412,15 @@ function FocusedPositionEditor({ pt, tags, issues, count, showDeleted, onOpenPro
           style={{ flexShrink: 0, background: '#e7f1ff', borderBottom: '1px solid #b6d4fe', fontSize: 12 }}
         >
           <span className="fw-semibold text-primary">{selectedRowIds.length} row{selectedRowIds.length === 1 ? '' : 's'} selected</span>
-          <Button variant="primary" size="sm" style={{ fontSize: 11 }} onClick={doCopySelection}>Copy (Ctrl+C)</Button>
-          <Button variant="link" size="sm" style={{ fontSize: 11 }} onClick={clearRowSelection}>Clear</Button>
+          <IconButton variant="primary" bsSize="sm" style={{ fontSize: 11 }} icon={ACTION_ICONS.copy}
+            title="Copy selection (Ctrl+C)" onClick={doCopySelection} />
+          <IconButton variant="link" bsSize="sm" style={{ fontSize: 11 }} icon="deselect"
+            title="Clear selection" onClick={clearRowSelection} />
         </div>
       )}
       {pasteMsg && (
-        <div className="px-3 py-1 text-success" style={{ flexShrink: 0, background: '#d1e7dd', fontSize: 12 }}>
-          ✓ {pasteMsg}
+        <div className="px-3 py-1 text-success d-flex align-items-center gap-1" style={{ flexShrink: 0, background: '#d1e7dd', fontSize: 12 }}>
+          <MaterialIcon name="check" size={14} /> {pasteMsg}
         </div>
       )}
 
@@ -446,6 +439,8 @@ function FocusedPositionEditor({ pt, tags, issues, count, showDeleted, onOpenPro
           rows={filterDeleted(grouped.position)}
           posRef={ref}
           onOpenProductSpec={onOpenProductSpec}
+          onAddRow={onAddRow}
+          onNewET={onNewET}
         />
         <div className="text-muted mb-3" style={{ fontSize: 11 }}>
           Element internals are shown read-only on each container row above — use

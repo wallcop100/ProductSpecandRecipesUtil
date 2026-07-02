@@ -1,11 +1,12 @@
-import React, { useState, useMemo } from 'react'
-import { ButtonGroup, Button } from 'react-bootstrap'
+import React, { useState, useMemo, useEffect } from 'react'
+import { ButtonGroup, Button, Form } from 'react-bootstrap'
 import { useDraggable } from '@dnd-kit/core'
 import useStore from '../store/useStore'
 import FilterBar from './FilterBar'
 import MaterialIcon from './MaterialIcon'
+import IconButton from './IconButton'
 import { familyOf } from '../utils/etRef'
-import { colorsForType, iconForEntity } from '../utils/entityStyle'
+import { colorsForType, iconForEntity, ACTION_ICONS } from '../utils/entityStyle'
 
 const FLAGGED_FAMILY = '⚠ Recipe-only (not in DB or Spec)'
 
@@ -14,18 +15,19 @@ const FLAGGED_FAMILY = '⚠ Recipe-only (not in DB or Spec)'
  *   "ET Ref"    — grouped by family, ET ref as primary identifier (original)
  *   "Mfr+Code"  — grouped by Manufacturer from PS rows, ProductCode as primary
  */
-export default function ElementPalette() {
+export default function ElementPalette({ pickTarget, onPickET, onPickETMulti, onCancelPick, onNewET, justAdded, onAddToMultiple }) {
   const elementTypes = useStore(s => s.elementTypes)
   const psRows = useStore(s => s.psRows)
   const recipes = useStore(s => s.recipes)
-  const addLocalElementType = useStore(s => s.addLocalElementType)
 
   const [mode, setMode] = useState('et-ref')   // 'et-ref' | 'mfr-code'
   const [search, setSearch] = useState('')
   const [familyFilter, setFamilyFilter] = useState('')
   const [expanded, setExpanded] = useState({})
-  const [newETRef, setNewETRef] = useState('')
-  const [showNewET, setShowNewET] = useState(false)
+  const [multiAdd, setMultiAdd] = useState(false)
+
+  // Reset multi-add when pick mode ends
+  useEffect(() => { if (!pickTarget) setMultiAdd(false) }, [pickTarget])
 
   // Build a lookup: lowercase ET ref → PS row
   const psRowByET = useMemo(() => {
@@ -134,16 +136,61 @@ export default function ElementPalette() {
   }
   function collapseAll() { setExpanded({}) }
 
-  function handleAddET() {
-    const ref = newETRef.trim()
-    if (!ref) return
-    addLocalElementType(ref)
-    setNewETRef('')
-    setShowNewET(false)
-  }
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      {/* Just-added success banner */}
+      {justAdded && !pickTarget && (
+        <div
+          className="px-3 py-2 border-bottom"
+          style={{ background: '#d1e7dd', fontSize: 12, flexShrink: 0 }}
+        >
+          <div className="d-flex align-items-center gap-2">
+            <MaterialIcon name="check_circle" size={14} style={{ color: '#198754' }} />
+            <span className="fw-semibold" style={{ color: '#0a3622' }}>
+              🎉 {justAdded.etRef} added to {justAdded.posRef}
+            </span>
+          </div>
+          {onAddToMultiple && (
+            <div className="mt-1" style={{ fontSize: 11, color: '#198754' }}>
+              <button
+                className="btn btn-link p-0"
+                style={{ fontSize: 11, color: '#0a3622', textDecoration: 'underline' }}
+                onClick={onAddToMultiple}
+              >
+                Add to multiple recipes?
+              </button>
+              <span className="text-muted ms-2" style={{ fontSize: 10 }}>or just keep going</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Pick-mode banner */}
+      {pickTarget && (
+        <div
+          className="d-flex align-items-center gap-2 px-3 py-2 border-bottom flex-wrap"
+          style={{ background: '#e8f0fe', fontSize: 12, flexShrink: 0 }}
+        >
+          <MaterialIcon name="add_circle" size={14} style={{ color: '#0d6efd' }} />
+          <span>Click to add to <strong>{pickTarget.posRef}</strong></span>
+          <Form.Check
+            type="switch"
+            id="palette-multi-add"
+            checked={multiAdd}
+            onChange={e => setMultiAdd(e.target.checked)}
+            label={<span style={{ fontSize: 11, whiteSpace: 'nowrap' }}>Add to multiple</span>}
+            className="ms-auto"
+            style={{ fontSize: 11 }}
+          />
+          <button
+            className="btn btn-link btn-sm p-0"
+            style={{ fontSize: 11, color: '#0d6efd' }}
+            onClick={onCancelPick}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
       {/* Mode toggle */}
       <div className="px-2 pt-2 pb-1 border-bottom">
         <ButtonGroup size="sm" className="w-100 mb-2">
@@ -174,35 +221,22 @@ export default function ElementPalette() {
           compact={false}
         />
         <div className="d-flex gap-2 mt-1 align-items-center">
-          <button className="btn btn-link btn-sm p-0" style={{ fontSize: 11, textDecoration: 'none' }} onClick={expandAll}>
-            Expand all
-          </button>
-          <button className="btn btn-link btn-sm p-0" style={{ fontSize: 11, textDecoration: 'none' }} onClick={collapseAll}>
-            Collapse all
-          </button>
-          <button
-            className="btn btn-link btn-sm p-0 ms-auto"
-            style={{ fontSize: 11, textDecoration: 'none', color: '#0d6efd' }}
-            onClick={() => setShowNewET(v => !v)}
-          >
-            + New ET
-          </button>
+          <IconButton icon={ACTION_ICONS.expandAll} size={16} style={{ padding: 0 }}
+            title="Expand all groups" onClick={expandAll} />
+          <IconButton icon={ACTION_ICONS.collapseAll} size={16} style={{ padding: 0 }}
+            title="Collapse all groups" onClick={collapseAll} />
+          {onNewET && (
+            <button
+              className="btn btn-link btn-sm p-0 ms-auto d-inline-flex align-items-center gap-1"
+              style={{ fontSize: 11, color: '#198754', whiteSpace: 'nowrap' }}
+              title="Create a brand-new element type"
+              onClick={() => onNewET(pickTarget?.posRef ?? null, pickTarget?.sectionKey ?? 'position')}
+            >
+              <MaterialIcon name="add_circle" size={14} />
+              Add ElementType
+            </button>
+          )}
         </div>
-
-        {showNewET && (
-          <div className="d-flex gap-1 mt-2">
-            <input
-              className="form-control form-control-sm"
-              placeholder="ET ref…"
-              value={newETRef}
-              onChange={e => setNewETRef(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') handleAddET(); if (e.key === 'Escape') setShowNewET(false) }}
-              autoFocus
-              style={{ fontSize: 12 }}
-            />
-            <button className="btn btn-sm btn-primary" onClick={handleAddET} style={{ fontSize: 11, whiteSpace: 'nowrap' }}>Add</button>
-          </div>
-        )}
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
@@ -218,12 +252,17 @@ export default function ElementPalette() {
                 style={{ fontSize: 10, letterSpacing: 0.5, cursor: 'pointer', userSelect: 'none' }}
                 onClick={() => toggle(group)}
               >
-                <span style={{ width: 10 }}>{open ? '▾' : '▸'}</span>
+                <MaterialIcon name={open ? ACTION_ICONS.expand : ACTION_ICONS.collapse} size={14} style={{ width: 14 }} />
                 <span>{group}</span>
                 <span className="text-muted" style={{ fontWeight: 400 }}>({ets.length})</span>
               </div>
               {open && ets.map(et => (
-                <DraggableETCard key={et.ElementTypeRef || et.elementTypeRef} et={et} mode={mode} />
+                <DraggableETCard
+                  key={et.ElementTypeRef || et.elementTypeRef}
+                  et={et}
+                  mode={mode}
+                  onPickET={pickTarget ? (multiAdd && onPickETMulti ? onPickETMulti : onPickET) : null}
+                />
               ))}
             </div>
           )
@@ -240,9 +279,11 @@ function groupKeyFor(et, mode) {
   return et._family
 }
 
-function DraggableETCard({ et, mode }) {
+function DraggableETCard({ et, mode, onPickET }) {
   const ref = et.ElementTypeRef || et.elementTypeRef
   const isCollection = useStore(s => ref ? s.containerETRefs.has(ref.toLowerCase()) : false)
+  const isFav = useStore(s => ref ? s.isFavorite('element', ref) : false)
+  const favoriteElement = useStore(s => s.favoriteElement)
   const { accent } = colorsForType('ElementType')
 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -292,7 +333,29 @@ function DraggableETCard({ et, mode }) {
         >
           <MaterialIcon name={iconForEntity({ type: 'ElementType', isCollection })} size={14} style={{ color: accent }} />
         </span>
-        <span className="fw-semibold" style={{ wordBreak: 'break-all' }}>{primaryLabel}</span>
+        <span className="fw-semibold flex-grow-1" style={{ wordBreak: 'break-all' }}>{primaryLabel}</span>
+        {/* Pick-mode Add button */}
+        {onPickET && (
+          <button
+            className="btn btn-link p-0"
+            style={{ lineHeight: 1, color: '#0d6efd', flexShrink: 0 }}
+            title="Add to recipe"
+            onPointerDown={e => e.stopPropagation()}
+            onClick={e => { e.stopPropagation(); onPickET(ref) }}
+          >
+            <MaterialIcon name="add_circle" size={17} />
+          </button>
+        )}
+        {/* Favourite toggle (kept out of the drag stream via stopPropagation) */}
+        <button
+          className="btn btn-link p-0"
+          style={{ lineHeight: 1, color: isFav ? '#f5a623' : '#ccc', flexShrink: 0 }}
+          title={isFav ? 'Remove from favourites' : 'Save to my favourites'}
+          onPointerDown={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); favoriteElement(ref) }}
+        >
+          <MaterialIcon name={isFav ? 'star' : 'star_border'} size={15} />
+        </button>
       </div>
       {secondaryLabel && (
         <div className="text-muted" style={{ fontSize: 11, marginLeft: 26 }}>{secondaryLabel}</div>
