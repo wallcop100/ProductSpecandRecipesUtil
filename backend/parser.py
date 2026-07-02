@@ -22,15 +22,18 @@ import openpyxl
 
 ET_COLUMN_MAP = {
     'Ref':         'ElementTypeRef',
-    'Description': 'Name',
+    'Name':        'Name',
+    'Description': 'Description',
     'ParentRef':   'Family',
     'IsCollection':'IsCollection',
     'IsDeleted':   'IsDeleted',
+    'SortOrder':   'SortOrder',
 }
 
 PT_COLUMN_MAP = {
     'Ref':                    'PositionTypeRef',
-    'Description':            'Name',
+    'Name':                   'Name',
+    'Description':            'Description',
     'ParentRef':              'ParentRef',
     'IsCollection':           'IsCollection',
     'IsDeleted':              'IsDeleted',
@@ -131,6 +134,21 @@ def _parse_sheet_by_headers(ws, column_map, flag_cols=None):
 # Public parsers
 # ---------------------------------------------------------------------------
 
+def _collection_refs(raw_rows, ref_field, parent_field):
+    """
+    A "true collection" is any Ref that appears as another row's ParentRef —
+    i.e. a category/grouping node with children. Leaf refs are real entities
+    (including app wrapper ETs, which may carry IsCollection='Y' but have no
+    children in the DB hierarchy, so they are NOT filtered out).
+    """
+    parents = set()
+    for r in raw_rows:
+        pref = r.get(parent_field)
+        if pref:
+            parents.add(pref)
+    return parents
+
+
 def parse_db(filepath):
     """
     Parse a DesignDB xlsx workbook.
@@ -138,12 +156,14 @@ def parse_db(filepath):
     Returns::
 
         {
-            "element_types":  [{ElementTypeRef, Name, Family}, ...],
-            "position_types": [{PositionTypeRef, Name, DriverLocation, ...}, ...]
+            "element_types":  [{ElementTypeRef, Name, Description, Family, ...}, ...],
+            "position_types": [{PositionTypeRef, Name, Description, ...}, ...]
         }
 
-    Collection items (IsCollection='Y') and deleted items (IsDeleted='Y')
-    are filtered out. _row_num is stripped since DB rows are read-only.
+    A ref used as another row's ParentRef is a true collection and is filtered
+    out; deleted rows (IsDeleted='Y') are filtered too. ElementTypes keep
+    _row_num (the DB ElementTypes sheet is writable via the catalogue export);
+    PositionTypes stay read-only so their _row_num is stripped.
     """
     wb = openpyxl.load_workbook(filepath, data_only=True)
 
@@ -153,23 +173,30 @@ def parse_db(filepath):
         raise ValueError(f"Sheet 'PositionTypes' not found in {filepath}")
 
     raw_ets = _parse_sheet_by_headers(wb['ElementTypes'], ET_COLUMN_MAP, ET_FLAG_COLS)
+    et_collections = _collection_refs(raw_ets, 'ElementTypeRef', 'Family')
     element_types = []
     for r in raw_ets:
-        if r.get('IsCollection') == 'Y' or r.get('IsDeleted') == 'Y':
+        ref = r.get('ElementTypeRef')
+        if not ref:
             continue
-        if not r.get('ElementTypeRef'):
+        if r.get('IsDeleted') == 'Y':
             continue
-        r.pop('IsCollection', None)
+        if ref in et_collections:
+            continue
         r.pop('IsDeleted', None)
-        r.pop('_row_num', None)
+        # _row_num kept — ElementTypes is writable
         element_types.append(r)
 
     raw_pts = _parse_sheet_by_headers(wb['PositionTypes'], PT_COLUMN_MAP, PT_FLAG_COLS)
+    pt_collections = _collection_refs(raw_pts, 'PositionTypeRef', 'ParentRef')
     position_types = []
     for r in raw_pts:
-        if r.get('IsCollection') == 'Y' or r.get('IsDeleted') == 'Y':
+        ref = r.get('PositionTypeRef')
+        if not ref:
             continue
-        if not r.get('PositionTypeRef'):
+        if r.get('IsDeleted') == 'Y':
+            continue
+        if ref in pt_collections:
             continue
         r.pop('IsCollection', None)
         r.pop('IsDeleted', None)

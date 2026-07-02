@@ -69,6 +69,7 @@ export function runValidation(dbData, psRows, rsRows, positionUI) {
   issues.push(...checkRemoteNoSiteSocket(rsRows, positionUI))
   issues.push(...checkExteriorIPConnectors(rsRows, positionUI))
   issues.push(...checkMissingProductSpecs(psRows))
+  issues.push(...checkDanglingElementTypeRefs(dbData, psRows, rsRows))
 
   // Tag each issue with where its "fix" lives so the UI can route correctly.
   for (const i of issues) i.fixKind = SPEC_RULES.has(i.rule) ? 'spec' : 'position'
@@ -359,6 +360,61 @@ function checkMissingProductSpecs(psRows) {
       message: `"${r.ElementTypeRef || r.elementTypeRef}" has no ProductCode and is not marked TBC.`,
       ref: r.ElementTypeRef || r.elementTypeRef || null,
     }))
+}
+
+// ---------------------------------------------------------------------------
+// Rule — DANGLING_ELEMENT_TYPE_REF
+// A recipe or product-spec row references an ElementType that no longer exists
+// in the catalogue, or points at one that has been soft-deleted (IsDeleted=Y).
+// Surfaces the fallout of a catalogue delete (EXPORT_PLAN §4, settled decision).
+// ---------------------------------------------------------------------------
+function checkDanglingElementTypeRefs(dbData, psRows, rsRows) {
+  const issues = []
+  const ets = (dbData && dbData.element_types) || []
+  if (ets.length === 0) return issues   // catalogue not loaded — skip
+
+  const live = new Set()
+  const deleted = new Set()
+  for (const e of ets) {
+    const ref = (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase()
+    if (!ref) continue
+    if ((e.IsDeleted || e.isDeleted) === 'Y') deleted.add(ref)
+    else live.add(ref)
+  }
+
+  const seen = new Set()
+  function check(ref, where) {
+    const raw = (ref || '').trim()
+    const key = raw.toLowerCase()
+    if (!key) return
+    // Only flag refs pointing at a soft-deleted catalogue entry — the direct
+    // fallout of a catalogue delete. Refs simply absent from the catalogue are
+    // the app's existing "recipe-only" concept and handled elsewhere.
+    if (!(deleted.has(key) && !live.has(key))) return
+    const dedupe = `${key}::${where}`
+    if (seen.has(dedupe)) return
+    seen.add(dedupe)
+    issues.push({
+      severity: 'error',
+      rule: 'DANGLING_ELEMENT_TYPE_REF',
+      message: `${where} references "${raw}", which is deleted in the ElementTypes catalogue.`,
+      ref: null,
+    })
+  }
+
+  for (const r of rsRows) {
+    if ((r.IsDeleted || r.isDeleted) === 'Y') continue
+    check(r.ElementTypeRef || r.elementTypeRef, 'A recipe row')
+    if ((r.ContextType || r.contextType) === 'ElementType') {
+      check(r.ContextRef || r.contextRef, 'A recipe container')
+    }
+  }
+  for (const r of psRows) {
+    if ((r.IsDeleted || r.isDeleted) === 'Y') continue
+    check(r.ElementTypeRef || r.elementTypeRef, 'A product-spec row')
+  }
+
+  return issues
 }
 
 // ---------------------------------------------------------------------------

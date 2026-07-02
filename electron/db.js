@@ -162,6 +162,28 @@ function createTables() {
       data        TEXT DEFAULT '{}',
       created_at  TEXT
     );
+
+    -- Crash-safe dirty registry (EXPORT_PLAN §3.1): the unexported ps/rs
+    -- change queues, persisted per project so a crash never loses work.
+    CREATE TABLE IF NOT EXISTS pending_changes (
+      project_id  INTEGER PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE,
+      ps          TEXT NOT NULL DEFAULT '[]',
+      rs          TEXT NOT NULL DEFAULT '[]',
+      updated_at  TEXT
+    );
+
+    -- Locally-created ElementTypes (EXPORT_PLAN §4). Survive restarts even when
+    -- DB writes are off; the promotion queue for the writable catalogue.
+    CREATE TABLE IF NOT EXISTS local_element_types (
+      project_id      INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      ref             TEXT NOT NULL,
+      name            TEXT,
+      description     TEXT,
+      family          TEXT,
+      is_collection   INTEGER DEFAULT 0,
+      created_at      TEXT,
+      UNIQUE(project_id, ref)
+    );
   `)
 }
 
@@ -501,6 +523,116 @@ function getFavorites() {
 
 function deleteFavorite(id) {
   getDb().prepare('DELETE FROM favorites WHERE id = ?').run(id)
+}
+
+// ---------------------------------------------------------------------------
+// Pending changes — crash-safe dirty registry (EXPORT_PLAN §3.1)
+// ---------------------------------------------------------------------------
+
+function getPendingChanges(projectId) {
+  const row = getDb()
+    .prepare('SELECT ps, rs FROM pending_changes WHERE project_id = ?')
+    .get(projectId)
+  if (!row) return { ps: [], rs: [] }
+  let ps = [], rs = []
+  try { ps = JSON.parse(row.ps || '[]') } catch { /* corrupt — treat as empty */ }
+  try { rs = JSON.parse(row.rs || '[]') } catch { /* corrupt — treat as empty */ }
+  return { ps, rs }
+}
+
+function setPendingChanges(projectId, ps, rs) {
+  getDb()
+    .prepare(`
+      INSERT INTO pending_changes (project_id, ps, rs, updated_at)
+      VALUES (@id, @ps, @rs, @ts)
+      ON CONFLICT(project_id) DO UPDATE SET
+        ps = excluded.ps, rs = excluded.rs, updated_at = excluded.updated_at
+    `)
+    .run({ id: projectId, ps: JSON.stringify(ps || []), rs: JSON.stringify(rs || []), ts: now() })
+}
+
+function clearPendingChanges(projectId) {
+  getDb().prepare('DELETE FROM pending_changes WHERE project_id = ?').run(projectId)
+}
+
+// ---------------------------------------------------------------------------
+// Local ElementTypes — app-created catalogue entries (EXPORT_PLAN §4)
+// ---------------------------------------------------------------------------
+
+function upsertLocalElementType(projectId, et) {
+  const { ref, name = null, description = null, family = null, isCollection = false, created_at = now() } = et
+  getDb()
+    .prepare(`
+      INSERT INTO local_element_types (project_id, ref, name, description, family, is_collection, created_at)
+      VALUES (@projectId, @ref, @name, @description, @family, @isCollection, @created_at)
+      ON CONFLICT(project_id, ref) DO UPDATE SET
+        name = excluded.name, description = excluded.description,
+        family = excluded.family, is_collection = excluded.is_collection
+    `)
+    .run({ projectId, ref, name, description, family, isCollection: isCollection ? 1 : 0, created_at })
+  return true
+}
+
+function getLocalElementTypes(projectId) {
+  return getDb()
+    .prepare('SELECT ref, name, description, family, is_collection FROM local_element_types WHERE project_id = ? ORDER BY created_at ASC')
+    .all(projectId)
+    .map(r => ({
+      ElementTypeRef: r.ref, Name: r.name, Description: r.description,
+      Family: r.family, IsCollection: r.is_collection ? 'Y' : null,
+    }))
+}
+
+function renameLocalElementType(projectId, oldRef, newRef) {
+  getDb()
+    .prepare('UPDATE local_element_types SET ref = ? WHERE project_id = ? AND ref = ?')
+    .run(newRef, projectId, oldRef)
+}
+
+function deleteLocalElementType(projectId, ref) {
+  getDb().prepare('DELETE FROM local_element_types WHERE project_id = ? AND ref = ?').run(projectId, ref)
+}
+
+// ---------------------------------------------------------------------------
+// Personal library — favorites + global templates (EXPORT_PLAN §5)
+// ---------------------------------------------------------------------------
+
+function collectLibraryData() {
+  const templates = getDb()
+    .prepare("SELECT * FROM templates WHERE scope = 'global'")
+    .all()
+    .map(parseTemplate)
+  return { version: 1, favorites: getFavorites(), templates }
+}
+
+/**
+ * Merge a library import: favorites insert-if-missing by (kind, ref);
+ * global templates upsert by id (imported wins). Returns counts for a report.
+ */
+function applyLibraryData(data = {}) {
+  if (data.version !== 1) {
+    throw new Error(`Unsupported library file version: ${data.version ?? 'none'}`)
+  }
+  const database = getDb()
+  let favAdded = 0, favSkipped = 0, tplUpserted = 0
+  const apply = database.transaction(() => {
+    const existingFavs = new Set(
+      getFavorites().map(f => `${f.kind}::${(f.ref || '').toLowerCase()}`)
+    )
+    for (const f of (data.favorites || [])) {
+      const key = `${f.kind}::${(f.ref || '').toLowerCase()}`
+      if (existingFavs.has(key)) { favSkipped++; continue }
+      upsertFavorite(f)
+      existingFavs.add(key)
+      favAdded++
+    }
+    for (const t of (data.templates || [])) {
+      upsertTemplate({ ...t, scope: 'global', project_id: null })
+      tplUpserted++
+    }
+  })
+  apply()
+  return { favAdded, favSkipped, tplUpserted }
 }
 
 /** All prefs for a project as a { key: value } map. */
@@ -965,4 +1097,13 @@ module.exports = {
   deleteFavorite,
   collectConfigData,
   applyConfigData,
+  getPendingChanges,
+  setPendingChanges,
+  clearPendingChanges,
+  collectLibraryData,
+  applyLibraryData,
+  upsertLocalElementType,
+  getLocalElementTypes,
+  renameLocalElementType,
+  deleteLocalElementType,
 }

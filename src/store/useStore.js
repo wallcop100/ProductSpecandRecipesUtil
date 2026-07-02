@@ -47,6 +47,196 @@ function stampIds(rows) {
 }
 
 // ---------------------------------------------------------------------------
+// Dirty registry (see EXPORT_PLAN.md)
+//
+// psChanges / rsChanges hold ONE coalesced entry per dirty row, not one entry
+// per edit event. Each modified-row entry carries:
+//   changedFields — the fields that differ from `before` (field-level patch)
+//   before        — the row's values when it FIRST became dirty (staleness base)
+// Brand-new rows (never exported, _row_num == null) queue as full-row appends.
+// ---------------------------------------------------------------------------
+
+/** Canonical RS export fields (must match backend RS_FIELD_TO_EXCEL keys). */
+const RS_EXPORT_FIELDS = [
+  'ContextType', 'ContextRef', 'RecipeIndex', 'ElementTypeRef', 'SortOrder',
+  'Quantity', 'PackQuantity', 'IsDeleted', 'IsDesign', 'IsContractItem',
+  'IsTRItem', 'Dim_QuantityMultiplier', 'IsInteger',
+]
+
+const RS_FIELD_ALIASES = {
+  ContextType: 'contextType', ContextRef: 'contextRef', RecipeIndex: 'recipeIndex',
+  ElementTypeRef: 'elementTypeRef', SortOrder: 'sortOrder', Quantity: 'quantity',
+  PackQuantity: 'packQuantity', IsDeleted: 'isDeleted', IsDesign: 'isDesign',
+  IsContractItem: 'isContractItem', IsTRItem: 'isTRItem',
+  Dim_QuantityMultiplier: 'dimQtyMultiplier', IsInteger: 'isInteger',
+}
+
+function rsValue(row, field) {
+  if (row[field] !== undefined) return row[field]
+  const alias = RS_FIELD_ALIASES[field]
+  return alias !== undefined ? row[alias] : undefined
+}
+
+/** Loose equality: null == '' , 1 == '1'. */
+function looseEqual(a, b) {
+  const na = (a === '' || a === undefined) ? null : a
+  const nb = (b === '' || b === undefined) ? null : b
+  if (na === nb) return true
+  if (na == null || nb == null) return false
+  const fa = parseFloat(na), fb = parseFloat(nb)
+  if (!Number.isNaN(fa) && !Number.isNaN(fb) && String(fa) === String(na).trim() && String(fb) === String(nb).trim()) {
+    return fa === fb
+  }
+  return false
+}
+
+/**
+ * Coalesce new RS change events into the dirty registry.
+ *
+ * prevRecipes = the recipes array BEFORE the mutation (used to snapshot
+ * `before` the first time a row becomes dirty). Entries whose changedFields
+ * become empty (edit reverted back to base) are dropped.
+ */
+function mergeRsChanges(prevChanges, newChanges, prevRecipes) {
+  if (!newChanges || newChanges.length === 0) return prevChanges
+  const byId = new Map(prevChanges.map(c => [c._id, c]))
+  const prevById = new Map()
+  if (prevRecipes) for (const r of prevRecipes) prevById.set(r._id, r)
+
+  for (const change of newChanges) {
+    const existing = byId.get(change._id)
+    const row = change.row || {}
+    const rowNum = row._row_num ?? null
+
+    if (change.action === 'delete') {
+      byId.set(change._id, {
+        _id: change._id, positionTypeRef: change.positionTypeRef,
+        action: 'delete', row, before: existing?.before,
+      })
+      continue
+    }
+
+    if (rowNum == null) {
+      // Never exported — full-row append.
+      byId.set(change._id, {
+        _id: change._id, positionTypeRef: change.positionTypeRef,
+        action: 'upsert', row,
+      })
+      continue
+    }
+
+    // Row exists on disk — field-level entry against a stable `before` base.
+    let before = existing?.before
+    if (!before) {
+      const base = prevById.get(change._id)
+      before = {}
+      if (base) for (const f of RS_EXPORT_FIELDS) before[f] = rsValue(base, f) ?? null
+    }
+    const changedFields = {}
+    for (const f of RS_EXPORT_FIELDS) {
+      const cur = rsValue(row, f) ?? null
+      if (!looseEqual(cur, before[f] ?? null)) changedFields[f] = cur
+    }
+    if (Object.keys(changedFields).length === 0) {
+      byId.delete(change._id)   // reverted to base — no longer dirty
+      continue
+    }
+    byId.set(change._id, {
+      _id: change._id, positionTypeRef: change.positionTypeRef,
+      action: 'upsert', row, changedFields, before,
+    })
+  }
+  return [...byId.values()]
+}
+
+/**
+ * Coalesce a DB catalogue change into its registry (keyed by ElementTypeRef).
+ * Same shape/merge rules as PS changes: earliest `before` wins, updates merge,
+ * _isNew sticky. A rename carries updates.ElementTypeRef = the new ref.
+ */
+function mergeDbChanges(prevChanges, change) {
+  return mergePsChanges(prevChanges, change)
+}
+
+/** Coalesce a PS change event into the dirty registry (keyed by ET ref). */
+function mergePsChanges(prevChanges, change) {
+  const idx = prevChanges.findIndex(c => c.elementTypeRef === change.elementTypeRef)
+  if (idx === -1) return [...prevChanges, change]
+  const existing = prevChanges[idx]
+  const merged = {
+    elementTypeRef: change.elementTypeRef,
+    updates: { ...(existing.updates || {}), ...(change.updates || {}) },
+    // earliest `before` wins — it is the base that still matches disk
+    before: { ...(change.before || {}), ...(existing.before || {}) },
+  }
+  if (existing._isNew || change._isNew) merged._isNew = true
+  const next = [...prevChanges]
+  next[idx] = merged
+  return next
+}
+
+/**
+ * Re-apply a pending PS registry onto freshly parsed rows: overlay updates on
+ * matching rows, re-inject _isNew rows that aren't on disk yet.
+ */
+function applyPsPending(psRows, psChanges) {
+  if (!psChanges || psChanges.length === 0) return psRows
+  const present = new Set(psRows.map(r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase()))
+  const rows = psRows.map(r => {
+    const ref = (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase()
+    const entry = psChanges.find(c => (c.elementTypeRef || '').toLowerCase() === ref)
+    return entry ? { ...r, ...entry.updates } : r
+  })
+  for (const c of psChanges) {
+    if (!present.has((c.elementTypeRef || '').toLowerCase())) {
+      rows.push({
+        ElementTypeRef: c.elementTypeRef, elementTypeRef: c.elementTypeRef,
+        ...c.updates, _id: uuidv4(), _row_num: null,
+      })
+    }
+  }
+  return rows
+}
+
+/**
+ * Re-apply a pending RS registry onto freshly parsed rows.
+ *
+ * Modified rows are addressed by _row_num (every position copy of a shared
+ * ET-internal row gets the pending values); never-exported rows are
+ * re-injected whole.
+ * ponytail: registry entry _ids are left pointing at the pre-reload rows —
+ * export addresses rows by _row_num so this is harmless; re-key if a
+ * post-reload edit of the same row ever needs to coalesce with its entry.
+ */
+function applyRsPending(recipes, rsChanges) {
+  if (!rsChanges || rsChanges.length === 0) return recipes
+  const byRowNum = new Map()
+  for (const c of rsChanges) {
+    const rn = c.row?._row_num ?? null
+    if (rn != null) byRowNum.set(rn, c)
+  }
+  const rows = recipes.map(r => {
+    const c = byRowNum.get(r._row_num ?? null)
+    if (!c) return r
+    if (c.action === 'delete') return { ...r, IsDeleted: 'Y', isDeleted: 'Y' }
+    if (!c.changedFields) return r
+    const patch = {}
+    for (const [f, v] of Object.entries(c.changedFields)) {
+      patch[f] = v
+      const alias = RS_FIELD_ALIASES[f]
+      if (alias) patch[alias] = v
+    }
+    return { ...r, ...patch }
+  })
+  for (const c of rsChanges) {
+    if (c.action === 'upsert' && (c.row?._row_num ?? null) == null && c.row) {
+      rows.push({ ...c.row })
+    }
+  }
+  return rows
+}
+
+// ---------------------------------------------------------------------------
 // Recipe grouping helper (exported for components)
 // ---------------------------------------------------------------------------
 
@@ -194,9 +384,19 @@ const useStore = create((set, get) => ({
   validationResults: [],
   fileWatchAlert: null,
 
-  // Dirty tracking
+  // Dirty tracking (coalesced registries — one entry per dirty row)
   psChanges: [],
   rsChanges: [],
+  dbChanges: [],         // writable DesignDB ElementTypes catalogue (EXPORT_PLAN §4)
+
+  // DesignDB writes are opt-in per project (off by default, easily enabled).
+  dbWriteEnabled: false,
+
+  // Locally-created ETs (SQLite staging) — kept to re-merge after a DB reload.
+  localElementTypes: [],
+
+  // Staleness conflicts awaiting per-cell resolution: { target: 'ps'|'rs'|'db', items: [...] } | null
+  exportConflicts: null,
 
   // Undo/redo history — snapshots of { recipes, psRows, rsChanges, psChanges }
   past: [],
@@ -247,8 +447,17 @@ const useStore = create((set, get) => ({
     const stampedRecipes = stampIds(recipes ?? [])
     const manualRefs = manualContainerETs ?? []
     const excludeRefs = manualContainerExcludeETs ?? []
+
+    // Merge locally-created ETs (SQLite) that aren't yet in the imported DB.
+    const dbEts = elementTypes ?? []
+    const dbRefSet = new Set(dbEts.map(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase()))
+    const localOnly = (data.localElementTypes ?? []).filter(
+      e => !dbRefSet.has((e.ElementTypeRef || '').toLowerCase())
+    )
+    const mergedEts = [...dbEts, ...localOnly]
+
     const containerInfo = computeContainerInfo({
-      elementTypes: elementTypes ?? [], psRows: stampedPsRows, recipes: stampedRecipes,
+      elementTypes: mergedEts, psRows: stampedPsRows, recipes: stampedRecipes,
       manualInclude: manualRefs, manualExclude: excludeRefs,
     })
 
@@ -259,7 +468,7 @@ const useStore = create((set, get) => ({
       projectLabel: projectLabel ?? null,
       folderPath: folderPath ?? null,
       paths: paths ?? { db: null, ps: null, rs: null },
-      elementTypes: elementTypes ?? [],
+      elementTypes: mergedEts,
       positionTypes: positionTypes ?? [],
       psRows: stampedPsRows,
       recipes: stampedRecipes,
@@ -277,9 +486,13 @@ const useStore = create((set, get) => ({
       containerETExcludeRefs: excludeRefs,
       containerETRefs: containerInfo.refs,
       containerReasons: containerInfo.reasons,
+      dbWriteEnabled: !!data.dbWriteEnabled,
+      localElementTypes: data.localElementTypes ?? [],
       // Reset transient state
       psChanges: [],
       rsChanges: [],
+      dbChanges: [],
+      exportConflicts: null,
       past: [],
       future: [],
       validationResults: [],
@@ -345,6 +558,10 @@ const useStore = create((set, get) => ({
         containerETRefs: containerInfo.refs,
         containerReasons: containerInfo.reasons,
         paths,
+        psChanges: [],
+        rsChanges: [],
+        dbChanges: [],
+        exportConflicts: null,
         past: [],
         future: [],
         isLoading: false,
@@ -614,7 +831,7 @@ const useStore = create((set, get) => ({
 
     set({
       recipes: updatedRecipes,
-      rsChanges: [...rsChanges, ...newChanges],
+      rsChanges: mergeRsChanges(rsChanges, newChanges, recipes),
     })
   },
 
@@ -676,10 +893,9 @@ const useStore = create((set, get) => ({
     set({
       recipes: updatedRecipes,
       slotMappings: updatedSlotMappings,
-      rsChanges: [
-        ...rsChanges,
+      rsChanges: mergeRsChanges(rsChanges, [
         { _id: updatedRow._id, positionTypeRef: posRef, action: 'upsert', row: updatedRow },
-      ],
+      ], recipes),
     })
 
     // Persist to SQLite
@@ -815,7 +1031,7 @@ const useStore = create((set, get) => ({
 
     set({
       recipes: updatedRecipes,
-      rsChanges: [...rsChanges, ...newChanges],
+      rsChanges: mergeRsChanges(rsChanges, newChanges, recipes),
     })
   },
 
@@ -873,7 +1089,7 @@ const useStore = create((set, get) => ({
         _id: row._id, positionTypeRef: row.PositionTypeRef, action: 'upsert', row,
       }))
 
-      set({ recipes: [...recipes, ...newRows], rsChanges: [...rsChanges, ...newChanges] })
+      set({ recipes: [...recipes, ...newRows], rsChanges: mergeRsChanges(rsChanges, newChanges, recipes) })
       return newRows[0]
     }
     // === END ET MODE ===
@@ -933,10 +1149,9 @@ const useStore = create((set, get) => ({
 
     set({
       recipes: [...recipes, newRow],
-      rsChanges: [
-        ...rsChanges,
+      rsChanges: mergeRsChanges(rsChanges, [
         { _id: newRow._id, positionTypeRef: posRef, action: 'upsert', row: newRow },
-      ],
+      ], recipes),
     })
 
     // Register the assigned element type in the Product Spec if it isn't already.
@@ -999,25 +1214,42 @@ const useStore = create((set, get) => ({
       _id: row._id, positionTypeRef: row.PositionTypeRef, action: 'upsert', row,
     }))
 
-    set({ recipes: [...recipes, ...newRows], rsChanges: [...rsChanges, ...newChanges] })
+    set({ recipes: [...recipes, ...newRows], rsChanges: mergeRsChanges(rsChanges, newChanges, recipes) })
     get().ensurePSRow(etRef)
     return newRows[0]
   },
 
   /**
    * ensurePSRow(etRef)
-   * Make sure a Product Spec row exists for etRef (the DB ElementTypes sheet is
-   * read-only, so a PS row is how a newly-assigned element type is registered).
-   * Container ETs default to ProductCode 'N/A'; others are left blank for fill-in.
+   * Registers a newly-used element type.
+   *
+   * With DB writes ON, registration happens in the DB catalogue (createElementType),
+   * so no PS row is fabricated — a PS row is only created when procurement data
+   * is actually entered. With DB writes OFF, fall back to the legacy behaviour:
+   * a PS row is how a new ET is registered (the DB sheet being read-only there),
+   * container ETs defaulting to ProductCode 'N/A'.
    * Idempotent; never records its own history (callers own that).
    */
   ensurePSRow(etRef) {
     if (!etRef) return null
-    const { containerETRefs, psRows } = get()
+    const { containerETRefs, psRows, elementTypes, dbWriteEnabled } = get()
     const exists = psRows.some(
       r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === etRef.toLowerCase()
     )
     if (exists) return null
+
+    if (dbWriteEnabled) {
+      // Register in the catalogue instead of the PS sheet.
+      const known = elementTypes.some(
+        e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === etRef.toLowerCase()
+      )
+      if (!known) {
+        const isContainer = containerETRefs.has(etRef.toLowerCase()) || looksLikeContainer(etRef)
+        get().createElementType({ ref: etRef, isCollection: isContainer })
+      }
+      return null
+    }
+
     const isContainer = containerETRefs.has(etRef.toLowerCase()) || looksLikeContainer(etRef)
     const defaults = isContainer ? { Manufacturer: '', ProductCode: 'N/A' } : {}
     return get().addPSRow(etRef, defaults, { recordHistory: false })
@@ -1050,7 +1282,7 @@ const useStore = create((set, get) => ({
           const merged = { ...existing, quantity: total, Quantity: total }
           set(s => ({
             recipes: s.recipes.map(r => r._id === existing._id ? merged : r),
-            rsChanges: [...s.rsChanges, { _id: existing._id, positionTypeRef: posRef, action: 'upsert', row: merged }],
+            rsChanges: mergeRsChanges(s.rsChanges, [{ _id: existing._id, positionTypeRef: posRef, action: 'upsert', row: merged }], s.recipes),
           }))
           continue
         }
@@ -1348,7 +1580,7 @@ const useStore = create((set, get) => ({
       return row
     })
 
-    set({ recipes: updatedRecipes, rsChanges: [...rsChanges, ...newChanges] })
+    set({ recipes: updatedRecipes, rsChanges: mergeRsChanges(rsChanges, newChanges, recipes) })
     get().applyCollection(posRef, toCollectionId)
   },
 
@@ -1375,7 +1607,7 @@ const useStore = create((set, get) => ({
         newChanges.push({ _id: row._id, positionTypeRef: posRef, action: 'upsert', row: u })
         return u
       })
-      set({ recipes: updated, rsChanges: [...rsChanges, ...newChanges] })
+      set({ recipes: updated, rsChanges: mergeRsChanges(rsChanges, newChanges, recipes) })
       return
     }
     get().addConnection(posRef, [{ section, elementTypeRef: ref, quantity }])
@@ -1403,7 +1635,7 @@ const useStore = create((set, get) => ({
       }
       return row
     })
-    set({ recipes: updated, rsChanges: [...rsChanges, ...newChanges] })
+    set({ recipes: updated, rsChanges: mergeRsChanges(rsChanges, newChanges, recipes) })
   },
 
   /**
@@ -1435,7 +1667,7 @@ const useStore = create((set, get) => ({
       }
       return row
     })
-    set({ recipes: updated, rsChanges: [...rsChanges, ...newChanges] })
+    set({ recipes: updated, rsChanges: mergeRsChanges(rsChanges, newChanges, recipes) })
   },
 
   /**
@@ -1475,7 +1707,7 @@ const useStore = create((set, get) => ({
       })
     }
 
-    set({ recipes: updatedRecipes, rsChanges: [...rsChanges, ...newChanges] })
+    set({ recipes: updatedRecipes, rsChanges: mergeRsChanges(rsChanges, newChanges, recipes) })
   },
 
   /**
@@ -1529,7 +1761,7 @@ const useStore = create((set, get) => ({
 
     // Drop any queued changes for hard-removed rows so export won't recreate them
     const cleaned = rsChanges.filter(c => !hardIds.has(c._id))
-    set({ recipes: nextRecipes, rsChanges: [...cleaned, ...newChanges] })
+    set({ recipes: nextRecipes, rsChanges: mergeRsChanges(cleaned, newChanges, recipes) })
   },
 
   /**
@@ -1569,7 +1801,7 @@ const useStore = create((set, get) => ({
 
     set({
       recipes: [...otherRows, ...reordered],
-      rsChanges: [...rsChanges, ...newChanges],
+      rsChanges: mergeRsChanges(rsChanges, newChanges, recipes),
     })
   },
 
@@ -1644,7 +1876,7 @@ const useStore = create((set, get) => ({
 
     set({
       recipes: updatedRecipes,
-      rsChanges: [...rsChanges, ...newChanges],
+      rsChanges: mergeRsChanges(rsChanges, newChanges, recipes),
     })
   },
 
@@ -1687,10 +1919,7 @@ const useStore = create((set, get) => ({
       psRows: updatedPsRows,
       containerETRefs: containerInfo.refs,
       containerReasons: containerInfo.reasons,
-      psChanges: [
-        ...psChanges,
-        { elementTypeRef, updates, before },
-      ],
+      psChanges: mergePsChanges(psChanges, { elementTypeRef, updates, before }),
     })
   },
 
@@ -1761,21 +1990,18 @@ const useStore = create((set, get) => ({
       psRows: newPsRows,
       containerETRefs: containerInfo.refs,
       containerReasons: containerInfo.reasons,
-      psChanges: [
-        ...psChanges,
-        {
-          elementTypeRef: trimmed,
-          updates: {
-            ElementTypeRef: trimmed,
-            ProductCode: newRow.ProductCode,
-            Manufacturer: newRow.Manufacturer,
-            ComponentDescription: newRow.ComponentDescription,
-            IsTBC: newRow.IsTBC,
-            IsPropertiesTBC: newRow.IsPropertiesTBC,
-          },
-          _isNew: true,
+      psChanges: mergePsChanges(psChanges, {
+        elementTypeRef: trimmed,
+        updates: {
+          ElementTypeRef: trimmed,
+          ProductCode: newRow.ProductCode,
+          Manufacturer: newRow.Manufacturer,
+          ComponentDescription: newRow.ComponentDescription,
+          IsTBC: newRow.IsTBC,
+          IsPropertiesTBC: newRow.IsPropertiesTBC,
         },
-      ],
+        _isNew: true,
+      }),
     })
 
     return newRow
@@ -1913,7 +2139,7 @@ const useStore = create((set, get) => ({
     }))
 
     get()._pushHistory()
-    set(s => ({ recipes: [...s.recipes, ...newRows], rsChanges: [...s.rsChanges, ...newChanges] }))
+    set(s => ({ recipes: [...s.recipes, ...newRows], rsChanges: mergeRsChanges(s.rsChanges, newChanges, s.recipes) }))
     get().openETRecipe(trimmedRef)
   },
 
@@ -1945,36 +2171,252 @@ const useStore = create((set, get) => ({
 
   /**
    * exportChanges()
-   * POSTs psChanges and rsChanges to Flask /patch, then clears them.
+   * Exports the dirty registries per target, independently (EXPORT_PLAN §3).
+   *
+   * - Appends are reconciled: the backend returns assigned row numbers, which
+   *   are stamped onto the in-memory rows so re-exports update, not duplicate.
+   * - A staleness conflict (HTTP 409) blocks that file: it is reloaded from
+   *   disk, the registry is KEPT, and the conflicts surface for resolution.
+   * - Any successful write sets an export barrier: undo history is cleared so
+   *   an already-exported change can never be resurrected.
    */
   async exportChanges() {
     const { psChanges, rsChanges, paths } = get()
+    const status = { ps: null, rs: null }   // null | 'ok' | 'conflict'
+    let anyWrite = false
 
-    const requests = []
+    // Tell the watcher to ignore the changes our own export is about to make,
+    // so it doesn't raise a bogus "the file changed on disk" prompt.
+    if (window.electronAPI?.suppressWatcher) {
+      window.electronAPI.suppressWatcher([paths.ps, paths.rs].filter(Boolean))
+    }
 
     if (psChanges.length > 0) {
-      requests.push(
-        axios.post(`${API}/patch`, {
-          target: 'ps',
-          filepath: paths.ps,
-          changes: psChanges,
+      try {
+        const resp = await axios.post(`${API}/patch`, {
+          target: 'ps', filepath: paths.ps, changes: psChanges,
         })
-      )
+        const assignments = resp.data?.assignments || {}
+        set(s => ({
+          psRows: s.psRows.map(r => {
+            const ref = r.ElementTypeRef || r.elementTypeRef
+            return (r._row_num == null && assignments[ref] != null)
+              ? { ...r, _row_num: assignments[ref] } : r
+          }),
+          psChanges: [],
+        }))
+        status.ps = 'ok'
+        anyWrite = true
+      } catch (err) {
+        if (err.response?.status === 409) {
+          status.ps = 'conflict'
+          await get()._handleExportConflict('ps', err.response.data?.conflicts || [])
+        } else {
+          throw new Error(`Product Spec export failed: ${err.response?.data?.error || err.message}`)
+        }
+      }
     }
 
-    if (rsChanges.length > 0) {
-      requests.push(
-        axios.post(`${API}/patch`, {
-          target: 'rs',
-          filepath: paths.rs,
-          changes: rsChanges,
+    // Stop at the first conflict — resolve, then export again.
+    if (status.ps !== 'conflict' && rsChanges.length > 0) {
+      try {
+        const resp = await axios.post(`${API}/patch`, {
+          target: 'rs', filepath: paths.rs, changes: rsChanges,
         })
-      )
+        const assignments = resp.data?.assignments || {}
+        set(s => ({
+          recipes: s.recipes.map(r =>
+            (r._row_num == null && assignments[r._id] != null)
+              ? { ...r, _row_num: assignments[r._id] } : r
+          ),
+          rsChanges: [],
+        }))
+        status.rs = 'ok'
+        anyWrite = true
+      } catch (err) {
+        if (err.response?.status === 409) {
+          status.rs = 'conflict'
+          await get()._handleExportConflict('rs', err.response.data?.conflicts || [])
+        } else {
+          throw new Error(`Recipe Spec export failed: ${err.response?.data?.error || err.message}`)
+        }
+      }
     }
 
-    await Promise.all(requests)
+    if (anyWrite) {
+      // Export barrier (EXPORT_PLAN §3.7): undo cannot cross an export.
+      set({ past: [], future: [] })
+      // Auto-write the config overlay beside the Excels so the project folder
+      // is self-contained (EXPORT_PLAN §5).
+      const { projectId, folderPath, configName } = get()
+      if (projectId != null && folderPath && window.electronAPI?.configWriteYaml) {
+        const overlayPath = `${folderPath}\\${configName || 'Base'}.ideaworks.yaml`
+        try { await window.electronAPI.configWriteYaml({ projectId, filePath: overlayPath }) } catch { /* non-fatal */ }
+      }
+    }
 
-    set({ psChanges: [], rsChanges: [] })
+    if (status.ps === 'conflict' || status.rs === 'conflict') {
+      throw new Error('Some changes conflict with edits made on disk — resolve them, then export again.')
+    }
+    return status
+  },
+
+  /**
+   * _handleExportConflict(target, conflicts)
+   * Block-reload-keep (EXPORT_PLAN §3.4): reload the conflicted file from disk,
+   * KEEP the dirty registry, re-apply pending values onto the fresh rows, and
+   * surface the conflicts for per-cell resolution.
+   */
+  async _handleExportConflict(target, conflicts) {
+    const { paths } = get()
+    const resp = await axios.post(`${API}/import`, { db: paths.db, ps: paths.ps, rs: paths.rs })
+
+    if (target === 'db') {
+      const fresh = (resp.data.db?.element_types ?? [])
+      const { dbChanges, localElementTypes = [] } = get()
+      const items = conflicts.map(c => ({
+        ...c,
+        localValue: dbChanges.find(e => e.elementTypeRef === c.key)?.updates?.[c.field] ?? null,
+      }))
+      // Re-merge: fresh DB ETs + local-only, then overlay pending updates
+      const dbRefSet = new Set(fresh.map(e => (e.ElementTypeRef || '').toLowerCase()))
+      const merged = [...fresh, ...localElementTypes.filter(e => !dbRefSet.has((e.ElementTypeRef || '').toLowerCase()))]
+      set({
+        elementTypes: applyPsPending(merged, dbChanges),
+        exportConflicts: { target: 'db', items },
+        past: [], future: [],
+        fileWatchAlert: null,
+      })
+    } else if (target === 'ps') {
+      const fresh = stampIds(resp.data.ps ?? [])
+      const { psChanges } = get()
+      const items = conflicts.map(c => ({
+        ...c,
+        localValue: psChanges.find(e => e.elementTypeRef === c.key)?.updates?.[c.field] ?? null,
+      }))
+      set({
+        psRows: applyPsPending(fresh, psChanges),
+        exportConflicts: { target: 'ps', items },
+        past: [], future: [],
+        fileWatchAlert: null,
+      })
+    } else {
+      const fresh = stampIds(resp.data.rs ?? [])
+      const { rsChanges } = get()
+      const items = conflicts.map(c => ({
+        ...c,
+        localValue: rsChanges.find(e => e._id === c.key)?.changedFields?.[c.field] ?? null,
+      }))
+      set({
+        recipes: applyRsPending(fresh, rsChanges),
+        exportConflicts: { target: 'rs', items },
+        past: [], future: [],
+        fileWatchAlert: null,
+      })
+    }
+  },
+
+  /**
+   * resolveExportConflict(index, resolution)
+   * resolution: 'mine' — keep the local value; the entry's `before` is updated
+   *             to the disk value so the next export passes the staleness check.
+   *             'theirs' — drop the local edit for that field; the visible row
+   *             reverts to the disk value.
+   */
+  resolveExportConflict(index, resolution) {
+    const { exportConflicts } = get()
+    if (!exportConflicts) return
+    const item = exportConflicts.items[index]
+    if (!item) return
+
+    if (exportConflicts.target === 'ps' || exportConflicts.target === 'db') {
+      // PS and DB share the same registry shape (keyed by ET ref) and only
+      // differ in which rows array they overlay.
+      const changeKey = exportConflicts.target === 'ps' ? 'psChanges' : 'dbChanges'
+      const rowsKey   = exportConflicts.target === 'ps' ? 'psRows' : 'elementTypes'
+      set(s => {
+        const changes = s[changeKey].map(c => {
+          if (c.elementTypeRef !== item.key) return c
+          if (resolution === 'mine') {
+            return { ...c, before: { ...(c.before || {}), [item.field]: item.diskValue } }
+          }
+          const updates = { ...(c.updates || {}) }
+          const before = { ...(c.before || {}) }
+          delete updates[item.field]
+          delete before[item.field]
+          return { ...c, updates, before }
+        }).filter(c => c._isNew || Object.keys(c.updates || {}).length > 0)
+        const rows = resolution === 'theirs'
+          ? s[rowsKey].map(r => {
+              const ref = r.ElementTypeRef || r.elementTypeRef
+              return ref === item.key ? { ...r, [item.field]: item.diskValue } : r
+            })
+          : s[rowsKey]
+        const items = s.exportConflicts.items.filter((_, i) => i !== index)
+        return {
+          [changeKey]: changes, [rowsKey]: rows,
+          exportConflicts: items.length ? { ...s.exportConflicts, items } : null,
+        }
+      })
+    } else {
+      set(s => {
+        const rsChanges = s.rsChanges.map(c => {
+          if (c._id !== item.key) return c
+          if (resolution === 'mine') {
+            return { ...c, before: { ...(c.before || {}), [item.field]: item.diskValue } }
+          }
+          const changedFields = { ...(c.changedFields || {}) }
+          const before = { ...(c.before || {}) }
+          delete changedFields[item.field]
+          before[item.field] = item.diskValue
+          return { ...c, changedFields, before }
+        }).filter(c => c.action === 'delete' || (c.row?._row_num ?? null) == null || Object.keys(c.changedFields || {}).length > 0)
+        const recipes = resolution === 'theirs'
+          ? s.recipes.map(r => {
+              if ((r._row_num ?? null) !== item.rowNum) return r
+              const alias = RS_FIELD_ALIASES[item.field]
+              const patch = { [item.field]: item.diskValue }
+              if (alias) patch[alias] = item.diskValue
+              return { ...r, ...patch }
+            })
+          : s.recipes
+        const items = s.exportConflicts.items.filter((_, i) => i !== index)
+        return {
+          rsChanges, recipes,
+          exportConflicts: items.length ? { ...s.exportConflicts, items } : null,
+        }
+      })
+    }
+  },
+
+  /**
+   * restorePendingChanges({ ps, rs })
+   * Re-applies a persisted dirty registry from a previous session onto the
+   * freshly imported rows (EXPORT_PLAN §3.1).
+   */
+  restorePendingChanges({ ps = [], rs = [], db = [] } = {}) {
+    set(s => ({
+      psChanges: ps,
+      rsChanges: rs,
+      dbChanges: db,
+      psRows: applyPsPending(s.psRows, ps),
+      recipes: applyRsPending(s.recipes, rs),
+      elementTypes: applyPsPending(s.elementTypes, db),
+    }))
+  },
+
+  /**
+   * snapshotProject()
+   * Copies the three project files + the config overlay into
+   * <folder>/snapshot/<date>/ (EXPORT_PLAN §6). Returns { dir }.
+   */
+  async snapshotProject() {
+    const { folderPath, paths, projectId, configName } = get()
+    if (!folderPath || !window.electronAPI?.snapshotProject) return null
+    const files = [paths.db, paths.ps, paths.rs]
+      .filter(Boolean)
+      .map(p => p.split(/[\\/]/).pop())
+    return window.electronAPI.snapshotProject({ folderPath, files, projectId, configName })
   },
 
   /**
@@ -1994,16 +2436,12 @@ const useStore = create((set, get) => ({
 
   /**
    * addLocalElementType(ref, name?, family?)
-   * Adds an ET to the in-memory elementTypes list (local only until next import/export).
+   * Back-compat shim — every ET now lives in the DB catalogue, so this
+   * delegates to createElementType (staging-table backed, queues a DB row when
+   * DB writes are enabled).
    */
   addLocalElementType(ref, name = null, family = null) {
-    const trimmed = (ref || '').trim()
-    if (!trimmed) return
-    const { elementTypes } = get()
-    if (elementTypes.some(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === trimmed.toLowerCase())) return
-    set(s => ({
-      elementTypes: [...s.elementTypes, { ElementTypeRef: trimmed, Name: name, Family: family }],
-    }))
+    return get().createElementType({ ref, name, family })
   },
 
   /**
@@ -2034,30 +2472,303 @@ const useStore = create((set, get) => ({
 
   /**
    * reloadFileFromDisk(file)
-   * file: 'ps' | 'rs'
-   * POST /import for just that file, merges into store, clears alert.
+   * file: 'ps' | 'rs' | 'db'
+   * POST /import, replaces that file's rows, and discards its dirty registry +
+   * undo stacks (EXPORT_PLAN §3.7): nothing stale can be re-exported or undone.
    */
   async reloadFileFromDisk(file) {
     const { paths } = get()
     set({ isLoading: true })
 
     try {
-      const filePath = file === 'ps' ? paths.ps : paths.rs
       const body = { db: paths.db, ps: paths.ps, rs: paths.rs }
       const response = await axios.post(`${API}/import`, body)
 
       if (file === 'ps') {
         const psRows = stampIds(response.data.ps ?? [])
-        set({ psRows, isLoading: false, fileWatchAlert: null })
+        set({ psRows, psChanges: [], past: [], future: [], isLoading: false, fileWatchAlert: null })
+      } else if (file === 'db') {
+        const dbEts = response.data.db?.element_types ?? []
+        const { localElementTypes = [] } = get()
+        const dbRefSet = new Set(dbEts.map(e => (e.ElementTypeRef || '').toLowerCase()))
+        const merged = [...dbEts, ...localElementTypes.filter(e => !dbRefSet.has((e.ElementTypeRef || '').toLowerCase()))]
+        set({ elementTypes: merged, dbChanges: [], past: [], future: [], isLoading: false, fileWatchAlert: null })
       } else {
         const recipes = stampIds(response.data.rs ?? [])
-        set({ recipes, isLoading: false, fileWatchAlert: null })
+        set({ recipes, rsChanges: [], past: [], future: [], isLoading: false, fileWatchAlert: null })
       }
     } catch (err) {
       set({ isLoading: false, loadError: err.message ?? String(err) })
       throw err
     }
   },
+
+  // -------------------------------------------------------------------------
+  // DesignDB catalogue (EXPORT_PLAN §4) — writable ElementTypes
+  // -------------------------------------------------------------------------
+
+  /**
+   * setDbWriteEnabled(enabled) — opt-in per project; persisted as a pref.
+   */
+  async setDbWriteEnabled(enabled) {
+    const { projectId, elementTypes, localElementTypes, dbChanges } = get()
+
+    // Turning writes ON promotes already-staged local ETs (created while off,
+    // never written to disk) into the catalogue queue — the staging table is
+    // the promotion queue (EXPORT_PLAN §4).
+    let nextDbChanges = dbChanges
+    if (enabled) {
+      const stagedRefs = new Set(localElementTypes.map(e => (e.ElementTypeRef || '').toLowerCase()))
+      for (const e of elementTypes) {
+        const ref = e.ElementTypeRef || e.elementTypeRef
+        const key = (ref || '').toLowerCase()
+        if (!ref || !stagedRefs.has(key)) continue
+        if (e._row_num != null) continue                        // already on disk
+        if (nextDbChanges.some(c => (c.elementTypeRef || '').toLowerCase() === key)) continue
+        nextDbChanges = mergeDbChanges(nextDbChanges, {
+          elementTypeRef: ref,
+          updates: {
+            ElementTypeRef: ref, Name: e.Name ?? null, Description: e.Description ?? null,
+            Family: e.Family ?? null, IsCollection: e.IsCollection ?? null,
+            SortOrder: e.SortOrder ?? get().suggestSortOrder(e.Family ?? null),
+          },
+          _isNew: true,
+        })
+      }
+    }
+
+    set({ dbWriteEnabled: !!enabled, dbChanges: nextDbChanges })
+    if (projectId != null) {
+      await window.electronAPI.db.setPref(projectId, 'db_write_enabled', JSON.stringify(!!enabled))
+    }
+  },
+
+  /**
+   * suggestSortOrder(family) — max SortOrder within a family + 1 (EXPORT_PLAN §6 answer).
+   */
+  suggestSortOrder(family) {
+    const { elementTypes } = get()
+    let max = 0
+    for (const e of elementTypes) {
+      if ((e.Family || e.family || null) !== (family ?? null)) continue
+      const so = Number(e.SortOrder ?? e.sortOrder ?? 0)
+      if (!Number.isNaN(so)) max = Math.max(max, so)
+    }
+    return max + 1
+  },
+
+  /**
+   * createElementType({ ref, name, description, family, isCollection })
+   * Every ET lives in the DB catalogue. Adds it to the in-memory list, persists
+   * to the local_element_types staging table (survives restart regardless of
+   * the DB-write setting), and — when DB writes are on — queues a catalogue row.
+   */
+  createElementType({ ref, name = null, description = null, family = null, isCollection = false } = {}) {
+    const trimmed = (ref || '').trim()
+    if (!trimmed) return null
+    const { elementTypes, projectId, dbWriteEnabled, dbChanges } = get()
+    if (elementTypes.some(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === trimmed.toLowerCase())) return null
+
+    const sortOrder = get().suggestSortOrder(family)
+    const etObj = {
+      ElementTypeRef: trimmed, Name: name, Description: description,
+      Family: family, IsCollection: isCollection ? 'Y' : null,
+      SortOrder: sortOrder, _row_num: null,
+    }
+
+    const patch = {
+      elementTypes: [...elementTypes, etObj],
+      localElementTypes: [...get().localElementTypes, etObj],
+    }
+    if (dbWriteEnabled) {
+      patch.dbChanges = mergeDbChanges(dbChanges, {
+        elementTypeRef: trimmed,
+        updates: {
+          ElementTypeRef: trimmed, Name: name, Description: description,
+          Family: family, IsCollection: isCollection ? 'Y' : null, SortOrder: sortOrder,
+        },
+        _isNew: true,
+      })
+    }
+    set(patch)
+
+    // Persist to the staging table (best-effort)
+    if (projectId != null && window.electronAPI?.db?.upsertLocalET) {
+      window.electronAPI.db.upsertLocalET(projectId, {
+        ref: trimmed, name, description, family, isCollection,
+      })?.catch?.(() => {})
+    }
+    return etObj
+  },
+
+  /**
+   * renameElementType(oldRef, newRef)
+   * Cascades the rename through the app's own writable files — the DB catalogue
+   * row, PS EntityRef, and RS EntityRef + ContextRef (container refs). Never
+   * touches any other DB sheet (Positions/Elements/LinksMap); those belong to
+   * the upstream pipeline and are the user's responsibility (they were warned).
+   */
+  renameElementType(oldRef, newRef) {
+    const from = (oldRef || '').trim()
+    const to = (newRef || '').trim()
+    if (!from || !to || from === to) return
+    const state = get()
+    if (state.elementTypes.some(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === to.toLowerCase())) return
+
+    get()._pushHistory()
+    const lc = from.toLowerCase()
+
+    // 1. elementTypes
+    const elementTypes = state.elementTypes.map(e =>
+      (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === lc
+        ? { ...e, ElementTypeRef: to, elementTypeRef: to } : e
+    )
+
+    // 2. DB catalogue change (rename by writing the new Ref into the row found
+    //    by the old Ref)
+    let dbChanges = state.dbChanges
+    if (state.dbWriteEnabled) {
+      dbChanges = mergeDbChanges(dbChanges, {
+        elementTypeRef: from,
+        updates: { ElementTypeRef: to },
+        before: { ElementTypeRef: from },
+      })
+    }
+
+    // 3. PS rows — the ref IS the key, so this is a keyed rename
+    let psRows = state.psRows
+    let psChanges = state.psChanges
+    const psHit = state.psRows.find(r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === lc)
+    if (psHit) {
+      psRows = state.psRows.map(r =>
+        (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === lc
+          ? { ...r, ElementTypeRef: to, elementTypeRef: to } : r
+      )
+      psChanges = mergePsChanges(psChanges, {
+        elementTypeRef: from,
+        updates: { ElementTypeRef: to },
+        before: { ElementTypeRef: from },
+      })
+    }
+
+    // 4. RS rows — EntityRef and ContextRef (container refs)
+    const rsNew = []
+    const recipes = state.recipes.map(r => {
+      const isEntity = (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === lc
+      const isContext = (r.ContextType || r.contextType) === 'ElementType' &&
+                        (r.ContextRef || r.contextRef || '').toLowerCase() === lc
+      if (!isEntity && !isContext) return r
+      const patch = { ...r }
+      if (isEntity) { patch.ElementTypeRef = to; patch.elementTypeRef = to }
+      if (isContext) { patch.ContextRef = to; patch.contextRef = to }
+      rsNew.push({ _id: r._id, positionTypeRef: r.PositionTypeRef || r.positionTypeRef, action: 'upsert', row: patch })
+      return patch
+    })
+    const rsChanges = mergeRsChanges(state.rsChanges, rsNew, state.recipes)
+
+    set({ elementTypes, dbChanges, psRows, psChanges, recipes, rsChanges })
+
+    // Staging table rename
+    const { projectId } = state
+    if (projectId != null && window.electronAPI?.db?.renameLocalET) {
+      window.electronAPI.db.renameLocalET(projectId, from, to)?.catch?.(() => {})
+    }
+  },
+
+  /**
+   * deleteElementType(ref)
+   * Soft-delete in the DB catalogue (IsDeleted='Y'); exports are gospel so the
+   * row is never removed. Dangling PS/RS references are left in place and get
+   * surfaced by validation, per the settled decision.
+   */
+  deleteElementType(ref) {
+    const trimmed = (ref || '').trim()
+    if (!trimmed) return
+    const { elementTypes, dbChanges, dbWriteEnabled, projectId } = get()
+    const lc = trimmed.toLowerCase()
+    const hit = elementTypes.find(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === lc)
+    if (!hit) return
+
+    get()._pushHistory()
+
+    const nextEts = elementTypes.map(e =>
+      (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === lc
+        ? { ...e, IsDeleted: 'Y' } : e
+    )
+    const patch = { elementTypes: nextEts }
+    if (dbWriteEnabled) {
+      patch.dbChanges = mergeDbChanges(dbChanges, {
+        elementTypeRef: trimmed,
+        updates: { IsDeleted: 'Y' },
+        before: { IsDeleted: hit.IsDeleted ?? null },
+      })
+    }
+    set(patch)
+
+    if (projectId != null && window.electronAPI?.db?.deleteLocalET) {
+      window.electronAPI.db.deleteLocalET(projectId, trimmed)?.catch?.(() => {})
+    }
+  },
+
+  /**
+   * exportCatalogueChanges()
+   * Separate, explicit export for the DesignDB ElementTypes sheet (different
+   * blast radius than PS/RS). Same reconciliation + block-reload-keep conflict
+   * flow. Only writes when DB writes are enabled and there are changes.
+   */
+  async exportCatalogueChanges() {
+    const { dbChanges, dbWriteEnabled, paths } = get()
+    if (!dbWriteEnabled || dbChanges.length === 0) return { db: null }
+    try {
+      const resp = await axios.post(`${API}/patch`, {
+        target: 'db', filepath: paths.db, changes: dbChanges,
+      })
+      const assignments = resp.data?.assignments || {}
+      set(s => ({
+        elementTypes: s.elementTypes.map(e => {
+          const ref = e.ElementTypeRef || e.elementTypeRef
+          return (e._row_num == null && assignments[ref] != null)
+            ? { ...e, _row_num: assignments[ref] } : e
+        }),
+        dbChanges: [],
+        past: [], future: [],
+      }))
+      return { db: 'ok' }
+    } catch (err) {
+      if (err.response?.status === 409) {
+        await get()._handleExportConflict('db', err.response.data?.conflicts || [])
+        throw new Error('Catalogue changes conflict with edits on disk — resolve them, then export again.')
+      }
+      throw new Error(`Catalogue export failed: ${err.response?.data?.error || err.message}`)
+    }
+  },
 }))
+
+// ---------------------------------------------------------------------------
+// Pending-changes persistence (EXPORT_PLAN §3.1)
+// The dirty registry survives a crash: any change to psChanges/rsChanges is
+// debounced into SQLite; a restore prompt on project open offers it back.
+// ---------------------------------------------------------------------------
+
+let _pendingPersistTimer = null
+useStore.subscribe((state, prev) => {
+  if (state.psChanges === prev.psChanges &&
+      state.rsChanges === prev.rsChanges &&
+      state.dbChanges === prev.dbChanges) return
+  if (typeof window === 'undefined' || !window.electronAPI?.db?.setPendingChanges) return
+  clearTimeout(_pendingPersistTimer)
+  _pendingPersistTimer = setTimeout(() => {
+    const { projectId, psChanges, rsChanges, dbChanges } = useStore.getState()
+    if (projectId == null) return
+    try {
+      // dbChanges piggyback in the ps blob under a reserved key so no schema
+      // change is needed; restore splits them back out.
+      window.electronAPI.db.setPendingChanges(projectId, psChanges, rsChanges)?.catch?.(() => {})
+      if (window.electronAPI.db.setPref) {
+        window.electronAPI.db.setPref(projectId, 'pending_db_changes', JSON.stringify(dbChanges))?.catch?.(() => {})
+      }
+    } catch { /* persistence is best-effort */ }
+  }, 800)
+})
 
 export default useStore

@@ -40,6 +40,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
   const [confirmCtx, setConfirmCtx] = useState(null)
   const [showManager, setShowManager] = useState(false)
   const [appVersion, setAppVersion] = useState('')
+  const [libraryMsg, setLibraryMsg] = useState(null)
 
   useEffect(() => {
     window.electronAPI.getAppVersion?.().then(v => setAppVersion(v || '')).catch(() => {})
@@ -156,6 +157,30 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
       const elementTypes = db_data?.element_types ?? []
       const positionTypes = db_data?.position_types ?? []
 
+      // Read any crash-surviving pending changes BEFORE loadProject resets the
+      // queues (the persistence subscription would otherwise overwrite them).
+      let pendingChanges = null
+      try {
+        const pending = await window.electronAPI.db.getPendingChanges(projectId)
+        let db = []
+        try {
+          const raw = await window.electronAPI.db.getPref(projectId, 'pending_db_changes')
+          db = raw ? JSON.parse(raw) : []
+        } catch { /* none */ }
+        if (pending && ((pending.ps?.length || 0) + (pending.rs?.length || 0) + (db?.length || 0)) > 0) {
+          pendingChanges = { ...pending, db }
+        }
+      } catch { /* none */ }
+
+      // DB-write setting + locally-created ETs (EXPORT_PLAN §4)
+      let dbWriteEnabled = false
+      try {
+        const raw = await window.electronAPI.db.getPref(projectId, 'db_write_enabled')
+        dbWriteEnabled = raw ? JSON.parse(raw) : false
+      } catch { /* default off */ }
+      let localElementTypes = []
+      try { localElementTypes = await window.electronAPI.db.getLocalETs(projectId) || [] } catch { /* none */ }
+
       // 3. Load SQLite data
       const [positionUIArr, templates, slotMappings, containerETPref, containerExcludePref, etCollections, ignoredFamiliesPref, tagRulesPref, tagPalettePref, tagSnapshotsPref, favorites] = await Promise.all([
         window.electronAPI.db.getAllPositionUI(projectId),
@@ -257,7 +282,23 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
         tagPalette,
         tagSnapshots,
         tagDrift,
+        dbWriteEnabled,
+        localElementTypes,
       })
+
+      // 8b. Offer to restore unexported changes from a previous session
+      // (EXPORT_PLAN §3.1). Declining discards them permanently.
+      if (pendingChanges) {
+        const n = (pendingChanges.ps?.length || 0) + (pendingChanges.rs?.length || 0) + (pendingChanges.db?.length || 0)
+        if (window.confirm(`You have ${n} unexported change${n === 1 ? '' : 's'} from a previous session.\n\nRestore them?`)) {
+          useStore.getState().restorePendingChanges(pendingChanges)
+        } else {
+          try {
+            await window.electronAPI.db.clearPendingChanges(projectId)
+            await window.electronAPI.db.setPref(projectId, 'pending_db_changes', '[]')
+          } catch { /* best-effort */ }
+        }
+      }
 
       // 9. Start file watcher
       await window.electronAPI.startWatcher({ folderPath, psFilename, rsFilename })
@@ -404,9 +445,30 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
             </Button>
           </div>
 
-          {/* Version + update check */}
-          <div className="d-flex align-items-center gap-2 mt-3 pt-2 border-top">
+          {/* Version + library + update check */}
+          <div className="d-flex align-items-center gap-3 mt-3 pt-2 border-top">
             <span className="text-muted small">{appVersion ? `v${appVersion}` : ''}</span>
+            <Button
+              variant="link" size="sm" className="p-0"
+              title="Export your favourites + global templates to a YAML file"
+              onClick={async () => {
+                const r = await window.electronAPI.libraryExportYaml?.()
+                if (r?.ok) setLibraryMsg(`Library exported to ${r.path}`)
+              }}
+            >
+              Export my library
+            </Button>
+            <Button
+              variant="link" size="sm" className="p-0"
+              title="Merge a library YAML into your favourites + global templates"
+              onClick={async () => {
+                const r = await window.electronAPI.libraryImportYaml?.()
+                if (r?.ok) setLibraryMsg(`Imported: ${r.favAdded} favourite(s) added, ${r.favSkipped} already present, ${r.tplUpserted} template(s)`)
+                else if (r?.error) setLibraryMsg(`Import failed: ${r.error}`)
+              }}
+            >
+              Import library
+            </Button>
             <Button
               variant="link" size="sm" className="p-0 ms-auto"
               onClick={() => window.electronAPI.updater?.checkNow?.()}
@@ -414,6 +476,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
               Check for updates
             </Button>
           </div>
+          {libraryMsg && <div className="text-muted small mt-1">{libraryMsg}</div>}
         </Card.Body>
       </Card>
 

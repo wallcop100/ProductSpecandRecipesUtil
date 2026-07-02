@@ -67,38 +67,78 @@ PS_FIELD_TO_EXCEL = {
     'IsPropertiesTBC':     'IsPropertiesTBC',
 }
 
+# DesignDB ElementTypes sheet — writable catalogue (EXPORT_PLAN §4).
+# Identity + classification only; physical/electrical columns are left to the
+# upstream pipeline and are never written by the app.
+DB_FIELD_TO_EXCEL = {
+    'ElementTypeRef': 'Ref',
+    'Name':           'Name',
+    'Description':    'Description',
+    'Family':         'ParentRef',
+    'IsCollection':   'IsCollection',
+    'IsDeleted':      'IsDeleted',
+    'SortOrder':      'SortOrder',
+}
+
 
 # ---------------------------------------------------------------------------
 # Row-level patch engine
 # ---------------------------------------------------------------------------
 
-def _apply_row_level_patch(filepath, sheet_name, field_to_excel, changes):
+def _norm(value):
+    """Normalise a cell/before value for comparison: blank strings → None."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        v = value.strip()
+        return v if v else None
+    return value
+
+
+def _values_differ(a, b):
+    """Loose comparison: None == blank, 1 == 1.0, '1' == 1."""
+    a, b = _norm(a), _norm(b)
+    if a == b:
+        return False
+    # Numeric-vs-string tolerance ('1' on one side, 1 on the other)
+    try:
+        return float(a) != float(b)
+    except (TypeError, ValueError):
+        return True
+
+
+def _apply_row_level_patch(filepath, sheet_name, field_to_excel, changes, key_column='EntityRef'):
     """
     Apply row-level changes to the 'Form' sheet of an xlsx file.
 
     Two change formats are supported:
 
-    RS format (row-level):
-        [{"_id": str, "action": "upsert"|"delete", "row": {..., "_row_num": int|None}}, ...]
+    RS format:
+        [{"_id": str, "action": "upsert"|"delete",
+          "row": {..., "_row_num": int|None},
+          "changedFields": {field: value} | None,   # field-level patch when present
+          "before": {field: originalValue} | None}, ...]
 
-    PS format (field-level):
-        [{"elementTypeRef": str, "updates": {field: value, ...}}, ...]
+    PS format:
+        [{"elementTypeRef": str, "updates": {field: value},
+          "before": {field: originalValue} | None, "_isNew": bool}, ...]
 
-    RS upsert logic:
-        - row._row_num set  → update that existing Excel row
-        - row._row_num None → append a new row at the bottom
-    RS delete:
-        - row._row_num set  → soft-delete by writing IsDeleted='Y'
-
-    Multiple changes for the same _id are deduplicated (last write wins).
+    Behaviour (see EXPORT_PLAN.md):
+    - Staleness check: every change carrying 'before' has those values compared
+      against the live cells. ANY mismatch blocks the entire file — nothing is
+      written, no backup made, and the conflicts are returned.
+    - Appends write EntityType='ElementType' plus mapped fields, and their
+      assigned row numbers are returned in 'assignments' for reconciliation.
+    - RS appends are guarded by a natural key (ContextType, ContextRef,
+      RecipeIndex, EntityRef): if a matching row already exists on disk the
+      append becomes an update at that row (never duplicates).
+    - Deletes are tombstones only: IsDeleted='Y'. Exports are gospel.
     """
     if not os.path.isfile(filepath):
         return {'success': False, 'error': f'File not found: {filepath}'}
 
     if not changes:
         return {'success': False, 'error': 'No changes provided.'}
-
-    backup_path = backup_file(filepath)
 
     try:
         wb = openpyxl.load_workbook(filepath)
@@ -118,11 +158,31 @@ def _apply_row_level_patch(filepath, sheet_name, field_to_excel, changes):
             header_to_col[str(val).strip()] = c
 
     is_ps_format = changes and 'elementTypeRef' in changes[0]
+    assignments = {}
+    conflicts = []
+
+    def check_before(key, row_num, before):
+        """Compare a change's 'before' snapshot against live disk cells."""
+        for field_name, original in (before or {}).items():
+            excel_col = field_to_excel.get(field_name)
+            if not excel_col or excel_col not in header_to_col:
+                continue
+            disk_value = ws.cell(row=row_num, column=header_to_col[excel_col]).value
+            if _values_differ(original, disk_value):
+                conflicts.append({
+                    'key': key,
+                    'field': field_name,
+                    'column': excel_col,
+                    'rowNum': row_num,
+                    'diskValue': disk_value,
+                    'baseValue': original,
+                })
 
     if is_ps_format:
-        entity_ref_col = header_to_col.get('EntityRef')
+        entity_ref_col = header_to_col.get(key_column)
         if not entity_ref_col:
-            return {'success': False, 'error': "Column 'EntityRef' not found in PS sheet"}
+            return {'success': False, 'error': f"Column '{key_column}' not found in {sheet_name} sheet"}
+        entity_type_col = header_to_col.get('EntityType')
 
         ref_to_row = {}
         for rn in range(2, ws.max_row + 1):
@@ -130,6 +190,16 @@ def _apply_row_level_patch(filepath, sheet_name, field_to_excel, changes):
             if val:
                 ref_to_row[str(val).strip()] = rn
 
+        # Pass 1: staleness check — block the whole file on any conflict
+        for change in changes:
+            et_ref = change.get('elementTypeRef')
+            row_num = ref_to_row.get(et_ref)
+            if row_num:
+                check_before(et_ref, row_num, change.get('before'))
+        if conflicts:
+            return {'success': False, 'conflict': True, 'conflicts': conflicts}
+
+        # Pass 2: write
         for change in changes:
             et_ref = change.get('elementTypeRef')
             updates = change.get('updates') or {}
@@ -139,10 +209,13 @@ def _apply_row_level_patch(filepath, sheet_name, field_to_excel, changes):
             if not row_num:
                 if not is_new:
                     continue
-                # Append new row: write EntityRef first, then any non-null update fields
+                # Append new row: EntityRef + EntityType, then non-null update fields
                 row_num = ws.max_row + 1
-                if entity_ref_col:
-                    ws.cell(row=row_num, column=entity_ref_col).value = et_ref
+                ws.cell(row=row_num, column=entity_ref_col).value = et_ref
+                if entity_type_col:
+                    ws.cell(row=row_num, column=entity_type_col).value = 'ElementType'
+                ref_to_row[et_ref] = row_num
+                assignments[et_ref] = row_num
 
             for field_name, value in updates.items():
                 if value is None:
@@ -152,59 +225,121 @@ def _apply_row_level_patch(filepath, sheet_name, field_to_excel, changes):
                     ws.cell(row=row_num, column=header_to_col[excel_col]).value = value
 
     else:
-        # RS row-level: deduplicate by _id (last write wins, delete trumps)
+        # RS: deduplicate by _id (last write wins, delete trumps)
         latest = {}
         for change in changes:
             cid = change.get('_id')
             if not cid:
                 continue
             action = change.get('action', 'upsert')
-            row = change.get('row') or {}
             if cid not in latest:
-                latest[cid] = {'action': action, 'row': row}
+                latest[cid] = dict(change, action=action)
             else:
                 if action == 'delete':
                     latest[cid]['action'] = 'delete'
-                    # Preserve previously seen row data for _row_num lookup
-                    if not latest[cid]['row']:
-                        latest[cid]['row'] = row
+                    if not latest[cid].get('row'):
+                        latest[cid]['row'] = change.get('row') or {}
                 else:
-                    latest[cid] = {'action': action, 'row': row}
+                    latest[cid] = dict(change, action=action)
 
         isdeleted_col = header_to_col.get('IsDeleted')
         entity_type_col = header_to_col.get('EntityType')
 
-        for entry in latest.values():
+        # Natural-key index of existing rows: (ContextType, ContextRef,
+        # RecipeIndex, EntityRef) → row_num. Guards appends against duplication
+        # when a reconciliation payload was lost (crash mid-export).
+        def nat_key_cols():
+            cols = {}
+            for h in ('ContextType', 'ContextRef', 'RecipeIndex', 'EntityRef'):
+                cols[h] = header_to_col.get(h)
+            return cols
+
+        nk_cols = nat_key_cols()
+        nat_index = {}
+        if all(nk_cols.values()):
+            for rn in range(2, ws.max_row + 1):
+                key = tuple(
+                    _norm(ws.cell(row=rn, column=nk_cols[h]).value)
+                    for h in ('ContextType', 'ContextRef', 'RecipeIndex', 'EntityRef')
+                )
+                if any(v is not None for v in key):
+                    nat_index.setdefault(key, rn)
+
+        def natural_key(row):
+            return (
+                _norm(row.get('ContextType')),
+                _norm(row.get('ContextRef')),
+                _norm(row.get('RecipeIndex')),
+                _norm(row.get('ElementTypeRef')),
+            )
+
+        # Pass 1: staleness check — block the whole file on any conflict
+        for cid, entry in latest.items():
+            row = entry.get('row') or {}
+            row_num = row.get('_row_num')
+            if row_num:
+                check_before(cid, row_num, entry.get('before'))
+        if conflicts:
+            return {'success': False, 'conflict': True, 'conflicts': conflicts}
+
+        # Pass 2: write
+        for cid, entry in latest.items():
             action = entry['action']
-            row = entry['row']
-            row_num = row.get('_row_num') if row else None
+            row = entry.get('row') or {}
+            changed = entry.get('changedFields')
+            row_num = row.get('_row_num')
 
             if action == 'delete':
+                # Tombstone only. For never-reconciled rows, try the natural key
+                # (the row may exist on disk from a lost reconciliation).
+                if not row_num:
+                    row_num = nat_index.get(natural_key(row))
                 if row_num and isdeleted_col:
                     ws.cell(row=row_num, column=isdeleted_col).value = 'Y'
 
             elif action == 'upsert':
-                target_row = row_num if row_num else ws.max_row + 1
+                is_append = not row_num
+                if is_append:
+                    # Natural-key guard: update in place if the row already exists
+                    existing = nat_index.get(natural_key(row))
+                    if existing:
+                        row_num = existing
+                        is_append = False
+                    else:
+                        row_num = ws.max_row + 1
+                        if entity_type_col:
+                            ws.cell(row=row_num, column=entity_type_col).value = 'ElementType'
+                        nat_index[natural_key(row)] = row_num
+                    assignments[cid] = row_num
 
-                if not row_num and entity_type_col:
-                    ws.cell(row=target_row, column=entity_type_col).value = 'ElementType'
+                if changed and not is_append:
+                    # Field-level patch: write only the changed fields
+                    for field_name, value in changed.items():
+                        excel_col = field_to_excel.get(field_name)
+                        if excel_col and excel_col in header_to_col:
+                            ws.cell(row=row_num, column=header_to_col[excel_col]).value = value
+                else:
+                    # Full-row write (appends, and legacy whole-row changes)
+                    for field_name, excel_col_name in field_to_excel.items():
+                        if excel_col_name not in header_to_col:
+                            continue
+                        if field_name not in row:
+                            continue
+                        ws.cell(
+                            row=row_num,
+                            column=header_to_col[excel_col_name],
+                        ).value = row[field_name]
 
-                for field_name, excel_col_name in field_to_excel.items():
-                    if excel_col_name not in header_to_col:
-                        continue
-                    if field_name not in row:
-                        continue
-                    ws.cell(
-                        row=target_row,
-                        column=header_to_col[excel_col_name],
-                    ).value = row[field_name]
+    # Backup immediately before the save — one backup per successful write
+    # attempt; the conflict path above returns without touching the file.
+    backup_path = backup_file(filepath)
 
     try:
         wb.save(filepath)
     except Exception as exc:
         return {'success': False, 'error': f'Could not save workbook: {exc}'}
 
-    return {'success': True, 'backup_path': backup_path}
+    return {'success': True, 'backup_path': backup_path, 'assignments': assignments}
 
 
 # ---------------------------------------------------------------------------
@@ -313,18 +448,25 @@ def patch_route():
     filepath = body.get('filepath', '').strip()
     changes = body.get('changes')
 
-    if target not in ('ps', 'rs'):
-        return _error("'target' must be 'ps' or 'rs'.")
+    if target not in ('ps', 'rs', 'db'):
+        return _error("'target' must be 'ps', 'rs', or 'db'.")
     if not filepath:
         return _error("'filepath' is required.")
     if not isinstance(changes, list) or not changes:
         return _error("'changes' must be a non-empty array.")
 
-    field_map = PS_FIELD_TO_EXCEL if target == 'ps' else RS_FIELD_TO_EXCEL
-    result = _apply_row_level_patch(filepath, 'Form', field_map, changes)
+    if target == 'ps':
+        result = _apply_row_level_patch(filepath, 'Form', PS_FIELD_TO_EXCEL, changes, key_column='EntityRef')
+    elif target == 'db':
+        # Writable DesignDB catalogue: patches the ElementTypes sheet, keyed on Ref.
+        result = _apply_row_level_patch(filepath, 'ElementTypes', DB_FIELD_TO_EXCEL, changes, key_column='Ref')
+    else:
+        result = _apply_row_level_patch(filepath, 'Form', RS_FIELD_TO_EXCEL, changes)
 
     if result['success']:
         return jsonify(result)
+    if result.get('conflict'):
+        return jsonify(result), 409
     return jsonify(result), 422
 
 

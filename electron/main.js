@@ -149,6 +149,22 @@ function createWindow() {
 // Chokidar file watcher
 // ---------------------------------------------------------------------------
 
+// Paths the app is about to write itself → the watcher must ignore the change
+// event that our own export produces (otherwise every export prompts a bogus
+// "the file changed on disk, discard your changes?"). Keyed by normalised path.
+const selfWriteUntil = new Map()
+
+function normPath(p) {
+  return path.normalize(p).toLowerCase()
+}
+
+function suppressWatcher(paths, ms = 8000) {
+  const until = Date.now() + ms
+  for (const p of (paths || [])) {
+    if (p) selfWriteUntil.set(normPath(p), until)
+  }
+}
+
 function startWatcher(folderPath, psFilename, rsFilename) {
   if (watcher) watcher.close()
 
@@ -165,6 +181,13 @@ function startWatcher(folderPath, psFilename, rsFilename) {
   })
 
   watcher.on('change', (filePath) => {
+    // Skip changes the app itself just wrote (export/snapshot).
+    const key = normPath(filePath)
+    const until = selfWriteUntil.get(key)
+    if (until && Date.now() < until) {
+      selfWriteUntil.delete(key)
+      return
+    }
     const filename = path.basename(filePath)
     const file = filename === psFilename ? 'ps' : 'rs'
     if (mainWindow) {
@@ -246,6 +269,7 @@ ipcMain.handle('start-watcher', (event, { folderPath, psFilename, rsFilename }) 
   startWatcher(folderPath, psFilename, rsFilename)
 })
 ipcMain.handle('stop-watcher', () => stopWatcher())
+ipcMain.handle('suppress-watcher', (event, { files, ms }) => suppressWatcher(files, ms))
 
 // SQLite — Projects
 ipcMain.handle('db-upsert-project', (event, { folderPath, configName, projectNumber, projectLabel, dbFilename, psFilename, rsFilename }) =>
@@ -278,9 +302,92 @@ ipcMain.handle('config-import-yaml', async (event, { projectId }) => {
   if (result.canceled || !result.filePaths?.[0]) return { ok: false, canceled: true }
   const raw = fs.readFileSync(result.filePaths[0], 'utf8')
   const data = yaml.load(raw) || {}
+  if (data.version !== 1) {
+    return { ok: false, error: `Unsupported config file version: ${data.version ?? 'none'}` }
+  }
   db.applyConfigData(projectId, data)
   return { ok: true, path: result.filePaths[0] }
 })
+
+// Silent overlay write (no dialog) — auto-snapshot beside the Excels on export
+ipcMain.handle('config-write-yaml', async (event, { projectId, filePath }) => {
+  const data = db.collectConfigData(projectId)
+  fs.writeFileSync(filePath, yaml.dump(data, { noRefs: true }), 'utf8')
+  return { ok: true, path: filePath }
+})
+
+// Project snapshot (EXPORT_PLAN §6): copy the project files + config overlay
+// into <folder>/snapshot/<date>/ . Plain file copies, user's discretion.
+ipcMain.handle('snapshot-project', async (event, { folderPath, files, projectId, configName }) => {
+  const dateStr = new Date().toISOString().slice(0, 10)
+  let dir = path.join(folderPath, 'snapshot', dateStr)
+  if (fs.existsSync(dir)) {
+    const t = new Date().toTimeString().slice(0, 8).replace(/:/g, '')
+    dir = path.join(folderPath, 'snapshot', `${dateStr}_${t}`)
+  }
+  fs.mkdirSync(dir, { recursive: true })
+  const copied = []
+  for (const f of (files || [])) {
+    const src = path.join(folderPath, f)
+    if (fs.existsSync(src)) {
+      fs.copyFileSync(src, path.join(dir, f))
+      copied.push(f)
+    }
+  }
+  if (projectId != null) {
+    try {
+      const data = db.collectConfigData(projectId)
+      fs.writeFileSync(
+        path.join(dir, `${configName || 'config'}.ideaworks.yaml`),
+        yaml.dump(data, { noRefs: true }), 'utf8'
+      )
+    } catch (err) {
+      log.warn('[snapshot] overlay write failed:', err.message)
+    }
+  }
+  return { ok: true, dir, copied }
+})
+
+// Personal library (favorites + global templates) export / import
+ipcMain.handle('library-export-yaml', async () => {
+  const data = db.collectLibraryData()
+  const result = await dialog.showSaveDialog(mainWindow, {
+    title: 'Export my library',
+    defaultPath: 'my-library.yaml',
+    filters: [{ name: 'YAML', extensions: ['yaml', 'yml'] }],
+  })
+  if (result.canceled || !result.filePath) return { ok: false, canceled: true }
+  fs.writeFileSync(result.filePath, yaml.dump(data, { noRefs: true }), 'utf8')
+  return { ok: true, path: result.filePath }
+})
+
+ipcMain.handle('library-import-yaml', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Import a library',
+    properties: ['openFile'],
+    filters: [{ name: 'YAML', extensions: ['yaml', 'yml'] }],
+  })
+  if (result.canceled || !result.filePaths?.[0]) return { ok: false, canceled: true }
+  const raw = fs.readFileSync(result.filePaths[0], 'utf8')
+  const data = yaml.load(raw) || {}
+  try {
+    const report = db.applyLibraryData(data)
+    return { ok: true, path: result.filePaths[0], ...report }
+  } catch (err) {
+    return { ok: false, error: err.message }
+  }
+})
+
+// SQLite — Pending changes (crash-safe dirty registry)
+ipcMain.handle('db-get-pending-changes', (event, { projectId }) => db.getPendingChanges(projectId))
+ipcMain.handle('db-set-pending-changes', (event, { projectId, ps, rs }) => db.setPendingChanges(projectId, ps, rs))
+ipcMain.handle('db-clear-pending-changes', (event, { projectId }) => db.clearPendingChanges(projectId))
+
+// SQLite — Local ElementTypes (app-created catalogue entries)
+ipcMain.handle('db-upsert-local-et', (event, { projectId, et }) => db.upsertLocalElementType(projectId, et))
+ipcMain.handle('db-get-local-ets', (event, { projectId }) => db.getLocalElementTypes(projectId))
+ipcMain.handle('db-rename-local-et', (event, { projectId, oldRef, newRef }) => db.renameLocalElementType(projectId, oldRef, newRef))
+ipcMain.handle('db-delete-local-et', (event, { projectId, ref }) => db.deleteLocalElementType(projectId, ref))
 
 // SQLite — Position UI
 ipcMain.handle('db-upsert-position-ui', (event, { projectId, positionTypeRef, data }) =>

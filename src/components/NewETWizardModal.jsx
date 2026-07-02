@@ -18,13 +18,15 @@ export default function NewETWizardModal({ show, onHide, posRef, sectionKey, onD
   const elementTypes      = useStore(s => s.elementTypes)
   const psRows            = useStore(s => s.psRows)
   const recipes           = useStore(s => s.recipes)
-  const addLocalElementType = useStore(s => s.addLocalElementType)
+  const createElementType = useStore(s => s.createElementType)
   const addPSRow          = useStore(s => s.addPSRow)
   const updatePSRow       = useStore(s => s.updatePSRow)
+  const dbWriteEnabled    = useStore(s => s.dbWriteEnabled)
 
   const [ref, setRef]               = useState('')
   const [name, setName]             = useState('')
   const [description, setDescription] = useState('')
+  const [family, setFamily]         = useState('')
   const [manufacturer, setMfr]      = useState('')
   const [productCode, setCode]      = useState('')
   const [psDesc, setPsDesc]         = useState('')
@@ -34,10 +36,16 @@ export default function NewETWizardModal({ show, onHide, posRef, sectionKey, onD
   // Reset on open
   useEffect(() => {
     if (!show) return
-    setRef(''); setName(''); setDescription('')
+    setRef(''); setName(''); setDescription(''); setFamily('')
     setMfr(''); setCode(''); setPsDesc('')
     setShowSpec(false); setSaving(false)
   }, [show])
+
+  const familyOptions = useMemo(() => {
+    const s = new Set()
+    for (const e of elementTypes) { const f = (e.Family || e.family || '').trim(); if (f) s.add(f) }
+    return [...s].sort((a, b) => a.localeCompare(b))
+  }, [elementTypes])
 
   // All known ET refs for the next-available suggestion
   const allETObjects = useMemo(() => {
@@ -85,18 +93,24 @@ export default function NewETWizardModal({ show, onHide, posRef, sectionKey, onD
     if (!trimRef || alreadyExists) return
     setSaving(true)
     try {
-      addLocalElementType(trimRef)
-      // Create PS row with any filled-in spec data
+      // Register the ET in the catalogue (staging-backed; queues a DB row when
+      // DB writes are on).
+      createElementType({
+        ref: trimRef,
+        name: name.trim() || null,
+        description: description.trim() || null,
+        family: family.trim() || null,
+      })
+
+      // Only create a PS row when procurement data was actually entered.
       const psDefaults = {}
       if (manufacturer.trim()) psDefaults.Manufacturer = manufacturer.trim()
       if (productCode.trim())  psDefaults.ProductCode  = productCode.trim()
       if (psDesc.trim())       psDefaults.ComponentDescription = psDesc.trim()
-
-      const existing = psRows.find(p => (p.ElementTypeRef || p.elementTypeRef || '').toLowerCase() === trimRef.toLowerCase())
-      if (existing) {
-        if (Object.keys(psDefaults).length) updatePSRow(trimRef, psDefaults)
-      } else {
-        addPSRow(trimRef, psDefaults)
+      if (Object.keys(psDefaults).length) {
+        const existing = psRows.find(p => (p.ElementTypeRef || p.elementTypeRef || '').toLowerCase() === trimRef.toLowerCase())
+        if (existing) updatePSRow(trimRef, psDefaults)
+        else addPSRow(trimRef, psDefaults)
       }
 
       onDone(trimRef)
@@ -179,6 +193,29 @@ export default function NewETWizardModal({ show, onHide, posRef, sectionKey, onD
             placeholder="What is this element type?…"
             style={{ fontSize: 12, resize: 'none' }}
           />
+        </Form.Group>
+
+        {/* Family / ParentRef */}
+        <Form.Group className="mb-3">
+          <Form.Label style={{ fontSize: 12, fontWeight: 600 }}>
+            Family <span className="text-muted fw-normal">(optional)</span>
+          </Form.Label>
+          <Form.Control
+            size="sm"
+            list="newet-family-list"
+            value={family}
+            onChange={e => setFamily(e.target.value)}
+            placeholder="e.g. TAPE, PROFILE, CLIP…"
+            style={{ fontSize: 12 }}
+          />
+          <datalist id="newet-family-list">
+            {familyOptions.map(f => <option key={f} value={f} />)}
+          </datalist>
+          <Form.Text className="text-muted" style={{ fontSize: 11 }}>
+            {dbWriteEnabled
+              ? 'Will be written to the DesignDB ElementTypes catalogue on “Export catalogue changes”.'
+              : 'DB writes are off — this ET is kept locally until you enable catalogue writes.'}
+          </Form.Text>
         </Form.Group>
 
         {/* Product Spec (collapsible) */}

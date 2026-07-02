@@ -29,6 +29,7 @@ import ValidationFixModal from '../components/ValidationFixModal'
 import LinWrapperWizardModal from '../components/LinWrapperWizardModal'
 import AddAnywhereModal from '../components/AddAnywhereModal'
 import NewETWizardModal from '../components/NewETWizardModal'
+import ConflictModal from '../components/ConflictModal'
 import IconButton from '../components/IconButton'
 import MaterialIcon from '../components/MaterialIcon'
 import { ACTION_ICONS, ICONS } from '../utils/entityStyle'
@@ -67,6 +68,11 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
   const closeETRecipe = useStore(s => s.closeETRecipe)
   const undo = useStore(s => s.undo)
   const redo = useStore(s => s.redo)
+  const snapshotProject = useStore(s => s.snapshotProject)
+  const dbWriteEnabled = useStore(s => s.dbWriteEnabled)
+  const dbChanges = useStore(s => s.dbChanges)
+  const setDbWriteEnabled = useStore(s => s.setDbWriteEnabled)
+  const exportCatalogueChanges = useStore(s => s.exportCatalogueChanges)
 
   const [showDupModal, setShowDupModal] = useState(false)
   const [showConnModal, setShowConnModal] = useState(false)
@@ -84,6 +90,8 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState(null)
   const [exportSuccess, setExportSuccess] = useState(false)
+  const [snapshotMsg, setSnapshotMsg] = useState(null)
+  const snapshotOfferedRef = React.useRef(false)
   const [, setActiveId] = useState(null)  // drag tracking
   const [templateNameInput, setTemplateNameInput] = useState('')
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)
@@ -275,6 +283,14 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
   }
 
   async function handleExport() {
+    // Offer a project snapshot before the first export of the session
+    // (EXPORT_PLAN §6) — declining never blocks the export.
+    if (!snapshotOfferedRef.current) {
+      snapshotOfferedRef.current = true
+      if (window.confirm('Take a snapshot of the project files before exporting?\n\n(Copies DB, PS and RS into a dated snapshot folder.)')) {
+        try { await snapshotProject() } catch { /* snapshot is best-effort */ }
+      }
+    }
     setExporting(true)
     setExportError(null)
     setExportSuccess(false)
@@ -286,6 +302,36 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
       setExportError(err.message || 'Export failed')
     } finally {
       setExporting(false)
+    }
+  }
+
+  async function handleSnapshot() {
+    setExportError(null)
+    try {
+      const res = await snapshotProject()
+      if (res?.dir) {
+        setSnapshotMsg('Snapshot saved')
+        setTimeout(() => setSnapshotMsg(null), 3000)
+      }
+    } catch (err) {
+      setExportError(`Snapshot failed: ${err.message}`)
+    }
+  }
+
+  async function handleExportCatalogue() {
+    if (dbChanges.length === 0) return
+    if (!window.confirm(
+      `Write ${dbChanges.length} change${dbChanges.length === 1 ? '' : 's'} to the DesignDB ElementTypes catalogue?\n\n` +
+      'This edits the shared DB file. Only the ElementTypes sheet is touched — ' +
+      'Positions, Elements and LinksMap are left to the design pipeline.'
+    )) return
+    setExportError(null)
+    try {
+      await exportCatalogueChanges()
+      setSnapshotMsg('Catalogue exported')
+      setTimeout(() => setSnapshotMsg(null), 3000)
+    } catch (err) {
+      setExportError(err.message || 'Catalogue export failed')
     }
   }
 
@@ -404,6 +450,27 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
             title={hasRecipeRows ? 'Save the active position as a template' : 'Select a position with rows to save as a template'}
           />
         )}
+        <IconButton
+          variant="outline-secondary"
+          bsSize="sm"
+          icon="backup_table"
+          onClick={handleSnapshot}
+          title="Snapshot the project files into a dated backup folder"
+        />
+        {/* Catalogue export appears only when there are pending ElementType
+            catalogue changes to write to the shared DesignDB file. */}
+        {dbWriteEnabled && dbChanges.length > 0 && (
+          <Button
+            variant="warning"
+            size="sm"
+            className="d-inline-flex align-items-center gap-1"
+            onClick={handleExportCatalogue}
+            title={`Write ${dbChanges.length} new/edited ElementType${dbChanges.length === 1 ? '' : 's'} to the shared DesignDB catalogue (ElementTypes sheet only)`}
+          >
+            <MaterialIcon name="inventory_2" size={15} />
+            Save {dbChanges.length} to DB
+          </Button>
+        )}
         <Button
           variant={hasDirtyChanges ? 'primary' : 'outline-secondary'}
           size="sm"
@@ -413,6 +480,7 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
           {exporting ? <><Spinner size="sm" animation="border" className="me-1" />Exporting…</> : 'Export changes'}
         </Button>
         {exportSuccess && <span className="text-success small d-inline-flex align-items-center gap-1"><MaterialIcon name="check" size={14} /> Exported</span>}
+        {snapshotMsg && <span className="text-success small d-inline-flex align-items-center gap-1"><MaterialIcon name="check" size={14} /> {snapshotMsg}</span>}
         {exportError && <span className="text-danger small">{exportError}</span>}
       </div>
 
@@ -709,6 +777,8 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
         sectionKey={newETTarget?.sectionKey}
         onDone={handleNewETDone}
       />
+
+      <ConflictModal />
     </div>
   )
 }

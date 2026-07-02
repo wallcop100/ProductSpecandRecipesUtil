@@ -145,6 +145,10 @@ function resetStore(overrides = {}) {
     fileWatchAlert: null,
     psChanges: [],
     rsChanges: [],
+    dbChanges: [],
+    dbWriteEnabled: false,
+    localElementTypes: [],
+    exportConflicts: null,
     past: [],
     future: [],
     activeContextType: 'PositionType',
@@ -313,12 +317,19 @@ describe('resolveSlot', () => {
     expect(slotMappings[TEMPLATE_ID]['SITE_SOCKET']).toBe('ET-SOCK-5P-01')
   })
 
-  test('resolveSlot adds to rsChanges', async () => {
-    const changesBefore = useStore.getState().rsChanges.length
+  test('resolveSlot keeps the resolved row queued in rsChanges (coalesced)', async () => {
     await useStore.getState().resolveSlot(POS_REF, 'SITE_SOCKET', 'ET-SOCK-5P-01')
 
-    const changesAfter = useStore.getState().rsChanges.length
-    expect(changesAfter).toBeGreaterThan(changesBefore)
+    const { recipes, rsChanges } = useStore.getState()
+    const resolved = recipes.find(r => r.slotKey === 'SITE_SOCKET')
+    // The registry holds ONE coalesced entry per dirty row — the resolved
+    // row's entry must exist and carry the resolved ref.
+    const entry = rsChanges.find(c => c._id === resolved._id)
+    expect(entry).toBeDefined()
+    expect(entry.row.ElementTypeRef || entry.row.elementTypeRef).toBe('ET-SOCK-5P-01')
+    // Coalescing: never more than one entry per row id
+    const ids = rsChanges.map(c => c._id)
+    expect(new Set(ids).size).toBe(ids.length)
   })
 })
 
@@ -678,13 +689,23 @@ describe('reorderIngredients', () => {
     expect(reorderedRows[2].RecipeIndex ?? reorderedRows[2].recipeIndex).toBe(3)
   })
 
-  test('reorderIngredients adds all affected rows to rsChanges', () => {
-    const changesBefore = useStore.getState().rsChanges.length
+  test('reorderIngredients keeps all affected rows queued in rsChanges (coalesced)', () => {
     useStore.getState().reorderIngredients(POS_REF, 'position', 0, 2)
 
-    const changesAfter = useStore.getState().rsChanges.length
-    // At minimum 3 rows changed (all position-level rows got renumbered)
-    expect(changesAfter - changesBefore).toBeGreaterThanOrEqual(3)
+    const { recipes, rsChanges } = useStore.getState()
+    const positionRows = recipes.filter(
+      r => (r.positionTypeRef || r.PositionTypeRef) === POS_REF &&
+           (r.contextType || r.ContextType) === 'PositionType'
+    )
+    // Every renumbered row has exactly one coalesced registry entry, and the
+    // entry's row carries the new RecipeIndex.
+    for (const row of positionRows) {
+      const entry = rsChanges.find(c => c._id === row._id)
+      expect(entry).toBeDefined()
+      expect(entry.row.RecipeIndex ?? entry.row.recipeIndex).toBe(row.RecipeIndex ?? row.recipeIndex)
+    }
+    const ids = rsChanges.map(c => c._id)
+    expect(new Set(ids).size).toBe(ids.length)
   })
 })
 
@@ -755,19 +776,22 @@ describe('moveIngredientAcrossSections', () => {
     expect(dlRows[1].RecipeIndex ?? dlRows[1].recipeIndex).toBe(2)
   })
 
-  test('moveIngredientAcrossSections adds all affected rows to rsChanges', () => {
+  test('moveIngredientAcrossSections keeps affected rows queued in rsChanges (coalesced)', () => {
     const { recipes: before } = useStore.getState()
     const socketRow = before.find(
       r => (r.positionTypeRef || r.PositionTypeRef) === POS_REF &&
            r.slotKey === 'SITE_SOCKET'
     )
-    const changesBefore = useStore.getState().rsChanges.length
 
     useStore.getState().moveIngredientAcrossSections(POS_REF, socketRow._id, 'dl_internal')
 
-    const changesAfter = useStore.getState().rsChanges.length
-    // At least the rows in both sections that were renumbered
-    expect(changesAfter - changesBefore).toBeGreaterThanOrEqual(2)
+    const { rsChanges } = useStore.getState()
+    // The moved row's single coalesced entry reflects its new section context
+    const entry = rsChanges.find(c => c._id === socketRow._id)
+    expect(entry).toBeDefined()
+    expect(entry.row.ContextType || entry.row.contextType).toBe('ElementType')
+    const ids = rsChanges.map(c => c._id)
+    expect(new Set(ids).size).toBe(ids.length)
   })
 })
 
@@ -1034,5 +1058,175 @@ describe('updatePSRow — upsert', () => {
     expect(row.Manufacturer).toBe('Acme')
     expect(row.ProductCode).toBe('X1')
     expect(row._row_num).toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Dirty registry semantics (EXPORT_PLAN §2–3)
+// ---------------------------------------------------------------------------
+
+describe('dirty registry — coalescing + field-level entries', () => {
+  const syncedRow = {
+    _id: 'r1', positionTypeRef: POS_REF, PositionTypeRef: POS_REF,
+    contextType: 'PositionType', ContextType: 'PositionType',
+    contextRef: POS_REF, ContextRef: POS_REF,
+    elementTypeRef: 'ET-A', ElementTypeRef: 'ET-A',
+    recipeIndex: 1, RecipeIndex: 1,
+    quantity: 1, Quantity: 1,
+    _row_num: 9,
+  }
+
+  test('editing a synced row queues a field-level entry with before + changedFields', () => {
+    resetStore({ recipes: [{ ...syncedRow }] })
+    useStore.getState().updateRecipeRow(POS_REF, 'r1', { quantity: 5, Quantity: 5 })
+
+    const { rsChanges } = useStore.getState()
+    expect(rsChanges).toHaveLength(1)
+    const entry = rsChanges[0]
+    expect(entry.changedFields).toEqual({ Quantity: 5 })
+    expect(entry.before.Quantity).toBe(1)
+  })
+
+  test('repeat edits coalesce into one entry; before stays at first-dirty value', () => {
+    resetStore({ recipes: [{ ...syncedRow }] })
+    useStore.getState().updateRecipeRow(POS_REF, 'r1', { quantity: 5, Quantity: 5 })
+    useStore.getState().updateRecipeRow(POS_REF, 'r1', { quantity: 7, Quantity: 7 })
+
+    const { rsChanges } = useStore.getState()
+    expect(rsChanges).toHaveLength(1)
+    expect(rsChanges[0].changedFields).toEqual({ Quantity: 7 })
+    expect(rsChanges[0].before.Quantity).toBe(1)  // disk base preserved
+  })
+
+  test('reverting an edit back to base drops the entry entirely', () => {
+    resetStore({ recipes: [{ ...syncedRow }] })
+    useStore.getState().updateRecipeRow(POS_REF, 'r1', { quantity: 5, Quantity: 5 })
+    useStore.getState().updateRecipeRow(POS_REF, 'r1', { quantity: 1, Quantity: 1 })
+
+    expect(useStore.getState().rsChanges).toHaveLength(0)  // no longer dirty
+  })
+
+  test('PS edits coalesce by ref, merging updates and keeping earliest before', () => {
+    resetStore({ psRows: [{
+      _id: 'p1', ElementTypeRef: 'ET-A', elementTypeRef: 'ET-A',
+      Manufacturer: 'Old', ProductCode: 'PC-1', _row_num: 3,
+    }] })
+    useStore.getState().updatePSRow('ET-A', { Manufacturer: 'New1' })
+    useStore.getState().updatePSRow('ET-A', { Manufacturer: 'New2', ProductCode: 'PC-2' })
+
+    const { psChanges } = useStore.getState()
+    expect(psChanges).toHaveLength(1)
+    expect(psChanges[0].updates).toEqual({ Manufacturer: 'New2', ProductCode: 'PC-2' })
+    expect(psChanges[0].before.Manufacturer).toBe('Old')   // earliest wins
+    expect(psChanges[0].before.ProductCode).toBe('PC-1')
+  })
+
+  test('restorePendingChanges re-applies pending values and re-injects new rows', () => {
+    resetStore({ recipes: [{ ...syncedRow }] })
+    useStore.getState().restorePendingChanges({
+      ps: [],
+      rs: [
+        { _id: 'old-id', positionTypeRef: POS_REF, action: 'upsert',
+          row: { ...syncedRow, _id: 'old-id' }, changedFields: { Quantity: 42 }, before: { Quantity: 1 } },
+        { _id: 'new-id', positionTypeRef: POS_REF, action: 'upsert',
+          row: { _id: 'new-id', PositionTypeRef: POS_REF, ElementTypeRef: 'ET-NEW', _row_num: null } },
+      ],
+    })
+    const { recipes, rsChanges } = useStore.getState()
+    // Pending value re-applied onto the matching (_row_num) row
+    expect(recipes.find(r => r._row_num === 9).Quantity).toBe(42)
+    // Never-exported row re-injected
+    expect(recipes.some(r => (r.ElementTypeRef || '') === 'ET-NEW')).toBe(true)
+    expect(rsChanges).toHaveLength(2)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// DesignDB catalogue (EXPORT_PLAN §4)
+// ---------------------------------------------------------------------------
+
+describe('catalogue — createElementType / rename / delete', () => {
+  test('createElementType with DB writes off: adds ET, stages it, no dbChanges', () => {
+    resetStore({ dbWriteEnabled: false, elementTypes: [], dbChanges: [] })
+    useStore.getState().createElementType({ ref: 'ET-NEW-01', name: 'New', family: 'TAPE' })
+    const s = useStore.getState()
+    expect(s.elementTypes.some(e => e.ElementTypeRef === 'ET-NEW-01')).toBe(true)
+    expect(s.localElementTypes.some(e => e.ElementTypeRef === 'ET-NEW-01')).toBe(true)
+    expect(s.dbChanges).toHaveLength(0)   // off → nothing queued for the DB
+  })
+
+  test('createElementType with DB writes on: queues a new catalogue row + SortOrder', () => {
+    resetStore({
+      dbWriteEnabled: true, dbChanges: [],
+      elementTypes: [{ ElementTypeRef: 'ET-TAPE-01', Family: 'TAPE', SortOrder: 2 }],
+    })
+    useStore.getState().createElementType({ ref: 'ET-TAPE-09', name: 'Tape', family: 'TAPE' })
+    const { dbChanges } = useStore.getState()
+    expect(dbChanges).toHaveLength(1)
+    expect(dbChanges[0]._isNew).toBe(true)
+    expect(dbChanges[0].updates.SortOrder).toBe(3)   // max(2)+1 within family
+    expect(dbChanges[0].updates.Name).toBe('Tape')
+  })
+
+  test('renameElementType cascades to elementTypes, PS and RS (never other sheets)', () => {
+    resetStore({
+      dbWriteEnabled: true, dbChanges: [], psChanges: [], rsChanges: [],
+      elementTypes: [{ ElementTypeRef: 'ET-OLD', _row_num: 5 }],
+      psRows: [{ _id: 'p1', ElementTypeRef: 'ET-OLD', _row_num: 4 }],
+      recipes: [
+        { _id: 'r1', PositionTypeRef: POS_REF, ContextType: 'PositionType', ContextRef: POS_REF, ElementTypeRef: 'ET-OLD', _row_num: 7 },
+        { _id: 'r2', PositionTypeRef: POS_REF, ContextType: 'ElementType', ContextRef: 'ET-OLD', ElementTypeRef: 'ET-X', _row_num: 8 },
+      ],
+    })
+    useStore.getState().renameElementType('ET-OLD', 'ET-NEW')
+    const s = useStore.getState()
+    expect(s.elementTypes[0].ElementTypeRef).toBe('ET-NEW')
+    expect(s.psRows[0].ElementTypeRef).toBe('ET-NEW')
+    expect(s.recipes.find(r => r._id === 'r1').ElementTypeRef).toBe('ET-NEW')
+    expect(s.recipes.find(r => r._id === 'r2').ContextRef).toBe('ET-NEW')  // container ref cascaded
+    expect(s.dbChanges.some(c => c.updates.ElementTypeRef === 'ET-NEW')).toBe(true)
+    expect(s.psChanges.some(c => c.updates.ElementTypeRef === 'ET-NEW')).toBe(true)
+  })
+
+  test('deleteElementType soft-deletes (IsDeleted=Y), queues a DB change', () => {
+    resetStore({
+      dbWriteEnabled: true, dbChanges: [],
+      elementTypes: [{ ElementTypeRef: 'ET-DEL', _row_num: 3 }],
+    })
+    useStore.getState().deleteElementType('ET-DEL')
+    const s = useStore.getState()
+    expect(s.elementTypes[0].IsDeleted).toBe('Y')
+    expect(s.dbChanges[0].updates.IsDeleted).toBe('Y')
+  })
+
+  test('suggestSortOrder returns max within family + 1', () => {
+    resetStore({ elementTypes: [
+      { ElementTypeRef: 'A', Family: 'CLIP', SortOrder: 5 },
+      { ElementTypeRef: 'B', Family: 'CLIP', SortOrder: 9 },
+      { ElementTypeRef: 'C', Family: 'TAPE', SortOrder: 20 },
+    ] })
+    expect(useStore.getState().suggestSortOrder('CLIP')).toBe(10)
+    expect(useStore.getState().suggestSortOrder('NEW')).toBe(1)
+  })
+})
+
+describe('catalogue — enabling DB writes promotes staged ETs', () => {
+  test('setDbWriteEnabled(true) queues staged local ETs not yet on disk', async () => {
+    const staged = { ElementTypeRef: 'ET-STAGED-01', Name: 'Staged', Family: 'CLIP', SortOrder: 1, _row_num: null }
+    resetStore({
+      dbWriteEnabled: false, dbChanges: [],
+      elementTypes: [
+        staged,
+        { ElementTypeRef: 'ET-ONDISK', _row_num: 12 },   // already on disk → not promoted
+      ],
+      localElementTypes: [staged],
+    })
+    // getPref/setPref mock
+    window.electronAPI.db.setPref = () => Promise.resolve()
+    await useStore.getState().setDbWriteEnabled(true)
+    const { dbChanges } = useStore.getState()
+    expect(dbChanges).toHaveLength(1)
+    expect(dbChanges[0].elementTypeRef).toBe('ET-STAGED-01')
+    expect(dbChanges[0]._isNew).toBe(true)
   })
 })

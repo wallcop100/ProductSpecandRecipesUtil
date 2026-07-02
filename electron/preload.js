@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // File watcher
   startWatcher: (opts) => ipcRenderer.invoke('start-watcher', opts),
   stopWatcher: () => ipcRenderer.invoke('stop-watcher'),
+  suppressWatcher: (files, ms) => ipcRenderer.invoke('suppress-watcher', { files, ms }),
   onFileChanged: (callback) =>
     ipcRenderer.on('file-changed', (_event, data) => callback(data)),
 
@@ -73,7 +74,26 @@ contextBridge.exposeInMainWorld('electronAPI', {
     upsertFavorite: (favorite) => ipcRenderer.invoke('db-upsert-favorite', { favorite }),
     getFavorites: () => ipcRenderer.invoke('db-get-favorites'),
     deleteFavorite: (id) => ipcRenderer.invoke('db-delete-favorite', { id }),
+
+    // Pending changes (crash-safe dirty registry — EXPORT_PLAN §3.1)
+    getPendingChanges: (projectId) => ipcRenderer.invoke('db-get-pending-changes', { projectId }),
+    setPendingChanges: (projectId, ps, rs) => ipcRenderer.invoke('db-set-pending-changes', { projectId, ps, rs }),
+    clearPendingChanges: (projectId) => ipcRenderer.invoke('db-clear-pending-changes', { projectId }),
+
+    // Local ElementTypes (app-created catalogue entries — EXPORT_PLAN §4)
+    upsertLocalET: (projectId, et) => ipcRenderer.invoke('db-upsert-local-et', { projectId, et }),
+    getLocalETs: (projectId) => ipcRenderer.invoke('db-get-local-ets', { projectId }),
+    renameLocalET: (projectId, oldRef, newRef) => ipcRenderer.invoke('db-rename-local-et', { projectId, oldRef, newRef }),
+    deleteLocalET: (projectId, ref) => ipcRenderer.invoke('db-delete-local-et', { projectId, ref }),
   },
+
+  // Project snapshot + silent overlay write (EXPORT_PLAN §5–6)
+  snapshotProject: (opts) => ipcRenderer.invoke('snapshot-project', opts),
+  configWriteYaml: (opts) => ipcRenderer.invoke('config-write-yaml', opts),
+
+  // Personal library export / import
+  libraryExportYaml: () => ipcRenderer.invoke('library-export-yaml'),
+  libraryImportYaml: () => ipcRenderer.invoke('library-import-yaml'),
 
   // App
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
