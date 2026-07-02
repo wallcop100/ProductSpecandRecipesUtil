@@ -1,5 +1,6 @@
 import React from 'react'
 import useStore from '../store/useStore'
+import MaterialIcon from './MaterialIcon'
 
 /**
  * Breadcrumbs — shows and navigates the current location.
@@ -51,7 +52,7 @@ export default function Breadcrumbs() {
         const isLast = i === crumbs.length - 1
         return (
           <React.Fragment key={i}>
-            {i > 0 && <span className="text-muted">›</span>}
+            {i > 0 && <MaterialIcon name="chevron_right" size={16} className="text-muted" />}
             {c.onClick && !isLast ? (
               <button
                 type="button"

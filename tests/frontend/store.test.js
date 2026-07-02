@@ -968,4 +968,71 @@ describe('addConnection', () => {
     const socket = useStore.getState().recipes.find(r => (r.ElementTypeRef || r.elementTypeRef) === 'ET-SOCKET-5P-01')
     expect(socket.Quantity).toBe(2)
   })
+
+  test('merge sums duplicate quantities instead of adding a new row', () => {
+    resetStore({ psRows: [], recipes: withDesign })
+    useStore.getState().addConnection(POS_REF, [
+      { section: 'position', elementTypeRef: 'ET-SOCKET-5P-01', quantity: 2 },
+    ])
+    // Paste the same ET into the same section with merge → one row, qty 5
+    useStore.getState().addConnection(POS_REF, [
+      { section: 'position', elementTypeRef: 'ET-SOCKET-5P-01', quantity: 3 },
+    ], { merge: true })
+
+    const sockets = useStore.getState().recipes.filter(r => (r.ElementTypeRef || r.elementTypeRef) === 'ET-SOCKET-5P-01')
+    expect(sockets).toHaveLength(1)
+    expect(sockets[0].Quantity).toBe(5)
+
+    // Without merge it appends a separate row
+    useStore.getState().addConnection(POS_REF, [
+      { section: 'position', elementTypeRef: 'ET-SOCKET-5P-01', quantity: 1 },
+    ])
+    expect(useStore.getState().recipes.filter(r => (r.ElementTypeRef || r.elementTypeRef) === 'ET-SOCKET-5P-01')).toHaveLength(2)
+  })
+
+  test('pasteDuplicateCount detects rows already present', () => {
+    resetStore({ psRows: [], recipes: withDesign })
+    useStore.getState().addConnection(POS_REF, [
+      { section: 'position', elementTypeRef: 'ET-SOCKET-5P-01' },
+    ])
+    useStore.setState({ rowClipboard: { parts: [
+      { section: 'position', elementTypeRef: 'ET-SOCKET-5P-01', quantity: 1 },
+      { section: 'position', elementTypeRef: 'ET-NEW-01', quantity: 1 },
+    ], count: 2, label: '2 rows' } })
+    expect(useStore.getState().pasteDuplicateCount(POS_REF)).toBe(1)
+  })
+})
+
+describe('removeRecipeRow — new vs existing', () => {
+  test('hard-removes a new (unsynced) row', () => {
+    resetStore({ recipes: [
+      { _id: 'new1', positionTypeRef: POS_REF, PositionTypeRef: POS_REF, elementTypeRef: 'ET-A', ElementTypeRef: 'ET-A', _row_num: null },
+    ] })
+    useStore.getState().removeRecipeRow(POS_REF, 'new1')
+    expect(useStore.getState().recipes.find(r => r._id === 'new1')).toBeUndefined()
+  })
+
+  test('soft-deletes an existing (synced) row instead of removing it', () => {
+    resetStore({ recipes: [
+      { _id: 'src1', positionTypeRef: POS_REF, PositionTypeRef: POS_REF, elementTypeRef: 'ET-A', ElementTypeRef: 'ET-A', _row_num: 7 },
+    ] })
+    useStore.getState().removeRecipeRow(POS_REF, 'src1')
+    const row = useStore.getState().recipes.find(r => r._id === 'src1')
+    expect(row).toBeDefined()
+    expect(row.IsDeleted).toBe('Y')
+    // and it queues an upsert (not a bare delete) so the flag syncs out
+    expect(useStore.getState().rsChanges.some(c => c._id === 'src1' && c.action === 'upsert')).toBe(true)
+  })
+})
+
+describe('updatePSRow — upsert', () => {
+  test('creates a PS row when none exists for the ref', () => {
+    resetStore({ psRows: [] })
+    useStore.getState().updatePSRow('ET-NOSPEC', { Manufacturer: 'Acme', ProductCode: 'X1' })
+    const row = useStore.getState().psRows.find(r => (r.ElementTypeRef || r.elementTypeRef) === 'ET-NOSPEC')
+    expect(row).toBeDefined()
+    expect(row.Manufacturer).toBe('Acme')
+    expect(row.ProductCode).toBe('X1')
+    expect(row._row_num).toBeNull()
+  })
 })

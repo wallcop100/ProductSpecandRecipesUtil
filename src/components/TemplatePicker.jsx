@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react'
 import { Form, Alert, Button, Badge } from 'react-bootstrap'
 import useStore from '../store/useStore'
+import MaterialIcon from './MaterialIcon'
+import { ACTION_ICONS } from '../utils/entityStyle'
 
 /**
  * TemplatePicker — browsable list of templates with Apply / Add-connector buttons.
@@ -123,7 +125,7 @@ export default function TemplatePicker({ posRef, activeTags, hasRows, onApply })
               style={{ cursor: 'pointer', userSelect: 'none', borderBottom: '1px solid #c3e6cb' }}
               onClick={() => setConnectorOpen(v => !v)}
             >
-              <span style={{ fontSize: 10, width: 10 }}>{connectorOpen ? '▾' : '▸'}</span>
+              <MaterialIcon name={connectorOpen ? ACTION_ICONS.expand : ACTION_ICONS.collapse} size={13} style={{ width: 13 }} />
               <span
                 className="text-uppercase fw-bold"
                 style={{ fontSize: 10, letterSpacing: 0.5, color: '#276749' }}
@@ -191,7 +193,7 @@ function ConnectorCard({ tpl, posRef, onAdd }) {
       <div className="d-flex align-items-center justify-content-between mb-1">
         <span className="fw-semibold" style={{ fontSize: 12 }}>{tpl.name}</span>
         {tpl._isMatch && (
-          <span style={{ fontSize: 11, color: '#059669', fontWeight: 600 }}>✓ match</span>
+          <span className="d-inline-flex align-items-center gap-1" style={{ fontSize: 11, color: '#059669', fontWeight: 600 }}><MaterialIcon name={ACTION_ICONS.complete} size={13} /> match</span>
         )}
       </div>
 
@@ -257,7 +259,7 @@ function TemplateCard({ tpl, onApply }) {
       <div className="d-flex align-items-center justify-content-between mb-1">
         <span className="fw-semibold" style={{ fontSize: 12 }}>{tpl.name}</span>
         {tpl._isMatch && (
-          <span style={{ fontSize: 11, color: '#198754', fontWeight: 600 }}>✓ match</span>
+          <span className="d-inline-flex align-items-center gap-1" style={{ fontSize: 11, color: '#198754', fontWeight: 600 }}><MaterialIcon name={ACTION_ICONS.complete} size={13} /> match</span>
         )}
       </div>
       {tpl._tags?.length > 0 && (

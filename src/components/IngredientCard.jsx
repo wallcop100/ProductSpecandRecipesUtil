@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react'
-import { Card, Form, Button, Overlay, Popover } from 'react-bootstrap'
+import React, { useState } from 'react'
+import { Card, Form, Button } from 'react-bootstrap'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import useStore from '../store/useStore'
@@ -8,8 +8,10 @@ import ETRefSelect from './ETRefSelect'
 import EntityPill from './EntityPill'
 import ContentsBadge from './ContentsBadge'
 import MaterialIcon from './MaterialIcon'
+import IconButton from './IconButton'
 import { getUsedIn, getInternalItems } from '../utils/containerUtils'
 import { familyOf } from '../utils/etRef'
+import { ACTION_ICONS } from '../utils/entityStyle'
 
 /**
  * IngredientCard — a resolved recipe row with drag-to-reorder support.
@@ -25,7 +27,6 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   const toggleContainerET = useStore(s => s.toggleContainerET)
   const openETRecipe = useStore(s => s.openETRecipe)
   const ensurePSRow = useStore(s => s.ensurePSRow)
-  const updatePSRow = useStore(s => s.updatePSRow)
   const psRows = useStore(s => s.psRows)
   const recipes = useStore(s => s.recipes)
   const elementTypes = useStore(s => s.elementTypes)
@@ -35,9 +36,13 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   const toggleRowSelection = useStore(s => s.toggleRowSelection)
   const copyRows = useStore(s => s.copyRows)
   const suggestNextETRef = useStore(s => s.suggestNextETRef)
+  const restoreRecipeRow = useStore(s => s.restoreRecipeRow)
 
   const rowId = row._id
   const isSelected = selectedRowIds.includes(rowId)
+  // Unsynced = this row has a pending change not yet exported to the source file
+  const isDirty = useStore(s => s.rsChanges.some(c => c._id === rowId))
+  const isDeleted = (row.IsDeleted || row.isDeleted) === 'Y'
 
   const {
     attributes,
@@ -60,8 +65,8 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
 
   const etRef = row.elementTypeRef || row.ElementTypeRef || ''
   const isUnresolved = row.resolved === false
-  // Rows added in-app (paste, palette, connectors) have no source-file row yet.
-  const isNewRow = !isUnresolved && row._row_num == null
+  // New = added in-app this session AND not yet synced to the source file.
+  const isNewRow = !isUnresolved && row._row_num == null && isDirty
 
   // Look up PS row for product code, manufacturer, description
   const psRow = psRows.find(p => {
@@ -70,7 +75,6 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   })
   const productCode = psRow?.ProductCode || psRow?.productCode || null
   const manufacturer = psRow?.Manufacturer || psRow?.manufacturer || null
-  const componentDesc = psRow?.ComponentDescription || psRow?.componentDescription || null
 
   // ET family for sublabel on the pill
   const etObj = etRef
@@ -93,8 +97,6 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   const internalItems = isContainer ? getInternalItems(etRef, recipes, elementTypes) : []
 
   const [showContents, setShowContents] = useState(false)
-  const [showSpecPopover, setShowSpecPopover] = useState(false)
-  const pillRef = useRef(null)
 
   // Extra fields: show if any are set, or if user manually expanded
   const extraInUse = (
@@ -122,19 +124,26 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   }
 
   // Left border = element type colour; context colour lives on the section header line
-  const etAccent = (etRef && !isUnresolved) ? '#bf6018' : '#ffc107'
+  const leftColor = isSelected ? '#0d6efd' : isDeleted ? '#adb5bd' : isDirty ? '#f0ad4e' : ((etRef && !isUnresolved) ? '#bf6018' : '#ffc107')
+  const background = isSelected ? '#e7f1ff' : isDeleted ? '#f8f9fa' : isDirty ? '#fffdf5' : undefined
 
   return (
     <div ref={setNodeRef} style={style} data-debug-id="IngredientCard">
       <Card
         style={{
-          borderLeft: `3px solid ${isSelected ? '#0d6efd' : etAccent}`,
+          borderLeft: `3px solid ${leftColor}`,
           borderRadius: 6,
-          background: isSelected ? '#e7f1ff' : undefined,
+          background,
           boxShadow: isSelected ? '0 0 0 1px #0d6efd' : undefined,
+          opacity: isDeleted ? 0.65 : 1,
         }}
       >
         <Card.Body className="py-2 px-3">
+          {isDeleted && (
+            <div className="d-flex align-items-center gap-1 mb-1" style={{ fontSize: 10, color: '#6c757d' }}>
+              <MaterialIcon name="delete" size={12} /> Deleted — will sync as IsDeleted=Y
+            </div>
+          )}
           <div className="d-flex align-items-start gap-2">
             {/* Select for copy */}
             <Form.Check
@@ -149,9 +158,10 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
               className="btn btn-link p-0"
               style={{ color: '#aaa', lineHeight: 1, paddingTop: 2 }}
               title="Copy this row"
+              aria-label="Copy this row"
               onClick={() => copyRows([rowId])}
             >
-              <MaterialIcon name="content_copy" size={15} />
+              <MaterialIcon name={ACTION_ICONS.copy} size={15} />
             </button>
             {/* Drag handle */}
             <span
@@ -160,14 +170,13 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
               style={{
                 cursor: 'grab',
                 color: '#aaa',
-                fontSize: 18,
                 lineHeight: 1,
                 paddingTop: 2,
                 userSelect: 'none',
               }}
               title="Drag to reorder"
             >
-              ⠿
+              <MaterialIcon name={ACTION_ICONS.drag} size={18} />
             </span>
 
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -175,75 +184,41 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
               <div className="d-flex align-items-center gap-2 mb-2 flex-wrap">
                 {etRef ? (
                   <>
-                    <span ref={pillRef} style={{ cursor: 'pointer' }} onClick={() => psRow && setShowSpecPopover(v => !v)}>
-                      <EntityPill
-                        type="ElementType"
-                        label={etRef}
-                        sublabel={etFamily}
-                        title={psRow ? 'Click to edit spec' : (isContainer ? 'Collection (container element)' : 'Element')}
-                      />
-                    </span>
+                    <EntityPill
+                      type="ElementType"
+                      label={etRef}
+                      sublabel={etFamily}
+                      stack
+                      title={isContainer ? 'Container / wrapper element' : 'Element type'}
+                    />
                     {isNewRow && (
                       <span
-                        className="badge d-inline-flex align-items-center gap-1"
+                        className="badge"
                         style={{ background: '#d1e7dd', color: '#0a3622', border: '1px solid #a3cfbb', fontSize: 9, flexShrink: 0 }}
                         title="New — added here and not yet in the source file (unsaved until you export)"
                       >
-                        <MaterialIcon name="fiber_new" size={12} /> new
+                        new
                       </span>
                     )}
                     <MaterialIcon name="arrow_forward" size={14} style={{ color: '#ccc', flexShrink: 0 }} />
                     {productCode ? (
-                      <span
-                        className="badge bg-light text-dark border"
-                        style={{ fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-                        onClick={() => setShowSpecPopover(v => !v)}
-                        title={manufacturer ? `${manufacturer}` : 'Product code'}
-                      >
-                        {productCode}
-                      </span>
-                    ) : etRef ? (
                       <button
-                        className="btn btn-link btn-sm p-0"
-                        style={{ fontSize: 11, color: '#e67e22', textDecoration: 'none' }}
+                        className="btn btn-link p-0 d-inline-flex align-items-center gap-1"
+                        style={{ fontSize: 11, color: '#333', textDecoration: 'none', fontWeight: 500 }}
                         onClick={() => onOpenProductSpec && onOpenProductSpec(etRef)}
-                        title="No product spec entry — click to add"
+                        title="Open in Product Spec"
                       >
-                        + Add to spec
+                        <span style={{ color: '#666' }}>{manufacturer ? `${manufacturer} – ` : ''}{productCode}</span>
+                        <MaterialIcon name="edit" size={12} style={{ color: '#aaa' }} />
                       </button>
+                    ) : etRef ? (
+                      <IconButton
+                        icon={ACTION_ICONS.addToSpec} size={16}
+                        style={{ fontSize: 11, color: '#e67e22', padding: 0 }}
+                        onClick={() => onOpenProductSpec && onOpenProductSpec(etRef)}
+                        title="No product spec — click to add"
+                      />
                     ) : null}
-
-                    {/* Inline spec popover */}
-                    {psRow && (
-                      <Overlay
-                        target={pillRef.current}
-                        show={showSpecPopover}
-                        placement="bottom-start"
-                        rootClose
-                        onHide={() => setShowSpecPopover(false)}
-                      >
-                        <Popover style={{ minWidth: 240, maxWidth: 320 }}>
-                          <Popover.Header style={{ fontSize: 12 }}>Spec — {etRef}</Popover.Header>
-                          <Popover.Body className="p-2">
-                            <SpecField
-                              label="Product Code"
-                              value={productCode || ''}
-                              onChange={val => updatePSRow(etRef, { ProductCode: val })}
-                            />
-                            <SpecField
-                              label="Manufacturer"
-                              value={manufacturer || ''}
-                              onChange={val => updatePSRow(etRef, { Manufacturer: val })}
-                            />
-                            <SpecField
-                              label="Description"
-                              value={componentDesc || ''}
-                              onChange={val => updatePSRow(etRef, { ComponentDescription: val })}
-                            />
-                          </Popover.Body>
-                        </Popover>
-                      </Overlay>
-                    )}
                   </>
                 ) : (
                   <div style={{ width: 220 }}>
@@ -268,25 +243,16 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                     Edit internals →
                   </button>
                 )}
-                {etRef && !isContainer && (
-                  <button
-                    className="btn btn-link btn-sm p-0"
-                    style={{ fontSize: 10, color: '#aaa', textDecoration: 'none' }}
+                {/* Container toggle: same icon, coloured when marked, grey when not */}
+                {etRef && (
+                  <IconButton
+                    icon={ACTION_ICONS.container} size={15}
+                    style={{ color: isContainer ? '#bf6018' : '#ccc', padding: 0 }}
                     onClick={() => toggleContainerET(etRef)}
-                    title={`Mark as virtual container element${whyText ? ` — ${whyText}` : ''}`}
-                  >
-                    Mark as container
-                  </button>
-                )}
-                {etRef && isContainer && (
-                  <button
-                    className="btn btn-link btn-sm p-0"
-                    style={{ fontSize: 10, color: '#aaa', textDecoration: 'none' }}
-                    onClick={() => toggleContainerET(etRef)}
-                    title={`Remove container designation${whyText ? ` — ${whyText}` : ''}`}
-                  >
-                    ✕ container
-                  </button>
+                    title={isContainer
+                      ? `Container element — click to remove designation${whyText ? ` — ${whyText}` : ''}`
+                      : `Mark as virtual container element${whyText ? ` — ${whyText}` : ''}`}
+                  />
                 )}
               </div>
 
@@ -398,40 +364,47 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                       activeVariant="warning"
                     />
                     {!extraInUse && (
-                      <button
-                        className="btn btn-link btn-sm p-0"
-                        style={{ fontSize: 11, color: '#aaa', textDecoration: 'none' }}
+                      <IconButton
+                        icon={ACTION_ICONS.remove} size={15}
+                        style={{ color: '#aaa', padding: 0 }}
                         onClick={() => setShowExtra(false)}
                         title="Collapse extra fields"
-                      >
-                        ×
-                      </button>
+                      />
                     )}
                   </>
                 ) : (
-                  <button
-                    className="btn btn-link btn-sm p-0"
-                    style={{ fontSize: 12, color: '#aaa', textDecoration: 'none', letterSpacing: 2 }}
+                  <IconButton
+                    icon={ACTION_ICONS.more} size={16}
+                    style={{ color: '#aaa', padding: 0 }}
                     onClick={() => setShowExtra(true)}
                     title="Show DimMult, PackQty, TRItem"
-                  >
-                    •••
-                  </button>
+                  />
                 )}
               </div>
             </div>
 
-            {/* Delete */}
-            <Button
-              variant="link"
-              size="sm"
-              className="text-danger p-0"
-              style={{ lineHeight: 1, alignSelf: 'flex-start' }}
-              onClick={() => removeRecipeRow(posRef, rowId)}
-              title="Remove row"
-            >
-              ×
-            </Button>
+            {/* Delete / restore */}
+            {isDeleted ? (
+              <IconButton
+                variant="link"
+                className="text-success p-0"
+                style={{ alignSelf: 'flex-start' }}
+                icon="undo"
+                size={16}
+                onClick={() => restoreRecipeRow(posRef, rowId)}
+                title="Restore row"
+              />
+            ) : (
+              <IconButton
+                variant="link"
+                className="text-danger p-0"
+                style={{ alignSelf: 'flex-start' }}
+                icon={ACTION_ICONS.delete}
+                size={16}
+                onClick={() => removeRecipeRow(posRef, rowId)}
+                title="Remove row"
+              />
+            )}
           </div>
         </Card.Body>
       </Card>
@@ -439,30 +412,67 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   )
 }
 
-// Qty field: category icon + borderless number input inside a pill-shaped box
+// Qty field: category icon (with the count when >1); clicking it expands a
+// stepper that slides open to the right (no floating popover).
 function QtyField({ value, onChange }) {
+  const num = value === '' || value == null ? 1 : Number(value)
+  const [open, setOpen] = useState(false)
+
   return (
     <div
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        gap: 4,
         border: '1px solid #dee2e6',
         borderRadius: 6,
         padding: '2px 6px',
         background: '#fff',
       }}
     >
-      <MaterialIcon name="category" size={16} className="text-secondary" />
-      <Form.Control
-        type="number"
-        size="sm"
-        value={value}
-        placeholder="1"
-        onChange={e => onChange(e.target.value)}
-        style={{ border: 'none', padding: 0, width: 50, fontSize: 12, boxShadow: 'none' }}
-        min={0}
-      />
+      <button
+        className="btn btn-link p-0 d-inline-flex align-items-center gap-1"
+        style={{ lineHeight: 1, color: '#6c757d', textDecoration: 'none' }}
+        onClick={() => setOpen(v => !v)}
+        title={`Quantity: ${num} — click to change`}
+        aria-label="Quantity"
+        aria-expanded={open}
+      >
+        <MaterialIcon name="category" size={16} />
+        {!open && num > 1 && (
+          <span style={{ fontSize: 12, fontWeight: 600, color: '#212529' }}>{num}</span>
+        )}
+      </button>
+      {/* Slides open to the right */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 4,
+          overflow: 'hidden',
+          width: open ? 122 : 0,
+          marginLeft: open ? 4 : 0,
+          opacity: open ? 1 : 0,
+          transition: 'width 0.2s ease, opacity 0.2s ease, margin-left 0.2s ease',
+        }}
+      >
+        <Button
+          variant="outline-secondary" size="sm" tabIndex={open ? 0 : -1}
+          style={{ width: 26, padding: '0 4px', flexShrink: 0 }}
+          onClick={() => onChange(String(Math.max(0, num - 1)))}
+        >−</Button>
+        <Form.Control
+          type="number" size="sm" tabIndex={open ? 0 : -1}
+          value={num}
+          onChange={e => onChange(e.target.value)}
+          style={{ width: 50, textAlign: 'center', fontSize: 12, padding: '2px', flexShrink: 0 }}
+          min={0}
+        />
+        <Button
+          variant="outline-secondary" size="sm" tabIndex={open ? 0 : -1}
+          style={{ width: 26, padding: '0 4px', flexShrink: 0 }}
+          onClick={() => onChange(String(num + 1))}
+        >+</Button>
+      </div>
     </div>
   )
 }
@@ -480,24 +490,6 @@ function FieldInput({ label, value, onChange, width = 80, type = 'text', min, st
         style={{ width, padding: '2px 6px', fontSize: 12 }}
         min={min}
         step={step}
-      />
-    </div>
-  )
-}
-
-// Compact editable field row for the spec popover
-function SpecField({ label, value, onChange }) {
-  const [local, setLocal] = useState(value)
-  return (
-    <div className="mb-2">
-      <div className="text-muted" style={{ fontSize: 10, marginBottom: 2 }}>{label}</div>
-      <Form.Control
-        size="sm"
-        value={local}
-        onChange={e => setLocal(e.target.value)}
-        onBlur={() => { if (local !== value) onChange(local) }}
-        onKeyDown={e => { if (e.key === 'Enter') { e.target.blur() } }}
-        style={{ fontSize: 12 }}
       />
     </div>
   )

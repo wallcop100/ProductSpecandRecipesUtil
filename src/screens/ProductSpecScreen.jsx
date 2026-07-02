@@ -4,6 +4,9 @@ import useStore from '../store/useStore'
 import ETSpecBrowser from '../components/ETSpecBrowser'
 import ETSpecEditor  from '../components/ETSpecEditor'
 import SpecWizardModal from '../components/SpecWizardModal'
+import IconButton from '../components/IconButton'
+import MaterialIcon from '../components/MaterialIcon'
+import { ACTION_ICONS } from '../utils/entityStyle'
 
 /**
  * ProductSpecScreen — split-panel product spec editor.
@@ -18,6 +21,7 @@ export default function ProductSpecScreen({ onBack, scrollToRef }) {
   const recipes      = useStore(s => s.recipes)
   const updatePSRow  = useStore(s => s.updatePSRow)
   const addPSRow     = useStore(s => s.addPSRow)
+  const deletePSRow  = useStore(s => s.deletePSRow)
 
   const [selectedRef,  setSelectedRef]  = useState(scrollToRef || null)
   const [bulkSelected, setBulkSelected] = useState(new Set())
@@ -164,7 +168,7 @@ export default function ProductSpecScreen({ onBack, scrollToRef }) {
   function bulkDelete() {
     for (const key of bulkSelected) {
       const ref = psRows.find(r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === key)
-      if (ref) updatePSRow(ref.ElementTypeRef || ref.elementTypeRef, { IsDeleted: 'Y' })
+      if (ref) deletePSRow(ref.ElementTypeRef || ref.elementTypeRef)
     }
     clearBulk()
   }
@@ -188,9 +192,8 @@ export default function ProductSpecScreen({ onBack, scrollToRef }) {
         className="d-flex align-items-center gap-2 px-3 py-2 border-bottom bg-white"
         style={{ flexShrink: 0 }}
       >
-        <Button variant="outline-secondary" size="sm" onClick={onBack}>
-          ← Back
-        </Button>
+        <IconButton variant="outline-secondary" bsSize="sm" icon={ACTION_ICONS.back}
+          title="Back to builder" onClick={onBack} />
         <span className="fw-semibold ms-1">Product Spec</span>
 
         {/* Completeness bar */}
@@ -201,10 +204,10 @@ export default function ProductSpecScreen({ onBack, scrollToRef }) {
           <span style={{ fontSize: 11, color: '#6c757d', whiteSpace: 'nowrap' }}>
             {stats.complete} / {total - stats.deleted} complete
           </span>
-          <span style={{ fontSize: 10, color: '#ef4444' }} title="Missing spec">● {stats.missing}</span>
-          <span style={{ fontSize: 10, color: '#f59e0b' }} title="Partial/TBC">● {stats.partial}</span>
+          <span className="d-inline-flex align-items-center gap-1" style={{ fontSize: 10, color: '#ef4444' }} title="Missing spec"><MaterialIcon name={ACTION_ICONS.missing} size={12} /> {stats.missing}</span>
+          <span className="d-inline-flex align-items-center gap-1" style={{ fontSize: 10, color: '#f59e0b' }} title="Partial/TBC"><MaterialIcon name={ACTION_ICONS.partial} size={12} /> {stats.partial}</span>
           {stats.duplicates > 0 && (
-            <span style={{ fontSize: 10, color: '#dc3545' }} title="Duplicate product codes">⚠ {stats.duplicates} dup</span>
+            <span className="d-inline-flex align-items-center gap-1" style={{ fontSize: 10, color: '#dc3545' }} title="Duplicate product codes"><MaterialIcon name="warning" size={12} /> {stats.duplicates} dup</span>
           )}
         </div>
 

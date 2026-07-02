@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react'
 import { Button, Badge, Form } from 'react-bootstrap'
 import useStore from '../store/useStore'
+import MaterialIcon from './MaterialIcon'
+import { ACTION_ICONS } from '../utils/entityStyle'
 
 const SECTION_LABEL = {
   position: 'position',
@@ -60,7 +62,7 @@ export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap,
 
   if (!collection) {
     return (
-      <div className="p-3 text-muted small">Collection not found.</div>
+      <div className="p-3 text-muted small">Template not found.</div>
     )
   }
 
@@ -73,13 +75,14 @@ export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap,
           <div
             onClick={() => onOpenPosition?.(posRef)}
             title="Open this position type in the builder"
+            className="d-inline-flex align-items-center gap-1"
             style={{ fontFamily: 'monospace', fontSize: 11, color: '#0d6efd', cursor: 'pointer' }}
           >
-            {posRef} ↗
+            {posRef} <MaterialIcon name={ACTION_ICONS.external} size={13} />
           </div>
         </div>
-        <Button variant="link" size="sm" className="p-0 text-muted" style={{ fontSize: 16, lineHeight: 1 }}
-          onClick={onClose} title="Close">×</Button>
+        <Button variant="link" size="sm" className="p-0 text-muted" style={{ lineHeight: 1 }}
+          onClick={onClose} title="Close" aria-label="Close"><MaterialIcon name="close" size={18} /></Button>
       </div>
 
       {/* Applicability note */}
@@ -98,7 +101,7 @@ export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap,
       {/* Ingredient list */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 12px' }}>
         {ingredients.length === 0 && (
-          <div className="text-muted small py-2">This collection has no ingredients.</div>
+          <div className="text-muted small py-2">This template has no ingredients.</div>
         )}
         {ingredients.map((ing, idx) => {
           const ref = ing.ElementTypeRef || ing.slotLabel || ''
@@ -112,9 +115,9 @@ export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap,
             >
               <span
                 title={present ? 'Present in recipe' : 'Not in recipe'}
-                style={{ color: present ? '#198754' : '#dc3545', fontSize: 13, width: 14, textAlign: 'center' }}
+                style={{ color: present ? '#198754' : '#dc3545', width: 16, textAlign: 'center' }}
               >
-                {present ? '✓' : '○'}
+                <MaterialIcon name={present ? ACTION_ICONS.complete : ACTION_ICONS.incomplete} size={14} />
               </span>
               <div className="flex-grow-1" style={{ minWidth: 0 }}>
                 <div style={{ fontFamily: 'monospace', fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -154,7 +157,7 @@ export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap,
         </div>
         <Button size="sm" variant="outline-secondary" style={{ fontSize: 11 }}
           onClick={() => onSwap(posRef, collectionId)}>
-          Swap for another collection…
+          Swap for another template…
         </Button>
       </div>
     </div>

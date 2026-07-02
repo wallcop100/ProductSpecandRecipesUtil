@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react'
 import { Modal, Button, Form } from 'react-bootstrap'
 import useStore, { collectAllETRefs } from '../store/useStore'
 import ETRefSelect from './ETRefSelect'
+import MaterialIcon from './MaterialIcon'
 import { CONNECTION_TYPES, composeConnection, suggestRefForPart } from '../utils/connectors'
 
 const SECTION_LABEL = {
@@ -104,12 +105,12 @@ export default function ConnectorWizardModal({ show, posRef, context = 'position
                 <button
                   key={t.id}
                   type="button"
-                  className={`btn btn-sm ${active ? 'btn-primary' : relevant ? 'btn-outline-primary' : 'btn-outline-secondary'}`}
+                  className={`btn btn-sm d-inline-flex align-items-center gap-1 ${active ? 'btn-primary' : relevant ? 'btn-outline-primary' : 'btn-outline-secondary'}`}
                   style={{ fontSize: 12 }}
                   onClick={() => pickType(t)}
                   title={relevant ? 'Matches this position’s tags' : undefined}
                 >
-                  {t.label}{relevant && !active ? ' ★' : ''}
+                  {t.label}{relevant && !active && <MaterialIcon name="star" size={13} />}
                 </button>
               )
             })}

@@ -1,14 +1,16 @@
 import React, { useMemo, useState } from 'react'
 import { Badge, Button, Form } from 'react-bootstrap'
 import useStore from '../store/useStore'
+import MaterialIcon from './MaterialIcon'
 import { collectionStatusForPosition } from '../utils/collectionStatus'
 import { positionFamilyOf } from '../utils/positionFamily'
+import { ACTION_ICONS } from '../utils/entityStyle'
 
 const STATUS_SYMBOL = {
-  complete: { symbol: '✓', color: '#198754', bg: '#d1e7dd', title: 'All collection refs present' },
-  partial:  { symbol: '⚠', color: '#856404', bg: '#fff3cd', title: 'Some refs present, some missing' },
-  missing:  { symbol: '✗', color: '#842029', bg: '#f8d7da', title: 'Tags match but no refs present' },
-  na:       { symbol: '—', color: '#adb5bd', bg: '#f8f9fa', title: "Tags don't match (N/A)" },
+  complete: { icon: ACTION_ICONS.complete,   color: '#198754', bg: '#d1e7dd', title: 'All template refs present' },
+  partial:  { icon: ACTION_ICONS.partial,    color: '#856404', bg: '#fff3cd', title: 'Some refs present, some missing' },
+  missing:  { icon: ACTION_ICONS.missing,    color: '#842029', bg: '#f8d7da', title: 'Tags match but no refs present' },
+  na:       { icon: ACTION_ICONS.na,         color: '#adb5bd', bg: '#f8f9fa', title: "Tags don't match (N/A)" },
 }
 
 function StatusCell({ posRef, collection, status, isSelected, onClick }) {
@@ -25,9 +27,7 @@ function StatusCell({ posRef, collection, status, isSelected, onClick }) {
         outlineOffset: -2,
       }}
     >
-      <span style={{ color: meta.color, fontWeight: 600, fontSize: 15, userSelect: 'none' }}>
-        {meta.symbol}
-      </span>
+      <MaterialIcon name={meta.icon} size={16} style={{ color: meta.color }} />
     </td>
   )
 }
@@ -105,10 +105,10 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
     return (
       <div className="text-muted p-4 text-center">
         <p className="mb-3">
-          No connector sets defined yet. Create one, then click a cell to add or remove its
+          No connector templates defined yet. Create one, then click a cell to add or remove its
           connectors on each position.
         </p>
-        <Button variant="primary" size="sm" onClick={onNewCollection}>+ New connector set</Button>
+        <Button variant="primary" size="sm" onClick={onNewCollection}>+ New template</Button>
       </div>
     )
   }
@@ -116,7 +116,9 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
   return (
     <div style={{ overflowX: 'auto' }}>
       <div className="d-flex gap-3 mb-2 align-items-center">
-        <Button variant="primary" size="sm" onClick={onNewCollection}>+ New set</Button>
+        <Button variant="primary" size="sm" className="d-inline-flex align-items-center gap-1" onClick={onNewCollection} title="Create a new connector template">
+          <MaterialIcon name={ACTION_ICONS.add} size={15} /> New template
+        </Button>
         <span className="small text-muted">{positions.length} positions · click a cell to manage connectors</span>
         <div className="ms-auto">
           <Form.Check
@@ -149,14 +151,14 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
                 >
                   <div>{c.Name}</div>
                   <div className="d-flex gap-1 justify-content-center mt-1">
-                    <Button size="sm" variant="outline-danger" style={{ fontSize: 9, padding: '0px 5px' }}
+                    <Button size="sm" variant="outline-danger" className="d-inline-flex align-items-center gap-1" style={{ fontSize: 9, padding: '0px 5px' }}
                       disabled={!anyMissing}
                       onClick={() => handleBulkApply(c.CollectionId, 'missing')}
-                      title="Apply to all positions with ✗ status">Apply all ✗</Button>
-                    <Button size="sm" variant="outline-warning" style={{ fontSize: 9, padding: '0px 5px' }}
+                      title="Apply to all positions with missing status">Apply all <MaterialIcon name={ACTION_ICONS.missing} size={12} /></Button>
+                    <Button size="sm" variant="outline-warning" className="d-inline-flex align-items-center gap-1" style={{ fontSize: 9, padding: '0px 5px' }}
                       disabled={!anyPartial}
                       onClick={() => handleBulkApply(c.CollectionId, 'partial')}
-                      title="Fill missing refs on ⚠ positions">Fill ⚠</Button>
+                      title="Fill missing refs on partial positions">Fill <MaterialIcon name={ACTION_ICONS.partial} size={12} /></Button>
                   </div>
                 </th>
               )
@@ -173,9 +175,10 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
                   <span
                     onClick={() => onOpenPosition?.(posRef)}
                     title="Open this position type in the builder"
+                    className="d-inline-flex align-items-center gap-1"
                     style={{ color: '#0d6efd', cursor: 'pointer' }}
                   >
-                    {posRef} ↗
+                    {posRef} <MaterialIcon name={ACTION_ICONS.external} size={13} />
                   </span>
                 </td>
                 <td>

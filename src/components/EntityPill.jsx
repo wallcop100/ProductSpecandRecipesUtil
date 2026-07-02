@@ -14,12 +14,14 @@ import { colorsForType } from '../utils/entityStyle'
  *   type: 'ElementType' | 'PositionType'  (default ElementType)
  *   label: string — the ET / position ref (right pill)
  *   sublabel: string — optional family / parent ref (left pill)
+ *   stack: boolean — when true, sublabel sits smaller and above the label
  *   title, className, style — passed through to the outer wrapper
  */
 export default function EntityPill({
   type = 'ElementType',
   label,
   sublabel,
+  stack = false,
   title,
   className = '',
   style,
@@ -44,14 +46,15 @@ export default function EntityPill({
       title={title}
       style={{
         display: 'inline-flex',
-        alignItems: 'center',
-        gap: 4,
+        flexDirection: stack ? 'column' : 'row',
+        alignItems: stack ? 'flex-start' : 'center',
+        gap: stack ? 2 : 4,
         userSelect: 'none',
         ...style,
       }}
     >
       {sublabel != null && (
-        <span style={{ ...pillBase, fontSize: 11, color: '#555' }}>
+        <span style={{ ...pillBase, fontSize: stack ? 10 : 11, padding: stack ? '1px 6px' : '2px 8px', color: '#555' }}>
           {sublabel}
         </span>
       )}

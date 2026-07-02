@@ -2,6 +2,8 @@ import React, { useMemo, useState, useEffect } from 'react'
 import { Modal, Button, Form, InputGroup } from 'react-bootstrap'
 import useStore, { collectAllETRefs } from '../store/useStore'
 import { getUsedIn } from '../utils/containerUtils'
+import MaterialIcon from './MaterialIcon'
+import { ACTION_ICONS } from '../utils/entityStyle'
 
 /**
  * DuplicateETModal — fork a container element type under a new ref.
@@ -78,8 +80,8 @@ export default function DuplicateETModal({ show, etRef, posRef, onClose }) {
               onKeyDown={e => { if (e.key === 'Enter') handleConfirm() }}
               placeholder="e.g. ET-DL-02"
             />
-            <Button variant="outline-secondary" onClick={handleSuggest} title="Suggest the next available ref">
-              ✨ Suggest
+            <Button variant="outline-secondary" className="d-inline-flex align-items-center gap-1" onClick={handleSuggest} title="Suggest the next available ref">
+              <MaterialIcon name={ACTION_ICONS.suggest} size={15} /> Suggest
             </Button>
             <Form.Control.Feedback type="invalid">
               That ref already exists — choose another.

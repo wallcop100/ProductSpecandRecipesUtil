@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { Form, Badge } from 'react-bootstrap'
+import MaterialIcon from './MaterialIcon'
 
 /**
  * TagInput — free-form tag editor. Type a tag and press Enter to add; click a
@@ -34,9 +35,9 @@ export default function TagInput({ value = [], onChange, palette = [], placehold
       <div className="d-flex flex-wrap gap-1 mb-2">
         {value.length === 0 && <span className="text-muted small fst-italic">no tags</span>}
         {value.map(t => (
-          <Badge key={t} bg="secondary" style={{ fontWeight: 500, cursor: disabled ? 'default' : 'pointer' }}
+          <Badge key={t} bg="secondary" className="d-inline-flex align-items-center gap-1" style={{ fontWeight: 500, cursor: disabled ? 'default' : 'pointer' }}
             onClick={() => !disabled && remove(t)} title={disabled ? '' : 'Remove'}>
-            {t}{!disabled && ' ×'}
+            {t}{!disabled && <MaterialIcon name="close" size={12} />}
           </Badge>
         ))}
       </div>

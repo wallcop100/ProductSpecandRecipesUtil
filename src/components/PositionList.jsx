@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react'
 import useStore from '../store/useStore'
 import TagBadge from './TagBadge'
+import PositionValidationBadge from './PositionValidationBadge'
 import { positionFamilyOf } from '../utils/positionFamily'
 
 /**
@@ -14,21 +15,7 @@ export default function PositionList({ filter = '' }) {
   const positionUI = useStore(s => s.positionUI)
   const activePositionRef = useStore(s => s.activePositionRef)
   const setActivePosition = useStore(s => s.setActivePosition)
-  const validationResults = useStore(s => s.validationResults)
   const ignoredPositionFamilies = useStore(s => s.ignoredPositionFamilies)
-
-  // Index validation issues by positionTypeRef
-  const issuesByRef = useMemo(() => {
-    const map = {}
-    for (const issue of validationResults) {
-      if (issue.ref) {
-        if (!map[issue.ref]) map[issue.ref] = []
-        map[issue.ref].push(issue)
-      }
-    }
-    return map
-  }, [validationResults])
-
 
   // Apply the filter: match on ref, name, or any tag. Ignored positions/families
   // are out-of-scope and excluded from the navigator index entirely.
@@ -64,9 +51,6 @@ export default function PositionList({ filter = '' }) {
           const isActive = ref === activePositionRef
           const ui = positionUI[ref] || {}
           const tags = ui.tags || []
-          const issues = issuesByRef[ref] || []
-          const hasError = issues.some(i => i.severity === 'error')
-          const hasWarning = issues.some(i => i.severity === 'warning')
 
           return (
             <div
@@ -87,11 +71,7 @@ export default function PositionList({ filter = '' }) {
                 >
                   {ref}
                 </span>
-                {hasError && <span title="Has errors" style={{ color: '#dc3545', fontSize: 14 }}>●</span>}
-                {!hasError && hasWarning && <span title="Has warnings" style={{ color: '#ffc107', fontSize: 14 }}>●</span>}
-                {!hasError && !hasWarning && issues.length === 0 && validationResults.length > 0 && (
-                  <span title="OK" style={{ color: '#198754', fontSize: 14 }}>●</span>
-                )}
+                <PositionValidationBadge posRef={ref} showOk />
               </div>
 
               {tags.length > 0 && (

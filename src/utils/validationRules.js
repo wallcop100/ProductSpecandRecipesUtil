@@ -52,6 +52,10 @@ const refOf = r => r.elementTypeRef || r.ElementTypeRef || ''
  * @param {object} positionUI - { [ref: string]: { tags: string[] } } from store
  * @returns {object[]} issues
  */
+// Rules whose fix lives on the Product Spec screen (ref is an ET ref); all
+// others are recipe rules whose ref is a PositionTypeRef.
+const SPEC_RULES = new Set(['DUPLICATE_PRODUCT_CODE', 'MISSING_PRODUCT_CODE'])
+
 export function runValidation(dbData, psRows, rsRows, positionUI) {
   const issues = []
 
@@ -65,6 +69,9 @@ export function runValidation(dbData, psRows, rsRows, positionUI) {
   issues.push(...checkRemoteNoSiteSocket(rsRows, positionUI))
   issues.push(...checkExteriorIPConnectors(rsRows, positionUI))
   issues.push(...checkMissingProductSpecs(psRows))
+
+  // Tag each issue with where its "fix" lives so the UI can route correctly.
+  for (const i of issues) i.fixKind = SPEC_RULES.has(i.rule) ? 'spec' : 'position'
 
   return issues
 }
@@ -241,12 +248,12 @@ function checkMissingClipsDimQty(rsRows, positionUI) {
     })
 
     for (const row of clipRows) {
-      const qty = row.quantity ?? row.Quantity ?? null
-      if (qty === null || qty === undefined) {
+      const dimQty = row.Dim_QuantityMultiplier ?? row.dimQtyMultiplier ?? null
+      if (dimQty === null || dimQty === undefined) {
         issues.push({
           severity: 'warning',
-          rule: 'MISSING_CLIPS_QTY',
-          message: `LIN position "${ref}" has a CLIP row with no Quantity (clips/m) set.`,
+          rule: 'MISSING_CLIPS_DIM_QTY',
+          message: `LIN position "${ref}" has a CLIP row with no clip rate (Dim_QuantityMultiplier) set.`,
           ref,
         })
       }
@@ -350,7 +357,7 @@ function checkMissingProductSpecs(psRows) {
       severity: 'warning',
       rule: 'MISSING_PRODUCT_CODE',
       message: `"${r.ElementTypeRef || r.elementTypeRef}" has no ProductCode and is not marked TBC.`,
-      ref: null,
+      ref: r.ElementTypeRef || r.elementTypeRef || null,
     }))
 }
 

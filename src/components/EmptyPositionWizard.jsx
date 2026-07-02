@@ -1,7 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { Modal, Button, ProgressBar, Badge } from 'react-bootstrap'
 import useStore from '../store/useStore'
+import MaterialIcon from './MaterialIcon'
 import { positionFamilyOf } from '../utils/positionFamily'
+import { ACTION_ICONS } from '../utils/entityStyle'
 
 /**
  * EmptyPositionWizard — steps through position types that have no recipe rows so
@@ -92,13 +94,13 @@ export default function EmptyPositionWizard({ show, onHide, onOpenPosition }) {
       <Modal.Body>
         {queue.length === 0 ? (
           <div className="text-center py-4">
-            <div style={{ fontSize: 36 }}>✓</div>
+            <MaterialIcon name={ACTION_ICONS.complete} size={36} style={{ color: '#198754' }} />
             <div className="fw-semibold mt-2">No empty positions to review.</div>
             <div className="text-muted small mt-1">Every position has a recipe or is already flagged as ignore.</div>
           </div>
         ) : done ? (
           <div className="text-center py-4">
-            <div style={{ fontSize: 36 }}>✓</div>
+            <MaterialIcon name={ACTION_ICONS.complete} size={36} style={{ color: '#198754' }} />
             <div className="fw-semibold mt-2">Review complete</div>
             <div className="text-muted small mt-1">
               Flagged {ignoredCount} position{ignoredCount === 1 ? '' : 's'} as ignore

@@ -1,4 +1,5 @@
 import React from 'react'
+import MaterialIcon from './MaterialIcon'
 
 /**
  * FilterBar — reusable filter row: text + optional tag chips + optional family select.
@@ -38,11 +39,12 @@ export default function FilterBar({
             <button
               type="button"
               className="btn btn-sm p-0 position-absolute"
-              style={{ right: 6, top: '50%', transform: 'translateY(-50%)', fontSize: 14, lineHeight: 1, color: '#888' }}
+              style={{ right: 6, top: '50%', transform: 'translateY(-50%)', lineHeight: 1, color: '#888' }}
               onClick={() => onText('')}
               title="Clear filter"
+              aria-label="Clear filter"
             >
-              ×
+              <MaterialIcon name="close" size={15} />
             </button>
           )}
         </div>

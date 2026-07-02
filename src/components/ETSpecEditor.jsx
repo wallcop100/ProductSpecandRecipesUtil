@@ -4,7 +4,9 @@ import useStore from '../store/useStore'
 import FlagPill from './FlagPill'
 import EntityPill from './EntityPill'
 import MaterialIcon from './MaterialIcon'
+import IconButton from './IconButton'
 import { familyOf } from '../utils/etRef'
+import { ACTION_ICONS } from '../utils/entityStyle'
 
 /**
  * ETSpecEditor — right-panel form for editing a single ET's product spec.
@@ -125,8 +127,10 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
           </div>
           {onNavigate && (
             <div className="d-flex gap-1">
-              <Button variant="outline-secondary" size="sm" style={{ fontSize: 11, padding: '2px 8px' }} onClick={() => onNavigate('prev')}>← Prev</Button>
-              <Button variant="outline-secondary" size="sm" style={{ fontSize: 11, padding: '2px 8px' }} onClick={() => onNavigate('next')}>Next →</Button>
+              <IconButton variant="outline-secondary" bsSize="sm" style={{ fontSize: 11, padding: '2px 8px' }}
+                icon="chevron_left" title="Previous element type" onClick={() => onNavigate('prev')} />
+              <IconButton variant="outline-secondary" bsSize="sm" style={{ fontSize: 11, padding: '2px 8px' }}
+                icon="chevron_right" title="Next element type" onClick={() => onNavigate('next')} />
             </div>
           )}
           {(!productCode || !manufacturer) && !isDeleted && (
@@ -230,11 +234,11 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
         {/* Internal notes (collapsed) */}
         <div className="mb-3">
           <button
-            className="btn btn-link btn-sm p-0"
+            className="btn btn-link btn-sm p-0 d-inline-flex align-items-center gap-1"
             style={{ fontSize: 11, textDecoration: 'none', color: '#6c757d' }}
             onClick={() => setShowNotes(v => !v)}
           >
-            {showNotes ? '▾' : '▸'} Internal notes
+            <MaterialIcon name={showNotes ? ACTION_ICONS.expand : ACTION_ICONS.collapse} size={14} /> Internal notes
           </button>
           {showNotes && (
             <Form.Control

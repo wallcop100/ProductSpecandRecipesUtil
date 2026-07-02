@@ -38,6 +38,11 @@ function migrate() {
     db.exec(`ALTER TABLE position_ui ADD COLUMN tag_remove TEXT DEFAULT '[]'`)
   }
 
+  // et_collections: excluded tags (excluded takes priority over applicable/included).
+  if (!hasColumn('et_collections', 'ExcludedTags')) {
+    db.exec(`ALTER TABLE et_collections ADD COLUMN ExcludedTags TEXT DEFAULT '[]'`)
+  }
+
   // projects: config-aware identity. Old schema keyed by UNIQUE(folder_path) with
   // no config columns. Rebuild preserving `id` so overlay FKs stay valid, and
   // switch the unique constraint to (folder_path, config_name).
@@ -145,6 +150,17 @@ function createTables() {
       Ingredients     TEXT DEFAULT '[]',
       CreatedAt       TEXT,
       UpdatedAt       TEXT
+    );
+
+    -- User "favourites pot": cross-project, not tied to any project_id.
+    -- kind: 'tag' | 'element'  (favourite templates reuse scope='global' templates)
+    CREATE TABLE IF NOT EXISTS favorites (
+      id          TEXT PRIMARY KEY,
+      kind        TEXT NOT NULL,
+      ref         TEXT,
+      label       TEXT,
+      data        TEXT DEFAULT '{}',
+      created_at  TEXT
     );
   `)
 }
@@ -451,6 +467,42 @@ function getPref(projectId, key) {
   return row ? row.value : null
 }
 
+// ---------------------------------------------------------------------------
+// Favourites (cross-project user library: tags + elements)
+// ---------------------------------------------------------------------------
+
+function parseFavorite(row) {
+  if (!row) return null
+  let data = {}
+  try { data = JSON.parse(row.data || '{}') } catch { data = {} }
+  return { ...row, data }
+}
+
+function upsertFavorite(fav) {
+  const ts = now()
+  const { id, kind, ref = null, label = null, data = {}, created_at = ts } = fav
+  getDb()
+    .prepare(`
+      INSERT INTO favorites (id, kind, ref, label, data, created_at)
+      VALUES (@id, @kind, @ref, @label, @data, @created_at)
+      ON CONFLICT(id) DO UPDATE SET
+        kind = excluded.kind, ref = excluded.ref, label = excluded.label, data = excluded.data
+    `)
+    .run({ id, kind, ref, label, data: JSON.stringify(data), created_at })
+  return parseFavorite(getDb().prepare('SELECT * FROM favorites WHERE id = ?').get(id))
+}
+
+function getFavorites() {
+  return getDb()
+    .prepare('SELECT * FROM favorites ORDER BY created_at ASC, id ASC')
+    .all()
+    .map(parseFavorite)
+}
+
+function deleteFavorite(id) {
+  getDb().prepare('DELETE FROM favorites WHERE id = ?').run(id)
+}
+
 /** All prefs for a project as a { key: value } map. */
 function getAllPrefs(projectId) {
   const rows = getDb()
@@ -748,6 +800,7 @@ function parseCollection(row) {
   return {
     ...row,
     ApplicableTags: JSON.parse(row.ApplicableTags || '[]'),
+    ExcludedTags:   JSON.parse(row.ExcludedTags   || '[]'),
     Ingredients:    JSON.parse(row.Ingredients    || '[]'),
   }
 }
@@ -759,17 +812,19 @@ function upsertCollection(projectId, collection) {
     CollectionId,
     Name,
     ApplicableTags = [],
+    ExcludedTags   = [],
     Ingredients    = [],
     CreatedAt      = ts,
   } = collection
 
   database
     .prepare(`
-      INSERT INTO et_collections (CollectionId, project_id, Name, ApplicableTags, Ingredients, CreatedAt, UpdatedAt)
-      VALUES (@CollectionId, @project_id, @Name, @ApplicableTags, @Ingredients, @CreatedAt, @UpdatedAt)
+      INSERT INTO et_collections (CollectionId, project_id, Name, ApplicableTags, ExcludedTags, Ingredients, CreatedAt, UpdatedAt)
+      VALUES (@CollectionId, @project_id, @Name, @ApplicableTags, @ExcludedTags, @Ingredients, @CreatedAt, @UpdatedAt)
       ON CONFLICT(CollectionId) DO UPDATE SET
         Name           = excluded.Name,
         ApplicableTags = excluded.ApplicableTags,
+        ExcludedTags   = excluded.ExcludedTags,
         Ingredients    = excluded.Ingredients,
         UpdatedAt      = excluded.UpdatedAt
     `)
@@ -778,6 +833,7 @@ function upsertCollection(projectId, collection) {
       project_id:    projectId,
       Name,
       ApplicableTags: JSON.stringify(ApplicableTags),
+      ExcludedTags:   JSON.stringify(ExcludedTags),
       Ingredients:    JSON.stringify(Ingredients),
       CreatedAt,
       UpdatedAt: ts,
@@ -904,6 +960,9 @@ module.exports = {
   upsertCollection,
   getAllCollections,
   deleteCollection,
+  upsertFavorite,
+  getFavorites,
+  deleteFavorite,
   collectConfigData,
   applyConfigData,
 }

@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react'
 import useStore from '../store/useStore'
+import MaterialIcon from './MaterialIcon'
 import { collectionStatusForPosition, overallCollectionStatus } from '../utils/collectionStatus'
+import { ACTION_ICONS } from '../utils/entityStyle'
 
 const STATUS_STYLE = {
   complete: { bg: '#d1e7dd', color: '#0a3622', border: '#a3cfbb' },
@@ -60,12 +62,15 @@ export default function CollectionBadge({ posRef }) {
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
-        display: 'inline-block',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 3,
         verticalAlign: 'middle',
         lineHeight: '16px',
       }}
     >
-      {overall === 'complete' ? '✓ ' : overall === 'missing' ? '✗ ' : '⚠ '}
+      <MaterialIcon size={12}
+        name={overall === 'complete' ? ACTION_ICONS.complete : overall === 'missing' ? ACTION_ICONS.missing : ACTION_ICONS.partial} />
       {label}
     </span>
   )

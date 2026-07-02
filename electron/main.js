@@ -317,6 +317,11 @@ ipcMain.handle('db-get-all-collections', (event, { projectId }) =>
 ipcMain.handle('db-delete-collection', (event, { collectionId }) =>
   db.deleteCollection(collectionId))
 
+// SQLite — Favourites (cross-project user library)
+ipcMain.handle('db-upsert-favorite', (event, { favorite }) => db.upsertFavorite(favorite))
+ipcMain.handle('db-get-favorites', () => db.getFavorites())
+ipcMain.handle('db-delete-favorite', (event, { id }) => db.deleteFavorite(id))
+
 // Default tag palette + rules (bundled YAML, seeded into new configs)
 ipcMain.handle('get-default-tags', () => {
   try {

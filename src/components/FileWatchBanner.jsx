@@ -1,6 +1,7 @@
 import React from 'react'
 import { Alert, Button } from 'react-bootstrap'
 import useStore from '../store/useStore'
+import MaterialIcon from './MaterialIcon'
 
 /**
  * FileWatchBanner — sticky top banner shown when a watched file changes on disk.
@@ -36,13 +37,15 @@ export default function FileWatchBanner() {
         style={{ borderRadius: 0 }}
       >
         <div className="d-flex align-items-center gap-2 flex-wrap">
-          <span className="fw-semibold">📄 File changed on disk:</span>
+          <span className="fw-semibold d-inline-flex align-items-center gap-1">
+            <MaterialIcon name="description" size={16} /> File changed on disk:
+          </span>
           <code style={{ fontSize: 13 }}>{filename}</code>
           <span className="text-muted small">({fileLabel})</span>
 
           {hasLocalChanges && (
-            <span className="text-danger fw-semibold small">
-              ⚠ You have unsaved local changes for this file!
+            <span className="text-danger fw-semibold small d-inline-flex align-items-center gap-1">
+              <MaterialIcon name="warning" size={15} /> You have unsaved local changes for this file!
             </span>
           )}
 

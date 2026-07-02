@@ -1,15 +1,21 @@
 import React, { useState } from 'react'
 import { Button } from 'react-bootstrap'
 import useStore from '../store/useStore'
+import MaterialIcon from './MaterialIcon'
+import { ACTION_ICONS } from '../utils/entityStyle'
 
 /**
- * ValidationPanel — shows validation issues; clicking navigates to the affected position.
- * Spec-health warnings (MISSING_PRODUCT_CODE) are shown in a separate collapsible section.
+ * ValidationPanel — lists validation issues; each links to where it's fixed
+ * (position editor for recipe rules, Product Spec for spec rules).
+ *
+ * Props:
+ *   onOpenProductSpec(etRef) — open the Product Spec screen for a spec issue
+ *   onOpenFixer()            — open the step-through fixer modal
  */
-export default function ValidationPanel() {
+export default function ValidationPanel({ onOpenProductSpec, onOpenFixer }) {
   const validationResults = useStore(s => s.validationResults)
   const runValidation     = useStore(s => s.runValidation)
-  const setActivePosition = useStore(s => s.setActivePosition)
+  const focusPosition     = useStore(s => s.focusPosition)
 
   const [specOpen, setSpecOpen] = useState(false)
 
@@ -17,6 +23,12 @@ export default function ValidationPanel() {
   const recipeIssues    = validationResults.filter(i => i.rule !== 'MISSING_PRODUCT_CODE')
   const errors          = recipeIssues.filter(i => i.severity === 'error')
   const recipeWarnings  = recipeIssues.filter(i => i.severity === 'warning')
+
+  function goFix(issue) {
+    if (!issue?.ref) return
+    if (issue.fixKind === 'spec') onOpenProductSpec?.(issue.ref)
+    else focusPosition(issue.ref)
+  }
 
   return (
     <div className="p-3">
@@ -30,6 +42,17 @@ export default function ValidationPanel() {
         >
           Run
         </Button>
+        {validationResults.length > 0 && (
+          <Button
+            variant="outline-secondary" size="sm"
+            className="d-inline-flex align-items-center gap-1"
+            style={{ fontSize: 11, padding: '1px 8px' }}
+            onClick={() => onOpenFixer?.()}
+            title="Step through issues one at a time"
+          >
+            <MaterialIcon name={ACTION_ICONS.review} size={13} /> Fix issues
+          </Button>
+        )}
       </div>
 
       {validationResults.length === 0 && (
@@ -42,7 +65,7 @@ export default function ValidationPanel() {
             Errors ({errors.length})
           </div>
           {errors.map((issue, i) => (
-            <IssueRow key={i} issue={issue} onNavigate={setActivePosition} />
+            <IssueRow key={i} issue={issue} onFix={goFix} />
           ))}
         </div>
       )}
@@ -53,7 +76,7 @@ export default function ValidationPanel() {
             Warnings ({recipeWarnings.length})
           </div>
           {recipeWarnings.map((issue, i) => (
-            <IssueRow key={i} issue={issue} onNavigate={setActivePosition} />
+            <IssueRow key={i} issue={issue} onFix={goFix} />
           ))}
         </div>
       )}
@@ -66,28 +89,29 @@ export default function ValidationPanel() {
             style={{ cursor: 'pointer', userSelect: 'none' }}
             onClick={() => setSpecOpen(v => !v)}
           >
-            <span style={{ width: 10, fontSize: 10 }}>{specOpen ? '▾' : '▸'}</span>
+            <MaterialIcon name={specOpen ? ACTION_ICONS.expand : ACTION_ICONS.collapse} size={13} style={{ width: 13 }} />
             <div className="text-uppercase fw-bold" style={{ fontSize: 10, color: '#997404', letterSpacing: 0.5 }}>
               Spec health ({specWarnings.length})
             </div>
           </div>
           {specOpen && specWarnings.map((issue, i) => (
-            <IssueRow key={i} issue={issue} onNavigate={setActivePosition} />
+            <IssueRow key={i} issue={issue} onFix={goFix} />
           ))}
         </div>
       )}
 
       {validationResults.length > 0 && errors.length === 0 && recipeWarnings.length === 0 && specWarnings.length === 0 && (
-        <div className="text-success small">✓ No issues found.</div>
+        <div className="text-success small d-inline-flex align-items-center gap-1"><MaterialIcon name={ACTION_ICONS.complete} size={14} /> No issues found.</div>
       )}
     </div>
   )
 }
 
-function IssueRow({ issue, onNavigate }) {
+function IssueRow({ issue, onFix }) {
   const isError = issue.severity === 'error'
-  const icon  = isError ? '✕' : '⚠'
+  const icon  = isError ? 'error' : 'warning'
   const color = isError ? '#dc3545' : '#997404'
+  const fixLabel = issue.fixKind === 'spec' ? 'Open in Product Spec' : `Go to ${issue.ref}`
 
   return (
     <div
@@ -98,16 +122,18 @@ function IssueRow({ issue, onNavigate }) {
         cursor: issue.ref ? 'pointer' : 'default',
         fontSize: 12,
       }}
-      onClick={() => issue.ref && onNavigate(issue.ref)}
-      title={issue.ref ? `Click to navigate to ${issue.ref}` : ''}
+      onClick={() => onFix(issue)}
+      title={issue.ref ? fixLabel : ''}
     >
       <div className="d-flex align-items-start gap-1">
-        <span style={{ color, flexShrink: 0, fontWeight: 700 }}>{icon}</span>
+        <MaterialIcon name={icon} size={15} style={{ color, flexShrink: 0 }} />
         <div>
           <div style={{ fontWeight: 600, color }}>{issue.rule}</div>
           <div className="text-muted" style={{ fontSize: 11 }}>{issue.message}</div>
           {issue.ref && (
-            <div style={{ fontSize: 10, color: '#0d6efd', marginTop: 2 }}>→ {issue.ref}</div>
+            <div className="d-flex align-items-center gap-1" style={{ fontSize: 10, color: '#0d6efd', marginTop: 2 }}>
+              <MaterialIcon name={issue.fixKind === 'spec' ? ACTION_ICONS.productSpec : 'subdirectory_arrow_right'} size={11} /> {fixLabel}
+            </div>
           )}
         </div>
       </div>

@@ -9,6 +9,8 @@ import { FLASK_PORT } from '../utils/constants'
 import { extractProjectId } from '../utils/projectId'
 import ProjectConfirmModal from '../components/ProjectConfirmModal'
 import ProjectManager from '../components/ProjectManager'
+import MaterialIcon from '../components/MaterialIcon'
+import { ACTION_ICONS } from '../utils/entityStyle'
 
 const API = `http://localhost:${FLASK_PORT}`
 
@@ -155,7 +157,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
       const positionTypes = db_data?.position_types ?? []
 
       // 3. Load SQLite data
-      const [positionUIArr, templates, slotMappings, containerETPref, containerExcludePref, etCollections, ignoredFamiliesPref, tagRulesPref, tagPalettePref, tagSnapshotsPref] = await Promise.all([
+      const [positionUIArr, templates, slotMappings, containerETPref, containerExcludePref, etCollections, ignoredFamiliesPref, tagRulesPref, tagPalettePref, tagSnapshotsPref, favorites] = await Promise.all([
         window.electronAPI.db.getAllPositionUI(projectId),
         window.electronAPI.db.getAllTemplates(projectId),
         window.electronAPI.db.getAllSlotMappings(projectId), // already { templateId: { slotKey: ref } }
@@ -166,6 +168,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
         window.electronAPI.db.getPref(projectId, 'tag_rules'),
         window.electronAPI.db.getPref(projectId, 'tag_palette'),
         window.electronAPI.db.getPref(projectId, 'tag_snapshots'),
+        window.electronAPI.db.getFavorites(),
       ])
 
       // 3b. Tag rules + palette. Seed from bundled defaults the first time a
@@ -248,6 +251,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
         manualContainerETs,
         manualContainerExcludeETs,
         etCollections: etCollections ?? [],
+        favorites: favorites ?? [],
         ignoredPositionFamilies,
         tagRules,
         tagPalette,
@@ -272,7 +276,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
         <span style={{ width: 140, fontWeight: 500 }}>{label}</span>
         {found ? (
           <>
-            <span className="text-success fw-semibold">✓</span>
+            <MaterialIcon name={ACTION_ICONS.complete} size={16} className="text-success" title="Found" />
             <span className="text-muted small">{filename}</span>
             {badge && <Badge bg="secondary">{badge}</Badge>}
           </>

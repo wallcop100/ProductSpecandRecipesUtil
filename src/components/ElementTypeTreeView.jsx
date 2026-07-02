@@ -28,6 +28,7 @@ export default function ElementTypeTreeView() {
   const [filter, setFilter] = useState('')
   const [familyFilter, setFamilyFilter] = useState('')
   const [newWrapperRef, setNewWrapperRef] = useState(null)  // null = not creating
+  const [showAll, setShowAll] = useState(false)
 
   async function createBlankWrapper() {
     const ref = (newWrapperRef || '').trim()
@@ -78,14 +79,41 @@ export default function ElementTypeTreeView() {
       .sort((a, b) => a.ref.localeCompare(b.ref))
   }, [recipes, elementTypes, etMap, containerETRefs])
 
+  // Fast lookup for container data by ref (used when showAll merges lists)
+  const containerMap = useMemo(() => {
+    const m = new Map()
+    for (const c of containers) m.set(c.ref.toLowerCase(), c)
+    return m
+  }, [containers])
+
+  // Full ET list for "show all" mode — decorate with itemCount from containers
+  const allETs = useMemo(() => {
+    return elementTypes
+      .map(et => {
+        const ref = et.ElementTypeRef || et.elementTypeRef
+        if (!ref) return null
+        const c = containerMap.get(ref.toLowerCase())
+        return {
+          ref,
+          name: et.Name || et.name || null,
+          family: familyOf(ref, et),
+          itemCount: c ? c.itemCount : 0,
+          usedIn: c ? c.usedIn : getUsedIn(ref, recipes, null),
+        }
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.ref.localeCompare(b.ref))
+  }, [elementTypes, containerMap, recipes])
+
+  const sourceList = showAll ? allETs : containers
+
   const familyOptions = useMemo(
-    () => [...new Set(containers.map(c => c.family))].sort((a, b) => a.localeCompare(b)),
-    [containers]
+    () => [...new Set(sourceList.map(c => c.family))].sort((a, b) => a.localeCompare(b)),
+    [sourceList]
   )
 
   const q = filter.trim().toLowerCase()
-  // Text filter matches the ref, name, OR any position it's used in
-  const visible = containers.filter(c => {
+  const visible = sourceList.filter(c => {
     if (familyFilter && c.family !== familyFilter) return false
     if (!q) return true
     return c.ref.toLowerCase().includes(q) ||
@@ -101,8 +129,17 @@ export default function ElementTypeTreeView() {
         style={{ flexShrink: 0, position: 'sticky', top: 0, zIndex: 2 }}
       >
         <strong className="small text-uppercase text-muted" style={{ letterSpacing: 0.5 }}>
-          Element Types ({containers.length})
+          Element Types ({showAll ? allETs.length : containers.length})
         </strong>
+        <Button
+          variant={showAll ? 'secondary' : 'outline-secondary'}
+          size="sm"
+          style={{ fontSize: 10, padding: '1px 7px' }}
+          onClick={() => setShowAll(v => !v)}
+          title={showAll ? 'Showing all ETs — click to show only those with internal recipes' : 'Showing only ETs with internal recipes — click to show all'}
+        >
+          {showAll ? 'Wrappers only' : 'Show all'}
+        </Button>
         {newWrapperRef === null ? (
           <Button variant="outline-primary" size="sm" style={{ fontSize: 11 }} onClick={() => setNewWrapperRef('')}>
             + New wrapper
@@ -134,14 +171,15 @@ export default function ElementTypeTreeView() {
 
       {/* List */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem 0.75rem' }}>
-        {containers.length === 0 && (
+        {sourceList.length === 0 && (
           <div className="text-muted text-center mt-4 small">
-            No container element types yet — they appear here once a position uses a DL/LIN
-            element with internal items.
+            {showAll
+              ? 'No element types in this project yet.'
+              : 'No element types with internal recipes yet — they appear here once a position uses a wrapper element.'}
           </div>
         )}
-        {containers.length > 0 && visible.length === 0 && (
-          <div className="text-muted text-center mt-4 small">No element types match “{filter}”.</div>
+        {sourceList.length > 0 && visible.length === 0 && (
+          <div className="text-muted text-center mt-4 small">No element types match "{filter}".</div>
         )}
         {visible.map(c => {
           const active = c.ref === activeETRef
@@ -161,11 +199,15 @@ export default function ElementTypeTreeView() {
               }}
             >
               <div className="d-flex align-items-center gap-2">
-                <MaterialIcon name={ICONS.collection} size={18} style={{ color: accent }} title="Collection" />
+                {c.itemCount > 0 && (
+                  <MaterialIcon name={ICONS.collection} size={18} style={{ color: accent }} title="Has internal recipe" />
+                )}
                 <span style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 600 }}>{c.ref}</span>
                 {c.name && <span className="text-muted" style={{ fontSize: 11 }}>{c.name}</span>}
                 <div className="flex-grow-1" />
-                <ContentsBadge count={c.itemCount} title={`${c.itemCount} internal items`} />
+                {c.itemCount > 0 && (
+                  <ContentsBadge count={c.itemCount} title={`${c.itemCount} internal items`} />
+                )}
                 <span className="badge bg-light text-dark border" style={{ fontSize: 10 }} title={usedInLabel}>
                   used in {c.usedIn.length}
                 </span>
@@ -177,7 +219,7 @@ export default function ElementTypeTreeView() {
                 title={usedInLabel}
               >
                 {c.usedIn.length > 0
-                  ? <>→ {usedInLabel}</>
+                  ? <><MaterialIcon name="subdirectory_arrow_right" size={11} /> {usedInLabel}</>
                   : <span className="fst-italic">not used in any position</span>}
               </div>
             </div>

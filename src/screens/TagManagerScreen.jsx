@@ -6,6 +6,9 @@ import { TAG_COLUMNS, TAG_OPS, ruleMatches } from '../utils/tagRules'
 import TagInput from '../components/TagInput'
 import ProjectIdPill from '../components/ProjectIdPill'
 import TagDriftWizard from '../components/TagDriftWizard'
+import IconButton from '../components/IconButton'
+import MaterialIcon from '../components/MaterialIcon'
+import { ACTION_ICONS } from '../utils/entityStyle'
 
 /**
  * TagManagerScreen — the dedicated tag window.
@@ -31,7 +34,7 @@ export default function TagManagerScreen({ onBack }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }} data-debug-id="TagManagerScreen">
       <div className="d-flex align-items-center gap-2 px-3 py-2 border-bottom bg-white" style={{ flexShrink: 0 }}>
-        <Button variant="outline-secondary" size="sm" onClick={onBack}>← Back</Button>
+        <IconButton variant="outline-secondary" bsSize="sm" icon={ACTION_ICONS.back} title="Back to builder" onClick={onBack} />
         <span className="fw-semibold ms-1">Tags</span>
         {projectNumber && <ProjectIdPill number={projectNumber} configName={configName} size="sm" className="ms-1" />}
         <Nav variant="pills" activeKey={tab} onSelect={setTab} className="ms-3">
@@ -164,7 +167,7 @@ function RulesTab({ tagRules, setTagRules, tagPalette, setTagPalette, positionTy
                 </Badge>
               </td>
               <td className="text-center">
-                <Button variant="link" size="sm" className="text-danger p-0" onClick={() => removeRule(rule.id)}>✕</Button>
+                <Button variant="link" size="sm" className="text-danger p-0" onClick={() => removeRule(rule.id)} title="Remove rule" aria-label="Remove rule"><MaterialIcon name="close" size={15} /></Button>
               </td>
             </tr>
           ))}

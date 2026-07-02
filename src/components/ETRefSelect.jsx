@@ -23,6 +23,7 @@ export default function ETRefSelect({
   autoFocus = true,
   size = 'sm',
   style,
+  filterToken,  // if set, datalist suggestions are restricted to refs containing this token (case-insensitive)
 }) {
   const elementTypes = useStore(s => s.elementTypes)
   const psRows = useStore(s => s.psRows)
@@ -31,10 +32,14 @@ export default function ETRefSelect({
   const listId = useId()
   const [value, setValue] = useState(initial)
 
-  const candidates = useMemo(
-    () => collectAllETRefs(elementTypes, psRows, recipes).sort((a, b) => a.localeCompare(b)),
-    [elementTypes, psRows, recipes]
-  )
+  const candidates = useMemo(() => {
+    let refs = collectAllETRefs(elementTypes, psRows, recipes)
+    if (filterToken) {
+      const up = filterToken.toUpperCase()
+      refs = refs.filter(r => r.toUpperCase().includes(up))
+    }
+    return refs.sort((a, b) => a.localeCompare(b))
+  }, [elementTypes, psRows, recipes, filterToken])
 
   function commit() {
     const trimmed = value.trim()

@@ -4,7 +4,9 @@ import useStore from '../store/useStore'
 import CoverageMatrix from '../components/CoverageMatrix'
 import CollectionEditor from '../components/CollectionEditor'
 import CellDetailPanel from '../components/CellDetailPanel'
+import IconButton from '../components/IconButton'
 import { collectionStatusForPosition } from '../utils/collectionStatus'
+import { ACTION_ICONS } from '../utils/entityStyle'
 
 /**
  * ConnectorsScreen — dedicated screen for managing virtual ElementType Collections
@@ -78,7 +80,7 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
   }
 
   async function handleDelete(collectionId) {
-    if (!window.confirm('Delete this collection? This does not modify any recipes.')) return
+    if (!window.confirm('Delete this connector template? This does not modify any recipes.')) return
     await deleteCollection(collectionId)
     if (selectedCollectionId === collectionId) setSelectedCollectionId(null)
     if (selectedCell?.collectionId === collectionId) setSelectedCell(null)
@@ -103,10 +105,10 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }} data-debug-id="ConnectorsScreen">
       {/* Toolbar */}
       <div className="d-flex align-items-center gap-2 px-3 py-2 border-bottom bg-white" style={{ flexShrink: 0 }}>
-        <Button variant="outline-secondary" size="sm" onClick={onBack}>← Back</Button>
+        <IconButton variant="outline-secondary" bsSize="sm" icon={ACTION_ICONS.back} title="Back to builder" onClick={onBack} />
         <span className="fw-semibold ms-1">Connectors</span>
         <div className="flex-grow-1" />
-        <Button variant="primary" size="sm" onClick={handleNew}>+ New Collection</Button>
+        <Button variant="primary" size="sm" onClick={handleNew}>+ New Template</Button>
       </div>
 
       {/* Body: left panel + matrix */}
@@ -123,9 +125,9 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
           }}
           className="p-2"
         >
-          <div className="small text-muted mb-2 px-1">ElementType Collections</div>
+          <div className="small text-muted mb-2 px-1">Connector Templates</div>
           {etCollections.length === 0 && (
-            <p className="text-muted small px-1">No collections yet.</p>
+            <p className="text-muted small px-1">No templates yet.</p>
           )}
           {etCollections.map(c => {
             const isSelected = c.CollectionId === selectedCollectionId
@@ -215,16 +217,16 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
       {/* Swap modal */}
       <Modal show={!!swapModal} onHide={() => setSwapModal(null)}>
         <Modal.Header closeButton>
-          <Modal.Title>Swap Collection</Modal.Title>
+          <Modal.Title>Swap Template</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <p className="small text-muted mb-3">
-            This will soft-delete all recipe rows belonging to the current collection on
-            <strong> {swapModal?.posRef}</strong> and apply the new collection's ingredients additively.
+            This will soft-delete all recipe rows belonging to the current template on
+            <strong> {swapModal?.posRef}</strong> and apply the new template's ingredients additively.
           </p>
           <Form.Label className="fw-semibold">Replace with:</Form.Label>
           <Form.Select value={swapTargetId} onChange={e => setSwapTargetId(e.target.value)}>
-            <option value="">— select collection —</option>
+            <option value="">— select template —</option>
             {swapCandidates.map(c => (
               <option key={c.CollectionId} value={c.CollectionId}>{c.Name}</option>
             ))}

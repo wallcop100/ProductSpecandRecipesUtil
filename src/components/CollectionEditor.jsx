@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Modal, Button, Form, Badge } from 'react-bootstrap'
 import useStore from '../store/useStore'
+import MaterialIcon from './MaterialIcon'
 
 const SECTION_OPTIONS = ['position', 'dl_internal', 'lin_internal']
 const COMMON_TAGS = ['Local', 'Remote-CC', 'Remote-CV', 'LIN', 'IP']
@@ -17,8 +18,45 @@ function parseTags(raw) {
   try { return JSON.parse(raw) } catch { return [] }
 }
 
+function TagRow({ tags, onRemove, input, onInputChange, onAdd, label, hint, badgeVariant = 'secondary' }) {
+  return (
+    <Form.Group className="mb-3">
+      <Form.Label className="fw-semibold">
+        {label}
+        {hint && <span className="text-muted fw-normal ms-1">{hint}</span>}
+      </Form.Label>
+      <div className="d-flex flex-wrap gap-1 mb-2">
+        {tags.map(t => (
+          <Badge key={t} bg={badgeVariant} className="d-inline-flex align-items-center gap-1"
+            style={{ cursor: 'pointer' }} onClick={() => onRemove(t)} title={`Remove ${t}`}>
+            {t} <MaterialIcon name="close" size={12} />
+          </Badge>
+        ))}
+      </div>
+      <div className="d-flex gap-2">
+        <Form.Control
+          size="sm"
+          value={input}
+          onChange={e => onInputChange(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); onAdd(input) } }}
+          placeholder="Type tag and press Enter…"
+          style={{ maxWidth: 220 }}
+        />
+        <div className="d-flex gap-1 flex-wrap">
+          {COMMON_TAGS.map(t => (
+            <Button key={t} size="sm" variant="outline-secondary" style={{ fontSize: 11 }}
+              onClick={() => onAdd(t)} disabled={tags.includes(t)}>
+              {t}
+            </Button>
+          ))}
+        </div>
+      </div>
+    </Form.Group>
+  )
+}
+
 /**
- * CollectionEditor — create or edit a virtual ElementTypeCollection.
+ * CollectionEditor — create or edit a Connector Template (virtual ElementTypeCollection).
  * Props: show, onHide, collection (null = create mode), initialTags (create-mode seed)
  */
 export default function CollectionEditor({ show, onHide, collection, initialTags = [] }) {
@@ -26,13 +64,14 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
   const updateCollection = useStore(s => s.updateCollection)
   const elementTypes     = useStore(s => s.elementTypes)
 
-  const [name, setName] = useState('')
-  const [tags, setTags] = useState([])
-  const [tagInput, setTagInput] = useState('')
-  const [ingredients, setIngredients] = useState([])
-  const [saving, setSaving] = useState(false)
+  const [name,         setName]         = useState('')
+  const [tags,         setTags]         = useState([])
+  const [tagInput,     setTagInput]     = useState('')
+  const [exclTags,     setExclTags]     = useState([])
+  const [exclInput,    setExclInput]    = useState('')
+  const [ingredients,  setIngredients]  = useState([])
+  const [saving,       setSaving]       = useState(false)
 
-  // Known ET refs for autocomplete
   const knownRefs = elementTypes.map(et => et.ElementTypeRef).filter(Boolean)
 
   useEffect(() => {
@@ -40,39 +79,37 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
       if (collection) {
         setName(collection.Name || '')
         setTags(parseTags(collection.ApplicableTags))
+        setExclTags(parseTags(collection.ExcludedTags))
         setIngredients(parseIngredients(collection.Ingredients).map(i => ({ ...i })))
       } else {
         setName('')
         setTags(initialTags ?? [])
+        setExclTags([])
         setIngredients([{ ElementTypeRef: '', section: 'position', quantity: 1 }])
       }
       setTagInput('')
+      setExclInput('')
       setSaving(false)
     }
   }, [show, collection])
 
-  function addTag(tag) {
+  function addTag(tag, setter, current) {
     const t = tag.trim()
-    if (t && !tags.includes(t)) setTags(prev => [...prev, t])
-    setTagInput('')
+    if (t && !current.includes(t)) setter(prev => [...prev, t])
   }
-
-  function removeTag(tag) {
-    setTags(prev => prev.filter(t => t !== tag))
+  function removeTag(tag, setter) {
+    setter(prev => prev.filter(t => t !== tag))
   }
 
   function addIngredient() {
     setIngredients(prev => [...prev, { ElementTypeRef: '', section: 'position', quantity: 1 }])
   }
-
   function removeIngredient(idx) {
     setIngredients(prev => prev.filter((_, i) => i !== idx))
   }
-
   function updateIngredient(idx, field, value) {
     setIngredients(prev => prev.map((ing, i) => i === idx ? { ...ing, [field]: value } : ing))
   }
-
   function moveIngredient(idx, dir) {
     setIngredients(prev => {
       const next = [...prev]
@@ -95,10 +132,11 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
         await updateCollection(collection.CollectionId, {
           Name: name.trim(),
           ApplicableTags: tags,
+          ExcludedTags: exclTags,
           Ingredients: cleanIngredients,
         })
       } else {
-        await createCollection(name.trim(), cleanIngredients, tags)
+        await createCollection(name.trim(), cleanIngredients, tags, exclTags)
       }
       onHide()
     } finally {
@@ -109,7 +147,7 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
   return (
     <Modal show={show} onHide={onHide} size="lg">
       <Modal.Header closeButton>
-        <Modal.Title>{collection ? 'Edit Collection' : 'New ElementType Collection'}</Modal.Title>
+        <Modal.Title>{collection ? 'Edit Connector Template' : 'New Connector Template'}</Modal.Title>
       </Modal.Header>
       <Modal.Body>
         <Form.Group className="mb-3">
@@ -121,34 +159,27 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
           />
         </Form.Group>
 
-        <Form.Group className="mb-3">
-          <Form.Label className="fw-semibold">Applicable Tags <span className="text-muted fw-normal">(empty = applies to all positions)</span></Form.Label>
-          <div className="d-flex flex-wrap gap-1 mb-2">
-            {tags.map(t => (
-              <Badge key={t} bg="secondary" style={{ cursor: 'pointer' }} onClick={() => removeTag(t)}>
-                {t} ×
-              </Badge>
-            ))}
-          </div>
-          <div className="d-flex gap-2">
-            <Form.Control
-              size="sm"
-              value={tagInput}
-              onChange={e => setTagInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag(tagInput) } }}
-              placeholder="Type tag and press Enter…"
-              style={{ maxWidth: 220 }}
-            />
-            <div className="d-flex gap-1 flex-wrap">
-              {COMMON_TAGS.map(t => (
-                <Button key={t} size="sm" variant="outline-secondary" style={{ fontSize: 11 }}
-                  onClick={() => addTag(t)} disabled={tags.includes(t)}>
-                  {t}
-                </Button>
-              ))}
-            </div>
-          </div>
-        </Form.Group>
+        <TagRow
+          label="Included Tags"
+          hint="(empty = applies to all positions)"
+          tags={tags}
+          onRemove={t => removeTag(t, setTags)}
+          input={tagInput}
+          onInputChange={setTagInput}
+          onAdd={t => { addTag(t, setTags, tags); setTagInput('') }}
+          badgeVariant="secondary"
+        />
+
+        <TagRow
+          label="Excluded Tags"
+          hint="(excluded takes priority — positions with these tags are skipped)"
+          tags={exclTags}
+          onRemove={t => removeTag(t, setExclTags)}
+          input={exclInput}
+          onInputChange={setExclInput}
+          onAdd={t => { addTag(t, setExclTags, exclTags); setExclInput('') }}
+          badgeVariant="danger"
+        />
 
         <Form.Group className="mb-2">
           <Form.Label className="fw-semibold">Ingredients</Form.Label>
@@ -167,10 +198,10 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
                 <tr key={idx}>
                   <td>
                     <div className="d-flex flex-column gap-0" style={{ lineHeight: 1 }}>
-                      <Button variant="link" size="sm" className="p-0 text-muted" style={{ fontSize: 10 }}
-                        onClick={() => moveIngredient(idx, -1)} disabled={idx === 0}>▲</Button>
-                      <Button variant="link" size="sm" className="p-0 text-muted" style={{ fontSize: 10 }}
-                        onClick={() => moveIngredient(idx, 1)} disabled={idx === ingredients.length - 1}>▼</Button>
+                      <Button variant="link" size="sm" className="p-0 text-muted" title="Move up"
+                        onClick={() => moveIngredient(idx, -1)} disabled={idx === 0}><MaterialIcon name="arrow_upward" size={14} /></Button>
+                      <Button variant="link" size="sm" className="p-0 text-muted" title="Move down"
+                        onClick={() => moveIngredient(idx, 1)} disabled={idx === ingredients.length - 1}><MaterialIcon name="arrow_downward" size={14} /></Button>
                     </div>
                   </td>
                   <td>
@@ -198,8 +229,8 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
                     />
                   </td>
                   <td>
-                    <Button variant="link" size="sm" className="text-danger p-0"
-                      onClick={() => removeIngredient(idx)}>✕</Button>
+                    <Button variant="link" size="sm" className="text-danger p-0" title="Remove ingredient"
+                      onClick={() => removeIngredient(idx)}><MaterialIcon name="close" size={14} /></Button>
                   </td>
                 </tr>
               ))}
@@ -215,7 +246,7 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
       <Modal.Footer>
         <Button variant="secondary" onClick={onHide}>Cancel</Button>
         <Button variant="primary" onClick={handleSave} disabled={saving || !name.trim()}>
-          {saving ? 'Saving…' : collection ? 'Save changes' : 'Create collection'}
+          {saving ? 'Saving…' : collection ? 'Save changes' : 'Create template'}
         </Button>
       </Modal.Footer>
     </Modal>

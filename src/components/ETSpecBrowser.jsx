@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from 'react'
 import { ButtonGroup, Button } from 'react-bootstrap'
 import useStore from '../store/useStore'
+import MaterialIcon from './MaterialIcon'
 import { familyOf } from '../utils/etRef'
+import { ACTION_ICONS } from '../utils/entityStyle'
 
 const STATUS_COLOR = {
   complete: '#22c55e',
@@ -39,6 +41,14 @@ export default function ETSpecBrowser({
   const elementTypes = useStore(s => s.elementTypes)
   const psRows      = useStore(s => s.psRows)
   const recipes     = useStore(s => s.recipes)
+  const psChanges   = useStore(s => s.psChanges)
+
+  // ET refs with an unsynced product-spec change (cleared on export)
+  const dirtyRefs = useMemo(() => {
+    const s = new Set()
+    for (const c of psChanges) if (c.elementTypeRef) s.add(c.elementTypeRef.toLowerCase())
+    return s
+  }, [psChanges])
 
   const [search, setSearch]               = useState('')
   const [groupFilter, setGroupFilter]     = useState('')
@@ -200,9 +210,10 @@ export default function ETSpecBrowser({
               <button
                 type="button"
                 className="btn btn-sm p-0 position-absolute"
-                style={{ right: 6, top: '50%', transform: 'translateY(-50%)', fontSize: 14, lineHeight: 1, color: '#888' }}
+                style={{ right: 6, top: '50%', transform: 'translateY(-50%)', lineHeight: 1, color: '#888' }}
                 onClick={() => setSearch('')}
-              >×</button>
+                title="Clear search" aria-label="Clear search"
+              ><MaterialIcon name="close" size={15} /></button>
             )}
           </div>
           <select
@@ -260,7 +271,7 @@ export default function ETSpecBrowser({
               style={{ background: '#fff8e1', cursor: 'pointer', userSelect: 'none' }}
               onClick={() => setMissingOpen(v => !v)}
             >
-              <span style={{ width: 10, fontSize: 10 }}>{missingOpen ? '▾' : '▸'}</span>
+              <MaterialIcon name={missingOpen ? ACTION_ICONS.expand : ACTION_ICONS.collapse} size={13} style={{ width: 13 }} />
               <span style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700, color: '#92400e' }}>
                 Missing spec
               </span>
@@ -296,12 +307,13 @@ export default function ETSpecBrowser({
               }}
               onClick={() => toggleGroup(group)}
             >
-              <span style={{ width: 10 }}>{isOpen(group) ? '▾' : '▸'}</span>
+              <MaterialIcon name={isOpen(group) ? ACTION_ICONS.expand : ACTION_ICONS.collapse} size={13} style={{ width: 13 }} />
               <span>{group}</span>
               <span style={{ fontWeight: 400, marginLeft: 2 }}>({refs.length})</span>
             </div>
             {isOpen(group) && refs.map(ref => {
               const psRow = psRowMap.get(ref.toLowerCase())
+              const isDirty = dirtyRefs.has(ref.toLowerCase())
               return (
                 <BrowserRow
                   key={ref}
@@ -310,6 +322,8 @@ export default function ETSpecBrowser({
                   productCode={(psRow?.ProductCode || psRow?.productCode || '').trim()}
                   isSelected={selectedRef?.toLowerCase() === ref.toLowerCase()}
                   isChecked={bulkSelected.has(ref.toLowerCase())}
+                  isDirty={isDirty}
+                  isNew={!!psRow && psRow._row_num == null && isDirty}
                   onSelect={() => onSelect(ref)}
                   onCheck={() => onBulkToggle(ref.toLowerCase())}
                 />
@@ -326,14 +340,14 @@ export default function ETSpecBrowser({
   )
 }
 
-function BrowserRow({ ref_, status, productCode, isSelected, isChecked, onSelect, onCheck, rowBg }) {
+function BrowserRow({ ref_, status, productCode, isSelected, isChecked, isDirty, isNew, onSelect, onCheck, rowBg }) {
   return (
     <div
       className="d-flex align-items-center gap-1 px-2"
       style={{
         cursor: 'pointer',
-        background: isSelected ? '#e8f0fe' : rowBg,
-        borderLeft: isSelected ? '3px solid #4285f4' : '3px solid transparent',
+        background: isSelected ? '#e8f0fe' : isDirty ? '#fffdf5' : rowBg,
+        borderLeft: isSelected ? '3px solid #4285f4' : isDirty ? '3px solid #f0ad4e' : '3px solid transparent',
         minHeight: 28,
         fontSize: 11,
       }}
@@ -355,6 +369,10 @@ function BrowserRow({ ref_, status, productCode, isSelected, isChecked, onSelect
         title={status}
       />
       <span style={{ flex: 1, fontWeight: 500, wordBreak: 'break-all' }}>{ref_}</span>
+      {isNew && (
+        <span className="badge" style={{ background: '#d1e7dd', color: '#0a3622', border: '1px solid #a3cfbb', fontSize: 9, flexShrink: 0 }}
+          title="New — added this session, not yet exported">new</span>
+      )}
       {productCode && (
         <span style={{ fontSize: 10, color: '#888', flexShrink: 0, maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {productCode}

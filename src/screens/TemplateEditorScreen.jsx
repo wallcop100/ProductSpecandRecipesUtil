@@ -6,6 +6,9 @@ import { v4 as uuidv4 } from 'uuid'
 import useStore from '../store/useStore'
 import { GLOBAL_TEMPLATE_IDS } from '../utils/constants'
 import TagInput from '../components/TagInput'
+import IconButton from '../components/IconButton'
+import MaterialIcon from '../components/MaterialIcon'
+import { ACTION_ICONS } from '../utils/entityStyle'
 
 const SECTION_OPTIONS = ['position', 'dl_internal', 'lin_internal']
 
@@ -230,7 +233,7 @@ export default function TemplateEditorScreen({ onBack }) {
         }}
       >
         <div className="p-3 border-bottom d-flex align-items-center justify-content-between">
-          <Button variant="link" size="sm" onClick={onBack} className="p-0">← Back</Button>
+          <IconButton variant="link" bsSize="sm" className="p-0" icon={ACTION_ICONS.back} title="Back to builder" onClick={onBack} />
           <span className="fw-semibold small">Templates</span>
         </div>
 
@@ -375,7 +378,7 @@ export default function TemplateEditorScreen({ onBack }) {
                 >
                   Delete
                 </Button>
-                {saveSuccess && <span className="text-success align-self-center small">✓ Saved</span>}
+                {saveSuccess && <span className="text-success align-self-center small d-inline-flex align-items-center gap-1"><MaterialIcon name={ACTION_ICONS.complete} size={14} /> Saved</span>}
                 {saveError && <span className="text-danger align-self-center small">{saveError}</span>}
               </div>
             )}
@@ -436,7 +439,7 @@ function IngredientRow({ ing, readOnly, onChange, onRemove }) {
       {cell('isInteger', 'flag')}
       {!readOnly && (
         <td className="text-center">
-          <Button variant="link" size="sm" className="text-danger p-0" onClick={onRemove}>×</Button>
+          <Button variant="link" size="sm" className="text-danger p-0" onClick={onRemove} title="Remove ingredient" aria-label="Remove ingredient"><MaterialIcon name="close" size={15} /></Button>
         </td>
       )}
     </tr>

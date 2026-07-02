@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { Spinner, Button, ProgressBar, Modal } from 'react-bootstrap'
 import DOMPurify from 'dompurify'
+import MaterialIcon from './MaterialIcon'
+import { ACTION_ICONS } from '../utils/entityStyle'
 
 const barStyle = (bg, border) => ({
   position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1040,
@@ -34,7 +36,7 @@ export default function UpdateBanner({ updateStatus, onDismiss }) {
   if (status === 'none') {
     return (
       <div style={barStyle('#e7f1ff', '#b6d4fe')}>
-        <span className="small text-primary">✓ You're on the latest version{version ? ` (v${version})` : ''}.</span>
+        <span className="small text-primary d-inline-flex align-items-center gap-1"><MaterialIcon name={ACTION_ICONS.complete} size={14} /> You're on the latest version{version ? ` (v${version})` : ''}.</span>
         <Button variant="link" size="sm" className="ms-auto p-0" onClick={onDismiss}>Dismiss</Button>
       </div>
     )

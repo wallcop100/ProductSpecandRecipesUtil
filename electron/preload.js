@@ -68,6 +68,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('db-get-all-collections', { projectId }),
     deleteCollection: (collectionId) =>
       ipcRenderer.invoke('db-delete-collection', { collectionId }),
+
+    // Favourites (cross-project user library)
+    upsertFavorite: (favorite) => ipcRenderer.invoke('db-upsert-favorite', { favorite }),
+    getFavorites: () => ipcRenderer.invoke('db-get-favorites'),
+    deleteFavorite: (id) => ipcRenderer.invoke('db-delete-favorite', { id }),
   },
 
   // App

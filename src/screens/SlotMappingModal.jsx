@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react'
 import { Modal, Button, Form, Badge, Alert, ListGroup } from 'react-bootstrap'
 import useStore from '../store/useStore'
+import MaterialIcon from '../components/MaterialIcon'
+import { ACTION_ICONS } from '../utils/entityStyle'
 
 /**
  * SlotMappingModal
@@ -117,7 +119,7 @@ export default function SlotMappingModal({ show, template, posRef, onApply, onCa
                   {ing.section}
                 </Badge>
                 {isResolved
-                  ? <Badge bg="success">✓ {selected}</Badge>
+                  ? <Badge bg="success" className="d-inline-flex align-items-center gap-1"><MaterialIcon name={ACTION_ICONS.complete} size={12} /> {selected}</Badge>
                   : <Badge bg="danger">Unresolved</Badge>
                 }
               </div>

@@ -284,42 +284,42 @@ describe('DIM_QTY_MULT_NOT_ONE', () => {
 // ---------------------------------------------------------------------------
 // MISSING_CLIPS_DIM_QTY
 // ---------------------------------------------------------------------------
-describe('MISSING_CLIPS_QTY', () => {
-  test('warns when LIN position has CLIP row with no Quantity', () => {
+describe('MISSING_CLIPS_DIM_QTY', () => {
+  test('warns when LIN position has CLIP row with no Dim_QuantityMultiplier', () => {
     const rsRows = [
       makeRsRow({
         positionTypeRef: 'PT-LIN-01',
         contextType: 'PositionType',
         contextRef: 'PT-LIN-01',
         elementTypeRef: 'ET-CLIP-ROUND-01',
-        Quantity: null,
-        quantity: null,
+        Dim_QuantityMultiplier: null,
+        dimQtyMultiplier: null,
         isDesign: 'Y',
       }),
     ]
     const ui = { 'PT-LIN-01': { tags: ['LIN', 'Local'] } }
     const issues = runValidation(dbData, [], rsRows, ui)
 
-    const found = issues.filter(i => i.rule === 'MISSING_CLIPS_QTY')
+    const found = issues.filter(i => i.rule === 'MISSING_CLIPS_DIM_QTY')
     expect(found).toHaveLength(1)
     expect(found[0].severity).toBe('warning')
   })
 
-  test('no warning when LIN CLIP row has Quantity set', () => {
+  test('no warning when LIN CLIP row has Dim_QuantityMultiplier set', () => {
     const rsRows = [
       makeRsRow({
         positionTypeRef: 'PT-LIN-01',
         contextType: 'PositionType',
         contextRef: 'PT-LIN-01',
         elementTypeRef: 'ET-CLIP-ROUND-01',
-        Quantity: 10,
+        Dim_QuantityMultiplier: 8,
         isDesign: 'Y',
       }),
     ]
     const ui = { 'PT-LIN-01': { tags: ['LIN', 'Local'] } }
     const issues = runValidation(dbData, [], rsRows, ui)
 
-    const found = issues.filter(i => i.rule === 'MISSING_CLIPS_QTY')
+    const found = issues.filter(i => i.rule === 'MISSING_CLIPS_DIM_QTY')
     expect(found).toHaveLength(0)
   })
 })

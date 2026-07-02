@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react'
 import { Modal, Button, ProgressBar, Badge } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import TagBadge from './TagBadge'
+import MaterialIcon from './MaterialIcon'
+import { ACTION_ICONS } from '../utils/entityStyle'
 
 /**
  * TagDriftWizard — steps through positions whose rule-derived tags changed since
@@ -56,13 +58,13 @@ export default function TagDriftWizard({ show, onHide, onOpenPosition }) {
       <Modal.Body>
         {queue.length === 0 ? (
           <div className="text-center py-4">
-            <div style={{ fontSize: 36 }}>✓</div>
+            <MaterialIcon name={ACTION_ICONS.complete} size={36} style={{ color: '#198754' }} />
             <div className="fw-semibold mt-2">No tag changes to review.</div>
             <div className="text-muted small mt-1">Rule tags match the accepted baseline for every position.</div>
           </div>
         ) : done ? (
           <div className="text-center py-4">
-            <div style={{ fontSize: 36 }}>✓</div>
+            <MaterialIcon name={ACTION_ICONS.complete} size={36} style={{ color: '#198754' }} />
             <div className="fw-semibold mt-2">Review complete</div>
           </div>
         ) : (

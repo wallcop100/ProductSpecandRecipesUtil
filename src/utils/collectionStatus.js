@@ -40,9 +40,15 @@ export function collectionStatusForPosition(posRef, tags, recipe, collections) {
     .map(r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase())
 
   return (collections || []).map(collection => {
-    const collTags = parseTags(collection.ApplicableTags)
+    const collTags     = parseTags(collection.ApplicableTags)
+    const excludedTags = parseTags(collection.ExcludedTags)
 
-    // Tag gate: if the collection declares applicable tags, at least one must match
+    // Excluded takes priority: if ANY position tag matches ExcludedTags, skip.
+    if (excludedTags.length > 0 && excludedTags.some(t => posTags.includes(t))) {
+      return { collection, status: 'na', missing: [], extra: [] }
+    }
+
+    // Included tag gate: if the collection declares included tags, at least one must match
     const applicable = collTags.length === 0 || collTags.some(t => posTags.includes(t))
     if (!applicable) {
       return { collection, status: 'na', missing: [], extra: [] }
