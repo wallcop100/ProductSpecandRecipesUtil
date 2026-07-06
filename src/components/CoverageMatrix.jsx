@@ -135,7 +135,7 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
       <table className="table table-sm table-bordered" style={{ fontSize: 12, minWidth: 500 }}>
         <thead className="table-light">
           <tr>
-            <th style={{ minWidth: 200 }}>Position type</th>
+            <th style={{ minWidth: 200 }}>PositionType</th>
             <th style={{ minWidth: 80 }}>Tags</th>
             {collections.map(c => {
               const selected = selectedCell?.collectionId === c.CollectionId
@@ -174,7 +174,7 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
                 <td style={{ fontFamily: 'monospace', fontSize: 11 }}>
                   <span
                     onClick={() => onOpenPosition?.(posRef)}
-                    title="Open this position type in the builder"
+                    title="Open this PositionType in the builder"
                     className="d-inline-flex align-items-center gap-1"
                     style={{ color: '#0d6efd', cursor: 'pointer' }}
                   >

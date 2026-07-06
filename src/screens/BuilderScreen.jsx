@@ -60,6 +60,8 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
 
   const setRootView = useStore(s => s.setRootView)
   const addRecipeRow = useStore(s => s.addRecipeRow)
+  const updateRecipeRow = useStore(s => s.updateRecipeRow)
+  const ensurePSRow = useStore(s => s.ensurePSRow)
   const resolveSlot = useStore(s => s.resolveSlot)
   const reorderIngredients = useStore(s => s.reorderIngredients)
   const moveIngredientAcrossSections = useStore(s => s.moveIngredientAcrossSections)
@@ -82,6 +84,7 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
   const [addAnywhereState, setAddAnywhereState] = useState(null) // { etRef, sectionKey, excludePosRef, startPosRef }
   const [newETTarget, setNewETTarget] = useState(null)        // { posRef, sectionKey }
   const [justAdded, setJustAdded] = useState(null)           // { etRef, posRef, sectionKey }
+  const [reviewAddCtx, setReviewAddCtx] = useState(null)     // { unit, filters } for review→add priming
   const [showFixer, setShowFixer] = useState(false)
   const [rightTab, setRightTab] = useState('palette')
   const [showDeleted, setShowDeleted] = useState(false)
@@ -141,10 +144,49 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
 
   function handlePickET(etRef) {
     if (!addRowTarget) return
+    if (addRowTarget.mode === 'replace') { doReplace(addRowTarget, etRef); setAddRowTarget(null); return }
+    if (addRowTarget.mode === 'reviewAdd') { setAddRowTarget(null); openReviewAddAnywhere(etRef); return }
     // Streamlined existing-pick: add the row and exit pick mode. Adding an
     // EXISTING ET to several positions is the "Add to multiple" toggle's job.
     addRecipeRow(addRowTarget.posRef, addRowTarget.sectionKey, { elementTypeRef: etRef, ElementTypeRef: etRef })
     setAddRowTarget(null)
+  }
+
+  // Replace a row's ElementType in place (Existing/New fork). keepFields
+  // preserves quantity/flags; otherwise they reset to defaults for the new ET.
+  function handleReplace(posRef, rowId, { mode, keepFields, resumeReview } = {}) {
+    if (mode === 'new') {
+      setNewETTarget({ posRef, sectionKey: null, mode: 'replace', rowId, keepFields, resumeReview })
+    } else {
+      setAddRowTarget({ posRef, sectionKey: null, mode: 'replace', rowId, keepFields, resumeReview })
+      setRightOpen(true)
+      setRightTab('palette')
+    }
+  }
+
+  // From the review modal: close it, run the replace pick, reopen when done.
+  function handleReplaceFromReview(posRef, rowId, opts) {
+    setShowReview(false)
+    handleReplace(posRef, rowId, { ...opts, resumeReview: true })
+  }
+
+  function doReplace(target, etRef) {
+    const { posRef, rowId, keepFields } = target
+    const patch = { elementTypeRef: etRef, ElementTypeRef: etRef }
+    if (!keepFields) {
+      Object.assign(patch, {
+        quantity: 1, Quantity: 1,
+        packQuantity: null, PackQuantity: null,
+        isDesign: null, IsDesign: null,
+        isContractItem: null, IsContractItem: null,
+        isTRItem: null, IsTRItem: null,
+        dimQtyMultiplier: null, Dim_QuantityMultiplier: null,
+        isInteger: null, IsInteger: null,
+      })
+    }
+    updateRecipeRow(posRef, rowId, patch)
+    ensurePSRow(etRef)
+    if (target.resumeReview) setShowReview(true)
   }
 
   function handleAddToMultiple() {
@@ -156,14 +198,44 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
 
   function handlePickETMulti(etRef) {
     if (!addRowTarget) return
+    if (addRowTarget.mode === 'replace') { doReplace(addRowTarget, etRef); setAddRowTarget(null); return }
+    if (addRowTarget.mode === 'reviewAdd') { setAddRowTarget(null); openReviewAddAnywhere(etRef); return }
     // Multi-add: don't insert yet — open step-through for all positions starting at the current one
     setAddAnywhereState({ etRef, sectionKey: addRowTarget.sectionKey, excludePosRef: null, startPosRef: addRowTarget.posRef })
     setAddRowTarget(null)
   }
 
   function handleCancelPick() {
+    const backToReview = addRowTarget?.mode === 'reviewAdd' || addRowTarget?.resumeReview
     setAddRowTarget(null)
     setJustAdded(null)
+    if (backToReview) { setReviewAddCtx(null); setShowReview(true) }
+  }
+
+  // Review → Add Entity: close the review, run the Existing/New pick, then open
+  // the step-through primed with the review's own filter, and reopen the review
+  // when done.
+  function handleReviewAddEntity({ mode, unit, filters } = {}) {
+    setShowReview(false)
+    const ctx = { unit, filters }
+    setReviewAddCtx(ctx)
+    if (mode === 'new') {
+      setNewETTarget({ posRef: null, sectionKey: 'position', mode: 'reviewAdd' })
+    } else {
+      setAddRowTarget({ posRef: null, sectionKey: 'position', mode: 'reviewAdd' })
+      setRightOpen(true)
+      setRightTab('palette')
+    }
+  }
+
+  function openReviewAddAnywhere(etRef) {
+    setAddAnywhereState({
+      etRef, sectionKey: 'position',
+      initialFilters: reviewAddCtx?.filters,
+      initialUnit: reviewAddCtx?.unit,
+      resumeReview: true,
+    })
+    setReviewAddCtx(null)
   }
 
   function handleNewET(posRef, sectionKey) {
@@ -172,6 +244,8 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
 
   function handleNewETDone(etRef) {
     if (!newETTarget) return
+    if (newETTarget.mode === 'replace') { doReplace(newETTarget, etRef); setNewETTarget(null); return }
+    if (newETTarget.mode === 'reviewAdd') { setNewETTarget(null); openReviewAddAnywhere(etRef); return }
     const { posRef, sectionKey } = newETTarget
     setNewETTarget(null)
     addRecipeRow(posRef, sectionKey, { elementTypeRef: etRef, ElementTypeRef: etRef })
@@ -383,7 +457,7 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
             variant={rootView === 'positions' ? 'primary' : 'outline-primary'}
             onClick={() => setRootView('positions')}
             className="d-inline-flex align-items-center gap-1"
-            title="Browse by position type"
+            title="Browse by PositionType"
           >
             <MaterialIcon name={ICONS.position} size={15} /> PositionTypes
           </Button>
@@ -391,7 +465,7 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
             variant={rootView === 'elements' ? 'primary' : 'outline-primary'}
             onClick={() => setRootView('elements')}
             className="d-inline-flex align-items-center gap-1"
-            title="Browse by element type"
+            title="Browse by ElementType"
           >
             <MaterialIcon name={ICONS.element} size={15} /> ElementTypes
           </Button>
@@ -459,13 +533,8 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
             title={hasRecipeRows ? 'Save the active position as a template' : 'Select a position with rows to save as a template'}
           />
         )}
-        <IconButton
-          variant="outline-secondary"
-          bsSize="sm"
-          icon="backup_table"
-          onClick={handleSnapshot}
-          title="Snapshot the project files into a dated backup folder"
-        />
+        {/* Snapshot is now offered as part of the export flow (see the
+            snapshot-before-export prompt), so no standalone toolbar button. */}
         {/* Catalogue export appears only when there are pending ElementType
             catalogue changes to write to the shared DesignDB file. */}
         {dbWriteEnabled && dbChanges.length > 0 && (
@@ -645,6 +714,7 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
                 onOpenProductSpec={onOpenProductSpec}
                 onAddRow={handleAddRow}
                 onNewET={handleNewET}
+                onReplace={handleReplace}
                 disableSorting
               />
             </div>
@@ -657,6 +727,7 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
               showDeleted={showDeleted}
               onAddRow={handleAddRow}
               onNewET={handleNewET}
+              onReplace={handleReplace}
             />
           )}
         </div>
@@ -684,7 +755,7 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
               style={{ borderBottom: 'none' }}
             >
               <Nav.Item>
-                <Nav.Link eventKey="palette" className="py-1 px-2 small">Elements</Nav.Link>
+                <Nav.Link eventKey="palette" className="py-1 px-2 small">ElementTypes</Nav.Link>
               </Nav.Item>
               <Nav.Item>
                 <Nav.Link eventKey="templates" className="py-1 px-2 small">Templates</Nav.Link>
@@ -754,6 +825,8 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
         show={showReview}
         onHide={() => setShowReview(false)}
         onOpenProductSpec={onOpenProductSpec}
+        onAddEntity={handleReviewAddEntity}
+        onReplaceInReview={handleReplaceFromReview}
       />
 
       <ValidationFixModal
@@ -772,16 +845,26 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
 
       <AddAnywhereModal
         show={!!addAnywhereState}
-        onHide={() => setAddAnywhereState(null)}
+        onHide={() => {
+          const resume = addAnywhereState?.resumeReview
+          setAddAnywhereState(null)
+          if (resume) setShowReview(true)   // continue the review where it left off
+        }}
         etRef={addAnywhereState?.etRef}
         sectionKey={addAnywhereState?.sectionKey}
         excludePosRef={addAnywhereState?.excludePosRef}
         startPosRef={addAnywhereState?.startPosRef}
+        initialFilters={addAnywhereState?.initialFilters}
+        initialUnit={addAnywhereState?.initialUnit}
       />
 
       <NewETWizardModal
         show={!!newETTarget}
-        onHide={() => setNewETTarget(null)}
+        onHide={() => {
+          const backToReview = newETTarget?.mode === 'reviewAdd' || newETTarget?.resumeReview
+          setNewETTarget(null)
+          if (backToReview) { setReviewAddCtx(null); setShowReview(true) }
+        }}
         posRef={newETTarget?.posRef}
         sectionKey={newETTarget?.sectionKey}
         onDone={handleNewETDone}

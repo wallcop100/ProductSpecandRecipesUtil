@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import os
 import sys
+import tempfile
 
 from flask import Flask, jsonify, request
 
@@ -334,10 +335,34 @@ def _apply_row_level_patch(filepath, sheet_name, field_to_excel, changes, key_co
     # attempt; the conflict path above returns without touching the file.
     backup_path = backup_file(filepath)
 
+    # Atomic save: write to a temp file in the same directory, then replace the
+    # original in one move. If openpyxl fails to serialise the workbook (e.g. it
+    # can't round-trip some embedded content), the original file is left
+    # completely untouched instead of being half-overwritten and corrupted.
+    tmp_fd, tmp_path = tempfile.mkstemp(
+        suffix='.xlsx', dir=os.path.dirname(filepath) or '.'
+    )
+    os.close(tmp_fd)
     try:
-        wb.save(filepath)
+        wb.save(tmp_path)
     except Exception as exc:
-        return {'success': False, 'error': f'Could not save workbook: {exc}'}
+        try:
+            os.remove(tmp_path)
+        except OSError:
+            pass
+        return {
+            'success': False,
+            'error': f'Could not save workbook (your file was left untouched): {exc}',
+        }
+
+    try:
+        os.replace(tmp_path, filepath)
+    except OSError as exc:
+        try:
+            os.remove(tmp_path)
+        except OSError:
+            pass
+        return {'success': False, 'error': f'Could not replace workbook: {exc}'}
 
     return {'success': True, 'backup_path': backup_path, 'assignments': assignments}
 

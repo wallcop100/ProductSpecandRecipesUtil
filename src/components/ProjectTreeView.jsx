@@ -1,9 +1,9 @@
 import React, { useMemo, useState, useEffect } from 'react'
 import { Button } from 'react-bootstrap'
 import useStore, { getRecipeForPosition } from '../store/useStore'
-import RecipeSection from './RecipeSection'
 import TagBadge from './TagBadge'
 import FilterBar from './FilterBar'
+import PositionRecipeEditor from './PositionRecipeEditor'
 import MaterialIcon from './MaterialIcon'
 import IconButton from './IconButton'
 import PositionValidationBadge from './PositionValidationBadge'
@@ -25,7 +25,7 @@ import { positionFamilyOf } from '../utils/positionFamily'
  * The left index and breadcrumbs switch between positions; the back link
  * returns to the overview.
  */
-export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, showDeleted, onAddRow, onNewET }) {
+export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, showDeleted, onAddRow, onNewET, onReplace }) {
   const positionTypes = useStore(s => s.positionTypes)
   const recipes = useStore(s => s.recipes)
   const positionUI = useStore(s => s.positionUI)
@@ -42,7 +42,26 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
   const [showEmptyWizard, setShowEmptyWizard] = useState(false)
   const [showDriftWizard, setShowDriftWizard] = useState(false)
   const [showIgnored, setShowIgnored] = useState(false)
+  const [collapsedFamilies, setCollapsedFamilies] = useState(() => new Set())
   const driftCount = Object.keys(tagDrift || {}).length
+
+  const NO_FAMILY = '(no family)'
+  function groupByFamily(pts) {
+    const map = new Map()
+    for (const pt of pts) {
+      const fam = positionFamilyOf(pt) || NO_FAMILY
+      if (!map.has(fam)) map.set(fam, [])
+      map.get(fam).push(pt)
+    }
+    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b))
+  }
+  function toggleFamilyCollapse(fam) {
+    setCollapsedFamilies(prev => {
+      const next = new Set(prev)
+      if (next.has(fam)) next.delete(fam); else next.add(fam)
+      return next
+    })
+  }
 
   // Tags actually present across positions (alphabetical)
   const availableTags = useMemo(() => {
@@ -112,6 +131,7 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
         onBack={() => setActivePosition(null)}
         onAddRow={onAddRow}
         onNewET={onNewET}
+        onReplace={onReplace}
       />
     )
   }
@@ -167,35 +187,22 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
             Ignore
           </span>
         )}
-        {family && (
-          <span
-            className="badge"
-            style={{
-              background: familyIgnored ? '#fff3cd' : '#eef1f5',
-              color: familyIgnored ? '#856404' : '#5a6472',
-              border: `1px solid ${familyIgnored ? '#ffc107' : '#d4dae2'}`,
-              fontSize: 10, cursor: 'pointer',
-            }}
-            title={familyIgnored
-              ? `Family “${family}” is ignored — click to un-ignore the whole family`
-              : `Click to ignore the whole “${family}” family`}
-            onClick={e => { e.stopPropagation(); toggleIgnorePositionFamily(family) }}
-          >
-            {familyIgnored ? `family ignored: ${family}` : `⌥ ${family}`}
+        {familyIgnored && (
+          <span className="badge" style={{ background: '#fff3cd', color: '#856404', fontSize: 10, border: '1px solid #ffc107' }}
+            title={`Family “${family}” is ignored`}>
+            family ignored
           </span>
         )}
         {tags.slice(0, 4).map(tag => (
           <TagBadge key={tag} tag={tag} />
         ))}
         {drifted && (
-          <span
-            className="badge"
-            style={{ background: '#fff3cd', color: '#856404', fontSize: 10, border: '1px solid #ffc107', cursor: 'pointer' }}
+          <MaterialIcon
+            name="warning" size={14}
+            style={{ color: '#e0a800', cursor: 'pointer', flexShrink: 0 }}
             title="Rule-derived tags changed since last accepted — click to review"
             onClick={e => { e.stopPropagation(); setShowDriftWizard(true) }}
-          >
-            ⚠ tags changed
-          </span>
+          />
         )}
         <CollectionBadge posRef={ref} />
         <div className="flex-grow-1" />
@@ -224,7 +231,7 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
         style={{ flexShrink: 0, position: 'sticky', top: 0, zIndex: 2 }}
       >
         <strong className="small text-uppercase text-muted" style={{ letterSpacing: 0.5 }}>
-          Position Types
+          PositionTypes
         </strong>
         <Button
           variant={emptyCount > 0 ? 'outline-warning' : 'outline-secondary'}
@@ -273,14 +280,46 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem 0.75rem' }}>
         {activeVisible.length === 0 && ignoredVisible.length === 0 && (
-          <div className="text-muted text-center mt-4 small">No positions match the filter.</div>
+          <div className="text-muted text-center mt-4 small">No PositionTypes match the filter.</div>
         )}
         {activeVisible.length === 0 && ignoredVisible.length > 0 && (
-          <div className="text-muted text-center mt-4 small">All matching positions are ignored.</div>
+          <div className="text-muted text-center mt-4 small">All matching PositionTypes are ignored.</div>
         )}
-        {activeVisible.map(renderPositionRow)}
 
-        {/* Ignored positions — hidden by default to cut noise, but reachable */}
+        {/* Active PositionTypes, grouped into collapsible family sections. */}
+        {groupByFamily(activeVisible).map(([fam, pts]) => {
+          const realFam = fam !== NO_FAMILY
+          const collapsed = collapsedFamilies.has(fam)
+          return (
+            <div key={fam} className="mb-2">
+              <div
+                className="d-flex align-items-center gap-2 px-2 py-1 mb-1"
+                style={{ borderBottom: '2px solid #e5e7eb', cursor: 'pointer', userSelect: 'none' }}
+                onClick={() => toggleFamilyCollapse(fam)}
+              >
+                <MaterialIcon name={collapsed ? ACTION_ICONS.collapse : ACTION_ICONS.expand} size={16} style={{ color: '#888' }} />
+                <span className="fw-bold text-uppercase" style={{ fontSize: 11, letterSpacing: 0.5 }}>{fam}</span>
+                <span className="text-muted" style={{ fontSize: 11 }}>({pts.length})</span>
+                <div className="flex-grow-1" />
+                {realFam && (
+                  <Button
+                    variant="link" size="sm"
+                    className="p-0 d-inline-flex align-items-center gap-1 text-warning"
+                    style={{ fontSize: 11, textDecoration: 'none' }}
+                    onClick={e => { e.stopPropagation(); toggleIgnorePositionFamily(fam) }}
+                    title={`Ignore every PositionType in the “${fam}” family — they move to the Ignored section below`}
+                  >
+                    <MaterialIcon name="do_not_disturb_on" size={14} /> Ignore family
+                  </Button>
+                )}
+              </div>
+              {!collapsed && pts.map(renderPositionRow)}
+            </div>
+          )
+        })}
+
+        {/* Ignored PositionTypes — hidden by default, grouped so a whole
+            ignored family can be un-ignored from its header. */}
         {ignoredVisible.length > 0 && (
           <div className="mt-3">
             <button
@@ -291,7 +330,31 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
             </button>
             {showIgnored && (
               <div className="mt-2">
-                {ignoredVisible.map(renderPositionRow)}
+                {groupByFamily(ignoredVisible).map(([fam, pts]) => {
+                  const familyIgnored = fam !== NO_FAMILY && ignoredFamilySet.has(fam)
+                  return (
+                    <div key={fam} className="mb-2">
+                      <div className="d-flex align-items-center gap-2 px-2 py-1 mb-1"
+                        style={{ borderBottom: '1px solid #eee' }}>
+                        <span className="fw-bold text-uppercase text-muted" style={{ fontSize: 11, letterSpacing: 0.5 }}>{fam}</span>
+                        <span className="text-muted" style={{ fontSize: 11 }}>({pts.length})</span>
+                        <div className="flex-grow-1" />
+                        {familyIgnored && (
+                          <Button
+                            variant="link" size="sm"
+                            className="p-0 d-inline-flex align-items-center gap-1 text-success"
+                            style={{ fontSize: 11, textDecoration: 'none' }}
+                            onClick={() => toggleIgnorePositionFamily(fam)}
+                            title={`Un-ignore the whole “${fam}” family`}
+                          >
+                            <MaterialIcon name="do_not_disturb_off" size={14} /> Un-ignore family
+                          </Button>
+                        )}
+                      </div>
+                      {pts.map(renderPositionRow)}
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>
@@ -305,148 +368,21 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
 // FocusedPositionEditor — full-surface editor for a single position
 // ---------------------------------------------------------------------------
 
-function FocusedPositionEditor({ pt, tags, issues, count, showDeleted, onOpenProductSpec, onOpenConnectors, onBack, onAddRow, onNewET }) {
-  const recipes = useStore(s => s.recipes)
-  const ref = pt.PositionTypeRef
-  const name = pt.Name || pt.name || ''
-
-  // Copy / paste
-  const selectedRowIds = useStore(s => s.selectedRowIds)
-  const clearRowSelection = useStore(s => s.clearRowSelection)
-  const copySelectedRows = useStore(s => s.copySelectedRows)
-  const copyPositionRecipe = useStore(s => s.copyPositionRecipe)
-  const requestPaste = useStore(s => s.requestPaste)
-  const rowClipboard = useStore(s => s.rowClipboard)
-  const [pasteMsg, setPasteMsg] = useState(null)
-
-  function filterDeleted(rows) {
-    return showDeleted ? rows : rows.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
-  }
-
-  const grouped = getRecipeForPosition(recipes, ref)
-
-  function flashPaste(msg) {
-    setPasteMsg(msg)
-    setTimeout(() => setPasteMsg(null), 2500)
-  }
-  function doCopySelection() {
-    const clip = copySelectedRows()
-    if (clip) flashPaste(`Copied ${clip.count} row${clip.count === 1 ? '' : 's'}`)
-  }
-  function doPaste() {
-    const n = requestPaste(ref)
-    // null → a merge-vs-separate prompt opened; the modal finishes the paste.
-    if (n > 0) flashPaste(`Pasted ${n} row${n === 1 ? '' : 's'} into ${ref}`)
-  }
-
-  // Keyboard: Ctrl/Cmd+C copies the selection, Ctrl/Cmd+V pastes into this position.
-  // Ignored only while typing in a TEXT field — checkboxes/buttons (e.g. the row
-  // select box) must NOT swallow the shortcut, otherwise copy fails right after
-  // ticking a row.
-  useEffect(() => {
-    function onKey(e) {
-      const t = e.target
-      const tag = t?.tagName
-      const type = (t?.type || '').toLowerCase()
-      const isTextField =
-        tag === 'TEXTAREA' || t?.isContentEditable ||
-        (tag === 'INPUT' && !['checkbox', 'radio', 'button', 'submit', 'reset'].includes(type))
-      if (isTextField) return
-      if (!(e.ctrlKey || e.metaKey)) return
-      if (e.key === 'c' && selectedRowIds.length > 0) { e.preventDefault(); doCopySelection() }
-      else if (e.key === 'v' && rowClipboard) { e.preventDefault(); doPaste() }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedRowIds, rowClipboard, ref])
-
-  // Clear any stale selection when switching positions
-  useEffect(() => { clearRowSelection() /* eslint-disable-next-line */ }, [ref])
-
+function FocusedPositionEditor({ pt, tags, count, showDeleted, onOpenProductSpec, onOpenConnectors, onBack, onAddRow, onNewET, onReplace }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }} data-debug-id="ProjectTreeView/FocusedEditor (main surface)">
-      {/* Focused header */}
-      <div
-        className="d-flex align-items-center gap-2 px-3 py-2 border-bottom bg-white"
-        style={{ flexShrink: 0 }}
-      >
-        <IconButton variant="outline-secondary" bsSize="sm" style={{ fontSize: 11 }}
-          icon={ACTION_ICONS.back} title="All position types" onClick={onBack} />
-        <MaterialIcon name={ICONS.position} size={20} style={{ color: colorsForType('PositionType').accent }} title="Position" />
-        <span className="fw-semibold" style={{ fontSize: 15 }}>{ref}</span>
-        {name && name !== ref && <span className="text-muted" style={{ fontSize: 12 }}>{name}</span>}
-        {tags.map(tag => (
-          <TagBadge key={tag} tag={tag} />
-        ))}
-        <div className="flex-grow-1" />
-        <IconButton
-          variant="outline-secondary" bsSize="sm" style={{ fontSize: 11 }}
-          icon={ACTION_ICONS.copy}
-          onClick={() => { const c = copyPositionRecipe(ref); if (c) flashPaste(`Copied ${c.count} row${c.count === 1 ? '' : 's'}`) }}
-          disabled={count === 0}
-          title="Copy this whole position's recipe"
-        />
-        <IconButton
-          variant="outline-secondary" bsSize="sm" style={{ fontSize: 11 }}
-          icon={ACTION_ICONS.paste}
-          badge={rowClipboard ? rowClipboard.count : null}
-          onClick={doPaste}
-          disabled={!rowClipboard}
-          title={rowClipboard ? `Paste ${rowClipboard.label} (Ctrl+V)` : 'Clipboard empty'}
-        />
-        <Button
-          variant="link" size="sm" className="d-inline-flex align-items-center gap-1" style={{ fontSize: 11, textDecoration: 'none' }}
-          onClick={() => onOpenConnectors?.(ref)}
-          title="Open the Connectors screen focused on this position"
-        >
-          <MaterialIcon name="cable" size={14} /> Manage connectors
-        </Button>
-        <PositionValidationBadge posRef={ref} size={16} showOk={count > 0} />
-      </div>
-
-      {/* Selection bar — clear about what will be copied */}
-      {selectedRowIds.length > 0 && (
-        <div
-          className="d-flex align-items-center gap-2 px-3 py-1"
-          style={{ flexShrink: 0, background: '#e7f1ff', borderBottom: '1px solid #b6d4fe', fontSize: 12 }}
-        >
-          <span className="fw-semibold text-primary">{selectedRowIds.length} row{selectedRowIds.length === 1 ? '' : 's'} selected</span>
-          <IconButton variant="primary" bsSize="sm" style={{ fontSize: 11 }} icon={ACTION_ICONS.copy}
-            title="Copy selection (Ctrl+C)" onClick={doCopySelection} />
-          <IconButton variant="link" bsSize="sm" style={{ fontSize: 11 }} icon="deselect"
-            title="Clear selection" onClick={clearRowSelection} />
-        </div>
-      )}
-      {pasteMsg && (
-        <div className="px-3 py-1 text-success d-flex align-items-center gap-1" style={{ flexShrink: 0, background: '#d1e7dd', fontSize: 12 }}>
-          <MaterialIcon name="check" size={14} /> {pasteMsg}
-        </div>
-      )}
-
-      {/* Editor body */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '1rem 1.25rem' }}>
-        {count === 0 && (
-          <div className="text-muted small mb-3">
-            No recipe yet — drag an element from the palette, use the Templates tab to apply
-            one, or add connectors via <span className="fw-semibold">Manage connectors →</span>.
-          </div>
-        )}
-        <ConnectorSuggestions posRef={ref} />
-        <RecipeSection
-          title="Position Level"
-          sectionKey="position"
-          rows={filterDeleted(grouped.position)}
-          posRef={ref}
-          onOpenProductSpec={onOpenProductSpec}
-          onAddRow={onAddRow}
-          onNewET={onNewET}
-        />
-        <div className="text-muted mb-3" style={{ fontSize: 11 }}>
-          Element internals are shown read-only on each container row above — use
-          <span className="fw-semibold"> Edit internals → </span> to change them.
-        </div>
-      </div>
-    </div>
+    <PositionRecipeEditor
+      posRef={pt.PositionTypeRef}
+      name={pt.Name || pt.name || ''}
+      tags={tags}
+      count={count}
+      showDeleted={showDeleted}
+      onOpenProductSpec={onOpenProductSpec}
+      onOpenConnectors={onOpenConnectors}
+      onAddRow={onAddRow}
+      onNewET={onNewET}
+      onReplace={onReplace}
+      showBack
+      onBack={onBack}
+    />
   )
 }

@@ -5,6 +5,7 @@ import {
 } from '@dnd-kit/core'
 import useStore, { getRecipeForPosition } from '../store/useStore'
 import RecipeSection from './RecipeSection'
+import PositionRecipeEditor from './PositionRecipeEditor'
 import IconButton from './IconButton'
 import MaterialIcon from './MaterialIcon'
 import EntityPill from './EntityPill'
@@ -19,7 +20,7 @@ const EMPTY_FILTERS = { family: '', manufacturer: '', tag: '', containsET: '' }
  * time. The unit (positions or element types) is chosen per run; filters combine
  * with AND. This reviews RECIPES (not the product spec).
  */
-export default function ReviewModal({ show, onHide, onOpenProductSpec }) {
+export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEntity, onReplaceInReview }) {
   const positionTypes = useStore(s => s.positionTypes)
   const recipes       = useStore(s => s.recipes)
   const psRows        = useStore(s => s.psRows)
@@ -33,6 +34,7 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec }) {
   const [filters, setFilters] = useState(EMPTY_FILTERS)
   const [phase, setPhase]     = useState('build')      // 'build' | 'cycle'
   const [index, setIndex]     = useState(0)
+  const [addingEntity, setAddingEntity] = useState(false)  // Existing/New fork open
 
   useEffect(() => { if (show) { setPhase('build'); setIndex(0) } }, [show])
   // Changing the unit invalidates the criteria (families/manufacturers differ)
@@ -176,6 +178,20 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec }) {
     return { posRef: firstPos, rows: posRows }
   }, [current, liveRows])
 
+  // PositionTypes that use the current container ET as their internal recipe —
+  // editing here applies to all of them, so warn when there's more than one.
+  const etUsedIn = useMemo(() => {
+    if (!current || current.kind !== 'element') return []
+    const s = new Set()
+    for (const r of liveRows) {
+      if ((r.ContextType || r.contextType) === 'ElementType' && (r.ContextRef || r.contextRef) === current.ref) {
+        const p = r.PositionTypeRef || r.positionTypeRef
+        if (p) s.add(p)
+      }
+    }
+    return [...s]
+  }, [current, liveRows])
+
   function filterRows(rows) {
     return (rows || []).filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
   }
@@ -217,9 +233,9 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec }) {
               <span className="text-muted small">Step through</span>
               <ButtonGroup size="sm">
                 <Button variant={unit === 'position' ? 'primary' : 'outline-secondary'} style={{ fontSize: 12 }}
-                  onClick={() => setUnit('position')}>Positions</Button>
+                  onClick={() => setUnit('position')}>PositionTypes</Button>
                 <Button variant={unit === 'element' ? 'primary' : 'outline-secondary'} style={{ fontSize: 12 }}
-                  onClick={() => setUnit('element')}>Element types</Button>
+                  onClick={() => setUnit('element')}>ElementTypes</Button>
               </ButtonGroup>
             </div>
 
@@ -251,7 +267,7 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec }) {
               </Button>
             </div>
             {activeFilterChips.length === 0 && (
-              <div className="text-muted small mt-3">No filters set — every {unit === 'position' ? 'position' : 'element type'} matches.</div>
+              <div className="text-muted small mt-3">No filters set — every {unit === 'position' ? 'PositionType' : 'ElementType'} matches.</div>
             )}
           </>
         ) : (
@@ -273,13 +289,15 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec }) {
               </div>
             </div>
 
-            {current && (
+            {/* Element unit keeps its own pill header; the position unit gets its
+                header from the shared PositionRecipeEditor below. */}
+            {current && current.kind === 'element' && (
               <div className="d-flex align-items-center gap-2 mb-3 px-2 py-1 rounded" style={{ background: '#f8f9fa' }}>
                 <EntityPill
-                  type={current.kind === 'position' ? 'PositionType' : 'ElementType'}
+                  type="ElementType"
                   label={current.ref}
-                  sublabel={current.kind === 'element' ? familyOf(current.ref, etObjByRef.get(current.ref.toLowerCase())) : null}
-                  stack={current.kind === 'element'}
+                  sublabel={familyOf(current.ref, etObjByRef.get(current.ref.toLowerCase()))}
+                  stack
                 />
                 {current.name && <span className="text-muted small">{current.name}</span>}
               </div>
@@ -288,29 +306,38 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec }) {
             {/* Current match recipe (live-editable) */}
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               {current?.kind === 'position' && grouped && (
-                <>
-                  <RecipeSection title="Position Level" sectionKey="position"
-                    rows={filterRows(grouped.position)} posRef={current.ref} onOpenProductSpec={onOpenProductSpec} />
-                  {filterRows(grouped.dlInternal).length > 0 && (
-                    <RecipeSection title="DL Internal" sectionKey="dl_internal"
-                      rows={filterRows(grouped.dlInternal)} posRef={current.ref} onOpenProductSpec={onOpenProductSpec} />
-                  )}
-                  {filterRows(grouped.linInternal).length > 0 && (
-                    <RecipeSection title="LIN Internal" sectionKey="lin_internal"
-                      rows={filterRows(grouped.linInternal)} posRef={current.ref} onOpenProductSpec={onOpenProductSpec} />
-                  )}
-                  {!filterRows(grouped.position).length && !filterRows(grouped.dlInternal).length && !filterRows(grouped.linInternal).length && (
-                    <div className="text-muted small fst-italic py-3">This position has no recipe rows.</div>
-                  )}
-                </>
+                <PositionRecipeEditor
+                  embedded
+                  showInternals
+                  posRef={current.ref}
+                  name={current.name}
+                  tags={positionUI[current.ref]?.tags || []}
+                  count={(rowsForPos.get(current.ref) || []).length}
+                  onOpenProductSpec={onOpenProductSpec}
+                  onAddRow={() => onAddEntity && onAddEntity({ mode: 'existing', unit, filters })}
+                  onNewET={() => onAddEntity && onAddEntity({ mode: 'new', unit, filters })}
+                  onReplace={(posRef, rowId, opts) => onReplaceInReview && onReplaceInReview(posRef, rowId, opts)}
+                />
               )}
               {current?.kind === 'element' && etGrouped && (
-                etGrouped.rows.length > 0 ? (
-                  <RecipeSection title="Element internal recipe" sectionKey="position"
-                    rows={filterRows(etGrouped.rows)} posRef={etGrouped.posRef} onOpenProductSpec={onOpenProductSpec} disableSorting />
-                ) : (
-                  <div className="text-muted small fst-italic py-3">This element type has no internal recipe.</div>
-                )
+                <>
+                  {etUsedIn.length > 1 && (
+                    <div className="d-flex align-items-start gap-2 mb-2 px-2 py-1 rounded"
+                      style={{ background: '#fff3cd', border: '1px solid #ffc107', fontSize: 11 }}>
+                      <MaterialIcon name="warning" size={14} style={{ color: '#856404', flexShrink: 0, marginTop: 1 }} />
+                      <span style={{ color: '#856404' }}>
+                        Shared assembly — edits here apply to all {etUsedIn.length} PositionTypes that use{' '}
+                        <span style={{ fontFamily: 'monospace' }}>{current.ref}</span>: {etUsedIn.join(', ')}
+                      </span>
+                    </div>
+                  )}
+                  {etGrouped.rows.length > 0 ? (
+                    <RecipeSection title={current.ref} sectionKey="position"
+                      rows={filterRows(etGrouped.rows)} posRef={etGrouped.posRef} onOpenProductSpec={onOpenProductSpec} disableSorting />
+                  ) : (
+                    <div className="text-muted small fst-italic py-3">This ElementType has no internal recipe.</div>
+                  )}
+                </>
               )}
             </DndContext>
           </>
@@ -319,9 +346,47 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec }) {
 
       <Modal.Footer>
         <Button variant="secondary" size="sm" onClick={onHide}>Close</Button>
+        <div className="flex-grow-1" />
+        {onAddEntity && (
+          addingEntity ? (
+            <div className="d-flex align-items-center gap-2">
+              <span className="text-muted small">Add into your{activeFilterChips.length > 0 ? ' filtered' : ''} {unit === 'position' ? 'PositionTypes' : 'ElementTypes'}:</span>
+              <Button variant="outline-primary" size="sm" style={{ fontSize: 12 }}
+                onClick={() => { setAddingEntity(false); onAddEntity({ mode: 'existing', unit, filters }) }}>
+                Existing
+              </Button>
+              <Button variant="outline-success" size="sm" style={{ fontSize: 12 }}
+                onClick={() => { setAddingEntity(false); onAddEntity({ mode: 'new', unit, filters }) }}>
+                New ↗
+              </Button>
+              <button className="btn btn-link btn-sm p-0 text-muted" style={{ fontSize: 11 }}
+                onClick={() => setAddingEntity(false)}>Cancel</button>
+            </div>
+          ) : (
+            <Button variant="primary" size="sm" className="d-inline-flex align-items-center gap-1"
+              style={{ fontSize: 12 }}
+              onClick={() => setAddingEntity(true)}
+              title="Pick or create an entity and add it across the items you're reviewing">
+              <MaterialIcon name="add_circle" size={15} /> Add Entity
+            </Button>
+          )
+        )}
       </Modal.Footer>
     </Modal>
   )
+}
+
+// Group container-internal rows by their ContextRef (the container's
+// ElementTypeRef) so each container gets its own section titled by that ref,
+// rather than a generic "DL/LIN Internal" heading.
+function groupByContainer(rows) {
+  const map = new Map()
+  for (const r of rows) {
+    const ref = r.ContextRef || r.contextRef || '—'
+    if (!map.has(ref)) map.set(ref, [])
+    map.get(ref).push(r)
+  }
+  return [...map.entries()].map(([contextRef, groupRows]) => ({ contextRef, rows: groupRows }))
 }
 
 function FilterSelect({ label, icon, value, onChange, options }) {

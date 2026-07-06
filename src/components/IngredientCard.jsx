@@ -21,7 +21,7 @@ import { ACTION_ICONS } from '../utils/entityStyle'
  *   posRef: string
  *   sectionKey: 'position' | 'dl_internal' | 'lin_internal'
  */
-export default function IngredientCard({ row, posRef, sectionKey, onOpenProductSpec }) {
+export default function IngredientCard({ row, posRef, sectionKey, onOpenProductSpec, onReplace }) {
   const updateRecipeRow = useStore(s => s.updateRecipeRow)
   const removeRecipeRow = useStore(s => s.removeRecipeRow)
   const toggleContainerET = useStore(s => s.toggleContainerET)
@@ -97,6 +97,8 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   const internalItems = isContainer ? getInternalItems(etRef, recipes, elementTypes) : []
 
   const [showContents, setShowContents] = useState(false)
+  const [replacing, setReplacing] = useState(false)
+  const [keepFields, setKeepFields] = useState(true)
 
   // Extra fields: show if any are set, or if user manually expanded
   const extraInUse = (
@@ -197,7 +199,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                         style={{ background: '#d1e7dd', color: '#0a3622', border: '1px solid #a3cfbb', fontSize: 9, flexShrink: 0 }}
                         title="New — added here and not yet in the source file (unsaved until you export)"
                       >
-                        new
+                        New
                       </span>
                     )}
                     <MaterialIcon name="arrow_forward" size={14} style={{ color: '#ccc', flexShrink: 0 }} />
@@ -255,6 +257,32 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                   />
                 )}
               </div>
+
+              {/* Replace-entity fork (Existing / New) with a keep-fields toggle */}
+              {replacing && onReplace && (
+                <div className="d-flex align-items-center gap-2 mb-2 px-2 py-1 rounded flex-wrap"
+                  style={{ background: '#f0f4ff', border: '1px solid #c7d7f5', fontSize: 11 }}>
+                  <span className="text-muted">Replace with:</span>
+                  <Button variant="outline-primary" size="sm" style={{ padding: '1px 8px', fontSize: 11 }}
+                    onClick={() => { setReplacing(false); onReplace(posRef, rowId, { mode: 'existing', keepFields }) }}>
+                    Existing
+                  </Button>
+                  <Button variant="outline-success" size="sm" style={{ padding: '1px 8px', fontSize: 11 }}
+                    onClick={() => { setReplacing(false); onReplace(posRef, rowId, { mode: 'new', keepFields }) }}>
+                    New ↗
+                  </Button>
+                  <Form.Check
+                    type="switch"
+                    id={`replace-keep-${rowId}`}
+                    checked={keepFields}
+                    onChange={e => setKeepFields(e.target.checked)}
+                    label={<span style={{ fontSize: 10 }}>keep qty &amp; flags</span>}
+                    style={{ fontSize: 10 }}
+                  />
+                  <button className="btn btn-link btn-sm p-0 text-muted" style={{ fontSize: 10 }}
+                    onClick={() => setReplacing(false)}>Cancel</button>
+                </div>
+              )}
 
               {/* Container ET info: Used in + Next ref */}
               {isContainer && (usedIn.length > 0 || nextRef) && (
@@ -395,15 +423,26 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                 title="Restore row"
               />
             ) : (
-              <IconButton
-                variant="link"
-                className="text-danger p-0"
-                style={{ alignSelf: 'flex-start' }}
-                icon={ACTION_ICONS.delete}
-                size={16}
-                onClick={() => removeRecipeRow(posRef, rowId)}
-                title="Remove row"
-              />
+              <div className="d-flex flex-column align-items-center gap-1" style={{ alignSelf: 'flex-start' }}>
+                {onReplace && etRef && !isUnresolved && (
+                  <IconButton
+                    variant="link"
+                    className="text-secondary p-0"
+                    icon="swap_horiz"
+                    size={16}
+                    onClick={() => setReplacing(v => !v)}
+                    title="Replace this element type with another"
+                  />
+                )}
+                <IconButton
+                  variant="link"
+                  className="text-danger p-0"
+                  icon={ACTION_ICONS.delete}
+                  size={16}
+                  onClick={() => removeRecipeRow(posRef, rowId)}
+                  title="Remove row"
+                />
+              </div>
             )}
           </div>
         </Card.Body>

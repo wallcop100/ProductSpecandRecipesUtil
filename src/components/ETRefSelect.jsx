@@ -19,7 +19,7 @@ export default function ETRefSelect({
   initial = '',
   onCommit,
   onCancel,
-  placeholder = 'Element type ref…',
+  placeholder = 'ElementType ref…',
   autoFocus = true,
   size = 'sm',
   style,

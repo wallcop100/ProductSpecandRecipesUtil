@@ -13,6 +13,18 @@ import { familyOf } from '../utils/etRef'
 
 const EMPTY_FILTERS = { family: '', tag: '', manufacturer: '', containsET: '' }
 
+// Group container-internal rows by ContextRef so each container gets a section
+// titled by its ElementTypeRef instead of a generic "DL/LIN Internal" heading.
+function groupByContainer(rows) {
+  const map = new Map()
+  for (const r of rows) {
+    const ref = r.ContextRef || r.contextRef || '—'
+    if (!map.has(ref)) map.set(ref, [])
+    map.get(ref).push(r)
+  }
+  return [...map.entries()].map(([contextRef, groupRows]) => ({ contextRef, rows: groupRows }))
+}
+
 /**
  * AddAnywhereModal — step through targets and add (or skip) a primed ET.
  *
@@ -27,7 +39,7 @@ const EMPTY_FILTERS = { family: '', tag: '', manufacturer: '', containsET: '' }
  *   excludePosRef — position already handled before the modal opened (position unit)
  *   startPosRef   — position to land on first (position unit, multi-add path)
  */
-export default function AddAnywhereModal({ show, onHide, etRef, sectionKey, excludePosRef, startPosRef }) {
+export default function AddAnywhereModal({ show, onHide, etRef, sectionKey, excludePosRef, startPosRef, initialFilters, initialUnit }) {
   const positionTypes  = useStore(s => s.positionTypes)
   const elementTypes   = useStore(s => s.elementTypes)
   const psRows         = useStore(s => s.psRows)
@@ -49,8 +61,8 @@ export default function AddAnywhereModal({ show, onHide, etRef, sectionKey, excl
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   const isPos = unit === 'position'
-  const unitNoun = isPos ? 'position' : 'element type'
-  const unitNounPl = isPos ? 'positions' : 'element types'
+  const unitNoun = isPos ? 'PositionType' : 'ElementType'
+  const unitNounPl = isPos ? 'PositionTypes' : 'ElementTypes'
 
   const ps        = useMemo(() => psRows.find(p => (p.ElementTypeRef || p.elementTypeRef || '').toLowerCase() === (etRef || '').toLowerCase()), [psRows, etRef])
   const mfr       = ps?.Manufacturer  || ps?.manufacturer  || ''
@@ -196,19 +208,21 @@ export default function AddAnywhereModal({ show, onHide, etRef, sectionKey, excl
 
   useEffect(() => {
     if (!show) return
-    setUnit('position')
+    // Seed from the review filter when primed, else start blank.
+    setUnit(initialUnit || 'position')
     setPhase('filter')
-    setFilters(EMPTY_FILTERS)
+    setFilters(initialFilters ? { ...EMPTY_FILTERS, ...initialFilters } : EMPTY_FILTERS)
     setIndex(0)
     setSessionAdded(new Set())
   }, [show]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Switching unit invalidates filters + progress
-  useEffect(() => {
+  // Switching unit clears filters + progress (families/manufacturers differ).
+  function switchUnit(next) {
+    setUnit(next)
     setFilters(EMPTY_FILTERS)
     setIndex(0)
     setSessionAdded(new Set())
-  }, [unit])
+  }
 
   function startCycle() {
     const startIdx = (isPos && startPosRef)
@@ -368,12 +382,12 @@ export default function AddAnywhereModal({ show, onHide, etRef, sectionKey, excl
             <div className="d-flex justify-content-center mb-3">
               <ButtonGroup>
                 <Button variant={isPos ? 'primary' : 'outline-secondary'} style={{ fontSize: 12 }}
-                  className="d-inline-flex align-items-center gap-1" onClick={() => setUnit('position')}>
-                  <MaterialIcon name="place" size={15} /> Position recipes
+                  className="d-inline-flex align-items-center gap-1" onClick={() => switchUnit('position')}>
+                  <MaterialIcon name="place" size={15} /> PositionType recipes
                 </Button>
                 <Button variant={!isPos ? 'primary' : 'outline-secondary'} style={{ fontSize: 12 }}
-                  className="d-inline-flex align-items-center gap-1" onClick={() => setUnit('element')}>
-                  <MaterialIcon name="widgets" size={15} /> Element internals
+                  className="d-inline-flex align-items-center gap-1" onClick={() => switchUnit('element')}>
+                  <MaterialIcon name="widgets" size={15} /> ElementType internals
                 </Button>
               </ButtonGroup>
             </div>
@@ -503,25 +517,27 @@ export default function AddAnywhereModal({ show, onHide, etRef, sectionKey, excl
                 <>
                   <RecipeSection title="Position Level" sectionKey="position"
                     rows={filterRows(posGrouped.position)} posRef={current.ref} />
-                  {filterRows(posGrouped.dlInternal).length > 0 && (
-                    <RecipeSection title="DL Internal" sectionKey="dl_internal"
-                      rows={filterRows(posGrouped.dlInternal)} posRef={current.ref} />
-                  )}
-                  {filterRows(posGrouped.linInternal).length > 0 && (
-                    <RecipeSection title="LIN Internal" sectionKey="lin_internal"
-                      rows={filterRows(posGrouped.linInternal)} posRef={current.ref} />
-                  )}
+                  {/* Container internals — one section per container, titled by
+                      the container's ElementTypeRef. */}
+                  {groupByContainer(filterRows(posGrouped.dlInternal)).map(g => (
+                    <RecipeSection key={`dl-${g.contextRef}`} title={g.contextRef} sectionKey="dl_internal"
+                      rows={g.rows} posRef={current.ref} />
+                  ))}
+                  {groupByContainer(filterRows(posGrouped.linInternal)).map(g => (
+                    <RecipeSection key={`lin-${g.contextRef}`} title={g.contextRef} sectionKey="lin_internal"
+                      rows={g.rows} posRef={current.ref} />
+                  ))}
                   {!filterRows(posGrouped.position).length && !filterRows(posGrouped.dlInternal).length && !filterRows(posGrouped.linInternal).length && (
-                    <div className="text-muted small fst-italic py-3">This position has no recipe rows yet.</div>
+                    <div className="text-muted small fst-italic py-3">This PositionType has no recipe rows yet.</div>
                   )}
                 </>
               )}
               {!isPos && elementRows && (
                 elementRows.rows.length > 0 ? (
-                  <RecipeSection title="Internal Recipe" sectionKey="position"
+                  <RecipeSection title={current.ref} sectionKey="position"
                     rows={elementRows.rows} posRef={elementRows.firstPos} disableSorting />
                 ) : (
-                  <div className="text-muted small fst-italic py-3">This element type has no internal recipe rows yet.</div>
+                  <div className="text-muted small fst-italic py-3">This ElementType has no internal recipe rows yet.</div>
                 )
               )}
             </DndContext>

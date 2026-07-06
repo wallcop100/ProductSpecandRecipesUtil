@@ -33,6 +33,7 @@ export default function RecipeSection({
   title, sectionKey, rows, posRef, onOpenProductSpec, disableSorting = false,
   onAddRow,   // opens right drawer in pick mode (existing ET)
   onNewET,    // opens NewETWizardModal (brand new ET)
+  onReplace,  // replace a row's ElementType (Existing/New fork)
 }) {
   const addRecipeRow = useStore(s => s.addRecipeRow)
   const resolveSlot = useStore(s => s.resolveSlot)
@@ -157,6 +158,7 @@ export default function RecipeSection({
                   posRef={posRef}
                   sectionKey={sectionKey}
                   onOpenProductSpec={onOpenProductSpec}
+                  onReplace={onReplace}
                 />
               )
           ))}

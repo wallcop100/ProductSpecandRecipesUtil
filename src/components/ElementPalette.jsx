@@ -171,8 +171,12 @@ export default function ElementPalette({ pickTarget, onPickET, onPickETMulti, on
           className="d-flex align-items-center gap-2 px-3 py-2 border-bottom flex-wrap"
           style={{ background: '#e8f0fe', fontSize: 12, flexShrink: 0 }}
         >
-          <MaterialIcon name="add_circle" size={14} style={{ color: '#0d6efd' }} />
-          <span>Click to add to <strong>{pickTarget.posRef}</strong></span>
+          <MaterialIcon name={pickTarget.mode === 'replace' ? 'swap_horiz' : 'add_circle'} size={14} style={{ color: '#0d6efd' }} />
+          <span>
+            {pickTarget.mode === 'replace'
+              ? <>Pick the ElementType to <strong>replace with</strong></>
+              : <>Click to add to <strong>{pickTarget.posRef}</strong></>}
+          </span>
           <Form.Check
             type="switch"
             id="palette-multi-add"
@@ -229,7 +233,7 @@ export default function ElementPalette({ pickTarget, onPickET, onPickETMulti, on
             <button
               className="btn btn-link btn-sm p-0 ms-auto d-inline-flex align-items-center gap-1"
               style={{ fontSize: 11, color: '#198754', whiteSpace: 'nowrap' }}
-              title="Create a brand-new element type"
+              title="Create a brand-new ElementType"
               onClick={() => onNewET(pickTarget?.posRef ?? null, pickTarget?.sectionKey ?? 'position')}
             >
               <MaterialIcon name="add_circle" size={14} />
