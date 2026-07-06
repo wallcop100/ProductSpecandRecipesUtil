@@ -319,33 +319,56 @@ ipcMain.handle('config-write-yaml', async (event, { projectId, filePath }) => {
 // Project snapshot (EXPORT_PLAN §6): copy the project files + config overlay
 // into <folder>/snapshot/<date>/ . Plain file copies, user's discretion.
 ipcMain.handle('snapshot-project', async (event, { folderPath, files, projectId, configName }) => {
-  const dateStr = new Date().toISOString().slice(0, 10)
-  let dir = path.join(folderPath, 'snapshot', dateStr)
-  if (fs.existsSync(dir)) {
-    const t = new Date().toTimeString().slice(0, 8).replace(/:/g, '')
-    dir = path.join(folderPath, 'snapshot', `${dateStr}_${t}`)
-  }
-  fs.mkdirSync(dir, { recursive: true })
-  const copied = []
-  for (const f of (files || [])) {
-    const src = path.join(folderPath, f)
-    if (fs.existsSync(src)) {
-      fs.copyFileSync(src, path.join(dir, f))
-      copied.push(f)
+  try {
+    if (!folderPath) return { ok: false, error: 'No project folder is open.' }
+    const dateStr = new Date().toISOString().slice(0, 10)
+    let dir = path.join(folderPath, 'snapshot', dateStr)
+    if (fs.existsSync(dir)) {
+      const t = new Date().toTimeString().slice(0, 8).replace(/:/g, '')
+      dir = path.join(folderPath, 'snapshot', `${dateStr}_${t}`)
     }
-  }
-  if (projectId != null) {
-    try {
-      const data = db.collectConfigData(projectId)
-      fs.writeFileSync(
-        path.join(dir, `${configName || 'config'}.ideaworks.yaml`),
-        yaml.dump(data, { noRefs: true }), 'utf8'
-      )
-    } catch (err) {
-      log.warn('[snapshot] overlay write failed:', err.message)
+    fs.mkdirSync(dir, { recursive: true })
+    const copied = []
+    for (const f of (files || [])) {
+      if (!f) continue
+      const src = path.join(folderPath, f)
+      if (fs.existsSync(src)) {
+        fs.copyFileSync(src, path.join(dir, f))
+        copied.push(f)
+      }
     }
+    if (projectId != null) {
+      try {
+        const data = db.collectConfigData(projectId)
+        fs.writeFileSync(
+          path.join(dir, `${configName || 'config'}.ideaworks.yaml`),
+          yaml.dump(data, { noRefs: true }), 'utf8'
+        )
+      } catch (err) {
+        log.warn('[snapshot] overlay write failed:', err.message)
+      }
+    }
+    return { ok: true, dir, copied }
+  } catch (err) {
+    log.warn('[snapshot] failed:', err.message)
+    return { ok: false, error: err.message }
   }
-  return { ok: true, dir, copied }
+})
+
+// Newest snapshot folder's mtime (ms) — drives the "snapshot is stale?" check.
+ipcMain.handle('last-snapshot-time', (event, { folderPath }) => {
+  try {
+    const dir = path.join(folderPath, 'snapshot')
+    if (!fs.existsSync(dir)) return null
+    let newest = 0
+    for (const name of fs.readdirSync(dir)) {
+      const st = fs.statSync(path.join(dir, name))
+      if (st.isDirectory() && st.mtimeMs > newest) newest = st.mtimeMs
+    }
+    return newest || null
+  } catch {
+    return null
+  }
 })
 
 // Personal library (favorites + global templates) export / import

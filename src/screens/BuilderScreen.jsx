@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import {
-  Button, ButtonGroup, Nav, Spinner, Form,
+  Button, ButtonGroup, Nav, Spinner, Form, Modal,
 } from 'react-bootstrap'
 import {
   DndContext,
@@ -47,6 +47,7 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
   const rootView = useStore(s => s.rootView)
   const projectNumber = useStore(s => s.projectNumber)
   const configName = useStore(s => s.configName)
+  const folderPath = useStore(s => s.folderPath)
   const activePositionRef = useStore(s => s.activePositionRef)
   const activeContextType = useStore(s => s.activeContextType)
   const activeETRef = useStore(s => s.activeETRef)
@@ -71,7 +72,6 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
   const snapshotProject = useStore(s => s.snapshotProject)
   const dbWriteEnabled = useStore(s => s.dbWriteEnabled)
   const dbChanges = useStore(s => s.dbChanges)
-  const setDbWriteEnabled = useStore(s => s.setDbWriteEnabled)
   const exportCatalogueChanges = useStore(s => s.exportCatalogueChanges)
 
   const [showDupModal, setShowDupModal] = useState(false)
@@ -91,6 +91,7 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
   const [exportError, setExportError] = useState(null)
   const [exportSuccess, setExportSuccess] = useState(false)
   const [snapshotMsg, setSnapshotMsg] = useState(null)
+  const [showSnapshotPrompt, setShowSnapshotPrompt] = useState(false)
   const snapshotOfferedRef = React.useRef(false)
   const [, setActiveId] = useState(null)  // drag tracking
   const [templateNameInput, setTemplateNameInput] = useState('')
@@ -282,15 +283,22 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
     }
   }
 
+  // Offer a snapshot before export only when the newest snapshot is stale
+  // (older than a day) or there's never been one — and only once per session.
   async function handleExport() {
-    // Offer a project snapshot before the first export of the session
-    // (EXPORT_PLAN §6) — declining never blocks the export.
     if (!snapshotOfferedRef.current) {
       snapshotOfferedRef.current = true
-      if (window.confirm('Take a snapshot of the project files before exporting?\n\n(Copies DB, PS and RS into a dated snapshot folder.)')) {
-        try { await snapshotProject() } catch { /* snapshot is best-effort */ }
-      }
+      let stale = true
+      try {
+        const t = await window.electronAPI.lastSnapshotTime?.(folderPath)
+        stale = !t || (Date.now() - t) > 24 * 60 * 60 * 1000
+      } catch { /* treat as stale */ }
+      if (stale) { setShowSnapshotPrompt(true); return }  // in-app prompt drives the export
     }
+    doExport()
+  }
+
+  async function doExport() {
     setExporting(true)
     setExportError(null)
     setExportSuccess(false)
@@ -309,6 +317,7 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
     setExportError(null)
     try {
       const res = await snapshotProject()
+      if (res?.ok === false) throw new Error(res.error || 'unknown error')
       if (res?.dir) {
         setSnapshotMsg('Snapshot saved')
         setTimeout(() => setSnapshotMsg(null), 3000)
@@ -779,6 +788,34 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
       />
 
       <ConflictModal />
+
+      {/* In-app snapshot offer (replaces the native confirm; only shown when
+          the newest snapshot is stale). */}
+      <Modal show={showSnapshotPrompt} onHide={() => setShowSnapshotPrompt(false)} centered size="sm">
+        <Modal.Header closeButton>
+          <Modal.Title style={{ fontSize: 14 }} className="d-flex align-items-center gap-2">
+            <MaterialIcon name="backup_table" size={18} /> Snapshot before exporting?
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body style={{ fontSize: 13 }}>
+          It's been a while since your last snapshot. A snapshot copies the DB, PS and RS
+          files into a dated backup folder so you can roll back if an export goes wrong.
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="link" size="sm" style={{ fontSize: 12 }}
+            onClick={() => { setShowSnapshotPrompt(false); doExport() }}>
+            Export without snapshot
+          </Button>
+          <Button variant="primary" size="sm" style={{ fontSize: 12 }}
+            onClick={async () => {
+              setShowSnapshotPrompt(false)
+              try { await handleSnapshot() } catch { /* surfaced by handleSnapshot */ }
+              doExport()
+            }}>
+            Snapshot &amp; export
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   )
 }

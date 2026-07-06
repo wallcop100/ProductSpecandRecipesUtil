@@ -89,6 +89,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Project snapshot + silent overlay write (EXPORT_PLAN §5–6)
   snapshotProject: (opts) => ipcRenderer.invoke('snapshot-project', opts),
+  lastSnapshotTime: (folderPath) => ipcRenderer.invoke('last-snapshot-time', { folderPath }),
   configWriteYaml: (opts) => ipcRenderer.invoke('config-write-yaml', opts),
 
   // Personal library export / import

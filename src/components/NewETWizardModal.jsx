@@ -22,6 +22,7 @@ export default function NewETWizardModal({ show, onHide, posRef, sectionKey, onD
   const addPSRow          = useStore(s => s.addPSRow)
   const updatePSRow       = useStore(s => s.updatePSRow)
   const dbWriteEnabled    = useStore(s => s.dbWriteEnabled)
+  const setDbWriteEnabled = useStore(s => s.setDbWriteEnabled)
 
   const [ref, setRef]               = useState('')
   const [name, setName]             = useState('')
@@ -211,12 +212,23 @@ export default function NewETWizardModal({ show, onHide, posRef, sectionKey, onD
           <datalist id="newet-family-list">
             {familyOptions.map(f => <option key={f} value={f} />)}
           </datalist>
-          <Form.Text className="text-muted" style={{ fontSize: 11 }}>
-            {dbWriteEnabled
-              ? 'Will be written to the DesignDB ElementTypes catalogue on “Export catalogue changes”.'
-              : 'DB writes are off — this ET is kept locally until you enable catalogue writes.'}
-          </Form.Text>
         </Form.Group>
+
+        {/* Where does this ET get saved? Teaches the catalogue concept in context. */}
+        <div className="rounded p-2 mb-3" style={{ background: '#f0f4ff', border: '1px solid #c7d7f5' }}>
+          <Form.Check
+            type="switch"
+            id="newet-db-write"
+            checked={dbWriteEnabled}
+            onChange={e => setDbWriteEnabled(e.target.checked)}
+            label={<span style={{ fontSize: 12, fontWeight: 600 }}>Also save to the shared DesignDB catalogue</span>}
+          />
+          <div className="text-muted mt-1" style={{ fontSize: 11 }}>
+            {dbWriteEnabled
+              ? 'This element type is added to the DesignDB ElementTypes sheet when you press “Save N to DB”. Use this so the whole team’s design database knows about it.'
+              : 'Off: the element type is remembered in this project only. Turn on to write new/renamed element types back to the shared DesignDB file that the design pipeline reads.'}
+          </div>
+        </div>
 
         {/* Product Spec (collapsible) */}
         <div className="border rounded p-2" style={{ background: '#f8f9fa' }}>

@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  release:
+  build:
     runs-on: ${{ matrix.os }}
     permissions:
       contents: write
@@ -52,21 +52,54 @@ jobs:
       - name: Build React
         run: npm run build
 
-      - name: Build Electron + publish
+      # Build the installers only — do NOT let electron-builder publish. Publishing
+      # from each matrix job races on the same GitHub release and drops assets;
+      # a single release job below attaches everything instead. This still
+      # generates latest.yml + .blockmap (the auto-updater metadata).
+      - name: Build Electron installers
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
-        run: npm run electron:build -- --config electron-builder.config.js --publish ${{ startsWith(github.ref, 'refs/tags/') && 'always' || 'never' }}
+        run: npm run electron:build -- --config electron-builder.config.js --publish never
 
-      # Make the installers downloadable from the run page on every run, including
-      # manual dry-runs that don't publish a GitHub Release.
-      - name: Upload installers
+      # Installers + auto-update metadata, downloadable from the run page and
+      # consumed by the release job. Includes *.yml / *.blockmap so
+      # electron-updater can serve updates from the published release.
+      - name: Upload build artifacts
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: installers-${{ matrix.os }}
           path: |
             dist-electron/*.exe
+            dist-electron/*.exe.blockmap
             dist-electron/*.dmg
+            dist-electron/*.dmg.blockmap
             dist-electron/*.zip
+            dist-electron/*.yml
           if-no-files-found: ignore
+
+  # Single, non-concurrent job that attaches every OS's installers + update
+  # metadata to the tag's GitHub Release. Only runs for tag pushes.
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/**/*.exe
+            artifacts/**/*.exe.blockmap
+            artifacts/**/*.dmg
+            artifacts/**/*.dmg.blockmap
+            artifacts/**/*.zip
+            artifacts/**/*.yml
+          fail_on_unmatched_files: false
