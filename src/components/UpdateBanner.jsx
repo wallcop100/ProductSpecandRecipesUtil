@@ -22,7 +22,18 @@ export default function UpdateBanner({ updateStatus, onDismiss }) {
 
   if (!updateStatus) return null
 
-  const { status, version, percent, releaseNotes } = updateStatus
+  const { status, version, percent, releaseNotes, message } = updateStatus
+
+  if (status === 'error') {
+    return (
+      <div style={barStyle('#f8d7da', '#f5c2c7')}>
+        <span className="small text-danger d-inline-flex align-items-center gap-1">
+          <MaterialIcon name="error" size={14} /> Update failed{message ? `: ${message}` : ''}.
+        </span>
+        <Button variant="link" size="sm" className="ms-auto p-0" onClick={onDismiss}>Dismiss</Button>
+      </div>
+    )
+  }
 
   if (status === 'checking') {
     return (

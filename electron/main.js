@@ -214,9 +214,13 @@ function initAutoUpdater() {
   autoUpdater.logger.transports.file.level = 'info'
   autoUpdater.autoInstallOnAppQuit = true
   autoUpdater.autoDownload = true
+  // Full downloads only. Differential (blockmap-based) downloads stall when a
+  // release is missing/has-mismatched .blockmap files — a common cause of the
+  // download bar hanging forever.
+  autoUpdater.disableDifferentialDownload = true
 
-  setTimeout(() => autoUpdater.checkForUpdates(), 3000)
-  setInterval(() => autoUpdater.checkForUpdates(), AUTO_UPDATE_CHECK_INTERVAL_MS)
+  setTimeout(() => autoUpdater.checkForUpdates().catch(() => {}), 3000)
+  setInterval(() => autoUpdater.checkForUpdates().catch(() => {}), AUTO_UPDATE_CHECK_INTERVAL_MS)
 
   const send = (payload) => { if (mainWindow) mainWindow.webContents.send('update-status', payload) }
 
@@ -249,6 +253,8 @@ function initAutoUpdater() {
 
   autoUpdater.on('error', (err) => {
     log.error('Auto-updater error:', err)
+    // Surface the failure so the UI leaves its spinner instead of hanging.
+    send({ status: 'error', message: err?.message || String(err) })
   })
 }
 
@@ -472,7 +478,9 @@ ipcMain.handle('check-for-updates', () => {
   // Immediate feedback; real events follow in prod.
   if (mainWindow) mainWindow.webContents.send('update-status', { status: 'checking' })
   if (!isDev) {
-    autoUpdater.checkForUpdates()
+    autoUpdater.checkForUpdates().catch((err) => {
+      if (mainWindow) mainWindow.webContents.send('update-status', { status: 'error', message: err?.message || String(err) })
+    })
   } else {
     // Dev: no feed configured — simulate an "up to date" result.
     setTimeout(() => {
