@@ -36,8 +36,12 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
   const [openError, setOpenError] = useState(null)
   const [flaskError, setFlaskError] = useState(null)
 
-  // Project confirm modal context: { suggestedNumber, existingConfigs, preselectConfig } | null
-  const [confirmCtx, setConfirmCtx] = useState(null)
+  // Project identity — shown inline; the ProjectConfirmModal stays reachable
+  // behind the "Advanced / edit identity" link for the rare edit case.
+  const [projectNumber, setProjectNumber] = useState('')
+  const [configName, setConfigName] = useState('Base')
+  const [existingConfigs, setExistingConfigs] = useState([])
+  const [showAdvanced, setShowAdvanced] = useState(false)
   const [showManager, setShowManager] = useState(false)
   const [appVersion, setAppVersion] = useState('')
   const [libraryMsg, setLibraryMsg] = useState(null)
@@ -65,10 +69,9 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
           setDbFilename(last.db_filename || '')
           setPsFilename(last.ps_filename || '')
           setRsFilename(last.rs_filename || '')
-          // Auto-detect for this folder
+          // Auto-detect for this folder, then prime the inline identity fields
           await runDetect(last.folder_path)
-          // Prompt to confirm Project ID + config on startup
-          await requestOpen({ folder: last.folder_path, dbFn: last.db_filename, preselect: last.config_name })
+          await prepareIdentity(last.folder_path, last.db_filename, last.config_name)
         }
       } catch {
         // No last project — fine
@@ -87,7 +90,8 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
     setDbFilename('')
     setPsFilename('')
     setRsFilename('')
-    await runDetect(path)
+    const data = await runDetect(path)
+    if (data) await prepareIdentity(path, data.db)
   }
 
   async function runDetect(path) {
@@ -100,8 +104,10 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
       setDbFilename(data.db || '')
       setPsFilename(data.ps || '')
       setRsFilename(data.rs || '')
+      return data
     } catch (err) {
       setDetectError('Could not detect files: ' + (err.response?.data?.error || err.message))
+      return null
     } finally {
       setDetecting(false)
     }
@@ -110,25 +116,21 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
   const allXlsx = detectedFiles?.all_xlsx || []
   const allFound = dbFilename && psFilename && rsFilename
 
-  // Step 1 of opening: gather confirm context (suggested ID + existing configs)
-  // and show the confirm modal. Accepts explicit values for the resume path,
-  // where component state may not have flushed yet.
-  async function requestOpen({ folder, dbFn, preselect } = {}) {
-    const useFolder = folder || folderPath
-    const useDbFn = dbFn || dbFilename
-    if (!useFolder || !(dbFn ? true : allFound)) {
-      if (!allFound && !dbFn) return
-    }
-    let existingConfigs = []
-    try { existingConfigs = await window.electronAPI.db.getConfigsForFolder(useFolder) || [] } catch { /* none */ }
-    const fromExisting = existingConfigs.find(c => c.config_name === preselect)?.project_number
-    const suggestedNumber = fromExisting || extractProjectId(useDbFn)
-    setConfirmCtx({ suggestedNumber, existingConfigs, preselectConfig: preselect || 'Base' })
+  // Prime the inline Project ID + config fields for a folder (suggested number
+  // from the DB filename, configs from SQLite).
+  async function prepareIdentity(folder, dbFn, preselect) {
+    let configs = []
+    try { configs = await window.electronAPI.db.getConfigsForFolder(folder) || [] } catch { /* none */ }
+    setExistingConfigs(configs)
+    const pre = configs.find(c => c.config_name === preselect) || configs[0]
+    const suggestedNumber = pre?.project_number || extractProjectId(dbFn || '')
+    setProjectNumber(suggestedNumber || '')
+    setConfigName(pre?.config_name || preselect || 'Base')
   }
 
-  // Step 2: actually open, with the confirmed Project ID + config name.
+  // Actually open, with the confirmed Project ID + config name.
   async function doOpenProject({ projectNumber, configName }) {
-    setConfirmCtx(null)
+    setShowAdvanced(false)
     if (!allFound) return
     setOpening(true)
     setOpenError(null)
@@ -182,7 +184,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
       try { localElementTypes = await window.electronAPI.db.getLocalETs(projectId) || [] } catch { /* none */ }
 
       // 3. Load SQLite data
-      const [positionUIArr, templates, slotMappings, containerETPref, containerExcludePref, etCollections, ignoredFamiliesPref, tagRulesPref, tagPalettePref, tagSnapshotsPref, favorites] = await Promise.all([
+      const [positionUIArr, templates, slotMappings, containerETPref, containerExcludePref, etCollections, ignoredFamiliesPref, tagRulesPref, tagPalettePref, tagSnapshotsPref, favorites, tagColorsPref] = await Promise.all([
         window.electronAPI.db.getAllPositionUI(projectId),
         window.electronAPI.db.getAllTemplates(projectId),
         window.electronAPI.db.getAllSlotMappings(projectId), // already { templateId: { slotKey: ref } }
@@ -194,7 +196,11 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
         window.electronAPI.db.getPref(projectId, 'tag_palette'),
         window.electronAPI.db.getPref(projectId, 'tag_snapshots'),
         window.electronAPI.db.getFavorites(),
+        window.electronAPI.db.getPref(projectId, 'tag_colors'),
       ])
+
+      let tagColors = {}
+      try { tagColors = tagColorsPref ? JSON.parse(tagColorsPref) : {} } catch { tagColors = {} }
 
       // 3b. Tag rules + palette. Seed from bundled defaults the first time a
       // config is opened, then persist so each config owns its own copy.
@@ -282,6 +288,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
         tagPalette,
         tagSnapshots,
         tagDrift,
+        tagColors,
         dbWriteEnabled,
         localElementTypes,
       })
@@ -429,6 +436,55 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
             </Card>
           )}
 
+          {/* Project identity — inline for the normal flow (T-O1) */}
+          {detectedFiles && !detecting && (
+            <Card className="mb-4 bg-light border-0">
+              <Card.Body className="py-3">
+                <Row className="g-2 align-items-end">
+                  <Col xs={4}>
+                    <Form.Group>
+                      <Form.Label className="small fw-semibold mb-1">Project ID</Form.Label>
+                      <Form.Control
+                        size="sm"
+                        value={projectNumber}
+                        onChange={e => setProjectNumber(e.target.value)}
+                        placeholder="e.g. 4521"
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col xs={5}>
+                    <Form.Group>
+                      <Form.Label className="small fw-semibold mb-1">Configuration</Form.Label>
+                      {existingConfigs.length > 0 ? (
+                        <Form.Select size="sm" value={configName} onChange={e => setConfigName(e.target.value)}>
+                          {!existingConfigs.some(c => c.config_name === configName) && (
+                            <option value={configName}>{configName} (new)</option>
+                          )}
+                          {existingConfigs.map(c => (
+                            <option key={c.id} value={c.config_name}>{c.config_name}</option>
+                          ))}
+                        </Form.Select>
+                      ) : (
+                        <Form.Control
+                          size="sm"
+                          value={configName}
+                          onChange={e => setConfigName(e.target.value)}
+                          placeholder="Base"
+                        />
+                      )}
+                    </Form.Group>
+                  </Col>
+                  <Col xs={3} className="text-end">
+                    <Button variant="link" size="sm" className="p-0" style={{ fontSize: 12 }}
+                      onClick={() => setShowAdvanced(true)}>
+                      Advanced / edit identity
+                    </Button>
+                  </Col>
+                </Row>
+              </Card.Body>
+            </Card>
+          )}
+
           {openError && <Alert variant="danger" className="py-2">{openError}</Alert>}
 
           {/* Actions */}
@@ -438,7 +494,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
             </Button>
             <Button
               variant="primary"
-              onClick={() => requestOpen()}
+              onClick={() => doOpenProject({ projectNumber: projectNumber.trim(), configName: configName.trim() || 'Base' })}
               disabled={!allFound || opening || detecting}
             >
               {opening ? <><Spinner size="sm" animation="border" className="me-2" />Opening…</> : 'Open Project'}
@@ -480,13 +536,18 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
         </Card.Body>
       </Card>
 
+      {/* Advanced identity editing — updates the inline fields, doesn't open */}
       <ProjectConfirmModal
-        show={!!confirmCtx}
-        suggestedNumber={confirmCtx?.suggestedNumber}
-        existingConfigs={confirmCtx?.existingConfigs || []}
-        preselectConfig={confirmCtx?.preselectConfig}
-        onCancel={() => setConfirmCtx(null)}
-        onConfirm={doOpenProject}
+        show={showAdvanced}
+        suggestedNumber={projectNumber}
+        existingConfigs={existingConfigs}
+        preselectConfig={configName}
+        onCancel={() => setShowAdvanced(false)}
+        onConfirm={({ projectNumber: pn, configName: cn }) => {
+          setProjectNumber(pn)
+          setConfigName(cn)
+          setShowAdvanced(false)
+        }}
       />
 
       <ProjectManager

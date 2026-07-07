@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { Card, Form, Button } from 'react-bootstrap'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -63,6 +63,16 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
     marginBottom: 6,
   }
 
+  // Scroll a freshly-added row into view (T-E3).
+  const lastAddedRowId = useStore(s => s.lastAddedRowId)
+  const elRef = useRef(null)
+  const composedRef = useCallback(node => { elRef.current = node; setNodeRef(node) }, [setNodeRef])
+  useEffect(() => {
+    if (lastAddedRowId && lastAddedRowId === rowId && elRef.current) {
+      elRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [lastAddedRowId, rowId])
+
   const etRef = row.elementTypeRef || row.ElementTypeRef || ''
   const isUnresolved = row.resolved === false
   // New = added in-app this session AND not yet synced to the source file.
@@ -125,12 +135,13 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
     updateRecipeRow(posRef, rowId, update)
   }
 
-  // Left border = element type colour; context colour lives on the section header line
-  const leftColor = isSelected ? '#0d6efd' : isDeleted ? '#adb5bd' : isDirty ? '#f0ad4e' : ((etRef && !isUnresolved) ? '#bf6018' : '#ffc107')
-  const background = isSelected ? '#e7f1ff' : isDeleted ? '#f8f9fa' : isDirty ? '#fffdf5' : undefined
+  // Left border = element type colour; context colour lives on the section header line.
+  // New rows read green; other unsynced edits read amber.
+  const leftColor = isSelected ? '#0d6efd' : isDeleted ? '#adb5bd' : isNewRow ? '#198754' : isDirty ? '#f0ad4e' : ((etRef && !isUnresolved) ? '#bf6018' : '#ffc107')
+  const background = isSelected ? '#e7f1ff' : isDeleted ? '#f8f9fa' : isNewRow ? '#f2fbf5' : isDirty ? '#fffdf5' : undefined
 
   return (
-    <div ref={setNodeRef} style={style} data-debug-id="IngredientCard">
+    <div ref={composedRef} style={style} data-debug-id="IngredientCard">
       <Card
         style={{
           borderLeft: `3px solid ${leftColor}`,
@@ -138,12 +149,27 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
           background,
           boxShadow: isSelected ? '0 0 0 1px #0d6efd' : undefined,
           opacity: isDeleted ? 0.65 : 1,
+          position: 'relative',
         }}
       >
+        {/* New badge, docked to the top-left corner */}
+        {isNewRow && (
+          <span
+            className="badge"
+            style={{
+              position: 'absolute', top: -7, left: -6, zIndex: 1,
+              background: '#198754', color: '#fff', border: '1px solid #146c43',
+              fontSize: 9, flexShrink: 0,
+            }}
+            title="New — added here and not yet in the source file (unsaved until you export)"
+          >
+            New
+          </span>
+        )}
         <Card.Body className="py-2 px-3">
           {isDeleted && (
             <div className="d-flex align-items-center gap-1 mb-1" style={{ fontSize: 10, color: '#6c757d' }}>
-              <MaterialIcon name="delete" size={12} /> Deleted — will sync as IsDeleted=Y
+              <MaterialIcon name="delete" size={12} /> IsDeleted — will sync to the source file
             </div>
           )}
           <div className="d-flex align-items-start gap-2">
@@ -193,15 +219,6 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                       stack
                       title={isContainer ? 'Container / wrapper element' : 'Element type'}
                     />
-                    {isNewRow && (
-                      <span
-                        className="badge"
-                        style={{ background: '#d1e7dd', color: '#0a3622', border: '1px solid #a3cfbb', fontSize: 9, flexShrink: 0 }}
-                        title="New — added here and not yet in the source file (unsaved until you export)"
-                      >
-                        New
-                      </span>
-                    )}
                     <MaterialIcon name="arrow_forward" size={14} style={{ color: '#ccc', flexShrink: 0 }} />
                     {productCode ? (
                       <button
@@ -245,17 +262,6 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                     Edit internals →
                   </button>
                 )}
-                {/* Container toggle: same icon, coloured when marked, grey when not */}
-                {etRef && (
-                  <IconButton
-                    icon={ACTION_ICONS.container} size={15}
-                    style={{ color: isContainer ? '#bf6018' : '#ccc', padding: 0 }}
-                    onClick={() => toggleContainerET(etRef)}
-                    title={isContainer
-                      ? `Container element — click to remove designation${whyText ? ` — ${whyText}` : ''}`
-                      : `Mark as virtual container element${whyText ? ` — ${whyText}` : ''}`}
-                  />
-                )}
               </div>
 
               {/* Replace-entity fork (Existing / New) with a keep-fields toggle */}
@@ -284,24 +290,11 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                 </div>
               )}
 
-              {/* Container ET info: Used in + Next ref */}
-              {isContainer && (usedIn.length > 0 || nextRef) && (
-                <div
-                  className="mb-1"
-                  style={{ fontSize: 11, color: '#555', lineHeight: 1.4 }}
-                >
-                  {usedIn.length > 0 && (
-                    <span className="me-3">
-                      <span className="text-muted">Used in: </span>
-                      {usedIn.join(', ')}
-                    </span>
-                  )}
-                  {nextRef && (
-                    <span>
-                      <span className="text-muted">Next ref: </span>
-                      <span className="fw-semibold">{nextRef}</span>
-                    </span>
-                  )}
+              {/* Container ET info: Used in */}
+              {isContainer && usedIn.length > 0 && (
+                <div className="mb-1" style={{ fontSize: 11, color: '#555', lineHeight: 1.4 }}>
+                  <span className="text-muted">Used in: </span>
+                  {usedIn.join(', ')}
                 </div>
               )}
 
@@ -440,8 +433,19 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                   icon={ACTION_ICONS.delete}
                   size={16}
                   onClick={() => removeRecipeRow(posRef, rowId)}
-                  title="Remove row"
+                  title="Mark IsDeleted"
                 />
+                {/* Container designation toggle — stacked under the delete action */}
+                {etRef && (
+                  <IconButton
+                    icon={ACTION_ICONS.container} size={15}
+                    style={{ color: isContainer ? '#bf6018' : '#ccc', padding: 0 }}
+                    onClick={() => toggleContainerET(etRef)}
+                    title={isContainer
+                      ? `Container element — click to remove designation${whyText ? ` — ${whyText}` : ''}`
+                      : `Mark as virtual container element${whyText ? ` — ${whyText}` : ''}`}
+                  />
+                )}
               </div>
             )}
           </div>

@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react'
 import { Badge, Button, Form } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
-import { collectionStatusForPosition } from '../utils/collectionStatus'
+import { collectionStatusForPosition, positionRecipeWithWrapperInternals } from '../utils/collectionStatus'
 import { positionFamilyOf } from '../utils/positionFamily'
 import { ACTION_ICONS } from '../utils/entityStyle'
 
@@ -47,7 +47,7 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
   const etCollections  = useStore(s => s.etCollections)
   const positionUI     = useStore(s => s.positionUI)
   const recipes        = useStore(s => s.recipes)
-  const applyCollection = useStore(s => s.applyCollection)
+  const applyCollectionBulk = useStore(s => s.applyCollectionBulk)
 
   const ignoredPositionFamilies = useStore(s => s.ignoredPositionFamilies)
 
@@ -72,7 +72,9 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
     for (const pt of scopedPositions) {
       const posRef = pt.PositionTypeRef
       const tags = positionUI[posRef]?.tags ?? []
-      const posRecipe = recipes.filter(r => (r.PositionTypeRef || r.positionTypeRef) === posRef)
+      // Wrapper-aware: the DL/LIN wrapper's internals count toward coverage
+      // even when they're stored under another position (shared assembly).
+      const posRecipe = positionRecipeWithWrapperInternals(recipes, posRef).combined
       const results = collectionStatusForPosition(posRef, tags, posRecipe, collections)
       const byColl = {}
       results.forEach(r => { byColl[r.collection.CollectionId] = r.status })
@@ -90,15 +92,14 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
   }, [scopedPositions, statusByPos, incompleteOnly])
 
   function handleBulkApply(collectionId, targetStatus) {
-    for (const pt of scopedPositions) {
-      const posRef = pt.PositionTypeRef
-      const status = (statusByPos[posRef] || {})[collectionId]
-      if (targetStatus === 'incomplete'
+    const targets = scopedPositions.filter(pt => {
+      const status = (statusByPos[pt.PositionTypeRef] || {})[collectionId]
+      return targetStatus === 'incomplete'
         ? (status === 'missing' || status === 'partial')
-        : status === targetStatus) {
-        applyCollection(posRef, collectionId)
-      }
-    }
+        : status === targetStatus
+    }).map(pt => pt.PositionTypeRef)
+    // Wrapper-aware: internal ingredients are applied once per shared wrapper.
+    applyCollectionBulk(targets, collectionId)
   }
 
   if (!collections.length) {
@@ -204,8 +205,8 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
 
       <div className="d-flex gap-3 mt-2" style={{ fontSize: 11 }}>
         {Object.entries(STATUS_SYMBOL).map(([k, v]) => (
-          <span key={k} style={{ color: v.color }}>
-            <strong>{v.symbol}</strong> {v.title}
+          <span key={k} className="d-inline-flex align-items-center gap-1" style={{ color: v.color }}>
+            <MaterialIcon name={v.icon} size={13} /> {v.title}
           </span>
         ))}
       </div>

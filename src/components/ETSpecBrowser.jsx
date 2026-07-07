@@ -6,13 +6,14 @@ import { familyOf } from '../utils/etRef'
 import { ACTION_ICONS } from '../utils/entityStyle'
 
 const STATUS_COLOR = {
-  complete: '#22c55e',
-  partial:  '#f59e0b',
-  missing:  '#ef4444',
-  deleted:  '#9ca3af',
+  complete:  '#22c55e',
+  partial:   '#f59e0b',
+  missing:   '#ef4444',
+  deleted:   '#9ca3af',
+  duplicate: '#dc3545',
 }
 
-function completenessOf(ref, psRowMap, missingSet) {
+function completenessOf(ref, psRowMap, missingSet, duplicateCodes) {
   const key = ref.toLowerCase()
   if (missingSet.has(key) && !psRowMap.has(key)) return 'missing'
   const row = psRowMap.get(key)
@@ -20,7 +21,12 @@ function completenessOf(ref, psRowMap, missingSet) {
   if ((row.IsDeleted || row.isDeleted) === 'Y') return 'deleted'
   const tbc = (row.IsTBC || row.isTBC) === 'Y'
   const code = (row.ProductCode || row.productCode || '').trim()
-  return (!code || tbc) ? 'partial' : 'complete'
+  if (!code || tbc) return 'partial'
+  // A complete-looking row that shares its product code with another ET is a
+  // warning, not "ok" — never show it green.
+  const upper = code.toUpperCase()
+  if (duplicateCodes && upper !== 'N/A' && duplicateCodes.has(upper)) return 'duplicate'
+  return 'complete'
 }
 
 function getGroupKey(ref, viewMode, psRowMap, etObjMap) {
@@ -56,6 +62,8 @@ export default function ETSpecBrowser({
   const [usageFilters, setUsageFilters]   = useState([])
   const [expanded, setExpanded]           = useState({})
   const [missingOpen, setMissingOpen]     = useState(true)
+  const [partialOpen, setPartialOpen]     = useState(false)
+  const [dupOpen, setDupOpen]             = useState(false)
 
   const missingSet = useMemo(() => new Set(missingETs.map(r => r.toLowerCase())), [missingETs])
 
@@ -101,12 +109,20 @@ export default function ETSpecBrowser({
     return [...set].sort()
   }, [allRefs, viewMode, psRowMap, etObjMap])
 
+  // Problem-state indices (shown as their own heading sections, like Missing).
+  const partialRefs = useMemo(
+    () => allRefs.filter(r => completenessOf(r, psRowMap, missingSet, duplicateCodes) === 'partial'),
+    [allRefs, psRowMap, missingSet, duplicateCodes])
+  const duplicateRefs = useMemo(
+    () => allRefs.filter(r => completenessOf(r, psRowMap, missingSet, duplicateCodes) === 'duplicate'),
+    [allRefs, psRowMap, missingSet, duplicateCodes])
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim()
     return allRefs.filter(ref => {
       const key = ref.toLowerCase()
       const psRow = psRowMap.get(key)
-      const status = completenessOf(ref, psRowMap, missingSet)
+      const status = completenessOf(ref, psRowMap, missingSet, duplicateCodes)
       const group = getGroupKey(ref, viewMode, psRowMap, etObjMap)
       const code = (psRow?.ProductCode || psRow?.productCode || '').trim().toUpperCase()
       const isDeleted = (psRow?.IsDeleted || psRow?.isDeleted) === 'Y'
@@ -130,9 +146,9 @@ export default function ETSpecBrowser({
         const inPos = (usage?.positions?.size || 0) > 0
         const inEl  = (usage?.elements?.size  || 0) > 0
         const match = usageFilters.some(f => {
-          if (f === 'In positions') return inPos
-          if (f === 'In elements')  return inEl
-          if (f === 'Unused')       return !inPos && !inEl
+          if (f === 'In PositionTypes') return inPos
+          if (f === 'In ElementTypes')  return inEl
+          if (f === 'Unused')           return !inPos && !inEl
           return false
         })
         if (!match) return false
@@ -163,6 +179,10 @@ export default function ETSpecBrowser({
   function toggleUsage(f)  { setUsageFilters(p =>  p.includes(f) ? p.filter(x => x !== f) : [...p, f]) }
 
   function handleKeyDown(e) {
+    // Don't hijack Arrow keys while the user is typing in the search/filter
+    // fields — let the caret move normally.
+    const tag = (e.target?.tagName || '').toLowerCase()
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') return
     if (!selectedRef) return
     const flat = filtered
     const idx = flat.findIndex(r => r.toLowerCase() === selectedRef.toLowerCase())
@@ -239,7 +259,7 @@ export default function ETSpecBrowser({
           ))}
         </div>
         <div className="d-flex flex-wrap gap-1 mb-1">
-          {['In positions', 'In elements', 'Unused'].map(f => (
+          {['In PositionTypes', 'In ElementTypes', 'Unused'].map(f => (
             <button
               key={f} type="button"
               className={`btn btn-sm ${usageFilters.includes(f) ? 'btn-info' : 'btn-outline-secondary'}`}
@@ -295,6 +315,26 @@ export default function ETSpecBrowser({
           </div>
         )}
 
+        {/* Partial Spec section */}
+        <ProblemSection
+          title="Partial spec" refs={partialRefs} open={partialOpen} setOpen={setPartialOpen}
+          headBg="#fff8e1" border="#fde68a" textColor="#92400e" badgeBg="#f59e0b"
+          selectedRef={selectedRef} bulkSelected={bulkSelected}
+          onSelect={onSelect} onBulkToggle={onBulkToggle}
+          statusFor={r => completenessOf(r, psRowMap, missingSet, duplicateCodes)}
+          psRowMap={psRowMap}
+        />
+
+        {/* Duplicate section */}
+        <ProblemSection
+          title="Duplicate product code" refs={duplicateRefs} open={dupOpen} setOpen={setDupOpen}
+          headBg="#fdecec" border="#f5c2c7" textColor="#842029" badgeBg="#dc3545"
+          selectedRef={selectedRef} bulkSelected={bulkSelected}
+          onSelect={onSelect} onBulkToggle={onBulkToggle}
+          statusFor={r => completenessOf(r, psRowMap, missingSet, duplicateCodes)}
+          psRowMap={psRowMap}
+        />
+
         {/* Grouped list */}
         {[...grouped.entries()].map(([group, refs]) => (
           <div key={group}>
@@ -318,8 +358,10 @@ export default function ETSpecBrowser({
                 <BrowserRow
                   key={ref}
                   ref_={ref}
-                  status={completenessOf(ref, psRowMap, missingSet)}
+                  status={completenessOf(ref, psRowMap, missingSet, duplicateCodes)}
                   productCode={(psRow?.ProductCode || psRow?.productCode || '').trim()}
+                  manufacturer={(psRow?.Manufacturer || psRow?.manufacturer || '').trim()}
+                  isTBC={(psRow?.IsTBC || psRow?.isTBC) === 'Y'}
                   isSelected={selectedRef?.toLowerCase() === ref.toLowerCase()}
                   isChecked={bulkSelected.has(ref.toLowerCase())}
                   isDirty={isDirty}
@@ -340,7 +382,48 @@ export default function ETSpecBrowser({
   )
 }
 
-function BrowserRow({ ref_, status, productCode, isSelected, isChecked, isDirty, isNew, onSelect, onCheck, rowBg }) {
+// A collapsible problem-state heading section (Partial / Duplicate), mirroring
+// the Missing-spec section.
+function ProblemSection({ title, refs, open, setOpen, headBg, border, textColor, badgeBg, selectedRef, bulkSelected, onSelect, onBulkToggle, statusFor, psRowMap }) {
+  if (refs.length === 0) return null
+  return (
+    <div style={{ borderBottom: `1px solid ${border}` }}>
+      <div
+        className="d-flex align-items-center gap-1 px-2 py-1"
+        style={{ background: headBg, cursor: 'pointer', userSelect: 'none' }}
+        onClick={() => setOpen(v => !v)}
+      >
+        <MaterialIcon name={open ? ACTION_ICONS.expand : ACTION_ICONS.collapse} size={13} style={{ width: 13 }} />
+        <span style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700, color: textColor }}>
+          {title}
+        </span>
+        <span style={{ marginLeft: 4, background: badgeBg, color: '#fff', borderRadius: 10, padding: '0 6px', fontSize: 10 }}>
+          {refs.length}
+        </span>
+      </div>
+      {open && refs.map(ref => {
+        const psRow = psRowMap.get(ref.toLowerCase())
+        return (
+          <BrowserRow
+            key={ref}
+            ref_={ref}
+            status={statusFor(ref)}
+            productCode={(psRow?.ProductCode || psRow?.productCode || '').trim()}
+            manufacturer={(psRow?.Manufacturer || psRow?.manufacturer || '').trim()}
+            isTBC={(psRow?.IsTBC || psRow?.isTBC) === 'Y'}
+            isSelected={selectedRef?.toLowerCase() === ref.toLowerCase()}
+            isChecked={bulkSelected.has(ref.toLowerCase())}
+            onSelect={() => onSelect(ref)}
+            onCheck={() => onBulkToggle(ref.toLowerCase())}
+          />
+        )
+      })}
+    </div>
+  )
+}
+
+function BrowserRow({ ref_, status, productCode, manufacturer, isTBC, isSelected, isChecked, isDirty, isNew, onSelect, onCheck, rowBg }) {
+  const specLabel = [manufacturer, productCode].filter(Boolean).join(' – ')
   return (
     <div
       className="d-flex align-items-center gap-1 px-2"
@@ -371,11 +454,16 @@ function BrowserRow({ ref_, status, productCode, isSelected, isChecked, isDirty,
       <span style={{ flex: 1, fontWeight: 500, wordBreak: 'break-all' }}>{ref_}</span>
       {isNew && (
         <span className="badge" style={{ background: '#d1e7dd', color: '#0a3622', border: '1px solid #a3cfbb', fontSize: 9, flexShrink: 0 }}
-          title="New — added this session, not yet exported">new</span>
+          title="New — added this session, not yet exported">New</span>
       )}
-      {productCode && (
-        <span style={{ fontSize: 10, color: '#888', flexShrink: 0, maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {productCode}
+      {isTBC && (
+        <span className="badge" style={{ background: '#fff4e5', color: '#b45309', border: '1px solid #f59e0b', fontSize: 9, flexShrink: 0 }}
+          title="Marked TBC — spec to be confirmed">TBC</span>
+      )}
+      {specLabel && (
+        <span style={{ fontSize: 10, color: '#888', flexShrink: 0, maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+          title={specLabel}>
+          {specLabel}
         </span>
       )}
     </div>

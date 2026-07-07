@@ -173,8 +173,7 @@ export function getNextAvailableRef(etRef, elementTypes) {
   }
 
   const nextN = maxN + 1
-  // Preserve original zero-padding width
-  const padWidth = match[2].length
-  const paddedN = String(nextN).padStart(padWidth, '0')
+  // Standardise on a single leading zero (2-digit) suffix: TAPE-04, not TAPE-004.
+  const paddedN = String(nextN).padStart(2, '0')
   return `${base}-${paddedN}`
 }

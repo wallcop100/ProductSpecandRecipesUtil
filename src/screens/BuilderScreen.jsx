@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import {
-  Button, ButtonGroup, Nav, Spinner, Form, Modal,
+  Button, ButtonGroup, Nav, Spinner, Form, Modal, Overlay, Popover,
 } from 'react-bootstrap'
 import {
   DndContext,
@@ -30,6 +30,8 @@ import LinWrapperWizardModal from '../components/LinWrapperWizardModal'
 import AddAnywhereModal from '../components/AddAnywhereModal'
 import NewETWizardModal from '../components/NewETWizardModal'
 import ConflictModal from '../components/ConflictModal'
+import ChangeSummaryModal from '../components/ChangeSummaryModal'
+import TransformToTemplateModal from '../components/TransformToTemplateModal'
 import IconButton from '../components/IconButton'
 import MaterialIcon from '../components/MaterialIcon'
 import { ACTION_ICONS, ICONS } from '../utils/entityStyle'
@@ -46,6 +48,7 @@ import { ACTION_ICONS, ICONS } from '../utils/entityStyle'
 export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec, onOpenConnectors, onOpenTags, onBackToSetup }) {
   const rootView = useStore(s => s.rootView)
   const projectNumber = useStore(s => s.projectNumber)
+  const projectId = useStore(s => s.projectId)
   const configName = useStore(s => s.configName)
   const folderPath = useStore(s => s.folderPath)
   const activePositionRef = useStore(s => s.activePositionRef)
@@ -67,7 +70,6 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
   const moveIngredientAcrossSections = useStore(s => s.moveIngredientAcrossSections)
   const runValidation = useStore(s => s.runValidation)
   const exportChanges = useStore(s => s.exportChanges)
-  const saveAsTemplate = useStore(s => s.saveAsTemplate)
   const closeETRecipe = useStore(s => s.closeETRecipe)
   const undo = useStore(s => s.undo)
   const redo = useStore(s => s.redo)
@@ -95,11 +97,13 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
   const [exportSuccess, setExportSuccess] = useState(false)
   const [snapshotMsg, setSnapshotMsg] = useState(null)
   const [showSnapshotPrompt, setShowSnapshotPrompt] = useState(false)
+  const [changeSummary, setChangeSummary] = useState(null)   // { scope: 'export'|'db' } — the hard gate (T-Q1)
+  const [exportConfigToo, setExportConfigToo] = useState(false)
+  const [showValidatePop, setShowValidatePop] = useState(false)
   const snapshotOfferedRef = React.useRef(false)
+  const validateBtnRef = React.useRef(null)
   const [, setActiveId] = useState(null)  // drag tracking
-  const [templateNameInput, setTemplateNameInput] = useState('')
-  const [showSaveTemplate, setShowSaveTemplate] = useState(false)
-  const [saveToLibrary, setSaveToLibrary] = useState(false)
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false)   // Transform-into-template modal (T-F4)
   // Track which template (if any) was applied to each position { [posRef]: templateId }
   const [appliedTemplateId, setAppliedTemplateId] = useState({})
 
@@ -116,7 +120,9 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
       const mod = e.ctrlKey || e.metaKey
       if (!mod) return
       const tag = (e.target?.tagName || '').toLowerCase()
-      if (tag === 'input' || tag === 'textarea' || e.target?.isContentEditable) return
+      const activeTag = (document.activeElement?.tagName || '').toLowerCase()
+      const editable = t => t === 'input' || t === 'textarea' || t === 'select'
+      if (editable(tag) || editable(activeTag) || e.target?.isContentEditable) return
       const k = e.key.toLowerCase()
       if (k === 'z') {
         e.preventDefault()
@@ -238,14 +244,20 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
     setReviewAddCtx(null)
   }
 
-  function handleNewET(posRef, sectionKey) {
-    setNewETTarget({ posRef, sectionKey })
+  function handleNewET(posRef, sectionKey, extra) {
+    setNewETTarget({ posRef, sectionKey, ...(extra || {}) })
   }
 
   function handleNewETDone(etRef) {
     if (!newETTarget) return
     if (newETTarget.mode === 'replace') { doReplace(newETTarget, etRef); setNewETTarget(null); return }
     if (newETTarget.mode === 'reviewAdd') { setNewETTarget(null); openReviewAddAnywhere(etRef); return }
+    if (newETTarget.mode === 'slot') {
+      // Fill a primed template slot with the freshly created ET (T-R1)
+      resolveSlot(newETTarget.posRef, newETTarget.slotKey, etRef)
+      setNewETTarget(null)
+      return
+    }
     const { posRef, sectionKey } = newETTarget
     setNewETTarget(null)
     addRecipeRow(posRef, sectionKey, { elementTypeRef: etRef, ElementTypeRef: etRef })
@@ -357,6 +369,27 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
     }
   }
 
+  // Hard gate (T-Q1): every write starts at the Change Summary modal.
+  function requestExport() {
+    setChangeSummary({ scope: 'export' })
+  }
+
+  function requestExportCatalogue() {
+    if (dbChanges.length === 0) return
+    setChangeSummary({ scope: 'db' })
+  }
+
+  async function handleSummaryConfirm({ exportConfig } = {}) {
+    const scope = changeSummary?.scope
+    setChangeSummary(null)
+    if (scope === 'db') {
+      await handleExportCatalogue()
+    } else {
+      setExportConfigToo(!!exportConfig)
+      await handleExport()
+    }
+  }
+
   // Offer a snapshot before export only when the newest snapshot is stale
   // (older than a day) or there's never been one — and only once per session.
   async function handleExport() {
@@ -378,12 +411,22 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
     setExportSuccess(false)
     try {
       await exportChanges()
+      // Opt-in config overlay export (T-M2), chosen in the Change Summary gate
+      if (exportConfigToo && projectId && folderPath) {
+        try {
+          await window.electronAPI.configWriteYaml?.({
+            projectId,
+            filePath: `${folderPath}\\${configName || 'config'}.config.yaml`,
+          })
+        } catch { /* best-effort — the Excel export already succeeded */ }
+      }
       setExportSuccess(true)
       setTimeout(() => setExportSuccess(false), 3000)
     } catch (err) {
       setExportError(err.message || 'Export failed')
     } finally {
       setExporting(false)
+      setExportConfigToo(false)
     }
   }
 
@@ -403,27 +446,14 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
 
   async function handleExportCatalogue() {
     if (dbChanges.length === 0) return
-    if (!window.confirm(
-      `Write ${dbChanges.length} change${dbChanges.length === 1 ? '' : 's'} to the DesignDB ElementTypes catalogue?\n\n` +
-      'This edits the shared DB file. Only the ElementTypes sheet is touched — ' +
-      'Positions, Elements and LinksMap are left to the design pipeline.'
-    )) return
     setExportError(null)
     try {
       await exportCatalogueChanges()
-      setSnapshotMsg('Catalogue exported')
+      setSnapshotMsg('ElementTypes table updated')
       setTimeout(() => setSnapshotMsg(null), 3000)
     } catch (err) {
-      setExportError(err.message || 'Catalogue export failed')
+      setExportError(err.message || 'ElementTypes update failed')
     }
-  }
-
-  async function handleSaveAsTemplate() {
-    if (!templateNameInput.trim() || !activePositionRef) return
-    await saveAsTemplate(activePositionRef, templateNameInput.trim(), saveToLibrary ? 'global' : 'project')
-    setTemplateNameInput('')
-    setShowSaveTemplate(false)
-    setSaveToLibrary(false)
   }
 
   const hasDirtyChanges = psChanges.length > 0 || rsChanges.length > 0
@@ -484,75 +514,73 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
           bsSize="sm"
           icon={showDeleted ? ACTION_ICONS.hideDeleted : ACTION_ICONS.showDeleted}
           onClick={() => setShowDeleted(v => !v)}
-          title={showDeleted ? 'Hide soft-deleted rows' : 'Show soft-deleted rows'}
+          title={showDeleted ? 'Hide IsDeleted rows' : 'Show IsDeleted rows'}
         />
+        <span ref={validateBtnRef}>
+          <IconButton
+            variant="outline-primary"
+            bsSize="sm"
+            icon={ACTION_ICONS.validate}
+            onClick={() => setShowValidatePop(v => !v)}
+            title="Run validation"
+          />
+        </span>
+        <Overlay target={validateBtnRef.current} show={showValidatePop} placement="bottom"
+          rootClose onHide={() => setShowValidatePop(false)}>
+          <Popover style={{ maxWidth: 280 }}>
+            <Popover.Body className="py-2 px-2" style={{ fontSize: 12 }}>
+              <div className="fw-semibold mb-1">Run validation?</div>
+              <div className="text-muted mb-2" style={{ fontSize: 11 }}>
+                Checks every PositionType recipe against the rule set (missing design
+                element, connector completeness, duplicate product codes, etc.) and lists
+                any issues in the Validation panel. It doesn't change anything.
+              </div>
+              <div className="d-flex justify-content-end gap-2">
+                <Button variant="link" size="sm" style={{ fontSize: 11 }}
+                  onClick={() => setShowValidatePop(false)}>Cancel</Button>
+                <Button variant="primary" size="sm" style={{ fontSize: 11 }}
+                  onClick={() => { runValidation(); setShowValidatePop(false); setRightOpen(true); setRightTab('validation') }}>
+                  Run validation
+                </Button>
+              </div>
+            </Popover.Body>
+          </Popover>
+        </Overlay>
         <IconButton
           variant="outline-primary"
           bsSize="sm"
-          icon={ACTION_ICONS.validate}
-          onClick={() => runValidation()}
-          title="Run validation"
-        />
-        <IconButton
-          variant="outline-primary"
-          bsSize="sm"
-          icon={ACTION_ICONS.review}
+          icon="fact_check"
           onClick={() => setShowReview(true)}
           title="Review recipes by family / manufacturer / tag / contains…"
         />
-        {showSaveTemplate ? (
-          <div className="d-flex gap-1 align-items-center">
-            <input
-              className="form-control form-control-sm"
-              style={{ width: 180 }}
-              placeholder="Template name…"
-              value={templateNameInput}
-              onChange={e => setTemplateNameInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') handleSaveAsTemplate() }}
-              autoFocus
-            />
-            <Form.Check
-              type="checkbox"
-              id="save-to-library"
-              label="My library"
-              checked={saveToLibrary}
-              onChange={e => setSaveToLibrary(e.target.checked)}
-              style={{ fontSize: 12, whiteSpace: 'nowrap' }}
-              title="Save to your cross-project favourites (available in every project)"
-            />
-            <Button variant="success" size="sm" onClick={handleSaveAsTemplate}>Save</Button>
-            <Button variant="link" size="sm" onClick={() => setShowSaveTemplate(false)}>Cancel</Button>
-          </div>
-        ) : (
-          <IconButton
-            variant="outline-secondary"
-            bsSize="sm"
-            icon={ACTION_ICONS.saveTemplate}
-            onClick={() => setShowSaveTemplate(true)}
-            disabled={!hasRecipeRows}
-            title={hasRecipeRows ? 'Save the active position as a template' : 'Select a position with rows to save as a template'}
-          />
-        )}
+        <IconButton
+          variant="outline-secondary"
+          bsSize="sm"
+          icon={ACTION_ICONS.saveTemplate}
+          onClick={() => setShowSaveTemplate(true)}
+          disabled={!hasRecipeRows}
+          title={hasRecipeRows ? 'Transform the active position into a template' : 'Select a position with rows to transform into a template'}
+        />
         {/* Snapshot is now offered as part of the export flow (see the
             snapshot-before-export prompt), so no standalone toolbar button. */}
-        {/* Catalogue export appears only when there are pending ElementType
-            catalogue changes to write to the shared DesignDB file. */}
+        {/* Appears only when there are pending ElementType changes to write
+            into the shared DesignDB ElementTypes table. */}
         {dbWriteEnabled && dbChanges.length > 0 && (
           <Button
             variant="warning"
             size="sm"
             className="d-inline-flex align-items-center gap-1"
-            onClick={handleExportCatalogue}
-            title={`Write ${dbChanges.length} new/edited ElementType${dbChanges.length === 1 ? '' : 's'} to the shared DesignDB catalogue (ElementTypes sheet only)`}
+            onClick={requestExportCatalogue}
+            title={`Update the ElementTypes table with ${dbChanges.length} new/edited ElementType${dbChanges.length === 1 ? '' : 's'} (ElementTypes table only)`}
           >
             <MaterialIcon name="inventory_2" size={15} />
-            Save {dbChanges.length} to DB
+            Update ElementTypes ({dbChanges.length})
           </Button>
         )}
         <Button
           variant={hasDirtyChanges ? 'primary' : 'outline-secondary'}
           size="sm"
-          onClick={handleExport}
+          onClick={requestExport}
           disabled={exporting || !hasDirtyChanges}
         >
           {exporting ? <><Spinner size="sm" animation="border" className="me-1" />Exporting…</> : 'Export changes'}
@@ -871,6 +899,26 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
       />
 
       <ConflictModal />
+
+      {/* Transform Active Position into a Template (T-F4) */}
+      <TransformToTemplateModal
+        show={showSaveTemplate}
+        onHide={() => setShowSaveTemplate(false)}
+        posRef={activePositionRef}
+      />
+
+      {/* Change Summary — the hard gate before every write (T-Q1) */}
+      <ChangeSummaryModal
+        show={!!changeSummary}
+        scope={changeSummary?.scope || 'export'}
+        onHide={() => setChangeSummary(null)}
+        onConfirm={handleSummaryConfirm}
+        confirmLabel={changeSummary?.scope === 'db' ? 'Update ElementTypes Table' : 'Export changes'}
+        note={changeSummary?.scope === 'db'
+          ? 'This edits the shared DesignDB file. Only the ElementTypes table is touched — Positions, Elements and LinksMap are left to the design pipeline.'
+          : 'Review what will be written to the Product Spec and Recipe Spec files, then confirm.'}
+        busy={exporting}
+      />
 
       {/* In-app snapshot offer (replaces the native confirm; only shown when
           the newest snapshot is stale). */}

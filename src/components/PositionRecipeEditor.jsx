@@ -165,7 +165,7 @@ export default function PositionRecipeEditor({
         )}
         <ConnectorSuggestions posRef={ref} />
         <RecipeSection
-          title="Position Level"
+          title="PositionType Level"
           sectionKey="position"
           rows={filterDeleted(grouped.position)}
           posRef={ref}

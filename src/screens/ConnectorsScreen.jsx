@@ -5,7 +5,7 @@ import CoverageMatrix from '../components/CoverageMatrix'
 import CollectionEditor from '../components/CollectionEditor'
 import CellDetailPanel from '../components/CellDetailPanel'
 import IconButton from '../components/IconButton'
-import { collectionStatusForPosition } from '../utils/collectionStatus'
+import { collectionStatusForPosition, positionRecipeWithWrapperInternals } from '../utils/collectionStatus'
 import { ACTION_ICONS } from '../utils/entityStyle'
 
 /**
@@ -32,7 +32,7 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
   useEffect(() => {
     if (!focusPosRef || etCollections.length === 0) return
     const tags = positionUI[focusPosRef]?.tags ?? []
-    const posRecipe = recipes.filter(r => (r.PositionTypeRef || r.positionTypeRef) === focusPosRef)
+    const posRecipe = positionRecipeWithWrapperInternals(recipes, focusPosRef).combined
     const statuses = collectionStatusForPosition(focusPosRef, tags, posRecipe, etCollections)
     // Prefer an applicable collection (tags match): complete/partial/missing over na.
     const applicable = statuses.find(s => s.status !== 'na')

@@ -147,7 +147,7 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
 
         {isDeleted && (
           <div className="alert alert-secondary py-1 px-2 mb-3 d-flex align-items-center gap-2" style={{ fontSize: 11 }}>
-            <span className="flex-grow-1">Marked as deleted.</span>
+            <span className="flex-grow-1">Marked IsDeleted.</span>
             <button className="btn btn-link btn-sm p-0" style={{ fontSize: 11 }} onClick={() => updatePSRow(selectedRef, { IsDeleted: null })}>Restore</button>
           </div>
         )}
@@ -224,7 +224,7 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
           <FlagPill label="Properties TBC" value={isPropTBC} onChange={val => updatePSRow(selectedRef, { IsPropertiesTBC: val })} activeVariant="warning" />
           <div className="ms-auto">
             {!isDeleted ? (
-              <button className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize: 11 }} onClick={() => updatePSRow(selectedRef, { IsDeleted: 'Y' })}>Delete</button>
+              <button className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize: 11 }} onClick={() => updatePSRow(selectedRef, { IsDeleted: 'Y' })}>Mark IsDeleted</button>
             ) : (
               <button className="btn btn-link btn-sm p-0 text-secondary" style={{ fontSize: 11 }} onClick={() => updatePSRow(selectedRef, { IsDeleted: null })}>Restore</button>
             )}
@@ -259,7 +259,7 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
             </div>
             {usage.positions?.size > 0 && (
               <div className="mb-2">
-                <div className="text-muted" style={{ fontSize: 11 }}>Positions</div>
+                <div className="text-muted" style={{ fontSize: 11 }}>In PositionTypes</div>
                 <div className="d-flex flex-wrap gap-1 mt-1">
                   {[...usage.positions].map(r => <EntityPill key={r} type="PositionType" label={r} style={{ fontSize: 10 }} />)}
                 </div>
@@ -267,7 +267,7 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
             )}
             {usage.elements?.size > 0 && (
               <div>
-                <div className="text-muted" style={{ fontSize: 11 }}>Element assemblies</div>
+                <div className="text-muted" style={{ fontSize: 11 }}>In ElementTypes</div>
                 <div className="d-flex flex-wrap gap-1 mt-1">
                   {[...usage.elements].map(r => <EntityPill key={r} type="ElementType" label={r} style={{ fontSize: 10 }} />)}
                 </div>

@@ -1,14 +1,21 @@
-import React, { useState, useMemo, useEffect } from 'react'
-import { Button, Nav, Form, Table, Badge, Alert } from 'react-bootstrap'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
+import { Button, Nav, Form, Table, Badge, Alert, Overlay, Popover } from 'react-bootstrap'
 import { v4 as uuidv4 } from 'uuid'
 import useStore from '../store/useStore'
 import { TAG_COLUMNS, TAG_OPS, ruleMatches } from '../utils/tagRules'
 import TagInput from '../components/TagInput'
+import TagBadge from '../components/TagBadge'
 import ProjectIdPill from '../components/ProjectIdPill'
 import TagDriftWizard from '../components/TagDriftWizard'
 import IconButton from '../components/IconButton'
 import MaterialIcon from '../components/MaterialIcon'
 import { ACTION_ICONS } from '../utils/entityStyle'
+
+// Predetermined tag colours the user can pick from.
+const TAG_SWATCHES = [
+  '#0d6efd', '#6610f2', '#6f42c1', '#d63384', '#dc3545', '#fd7e14',
+  '#f59e0b', '#198754', '#20c997', '#0dcaf0', '#6c757d', '#343a40',
+]
 
 /**
  * TagManagerScreen — the dedicated tag window.
@@ -106,6 +113,17 @@ function RulesTab({ tagRules, setTagRules, tagPalette, setTagPalette, positionTy
         <div className="fw-semibold mb-2">Tag palette</div>
         <div className="text-muted small mb-2">Suggestions offered when adding tags. Tags are free-form — any string is allowed.</div>
         <TagInput value={tagPalette} onChange={setTagPalette} palette={[]} placeholder="Add a palette tag…" />
+
+        {tagPalette.length > 0 && (
+          <div className="mt-3">
+            <div className="text-muted small mb-2">Tag colours — click a tag to recolour it.</div>
+            <div className="d-flex flex-wrap gap-2">
+              {tagPalette.map(tag => (
+                <TagColorPicker key={tag} tag={tag} />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="d-flex align-items-center mb-2">
@@ -260,6 +278,48 @@ function PositionsTab({ positionTypes, positionUI, tagPalette, togglePositionTag
       </Table>
       <div className="text-muted small">* = manual addition. Removing a rule-derived tag records an exception for that position only.</div>
     </div>
+  )
+}
+
+// The tag badge itself is the recolour control: click it to open a swatch
+// picker. Shows its current colour, so the badge doubles as a live preview.
+function TagColorPicker({ tag }) {
+  const setTagColor = useStore(s => s.setTagColor)
+  const current = useStore(s => s.tagColors?.[tag])
+  const [show, setShow] = useState(false)
+  const ref = useRef(null)
+  return (
+    <>
+      <span ref={ref} className="d-inline-flex">
+        <TagBadge
+          tag={tag}
+          onClick={() => setShow(v => !v)}
+          title="Click to set this tag's colour"
+        />
+      </span>
+      <Overlay target={ref.current} show={show} placement="bottom" rootClose onHide={() => setShow(false)}>
+        <Popover>
+          <Popover.Body className="p-2">
+            <div className="text-muted mb-1" style={{ fontSize: 11 }}>Colour for <strong>{tag}</strong></div>
+            <div className="d-flex flex-wrap gap-1" style={{ maxWidth: 168 }}>
+              {TAG_SWATCHES.map(c => (
+                <button key={c} type="button"
+                  onClick={() => { setTagColor(tag, c); setShow(false) }}
+                  title={c}
+                  style={{
+                    width: 22, height: 22, borderRadius: 4, background: c,
+                    border: current === c ? '2px solid #000' : '1px solid #ccc', cursor: 'pointer',
+                  }} />
+              ))}
+            </div>
+            <button className="btn btn-link btn-sm p-0 mt-2" style={{ fontSize: 11 }}
+              onClick={() => { setTagColor(tag, null); setShow(false) }}>
+              Clear colour
+            </button>
+          </Popover.Body>
+        </Popover>
+      </Overlay>
+    </>
   )
 }
 

@@ -34,7 +34,6 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
   const [filters, setFilters] = useState(EMPTY_FILTERS)
   const [phase, setPhase]     = useState('build')      // 'build' | 'cycle'
   const [index, setIndex]     = useState(0)
-  const [addingEntity, setAddingEntity] = useState(false)  // Existing/New fork open
 
   useEffect(() => { if (show) { setPhase('build'); setIndex(0) } }, [show])
   // Changing the unit invalidates the criteria (families/manufacturers differ)
@@ -229,7 +228,20 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
       <Modal.Body style={{ minHeight: 420 }}>
         {phase === 'build' ? (
           <>
-            <div className="d-flex align-items-center gap-2 mb-3">
+            {/* Big, unmistakable filter header (matches the Add-Anywhere first page) */}
+            <div className="text-center mb-4 pb-3 border-bottom">
+              <div className="d-inline-flex align-items-center justify-content-center mb-2"
+                style={{ width: 64, height: 64, borderRadius: '50%', background: '#e8f0fe' }}>
+                <MaterialIcon name="filter_alt" size={38} style={{ color: '#0d6efd' }} />
+              </div>
+              <h5 className="mb-1" style={{ fontSize: 16, fontWeight: 600 }}>What do you want to review?</h5>
+              <p className="text-muted mb-0" style={{ fontSize: 12, maxWidth: 440, margin: '0 auto' }}>
+                Pick PositionTypes or ElementTypes and narrow with the filters below —
+                or leave them blank to step through <strong>everything</strong>.
+              </p>
+            </div>
+
+            <div className="d-flex justify-content-center align-items-center gap-2 mb-3">
               <span className="text-muted small">Step through</span>
               <ButtonGroup size="sm">
                 <Button variant={unit === 'position' ? 'primary' : 'outline-secondary'} style={{ fontSize: 12 }}
@@ -346,31 +358,6 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
 
       <Modal.Footer>
         <Button variant="secondary" size="sm" onClick={onHide}>Close</Button>
-        <div className="flex-grow-1" />
-        {onAddEntity && (
-          addingEntity ? (
-            <div className="d-flex align-items-center gap-2">
-              <span className="text-muted small">Add into your{activeFilterChips.length > 0 ? ' filtered' : ''} {unit === 'position' ? 'PositionTypes' : 'ElementTypes'}:</span>
-              <Button variant="outline-primary" size="sm" style={{ fontSize: 12 }}
-                onClick={() => { setAddingEntity(false); onAddEntity({ mode: 'existing', unit, filters }) }}>
-                Existing
-              </Button>
-              <Button variant="outline-success" size="sm" style={{ fontSize: 12 }}
-                onClick={() => { setAddingEntity(false); onAddEntity({ mode: 'new', unit, filters }) }}>
-                New ↗
-              </Button>
-              <button className="btn btn-link btn-sm p-0 text-muted" style={{ fontSize: 11 }}
-                onClick={() => setAddingEntity(false)}>Cancel</button>
-            </div>
-          ) : (
-            <Button variant="primary" size="sm" className="d-inline-flex align-items-center gap-1"
-              style={{ fontSize: 12 }}
-              onClick={() => setAddingEntity(true)}
-              title="Pick or create an entity and add it across the items you're reviewing">
-              <MaterialIcon name="add_circle" size={15} /> Add Entity
-            </Button>
-          )
-        )}
       </Modal.Footer>
     </Modal>
   )

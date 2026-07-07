@@ -80,12 +80,15 @@ RS_FLAG_COLS = {'IsDesign', 'IsContractItem', 'IsTRItem', 'IsInteger', 'IsDelete
 # Internal helpers
 # ---------------------------------------------------------------------------
 
-def _parse_sheet_by_headers(ws, column_map, flag_cols=None):
+def _parse_sheet_by_headers(ws, column_map, flag_cols=None, include_all=False):
     """
     Parse a worksheet by matching actual column headers to output field names.
 
     column_map : {excel_header: output_field_name}
     flag_cols  : set of output field names that must normalise to 'Y' or None
+    include_all: also expose every raw column under its own header name (in
+                 addition to the mapped/canonical fields). Used for PositionTypes
+                 so tag rules can key off any DB schema column.
 
     Returns list of row dicts. Each dict includes '_row_num' (1-based Excel
     row index, header = row 1, first data row = row 2).
@@ -103,6 +106,14 @@ def _parse_sheet_by_headers(ws, column_map, flag_cols=None):
             col_index[output_name] = actual_headers.index(excel_name)
         except ValueError:
             pass  # column absent in this file version
+
+    # Extra pass-through columns: every header not already a mapped OUTPUT name.
+    extra_index = {}
+    if include_all:
+        mapped_outputs = set(column_map.values())
+        for idx, header in enumerate(actual_headers):
+            if header and header not in mapped_outputs and header not in col_index:
+                extra_index[header] = idx
 
     rows = []
     for row_num, row_values in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
@@ -122,6 +133,14 @@ def _parse_sheet_by_headers(ws, column_map, flag_cols=None):
 
             row_dict[output_name] = value
             if value is not None:
+                all_none = False
+
+        for header, idx in extra_index.items():
+            raw = row_values[idx] if idx < len(row_values) else None
+            if isinstance(raw, str):
+                raw = raw.strip() or None
+            row_dict[header] = raw
+            if raw is not None:
                 all_none = False
 
         if not all_none:
@@ -187,7 +206,7 @@ def parse_db(filepath):
         # _row_num kept — ElementTypes is writable
         element_types.append(r)
 
-    raw_pts = _parse_sheet_by_headers(wb['PositionTypes'], PT_COLUMN_MAP, PT_FLAG_COLS)
+    raw_pts = _parse_sheet_by_headers(wb['PositionTypes'], PT_COLUMN_MAP, PT_FLAG_COLS, include_all=True)
     pt_collections = _collection_refs(raw_pts, 'PositionTypeRef', 'ParentRef')
     position_types = []
     for r in raw_pts:

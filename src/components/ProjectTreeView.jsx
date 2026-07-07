@@ -43,6 +43,8 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
   const [showDriftWizard, setShowDriftWizard] = useState(false)
   const [showIgnored, setShowIgnored] = useState(false)
   const [collapsedFamilies, setCollapsedFamilies] = useState(() => new Set())
+  const [showTags, setShowTags] = useState(false)      // overview per-row tags (default off)
+  const [showStatus, setShowStatus] = useState(false)  // overview per-row validation/connector status (default off)
   const driftCount = Object.keys(tagDrift || {}).length
 
   const NO_FAMILY = '(no family)'
@@ -193,7 +195,7 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
             family ignored
           </span>
         )}
-        {tags.slice(0, 4).map(tag => (
+        {showTags && tags.slice(0, 4).map(tag => (
           <TagBadge key={tag} tag={tag} />
         ))}
         {drifted && (
@@ -209,7 +211,7 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
         {count > 0
           ? <span className="badge bg-light text-dark border" style={{ fontSize: 10 }}>{count} {count === 1 ? 'row' : 'rows'}</span>
           : <span className="text-muted fst-italic" style={{ fontSize: 11 }}>empty</span>}
-        {!isIgnored && <PositionValidationBadge posRef={ref} size={14} />}
+        {showStatus && !isIgnored && <PositionValidationBadge posRef={ref} size={14} />}
         {/* Ignore toggle — stop propagation so it doesn't open the position */}
         <button
           className="btn btn-link p-0"
@@ -254,15 +256,28 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
             Tag changes ({driftCount})
           </Button>
         )}
-        <div className="ms-auto" style={{ width: 360 }}>
-          <FilterBar
-            text={filter}
-            onText={setFilter}
-            placeholder="Filter positions…"
-            tagOptions={availableTags}
-            activeTags={activeTags}
-            onToggleTag={toggleTag}
-          />
+        <div className="ms-auto d-flex align-items-center gap-2">
+          {/* Per-row detail toggles — default off to keep the list scannable */}
+          <Button
+            variant={showTags ? 'secondary' : 'outline-secondary'} size="sm"
+            style={{ fontSize: 11 }} onClick={() => setShowTags(v => !v)}
+            title="Show tags on each row"
+          >Tags</Button>
+          <Button
+            variant={showStatus ? 'secondary' : 'outline-secondary'} size="sm"
+            style={{ fontSize: 11 }} onClick={() => setShowStatus(v => !v)}
+            title="Show validation / connector status on each row"
+          >Status</Button>
+          <div style={{ width: 300 }}>
+            <FilterBar
+              text={filter}
+              onText={setFilter}
+              placeholder="Filter positions…"
+              tagOptions={availableTags}
+              activeTags={activeTags}
+              onToggleTag={toggleTag}
+            />
+          </div>
         </div>
       </div>
 
@@ -304,8 +319,10 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
                 {realFam && (
                   <Button
                     variant="link" size="sm"
-                    className="p-0 d-inline-flex align-items-center gap-1 text-warning"
-                    style={{ fontSize: 11, textDecoration: 'none' }}
+                    className="p-0 d-inline-flex align-items-center gap-1"
+                    style={{ fontSize: 11, textDecoration: 'none', color: '#adb5bd' }}
+                    onMouseEnter={e => { e.currentTarget.style.color = '#e0a800' }}
+                    onMouseLeave={e => { e.currentTarget.style.color = '#adb5bd' }}
                     onClick={e => { e.stopPropagation(); toggleIgnorePositionFamily(fam) }}
                     title={`Ignore every PositionType in the “${fam}” family — they move to the Ignored section below`}
                   >

@@ -442,23 +442,14 @@ describe('LOCAL_DRIVER_REQUIREMENTS', () => {
 })
 
 // ---------------------------------------------------------------------------
-// REMOTE_HAS_SITE_SOCKET (Rule 8)
+// REMOTE_HAS_SITE_SOCKET (Rule 8) — REMOVED: remote fittings can legitimately
+// have a site-side socket, so the rule produced false positives.
 // ---------------------------------------------------------------------------
-describe('REMOTE_HAS_SITE_SOCKET', () => {
-  test('warns when a Remote-CC position has a site socket at position level', () => {
+describe('REMOTE_HAS_SITE_SOCKET (removed)', () => {
+  test('a Remote-CC position with a site socket is NOT flagged', () => {
     const rsRows = [
       makeRsRow({ positionTypeRef: 'PT-DL-CC-01', contextRef: 'PT-DL-CC-01', elementTypeRef: 'ET-DL-SPOT-01', isDesign: 'Y' }),
       makeRsRow({ positionTypeRef: 'PT-DL-CC-01', contextRef: 'PT-DL-CC-01', elementTypeRef: 'ET-SOCK-5P-01' }),
-    ]
-    const issues = runValidation(dbData, [], rsRows, { 'PT-DL-CC-01': { tags: ['DL', 'Remote-CC'] } })
-    const found = issues.filter(i => i.rule === 'REMOTE_HAS_SITE_SOCKET')
-    expect(found).toHaveLength(1)
-    expect(found[0].severity).toBe('warning')
-  })
-
-  test('no warning when a Remote-CC position has no site socket', () => {
-    const rsRows = [
-      makeRsRow({ positionTypeRef: 'PT-DL-CC-01', contextRef: 'PT-DL-CC-01', elementTypeRef: 'ET-DL-SPOT-01', isDesign: 'Y' }),
     ]
     const issues = runValidation(dbData, [], rsRows, { 'PT-DL-CC-01': { tags: ['DL', 'Remote-CC'] } })
     expect(issues.some(i => i.rule === 'REMOTE_HAS_SITE_SOCKET')).toBe(false)

@@ -10,6 +10,7 @@ import MaterialIcon from './MaterialIcon'
 import EntityPill from './EntityPill'
 import { positionFamilyOf } from '../utils/positionFamily'
 import { familyOf } from '../utils/etRef'
+import { ICONS } from '../utils/entityStyle'
 
 const EMPTY_FILTERS = { family: '', tag: '', manufacturer: '', containsET: '' }
 
@@ -383,7 +384,7 @@ export default function AddAnywhereModal({ show, onHide, etRef, sectionKey, excl
               <ButtonGroup>
                 <Button variant={isPos ? 'primary' : 'outline-secondary'} style={{ fontSize: 12 }}
                   className="d-inline-flex align-items-center gap-1" onClick={() => switchUnit('position')}>
-                  <MaterialIcon name="place" size={15} /> PositionType recipes
+                  <MaterialIcon name={ICONS.position} size={15} /> PositionType recipes
                 </Button>
                 <Button variant={!isPos ? 'primary' : 'outline-secondary'} style={{ fontSize: 12 }}
                   className="d-inline-flex align-items-center gap-1" onClick={() => switchUnit('element')}>

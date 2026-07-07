@@ -72,9 +72,13 @@ export default function PositionValidationBadge({ posRef, size = 14, showOk = fa
             </div>
           )
         })}
-        <div className="d-flex align-items-center gap-1 mt-1" style={{ fontSize: 10, color: '#0d6efd' }}>
-          <MaterialIcon name="open_in_new" size={11} /> Click an issue to open the position
-        </div>
+        <button
+          className="btn btn-link btn-sm p-0 d-flex align-items-center gap-1 mt-1"
+          style={{ fontSize: 11, color: '#0d6efd', textDecoration: 'none' }}
+          onClick={() => { setShow(false); focusPosition(posRef) }}
+        >
+          <MaterialIcon name="open_in_new" size={13} /> Open {posRef} to fix
+        </button>
       </Popover.Body>
     </Popover>
   )
@@ -82,11 +86,14 @@ export default function PositionValidationBadge({ posRef, size = 14, showOk = fa
   return (
     <OverlayTrigger placement="auto" trigger="manual" show={show} overlay={popover}>
       <span
-        style={{ display: 'inline-flex', cursor: 'default' }}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 2, cursor: 'default' }}
         onMouseEnter={openPop}
         onMouseLeave={schedulePop}
       >
         <MaterialIcon name={icon} size={size} style={{ color }} />
+        {issues.length > 1 && (
+          <span style={{ fontSize: Math.max(9, size - 5), fontWeight: 700, color }}>{issues.length}</span>
+        )}
       </span>
     </OverlayTrigger>
   )

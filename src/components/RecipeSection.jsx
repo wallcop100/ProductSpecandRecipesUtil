@@ -149,6 +149,7 @@ export default function RecipeSection({
                   posRef={posRef}
                   sectionKey={sectionKey}
                   onResolve={(slotKey, entityRef) => resolveSlot(posRef, slotKey, entityRef)}
+                  onNewET={onNewET ? slot => onNewET(posRef, sectionKey, { mode: 'slot', slotKey: slot.slotKey }) : null}
                 />
               )
               : (

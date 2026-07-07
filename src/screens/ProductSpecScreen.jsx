@@ -4,6 +4,7 @@ import useStore from '../store/useStore'
 import ETSpecBrowser from '../components/ETSpecBrowser'
 import ETSpecEditor  from '../components/ETSpecEditor'
 import SpecWizardModal from '../components/SpecWizardModal'
+import ChangeSummaryModal from '../components/ChangeSummaryModal'
 import IconButton from '../components/IconButton'
 import MaterialIcon from '../components/MaterialIcon'
 import { ACTION_ICONS } from '../utils/entityStyle'
@@ -25,6 +26,20 @@ export default function ProductSpecScreen({ onBack, scrollToRef }) {
 
   const [selectedRef,  setSelectedRef]  = useState(scrollToRef || null)
   const [bulkSelected, setBulkSelected] = useState(new Set())
+  const [leftWidth,    setLeftWidth]    = useState(320)   // resizable browser panel
+  const draggingRef = useRef(false)
+
+  useEffect(() => {
+    function onMove(e) {
+      if (!draggingRef.current) return
+      // clamp between 220 and 520 px
+      setLeftWidth(Math.min(520, Math.max(220, e.clientX)))
+    }
+    function onUp() { draggingRef.current = false; document.body.style.cursor = '' }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+  }, [])
   const [viewMode,     setViewMode]     = useState('family')
   const [showWizard,   setShowWizard]   = useState(false)
   const [showChangelog, setShowChangelog] = useState(false)
@@ -86,25 +101,9 @@ export default function ProductSpecScreen({ onBack, scrollToRef }) {
     return { complete, partial, missing: missingPsETs.length, deleted, duplicates: dupSet.size }
   }, [psRows, missingPsETs])
 
-  // Change log: deduplicate by etRef+field, keep first before / last after
-  const changelog = useMemo(() => {
-    const byKey = new Map()
-    for (const change of psChanges) {
-      const etRef   = change.elementTypeRef
-      const before  = change.before || {}
-      const updates = change.updates || {}
-      for (const [field, after] of Object.entries(updates)) {
-        const key = `${etRef}::${field}`
-        if (!byKey.has(key)) {
-          byKey.set(key, { etRef, field, before: before[field] ?? null, after })
-        } else {
-          byKey.get(key).after = after
-        }
-      }
-    }
-    // Only entries where before !== after
-    return [...byKey.values()].filter(c => String(c.before ?? '') !== String(c.after ?? ''))
-  }, [psChanges])
+  // Pending-change count for the header chip; the review surface itself is
+  // the shared Change Summary modal (T-Q1 — supersedes the old drawer).
+  const changeCount = psChanges.length
 
   // Navigate prev/next in the filtered list (ETSpecBrowser handles filtering;
   // we expose navigation via the selected ref directly here using the full psRows list
@@ -204,23 +203,34 @@ export default function ProductSpecScreen({ onBack, scrollToRef }) {
           <span style={{ fontSize: 11, color: '#6c757d', whiteSpace: 'nowrap' }}>
             {stats.complete} / {total - stats.deleted} complete
           </span>
-          <span className="d-inline-flex align-items-center gap-1" style={{ fontSize: 10, color: '#ef4444' }} title="Missing spec"><MaterialIcon name={ACTION_ICONS.missing} size={12} /> {stats.missing}</span>
-          <span className="d-inline-flex align-items-center gap-1" style={{ fontSize: 10, color: '#f59e0b' }} title="Partial/TBC"><MaterialIcon name={ACTION_ICONS.partial} size={12} /> {stats.partial}</span>
+          {/* Bigger, discoverable status pills */}
+          {stats.missing > 0 && (
+            <StatPill color="#ef4444" bg="#fdecec" icon={ACTION_ICONS.missing}
+              count={stats.missing} label="Missing spec"
+              hint="ElementTypes referenced in recipes with no Product Spec row" />
+          )}
+          {stats.partial > 0 && (
+            <StatPill color="#b45309" bg="#fff4e5" icon={ACTION_ICONS.partial}
+              count={stats.partial} label="Partial / TBC"
+              hint="Rows missing a manufacturer or product code, or marked TBC" />
+          )}
           {stats.duplicates > 0 && (
-            <span className="d-inline-flex align-items-center gap-1" style={{ fontSize: 10, color: '#dc3545' }} title="Duplicate product codes"><MaterialIcon name="warning" size={12} /> {stats.duplicates} dup</span>
+            <StatPill color="#dc3545" bg="#fdecec" icon="warning"
+              count={stats.duplicates} label="Duplicate codes"
+              hint="Product codes shared by more than one ElementType" />
           )}
         </div>
 
         <div className="flex-grow-1" />
 
-        {/* Change log chip */}
-        {changelog.length > 0 && (
+        {/* Pending-changes chip → Change Summary review (T-Q1) */}
+        {changeCount > 0 && (
           <button
             className={`btn btn-sm ${showChangelog ? 'btn-primary' : 'btn-outline-primary'}`}
             style={{ fontSize: 11, padding: '2px 8px' }}
             onClick={() => setShowChangelog(v => !v)}
           >
-            {changelog.length} change{changelog.length !== 1 ? 's' : ''}
+            {changeCount} change{changeCount !== 1 ? 's' : ''}
           </button>
         )}
 
@@ -234,32 +244,12 @@ export default function ProductSpecScreen({ onBack, scrollToRef }) {
         </Button>
       </div>
 
-      {/* Change log drawer */}
-      {showChangelog && changelog.length > 0 && (
-        <div
-          className="border-bottom px-3 py-2"
-          style={{ background: '#f8f9fa', flexShrink: 0, maxHeight: 200, overflowY: 'auto', fontSize: 12 }}
-        >
-          <div className="fw-semibold mb-1" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, color: '#6c757d' }}>
-            Unsaved changes
-          </div>
-          {changelog.map((c, i) => (
-            <div key={i} className="d-flex align-items-baseline gap-2 mb-1" style={{ fontSize: 11 }}>
-              <span className="text-muted" style={{ fontSize: 10, minWidth: 100, flexShrink: 0 }}>{c.field}</span>
-              <button
-                className="btn btn-link btn-sm p-0"
-                style={{ fontSize: 11, textDecoration: 'none', fontWeight: 500 }}
-                onClick={() => setSelectedRef(c.etRef)}
-              >
-                {c.etRef}
-              </button>
-              <span className="text-muted">
-                {String(c.before ?? '—')} → <strong>{String(c.after ?? '—')}</strong>
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* Change review — the shared per-entity summary (read-only here) */}
+      <ChangeSummaryModal
+        show={showChangelog}
+        scope="export"
+        onHide={() => setShowChangelog(false)}
+      />
 
       {/* Bulk action bar */}
       {bulkSelected.size > 0 && (
@@ -310,7 +300,7 @@ export default function ProductSpecScreen({ onBack, scrollToRef }) {
           </Overlay>
 
           <Button variant="outline-danger" size="sm" style={{ fontSize: 11 }} onClick={bulkDelete}>
-            Delete
+            Mark IsDeleted
           </Button>
           <button className="btn btn-link btn-sm p-0 ms-auto" style={{ fontSize: 11, color: '#6c757d' }} onClick={clearBulk}>
             Clear
@@ -320,8 +310,8 @@ export default function ProductSpecScreen({ onBack, scrollToRef }) {
 
       {/* Split panel */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        {/* Left: browser */}
-        <div style={{ width: 280, flexShrink: 0, borderRight: '1px solid #dee2e6', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        {/* Left: browser (user-resizable) */}
+        <div style={{ width: leftWidth, flexShrink: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <ETSpecBrowser
             selectedRef={selectedRef}
             onSelect={setSelectedRef}
@@ -334,6 +324,16 @@ export default function ProductSpecScreen({ onBack, scrollToRef }) {
             missingETs={missingPsETs}
           />
         </div>
+
+        {/* Draggable splitter */}
+        <div
+          onMouseDown={() => { draggingRef.current = true; document.body.style.cursor = 'col-resize' }}
+          title="Drag to resize"
+          style={{
+            width: 5, flexShrink: 0, cursor: 'col-resize',
+            background: '#dee2e6', borderLeft: '1px solid #cfd4da', borderRight: '1px solid #cfd4da',
+          }}
+        />
 
         {/* Right: editor */}
         <div style={{ flex: 1, overflow: 'hidden' }}>
@@ -349,5 +349,36 @@ export default function ProductSpecScreen({ onBack, scrollToRef }) {
       {/* Quick-fill wizard modal */}
       <SpecWizardModal show={showWizard} onHide={() => setShowWizard(false)} />
     </div>
+  )
+}
+
+// Bigger, easier-to-find status pill with a hover popover explaining it.
+function StatPill({ color, bg, icon, count, label, hint }) {
+  const [show, setShow] = useState(false)
+  const ref = useRef(null)
+  return (
+    <>
+      <span
+        ref={ref}
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+        className="d-inline-flex align-items-center gap-1"
+        style={{
+          fontSize: 12, fontWeight: 600, color, background: bg,
+          border: `1px solid ${color}33`, borderRadius: 12, padding: '2px 9px',
+          cursor: 'default', whiteSpace: 'nowrap',
+        }}
+      >
+        <MaterialIcon name={icon} size={15} /> {count}
+      </span>
+      <Overlay target={ref.current} show={show} placement="bottom">
+        <Popover style={{ maxWidth: 260 }}>
+          <Popover.Body className="py-2 px-2" style={{ fontSize: 12 }}>
+            <div className="fw-semibold" style={{ color }}>{label}: {count}</div>
+            <div className="text-muted" style={{ fontSize: 11 }}>{hint}</div>
+          </Popover.Body>
+        </Popover>
+      </Overlay>
+    </>
   )
 }

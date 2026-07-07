@@ -1,8 +1,9 @@
 import { describe, test, expect } from 'vitest'
 import {
   connectorRole, isConnector, counterpartRef, strainReliefRef, pinHint,
-  CONNECTION_TYPES, getConnectionType, composeConnection, connectorGaps, suggestRefForPart,
+  CONNECTION_TYPES, getConnectionType, composeConnection, suggestRefForPart,
 } from '../../src/utils/connectors.js'
+import { connectorGapsForPosition } from '../../src/utils/collectionStatus.js'
 
 describe('connectorRole', () => {
   test('detects socket, plug, and strain relief', () => {
@@ -125,35 +126,52 @@ describe('suggestRefForPart', () => {
   })
 })
 
-describe('connectorGaps', () => {
-  const row = (ref, section) => ({ elementTypeRef: ref, _section: section })
-  const grouped = (position = [], dlInternal = [], linInternal = []) => ({ position, dlInternal, linInternal })
+describe('connectorGapsForPosition (from the user\'s Connector Templates)', () => {
+  // Real, user-chosen refs — nothing token-shaped or hardcoded.
+  const posRow = (ref, extra = {}) => ({
+    PositionTypeRef: 'P1', ContextType: 'PositionType', ElementTypeRef: ref, ...extra,
+  })
+  const collection = {
+    CollectionId: 'c1', Name: 'Site kit', ApplicableTags: ['Local'],
+    Ingredients: [
+      { ElementTypeRef: 'ET-WHATEVER-SOCK-1234', section: 'position' },
+      { ElementTypeRef: 'ET-BLAH-SR-77', section: 'position' },
+      { ElementTypeRef: 'ET-ODD-PLUG-9', section: 'dl_internal' },
+    ],
+  }
 
-  test('a socket without its plug yields a plug gap in the DL', () => {
-    const gaps = connectorGaps(grouped([row('ET-SOCKET-5P-01')], []))
-    const plugGap = gaps.find(g => g.kind === 'plug')
-    expect(plugGap).toBeDefined()
-    expect(plugGap.ref).toBe('ET-PLUG-5P-01')
-    expect(plugGap.section).toBe('dl_internal')
-    expect(plugGap.optional).toBe(false)
+  test('a started-but-incomplete template suggests only its real missing refs', () => {
+    const recipes = [posRow('ET-WHATEVER-SOCK-1234')]
+    const gaps = connectorGapsForPosition(recipes, 'P1', ['Local'], [collection])
+    const refs = gaps.map(g => g.ref)
+    expect(refs).toContain('ET-BLAH-SR-77')
+    expect(refs).toContain('ET-ODD-PLUG-9')
+    expect(refs).not.toContain('ET-WHATEVER-SOCK-1234')  // already present
+    // No hardcoded/guessed placeholder refs ever appear
+    expect(gaps.every(g => !/2PIN|SOCKET/.test(g.ref))).toBe(true)
   })
 
-  test('a plug without its socket yields a socket gap at position [bug fix]', () => {
-    const gaps = connectorGaps(grouped([], [row('ET-PLUG-5P-01')]))
-    const socketGap = gaps.find(g => g.kind === 'socket')
-    expect(socketGap).toBeDefined()
-    expect(socketGap.ref).toBe('ET-SOCKET-5P-01')
-    expect(socketGap.section).toBe('position')
-    expect(socketGap.optional).toBe(false)
+  test('a fully-satisfied template yields no gaps (arbitrary real refs)', () => {
+    const recipes = [
+      posRow('ET-WHATEVER-SOCK-1234'),
+      posRow('ET-BLAH-SR-77'),
+      posRow('ET-ODD-PLUG-9', { ContextType: 'ElementType', ContextRef: 'ET-DESIGN-1' }),
+    ]
+    expect(connectorGapsForPosition(recipes, 'P1', ['Local'], [collection])).toHaveLength(0)
   })
 
-  test('a paired socket/plug has no required gaps', () => {
-    const gaps = connectorGaps(grouped([row('ET-SOCKET-5P-01')], [row('ET-PLUG-5P-01')]))
-    expect(gaps.filter(g => !g.optional)).toHaveLength(0)
+  test('a template the position never started yields nothing', () => {
+    const recipes = [posRow('ET-SOMETHING-ELSE')]
+    expect(connectorGapsForPosition(recipes, 'P1', ['Local'], [collection])).toHaveLength(0)
   })
 
-  test('connectorGaps does not emit strain-relief gaps (SR handled by validation)', () => {
-    const gaps = connectorGaps(grouped([row('ET-SOCKET-5P-01')], [row('ET-PLUG-5P-01')]))
-    expect(gaps.filter(g => g.kind === 'sr')).toHaveLength(0)
+  test('tag-inapplicable templates are skipped', () => {
+    const recipes = [posRow('ET-WHATEVER-SOCK-1234')]
+    expect(connectorGapsForPosition(recipes, 'P1', ['Remote-CC'], [collection])).toHaveLength(0)
+  })
+
+  test('no templates means nothing to suggest', () => {
+    const recipes = [posRow('ET-WHATEVER-SOCK-1234')]
+    expect(connectorGapsForPosition(recipes, 'P1', ['Local'], [])).toHaveLength(0)
   })
 })

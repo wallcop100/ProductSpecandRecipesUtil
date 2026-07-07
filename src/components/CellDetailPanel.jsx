@@ -3,11 +3,12 @@ import { Button, Badge, Form } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { ACTION_ICONS } from '../utils/entityStyle'
+import { positionRecipeWithWrapperInternals, wrapperUsedBy } from '../utils/collectionStatus'
 
 const SECTION_LABEL = {
-  position: 'position',
-  dl_internal: 'DL',
-  lin_internal: 'LIN',
+  position: 'free issue',
+  dl_internal: 'wrapper',
+  lin_internal: 'wrapper',
 }
 
 function parseIngredients(collection) {
@@ -44,21 +45,30 @@ export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap,
   const collTags = collection ? parseTags(collection.ApplicableTags) : []
   const applicable = collTags.length === 0 || collTags.some(t => tags.includes(t))
 
-  // Active (non-deleted) refs present on this position
-  const presentRefs = useMemo(() => {
+  // Active (non-deleted) refs present on this position — wrapper-aware: the
+  // wrapper's internals count even when stored under another position.
+  const { presentRefs, sharedWrappers } = useMemo(() => {
+    const { combined, wrapperRefs } = positionRecipeWithWrapperInternals(recipes, posRef)
     const set = new Set()
-    for (const r of recipes) {
-      if ((r.PositionTypeRef || r.positionTypeRef) !== posRef) continue
+    for (const r of combined) {
       if ((r.IsDeleted || r.isDeleted) === 'Y') continue
       const ref = (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase()
       if (ref) set.add(ref)
     }
-    return set
+    // Wrappers on this position that other positions also use — shared definitions
+    const shared = wrapperRefs
+      .map(ref => ({ ref, usedBy: wrapperUsedBy(recipes, ref) }))
+      .filter(w => w.usedBy.length > 1)
+    return { presentRefs: set, sharedWrappers: shared }
   }, [recipes, posRef])
 
   const ingredients = collection ? parseIngredients(collection) : []
   const presentCount = ingredients.filter(i => presentRefs.has((i.ElementTypeRef || i.slotLabel || '').toLowerCase())).length
   const missingCount = ingredients.length - presentCount
+
+  // Two stacked sections: what sits at PositionType level vs inside the wrapper
+  const positionIngs = ingredients.filter(i => (i.section || 'position') === 'position')
+  const internalIngs = ingredients.filter(i => (i.section || 'position') !== 'position')
 
   if (!collection) {
     return (
@@ -98,47 +108,70 @@ export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap,
         )}
       </div>
 
-      {/* Ingredient list */}
+      {/* Ingredient list — split by where each ref lives */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 12px' }}>
+        {/* Only warn about shared wrappers when this template actually places
+            something inside the wrapper — otherwise it's not relevant here. */}
+        {internalIngs.length > 0 && sharedWrappers.length > 0 && (
+          <div className="mt-1 mb-2 px-2 py-1 rounded" style={{ background: '#fff3cd', border: '1px solid #ffc107', fontSize: 11, color: '#856404' }}>
+            <MaterialIcon name="warning" size={13} style={{ verticalAlign: 'text-bottom' }} />{' '}
+            {sharedWrappers.map(w => (
+              <div key={w.ref}>
+                Wrapper <span style={{ fontFamily: 'monospace' }}>{w.ref.toUpperCase()}</span> is shared by{' '}
+                {w.usedBy.length} PositionTypes ({w.usedBy.join(', ')}) — changes to its internals apply to all of them.
+              </div>
+            ))}
+          </div>
+        )}
         {ingredients.length === 0 && (
           <div className="text-muted small py-2">This template has no ingredients.</div>
         )}
-        {ingredients.map((ing, idx) => {
-          const ref = ing.ElementTypeRef || ing.slotLabel || ''
-          const present = presentRefs.has(ref.toLowerCase())
-          const section = ing.section || 'position'
-          return (
-            <div
-              key={`${ref}-${idx}`}
-              className="d-flex align-items-center gap-2 py-1 border-bottom"
-              style={{ fontSize: 12 }}
-            >
-              <span
-                title={present ? 'Present in recipe' : 'Not in recipe'}
-                style={{ color: present ? '#198754' : '#dc3545', width: 16, textAlign: 'center' }}
-              >
-                <MaterialIcon name={present ? ACTION_ICONS.complete : ACTION_ICONS.incomplete} size={14} />
-              </span>
-              <div className="flex-grow-1" style={{ minWidth: 0 }}>
-                <div style={{ fontFamily: 'monospace', fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {ref}
-                </div>
-                <Badge bg="light" text="dark" style={{ fontSize: 9 }}>{SECTION_LABEL[section] || section}</Badge>
-              </div>
-              {present ? (
-                <Button size="sm" variant="outline-danger" style={{ fontSize: 10, padding: '1px 7px' }}
-                  onClick={() => removeCollectionRef(posRef, ref)} title="Soft-delete this ref from the recipe">
-                  Remove
-                </Button>
-              ) : (
-                <Button size="sm" variant="outline-success" style={{ fontSize: 10, padding: '1px 7px' }}
-                  onClick={() => addCollectionRef(posRef, ref, section, ing.quantity ?? 1)} title="Add this ref to the recipe">
-                  + Add
-                </Button>
-              )}
+        {[
+          { label: 'Free issue (PositionType level)', ings: positionIngs },
+          { label: 'Inside wrapper', ings: internalIngs },
+        ].filter(g => g.ings.length > 0).map(group => (
+          <div key={group.label} className="mb-2">
+            <div className="fw-semibold text-muted mt-2" style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '.04em' }}>
+              {group.label}
             </div>
-          )
-        })}
+            {group.ings.map((ing, idx) => {
+              const ref = ing.ElementTypeRef || ing.slotLabel || ''
+              const present = presentRefs.has(ref.toLowerCase())
+              const section = ing.section || 'position'
+              return (
+                <div
+                  key={`${ref}-${idx}`}
+                  className="d-flex align-items-center gap-2 py-1 border-bottom"
+                  style={{ fontSize: 12 }}
+                >
+                  <span
+                    title={present ? 'Present in recipe (position or wrapper internals)' : 'Not in recipe'}
+                    style={{ color: present ? '#198754' : '#dc3545', width: 16, textAlign: 'center' }}
+                  >
+                    <MaterialIcon name={present ? ACTION_ICONS.complete : ACTION_ICONS.incomplete} size={14} />
+                  </span>
+                  <div className="flex-grow-1" style={{ minWidth: 0 }}>
+                    <div style={{ fontFamily: 'monospace', fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {ref}
+                    </div>
+                    <Badge bg="light" text="dark" style={{ fontSize: 9 }}>{SECTION_LABEL[section] || section}</Badge>
+                  </div>
+                  {present ? (
+                    <Button size="sm" variant="outline-danger" style={{ fontSize: 10, padding: '1px 7px' }}
+                      onClick={() => removeCollectionRef(posRef, ref)} title="Soft-delete this ref from the recipe">
+                      Remove
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="outline-success" style={{ fontSize: 10, padding: '1px 7px' }}
+                      onClick={() => addCollectionRef(posRef, ref, section, ing.quantity ?? 1)} title="Add this ref to the recipe">
+                      + Add
+                    </Button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        ))}
       </div>
 
       {/* Bulk actions */}

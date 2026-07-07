@@ -72,14 +72,32 @@ export default function NewETWizardModal({ show, onHide, posRef, sectionKey, onD
     return [...s].sort((a, b) => a.localeCompare(b))
   }, [psRows])
 
-  // Live suggestion: next available ref for the typed prefix
+  // Live suggestion: next available ref for the typed prefix. Uppercased so it
+  // also nudges the user toward capitalised refs.
   const suggested = useMemo(() => {
-    const trimmed = ref.trim()
+    const trimmed = ref.trim().toUpperCase()
     if (!trimmed) return ''
     // Synthesise a probe with a trailing number so getNextAvailableRef can strip it
     const probe = /-\d+$/.test(trimmed) ? trimmed : `${trimmed}-01`
     return getNextAvailableRef(probe, allETObjects) || ''
   }, [ref, allETObjects])
+
+  // Nudge: the typed ref has lowercase letters (refs are conventionally caps).
+  const notCapitalised = ref.trim() && ref.trim() !== ref.trim().toUpperCase()
+
+  // Flag when the entered Manufacturer + Product Code already belongs to another ET.
+  const dupSpec = useMemo(() => {
+    const m = manufacturer.trim().toLowerCase()
+    const c = productCode.trim().toLowerCase()
+    if (!m || !c) return null
+    const hit = psRows.find(r =>
+      (r.Manufacturer || r.manufacturer || '').trim().toLowerCase() === m &&
+      (r.ProductCode || r.productCode || '').trim().toLowerCase() === c &&
+      (r.IsDeleted || r.isDeleted) !== 'Y' &&
+      (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() !== ref.trim().toLowerCase()
+    )
+    return hit ? { ref: hit.ElementTypeRef || hit.elementTypeRef } : null
+  }, [manufacturer, productCode, psRows, ref])
 
   const alreadyExists = useMemo(() => {
     const k = ref.trim().toLowerCase()
@@ -154,7 +172,7 @@ export default function NewETWizardModal({ show, onHide, posRef, sectionKey, onD
           {!alreadyExists && suggested && suggested !== ref.trim() && (
             <div style={{ fontSize: 11, marginTop: 4, color: '#0d6efd' }}>
               <MaterialIcon name="lightbulb" size={12} style={{ verticalAlign: 'middle', marginRight: 3 }} />
-              Next available:{' '}
+              {notCapitalised ? 'Suggested (capitalised):' : 'Next available:'}{' '}
               <button
                 className="btn btn-link p-0"
                 style={{ fontSize: 11, verticalAlign: 'baseline' }}
@@ -221,11 +239,11 @@ export default function NewETWizardModal({ show, onHide, posRef, sectionKey, onD
             id="newet-db-write"
             checked={dbWriteEnabled}
             onChange={e => setDbWriteEnabled(e.target.checked)}
-            label={<span style={{ fontSize: 12, fontWeight: 600 }}>Also save to the shared DesignDB catalogue</span>}
+            label={<span style={{ fontSize: 12, fontWeight: 600 }}>Also add to the DesignDB ElementTypes table</span>}
           />
           <div className="text-muted mt-1" style={{ fontSize: 11 }}>
             {dbWriteEnabled
-              ? 'This element type is added to the DesignDB ElementTypes sheet when you press “Save N to DB”. Use this so the whole team’s design database knows about it.'
+              ? 'This element type is written into the DesignDB ElementTypes table when you press “Update ElementTypes”. Use this so the whole team’s design database knows about it.'
               : 'Off: the element type is remembered in this project only. Turn on to write new/renamed element types back to the shared DesignDB file that the design pipeline reads.'}
           </div>
         </div>
@@ -272,6 +290,29 @@ export default function NewETWizardModal({ show, onHide, posRef, sectionKey, onD
                     placeholder="Component description…" style={{ fontSize: 11 }} />
                 </div>
               </div>
+
+              {/* Duplicate Manufacturer + Product Code guard */}
+              {dupSpec && (
+                <div className="mt-2 p-2 rounded" style={{ background: '#fff3cd', border: '1px solid #ffc107', fontSize: 11 }}>
+                  <div className="d-flex align-items-start gap-1" style={{ color: '#856404' }}>
+                    <MaterialIcon name="warning" size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+                    <span>
+                      <strong style={{ fontFamily: 'monospace' }}>{dupSpec.ref}</strong> already uses this
+                      Manufacturer + Product Code. Creating another means two ElementTypes for one product.
+                    </span>
+                  </div>
+                  <div className="mt-2 d-flex gap-2 flex-wrap">
+                    <Button size="sm" variant="warning" style={{ fontSize: 11 }}
+                      onClick={() => onDone(dupSpec.ref)}>
+                      Use existing {dupSpec.ref}
+                    </Button>
+                    <Button size="sm" variant="outline-secondary" style={{ fontSize: 11 }}
+                      onClick={() => setCode('')}>
+                      Adjust product code
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -203,66 +203,6 @@ export function suggestRefForPart(part, knownRefs = []) {
   return knownRefs.find(r => r.toUpperCase().includes(tokens[0])) || ''
 }
 
-// ---------------------------------------------------------------------------
-// Connector gap analysis (powers the reactive suggestions panel)
-// ---------------------------------------------------------------------------
-
-/**
- * connectorGaps(grouped) — analyse a position's grouped recipe
- * ({ position, dlInternal, linInternal }) and return the connector gaps:
- *   - every socket needs its plug (placed inside the DL when the socket is at
- *     position level)
- *   - every plug needs its socket (placed at position level — the free-issued
- *     socket)  ← symmetric pairing
- *   - optional strain-relief gaps (flagged optional, never block completeness)
- * Each gap: { kind:'plug'|'socket'|'sr', ref, section, label, optional, sourceRef }
- */
-export function connectorGaps(grouped) {
-  const refOf = r => r.elementTypeRef || r.ElementTypeRef || ''
-  const sections = [
-    { key: 'position', label: 'position level', rows: grouped.position || [] },
-    { key: 'dl_internal', label: 'the DL element', rows: grouped.dlInternal || [] },
-    { key: 'lin_internal', label: 'the LIN element', rows: grouped.linInternal || [] },
-  ]
-  const all = [...(grouped.position || []), ...(grouped.dlInternal || []), ...(grouped.linInternal || [])]
-  const eq = (a, b) => (a || '').toLowerCase() === (b || '').toLowerCase()
-  const has = ref => all.some(r => eq(refOf(r), ref))
-  const labelFor = key => key === 'dl_internal' ? 'the DL element'
-    : key === 'lin_internal' ? 'the LIN element' : 'position level'
-
-  const gaps = []
-  const seen = new Set()
-  const push = g => { if (!seen.has(g.kind + g.ref + g.section)) { seen.add(g.kind + g.ref + g.section); gaps.push(g) } }
-
-  for (const section of sections) {
-    for (const row of section.rows) {
-      const ref = refOf(row)
-      const role = connectorRole(ref)
-
-      if (role === 'socket') {
-        const plug = counterpartRef(ref)
-        if (plug && !has(plug)) {
-          // free-issued socket at position → plug goes in the DL; otherwise same level
-          const target = section.key === 'position' ? 'dl_internal' : section.key
-          push({ kind: 'plug', ref: plug, section: target, sourceRef: ref, optional: false,
-            label: `Add matching plug ${plug} in ${labelFor(target)}` })
-        }
-      } else if (role === 'plug') {
-        const socket    = counterpartRef(ref)                    // legacy: PLUG → SOCKET
-        const sockAlt   = ref.replace(/PLUG/gi, 'SOCK')         // abstract: PLUG → SOCK
-        if (!has(socket) && !has(sockAlt)) {
-          // a plug in the DL implies the free-issued socket at position level
-          const target     = section.key === 'dl_internal' ? 'position' : section.key
-          // Prefer SOCK form for refs using NNPin convention (abstract refs)
-          const suggestRef = /\dPIN/i.test(ref) ? sockAlt : socket
-          push({ kind: 'socket', ref: suggestRef, section: target, sourceRef: ref, optional: false,
-            label: `Add matching socket ${suggestRef} at ${labelFor(target)}` })
-        }
-      }
-    }
-    // SR hints removed: connector templates include SR explicitly, and
-    // LOCAL_MISSING_STRAIN_RELIEF validation catches genuinely absent SRs.
-  }
-
-  return gaps
-}
+// Connector gap analysis moved to collectionStatus.js
+// (connectorGapsForPosition) — it is sourced from the user's real Connector
+// Templates, not abstract token/role matching.

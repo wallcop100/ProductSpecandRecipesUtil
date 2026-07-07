@@ -356,6 +356,7 @@ const useStore = create((set, get) => ({
   // palette is the free-form suggestion list. Both persisted as project prefs.
   tagRules: [],
   tagPalette: [],
+  tagColors: {},          // { [tag]: colorHex } — per-config, pref 'tag_colors'
 
   // Drift tracking: tagSnapshots is the accepted baseline (pref 'tag_snapshots');
   // tagDrift is the in-memory set of positions whose rule data changed on reimport.
@@ -397,6 +398,9 @@ const useStore = create((set, get) => ({
 
   // Staleness conflicts awaiting per-cell resolution: { target: 'ps'|'rs'|'db', items: [...] } | null
   exportConflicts: null,
+
+  // _id of the most recently added recipe row — the card scrolls itself into view.
+  lastAddedRowId: null,
 
   // Undo/redo history — snapshots of { recipes, psRows, rsChanges, psChanges }
   past: [],
@@ -477,6 +481,7 @@ const useStore = create((set, get) => ({
       positionUI: positionUI ?? {},
       tagRules: tagRules ?? [],
       tagPalette: tagPalette ?? [],
+      tagColors: data.tagColors ?? {},
       tagSnapshots: tagSnapshots ?? {},
       tagDrift: tagDrift ?? {},
       etCollections: etCollections ?? [],
@@ -794,6 +799,20 @@ const useStore = create((set, get) => ({
   },
 
   /**
+   * setTagColor(tag, color) — set (or clear, when color is null) a tag's colour.
+   */
+  async setTagColor(tag, color) {
+    const { projectId, tagColors } = get()
+    const next = { ...tagColors }
+    if (color) next[tag] = color
+    else delete next[tag]
+    set({ tagColors: next })
+    if (projectId != null) {
+      await window.electronAPI.db.setPref(projectId, 'tag_colors', JSON.stringify(next))
+    }
+  },
+
+  /**
    * applyTemplate(posRef, templateId)
    * Resolves the template against current slot mappings and replaces all
    * recipe rows for this position with the newly produced rows.
@@ -813,6 +832,7 @@ const useStore = create((set, get) => ({
     const newRows = applyResolvedTemplate(resolvedIngredients, posRef).map(row => ({
       ...row,
       _id: uuidv4(),
+      templateId,
     }))
 
     // Replace existing rows for this posRef
@@ -902,6 +922,67 @@ const useStore = create((set, get) => ({
     if (templateId) {
       await window.electronAPI.db.upsertSlotMapping(projectId, templateId, slotKey, entityRef)
     }
+  },
+
+  /**
+   * transformToTemplate(posRef, name, scope, slotDefs)  (T-F4)
+   * Turns the active position's rows into a template where each row becomes a
+   * slot. slotDefs: [{ row, section, slotLabel, exact }] — user-edited labels,
+   * and per row whether it stays primed (fill-later) or is fixed to the row's
+   * current ElementType ("Exact Ref").
+   */
+  async transformToTemplate(posRef, name, scope, slotDefs) {
+    const { templates, projectId, positionUI } = get()
+    const suggestedTags = positionUI[posRef]?.tags || []
+
+    const usedKeys = new Set()
+    let slotCounter = 1
+    const ingredients = (slotDefs || []).map((d, idx) => {
+      const row = d.row || {}
+      const etRef = row.elementTypeRef || row.ElementTypeRef || null
+      // slotKey from the ET ref's last segment (unique-suffixed), or sequential
+      let slotKey = null
+      if (etRef) {
+        const seg = etRef.split(/[-_]/).pop().toUpperCase()
+        if (seg && seg.length <= 12 && /^[A-Z0-9]+$/.test(seg)) slotKey = seg
+      }
+      if (!slotKey) slotKey = `SLOT_${slotCounter++}`
+      while (usedKeys.has(slotKey)) slotKey = `${slotKey}_${slotCounter++}`
+      usedKeys.add(slotKey)
+
+      const label = (d.slotLabel || '').trim() || etRef || `Slot ${idx + 1}`
+      return {
+        slotKey,
+        // Exact Ref slots apply as normal fixed rows — the label must be the ref
+        slotLabel: d.exact ? (etRef || label) : label,
+        exact: !!d.exact,
+        section: d.section || 'position',
+        recipeIndex: row.recipeIndex ?? row.RecipeIndex ?? idx,
+        isDesign: row.isDesign || row.IsDesign || null,
+        isContractItem: row.isContractItem || row.IsContractItem || null,
+        isTBC: row.isTBC || row.IsTBC || null,
+        isPropertiesTBC: row.isPropertiesTBC || row.IsPropertiesTBC || null,
+        quantity: row.quantity ?? row.Quantity ?? null,
+        dimQtyMultiplier: row.dimQtyMultiplier ?? row.DimQtyMultiplier ?? row.Dim_QuantityMultiplier ?? null,
+        dimQuantity: row.dimQuantity ?? row.Dim_Quantity ?? null,
+        isInteger: row.isInteger ?? row.IsInteger ?? null,
+        notes: row.notes || row.Notes || null,
+        fixed: !!d.exact,
+      }
+    })
+
+    const template = {
+      id: uuidv4(),
+      name,
+      scope,
+      applicable_tags: JSON.stringify(Array.isArray(suggestedTags) ? suggestedTags : []),
+      ingredients: JSON.stringify(ingredients),
+    }
+    if (scope === 'project') template.projectId = projectId
+
+    await window.electronAPI.db.upsertTemplate(template)
+    set({ templates: [...templates, { ...template, applicable_tags: suggestedTags, ingredients }] })
+    return template
   },
 
   /**
@@ -1089,7 +1170,7 @@ const useStore = create((set, get) => ({
         _id: row._id, positionTypeRef: row.PositionTypeRef, action: 'upsert', row,
       }))
 
-      set({ recipes: [...recipes, ...newRows], rsChanges: mergeRsChanges(rsChanges, newChanges, recipes) })
+      set({ recipes: [...recipes, ...newRows], rsChanges: mergeRsChanges(rsChanges, newChanges, recipes), lastAddedRowId: newRows[0]?._id ?? null })
       return newRows[0]
     }
     // === END ET MODE ===
@@ -1152,6 +1233,7 @@ const useStore = create((set, get) => ({
       rsChanges: mergeRsChanges(rsChanges, [
         { _id: newRow._id, positionTypeRef: posRef, action: 'upsert', row: newRow },
       ], recipes),
+      lastAddedRowId: newRow._id,
     })
 
     // Register the assigned element type in the Product Spec if it isn't already.
@@ -1262,8 +1344,28 @@ const useStore = create((set, get) => ({
    * Skips parts with no elementTypeRef. PS rows are auto-registered via addRecipeRow.
    */
   addConnection(posRef, parts, { merge = false } = {}) {
-    const valid = (parts || []).filter(p => p && p.elementTypeRef && p.section)
+    let valid = (parts || []).filter(p => p && p.elementTypeRef && p.section)
     if (!posRef || valid.length === 0) return
+
+    // "Inside wrapper" auto-resolves to DL vs LIN based on the wrapper present
+    // on this position (T-J1) — templates store a generic internal marker, but
+    // rows must land in the wrapper the position actually has.
+    const designRow = get().recipes.find(r =>
+      (r.PositionTypeRef || r.positionTypeRef) === posRef &&
+      (r.ContextType || r.contextType) === 'PositionType' &&
+      (r.IsDesign || r.isDesign) === 'Y' &&
+      (r.IsDeleted || r.isDeleted) !== 'Y'
+    )
+    const wrapperRef = designRow ? (designRow.ElementTypeRef || designRow.elementTypeRef || '') : ''
+    if (wrapperRef) {
+      const internalSection = wrapperRef.toUpperCase().includes('LIN') ? 'lin_internal' : 'dl_internal'
+      valid = valid.map(p =>
+        (p.section === 'dl_internal' || p.section === 'lin_internal') && p.section !== internalSection
+          ? { ...p, section: internalSection }
+          : p
+      )
+    }
+
     get()._pushHistory()
     for (const part of valid) {
       // When merging, fold a duplicate (same section + ET) into the existing
@@ -1550,6 +1652,58 @@ const useStore = create((set, get) => ({
       quantity: ing.quantity ?? 1,
     }))
     get().addConnection(posRef, parts)
+  },
+
+  /**
+   * applyCollectionBulk(posRefs, collectionId)
+   * Bulk-apply a collection across many positions. Free-issue (position-level)
+   * ingredients are added to every position, but "inside wrapper" ingredients
+   * are added only ONCE per shared wrapper — a wrapper is a universal, shared
+   * definition, and the coverage read is wrapper-aware, so a single copy makes
+   * every position that uses that wrapper count as covered (avoids N duplicate
+   * internal rows).
+   */
+  applyCollectionBulk(posRefs, collectionId) {
+    const { etCollections, recipes } = get()
+    const collection = etCollections.find(c => c.CollectionId === collectionId)
+    if (!collection || !posRefs || posRefs.length === 0) return
+    const ingredients = Array.isArray(collection.Ingredients)
+      ? collection.Ingredients
+      : JSON.parse(collection.Ingredients || '[]')
+
+    const toPart = ing => ({
+      section: ing.section,
+      elementTypeRef: ing.ElementTypeRef || ing.slotLabel || '',
+      quantity: ing.quantity ?? 1,
+    })
+    const positionParts = ingredients.filter(i => (i.section || 'position') === 'position').map(toPart)
+    const internalParts = ingredients.filter(i => (i.section || 'position') !== 'position').map(toPart)
+
+    // The wrapper (design element) each position uses — same rule as addConnection.
+    const wrapperOf = ref => {
+      const d = recipes.find(r =>
+        (r.PositionTypeRef || r.positionTypeRef) === ref &&
+        (r.ContextType || r.contextType) === 'PositionType' &&
+        (r.IsDesign || r.isDesign) === 'Y' &&
+        (r.IsDeleted || r.isDeleted) !== 'Y'
+      )
+      return d ? (d.ElementTypeRef || d.elementTypeRef || '').toLowerCase() : ''
+    }
+
+    const handledWrappers = new Set()
+    for (const posRef of posRefs) {
+      const parts = [...positionParts]
+      if (internalParts.length > 0) {
+        const wrapper = wrapperOf(posRef)
+        // Add internals only the first time we see each shared wrapper; a
+        // position with no wrapper still gets its own copy.
+        if (!wrapper || !handledWrappers.has(wrapper)) {
+          parts.push(...internalParts)
+          if (wrapper) handledWrappers.add(wrapper)
+        }
+      }
+      if (parts.length > 0) get().addConnection(posRef, parts)
+    }
   },
 
   swapCollection(posRef, fromCollectionId, toCollectionId) {
@@ -2148,10 +2302,10 @@ const useStore = create((set, get) => ({
    * Runs validation rules and stores results.
    */
   runValidation() {
-    const { elementTypes, positionTypes, psRows, recipes, positionUI, ignoredPositionFamilies } = get()
+    const { elementTypes, positionTypes, psRows, recipes, positionUI, ignoredPositionFamilies, etCollections } = get()
 
     const dbData = { element_types: elementTypes, position_types: positionTypes }
-    const results = runValidation(dbData, psRows, recipes, positionUI)
+    const results = runValidation(dbData, psRows, recipes, positionUI, { collections: etCollections })
 
     // Ignored positions/families are out-of-scope — drop their issues so they
     // don't count toward validation totals.
@@ -2184,6 +2338,12 @@ const useStore = create((set, get) => ({
     const { psChanges, rsChanges, paths } = get()
     const status = { ps: null, rs: null }   // null | 'ok' | 'conflict'
     let anyWrite = false
+
+    // Unfilled primed template slots are held back (T-E4): they aren't real
+    // rows yet, so they never reach the RS file. They stay in the registry
+    // (and raise a validation error) until filled or removed.
+    const heldBack = rsChanges.filter(e => e.row && e.row.resolved === false)
+    const rsExportable = rsChanges.filter(e => !(e.row && e.row.resolved === false))
 
     // Tell the watcher to ignore the changes our own export is about to make,
     // so it doesn't raise a bogus "the file changed on disk" prompt.
@@ -2218,10 +2378,10 @@ const useStore = create((set, get) => ({
     }
 
     // Stop at the first conflict — resolve, then export again.
-    if (status.ps !== 'conflict' && rsChanges.length > 0) {
+    if (status.ps !== 'conflict' && rsExportable.length > 0) {
       try {
         const resp = await axios.post(`${API}/patch`, {
-          target: 'rs', filepath: paths.rs, changes: rsChanges,
+          target: 'rs', filepath: paths.rs, changes: rsExportable,
         })
         const assignments = resp.data?.assignments || {}
         set(s => ({
@@ -2229,7 +2389,7 @@ const useStore = create((set, get) => ({
             (r._row_num == null && assignments[r._id] != null)
               ? { ...r, _row_num: assignments[r._id] } : r
           ),
-          rsChanges: [],
+          rsChanges: heldBack,
         }))
         status.rs = 'ok'
         anyWrite = true
@@ -2246,13 +2406,9 @@ const useStore = create((set, get) => ({
     if (anyWrite) {
       // Export barrier (EXPORT_PLAN §3.7): undo cannot cross an export.
       set({ past: [], future: [] })
-      // Auto-write the config overlay beside the Excels so the project folder
-      // is self-contained (EXPORT_PLAN §5).
-      const { projectId, folderPath, configName } = get()
-      if (projectId != null && folderPath && window.electronAPI?.configWriteYaml) {
-        const overlayPath = `${folderPath}\\${configName || 'Base'}.ideaworks.yaml`
-        try { await window.electronAPI.configWriteYaml({ projectId, filePath: overlayPath }) } catch { /* non-fatal */ }
-      }
+      // Note: the config overlay is NO LONGER auto-written on export — the user
+      // opts into exporting configuration explicitly (see the config export
+      // action). Keeps the folder to a single set of .xlsx files.
     }
 
     if (status.ps === 'conflict' || status.rs === 'conflict') {

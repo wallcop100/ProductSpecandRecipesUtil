@@ -20,6 +20,14 @@ export function resolveTemplate(template, slotMappings, elementTypeRefs) {
 
   return ingredients.map(ingredient => {
     const slotKey = ingredient.slotKey
+
+    // "Exact Ref" ingredients are fixed, not primed — the slotLabel IS the
+    // ElementTypeRef and the row applies already-resolved (T-R1).
+    if (ingredient.exact && ingredient.slotLabel) {
+      const ref = ingredient.slotLabel
+      return { ...ingredient, entityRef: ref, resolved: true, etExists: etSet.has(ref.toUpperCase()) }
+    }
+
     const entityRef = slotMappings[slotKey] || null
     const resolved = entityRef !== null && entityRef !== undefined
 
@@ -177,6 +185,7 @@ export function applyResolvedTemplate(resolvedIngredients, positionTypeRef) {
       isPropertiesTBC: isPropertiesTBC || null,
       notes: notes || null,
       slotKey,
+      slotLabel: ingredient.slotLabel ?? null,
       resolved,
       etExists: resolved ? etExists : null,
     }

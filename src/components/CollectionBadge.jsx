@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
-import { collectionStatusForPosition, overallCollectionStatus } from '../utils/collectionStatus'
+import { collectionStatusForPosition, overallCollectionStatus, positionRecipeWithWrapperInternals } from '../utils/collectionStatus'
 import { ACTION_ICONS } from '../utils/entityStyle'
 
 const STATUS_STYLE = {
@@ -23,7 +23,7 @@ export default function CollectionBadge({ posRef }) {
     if (!etCollections.length) return { overall: null, label: '' }
 
     const tags = positionUI[posRef]?.tags ?? []
-    const posRecipe = recipes.filter(r => (r.PositionTypeRef || r.positionTypeRef) === posRef)
+    const posRecipe = positionRecipeWithWrapperInternals(recipes, posRef).combined
     const statuses = collectionStatusForPosition(posRef, tags, posRecipe, etCollections)
     const overall = overallCollectionStatus(statuses)
 

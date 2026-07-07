@@ -45,7 +45,7 @@ export default function ProjectConfirmModal({
   return (
     <Modal show={show} onHide={onCancel} centered>
       <Modal.Header closeButton>
-        <Modal.Title style={{ fontSize: 16 }}>Confirm project</Modal.Title>
+        <Modal.Title style={{ fontSize: 16 }}>Edit project identity</Modal.Title>
       </Modal.Header>
       <Modal.Body>
         <Form.Group className="mb-3">
@@ -113,7 +113,7 @@ export default function ProjectConfirmModal({
       <Modal.Footer>
         <Button variant="secondary" onClick={onCancel}>Cancel</Button>
         <Button variant="primary" onClick={handleConfirm} disabled={!canConfirm}>
-          Open project
+          Apply
         </Button>
       </Modal.Footer>
     </Modal>

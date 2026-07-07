@@ -3,7 +3,14 @@ import { Modal, Button, Form, Badge } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 
-const SECTION_OPTIONS = ['position', 'dl_internal', 'lin_internal']
+// Two-way section model (T-J1): "Free Issue" = position level; "Inside
+// Wrapper" is stored as dl_internal and auto-resolves to the DL or LIN wrapper
+// actually present on each position at apply time (see addConnection).
+const SECTION_OPTIONS = [
+  { value: 'position', label: 'Free Issue' },
+  { value: 'dl_internal', label: 'Inside Wrapper' },
+]
+const sectionValue = s => (s === 'dl_internal' || s === 'lin_internal') ? 'dl_internal' : 'position'
 const COMMON_TAGS = ['Local', 'Remote-CC', 'Remote-CV', 'LIN', 'IP']
 
 function parseIngredients(raw) {
@@ -124,7 +131,7 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
     if (!name.trim()) return
     const cleanIngredients = ingredients
       .filter(i => i.ElementTypeRef?.trim())
-      .map(i => ({ ElementTypeRef: i.ElementTypeRef.trim(), section: i.section, quantity: Number(i.quantity) || 1 }))
+      .map(i => ({ ElementTypeRef: i.ElementTypeRef.trim(), section: sectionValue(i.section), quantity: Number(i.quantity) || 1 }))
 
     setSaving(true)
     try {
@@ -183,6 +190,12 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
 
         <Form.Group className="mb-2">
           <Form.Label className="fw-semibold">Ingredients</Form.Label>
+          <div className="text-muted mb-2" style={{ fontSize: 12 }}>
+            <strong>Free Issue</strong> items are delivered to site on their own.{' '}
+            <strong>Inside Wrapper</strong> items are delivered as part of the
+            downlight/luminaire assembly — they land in the DL or LIN wrapper each
+            PositionType actually has.
+          </div>
           <table className="table table-sm mb-2" style={{ fontSize: 12 }}>
             <thead className="table-light">
               <tr>
@@ -214,9 +227,9 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
                     />
                   </td>
                   <td>
-                    <Form.Select size="sm" value={ing.section}
+                    <Form.Select size="sm" value={sectionValue(ing.section)}
                       onChange={e => updateIngredient(idx, 'section', e.target.value)}>
-                      {SECTION_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                      {SECTION_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                     </Form.Select>
                   </td>
                   <td>

@@ -8,6 +8,7 @@
  */
 
 import { DIM_QTY_COMPONENTS } from './constants.js'
+import { connectorGapsForPosition } from './collectionStatus.js'
 
 // Ref-token vocabularies for tag-driven recipe checks. Tokens are matched as
 // hyphen-delimited segments of the (uppercased) ElementTypeRef, which avoids the
@@ -56,7 +57,7 @@ const refOf = r => r.elementTypeRef || r.ElementTypeRef || ''
 // others are recipe rules whose ref is a PositionTypeRef.
 const SPEC_RULES = new Set(['DUPLICATE_PRODUCT_CODE', 'MISSING_PRODUCT_CODE'])
 
-export function runValidation(dbData, psRows, rsRows, positionUI) {
+export function runValidation(dbData, psRows, rsRows, positionUI, { collections = [] } = {}) {
   const issues = []
 
   issues.push(...checkMissingIsDesign(rsRows, positionUI))
@@ -66,7 +67,8 @@ export function runValidation(dbData, psRows, rsRows, positionUI) {
   issues.push(...checkDimQtyMultNotOne(rsRows))
   issues.push(...checkMissingClipsDimQty(rsRows, positionUI))
   issues.push(...checkLocalDriverRequirements(rsRows, positionUI))
-  issues.push(...checkRemoteNoSiteSocket(rsRows, positionUI))
+  issues.push(...checkConnectorSetIncomplete(rsRows, positionUI, collections))
+  issues.push(...checkUnresolvedTemplateSlots(rsRows))
   issues.push(...checkExteriorIPConnectors(rsRows, positionUI))
   issues.push(...checkMissingProductSpecs(psRows))
   issues.push(...checkDanglingElementTypeRefs(dbData, psRows, rsRows))
@@ -313,33 +315,58 @@ function checkLocalDriverRequirements(rsRows, positionUI) {
   return issues
 }
 
+// Rule 8 (REMOTE_HAS_SITE_SOCKET) removed — it was incorrect. Remote fittings
+// CAN legitimately have a site-side socket at position level, so flagging that
+// as a warning produced false positives.
+
 // ---------------------------------------------------------------------------
-// Rule 8 — REMOTE_HAS_SITE_SOCKET
-// A remote-driver position (tag 'Remote-CC' / 'Remote-CV') has no local driver,
-// so the mains/DALI socket belongs with the remote driver, not the fitting.
-// A site-side socket at position level is therefore likely a mistake.
+// Rule 9 — CONNECTOR_SET_INCOMPLETE
+// A position that has started a Connector Template but not finished it. The
+// gaps come straight from the user's Connector Templates (real refs), never
+// guessed. See connectorGapsForPosition.
 // ---------------------------------------------------------------------------
-function checkRemoteNoSiteSocket(rsRows, positionUI) {
+function checkConnectorSetIncomplete(rsRows, positionUI, collections) {
+  if (!collections || collections.length === 0) return []
   const issues = []
+  const posRefs = [...new Set(rsRows.map(r => r.positionTypeRef || r.PositionTypeRef).filter(Boolean))]
 
-  for (const [ref, ui] of Object.entries(positionUI || {})) {
-    const tags = ui.tags || []
-    if (!tags.includes('Remote-CC') && !tags.includes('Remote-CV')) continue
-
-    const offending = positionLevelRows(rsRows, ref)
-      .filter(r => refHasToken(refOf(r), SOCKET_TOKENS))
-
-    if (offending.length > 0) {
+  for (const ref of posRefs) {
+    const tags = positionUI?.[ref]?.tags || []
+    const gaps = connectorGapsForPosition(rsRows, ref, tags, collections)
+    for (const g of gaps) {
       issues.push({
         severity: 'warning',
-        rule: 'REMOTE_HAS_SITE_SOCKET',
-        message: `Remote-driver position "${ref}" has a site-side socket at position level — remote positions take no site connector at the fitting.`,
+        rule: 'CONNECTOR_SET_INCOMPLETE',
+        message: `"${ref}" has an incomplete connector set: add ${g.ref} (${g.collectionName}).`,
         ref,
       })
     }
   }
-
   return issues
+}
+
+// ---------------------------------------------------------------------------
+// Rule — UNRESOLVED_TEMPLATE_SLOT (error, T-E4)
+// A template was applied but some primed slots are still unfilled. Unfilled
+// slots are held back from export, so the recipe is incomplete until every
+// slot is filled (or converted with "Use Exact Ref").
+// ---------------------------------------------------------------------------
+function checkUnresolvedTemplateSlots(rsRows) {
+  const byPos = new Map()
+  for (const r of rsRows) {
+    if (r.resolved !== false) continue
+    if ((r.IsDeleted || r.isDeleted) === 'Y') continue
+    const ref = r.positionTypeRef || r.PositionTypeRef
+    if (!ref) continue
+    if (!byPos.has(ref)) byPos.set(ref, [])
+    byPos.get(ref).push(r.slotLabel || r.slotKey || 'unnamed slot')
+  }
+  return [...byPos.entries()].map(([ref, slots]) => ({
+    severity: 'error',
+    rule: 'UNRESOLVED_TEMPLATE_SLOT',
+    message: `"${ref}" has ${slots.length} unfilled template slot${slots.length === 1 ? '' : 's'} (${slots.join(', ')}) — these are held back from export until filled.`,
+    ref,
+  }))
 }
 
 // ---------------------------------------------------------------------------

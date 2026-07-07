@@ -347,7 +347,7 @@ ipcMain.handle('snapshot-project', async (event, { folderPath, files, projectId,
       try {
         const data = db.collectConfigData(projectId)
         fs.writeFileSync(
-          path.join(dir, `${configName || 'config'}.ideaworks.yaml`),
+          path.join(dir, `${configName || 'config'}.config.yaml`),
           yaml.dump(data, { noRefs: true }), 'utf8'
         )
       } catch (err) {

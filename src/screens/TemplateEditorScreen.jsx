@@ -11,6 +11,14 @@ import MaterialIcon from '../components/MaterialIcon'
 import { ACTION_ICONS } from '../utils/entityStyle'
 
 const SECTION_OPTIONS = ['position', 'dl_internal', 'lin_internal']
+// Friendlier display labels for the recipe sections. Free-issue items are
+// delivered to site on their own; inside-wrapper items ship as part of the
+// downlight/linear assembly. (Underlying keys are unchanged.)
+const SECTION_LABELS = {
+  position: 'Free Issue (to site)',
+  dl_internal: 'Inside DL Wrapper',
+  lin_internal: 'Inside LIN Wrapper',
+}
 
 function parseIngredients(raw) {
   if (Array.isArray(raw)) return raw
@@ -330,6 +338,11 @@ export default function TemplateEditorScreen({ onBack }) {
               )}
             </div>
 
+            <div className="text-muted small mb-2" style={{ fontSize: 11 }}>
+              <strong>Section</strong> is where each item lives: <em>Free Issue</em> items are
+              delivered to site on their own; <em>Inside DL/LIN Wrapper</em> items ship as part
+              of the downlight or linear assembly.
+            </div>
             <div style={{ overflowX: 'auto' }}>
               <Table bordered hover size="sm" className="small">
                 <thead className="table-light">
@@ -399,7 +412,7 @@ function IngredientRow({ ing, readOnly, onChange, onRemove }) {
       return (
         <td>
           <Form.Select size="sm" value={ing[field] || ''} onChange={e => onChange(field, e.target.value || null)}>
-            {options.map(o => <option key={o} value={o}>{o}</option>)}
+            {options.map(o => <option key={o} value={o}>{field === 'section' ? (SECTION_LABELS[o] || o) : o}</option>)}
           </Form.Select>
         </td>
       )

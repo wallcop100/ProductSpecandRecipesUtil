@@ -8,15 +8,45 @@
  * Rule shape: { id, column, op: 'equals' | 'contains', value, tag, enabled }
  */
 
-/** PositionType columns a rule can key off (surfaced by the importer). */
+/**
+ * PositionType columns a rule can key off. Canonical mapped fields first, then
+ * the rest of the DB PositionTypes schema (surfaced via the parser's include_all
+ * pass, keyed by their raw header names).
+ */
 export const TAG_COLUMNS = [
+  // Canonical / mapped
   'PositionTypeRef',
   'Name',
+  'Description',
   'ParentRef',
   'DriverLocation',
   'SecondaryPowerType',
   'ControlTypeRef',
   'SecondaryPowerNodes_+ve',
+  // Raw DB schema columns
+  'ExtRef',
+  'IsAdopted',
+  'IsTBC',
+  'IsCollection',
+  'ParentDetails',
+  'Details',
+  'SortOrder',
+  'InternalNotesText',
+  'ExternalNotesText',
+  'IsPropertiesTBC',
+  'Parameters',
+  'ExpandedEntities',
+  'RequiresControlLink',
+  'RequiresPrimaryPowerLink',
+  'RequiresSecondaryPowerLink',
+  'ControlAddressCount',
+  'ThreadCountPerControlAddress',
+  'SecondaryPowerNodes_-ve',
+  'PowerPerUoM',
+  'CurrentPerUoM',
+  'VoltagePerUoM',
+  'UoM',
+  'BallastCountPerUoM',
 ]
 
 export const TAG_OPS = ['equals', 'contains']

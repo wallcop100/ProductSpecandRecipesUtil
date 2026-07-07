@@ -24,7 +24,6 @@ if _BACKEND_DIR not in sys.path:
 
 from parser import detect_files, parse_db, parse_ps, parse_rs  # noqa: E402
 from validator import validate as _validate  # noqa: E402
-from patcher import backup_file  # noqa: E402
 
 import openpyxl  # noqa: E402
 
@@ -331,9 +330,12 @@ def _apply_row_level_patch(filepath, sheet_name, field_to_excel, changes, key_co
                             column=header_to_col[excel_col_name],
                         ).value = row[field_name]
 
-    # Backup immediately before the save — one backup per successful write
-    # attempt; the conflict path above returns without touching the file.
-    backup_path = backup_file(filepath)
+    # No per-write .backup file. Atomic save (below) already guarantees the
+    # original is never corrupted by a failed write, and user-taken snapshots are
+    # the rollback mechanism — so we keep a single set of .xlsx files instead of
+    # accumulating a timestamped backup on every export. (backup_file is retained
+    # in patcher.py for snapshots / explicit use.)
+    backup_path = None
 
     # Atomic save: write to a temp file in the same directory, then replace the
     # original in one move. If openpyxl fails to serialise the workbook (e.g. it
