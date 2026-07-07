@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import {
-  Button, ButtonGroup, Nav, Spinner, Form, Modal, Overlay, Popover,
+  Button, ButtonGroup, Nav, Overlay, Popover,
 } from 'react-bootstrap'
 import {
   DndContext,
@@ -29,7 +29,6 @@ import ValidationFixModal from '../components/ValidationFixModal'
 import LinWrapperWizardModal from '../components/LinWrapperWizardModal'
 import AddAnywhereModal from '../components/AddAnywhereModal'
 import NewETWizardModal from '../components/NewETWizardModal'
-import ConflictModal from '../components/ConflictModal'
 import ChangeSummaryModal from '../components/ChangeSummaryModal'
 import TransformToTemplateModal from '../components/TransformToTemplateModal'
 import IconButton from '../components/IconButton'
@@ -48,9 +47,7 @@ import { ACTION_ICONS, ICONS } from '../utils/entityStyle'
 export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec, onOpenConnectors, onOpenTags, onBackToSetup }) {
   const rootView = useStore(s => s.rootView)
   const projectNumber = useStore(s => s.projectNumber)
-  const projectId = useStore(s => s.projectId)
   const configName = useStore(s => s.configName)
-  const folderPath = useStore(s => s.folderPath)
   const activePositionRef = useStore(s => s.activePositionRef)
   const activeContextType = useStore(s => s.activeContextType)
   const activeETRef = useStore(s => s.activeETRef)
@@ -69,14 +66,11 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
   const reorderIngredients = useStore(s => s.reorderIngredients)
   const moveIngredientAcrossSections = useStore(s => s.moveIngredientAcrossSections)
   const runValidation = useStore(s => s.runValidation)
-  const exportChanges = useStore(s => s.exportChanges)
   const closeETRecipe = useStore(s => s.closeETRecipe)
   const undo = useStore(s => s.undo)
   const redo = useStore(s => s.redo)
-  const snapshotProject = useStore(s => s.snapshotProject)
   const dbWriteEnabled = useStore(s => s.dbWriteEnabled)
   const dbChanges = useStore(s => s.dbChanges)
-  const exportCatalogueChanges = useStore(s => s.exportCatalogueChanges)
 
   const [showDupModal, setShowDupModal] = useState(false)
   const [showConnModal, setShowConnModal] = useState(false)
@@ -92,15 +86,8 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
   const [showDeleted, setShowDeleted] = useState(false)
   const [leftOpen, setLeftOpen] = useState(false)
   const [rightOpen, setRightOpen] = useState(false)
-  const [exporting, setExporting] = useState(false)
-  const [exportError, setExportError] = useState(null)
-  const [exportSuccess, setExportSuccess] = useState(false)
-  const [snapshotMsg, setSnapshotMsg] = useState(null)
-  const [showSnapshotPrompt, setShowSnapshotPrompt] = useState(false)
-  const [changeSummary, setChangeSummary] = useState(null)   // { scope: 'export'|'db' } — the hard gate (T-Q1)
-  const [exportConfigToo, setExportConfigToo] = useState(false)
+  const [changeSummary, setChangeSummary] = useState(null)   // { scope: 'export'|'db' } — review + copy patches
   const [showValidatePop, setShowValidatePop] = useState(false)
-  const snapshotOfferedRef = React.useRef(false)
   const validateBtnRef = React.useRef(null)
   const [, setActiveId] = useState(null)  // drag tracking
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)   // Transform-into-template modal (T-F4)
@@ -369,7 +356,8 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
     }
   }
 
-  // Hard gate (T-Q1): every write starts at the Change Summary modal.
+  // Export is now review-and-copy: the Change Summary modal shows the per-file
+  // patch scripts to copy into Excel; the tool never writes the xlsx.
   function requestExport() {
     setChangeSummary({ scope: 'export' })
   }
@@ -377,83 +365,6 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
   function requestExportCatalogue() {
     if (dbChanges.length === 0) return
     setChangeSummary({ scope: 'db' })
-  }
-
-  async function handleSummaryConfirm({ exportConfig } = {}) {
-    const scope = changeSummary?.scope
-    setChangeSummary(null)
-    if (scope === 'db') {
-      await handleExportCatalogue()
-    } else {
-      setExportConfigToo(!!exportConfig)
-      await handleExport()
-    }
-  }
-
-  // Offer a snapshot before export only when the newest snapshot is stale
-  // (older than a day) or there's never been one — and only once per session.
-  async function handleExport() {
-    if (!snapshotOfferedRef.current) {
-      snapshotOfferedRef.current = true
-      let stale = true
-      try {
-        const t = await window.electronAPI.lastSnapshotTime?.(folderPath)
-        stale = !t || (Date.now() - t) > 24 * 60 * 60 * 1000
-      } catch { /* treat as stale */ }
-      if (stale) { setShowSnapshotPrompt(true); return }  // in-app prompt drives the export
-    }
-    doExport()
-  }
-
-  async function doExport() {
-    setExporting(true)
-    setExportError(null)
-    setExportSuccess(false)
-    try {
-      await exportChanges()
-      // Opt-in config overlay export (T-M2), chosen in the Change Summary gate
-      if (exportConfigToo && projectId && folderPath) {
-        try {
-          await window.electronAPI.configWriteYaml?.({
-            projectId,
-            filePath: `${folderPath}\\${configName || 'config'}.config.yaml`,
-          })
-        } catch { /* best-effort — the Excel export already succeeded */ }
-      }
-      setExportSuccess(true)
-      setTimeout(() => setExportSuccess(false), 3000)
-    } catch (err) {
-      setExportError(err.message || 'Export failed')
-    } finally {
-      setExporting(false)
-      setExportConfigToo(false)
-    }
-  }
-
-  async function handleSnapshot() {
-    setExportError(null)
-    try {
-      const res = await snapshotProject()
-      if (res?.ok === false) throw new Error(res.error || 'unknown error')
-      if (res?.dir) {
-        setSnapshotMsg('Snapshot saved')
-        setTimeout(() => setSnapshotMsg(null), 3000)
-      }
-    } catch (err) {
-      setExportError(`Snapshot failed: ${err.message}`)
-    }
-  }
-
-  async function handleExportCatalogue() {
-    if (dbChanges.length === 0) return
-    setExportError(null)
-    try {
-      await exportCatalogueChanges()
-      setSnapshotMsg('ElementTypes table updated')
-      setTimeout(() => setSnapshotMsg(null), 3000)
-    } catch (err) {
-      setExportError(err.message || 'ElementTypes update failed')
-    }
   }
 
   const hasDirtyChanges = psChanges.length > 0 || rsChanges.length > 0
@@ -581,13 +492,10 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
           variant={hasDirtyChanges ? 'primary' : 'outline-secondary'}
           size="sm"
           onClick={requestExport}
-          disabled={exporting || !hasDirtyChanges}
+          disabled={!hasDirtyChanges}
         >
-          {exporting ? <><Spinner size="sm" animation="border" className="me-1" />Exporting…</> : 'Export changes'}
+          Export changes
         </Button>
-        {exportSuccess && <span className="text-success small d-inline-flex align-items-center gap-1"><MaterialIcon name="check" size={14} /> Exported</span>}
-        {snapshotMsg && <span className="text-success small d-inline-flex align-items-center gap-1"><MaterialIcon name="check" size={14} /> {snapshotMsg}</span>}
-        {exportError && <span className="text-danger small">{exportError}</span>}
       </div>
 
       {/* Breadcrumb bar */}
@@ -898,8 +806,6 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
         onDone={handleNewETDone}
       />
 
-      <ConflictModal />
-
       {/* Transform Active Position into a Template (T-F4) */}
       <TransformToTemplateModal
         show={showSaveTemplate}
@@ -907,46 +813,15 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
         posRef={activePositionRef}
       />
 
-      {/* Change Summary — the hard gate before every write (T-Q1) */}
+      {/* Change Summary — review the pending changes and copy the per-file patch scripts */}
       <ChangeSummaryModal
         show={!!changeSummary}
         scope={changeSummary?.scope || 'export'}
         onHide={() => setChangeSummary(null)}
-        onConfirm={handleSummaryConfirm}
-        confirmLabel={changeSummary?.scope === 'db' ? 'Update ElementTypes Table' : 'Export changes'}
         note={changeSummary?.scope === 'db'
-          ? 'This edits the shared DesignDB file. Only the ElementTypes table is touched — Positions, Elements and LinksMap are left to the design pipeline.'
-          : 'Review what will be written to the Product Spec and Recipe Spec files, then confirm.'}
-        busy={exporting}
+          ? 'Copy the ElementTypes patch and run it against the DesignDB file. Only the ElementTypes table is touched — Positions, Elements and LinksMap are left to the design pipeline.'
+          : 'Copy each patch and run it against its Excel file. The tool no longer edits the files itself.'}
       />
-
-      {/* In-app snapshot offer (replaces the native confirm; only shown when
-          the newest snapshot is stale). */}
-      <Modal show={showSnapshotPrompt} onHide={() => setShowSnapshotPrompt(false)} centered size="sm">
-        <Modal.Header closeButton>
-          <Modal.Title style={{ fontSize: 14 }} className="d-flex align-items-center gap-2">
-            <MaterialIcon name="backup_table" size={18} /> Snapshot before exporting?
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body style={{ fontSize: 13 }}>
-          It's been a while since your last snapshot. A snapshot copies the DB, PS and RS
-          files into a dated backup folder so you can roll back if an export goes wrong.
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="link" size="sm" style={{ fontSize: 12 }}
-            onClick={() => { setShowSnapshotPrompt(false); doExport() }}>
-            Export without snapshot
-          </Button>
-          <Button variant="primary" size="sm" style={{ fontSize: 12 }}
-            onClick={async () => {
-              setShowSnapshotPrompt(false)
-              try { await handleSnapshot() } catch { /* surfaced by handleSnapshot */ }
-              doExport()
-            }}>
-            Snapshot &amp; export
-          </Button>
-        </Modal.Footer>
-      </Modal>
     </div>
   )
 }

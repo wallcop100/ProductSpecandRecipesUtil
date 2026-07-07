@@ -1,21 +1,20 @@
 import React, { useMemo, useState, useEffect } from 'react'
-import { Modal, Button, Form } from 'react-bootstrap'
+import { Modal, Button } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
+import { buildPsScript, buildRsScript, buildDbScript } from '../utils/patchScript'
 
 /**
- * ChangeSummaryModal — the hard gate before every write (T-Q1).
+ * ChangeSummaryModal — review pending changes and copy per-file patch scripts.
  *
- * Pops first whenever Export Changes or Update ElementTypes Table is
- * triggered; the write only proceeds via onConfirm. Summarised per entity in
- * plain action phrases — "Spec added, Marked TBC" for a Product Spec row,
- * "+2 added (…), −1 removed (…)" for a recipe — with a copiable Markdown
- * mirror. Scoped to the action:
- *   scope 'export' — Product Spec + Recipe Spec registries
- *   scope 'db'     — the DesignDB ElementTypes-table registry
- *
- * Without onConfirm it is a read-only review (supersedes the Product Spec
- * "Unsaved Changes" drawer).
+ * Opened by Export Changes / Update ElementTypes Table (and read-only from the
+ * Product Spec changes chip). Summarises changes per entity in plain action
+ * phrases — "Spec added, Marked TBC" for a Product Spec row, "+2 added (…),
+ * −1 removed (…)" for a recipe — then offers a "Copy Patch for <file>" button
+ * per changed file. The tool never writes the xlsx; the user runs each copied
+ * script in Excel. Scoped to the action:
+ *   scope 'export' — Product Spec + Recipe Spec
+ *   scope 'db'     — the DesignDB ElementTypes table
  */
 
 const refOf = r => (r?.ElementTypeRef || r?.elementTypeRef || '')
@@ -135,28 +134,50 @@ const SCOPE_LABEL = {
   db: 'ElementTypes table (DesignDB)',
 }
 
-export default function ChangeSummaryModal({
-  show, onHide, scope = 'export', onConfirm, confirmLabel, note, busy = false,
-}) {
+/**
+ * Which patch files this scope produces, with their generated scripts.
+ * Only files that actually have changes (non-empty script) are returned.
+ */
+function patchFilesFor(scope, { psChanges, rsChanges, dbChanges }) {
+  const files = scope === 'db'
+    ? [{ key: 'db', label: 'ElementTypes (DB)', script: buildDbScript(dbChanges) }]
+    : [
+        { key: 'ps', label: 'Product Spec', script: buildPsScript(psChanges) },
+        { key: 'rs', label: 'Recipe Spec', script: buildRsScript(rsChanges) },
+      ]
+  return files.filter(f => f.script)
+}
+
+export default function ChangeSummaryModal({ show, onHide, scope = 'export', note }) {
   const psChanges = useStore(s => s.psChanges)
   const rsChanges = useStore(s => s.rsChanges)
   const dbChanges = useStore(s => s.dbChanges)
 
-  const [copied, setCopied] = useState(false)
-  const [exportConfig, setExportConfig] = useState(false)
-  useEffect(() => { if (show) { setCopied(false); setExportConfig(false) } }, [show])
+  const [copiedKey, setCopiedKey] = useState(null)
+  useEffect(() => { if (show) setCopiedKey(null) }, [show])
 
   const sections = useMemo(
     () => buildSummary({ psChanges, rsChanges, dbChanges }, scope),
     [psChanges, rsChanges, dbChanges, scope]
   )
-  const totalRows = sections.reduce((n, s) => n + s.lines.length, 0)
+  const patchFiles = useMemo(
+    () => patchFilesFor(scope, { psChanges, rsChanges, dbChanges }),
+    [scope, psChanges, rsChanges, dbChanges]
+  )
 
-  async function handleCopy() {
+  async function copyPatch(file) {
+    try {
+      await navigator.clipboard.writeText(file.script)
+      setCopiedKey(file.key)
+      setTimeout(() => setCopiedKey(k => (k === file.key ? null : k)), 2000)
+    } catch { /* clipboard unavailable */ }
+  }
+
+  async function copyMarkdown() {
     try {
       await navigator.clipboard.writeText(summaryMarkdown(sections, SCOPE_LABEL[scope]))
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      setCopiedKey('md')
+      setTimeout(() => setCopiedKey(k => (k === 'md' ? null : k)), 2000)
     } catch { /* clipboard unavailable */ }
   }
 
@@ -168,10 +189,10 @@ export default function ChangeSummaryModal({
           Change summary — {SCOPE_LABEL[scope]}
         </Modal.Title>
       </Modal.Header>
-      <Modal.Body style={{ maxHeight: '55vh' }}>
+      <Modal.Body style={{ maxHeight: '60vh' }}>
         {note && <div className="text-muted mb-2" style={{ fontSize: 12 }}>{note}</div>}
         {sections.length === 0 && (
-          <div className="text-muted small fst-italic">Nothing to write — there are no pending changes for this action.</div>
+          <div className="text-muted small fst-italic">No pending changes for this action.</div>
         )}
         {sections.map(s => (
           <div key={s.title} className="mb-3">
@@ -186,28 +207,42 @@ export default function ChangeSummaryModal({
             ))}
           </div>
         ))}
-        {onConfirm && scope === 'export' && (
-          <Form.Check
-            type="checkbox" id="chsum-export-config" className="mt-2"
-            style={{ fontSize: 12 }}
-            label="Also export the app configuration (.config.yaml) beside the Excel files"
-            checked={exportConfig}
-            onChange={e => setExportConfig(e.target.checked)}
-          />
+
+        {/* Copy-patch section — one script per changed file (T: export as patches) */}
+        {patchFiles.length > 0 && (
+          <div className="mt-3 pt-2 border-top">
+            <div className="fw-semibold text-muted mb-2" style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '.05em' }}>
+              Apply these patches
+            </div>
+            {patchFiles.map(f => (
+              <div key={f.key} className="d-flex align-items-center gap-2 py-1">
+                <span style={{ fontSize: 12 }}>{f.label}</span>
+                <Button
+                  variant={copiedKey === f.key ? 'success' : 'outline-primary'}
+                  size="sm"
+                  className="ms-auto d-inline-flex align-items-center gap-1"
+                  style={{ fontSize: 11 }}
+                  onClick={() => copyPatch(f)}
+                >
+                  <MaterialIcon name="rebase_edit" size={14} />
+                  {copiedKey === f.key ? 'Copied!' : `Copy Patch for ${f.label}`}
+                </Button>
+              </div>
+            ))}
+            <div className="text-muted mt-2" style={{ fontSize: 11 }}>
+              Each patch is a script for its Excel file. To apply: open the file →
+              <strong> Automate</strong> tab → <strong>New Script</strong> → paste → <strong>Run</strong>.
+              The tool no longer edits the files itself.
+            </div>
+          </div>
         )}
       </Modal.Body>
       <Modal.Footer>
         <Button variant="outline-secondary" size="sm" className="d-inline-flex align-items-center gap-1 me-auto"
-          onClick={handleCopy} disabled={sections.length === 0}>
-          <MaterialIcon name="content_copy" size={14} /> {copied ? 'Copied!' : 'Copy as Markdown'}
+          onClick={copyMarkdown} disabled={sections.length === 0}>
+          <MaterialIcon name="content_copy" size={14} /> {copiedKey === 'md' ? 'Copied!' : 'Copy summary (Markdown)'}
         </Button>
-        <Button variant="secondary" size="sm" onClick={onHide}>{onConfirm ? 'Cancel' : 'Close'}</Button>
-        {onConfirm && (
-          <Button variant="primary" size="sm" disabled={busy || totalRows === 0}
-            onClick={() => onConfirm({ exportConfig })}>
-            {busy ? 'Writing…' : (confirmLabel || 'Confirm & write')}
-          </Button>
-        )}
+        <Button variant="secondary" size="sm" onClick={onHide}>Close</Button>
       </Modal.Footer>
     </Modal>
   )

@@ -396,9 +396,6 @@ const useStore = create((set, get) => ({
   // Locally-created ETs (SQLite staging) — kept to re-merge after a DB reload.
   localElementTypes: [],
 
-  // Staleness conflicts awaiting per-cell resolution: { target: 'ps'|'rs'|'db', items: [...] } | null
-  exportConflicts: null,
-
   // _id of the most recently added recipe row — the card scrolls itself into view.
   lastAddedRowId: null,
 
@@ -497,7 +494,6 @@ const useStore = create((set, get) => ({
       psChanges: [],
       rsChanges: [],
       dbChanges: [],
-      exportConflicts: null,
       past: [],
       future: [],
       validationResults: [],
@@ -566,7 +562,6 @@ const useStore = create((set, get) => ({
         psChanges: [],
         rsChanges: [],
         dbChanges: [],
-        exportConflicts: null,
         past: [],
         future: [],
         isLoading: false,
@@ -2324,228 +2319,6 @@ const useStore = create((set, get) => ({
   },
 
   /**
-   * exportChanges()
-   * Exports the dirty registries per target, independently (EXPORT_PLAN §3).
-   *
-   * - Appends are reconciled: the backend returns assigned row numbers, which
-   *   are stamped onto the in-memory rows so re-exports update, not duplicate.
-   * - A staleness conflict (HTTP 409) blocks that file: it is reloaded from
-   *   disk, the registry is KEPT, and the conflicts surface for resolution.
-   * - Any successful write sets an export barrier: undo history is cleared so
-   *   an already-exported change can never be resurrected.
-   */
-  async exportChanges() {
-    const { psChanges, rsChanges, paths } = get()
-    const status = { ps: null, rs: null }   // null | 'ok' | 'conflict'
-    let anyWrite = false
-
-    // Unfilled primed template slots are held back (T-E4): they aren't real
-    // rows yet, so they never reach the RS file. They stay in the registry
-    // (and raise a validation error) until filled or removed.
-    const heldBack = rsChanges.filter(e => e.row && e.row.resolved === false)
-    const rsExportable = rsChanges.filter(e => !(e.row && e.row.resolved === false))
-
-    // Tell the watcher to ignore the changes our own export is about to make,
-    // so it doesn't raise a bogus "the file changed on disk" prompt.
-    if (window.electronAPI?.suppressWatcher) {
-      window.electronAPI.suppressWatcher([paths.ps, paths.rs].filter(Boolean))
-    }
-
-    if (psChanges.length > 0) {
-      try {
-        const resp = await axios.post(`${API}/patch`, {
-          target: 'ps', filepath: paths.ps, changes: psChanges,
-        })
-        const assignments = resp.data?.assignments || {}
-        set(s => ({
-          psRows: s.psRows.map(r => {
-            const ref = r.ElementTypeRef || r.elementTypeRef
-            return (r._row_num == null && assignments[ref] != null)
-              ? { ...r, _row_num: assignments[ref] } : r
-          }),
-          psChanges: [],
-        }))
-        status.ps = 'ok'
-        anyWrite = true
-      } catch (err) {
-        if (err.response?.status === 409) {
-          status.ps = 'conflict'
-          await get()._handleExportConflict('ps', err.response.data?.conflicts || [])
-        } else {
-          throw new Error(`Product Spec export failed: ${err.response?.data?.error || err.message}`)
-        }
-      }
-    }
-
-    // Stop at the first conflict — resolve, then export again.
-    if (status.ps !== 'conflict' && rsExportable.length > 0) {
-      try {
-        const resp = await axios.post(`${API}/patch`, {
-          target: 'rs', filepath: paths.rs, changes: rsExportable,
-        })
-        const assignments = resp.data?.assignments || {}
-        set(s => ({
-          recipes: s.recipes.map(r =>
-            (r._row_num == null && assignments[r._id] != null)
-              ? { ...r, _row_num: assignments[r._id] } : r
-          ),
-          rsChanges: heldBack,
-        }))
-        status.rs = 'ok'
-        anyWrite = true
-      } catch (err) {
-        if (err.response?.status === 409) {
-          status.rs = 'conflict'
-          await get()._handleExportConflict('rs', err.response.data?.conflicts || [])
-        } else {
-          throw new Error(`Recipe Spec export failed: ${err.response?.data?.error || err.message}`)
-        }
-      }
-    }
-
-    if (anyWrite) {
-      // Export barrier (EXPORT_PLAN §3.7): undo cannot cross an export.
-      set({ past: [], future: [] })
-      // Note: the config overlay is NO LONGER auto-written on export — the user
-      // opts into exporting configuration explicitly (see the config export
-      // action). Keeps the folder to a single set of .xlsx files.
-    }
-
-    if (status.ps === 'conflict' || status.rs === 'conflict') {
-      throw new Error('Some changes conflict with edits made on disk — resolve them, then export again.')
-    }
-    return status
-  },
-
-  /**
-   * _handleExportConflict(target, conflicts)
-   * Block-reload-keep (EXPORT_PLAN §3.4): reload the conflicted file from disk,
-   * KEEP the dirty registry, re-apply pending values onto the fresh rows, and
-   * surface the conflicts for per-cell resolution.
-   */
-  async _handleExportConflict(target, conflicts) {
-    const { paths } = get()
-    const resp = await axios.post(`${API}/import`, { db: paths.db, ps: paths.ps, rs: paths.rs })
-
-    if (target === 'db') {
-      const fresh = (resp.data.db?.element_types ?? [])
-      const { dbChanges, localElementTypes = [] } = get()
-      const items = conflicts.map(c => ({
-        ...c,
-        localValue: dbChanges.find(e => e.elementTypeRef === c.key)?.updates?.[c.field] ?? null,
-      }))
-      // Re-merge: fresh DB ETs + local-only, then overlay pending updates
-      const dbRefSet = new Set(fresh.map(e => (e.ElementTypeRef || '').toLowerCase()))
-      const merged = [...fresh, ...localElementTypes.filter(e => !dbRefSet.has((e.ElementTypeRef || '').toLowerCase()))]
-      set({
-        elementTypes: applyPsPending(merged, dbChanges),
-        exportConflicts: { target: 'db', items },
-        past: [], future: [],
-        fileWatchAlert: null,
-      })
-    } else if (target === 'ps') {
-      const fresh = stampIds(resp.data.ps ?? [])
-      const { psChanges } = get()
-      const items = conflicts.map(c => ({
-        ...c,
-        localValue: psChanges.find(e => e.elementTypeRef === c.key)?.updates?.[c.field] ?? null,
-      }))
-      set({
-        psRows: applyPsPending(fresh, psChanges),
-        exportConflicts: { target: 'ps', items },
-        past: [], future: [],
-        fileWatchAlert: null,
-      })
-    } else {
-      const fresh = stampIds(resp.data.rs ?? [])
-      const { rsChanges } = get()
-      const items = conflicts.map(c => ({
-        ...c,
-        localValue: rsChanges.find(e => e._id === c.key)?.changedFields?.[c.field] ?? null,
-      }))
-      set({
-        recipes: applyRsPending(fresh, rsChanges),
-        exportConflicts: { target: 'rs', items },
-        past: [], future: [],
-        fileWatchAlert: null,
-      })
-    }
-  },
-
-  /**
-   * resolveExportConflict(index, resolution)
-   * resolution: 'mine' — keep the local value; the entry's `before` is updated
-   *             to the disk value so the next export passes the staleness check.
-   *             'theirs' — drop the local edit for that field; the visible row
-   *             reverts to the disk value.
-   */
-  resolveExportConflict(index, resolution) {
-    const { exportConflicts } = get()
-    if (!exportConflicts) return
-    const item = exportConflicts.items[index]
-    if (!item) return
-
-    if (exportConflicts.target === 'ps' || exportConflicts.target === 'db') {
-      // PS and DB share the same registry shape (keyed by ET ref) and only
-      // differ in which rows array they overlay.
-      const changeKey = exportConflicts.target === 'ps' ? 'psChanges' : 'dbChanges'
-      const rowsKey   = exportConflicts.target === 'ps' ? 'psRows' : 'elementTypes'
-      set(s => {
-        const changes = s[changeKey].map(c => {
-          if (c.elementTypeRef !== item.key) return c
-          if (resolution === 'mine') {
-            return { ...c, before: { ...(c.before || {}), [item.field]: item.diskValue } }
-          }
-          const updates = { ...(c.updates || {}) }
-          const before = { ...(c.before || {}) }
-          delete updates[item.field]
-          delete before[item.field]
-          return { ...c, updates, before }
-        }).filter(c => c._isNew || Object.keys(c.updates || {}).length > 0)
-        const rows = resolution === 'theirs'
-          ? s[rowsKey].map(r => {
-              const ref = r.ElementTypeRef || r.elementTypeRef
-              return ref === item.key ? { ...r, [item.field]: item.diskValue } : r
-            })
-          : s[rowsKey]
-        const items = s.exportConflicts.items.filter((_, i) => i !== index)
-        return {
-          [changeKey]: changes, [rowsKey]: rows,
-          exportConflicts: items.length ? { ...s.exportConflicts, items } : null,
-        }
-      })
-    } else {
-      set(s => {
-        const rsChanges = s.rsChanges.map(c => {
-          if (c._id !== item.key) return c
-          if (resolution === 'mine') {
-            return { ...c, before: { ...(c.before || {}), [item.field]: item.diskValue } }
-          }
-          const changedFields = { ...(c.changedFields || {}) }
-          const before = { ...(c.before || {}) }
-          delete changedFields[item.field]
-          before[item.field] = item.diskValue
-          return { ...c, changedFields, before }
-        }).filter(c => c.action === 'delete' || (c.row?._row_num ?? null) == null || Object.keys(c.changedFields || {}).length > 0)
-        const recipes = resolution === 'theirs'
-          ? s.recipes.map(r => {
-              if ((r._row_num ?? null) !== item.rowNum) return r
-              const alias = RS_FIELD_ALIASES[item.field]
-              const patch = { [item.field]: item.diskValue }
-              if (alias) patch[alias] = item.diskValue
-              return { ...r, ...patch }
-            })
-          : s.recipes
-        const items = s.exportConflicts.items.filter((_, i) => i !== index)
-        return {
-          rsChanges, recipes,
-          exportConflicts: items.length ? { ...s.exportConflicts, items } : null,
-        }
-      })
-    }
-  },
-
-  /**
    * restorePendingChanges({ ps, rs })
    * Re-applies a persisted dirty registry from a previous session onto the
    * freshly imported rows (EXPORT_PLAN §3.1).
@@ -2866,38 +2639,6 @@ const useStore = create((set, get) => ({
     }
   },
 
-  /**
-   * exportCatalogueChanges()
-   * Separate, explicit export for the DesignDB ElementTypes sheet (different
-   * blast radius than PS/RS). Same reconciliation + block-reload-keep conflict
-   * flow. Only writes when DB writes are enabled and there are changes.
-   */
-  async exportCatalogueChanges() {
-    const { dbChanges, dbWriteEnabled, paths } = get()
-    if (!dbWriteEnabled || dbChanges.length === 0) return { db: null }
-    try {
-      const resp = await axios.post(`${API}/patch`, {
-        target: 'db', filepath: paths.db, changes: dbChanges,
-      })
-      const assignments = resp.data?.assignments || {}
-      set(s => ({
-        elementTypes: s.elementTypes.map(e => {
-          const ref = e.ElementTypeRef || e.elementTypeRef
-          return (e._row_num == null && assignments[ref] != null)
-            ? { ...e, _row_num: assignments[ref] } : e
-        }),
-        dbChanges: [],
-        past: [], future: [],
-      }))
-      return { db: 'ok' }
-    } catch (err) {
-      if (err.response?.status === 409) {
-        await get()._handleExportConflict('db', err.response.data?.conflicts || [])
-        throw new Error('Catalogue changes conflict with edits on disk — resolve them, then export again.')
-      }
-      throw new Error(`Catalogue export failed: ${err.response?.data?.error || err.message}`)
-    }
-  },
 }))
 
 // ---------------------------------------------------------------------------
