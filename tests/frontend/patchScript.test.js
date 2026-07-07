@@ -6,7 +6,7 @@ describe('buildPsScript', () => {
     const s = buildPsScript([
       { elementTypeRef: 'ET-DL-01', updates: { ProductCode: 'ABC-123', IsTBC: 'Y' }, before: {} },
     ])
-    expect(s).toContain('var col = headerMap(Form);')
+    expect(s).toContain('const col: {[key: string]: number} = headerMap(Form);')
     expect(s).toContain('findByKey(Form,col,"EntityRef","ET-DL-01")')
     expect(s).toContain('setByHeader(Form,col,r,"ProductCode","ABC-123")')
     expect(s).toContain('setByHeader(Form,col,r,"IsTBC","Y")')
@@ -17,7 +17,7 @@ describe('buildPsScript', () => {
     const s = buildPsScript([
       { elementTypeRef: 'ET-NEW', _isNew: true, updates: { ProductCode: '0012' } },
     ])
-    expect(s).toContain('var apR = lastRow(Form) + 1;')
+    expect(s).toContain('let apR: number = lastRow(Form) + 1;')
     expect(s).toContain('setByHeader(Form,col,apR,"EntityRef","ET-NEW")')
     expect(s).toContain('setByHeader(Form,col,apR,"EntityType","ElementType")')
     // leading-zero product code stays a quoted string, not a bare number
@@ -44,7 +44,7 @@ describe('buildPsScript', () => {
 describe('buildDbScript', () => {
   test('targets the ElementTypes sheet keyed on Ref, no EntityType column', () => {
     const s = buildDbScript([{ elementTypeRef: 'ET-Z', _isNew: true, updates: { Name: 'Zed' } }])
-    expect(s).toContain('var col = headerMap(ElementTypes);')
+    expect(s).toContain('const col: {[key: string]: number} = headerMap(ElementTypes);')
     expect(s).toContain('setByHeader(ElementTypes,col,apR,"Ref","ET-Z")')
     expect(s).toContain('setByHeader(ElementTypes,col,apR,"Name","Zed")')
     expect(s).not.toContain('EntityType')
@@ -68,7 +68,7 @@ describe('buildRsScript', () => {
       { _id: '2', positionTypeRef: 'P1', action: 'upsert',
         row: { ContextType: 'ElementType', ContextRef: 'ET-DL-01', RecipeIndex: 7, elementTypeRef: 'ET-CLIP', quantity: 1 } },
     ])
-    expect(s).toContain('var apR = lastRow(Form) + 1;')
+    expect(s).toContain('let apR: number = lastRow(Form) + 1;')
     expect(s).toContain('setByHeader(Form,col,apR,"EntityType","ElementType")')
     expect(s).toContain('setByHeader(Form,col,apR,"EntityRef","ET-CLIP")')
     expect(s).toContain('setByHeader(Form,col,apR,"Quantity",1)')
