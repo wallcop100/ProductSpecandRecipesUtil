@@ -1,6 +1,6 @@
 {
   "name": "recipe-builder",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Product Spec & Recipes Builder",
   "author": "wallcop100 <wallcop100@gmail.com>",
   "main": "electron/main.js",
