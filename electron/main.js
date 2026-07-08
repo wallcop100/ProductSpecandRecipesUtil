@@ -270,6 +270,16 @@ ipcMain.handle('open-folder-dialog', async () => {
   return result.canceled ? null : result.filePaths[0]
 })
 
+// Pick an arbitrary spreadsheet to import product codes from (read-only).
+ipcMain.handle('open-xlsx-dialog', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Choose a spreadsheet to import product codes from',
+    properties: ['openFile'],
+    filters: [{ name: 'Excel', extensions: ['xlsx', 'xlsm'] }],
+  })
+  return result.canceled ? null : result.filePaths[0]
+})
+
 // Watcher control
 ipcMain.handle('start-watcher', (event, { folderPath, psFilename, rsFilename }) => {
   startWatcher(folderPath, psFilename, rsFilename)

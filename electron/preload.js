@@ -5,6 +5,7 @@ const { contextBridge, ipcRenderer } = require('electron')
 contextBridge.exposeInMainWorld('electronAPI', {
   // File dialogs
   openFolderDialog: () => ipcRenderer.invoke('open-folder-dialog'),
+  openXlsxDialog: () => ipcRenderer.invoke('open-xlsx-dialog'),
 
   // Flask status
   onFlaskStatus: (callback) =>

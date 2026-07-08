@@ -4,6 +4,7 @@ import FolderSetupScreen from './screens/FolderSetupScreen'
 import BuilderScreen from './screens/BuilderScreen'
 import TemplateEditorScreen from './screens/TemplateEditorScreen'
 import ProductSpecScreen from './screens/ProductSpecScreen'
+import ProductCodeImportScreen from './screens/ProductCodeImportScreen'
 import ConnectorsScreen from './screens/ConnectorsScreen'
 import TagManagerScreen from './screens/TagManagerScreen'
 import FileWatchBanner from './components/FileWatchBanner'
@@ -11,7 +12,8 @@ import UpdateBanner from './components/UpdateBanner'
 
 /**
  * App — top-level screen router.
- * Screens: 'folder-setup' | 'builder' | 'template-editor' | 'product-spec' | 'connectors'
+ * Screens: 'folder-setup' | 'builder' | 'template-editor' | 'product-spec' |
+ *          'product-code-import' | 'connectors'
  */
 export default function App() {
   const [activeScreen, setActiveScreen] = useState('folder-setup')
@@ -81,11 +83,15 @@ export default function App() {
         {activeScreen === 'product-spec' && (
           <ProductSpecScreen
             scrollToRef={psScrollToRef}
+            onOpenCodeImport={() => navigateTo('product-code-import')}
             onBack={() => {
               setPsScrollToRef(null)
               navigateTo('builder')
             }}
           />
+        )}
+        {activeScreen === 'product-code-import' && (
+          <ProductCodeImportScreen onBack={() => navigateTo('product-spec')} />
         )}
         {activeScreen === 'connectors' && (
           <ConnectorsScreen

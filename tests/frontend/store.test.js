@@ -1168,6 +1168,40 @@ describe('catalogue — createElementType / rename / delete', () => {
     expect(dbChanges[0].updates.Name).toBe('Tape')
   })
 
+  test('updateElementType with DB writes off: patches the ET, queues no dbChanges', () => {
+    resetStore({
+      dbWriteEnabled: false, dbChanges: [],
+      elementTypes: [{ ElementTypeRef: 'ET-A', Description: null }],
+    })
+    useStore.getState().updateElementType('ET-A', { Description: 'Nano Flex Solo 160' })
+    const s = useStore.getState()
+    expect(s.elementTypes[0].Description).toBe('Nano Flex Solo 160')
+    expect(s.dbChanges).toHaveLength(0)   // off → the note stays project-local
+  })
+
+  test('updateElementType with DB writes on: queues the Description with its before-value', () => {
+    resetStore({
+      dbWriteEnabled: true, dbChanges: [],
+      elementTypes: [{ ElementTypeRef: 'ET-A', Description: 'old' }],
+    })
+    useStore.getState().updateElementType('ET-A', { Description: 'new note' })
+    const { dbChanges } = useStore.getState()
+    expect(dbChanges).toHaveLength(1)
+    expect(dbChanges[0].elementTypeRef).toBe('ET-A')
+    expect(dbChanges[0].updates).toEqual({ Description: 'new note' })
+    expect(dbChanges[0].before).toEqual({ Description: 'old' })
+  })
+
+  test('updateElementType is a no-op for unchanged values and unknown refs', () => {
+    resetStore({
+      dbWriteEnabled: true, dbChanges: [],
+      elementTypes: [{ ElementTypeRef: 'ET-A', Description: 'same' }],
+    })
+    useStore.getState().updateElementType('ET-A', { Description: 'same' })
+    useStore.getState().updateElementType('ET-NOPE', { Description: 'x' })
+    expect(useStore.getState().dbChanges).toHaveLength(0)
+  })
+
   test('renameElementType cascades to elementTypes, PS and RS (never other sheets)', () => {
     resetStore({
       dbWriteEnabled: true, dbChanges: [], psChanges: [], rsChanges: [],

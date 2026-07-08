@@ -122,7 +122,7 @@ Files: `src/components/NewETWizardModal.jsx`, `src/store/useStore.js`
 - `T-H1` `M` `DONE` — Flag when the entered **Manufacturer + Product Code already
   exists**; reveal a button to either **use the existing ElementTypeRef** or
   **adjust the product code**.
-- `T-H2` `S` `DONE` — The "next ref" suggestion should **suggest capitalisation**
+- `T-H2` `S` `DONE` — The "next  ref" suggestion should **suggest capitalisation**
   if the typed ref isn't uppercased.
 - `T-H3` `S` `DONE` — Templated/suggested ref uses **one leading zero**:
   `TAPE-04`, not `TAPE-004`. (Also audit `getNextAvailableRef`.)

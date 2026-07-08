@@ -16,7 +16,7 @@ import { ACTION_ICONS } from '../utils/entityStyle'
  *   onBack: () => void
  *   scrollToRef: string|null — auto-selects this ET on open
  */
-export default function ProductSpecScreen({ onBack, scrollToRef }) {
+export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImport }) {
   const psRows       = useStore(s => s.psRows)
   const psChanges    = useStore(s => s.psChanges)
   const recipes      = useStore(s => s.recipes)
@@ -194,6 +194,13 @@ export default function ProductSpecScreen({ onBack, scrollToRef }) {
         <IconButton variant="outline-secondary" bsSize="sm" icon={ACTION_ICONS.back}
           title="Back to builder" onClick={onBack} />
         <span className="fw-semibold ms-1">Product Spec</span>
+        {onOpenCodeImport && (
+          <Button variant="outline-primary" size="sm" className="d-inline-flex align-items-center gap-1 ms-2"
+            style={{ fontSize: 11 }} onClick={onOpenCodeImport}
+            title="Import product codes from a spreadsheet and split them into distinct codes">
+            <MaterialIcon name="auto_fix_high" size={14} /> Import product codes
+          </Button>
+        )}
 
         {/* Completeness bar */}
         <div className="d-flex align-items-center gap-2 ms-3" style={{ flexShrink: 0 }}>

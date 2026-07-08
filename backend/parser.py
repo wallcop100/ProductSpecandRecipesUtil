@@ -228,6 +228,48 @@ def parse_db(filepath):
     }
 
 
+def read_sheet(filepath, sheet=None):
+    """
+    Read an ARBITRARY xlsx sheet — no fixed schema.
+
+    Unlike _parse_sheet_by_headers (which needs a column_map), this exposes the
+    raw headers and rows so the caller can map columns itself. Used by the
+    product-code import, where the incoming spreadsheet's shape is unknown.
+
+    sheet: worksheet name; defaults to the first sheet.
+
+    Returns {'sheets': [names], 'sheet': name, 'headers': [...],
+             'rows': [{header: value}, ...]}   ('_row_num' included per row)
+    """
+    wb = openpyxl.load_workbook(filepath, data_only=True, read_only=True)
+    try:
+        names = list(wb.sheetnames)
+        if not names:
+            raise ValueError(f'No worksheets in {filepath}')
+
+        target = sheet or names[0]
+        if target not in names:
+            raise ValueError(f"Sheet '{target}' not found in {filepath}")
+
+        ws = wb[target]
+        first_row = next(ws.iter_rows(min_row=1, max_row=1, values_only=True), ())
+        headers = [str(h).strip() if h is not None else '' for h in first_row]
+
+        rows = []
+        for idx, values in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+            if all(v is None or (isinstance(v, str) and not v.strip()) for v in values):
+                continue  # fully blank row
+            row = {'_row_num': idx}
+            for i, header in enumerate(headers):
+                if header:
+                    row[header] = values[i] if i < len(values) else None
+            rows.append(row)
+
+        return {'sheets': names, 'sheet': target, 'headers': headers, 'rows': rows}
+    finally:
+        wb.close()
+
+
 def parse_ps(filepath):
     """
     Parse a Product Spec xlsx workbook.

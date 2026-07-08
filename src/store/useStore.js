@@ -2531,6 +2531,57 @@ const useStore = create((set, get) => ({
   },
 
   /**
+   * updateElementType(ref, updates)
+   * Patch catalogue fields (Name / Description / Family / SortOrder) on an
+   * EXISTING element type. createElementType covers new ones; this is the only
+   * way to write, say, a Description onto one already in the catalogue.
+   *
+   * Like every catalogue write, the DesignDB row is only queued when DB writes
+   * are enabled — otherwise the change stays project-local.
+   */
+  updateElementType(ref, updates = {}) {
+    const trimmed = (ref || '').trim()
+    if (!trimmed || Object.keys(updates).length === 0) return
+    const { elementTypes, dbChanges, dbWriteEnabled, projectId } = get()
+    const lc = trimmed.toLowerCase()
+    const hit = elementTypes.find(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === lc)
+    if (!hit) return
+
+    // Drop no-op fields so we never register a change that writes the same value.
+    const changed = {}
+    for (const [k, v] of Object.entries(updates)) {
+      if ((hit[k] ?? null) !== (v ?? null)) changed[k] = v
+    }
+    if (Object.keys(changed).length === 0) return
+
+    get()._pushHistory()
+
+    const patch = {
+      elementTypes: elementTypes.map(e =>
+        (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === lc ? { ...e, ...changed } : e
+      ),
+    }
+    if (dbWriteEnabled) {
+      const before = {}
+      for (const k of Object.keys(changed)) before[k] = hit[k] ?? null
+      patch.dbChanges = mergeDbChanges(dbChanges, { elementTypeRef: trimmed, updates: changed, before })
+    }
+    set(patch)
+
+    // Persist to the staging table (best-effort)
+    if (projectId != null && window.electronAPI?.db?.upsertLocalET) {
+      const next = { ...hit, ...changed }
+      window.electronAPI.db.upsertLocalET(projectId, {
+        ref: trimmed,
+        name: next.Name ?? null,
+        description: next.Description ?? null,
+        family: next.Family ?? null,
+        isCollection: next.IsCollection === 'Y',
+      })?.catch?.(() => {})
+    }
+  },
+
+  /**
    * renameElementType(oldRef, newRef)
    * Cascades the rename through the app's own writable files — the DB catalogue
    * row, PS EntityRef, and RS EntityRef + ContextRef (container refs). Never

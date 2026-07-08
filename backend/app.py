@@ -22,7 +22,7 @@ _BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
 if _BACKEND_DIR not in sys.path:
     sys.path.insert(0, _BACKEND_DIR)
 
-from parser import detect_files, parse_db, parse_ps, parse_rs  # noqa: E402
+from parser import detect_files, parse_db, parse_ps, parse_rs, read_sheet  # noqa: E402
 from validator import validate as _validate  # noqa: E402
 
 import openpyxl  # noqa: E402
@@ -432,6 +432,30 @@ def import_files():
         return _error(f'Failed to parse RS file: {exc}')
 
     return jsonify({'db': db_data, 'ps': ps_rows, 'rs': rs_rows})
+
+
+@app.route('/read-sheet', methods=['POST'])
+def read_sheet_route():
+    """
+    Read an arbitrary xlsx sheet (headers + rows) so the caller can map columns.
+    Backs the product-code import, whose incoming spreadsheet has no fixed schema.
+
+    Body: {filepath, sheet?}  — omit 'sheet' to get the sheet list + the first sheet.
+    """
+    body = request.get_json(force=True, silent=True)
+    if not body:
+        return _error('Request body must be JSON.')
+
+    filepath = (body.get('filepath') or '').strip()
+    if not filepath:
+        return _error("'filepath' is required.")
+    if not os.path.isfile(filepath):
+        return _error(f"File not found at '{filepath}'")
+
+    try:
+        return jsonify(read_sheet(filepath, body.get('sheet') or None))
+    except Exception as exc:
+        return _error(f'Failed to read sheet: {exc}')
 
 
 @app.route('/validate', methods=['POST'])
