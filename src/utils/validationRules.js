@@ -55,7 +55,7 @@ const refOf = r => r.elementTypeRef || r.ElementTypeRef || ''
  */
 // Rules whose fix lives on the Product Spec screen (ref is an ET ref); all
 // others are recipe rules whose ref is a PositionTypeRef.
-const SPEC_RULES = new Set(['DUPLICATE_PRODUCT_CODE', 'MISSING_PRODUCT_CODE'])
+const SPEC_RULES = new Set(['DUPLICATE_PRODUCT_CODE', 'MISSING_PRODUCT_CODE', 'MISSING_PRODUCT_SPEC_ROW'])
 
 export function runValidation(dbData, psRows, rsRows, positionUI, { collections = [] } = {}) {
   const issues = []
@@ -72,9 +72,86 @@ export function runValidation(dbData, psRows, rsRows, positionUI, { collections 
   issues.push(...checkExteriorIPConnectors(rsRows, positionUI))
   issues.push(...checkMissingProductSpecs(psRows))
   issues.push(...checkDanglingElementTypeRefs(dbData, psRows, rsRows))
+  issues.push(...checkBlankRecipeContainer(rsRows))
+  issues.push(...checkUnspecifiedElementTypes(dbData, psRows, rsRows))
 
   // Tag each issue with where its "fix" lives so the UI can route correctly.
   for (const i of issues) i.fixKind = SPEC_RULES.has(i.rule) ? 'spec' : 'position'
+
+  return issues
+}
+
+// ---------------------------------------------------------------------------
+// Rule 13 — BLANK_RECIPE_CONTAINER
+// An internal row (ContextType=ElementType) must name the ElementType it lives
+// inside. A blank ContextRef is unrecoverable: the patch script skips blank cells,
+// so the row lands in the sheet parented to nothing.
+// ---------------------------------------------------------------------------
+function checkBlankRecipeContainer(rsRows) {
+  const issues = []
+  const seen = new Set()
+  for (const r of rsRows || []) {
+    if ((r.IsDeleted || r.isDeleted) === 'Y') continue
+    if ((r.ContextType || r.contextType) !== 'ElementType') continue
+    const container = String(r.ContextRef || r.contextRef || '').trim()
+    if (container) continue
+
+    const posRef = r.PositionTypeRef || r.positionTypeRef || null
+    const etRef = r.ElementTypeRef || r.elementTypeRef || '(unnamed)'
+    const key = `${posRef}::${etRef}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    issues.push({
+      severity: 'error',
+      rule: 'BLANK_RECIPE_CONTAINER',
+      message: `"${etRef}" is marked as living inside an ElementType but names no container. It cannot be written to the Recipes sheet.`,
+      ref: posRef,
+    })
+  }
+  return issues
+}
+
+// ---------------------------------------------------------------------------
+// Rule 14 — MISSING_PRODUCT_SPEC_ROW
+// The DesignDB says an ElementType exists; the Product Spec says what to buy.
+// An ET used in a recipe, or catalogued in the DB, needs a spec row — otherwise
+// there is nowhere to record its manufacturer and product code, and the BoM
+// cannot be priced. Collections are groupings, not purchasables, so they are
+// exempt. Wrappers are not exempt: they take Ideaworks / N/A.
+// ---------------------------------------------------------------------------
+function checkUnspecifiedElementTypes(dbData, psRows, rsRows) {
+  const lc = s => String(s || '').toLowerCase()
+  const spec = new Set((psRows || [])
+    .filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
+    .map(r => lc(r.ElementTypeRef || r.elementTypeRef))
+    .filter(Boolean))
+
+  const elementTypes = dbData?.element_types || dbData?.elementTypes || []
+  const catalogued = new Map()
+  for (const e of elementTypes) {
+    const ref = e.ElementTypeRef || e.elementTypeRef
+    if (ref && (e.IsCollection || e.isCollection) !== 'Y') catalogued.set(lc(ref), ref)
+  }
+
+  const issues = []
+  const seen = new Set()
+  const add = (ref, why) => {
+    const key = lc(ref)
+    if (!key || spec.has(key) || seen.has(key)) return
+    seen.add(key)
+    issues.push({
+      severity: 'warning',
+      rule: 'MISSING_PRODUCT_SPEC_ROW',
+      message: `"${ref}" ${why} but has no Product Spec row, so it carries no manufacturer or product code.`,
+      ref,
+    })
+  }
+
+  for (const r of rsRows || []) {
+    if ((r.IsDeleted || r.isDeleted) === 'Y') continue
+    add(r.ElementTypeRef || r.elementTypeRef, 'is used in a recipe')
+  }
+  for (const [, ref] of catalogued) add(ref, 'is in the DesignDB catalogue')
 
   return issues
 }

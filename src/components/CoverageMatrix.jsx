@@ -5,6 +5,7 @@ import MaterialIcon from './MaterialIcon'
 import { collectionStatusForPosition, positionRecipeWithWrapperInternals } from '../utils/collectionStatus'
 import { positionFamilyOf } from '../utils/positionFamily'
 import { ACTION_ICONS } from '../utils/entityStyle'
+import BulkApplyModal from './BulkApplyModal'
 
 const STATUS_SYMBOL = {
   complete: { icon: ACTION_ICONS.complete,   color: '#198754', bg: '#d1e7dd', title: 'All template refs present' },
@@ -48,10 +49,13 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
   const positionUI     = useStore(s => s.positionUI)
   const recipes        = useStore(s => s.recipes)
   const applyCollectionBulk = useStore(s => s.applyCollectionBulk)
+  const planBulk = useStore(s => s.planBulk)
 
   const ignoredPositionFamilies = useStore(s => s.ignoredPositionFamilies)
 
   const [incompleteOnly, setIncompleteOnly] = useState(false)
+  // A bulk apply is previewed before it touches anything — see BulkApplyModal.
+  const [pendingBulk, setPendingBulk] = useState(null)   // { collectionId, name, targets, plan }
 
   const collections = etCollections
 
@@ -74,8 +78,8 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
       const tags = positionUI[posRef]?.tags ?? []
       // Wrapper-aware: the DL/LIN wrapper's internals count toward coverage
       // even when they're stored under another position (shared assembly).
-      const posRecipe = positionRecipeWithWrapperInternals(recipes, posRef).combined
-      const results = collectionStatusForPosition(posRef, tags, posRecipe, collections)
+      const { combined: posRecipe, wrapperRefs } = positionRecipeWithWrapperInternals(recipes, posRef)
+      const results = collectionStatusForPosition(posRef, tags, posRecipe, collections, wrapperRefs)
       const byColl = {}
       results.forEach(r => { byColl[r.collection.CollectionId] = r.status })
       map[posRef] = byColl
@@ -91,6 +95,11 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
     })
   }, [scopedPositions, statusByPos, incompleteOnly])
 
+  /**
+   * Bulk apply never writes straight away: it plans, and the user confirms. The
+   * plan is what stops a 'partial' position collecting duplicate rows and shows
+   * where a quantity needs topping up per entity.
+   */
   function handleBulkApply(collectionId, targetStatus) {
     const targets = scopedPositions.filter(pt => {
       const status = (statusByPos[pt.PositionTypeRef] || {})[collectionId]
@@ -98,8 +107,17 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
         ? (status === 'missing' || status === 'partial')
         : status === targetStatus
     }).map(pt => pt.PositionTypeRef)
-    // Wrapper-aware: internal ingredients are applied once per shared wrapper.
-    applyCollectionBulk(targets, collectionId)
+    if (targets.length === 0) return
+
+    const plan = planBulk(targets, collectionId)
+    if (!plan) return
+    const name = collections.find(c => c.CollectionId === collectionId)?.Name || 'template'
+    setPendingBulk({ collectionId, name, targets, plan })
+  }
+
+  function confirmBulk() {
+    if (pendingBulk) applyCollectionBulk(pendingBulk.targets, pendingBulk.collectionId)
+    setPendingBulk(null)
   }
 
   if (!collections.length) {
@@ -210,6 +228,14 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
           </span>
         ))}
       </div>
+
+      <BulkApplyModal
+        show={!!pendingBulk}
+        plan={pendingBulk?.plan}
+        collectionName={pendingBulk?.name}
+        onHide={() => setPendingBulk(null)}
+        onConfirm={confirmBulk}
+      />
     </div>
   )
 }

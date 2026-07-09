@@ -155,9 +155,49 @@ describe('connectorGapsForPosition (from the user\'s Connector Templates)', () =
     const recipes = [
       posRow('ET-WHATEVER-SOCK-1234'),
       posRow('ET-BLAH-SR-77'),
+      // The position must actually USE the wrapper, otherwise a plug inside it
+      // belongs to somebody else's assembly and cannot satisfy this template.
+      posRow('ET-DESIGN-1', { IsDesign: 'Y' }),
       posRow('ET-ODD-PLUG-9', { ContextType: 'ElementType', ContextRef: 'ET-DESIGN-1' }),
     ]
     expect(connectorGapsForPosition(recipes, 'P1', ['Local'], [collection])).toHaveLength(0)
+  })
+
+  test('an inside-wrapper ingredient is NOT satisfied by a copy at position level', () => {
+    const recipes = [
+      posRow('ET-WHATEVER-SOCK-1234'),
+      posRow('ET-BLAH-SR-77'),
+      posRow('ET-DESIGN-1', { IsDesign: 'Y' }),
+      posRow('ET-ODD-PLUG-9'),                                                   // wrong slot
+      posRow('ET-INNER', { ContextType: 'ElementType', ContextRef: 'ET-DESIGN-1' }),
+    ]
+    const gaps = connectorGapsForPosition(recipes, 'P1', ['Local'], [collection])
+    expect(gaps).toHaveLength(1)
+    expect(gaps[0]).toMatchObject({ ref: 'ET-ODD-PLUG-9', status: 'misplaced' })
+    expect(gaps[0].label).toMatch(/^Move ET-ODD-PLUG-9/)
+  })
+
+  test('an internal gap on a position with no wrapper is blocked, never an add', () => {
+    const recipes = [posRow('ET-WHATEVER-SOCK-1234')]
+    const plug = connectorGapsForPosition(recipes, 'P1', ['Local'], [collection])
+      .find(g => g.ref === 'ET-ODD-PLUG-9')
+    expect(plug.blocked).toBe(true)          // adding it would write a blank ContextRef
+    expect(plug.container).toBeNull()
+    expect(plug.label).toMatch(/no design element/)
+  })
+
+  test('a short quantity is reported as short, not missing', () => {
+    const qtyColl = {
+      CollectionId: 'c2', Name: 'Caps', ApplicableTags: ['Local'],
+      Ingredients: [
+        { ElementTypeRef: 'ET-WHATEVER-SOCK-1234', section: 'position' },
+        { ElementTypeRef: 'ET-CAP-X', section: 'position', quantity: 2 },
+      ],
+    }
+    const recipes = [posRow('ET-WHATEVER-SOCK-1234'), posRow('ET-CAP-X', { Quantity: 1 })]
+    const gaps = connectorGapsForPosition(recipes, 'P1', ['Local'], [qtyColl])
+    expect(gaps).toHaveLength(1)
+    expect(gaps[0]).toMatchObject({ ref: 'ET-CAP-X', status: 'short', have: 1, need: 2 })
   })
 
   test('a template the position never started yields nothing', () => {

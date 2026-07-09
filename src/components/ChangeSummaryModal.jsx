@@ -153,8 +153,19 @@ export default function ChangeSummaryModal({ show, onHide, scope = 'export', not
   const rsChanges = useStore(s => s.rsChanges)
   const dbChanges = useStore(s => s.dbChanges)
 
+  const unspecifiedElementTypes = useStore(s => s.unspecifiedElementTypes)
+  const specifyMissingElementTypes = useStore(s => s.specifyMissingElementTypes)
+
   const [copiedKey, setCopiedKey] = useState(null)
   useEffect(() => { if (show) setCopiedKey(null) }, [show])
+
+  // PS and DB must agree wherever a spec is defined. An ElementType used in a
+  // recipe, or catalogued in the DesignDB, with no Product Spec row has nowhere to
+  // carry its manufacturer and product code — the patch would leave the two apart.
+  const unspecified = useMemo(
+    () => (show && scope === 'export' ? unspecifiedElementTypes() : []),
+    [show, scope, psChanges, rsChanges, dbChanges, unspecifiedElementTypes]
+  )
 
   const sections = useMemo(
     () => buildSummary({ psChanges, rsChanges, dbChanges }, scope),
@@ -191,7 +202,31 @@ export default function ChangeSummaryModal({ show, onHide, scope = 'export', not
       </Modal.Header>
       <Modal.Body style={{ maxHeight: '60vh' }}>
         {note && <div className="text-muted mb-2" style={{ fontSize: 12 }}>{note}</div>}
-        {sections.length === 0 && (
+
+        {/* PS ↔ DB alignment. Offered, never silent: appending spec rows is a real
+            change to the Product Spec, so it goes into psChanges like any other. */}
+        {unspecified.length > 0 && (
+          <div className="mb-3 px-2 py-2 rounded" style={{ background: '#fff3cd', border: '1px solid #f0e0a8' }}>
+            <div className="fw-semibold d-flex align-items-center gap-1" style={{ fontSize: 11, color: '#856404' }}>
+              <MaterialIcon name="warning" size={13} />
+              {unspecified.length} ElementType{unspecified.length === 1 ? '' : 's'} with no Product Spec row
+            </div>
+            <div className="text-muted my-1" style={{ fontSize: 11 }}>
+              Used in a recipe or catalogued in the DesignDB, but unspecified — nothing to buy, nothing to price.
+              Wrappers are appended as <span style={{ fontFamily: 'monospace' }}>Ideaworks / N/A</span>.
+            </div>
+            <div style={{ fontFamily: 'monospace', fontSize: 10, color: '#6c757d', maxHeight: 60, overflowY: 'auto' }}>
+              {unspecified.map(u => u.ref).join(', ')}
+            </div>
+            <Button size="sm" variant="outline-warning" className="mt-2" style={{ fontSize: 11 }}
+              onClick={() => specifyMissingElementTypes()}>
+              <MaterialIcon name="playlist_add_check" size={13} /> Add {unspecified.length} spec row
+              {unspecified.length === 1 ? '' : 's'}
+            </Button>
+          </div>
+        )}
+
+        {sections.length === 0 && unspecified.length === 0 && (
           <div className="text-muted small fst-italic">No pending changes for this action.</div>
         )}
         {sections.map(s => (

@@ -32,8 +32,8 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
   useEffect(() => {
     if (!focusPosRef || etCollections.length === 0) return
     const tags = positionUI[focusPosRef]?.tags ?? []
-    const posRecipe = positionRecipeWithWrapperInternals(recipes, focusPosRef).combined
-    const statuses = collectionStatusForPosition(focusPosRef, tags, posRecipe, etCollections)
+    const { combined: posRecipe, wrapperRefs } = positionRecipeWithWrapperInternals(recipes, focusPosRef)
+    const statuses = collectionStatusForPosition(focusPosRef, tags, posRecipe, etCollections, wrapperRefs)
     // Prefer an applicable collection (tags match): complete/partial/missing over na.
     const applicable = statuses.find(s => s.status !== 'na')
     const chosen = applicable?.collection ?? etCollections[0]

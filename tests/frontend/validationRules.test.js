@@ -329,9 +329,15 @@ describe('MISSING_CLIPS_DIM_QTY', () => {
 // ---------------------------------------------------------------------------
 describe('runValidation — valid recipe', () => {
   test('valid recipe with all rules satisfied returns no issues', () => {
+    // Every ElementType the recipe uses carries a spec row. Without one,
+    // MISSING_PRODUCT_SPEC_ROW fires — and rightly: there is nothing to buy.
     const psRows = [
       makePsRow('ET-DL-SPOT-01', 'SPOT-AAA-001'),
       makePsRow('ET-SOCK-5P-01', 'SOCK-BBB-002'),
+      makePsRow('ET-SR-DALI-01', 'SR-CCC-003'),
+      makePsRow('ET-DRIVER-CC-01', 'DRV-DDD-004'),
+      makePsRow('ET-TAPE-LED-01', 'TAPE-EEE-005'),
+      makePsRow('ET-LLOCK-ALU-01', 'LOCK-FFF-006'),
     ]
 
     const rsRows = [
@@ -478,5 +484,110 @@ describe('EXTERIOR_NON_IP_CONNECTOR', () => {
     ]
     const issues = runValidation(dbData, [], rsRows, { 'PT-EXT-01': { tags: ['DL', 'Exterior'] } })
     expect(issues.some(i => i.rule === 'EXTERIOR_NON_IP_CONNECTOR')).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Rule 13 — BLANK_RECIPE_CONTAINER
+// ---------------------------------------------------------------------------
+describe('BLANK_RECIPE_CONTAINER', () => {
+  const ui = { 'PT-DL-LOCAL-01': { tags: [] } }
+  const blank = extra => makeRsRow({ contextType: 'ElementType', contextRef: '', elementTypeRef: 'ET-PLUG-01', ...extra })
+
+  test('an internal row naming no container is an error', () => {
+    const issues = runValidation(dbData, [], [blank()], ui)
+      .filter(i => i.rule === 'BLANK_RECIPE_CONTAINER')
+    expect(issues).toHaveLength(1)
+    expect(issues[0].severity).toBe('error')
+    expect(issues[0].message).toMatch(/ET-PLUG-01/)
+    expect(issues[0].ref).toBe('PT-DL-LOCAL-01')
+  })
+
+  test('null, undefined and whitespace all count as blank', () => {
+    for (const contextRef of [null, undefined, '   ']) {
+      const rows = [makeRsRow({ contextType: 'ElementType', contextRef, elementTypeRef: 'ET-X' })]
+      expect(runValidation(dbData, [], rows, ui).filter(i => i.rule === 'BLANK_RECIPE_CONTAINER')).toHaveLength(1)
+    }
+  })
+
+  test('a named container is fine', () => {
+    const rows = [makeRsRow({ contextType: 'ElementType', contextRef: 'ET-DL-SPOT-01', elementTypeRef: 'ET-PLUG-01' })]
+    expect(runValidation(dbData, [], rows, ui).filter(i => i.rule === 'BLANK_RECIPE_CONTAINER')).toHaveLength(0)
+  })
+
+  test('a position-level row needs no container', () => {
+    const rows = [makeRsRow({ contextType: 'PositionType', contextRef: 'PT-DL-LOCAL-01' })]
+    expect(runValidation(dbData, [], rows, ui).filter(i => i.rule === 'BLANK_RECIPE_CONTAINER')).toHaveLength(0)
+  })
+
+  test('a deleted row is not reported', () => {
+    expect(runValidation(dbData, [], [blank({ isDeleted: 'Y' })], ui)
+      .filter(i => i.rule === 'BLANK_RECIPE_CONTAINER')).toHaveLength(0)
+  })
+
+  test('one issue per (position, element), not one per row', () => {
+    expect(runValidation(dbData, [], [blank(), blank()], ui)
+      .filter(i => i.rule === 'BLANK_RECIPE_CONTAINER')).toHaveLength(1)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Rule 14 — MISSING_PRODUCT_SPEC_ROW  (PS ↔ DB alignment)
+// ---------------------------------------------------------------------------
+describe('MISSING_PRODUCT_SPEC_ROW', () => {
+  const ui = { 'PT-DL-LOCAL-01': { tags: [] } }
+  const only = issues => issues.filter(i => i.rule === 'MISSING_PRODUCT_SPEC_ROW')
+  const db = element_types => ({ element_types, position_types: [] })
+
+  test('an ET used in a recipe with no spec row is reported', () => {
+    const rows = [makeRsRow({ elementTypeRef: 'ET-DRIVER-01' })]
+    const issues = only(runValidation(db([]), [], rows, ui))
+    expect(issues).toHaveLength(1)
+    expect(issues[0].ref).toBe('ET-DRIVER-01')
+    expect(issues[0].message).toMatch(/used in a recipe/)
+    expect(issues[0].fixKind).toBe('spec')      // the fix lives on the Product Spec screen
+  })
+
+  test('an ET catalogued in the DB with no spec row is reported', () => {
+    const issues = only(runValidation(db([{ ElementTypeRef: 'ET-ONLY-IN-DB' }]), [], [], {}))
+    expect(issues).toHaveLength(1)
+    expect(issues[0].message).toMatch(/DesignDB catalogue/)
+  })
+
+  test('a spec row silences it', () => {
+    const rows = [makeRsRow({ elementTypeRef: 'ET-DRIVER-01' })]
+    const ps = [makePsRow('ET-DRIVER-01', 'CODE-1')]
+    expect(only(runValidation(db([{ ElementTypeRef: 'ET-DRIVER-01' }]), ps, rows, ui))).toHaveLength(0)
+  })
+
+  test('matching is case-insensitive', () => {
+    const rows = [makeRsRow({ elementTypeRef: 'ET-Driver-01' })]
+    expect(only(runValidation(db([]), [makePsRow('et-driver-01', 'C')], rows, ui))).toHaveLength(0)
+  })
+
+  test('DB collections are exempt — a grouping is not purchasable', () => {
+    const dbData2 = db([{ ElementTypeRef: 'ET-FAMILY', IsCollection: 'Y' }])
+    expect(only(runValidation(dbData2, [], [], {}))).toHaveLength(0)
+  })
+
+  test('a deleted recipe row does not demand a spec', () => {
+    const rows = [makeRsRow({ elementTypeRef: 'ET-GONE', isDeleted: 'Y' })]
+    expect(only(runValidation(db([]), [], rows, ui))).toHaveLength(0)
+  })
+
+  test('a deleted spec row does not count as specified', () => {
+    const rows = [makeRsRow({ elementTypeRef: 'ET-DRIVER-01' })]
+    const ps = [{ elementTypeRef: 'ET-DRIVER-01', productCode: 'C', isDeleted: 'Y' }]
+    expect(only(runValidation(db([]), ps, rows, ui))).toHaveLength(1)
+  })
+
+  test('each ET is reported once, however many rows use it', () => {
+    const rows = [makeRsRow({ elementTypeRef: 'ET-X' }), makeRsRow({ elementTypeRef: 'ET-X', recipeIndex: 2 })]
+    expect(only(runValidation(db([{ ElementTypeRef: 'ET-X' }]), [], rows, ui))).toHaveLength(1)
+  })
+
+  test('it is a warning, not an error — the recipe still works', () => {
+    const rows = [makeRsRow({ elementTypeRef: 'ET-DRIVER-01' })]
+    expect(only(runValidation(db([]), [], rows, ui))[0].severity).toBe('warning')
   })
 })

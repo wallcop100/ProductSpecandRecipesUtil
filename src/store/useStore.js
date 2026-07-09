@@ -13,6 +13,8 @@ import { resolveTemplate, applyResolvedTemplate } from '../utils/slotResolver.js
 import { evaluateTags, effectiveTags, snapshotForPosition } from '../utils/tagRules.js'
 import { runValidation } from '../utils/validationRules.js'
 import { computeContainerInfo, looksLikeContainer, getNextAvailableRef } from '../utils/containerUtils.js'
+import { containerForPosition } from '../utils/recipePresence.js'
+import { planCollectionBulk, effectiveActions } from '../utils/collectionStatus.js'
 import { positionFamilyOf } from '../utils/positionFamily.js'
 import { familyOf } from '../utils/etRef.js'
 import { DIM_QTY_COMPONENTS, AUTO_CONTRACT_ITEMS } from '../utils/constants.js'
@@ -269,25 +271,23 @@ export function getRecipeForPosition(recipes, posRef) {
 // ---------------------------------------------------------------------------
 
 /** Canonical section key → ContextType / ContextRef lookup. */
-function contextForSection(section, posRef, recipes) {
-  if (section === 'position') {
-    return { contextType: 'PositionType', contextRef: posRef }
-  }
-
+/**
+ * Where a row of `section` belongs on `posRef`.
+ *
+ * An internal row must name the wrapper it lives inside. The old version looked
+ * only for an IsDesign row and returned `contextRef: null` when there wasn't one —
+ * the row was written anyway, and the patch script then SKIPPED the blank column,
+ * appending a row with ContextType=ElementType and an empty ContextRef.
+ *
+ * A blank container is never a legitimate value, so this returns `contextRef: null`
+ * only to signal "I cannot place this", and callers must refuse to write the row.
+ * Resolution goes through containerForPosition, which also accepts a wrapper that
+ * is not the design element and one that holds no internals yet.
+ */
+function contextForSection(section, posRef, recipes, containerETRefs = new Set()) {
   if (section === 'dl_internal' || section === 'lin_internal') {
-    // Find the DESIGN_ELEMENT row for this position to get its ElementTypeRef
-    const posRows = recipes.filter(
-      r => (r.positionTypeRef || r.PositionTypeRef) === posRef &&
-           (r.contextType || r.ContextType) === 'PositionType' &&
-           (r.isDesign || r.IsDesign) === 'Y'
-    )
-    const designRow = posRows[0]
-    const contextRef = designRow
-      ? (designRow.elementTypeRef || designRow.ElementTypeRef || null)
-      : null
-    return { contextType: 'ElementType', contextRef }
+    return { contextType: 'ElementType', contextRef: containerForPosition(recipes, posRef, containerETRefs) }
   }
-
   return { contextType: 'PositionType', contextRef: posRef }
 }
 
@@ -396,6 +396,10 @@ const useStore = create((set, get) => ({
 
   // _id of the most recently added recipe row — the card scrolls itself into view.
   lastAddedRowId: null,
+
+  // Why the last add was refused (e.g. an internal row with no container to hold
+  // it). Surfaced as a banner; a refusal is always better than a blank ContextRef.
+  recipeError: null,
 
   // Undo/redo history — snapshots of { recipes, psRows, rsChanges, psChanges }
   past: [],
@@ -1113,7 +1117,19 @@ const useStore = create((set, get) => ({
    * Adds a new recipe row from a palette drop.
    */
   addRecipeRow(posRef, section, ingredientData, { recordHistory = true } = {}) {
-    const { recipes, rsChanges, activeContextType, activeETRef } = get()
+    const { recipes, rsChanges, activeContextType, activeETRef, containerETRefs } = get()
+
+    // An internal row that cannot name its container must not be written: the patch
+    // script skips blank cells, so it would land in the sheet with an empty
+    // ContextRef. If the container is unknowable the recipe is wrong, not the row.
+    if (
+      (section === 'dl_internal' || section === 'lin_internal')
+      && !(activeContextType === 'ElementType' && activeETRef)
+      && !containerForPosition(recipes, posRef, containerETRefs)
+    ) {
+      set({ recipeError: `Cannot put ${ingredientData?.elementTypeRef || 'this element'} inside a wrapper: ${posRef} has no design element to hold it.` })
+      return null
+    }
 
     if (recordHistory) get()._pushHistory()
 
@@ -1184,7 +1200,12 @@ const useStore = create((set, get) => ({
     const isDimComponent = DIM_QTY_COMPONENTS.some(token => etToken.includes(token))
     const isAutoContract = AUTO_CONTRACT_ITEMS.some(token => etToken.includes(token))
 
-    const { contextType, contextRef } = contextForSection(section, posRef, recipes)
+    const { contextType, contextRef } = contextForSection(section, posRef, recipes, containerETRefs)
+    // Guarded above; belt and braces, because a blank ContextRef reaches the sheet.
+    if (contextType === 'ElementType' && !contextRef) {
+      set({ recipeError: `Cannot place ${etRef || 'this element'} inside a wrapper on ${posRef}: no container found.` })
+      return null
+    }
 
     const newRow = {
       positionTypeRef: posRef,
@@ -1232,6 +1253,56 @@ const useStore = create((set, get) => ({
     if (etRef) get().ensurePSRow(etRef)
 
     return newRow
+  },
+
+  clearRecipeError() { set({ recipeError: null }) },
+
+  /**
+   * moveRecipeRowToSection(posRef, rowId, section)
+   *
+   * Re-file a row that sits in the wrong slot — the "misplaced" state: its ref is
+   * right, its context is not. Moving beats adding a second copy, which is what a
+   * flat ref check used to leave you doing.
+   *
+   * The row keeps its _id, so mergeRsChanges compares against the same `before`
+   * base and the patch locates the on-disk row by its ORIGINAL key before
+   * rewriting ContextType/ContextRef. Returns the moved row, or null if refused.
+   */
+  moveRecipeRowToSection(posRef, rowId, section, { recordHistory = true } = {}) {
+    const { recipes, rsChanges, containerETRefs } = get()
+    const row = recipes.find(r => r._id === rowId)
+    if (!row) return null
+
+    const { contextType, contextRef } = contextForSection(section, posRef, recipes, containerETRefs)
+    if (contextType === 'ElementType' && !contextRef) {
+      set({ recipeError: `Cannot move ${row.ElementTypeRef || row.elementTypeRef} inside a wrapper: ${posRef} has no design element.` })
+      return null
+    }
+    if ((row.ContextType || row.contextType) === contextType &&
+        (row.ContextRef || row.contextRef) === contextRef) return row   // already there
+
+    if (recordHistory) get()._pushHistory()
+
+    // Land at the end of the target context. Keyed on the real context, not on
+    // sectionOfRow, which guesses dl vs lin from the ET's name.
+    const maxIndex = recipes
+      .filter(r => (r.PositionTypeRef || r.positionTypeRef) === posRef
+        && (r.ContextType || r.contextType) === contextType
+        && (r.ContextRef || r.contextRef) === contextRef)
+      .reduce((m, r) => Math.max(m, r.RecipeIndex ?? r.recipeIndex ?? 0), 0)
+
+    const moved = {
+      ...row,
+      contextType, ContextType: contextType,
+      contextRef, ContextRef: contextRef,
+      recipeIndex: maxIndex + 1, RecipeIndex: maxIndex + 1,
+    }
+    set({
+      recipes: recipes.map(r => (r._id === rowId ? moved : r)),
+      rsChanges: mergeRsChanges(rsChanges, [{ _id: rowId, positionTypeRef: posRef, action: 'upsert', row: moved }], recipes),
+      lastAddedRowId: rowId,
+    })
+    return moved
   },
 
   /**
@@ -1374,29 +1445,96 @@ const useStore = create((set, get) => ({
    * container ETs defaulting to ProductCode 'N/A'.
    * Idempotent; never records its own history (callers own that).
    */
+  /**
+   * ensurePSRow(etRef) — every ElementType we use gets a Product Spec row.
+   *
+   * The DB catalogue and the Product Spec are not alternatives: the DB says an
+   * ElementType exists, the Product Spec says what to buy. Registering in the DB
+   * used to RETURN EARLY, so with DB writes on a new ET landed in the DB patch and
+   * never appeared in the PS patch at all — no spec row, nowhere to put a product
+   * code. Both are written now.
+   *
+   * Wrappers are virtual assemblies with nothing to buy, so they default to
+   * Ideaworks / N/A — which is also the primary signal that marks them wrappers.
+   */
   ensurePSRow(etRef) {
     if (!etRef) return null
     const { containerETRefs, psRows, elementTypes, dbWriteEnabled } = get()
-    const exists = psRows.some(
-      r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === etRef.toLowerCase()
-    )
-    if (exists) return null
+    const key = etRef.toLowerCase()
+    const isContainer = containerETRefs.has(key) || looksLikeContainer(etRef)
 
     if (dbWriteEnabled) {
-      // Register in the catalogue instead of the PS sheet.
-      const known = elementTypes.some(
-        e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === etRef.toLowerCase()
-      )
-      if (!known) {
-        const isContainer = containerETRefs.has(etRef.toLowerCase()) || looksLikeContainer(etRef)
-        get().createElementType({ ref: etRef, isCollection: isContainer })
-      }
-      return null
+      const known = elementTypes.some(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === key)
+      if (!known) get().createElementType({ ref: etRef, isCollection: isContainer })
     }
 
-    const isContainer = containerETRefs.has(etRef.toLowerCase()) || looksLikeContainer(etRef)
-    const defaults = isContainer ? { Manufacturer: '', ProductCode: 'N/A' } : {}
+    const exists = psRows.some(r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === key)
+    if (exists) return null
+
+    const defaults = isContainer ? { Manufacturer: 'Ideaworks', ProductCode: 'N/A' } : {}
     return get().addPSRow(etRef, defaults, { recordHistory: false })
+  },
+
+  /**
+   * unspecifiedElementTypes() — ETs that ought to have a Product Spec row and do not.
+   *
+   * "Where there is a spec defined, PS and DB must be aligned." An ElementType used
+   * in a live recipe row, or present in the DB catalogue, needs a spec row: without
+   * one there is nowhere to record its manufacturer and product code, and the BoM
+   * cannot be priced.
+   *
+   * Returns [{ ref, isContainer, usedInRecipe, inDb }], ordered ref-ascending.
+   * Read-only; the export flow offers to append them.
+   */
+  unspecifiedElementTypes() {
+    const { recipes, psRows, elementTypes, containerETRefs } = get()
+    const spec = new Set(psRows
+      .filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
+      .map(r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase())
+      .filter(Boolean))
+
+    const used = new Set(recipes
+      .filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
+      .map(r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase())
+      .filter(Boolean))
+
+    const inDb = new Map()
+    for (const e of elementTypes) {
+      const ref = e.ElementTypeRef || e.elementTypeRef
+      // Collections are groupings, not purchasable items — they carry no spec.
+      if (ref && (e.IsCollection || e.isCollection) !== 'Y') inDb.set(ref.toLowerCase(), ref)
+    }
+
+    const out = new Map()
+    const consider = (key, ref) => {
+      if (spec.has(key) || out.has(key)) return
+      out.set(key, {
+        ref,
+        isContainer: containerETRefs.has(key) || looksLikeContainer(ref),
+        usedInRecipe: used.has(key),
+        inDb: inDb.has(key),
+      })
+    }
+    for (const r of recipes) {
+      const ref = r.ElementTypeRef || r.elementTypeRef
+      if (ref && (r.IsDeleted || r.isDeleted) !== 'Y') consider(ref.toLowerCase(), ref)
+    }
+    for (const [key, ref] of inDb) consider(key, ref)
+
+    return [...out.values()].sort((a, b) => a.ref.localeCompare(b.ref))
+  },
+
+  /** Append a Product Spec row for each ET that lacks one (wrappers → Ideaworks / N/A). */
+  specifyMissingElementTypes(refs) {
+    const wanted = refs && refs.length ? new Set(refs.map(r => r.toLowerCase())) : null
+    const targets = get().unspecifiedElementTypes().filter(e => !wanted || wanted.has(e.ref.toLowerCase()))
+    if (targets.length === 0) return 0
+    get()._pushHistory()
+    for (const t of targets) {
+      const defaults = t.isContainer ? { Manufacturer: 'Ideaworks', ProductCode: 'N/A' } : {}
+      get().addPSRow(t.ref, defaults, { recordHistory: false })
+    }
+    return targets.length
   },
 
   /**
@@ -1717,55 +1855,51 @@ const useStore = create((set, get) => ({
   },
 
   /**
+   * planBulk(posRefs, collectionId) — what applyCollectionBulk WOULD do.
+   * Pure; drives the confirmation preview. See planCollectionBulk.
+   */
+  planBulk(posRefs, collectionId) {
+    const { etCollections, recipes, containerETRefs } = get()
+    const collection = etCollections.find(c => c.CollectionId === collectionId)
+    if (!collection || !posRefs || posRefs.length === 0) return null
+    return planCollectionBulk(recipes, posRefs, collection, containerETRefs)
+  },
+
+  /**
    * applyCollectionBulk(posRefs, collectionId)
-   * Bulk-apply a collection across many positions. Free-issue (position-level)
-   * ingredients are added to every position, but "inside wrapper" ingredients
-   * are added only ONCE per shared wrapper — a wrapper is a universal, shared
-   * definition, and the coverage read is wrapper-aware, so a single copy makes
-   * every position that uses that wrapper count as covered (avoids N duplicate
-   * internal rows).
+   *
+   * Execute a plan, one action per (position, ingredient). Previously this pushed
+   * every ingredient into every target, so a position that already held some of
+   * them collected DUPLICATE rows, and an ingredient present in too small a
+   * quantity was never topped up.
+   *
+   * Internals of a shared wrapper are still applied once — the coverage read is
+   * wrapper-aware — but that is now decided by the plan, not by a side-effecting
+   * loop, and the preview says which positions share it.
+   *
+   * Returns the plan that was executed, so the caller can report it.
    */
   applyCollectionBulk(posRefs, collectionId) {
-    const { etCollections, recipes } = get()
-    const collection = etCollections.find(c => c.CollectionId === collectionId)
-    if (!collection || !posRefs || posRefs.length === 0) return
-    const ingredients = Array.isArray(collection.Ingredients)
-      ? collection.Ingredients
-      : JSON.parse(collection.Ingredients || '[]')
+    const plan = get().planBulk(posRefs, collectionId)
+    if (!plan) return null
 
-    const toPart = ing => ({
-      section: ing.section,
-      elementTypeRef: ing.ElementTypeRef || ing.slotLabel || '',
-      quantity: ing.quantity ?? 1,
-    })
-    const positionParts = ingredients.filter(i => (i.section || 'position') === 'position').map(toPart)
-    const internalParts = ingredients.filter(i => (i.section || 'position') !== 'position').map(toPart)
+    const todo = effectiveActions(plan)
+    if (todo.length === 0) return plan
 
-    // The wrapper (design element) each position uses — same rule as addConnection.
-    const wrapperOf = ref => {
-      const d = recipes.find(r =>
-        (r.PositionTypeRef || r.positionTypeRef) === ref &&
-        (r.ContextType || r.contextType) === 'PositionType' &&
-        (r.IsDesign || r.isDesign) === 'Y' &&
-        (r.IsDeleted || r.isDeleted) !== 'Y'
-      )
-      return d ? (d.ElementTypeRef || d.elementTypeRef || '').toLowerCase() : ''
-    }
-
-    const handledWrappers = new Set()
-    for (const posRef of posRefs) {
-      const parts = [...positionParts]
-      if (internalParts.length > 0) {
-        const wrapper = wrapperOf(posRef)
-        // Add internals only the first time we see each shared wrapper; a
-        // position with no wrapper still gets its own copy.
-        if (!wrapper || !handledWrappers.has(wrapper)) {
-          parts.push(...internalParts)
-          if (wrapper) handledWrappers.add(wrapper)
-        }
+    get()._pushHistory()
+    for (const a of todo) {
+      if (a.action === 'add') {
+        get().addRecipeRow(a.posRef, a.rawSection, { elementTypeRef: a.ref, quantity: a.need }, { recordHistory: false })
+      } else if (a.action === 'topUp') {
+        // Raise the first matching row to the required total rather than append.
+        const row = a.rows[0]
+        if (row) get().updateRecipeRow(a.posRef, row._id, { quantity: a.need, Quantity: a.need }, { recordHistory: false })
+      } else if (a.action === 'move') {
+        const row = a.rows[0]
+        if (row) get().moveRecipeRowToSection(a.posRef, row._id, a.rawSection, { recordHistory: false })
       }
-      if (parts.length > 0) get().addConnection(posRef, parts)
     }
+    return plan
   },
 
   swapCollection(posRef, fromCollectionId, toCollectionId) {
@@ -1891,10 +2025,10 @@ const useStore = create((set, get) => ({
    * Updates a specific recipe row identified by _id.
    * In ET mode, propagates to all position copies of that row.
    */
-  updateRecipeRow(posRef, rowId, updates) {
+  updateRecipeRow(posRef, rowId, updates, { recordHistory = true } = {}) {
     const { recipes, rsChanges, activeContextType, activeETRef } = get()
 
-    get()._pushHistory()
+    if (recordHistory) get()._pushHistory()
 
     let updatedRecipes = recipes.map(row => {
       if (row._id !== rowId) return row

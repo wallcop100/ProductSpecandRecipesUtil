@@ -23,8 +23,8 @@ export default function CollectionBadge({ posRef }) {
     if (!etCollections.length) return { overall: null, label: '' }
 
     const tags = positionUI[posRef]?.tags ?? []
-    const posRecipe = positionRecipeWithWrapperInternals(recipes, posRef).combined
-    const statuses = collectionStatusForPosition(posRef, tags, posRecipe, etCollections)
+    const { combined: posRecipe, wrapperRefs } = positionRecipeWithWrapperInternals(recipes, posRef)
+    const statuses = collectionStatusForPosition(posRef, tags, posRecipe, etCollections, wrapperRefs)
     const overall = overallCollectionStatus(statuses)
 
     if (!overall) return { overall: null, label: '' }

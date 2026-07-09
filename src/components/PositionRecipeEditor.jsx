@@ -7,6 +7,7 @@ import MaterialIcon from './MaterialIcon'
 import IconButton from './IconButton'
 import PositionValidationBadge from './PositionValidationBadge'
 import ConnectorSuggestions from './ConnectorSuggestions'
+import RecipeErrorBanner from './RecipeErrorBanner'
 import { colorsForType, ICONS, ACTION_ICONS } from '../utils/entityStyle'
 
 // Group container-internal rows by ContextRef so each container gets a section
@@ -163,6 +164,7 @@ export default function PositionRecipeEditor({
             one, or add connectors via <span className="fw-semibold">Manage connectors →</span>.
           </div>
         )}
+        <RecipeErrorBanner />
         <ConnectorSuggestions posRef={ref} />
         <RecipeSection
           title="PositionType Level"
