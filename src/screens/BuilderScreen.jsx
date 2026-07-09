@@ -44,7 +44,10 @@ import { ACTION_ICONS, ICONS } from '../utils/entityStyle'
  * supporting tabs. Drilling into a container element's internal recipe swaps the
  * centre for a focused ET editor.
  */
-export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec, onOpenConnectors, onOpenTags, onBackToSetup }) {
+export default function BuilderScreen({
+  onOpenTemplateEditor, onOpenProductSpec, onOpenConnectors, onOpenTags, onBackToSetup,
+  pendingReviewRefs, onConsumePendingReview,
+}) {
   const rootView = useStore(s => s.rootView)
   const projectNumber = useStore(s => s.projectNumber)
   const configName = useStore(s => s.configName)
@@ -76,6 +79,17 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
   const [showConnModal, setShowConnModal] = useState(false)
   const [showLinWizard, setShowLinWizard] = useState(false)
   const [showReview, setShowReview] = useState(false)
+  const [reviewInitialRefs, setReviewInitialRefs] = useState(null)
+
+  // Arriving with positions to review (e.g. from the product-code import) opens
+  // ReviewModal straight into them; consume once so it doesn't reopen on its own.
+  useEffect(() => {
+    if (pendingReviewRefs && pendingReviewRefs.length > 0) {
+      setReviewInitialRefs(pendingReviewRefs)
+      setShowReview(true)
+      onConsumePendingReview?.()
+    }
+  }, [pendingReviewRefs, onConsumePendingReview])
   const [addRowTarget, setAddRowTarget] = useState(null)      // { posRef, sectionKey }
   const [addAnywhereState, setAddAnywhereState] = useState(null) // { etRef, sectionKey, excludePosRef, startPosRef }
   const [newETTarget, setNewETTarget] = useState(null)        // { posRef, sectionKey }
@@ -759,10 +773,11 @@ export default function BuilderScreen({ onOpenTemplateEditor, onOpenProductSpec,
 
       <ReviewModal
         show={showReview}
-        onHide={() => setShowReview(false)}
+        onHide={() => { setShowReview(false); setReviewInitialRefs(null) }}
         onOpenProductSpec={onOpenProductSpec}
         onAddEntity={handleReviewAddEntity}
         onReplaceInReview={handleReplaceFromReview}
+        initialRefs={reviewInitialRefs}
       />
 
       <ValidationFixModal

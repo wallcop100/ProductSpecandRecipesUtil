@@ -21,6 +21,9 @@ export default function App() {
   const [psScrollToRef, setPsScrollToRef] = useState(null)
   // connectorsFocusRef: position ref to focus when opening the Connectors screen
   const [connectorsFocusRef, setConnectorsFocusRef] = useState(null)
+  // reviewPositionRefs: PositionTypeRefs to jump straight into reviewing (e.g. from
+  // the product-code import's "review what was prefilled" hand-off)
+  const [reviewPositionRefs, setReviewPositionRefs] = useState(null)
   const [updateStatus, setUpdateStatus] = useState(null)
   // updateStatus shape: { status: 'available'|'downloading'|'ready', version, percent, releaseNotes }
   const [debugIds, setDebugIds] = useState(false)
@@ -75,6 +78,8 @@ export default function App() {
             }}
             onOpenTags={() => navigateTo('tags')}
             onBackToSetup={() => navigateTo('folder-setup')}
+            pendingReviewRefs={reviewPositionRefs}
+            onConsumePendingReview={() => setReviewPositionRefs(null)}
           />
         )}
         {activeScreen === 'template-editor' && (
@@ -91,7 +96,10 @@ export default function App() {
           />
         )}
         {activeScreen === 'product-code-import' && (
-          <ProductCodeImportScreen onBack={() => navigateTo('product-spec')} />
+          <ProductCodeImportScreen
+            onBack={() => navigateTo('product-spec')}
+            onReviewPositions={refs => { setReviewPositionRefs(refs); navigateTo('builder') }}
+          />
         )}
         {activeScreen === 'connectors' && (
           <ConnectorsScreen

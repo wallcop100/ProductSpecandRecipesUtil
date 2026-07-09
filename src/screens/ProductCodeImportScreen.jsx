@@ -20,6 +20,7 @@ import {
   acceptSuggestions, punctuationSuggestion, acceptPunctuationSuggestion, roleTally,
   discardsFromNoteEdit, pickExamples,
 } from '../utils/codeLearning'
+import { inferConvention, reuseCandidates, suggestRef } from '../utils/etRefSuggest'
 
 const API = `http://localhost:${FLASK_PORT}`
 
@@ -49,13 +50,15 @@ const isExcluded = v => {
  *
  * The chosen spreadsheet is only ever read.
  */
-export default function ProductCodeImportScreen({ onBack }) {
+export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   const psRows = useStore(s => s.psRows)
   const positionTypes = useStore(s => s.positionTypes)
+  const elementTypes = useStore(s => s.elementTypes)
   const dbWriteEnabled = useStore(s => s.dbWriteEnabled)
   const ensurePSRow = useStore(s => s.ensurePSRow)
   const updatePSRow = useStore(s => s.updatePSRow)
   const updateElementType = useStore(s => s.updateElementType)
+  const prepopulateRecipe = useStore(s => s.prepopulateRecipe)
 
   const [step, setStep] = useState('pick')
   const [busy, setBusy] = useState(false)
@@ -73,7 +76,7 @@ export default function ProductCodeImportScreen({ onBack }) {
   const [idx, setIdx] = useState(0)
   const [assignments, setAssignments] = useState({})
   const [creatingFor, setCreatingFor] = useState(null)
-  const [staged, setStaged] = useState(0)
+  const [staged, setStaged] = useState(null)
   const [showBoundaries, setShowBoundaries] = useState(false)
   const [undoSnap, setUndoSnap] = useState(null)   // one-level undo of the last paint
   const [brush, setBrush] = useState('code')       // the colour you're painting with
@@ -159,7 +162,7 @@ export default function ProductCodeImportScreen({ onBack }) {
         context: Object.fromEntries(map.context.map(c => [c, r[c]]).filter(([, v]) => v != null && String(v).trim() !== '')),
       }))
     setRows(sortByConfidence(applyRules(built, {}), { master, duplicates: new Set() }))
-    setRules({}); setIdx(0); setAssignments({}); setStaged(0); setUndoSnap(null)
+    setRules({}); setIdx(0); setAssignments({}); setStaged(null); setUndoSnap(null)
     setStep('review')
     // Teach the dialect from a few covering examples before the queue starts.
     if (built.length >= 3) setPriming(true)
@@ -321,14 +324,40 @@ export default function ProductCodeImportScreen({ onBack }) {
 
   // ---- distinct list (from CONFIRMED rows only) -------------------------------
   const confirmed = useMemo(() => resolved.filter(r => r.confirmed), [resolved])
+  const convention = useMemo(() => inferConvention(elementTypes), [elementTypes])
+
   const entries = useMemo(() => buildDistinct(confirmed, captureOpts).map(e => {
     const c = classify(e.text, ctx)
-    return { ...e, ...c, etRef: c.elementTypeRef || assignments[norm(e.text)] || null }
-  }), [confirmed, ctx, assignments, captureOpts])
+    const etRef = c.elementTypeRef || assignments[norm(e.text)] || null
+    const note = e.variants[0]?.note || ''
+    // Only unresolved codes need a suggestion / reuse candidates.
+    const help = etRef ? {} : {
+      reuse: reuseCandidates(e.text, note, { psRows, elementTypes }, 3),
+      suggestedRef: suggestRef(e.text, note, e.manufacturers[0] || '', convention, elementTypes, psRows).ref,
+    }
+    return { ...e, ...c, etRef, ...help }
+  }), [confirmed, ctx, assignments, captureOpts, psRows, elementTypes, convention])
 
   const collisions = entries.filter(hasNoteCollision)
   const unassigned = entries.filter(e => !e.etRef && !hasNoteCollision(e))
   const canStage = entries.length > 0 && collisions.length === 0 && unassigned.length === 0
+
+  // Shared point source: a position's PRIMARY captured code is its point source;
+  // positions sharing that ET may share a DL. A prompt, not an automatic merge.
+  const sharedPointSources = useMemo(() => {
+    const byEt = new Map()   // etRef -> Set(positionType)
+    for (const row of confirmed) {
+      const primary = deriveCaptures(row, captureOpts).captures[0]
+      if (!primary) continue
+      const et = classify(primary.code, ctx).elementTypeRef || assignments[norm(primary.code)]
+      if (!et || !row.positionType) continue
+      if (!byEt.has(et)) byEt.set(et, new Set())
+      byEt.get(et).add(row.positionType)
+    }
+    return [...byEt.entries()]
+      .filter(([, pts]) => pts.size > 1)
+      .map(([et, pts]) => ({ et, positionTypes: [...pts] }))
+  }, [confirmed, captureOpts, ctx, assignments])
 
   /** Fold a variant's note into its code, on the rows behind it, so it earns its own ref. */
   function handlePromote(entry, variant) {
@@ -345,10 +374,18 @@ export default function ProductCodeImportScreen({ onBack }) {
     }
   }
 
+  /** Assign an existing ElementType to a distinct code — the reuse/dedup win. */
+  function handleReuse(entry, ref) {
+    setAssignments(a => ({ ...a, [norm(entry.text)]: ref }))
+  }
+
   function handleStage() {
+    // 1. Stage the Product Spec: product code + manufacturer per code, note → ET Description.
     let n = 0
+    const codeToEt = new Map()
     for (const e of entries) {
       if (!e.etRef) continue
+      codeToEt.set(norm(e.text), e.etRef)
       const note = e.variants[0]?.note || ''
       if (e.status !== 'green') {
         ensurePSRow(e.etRef)
@@ -360,7 +397,30 @@ export default function ProductCodeImportScreen({ onBack }) {
       }
       if (note) updateElementType(e.etRef, { Description: note })
     }
-    setStaged(n)
+
+    // 2. Prepopulate each PositionType's recipe from its assigned captures (flat,
+    //    form-badged). Positions with an existing recipe get the additions too, and
+    //    are reported so the user can review them.
+    const byPos = new Map()   // positionType -> [{ elementTypeRef, code, note }]
+    for (const row of confirmed) {
+      if (!row.positionType) continue
+      for (const cap of deriveCaptures(row, captureOpts).captures) {
+        const et = codeToEt.get(norm(cap.code))
+        if (!et) continue
+        if (!byPos.has(row.positionType)) byPos.set(row.positionType, [])
+        const list = byPos.get(row.positionType)
+        if (!list.some(x => x.elementTypeRef === et)) list.push({ elementTypeRef: et, code: cap.code, note: cap.note })
+      }
+    }
+    let rowsAdded = 0
+    const reviewPositions = []
+    for (const [pos, ets] of byPos) {
+      const res = prepopulateRecipe(pos, ets)
+      rowsAdded += res.added
+      if (res.existed && res.added > 0) reviewPositions.push(pos)
+    }
+
+    setStaged({ codes: n, rows: rowsAdded, review: reviewPositions })
   }
 
   const remaining = resolved.filter(r => !r.confirmed).length
@@ -592,16 +652,32 @@ export default function ProductCodeImportScreen({ onBack }) {
               knownPTs={knownPTs}
               onJump={jumpToCode}
               onPromote={handlePromote}
+              onReuse={handleReuse}
               onCreateET={e => setCreatingFor({
                 text: e.text,
+                ref: e.suggestedRef || '',
                 manufacturer: e.manufacturers[0] || '',
                 description: e.variants[0]?.note || '',
               })}
             />
 
+            {/* Shared point source — positions whose primary code is the same ET. */}
+            {sharedPointSources.length > 0 && (
+              <div className="mt-2 px-2 py-1 rounded" style={{ background: '#fff8e1', border: '1px solid #f0e0a8', fontSize: 10 }}>
+                <div className="fw-semibold" style={{ color: '#92400e' }}>
+                  <MaterialIcon name="hub" size={11} /> Shared point source — may share a DL
+                </div>
+                {sharedPointSources.map(g => (
+                  <div key={g.et} className="text-muted">
+                    <span style={{ fontFamily: 'monospace' }}>{g.et}</span> · {g.positionTypes.join(', ')}
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="mt-3">
               <Button variant="success" size="sm" className="w-100" disabled={!canStage} onClick={handleStage}>
-                Stage into Product Spec
+                Stage codes + prefill recipes
               </Button>
               {collisions.length > 0 && (
                 <div className="text-warning mt-1" style={{ fontSize: 10 }}>
@@ -619,9 +695,26 @@ export default function ProductCodeImportScreen({ onBack }) {
                   lives in the DesignDB table. With DB writes off they stay project-local.
                 </div>
               )}
-              {staged > 0 && (
+              {staged && (
                 <Alert variant="success" className="mt-2 py-1 px-2" style={{ fontSize: 11 }}>
-                  Staged {staged} code{staged === 1 ? '' : 's'}. Open <strong>Export changes</strong> to copy the patch.
+                  <div>
+                    Staged {staged.codes} code{staged.codes === 1 ? '' : 's'} and pre-filled {staged.rows} recipe
+                    row{staged.rows === 1 ? '' : 's'} (badged <strong>Form</strong>).
+                  </div>
+                  {staged.review.length > 0 && (
+                    <div className="mt-1">
+                      {staged.review.length} position{staged.review.length === 1 ? '' : 's'} already had a recipe
+                      — the additions need a look ({staged.review.join(', ')}).
+                      {onReviewPositions && (
+                        <Button size="sm" variant="outline-success" className="ms-2"
+                          style={{ fontSize: 10, padding: '0 6px' }}
+                          onClick={() => onReviewPositions(staged.review)}>
+                          Review now →
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                  <div className="mt-1">Open <strong>Export changes</strong> to copy the patch.</div>
                 </Alert>
               )}
             </div>
@@ -648,6 +741,7 @@ export default function ProductCodeImportScreen({ onBack }) {
         onHide={() => setCreatingFor(null)}
         contextLabel={creatingFor ? `for ${creatingFor.text}` : null}
         prefill={creatingFor ? {
+          ref: creatingFor.ref,
           manufacturer: creatingFor.manufacturer,
           productCode: creatingFor.text,
           description: creatingFor.description,

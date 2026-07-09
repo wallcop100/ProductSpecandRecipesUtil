@@ -16,9 +16,13 @@ import { clusterSimilar, hasNoteCollision } from '../utils/productCodes'
  *   entries       — resolved distinct entries: { text, variants, positionTypes,
  *                   manufacturers, rowRefs, status, etRef }
  *   knownPTs      — Set of PositionTypeRefs the project knows (others get a "?")
- *   onCreateET(entry)
+ *   onCreateET(entry)   — entry carries `suggestedRef` to prefill the new ET
+ *   onReuse(entry, ref) — assign an existing ElementType instead of creating one
  *   onPromote(entry, variant)
  *   onJump(entry)   — click the code to jump back to the row that produced it
+ *
+ * Each entry may carry `reuse: [{ ref, kind, score, matchedCode }]` and
+ * `suggestedRef` (see etRefSuggest); a `sharedDL` flag surfaces shared point sources.
  */
 
 const BG = { green: '#d1e7dd', amber: '#fff3cd', blue: '#cfe2ff', grey: '#f1f3f5' }
@@ -42,7 +46,7 @@ function PositionTypes({ pts, knownPTs }) {
   )
 }
 
-export default function CompareCodesPanel({ entries, knownPTs, onCreateET, onPromote, onJump }) {
+export default function CompareCodesPanel({ entries, knownPTs, onCreateET, onReuse, onPromote, onJump }) {
   if (!entries.length) {
     return <div className="text-muted fst-italic" style={{ fontSize: 11 }}>Confirm a row to collect its codes.</div>
   }
@@ -117,6 +121,29 @@ export default function CompareCodesPanel({ entries, knownPTs, onCreateET, onPro
                   </div>
                 )}
 
+                {/* Reuse: existing ETs this code might already be. One click assigns
+                    the existing ref — the dedup win, no new ET minted. */}
+                {!e.etRef && !collision && (e.reuse?.length > 0) && (
+                  <div className="mt-1">
+                    {e.reuse.map(c => (
+                      <div key={c.ref} className="d-flex align-items-center gap-1 py-1" style={{ fontSize: 10 }}>
+                        <MaterialIcon name={c.kind === 'same' ? 'link' : 'call_split'} size={12}
+                          style={{ color: c.kind === 'same' ? '#198754' : '#b45309' }} />
+                        <span style={{ fontFamily: 'monospace' }}>{c.ref}</span>
+                        <span className="text-muted">
+                          {c.kind === 'same' ? 'looks the same' : 'variant'} · {Math.round(c.score * 100)}%
+                        </span>
+                        <Button size="sm" variant="outline-success" className="ms-auto"
+                          style={{ fontSize: 9, padding: '0 5px' }}
+                          title={`Reuse ${c.ref}${c.matchedCode ? ` (${c.matchedCode})` : ''} instead of creating a new ElementType`}
+                          onClick={() => onReuse(e, c.ref)}>
+                          Use
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <div className="d-flex align-items-center gap-1 mt-1">
                   {e.etRef
                     ? <span className="text-success" style={{ fontFamily: 'monospace' }}>
@@ -125,11 +152,12 @@ export default function CompareCodesPanel({ entries, knownPTs, onCreateET, onPro
                     : collision
                       ? <span className="text-muted fst-italic" style={{ fontSize: 10 }}>resolve the variants first</span>
                       : <Button size="sm" variant="outline-primary" style={{ fontSize: 10, padding: '0 6px' }}
-                          onClick={() => onCreateET(e)}>
-                          Create ET
+                          onClick={() => onCreateET(e)}
+                          title={e.suggestedRef ? `Create ${e.suggestedRef}` : 'Create a new ElementType'}>
+                          Create {e.suggestedRef || 'ET'}
                         </Button>}
                   {!collision && e.variants[0]?.note && (
-                    <span className="text-muted text-truncate" style={{ fontSize: 10, maxWidth: 170 }}
+                    <span className="text-muted text-truncate" style={{ fontSize: 10, maxWidth: 150 }}
                       title={e.variants[0].note}>
                       note: {e.variants[0].note}
                     </span>

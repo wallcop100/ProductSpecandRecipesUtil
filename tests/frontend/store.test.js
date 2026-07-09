@@ -1202,6 +1202,40 @@ describe('catalogue — createElementType / rename / delete', () => {
     expect(useStore.getState().dbChanges).toHaveLength(0)
   })
 
+  test('prepopulateRecipe seeds an empty position flat, tagged form-derived', () => {
+    resetStore({ recipes: [], rsChanges: [], psRows: [], elementTypes: [] })
+    const res = useStore.getState().prepopulateRecipe('PT-A', [
+      { elementTypeRef: 'ET-TAPE-01', code: 'NF240', note: 'Tape' },
+      { elementTypeRef: 'ET-PROF-01', code: '021-01', note: 'Profile' },
+    ])
+    const s = useStore.getState()
+    expect(res).toEqual({ added: 2, existed: false })
+    const rows = s.recipes.filter(r => r.PositionTypeRef === 'PT-A')
+    expect(rows).toHaveLength(2)
+    expect(rows.every(r => r.ContextType === 'PositionType' && r.ContextRef === 'PT-A')).toBe(true)
+    expect(rows.every(r => r._origin === 'form' && r.resolved === true)).toBe(true)   // real rows, not primed
+    expect(rows.map(r => r.RecipeIndex)).toEqual([1, 2])
+    expect(s.rsChanges).toHaveLength(2)   // staged for export
+  })
+
+  test('prepopulateRecipe never duplicates an ET already in the recipe, and reports existed', () => {
+    resetStore({
+      recipes: [{ _id: 'r1', PositionTypeRef: 'PT-A', ContextType: 'PositionType', ContextRef: 'PT-A',
+                  ElementTypeRef: 'ET-TAPE-01', RecipeIndex: 1, resolved: true }],
+      rsChanges: [], psRows: [], elementTypes: [],
+    })
+    const res = useStore.getState().prepopulateRecipe('PT-A', [
+      { elementTypeRef: 'ET-TAPE-01' },   // already present -> skipped
+      { elementTypeRef: 'ET-CAP-01' },    // new -> added, CAP defaults to qty 2
+    ])
+    const s = useStore.getState()
+    expect(res).toEqual({ added: 1, existed: true })
+    const added = s.recipes.find(r => r.ElementTypeRef === 'ET-CAP-01')
+    expect(added.RecipeIndex).toBe(2)
+    expect(added.Quantity).toBe(2)
+    expect(s.recipes.filter(r => r.ElementTypeRef === 'ET-TAPE-01')).toHaveLength(1)   // no dup
+  })
+
   test('renameElementType cascades to elementTypes, PS and RS (never other sheets)', () => {
     resetStore({
       dbWriteEnabled: true, dbChanges: [], psChanges: [], rsChanges: [],

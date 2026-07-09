@@ -166,6 +166,20 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
             New
           </span>
         )}
+        {/* Provenance: pre-filled from the imported ProductCode form, not yet structured. */}
+        {row._origin === 'form' && (
+          <span
+            className="badge"
+            style={{
+              position: 'absolute', top: -7, right: -6, zIndex: 1,
+              background: '#e7f1ff', color: '#084298', border: '1px solid #b6d4fe',
+              fontSize: 9, flexShrink: 0,
+            }}
+            title={`From the imported form${row._formCode ? ` — code "${row._formCode}"` : ''}. Move it into structure (a DL/wrapper) when ready.`}
+          >
+            Form
+          </span>
+        )}
         <Card.Body className="py-2 px-3">
           {isDeleted && (
             <div className="d-flex align-items-center gap-1 mb-1" style={{ fontSize: 10, color: '#6c757d' }}>

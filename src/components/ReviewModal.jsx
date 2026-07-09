@@ -19,8 +19,11 @@ const EMPTY_FILTERS = { family: '', manufacturer: '', tag: '', containsET: '' }
  * ReviewModal — build a filtered set of recipes and cycle through them one at a
  * time. The unit (positions or element types) is chosen per run; filters combine
  * with AND. This reviews RECIPES (not the product spec).
+ *
+ * initialRefs: PositionTypeRefs to jump straight into cycling, skipping the
+ * filter-build step — e.g. "review what the product-code import just prefilled".
  */
-export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEntity, onReplaceInReview }) {
+export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEntity, onReplaceInReview, initialRefs }) {
   const positionTypes = useStore(s => s.positionTypes)
   const recipes       = useStore(s => s.recipes)
   const psRows        = useStore(s => s.psRows)
@@ -34,8 +37,16 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
   const [filters, setFilters] = useState(EMPTY_FILTERS)
   const [phase, setPhase]     = useState('build')      // 'build' | 'cycle'
   const [index, setIndex]     = useState(0)
+  // Once the user opens the filter builder, initialRefs stops driving matches —
+  // otherwise "Edit filters" from an initialRefs cycle could never escape it.
+  const [useInitialRefs, setUseInitialRefs] = useState(false)
 
-  useEffect(() => { if (show) { setPhase('build'); setIndex(0) } }, [show])
+  useEffect(() => {
+    if (!show) return
+    setIndex(0)
+    if (initialRefs && initialRefs.length > 0) { setUnit('position'); setPhase('cycle'); setUseInitialRefs(true) }
+    else { setPhase('build'); setUseInitialRefs(false) }
+  }, [show, initialRefs])
   // Changing the unit invalidates the criteria (families/manufacturers differ)
   useEffect(() => { setFilters(EMPTY_FILTERS) }, [unit])
 
@@ -128,6 +139,12 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
   }, [liveRows])
 
   const matches = useMemo(() => {
+    if (useInitialRefs && initialRefs && initialRefs.length > 0) {
+      return initialRefs.map(ref => {
+        const pt = positionTypes.find(p => p.PositionTypeRef === ref)
+        return { kind: 'position', ref, name: pt?.Name || pt?.PositionName || null }
+      })
+    }
     const f = filters
     if (unit === 'position') {
       return positionTypes.filter(pt => {
@@ -156,7 +173,7 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
       }
       return true
     }).map(ref => ({ kind: 'element', ref, name: psByRef.get(ref.toLowerCase())?.ComponentDescription || null }))
-  }, [unit, filters, positionTypes, positionUI, rowsForPos, allETRefs, etObjByRef, tagsByET, liveRows, psByRef])
+  }, [unit, filters, positionTypes, positionUI, rowsForPos, allETRefs, etObjByRef, tagsByET, liveRows, psByRef, initialRefs, useInitialRefs])
 
   const current = matches[index] || null
 
@@ -286,7 +303,13 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
           <>
             {/* Cycle header */}
             <div className="d-flex align-items-center gap-2 mb-2 flex-wrap">
-              <IconButton variant="outline-secondary" bsSize="sm" icon="tune" title="Edit filters" onClick={() => setPhase('build')} />
+              <IconButton variant="outline-secondary" bsSize="sm" icon="tune" title="Edit filters"
+                onClick={() => { setUseInitialRefs(false); setPhase('build') }} />
+              {useInitialRefs && (
+                <span className="badge" style={{ fontSize: 11, background: '#e7f1ff', color: '#084298' }}>
+                  Prefilled from product-code import
+                </span>
+              )}
               {activeFilterChips.map(([k, v]) => (
                 <span key={k} className="badge bg-light text-dark border" style={{ fontSize: 11 }}>
                   {FILTER_LABEL[k]}: {v}
