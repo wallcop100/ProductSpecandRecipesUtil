@@ -25,11 +25,12 @@ import { deriveCaptures } from '../utils/productCodes'
  *   onAcceptSuggestions(rowId)
  *   onEditNote(rowId, code, text)
  *   onMoveNote(rowId, fromCode, toCode)
+ *   onMoveNoteWord(rowId, fromCode, toCode, word)
  */
 export default function PrimingModal({
   show, onSkip, onDone, examples,
   signals, captureOpts, suggestedFor,
-  onPaint, onAcceptSuggestions, onEditNote, onMoveNote,
+  onPaint, onAcceptSuggestions, onEditNote, onMoveNote, onMoveNoteWord,
 }) {
   const [step, setStep] = useState(0)
   const [brush, setBrush] = useState('code')
@@ -100,6 +101,7 @@ export default function PrimingModal({
               discarded={readout.discarded}
               onEditNote={(code, text) => onEditNote(row.id, code, text)}
               onMoveNote={(from, to) => onMoveNote(row.id, from, to)}
+              onMoveNoteWord={(from, to, word) => onMoveNoteWord(row.id, from, to, word)}
             />
           </div>
         </div>

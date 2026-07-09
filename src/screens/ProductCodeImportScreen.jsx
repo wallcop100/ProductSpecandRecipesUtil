@@ -7,19 +7,23 @@ import IconButton from '../components/IconButton'
 import CodeChips from '../components/CodeChips'
 import PaintPalette from '../components/PaintPalette'
 import CompareCodesPanel from '../components/CompareCodesPanel'
+import NeedsResolving from '../components/NeedsResolving'
 import CaptureLines from '../components/CaptureLines'
 import PrimingModal from '../components/PrimingModal'
 import NewETModal from '../components/NewETModal'
+import ResolveRefsStep from '../components/ResolveRefsStep'
 import {
   makeRow, deriveCaptures, buildDistinct, buildMaster, classify, duplicateSet,
   hasNoteCollision, rowConfidence, sortByConfidence, norm, setNoteOverride,
+  pendingResolutions, groupKey,
 } from '../utils/productCodes'
 import {
   setRule, revokeRule, applyRules, learnedRules, learnedSignals, suggestCodes,
   acceptSuggestions, punctuationSuggestion, acceptPunctuationSuggestion, roleTally,
-  discardsFromNoteEdit, pickExamples,
+  discardsFromNoteEdit, pickExamples, learnCodeTokens,
 } from '../utils/codeLearning'
 import { inferConvention, reuseCandidates, suggestRef } from '../utils/etRefSuggest'
+import { resolveFormRefs, buildRefMap, targetFor } from '../utils/ptResolve'
 
 /** Fuzzy header match: exact normalised hit first, else shortest header containing it. */
 const nh = h => String(h || '').toLowerCase().replace(/[^a-z0-9]/g, '')
@@ -80,12 +84,20 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   const [scope, setScope] = useState('batch')      // 'batch' teaches every row; 'row' is local
   const [dirStats, setDirStats] = useState({ forward: 0, backward: 0 })   // learned from note drags
   const [priming, setPriming] = useState(false)
+  const [resolutions, setResolutions] = useState([])     // form ref -> PositionType
+  const [refOverrides, setRefOverrides] = useState({})
+  const [keptSeparate, setKeptSeparate] = useState(new Set())   // dismissed similar-groups
+  const [mergingGroup, setMergingGroup] = useState(null)        // codes awaiting one new ET
 
   const knownPTs = useMemo(
     () => new Set(positionTypes.map(p => p.PositionTypeRef || p.positionTypeRef).filter(Boolean)),
     [positionTypes]
   )
   const master = useMemo(() => buildMaster(psRows), [psRows])
+
+  /** Where each Form ref's recipe actually goes, after the resolve step. */
+  const refMap = useMemo(() => buildRefMap(resolutions, refOverrides), [resolutions, refOverrides])
+  const ptTarget = useCallback(pt => targetFor(refMap, pt), [refMap])
 
   // Roles are always derived from the learned rules + per-row overrides.
   const resolved = useMemo(() => applyRules(rows, rules), [rows, rules])
@@ -149,17 +161,34 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     [rawRows, map.exclude]
   )
 
-  function startReview() {
-    const built = rawRows
-      .filter(r => !(map.exclude && isExcluded(r[map.exclude])))
-      .filter(r => r[map.code] != null && String(r[map.code]).trim() !== '')
-      .map((r, i) => makeRow(i, String(r[map.code]), {
-        positionType: String(r[map.pt] ?? '').trim(),
-        manufacturer: String(r[map.mfr] ?? '').trim(),
-        context: Object.fromEntries(map.context.map(c => [c, r[c]]).filter(([, v]) => v != null && String(v).trim() !== '')),
-      }))
+  /** The rows the mapping selects, in queue order. */
+  const buildRows = useCallback(() => rawRows
+    .filter(r => !(map.exclude && isExcluded(r[map.exclude])))
+    .filter(r => r[map.code] != null && String(r[map.code]).trim() !== '')
+    .map((r, i) => makeRow(i, String(r[map.code]), {
+      positionType: String(r[map.pt] ?? '').trim(),
+      manufacturer: String(r[map.mfr] ?? '').trim(),
+      context: Object.fromEntries(map.context.map(c => [c, r[c]]).filter(([, v]) => v != null && String(v).trim() !== '')),
+    })), [rawRows, map])
+
+  /**
+   * Before reviewing a single code, settle where each Form ref's recipe belongs.
+   * The DesignDB's ExtRef usually answers it; the user confirms and may override.
+   * Skipped when the sheet has no PositionType column — nothing to resolve.
+   */
+  function startResolve() {
+    const built = buildRows()
     setRows(sortByConfidence(applyRules(built, {}), { master, duplicates: new Set() }))
     setRules({}); setIdx(0); setAssignments({}); setStaged(null); setUndoSnap(null)
+    setKeptSeparate(new Set())
+
+    if (!map.pt) { setResolutions([]); setRefOverrides({}); enterReview(built); return }
+    setResolutions(resolveFormRefs(built.map(r => r.positionType), positionTypes))
+    setRefOverrides({})
+    setStep('resolve')
+  }
+
+  function enterReview(built = rows) {
     setStep('review')
     // Teach the dialect from a few covering examples before the queue starts.
     if (built.length >= 3) setPriming(true)
@@ -167,8 +196,10 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
 
   // ---- review ---------------------------------------------------------------
   const current = resolved[idx]
-  // Learned continuously from the resolved roles — every code you paint, and every
-  // single-token field, sharpens the next suggestion.
+  // Learned continuously, and only from the rows the user has actually taught —
+  // painted, edited, or confirmed. Reading every row would feed the tool's own
+  // untouched defaults back in as evidence. Never stops: paints, note edits, note
+  // drags and ElementType decisions all land here.
   const signals = useMemo(() => learnedSignals(resolved), [resolved])
   const suggested = useMemo(() => (current ? suggestCodes(current, rules, signals) : []), [current, rules, signals])
   const punct = useMemo(() => punctuationSuggestion(rows), [rows])
@@ -239,21 +270,29 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
    * Editing a note teaches too: words you deleted are being kept in neither the code
    * nor the note, so they are noise everywhere. Guarded — only a pure deletion
    * teaches, and a word that looks like a code is never auto-discarded.
+   *
+   * The baseline is whatever the note said when you started editing it, NOT only the
+   * words originally derived from the field. Comparing against the derived note meant
+   * the second and every later edit of a note taught nothing at all.
    */
   const editNote = useCallback((rowId, code, text) => {
     const row = resolved.find(r => r.id === rowId)
     if (row && text != null) {
       const cap = deriveCaptures(row, captureOpts).captures.find(c => c.code === code)
-      const derived = cap && !cap.noteEdited ? cap.note : null
-      if (derived) {
-        const drop = discardsFromNoteEdit(derived, text, signals)
+      if (cap?.note) {
+        const drop = discardsFromNoteEdit(cap.note, text, signals)
         if (drop.length) setRules(rl => drop.reduce((acc, w) => setRule(acc, w, 'discard'), rl))
       }
     }
     patchRow(rowId, r => setNoteOverride(r, code, text))
   }, [resolved, patchRow, captureOpts, signals])
 
-  const moveNoteIn = useCallback((rowId, fromCode, toCode) => {
+  /**
+   * Move note text between captured codes. `word` moves a single token; omitting it
+   * moves the whole note. Either way the direction teaches: notes read toward their
+   * code, and which way that is, is this project's habit — not a rule we impose.
+   */
+  const moveNoteIn = useCallback((rowId, fromCode, toCode, word = null) => {
     const row = resolved.find(r => r.id === rowId)
     if (!row) return
     const caps = deriveCaptures(row, captureOpts).captures
@@ -261,12 +300,27 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     const ti = caps.findIndex(c => c.code === toCode)
     if (fi < 0 || ti < 0) return
     setDirStats(s => ti < fi ? { ...s, backward: s.backward + 1 } : { ...s, forward: s.forward + 1 })
-    const merged = [caps[ti].note, caps[fi].note].filter(Boolean).join(' ').trim()
-    patchRow(rowId, r => setNoteOverride(setNoteOverride(r, toCode, merged), fromCode, ''))
+
+    const words = s => String(s || '').split(/\s+/).filter(Boolean)
+    let moved, left
+    if (word) {
+      const rest = words(caps[fi].note)
+      const at = rest.indexOf(word)
+      if (at < 0) return
+      rest.splice(at, 1)               // only the dragged occurrence
+      moved = word
+      left = rest.join(' ')
+    } else {
+      moved = caps[fi].note
+      left = ''
+    }
+    const merged = [caps[ti].note, moved].filter(Boolean).join(' ').trim()
+    patchRow(rowId, r => setNoteOverride(setNoteOverride(r, toCode, merged), fromCode, left))
   }, [resolved, patchRow, captureOpts])
 
   /** Move a whole note from one captured code onto another (drag between lines). */
   const handleMoveNote = (fromCode, toCode) => current && moveNoteIn(current.id, fromCode, toCode)
+  const handleMoveNoteWord = (fromCode, toCode, word) => current && moveNoteIn(current.id, fromCode, toCode, word)
 
   // A handful of rows that between them show the most of this sheet's dialect.
   const examples = useMemo(() => (rows.length ? pickExamples(resolved, 5) : []), [rows.length, resolved])
@@ -335,33 +389,40 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     return { ...e, ...c, etRef, ...help }
   }), [confirmed, ctx, assignments, captureOpts, psRows, elementTypes, convention])
 
-  const collisions = entries.filter(hasNoteCollision)
+  const { collisions, similar } = useMemo(
+    () => pendingResolutions(entries, keptSeparate), [entries, keptSeparate]
+  )
   const unassigned = entries.filter(e => !e.etRef && !hasNoteCollision(e))
   const canStage = entries.length > 0 && collisions.length === 0 && unassigned.length === 0
 
   // Shared point source: a position's PRIMARY captured code is its point source;
   // positions sharing that ET may share a DL. A prompt, not an automatic merge.
+  //
+  // Grouped by the RESOLVED PositionType, the same one the recipe lands on — a hint
+  // naming C01 when the recipe went to C01r would send the user to the wrong place.
   const sharedPointSources = useMemo(() => {
-    const byEt = new Map()   // etRef -> Set(positionType)
+    const byEt = new Map()   // etRef -> Set(target positionType)
     for (const row of confirmed) {
       const primary = deriveCaptures(row, captureOpts).captures[0]
-      if (!primary) continue
+      if (!primary || !row.positionType) continue
+      const target = map.pt ? ptTarget(row.positionType) : row.positionType
+      if (!target) continue
       const et = classify(primary.code, ctx).elementTypeRef || assignments[norm(primary.code)]
-      if (!et || !row.positionType) continue
+      if (!et) continue
       if (!byEt.has(et)) byEt.set(et, new Set())
-      byEt.get(et).add(row.positionType)
+      byEt.get(et).add(target)
     }
     return [...byEt.entries()]
       .filter(([, pts]) => pts.size > 1)
       .map(([et, pts]) => ({ et, positionTypes: [...pts] }))
-  }, [confirmed, captureOpts, ctx, assignments])
+  }, [confirmed, captureOpts, ctx, assignments, map.pt, ptTarget])
 
   /** Fold a variant's note into its code, on the rows behind it, so it earns its own ref. */
   function handlePromote(entry, variant) {
     for (const rowId of variant.rowRefs) {
       const r = resolved.find(x => x.id === rowId)
       if (!r) continue
-      const cap = deriveCaptures(r).captures.find(c => c.code === entry.text && c.note === variant.note)
+      const cap = deriveCaptures(r, captureOpts).captures.find(c => c.code === entry.text && c.note === variant.note)
       if (!cap) continue
       patchRow(rowId, row => {
         const overrides = { ...row.overrides }
@@ -371,9 +432,51 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     }
   }
 
+  /**
+   * The variants were the same product after all: give every row behind this code
+   * the one note, collapsing the collision without inventing a new ref.
+   */
+  function handleUnify(entry, note) {
+    for (const rowId of entry.rowRefs) patchRow(rowId, r => setNoteOverride(r, entry.text, note))
+  }
+
+  /** These near-miss codes are genuinely different products — stop asking. */
+  function handleKeepSeparate(group) {
+    setKeptSeparate(s => new Set(s).add(groupKey(group)))
+  }
+
+  /**
+   * Consolidate near-miss codes onto ONE ElementType. If one of them already has a
+   * ref, the rest join it; otherwise the user creates a single ET for all of them.
+   */
+  function handleMerge(group, existingRef) {
+    if (existingRef) {
+      group.forEach(e => assignET(e.text, existingRef))
+      return
+    }
+    const lead = group[0]
+    setMergingGroup(group.map(e => e.text))
+    setCreatingFor({
+      text: lead.text,
+      ref: lead.suggestedRef || '',
+      manufacturer: lead.manufacturers[0] || '',
+      description: lead.variants[0]?.note || '',
+    })
+  }
+
+  /**
+   * Assign an ElementType to a code, and learn from it. Saying "this code is an ET"
+   * is the strongest evidence available that its tokens really are a code, so it
+   * becomes a batch-wide rule — no re-asking about the same token thirty rows later.
+   */
+  const assignET = useCallback((codeText, ref) => {
+    setAssignments(a => ({ ...a, [norm(codeText)]: ref }))
+    setRules(rl => learnCodeTokens(rl, codeText))
+  }, [])
+
   /** Assign an existing ElementType to a distinct code — the reuse/dedup win. */
   function handleReuse(entry, ref) {
-    setAssignments(a => ({ ...a, [norm(entry.text)]: ref }))
+    assignET(entry.text, ref)
   }
 
   function handleStage() {
@@ -398,14 +501,23 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     // 2. Prepopulate each PositionType's recipe from its assigned captures (flat,
     //    form-badged). Positions with an existing recipe get the additions too, and
     //    are reported so the user can review them.
-    const byPos = new Map()   // positionType -> [{ elementTypeRef, code, note }]
+    //
+    //    The recipe belongs to the PositionType the DesignDB points at, which is not
+    //    always the one the Form names: the Form says C01, but C01r declares
+    //    ExtRef="C01" and is where the recipe lives. Resolved (and confirmable) in
+    //    the resolve step; a ref left unresolved prefills nothing rather than
+    //    prefilling the wrong position.
+    const byPos = new Map()   // target PositionTypeRef -> [{ elementTypeRef, code, note }]
+    let unrouted = 0
     for (const row of confirmed) {
       if (!row.positionType) continue
+      const target = map.pt ? ptTarget(row.positionType) : row.positionType
+      if (!target) { unrouted++; continue }
       for (const cap of deriveCaptures(row, captureOpts).captures) {
         const et = codeToEt.get(norm(cap.code))
         if (!et) continue
-        if (!byPos.has(row.positionType)) byPos.set(row.positionType, [])
-        const list = byPos.get(row.positionType)
+        if (!byPos.has(target)) byPos.set(target, [])
+        const list = byPos.get(target)
         if (!list.some(x => x.elementTypeRef === et)) list.push({ elementTypeRef: et, code: cap.code, note: cap.note })
       }
     }
@@ -417,7 +529,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       if (res.existed && res.added > 0) reviewPositions.push(pos)
     }
 
-    setStaged({ codes: n, rows: rowsAdded, review: reviewPositions })
+    setStaged({ codes: n, rows: rowsAdded, review: reviewPositions, unrouted })
   }
 
   const remaining = resolved.filter(r => !r.confirmed).length
@@ -496,10 +608,21 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
           <div className="text-muted mb-3" style={{ fontSize: 11 }}>
             {rawRows.length} rows in “{sheet}”{skipped > 0 && <> · {skipped} skipped as excluded</>}
           </div>
-          <Button variant="primary" size="sm" disabled={!map.code || busy} onClick={startReview}>
-            Start review →
+          <Button variant="primary" size="sm" disabled={!map.code || busy} onClick={startResolve}>
+            {map.pt ? 'Resolve PositionTypes →' : 'Start review →'}
           </Button>
         </div>
+      )}
+
+      {step === 'resolve' && (
+        <ResolveRefsStep
+          resolutions={resolutions}
+          overrides={refOverrides}
+          onOverride={(formRef, target) => setRefOverrides(o => ({ ...o, [formRef]: target }))}
+          positionTypes={positionTypes}
+          onBack={() => setStep('map')}
+          onConfirm={() => enterReview()}
+        />
       )}
 
       {step === 'review' && (
@@ -627,6 +750,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                       discarded={readout.discarded}
                       onEditNote={(code, text) => editNote(current.id, code, text)}
                       onMoveNote={handleMoveNote}
+                      onMoveNoteWord={handleMoveNoteWord}
                     />
                   </div>
                 </div>
@@ -641,14 +765,25 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
 
           {/* Compare + stage */}
           <div style={{ width: 350, overflowY: 'auto', flexShrink: 0 }} className="border-start ps-3">
+            <NeedsResolving
+              collisions={collisions}
+              similar={similar}
+              resolvedCount={entries.length - collisions.length}
+              onPromote={handlePromote}
+              onUnify={handleUnify}
+              onMerge={handleMerge}
+              onKeepSeparate={handleKeepSeparate}
+              onJump={jumpToCode}
+            />
+
             <div className="fw-semibold text-muted mb-2" style={{ fontSize: 10, textTransform: 'uppercase' }}>
               Distinct codes ({entries.length})
             </div>
             <CompareCodesPanel
               entries={entries}
               knownPTs={knownPTs}
+              ptTarget={map.pt ? ptTarget : null}
               onJump={jumpToCode}
-              onPromote={handlePromote}
               onReuse={handleReuse}
               onCreateET={e => setCreatingFor({
                 text: e.text,
@@ -696,8 +831,14 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                 <Alert variant="success" className="mt-2 py-1 px-2" style={{ fontSize: 11 }}>
                   <div>
                     Staged {staged.codes} code{staged.codes === 1 ? '' : 's'} and pre-filled {staged.rows} recipe
-                    row{staged.rows === 1 ? '' : 's'} (badged <strong>Form</strong>).
+                    row{staged.rows === 1 ? '' : 's'} (badged <MaterialIcon name="token" size={11} />).
                   </div>
+                  {staged.unrouted > 0 && (
+                    <div className="mt-1 text-muted">
+                      {staged.unrouted} row{staged.unrouted === 1 ? '' : 's'} prefilled nothing — their Form ref
+                      resolves to no PositionType, or you skipped it.
+                    </div>
+                  )}
                   {staged.review.length > 0 && (
                     <div className="mt-1">
                       {staged.review.length} position{staged.review.length === 1 ? '' : 's'} already had a recipe
@@ -729,14 +870,17 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
         onAcceptSuggestions={acceptRowSuggestionsFor}
         onEditNote={editNote}
         onMoveNote={moveNoteIn}
+        onMoveNoteWord={moveNoteIn}
         onSkip={() => setPriming(false)}
         onDone={finishPriming}
       />
 
       <NewETModal
         show={!!creatingFor}
-        onHide={() => setCreatingFor(null)}
-        contextLabel={creatingFor ? `for ${creatingFor.text}` : null}
+        onHide={() => { setCreatingFor(null); setMergingGroup(null) }}
+        contextLabel={creatingFor
+          ? (mergingGroup ? `for ${mergingGroup.length} merged codes` : `for ${creatingFor.text}`)
+          : null}
         prefill={creatingFor ? {
           ref: creatingFor.ref,
           manufacturer: creatingFor.manufacturer,
@@ -744,8 +888,10 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
           description: creatingFor.description,
         } : {}}
         onCreated={etRef => {
-          setAssignments(a => ({ ...a, [norm(creatingFor.text)]: etRef }))
+          // A merge puts every code in the group on the one new ElementType.
+          for (const code of mergingGroup || [creatingFor.text]) assignET(code, etRef)
           setCreatingFor(null)
+          setMergingGroup(null)
         }}
       />
     </div>

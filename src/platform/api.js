@@ -178,7 +178,12 @@ export function installPlatform() {
       const contents = yamlDump(dbApi.collectConfigData(projectId), { noRefs: true })
       const name = String(filePath || 'config.config.yaml').split(/[\\/]/).pop()
       const dir = backend.getActiveDirectory()
-      if (dir) { await fsx.writeFile(dir, name, contents); return { ok: true, path: name } }
+      // The folder is granted read-only. A config yaml is not a form, so escalate —
+      // but if the user declines, hand them the file rather than failing.
+      if (dir && await fsx.ensureWritePermission(dir)) {
+        await fsx.writeFile(dir, name, contents)
+        return { ok: true, path: name }
+      }
       fsx.download(name, contents)
       return { ok: true, path: name }
     },

@@ -12,7 +12,13 @@
  *
  * (2) and (3) only ever produce *suggestions*. They are advisory, visibly marked,
  * and never assign a role on their own.
+ *
+ * Learning never stops, and it only ever learns from the user: every paint, note
+ * edit, note drag and ElementType decision feeds back in. It learns from rows the
+ * user has TOUCHED (see `teachingRows`) — never from its own untouched defaults.
  */
+
+import { tokenize } from './productCodes'
 
 const lower = t => String(t || '').toLowerCase()
 
@@ -218,13 +224,43 @@ export function roleTally(rows) {
   return tally
 }
 
-/** All learned signals in one pass. */
+/**
+ * The role a token would carry if the user had never said anything: 'note', except
+ * in a lone-token field, which is a code by default (see resolveRoles).
+ */
+const defaultRole = row => (row.tokens.length === 1 ? 'code' : 'note')
+
+/**
+ * A row teaches only where the user has actually decided something about it.
+ *
+ * Evidence is any role that DIFFERS from the default — which is precisely what a
+ * paint, a batch rule or a per-row override produces — plus an explicit confirm or
+ * note edit. Everything else is the tool's own guess, and learning from a guess
+ * lets one bad default entrench itself across the batch: an untouched multi-token
+ * row is all 'note', and an untouched lone-token row is 'code' for free.
+ *
+ * Reading the resolved roles means the rules need not be passed in: a rule has
+ * already been baked into `roles` by applyRules.
+ */
+export function isTaught(row) {
+  if (row.confirmed) return true
+  if (row.overrides && Object.keys(row.overrides).length > 0) return true
+  if (row.noteOverride && Object.keys(row.noteOverride).length > 0) return true
+  const dflt = defaultRole(row)
+  return (row.roles || []).some(r => r && r !== dflt)
+}
+
+/** The rows carrying evidence. Everything learned is learned from these. */
+export const teachingRows = rows => (rows || []).filter(isTaught)
+
+/** All learned signals in one pass, from the taught rows only. */
 export function learnedSignals(rows) {
+  const taught = teachingRows(rows)
   return {
-    shapes: learnedCodeShapes(rows),
-    contexts: learnedCodeContexts(rows),
-    profile: learnedCodeProfile(rows),
-    delimiters: learnedDelimiters(rows),
+    shapes: learnedCodeShapes(taught),
+    contexts: learnedCodeContexts(taught),
+    profile: learnedCodeProfile(taught),
+    delimiters: learnedDelimiters(taught),
   }
 }
 
@@ -266,6 +302,28 @@ export function acceptSuggestions(row, rules = {}, signals) {
   const overrides = { ...row.overrides }
   for (const i of idxs) overrides[i] = 'code'
   return { ...row, overrides }
+}
+
+// ---------------------------------------------------------------------------
+// Learning from the ElementType decisions on the compare panel
+// ---------------------------------------------------------------------------
+
+/**
+ * Giving a code an ElementType — creating one, reusing one, or merging codes into
+ * one — is the strongest statement available that its text really is a product
+ * code. So the tokens making it up become batch-wide 'code' rules: every other row
+ * mentioning that token now reads it as a code without being asked again.
+ *
+ * This is what stops the tool re-asking about `250-1CH` on row 30 when you settled
+ * it on row 2. Rules stay revocable in the Learned panel, as always.
+ */
+export function learnCodeTokens(rules, codeText) {
+  let next = rules
+  for (const t of tokenize(codeText)) {
+    if (isPunctuation(t.text)) continue
+    next = setRule(next, t.text, 'code')
+  }
+  return next
 }
 
 // ---------------------------------------------------------------------------

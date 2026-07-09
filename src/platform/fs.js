@@ -7,6 +7,21 @@
  * Directory handles are structured-cloneable, so they persist in IndexedDB and a
  * project can be reopened without re-picking. **Permission does not persist** —
  * on reload the user must re-grant with a gesture (`ensurePermission`).
+ *
+ * THE FORMS ARE READ-ONLY. The DesignDB, Product Spec and Recipes Spec workbooks
+ * are never modified by this tool — updates leave as Office Scripts patches the
+ * user runs themselves. That invariant is enforced twice, not merely documented:
+ *
+ *   1. The folder is granted in `mode: 'read'`. The browser itself rejects any
+ *      write. Escalating means calling `ensureWritePermission`, which only the
+ *      snapshot and config-yaml paths do — from a click, because escalation
+ *      needs a user gesture.
+ *   2. `writeFile` refuses to write a workbook unless the caller passes
+ *      `allowWorkbook`, which only `snapshot` does (into `snapshot/<date>/`,
+ *      never the project root). So even a write-granted folder cannot lose a form.
+ *
+ * So a bug in a caller cannot silently overwrite a form: it has to get past a
+ * permission the app never asked for and a guard it never opted out of.
  */
 
 import { idbGet, idbSet, idbDel } from './idb'
@@ -34,7 +49,8 @@ const newProjectKey = () => `dir_${crypto.randomUUID()}`
 
 export async function pickDirectory() {
   assertSupported()
-  const handle = await window.showDirectoryPicker({ id: 'recipe-builder-project', mode: 'readwrite' })
+  // 'read' — the forms are never written. Snapshotting escalates on demand.
+  const handle = await window.showDirectoryPicker({ id: 'recipe-builder-project', mode: 'read' })
   const key = newProjectKey()
   const all = (await idbGet(HANDLE_KEY)) || {}
   all[key] = { handle, name: handle.name }
@@ -64,12 +80,19 @@ export async function clearDirectories() { await idbDel(HANDLE_KEY) }
  * Re-grant access after a reload. Must be called from a user gesture, otherwise
  * `requestPermission` rejects. Returns true when usable.
  */
-export async function ensurePermission(handle, mode = 'readwrite') {
+export async function ensurePermission(handle, mode = 'read') {
   if (!handle) return false
   const opts = { mode }
   if ((await handle.queryPermission(opts)) === 'granted') return true
   return (await handle.requestPermission(opts)) === 'granted'
 }
+
+/**
+ * Escalate a read-only folder to writable. Only the snapshot path needs this, and
+ * it too must run from a user gesture. Kept separate from `ensurePermission` so
+ * that asking for write is always a deliberate, greppable act.
+ */
+export const ensureWritePermission = handle => ensurePermission(handle, 'readwrite')
 
 // --- reading ----------------------------------------------------------------
 
@@ -118,7 +141,18 @@ export async function pickXlsxFile() {
 
 // --- writing ----------------------------------------------------------------
 
-export async function writeFile(dirHandle, name, contents) {
+const isWorkbook = name => /\.(xlsx|xlsm)$/i.test(String(name || ''))
+
+/**
+ * `allowWorkbook` is the opt-out, and only `snapshot` takes it — a snapshot copies
+ * workbooks into `snapshot/<date>/`, which is the one legitimate workbook write.
+ * Everything else (config yaml) is refused outright, so no future caller can reach
+ * a form by accident.
+ */
+export async function writeFile(dirHandle, name, contents, { allowWorkbook = false } = {}) {
+  if (isWorkbook(name) && !allowWorkbook) {
+    throw new Error(`Refusing to write "${name}": the design workbooks are read-only. Export a patch script instead.`)
+  }
   const fileHandle = await dirHandle.getFileHandle(name, { create: true })
   const w = await fileHandle.createWritable()
   await w.write(contents)
@@ -140,8 +174,15 @@ async function dirExists(dirHandle, name) {
  * Copy the project files into `<folder>/snapshot/<date>/`, matching Electron's
  * behaviour (a same-day snapshot gets a time suffix rather than overwriting).
  * `overlay` is written beside them when provided.
+ *
+ * The only writer of workbooks, and the only caller that needs write permission.
+ * It escalates the folder grant here, so it must be reached from a user gesture.
+ * Sources are read from `dirHandle`; nothing in the project root is ever touched.
  */
 export async function snapshot(dirHandle, files, overlay) {
+  if (!(await ensureWritePermission(dirHandle))) {
+    throw new Error('Write access to the project folder was declined, so no snapshot was taken.')
+  }
   const dateStr = new Date().toISOString().slice(0, 10)
   const snapRoot = await ensureDir(dirHandle, ['snapshot'])
 
@@ -156,7 +197,7 @@ export async function snapshot(dirHandle, files, overlay) {
     if (!name) continue
     const bytes = await readFileNamed(dirHandle, name)
     if (!bytes) continue
-    await writeFile(target, name, bytes)
+    await writeFile(target, name, bytes, { allowWorkbook: true })   // a copy, inside snapshot/
     copied.push(name)
   }
   if (overlay?.name && overlay.contents != null) await writeFile(target, overlay.name, overlay.contents)

@@ -169,15 +169,18 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
         {/* Provenance: pre-filled from the imported ProductCode form, not yet structured. */}
         {row._origin === 'form' && (
           <span
-            className="badge"
+            className="badge d-inline-flex align-items-center"
             style={{
               position: 'absolute', top: -7, right: -6, zIndex: 1,
               background: '#e7f1ff', color: '#084298', border: '1px solid #b6d4fe',
-              fontSize: 9, flexShrink: 0,
+              fontSize: 9, flexShrink: 0, padding: '2px 4px',
             }}
             title={`From the imported form${row._formCode ? ` — code "${row._formCode}"` : ''}. Move it into structure (a DL/wrapper) when ready.`}
           >
-            Form
+            {/* 'token', not 'contextual_token': the latter is a Material Symbols icon
+                and the bundled font is classic Material Icons, where it has no
+                ligature and would render as literal text. */}
+            <MaterialIcon name="token" size={11} />
           </span>
         )}
         <Card.Body className="py-2 px-3">

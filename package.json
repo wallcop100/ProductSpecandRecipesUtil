@@ -1,6 +1,6 @@
 {
   "name": "recipe-builder",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "Product Spec & Recipes Builder — a pure-browser tool",
   "author": "wallcop100 <wallcop100@gmail.com>",
   "private": true,

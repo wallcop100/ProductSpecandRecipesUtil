@@ -3,6 +3,7 @@ import {
   tokenize, makeRow, codeRuns, deriveCaptures, deriveCodes, promoteNoteToCode,
   buildMaster, buildDistinct, hasNoteCollision, duplicateSet, classify,
   clusterSimilar, rowConfidence, sortByConfidence, setNoteOverride, segmentsOf,
+  pendingResolutions, groupKey,
 } from '../../src/utils/productCodes.js'
 
 // Real strings from samplefiles/5642 - Form V3.6.xlsx, sheet PositionTypeSpec.
@@ -325,5 +326,76 @@ describe('rowConfidence / sortByConfidence', () => {
     novel = mark(novel, 'code', 'LL240272024')
     const sorted = sortByConfidence([makeRow(3, REAL.C07), novel, easy], ctx)
     expect(sorted.map(r => r.id)).toEqual([1, 2, 3])
+  })
+})
+
+describe('pendingResolutions — what actually blocks the batch', () => {
+  const entry = (text, over = {}) => ({
+    text, rowRefs: [1], manufacturers: [], positionTypes: ['C01'],
+    variants: [{ note: '', rowRefs: [1], positionTypes: ['C01'] }],
+    etRef: null, ...over,
+  })
+  const twoNotes = text => entry(text, {
+    variants: [
+      { note: 'warm', rowRefs: [1], positionTypes: ['C01'] },
+      { note: '3000K', rowRefs: [2], positionTypes: ['C03'] },
+    ],
+  })
+
+  test('a code captured with two notes is a collision', () => {
+    const { collisions } = pendingResolutions([twoNotes('250-1CH')])
+    expect(collisions.map(e => e.text)).toEqual(['250-1CH'])
+  })
+
+  test('prefix-related codes are flagged as similar', () => {
+    const { similar } = pendingResolutions([entry('250-1CH'), entry('250-1CH-A')])
+    expect(similar).toHaveLength(1)
+    expect(similar[0].map(e => e.text).sort()).toEqual(['250-1CH', '250-1CH-A'])
+  })
+
+  test('unrelated codes are never grouped', () => {
+    expect(pendingResolutions([entry('AAA111'), entry('BBB222')]).similar).toEqual([])
+  })
+
+  test('a group whose codes all resolve to the SAME ET is settled', () => {
+    const { similar } = pendingResolutions([
+      entry('250-1CH', { etRef: 'ET-DL-01' }),
+      entry('250-1CH-A', { etRef: 'ET-DL-01' }),
+    ])
+    expect(similar).toEqual([])
+  })
+
+  test('a group whose codes sit on DIFFERENT ETs is also settled — the user decided', () => {
+    const { similar } = pendingResolutions([
+      entry('250-1CH', { etRef: 'ET-DL-01' }),
+      entry('250-1CH-A', { etRef: 'ET-DL-02' }),
+    ])
+    expect(similar).toEqual([])
+  })
+
+  test('a partly-assigned group still asks', () => {
+    const { similar } = pendingResolutions([
+      entry('250-1CH', { etRef: 'ET-DL-01' }),
+      entry('250-1CH-A'),
+    ])
+    expect(similar).toHaveLength(1)
+  })
+
+  test('"keep separate" dismisses a group for good', () => {
+    const entries = [entry('250-1CH'), entry('250-1CH-A')]
+    const key = groupKey(entries)
+    expect(pendingResolutions(entries, new Set([key])).similar).toEqual([])
+  })
+
+  test('groupKey is order-independent, so dismissal survives a re-sort', () => {
+    const a = [entry('250-1CH'), entry('250-1CH-A')]
+    const b = [entry('250-1CH-A'), entry('250-1CH')]
+    expect(groupKey(a)).toBe(groupKey(b))
+  })
+
+  test('a collision inside a similar-group is resolved first, not both at once', () => {
+    const { collisions, similar } = pendingResolutions([twoNotes('250-1CH'), entry('250-1CH-A')])
+    expect(collisions).toHaveLength(1)
+    expect(similar).toEqual([])          // don't ask two questions about one code
   })
 })

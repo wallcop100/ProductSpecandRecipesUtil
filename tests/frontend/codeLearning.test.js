@@ -5,6 +5,7 @@ import {
   ruleImpact, learnedRules, tokenFrequency, learnedCodeShapes, learnedSignals,
   suggestCodes, acceptSuggestions, punctuationSuggestion, acceptPunctuationSuggestion,
   learnedDelimiters, roleTally, discardsFromNoteEdit, pickExamples,
+  isTaught, teachingRows, learnCodeTokens,
 } from '../../src/utils/codeLearning.js'
 
 // Real ingredient rows — "Tape"/"Profile" are this project's dialect, not a spec.
@@ -116,13 +117,15 @@ describe('suggestions are learned continuously, never applied silently', () => {
   /** Rows with roles resolved — what the screen always passes to the learners. */
   const resolved = rules => applyRules(batch(), rules)
 
-  test('learning reads the RESOLVED ROLES, so single-token codes teach too', () => {
+  test('learnedCodeShapes reads the RESOLVED ROLES, not the rules', () => {
     // "SP6971" is a code by default (single-token field) and creates NO rule…
     const rows = applyRules([makeRow('x', 'SP6971')], {})
     expect(rows[0].roles).toEqual(['code'])
-    expect(Object.keys({})).toEqual([])                            // …no rule exists
     expect(learnedCodeShapes([])).toEqual(new Set())               // nothing painted, nothing learned
-    expect(learnedCodeShapes(rows)).toEqual(new Set(['AA####']))   // …but the ROLE teaches
+    expect(learnedCodeShapes(rows)).toEqual(new Set(['AA####']))   // …the ROLE is what it reads
+    // learnedSignals is the gate: it feeds this only the rows the user taught, so an
+    // untouched default like the one above never becomes evidence. See isTaught.
+    expect(learnedSignals(rows).shapes).toEqual(new Set())
   })
 
   test('a painted code suggests same-shaped tokens elsewhere', () => {
@@ -296,5 +299,88 @@ describe('punctuation is suggested, never assumed', () => {
   test('until accepted, punctuation is just a note — nothing is assumed', () => {
     const row = applyRules(batch(), {})[0]
     expect(row.roles[idxOf(row, '+')]).toBe('note')
+  })
+})
+
+describe('the tool learns only from the user, never from its own defaults', () => {
+  test('an untouched multi-token row teaches nothing', () => {
+    const row = applyRules([makeRow('D02', D02)], {})[0]
+    expect(isTaught(row)).toBe(false)
+  })
+
+  test('an untouched LONE-token row teaches nothing, though it reads as a code', () => {
+    // The lone-token 'code' default is a convenience, not evidence. Learning from it
+    // would let the tool's own guess define what a code looks like here.
+    const row = applyRules([makeRow('x', 'SP6971')], {})[0]
+    expect(row.roles).toEqual(['code'])
+    expect(isTaught(row)).toBe(false)
+    expect(learnedSignals([row]).profile.minLen).toBe(0)
+  })
+
+  test('confirming a lone-token row makes it teach', () => {
+    const row = { ...applyRules([makeRow('x', 'SP6971')], {})[0], confirmed: true }
+    expect(isTaught(row)).toBe(true)
+    expect(learnedSignals([row]).profile.minLen).toBe(6)
+  })
+
+  test('a batch rule makes the rows it REACHES teach, and only those', () => {
+    const rules = setRule({}, 'NF240272009', 'code')
+    const rows = applyRules(batch(), rules)
+    // D02 and D07 hold that token; C01 does not, so it stays an untouched default.
+    expect(teachingRows(rows).map(r => r.id)).toEqual(['D02', 'D07'])
+    expect(learnedCodeShapes(rows).has(shapeOf('NF240272009'))).toBe(true)
+  })
+
+  test('a per-row override teaches only that row', () => {
+    const rows = applyRules(batch(), {})
+    const touched = { ...rows[0], overrides: { 1: 'code' } }
+    expect(teachingRows([touched, rows[1], rows[2]])).toHaveLength(1)
+  })
+
+  test('an untouched row cannot pollute the code profile', () => {
+    const rules = setRule({}, '021-7309-02', 'code')        // a short-ish real code
+    const rows = applyRules(batch(), rules)
+    const taught = teachingRows(rows)
+    // D07/C01 lack that token, so only D02 teaches; nothing else contributes a shape.
+    expect(taught.map(r => r.id)).toEqual(['D02'])
+    expect(learnedSignals(rows).profile.minLen).toBe('021-7309-02'.length)
+  })
+
+  test('editing a note marks the row as teaching', () => {
+    const row = { ...applyRules(batch(), {})[0], noteOverride: { 'X': 'trimmed' } }
+    expect(isTaught(row)).toBe(true)
+  })
+})
+
+describe('learnCodeTokens — an ElementType decision teaches the batch', () => {
+  test('every alphanumeric token of the code becomes a code rule', () => {
+    const rules = learnCodeTokens({}, 'NF240272009')
+    expect(rules['nf240272009']).toBe('code')
+  })
+
+  test('a multi-token code teaches each of its tokens', () => {
+    const rules = learnCodeTokens({}, 'V6815 000')
+    expect(rules['v6815']).toBe('code')
+    expect(rules['000']).toBe('code')
+  })
+
+  test('punctuation inside the code is never turned into a code rule', () => {
+    const rules = learnCodeTokens({}, '(FPSN0809BG2000)')
+    expect(rules['(']).toBeUndefined()
+    expect(rules[')']).toBeUndefined()
+    expect(rules['fpsn0809bg2000']).toBe('code')
+  })
+
+  test('the learned rule reaches every other row holding that token', () => {
+    const rules = learnCodeTokens({}, 'NF240272009')
+    const rows = applyRules(batch(), rules)
+    expect(deriveCodes(rows[0])).toContain('NF240272009')
+    expect(deriveCodes(rows[1])).toContain('NF240272009')   // D07, never visited
+  })
+
+  test('existing rules survive', () => {
+    const rules = learnCodeTokens(setRule({}, '+', 'discard'), 'ABC123')
+    expect(rules['+']).toBe('discard')
+    expect(rules['abc123']).toBe('code')
   })
 })

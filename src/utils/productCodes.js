@@ -331,6 +331,36 @@ export function clusterSimilar(entries) {
   return [...groups.values()].map(g => g.sort((x, y) => x.text.localeCompare(y.text)))
 }
 
+/** Stable identity for a similar-group, so "keep separate" can be remembered. */
+export const groupKey = entries => entries.map(e => norm(e.text)).sort().join('|')
+
+/**
+ * What is blocking the batch, split into the two questions the user actually faces.
+ *
+ *   collisions — one code, several notes. Same product, or not?
+ *   similar    — near-miss codes. One ElementType, or several?
+ *
+ * A similar-group stops being a question once the user dismisses it ("keep
+ * separate") or once every code in it already resolves to the SAME ElementType —
+ * there is nothing left to consolidate. A group whose codes sit on different ETs
+ * is likewise settled: the user has already said they differ.
+ */
+export function pendingResolutions(entries, dismissed = new Set()) {
+  const collisions = entries.filter(hasNoteCollision)
+
+  const similar = clusterSimilar(entries)
+    .filter(g => g.length > 1)
+    .filter(g => !dismissed.has(groupKey(g)))
+    .filter(g => !g.some(hasNoteCollision))          // resolve the collision first
+    .filter(g => {
+      const refs = g.map(e => e.etRef)
+      if (refs.every(Boolean)) return false          // all assigned: the user has decided
+      return true
+    })
+
+  return { collisions, similar }
+}
+
 /**
  * 'high' when the row yields exactly one code and that code already exists in the
  * Product Spec — batch-confirmable. 'none' when it yields no codes at all.
