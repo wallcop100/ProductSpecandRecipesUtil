@@ -1,16 +1,15 @@
 import { describe, test, expect } from 'vitest'
-import fs from 'node:fs'
 import * as XLSX from 'xlsx'
 import { parseDb, parsePs, parseRs, readSheet, detectFileType, detectFiles } from '../../src/platform/xlsx.js'
 
 /**
- * The browser xlsx parser is a port of backend/parser.py. Its output was verified
- * byte-for-byte against the Python parser on the real project workbooks; these
- * tests pin the individual rules so a regression is caught without those files.
+ * The browser xlsx parser is a port of the old backend/parser.py. Its output was
+ * verified field-for-field against the Python parser on the real project
+ * workbooks; these tests pin the individual rules so a regression is caught
+ * without needing those files.
  *
- * Workbooks are built in memory — the committed tests/fixtures/*.xlsx use an
- * older column schema (ElementTypeRef where the parser expects Ref/EntityRef),
- * so they can only exercise sheet-level detection.
+ * Every workbook is built in memory: the sample xlsx are gitignored (generated,
+ * not committed), so a test that read them would pass locally and fail in CI.
  */
 const wbOf = sheets => {
   const wb = XLSX.utils.book_new()
@@ -179,12 +178,21 @@ describe('readSheet — arbitrary sheet, no schema', () => {
 })
 
 describe('detection', () => {
-  const read = p => fs.readFileSync(p)
+  // Detection keys off sheet names and the Form header row — the same three
+  // shapes the real workbooks have. Built in memory so CI needs no binaries.
+  const dbWb = wbOf({ ElementTypes: aoa([['Ref']]), PositionTypes: aoa([['Ref']]) })
+  const psWb = wbOf({ Form: aoa([['EntityRef', 'ProductCode']]) })
+  const rsWb = wbOf({ Form: aoa([['ContextType', 'ContextRef']]) })
 
-  test('classifies the real committed fixtures', () => {
-    expect(detectFileType(read('tests/fixtures/sample_db.xlsx'))).toBe('db')
-    expect(detectFileType(read('tests/fixtures/sample_ps.xlsx'))).toBe('ps')
-    expect(detectFileType(read('tests/fixtures/sample_rs.xlsx'))).toBe('rs')
+  test('classifies db / ps / rs by sheet names and header markers', () => {
+    expect(detectFileType(dbWb)).toBe('db')
+    expect(detectFileType(psWb)).toBe('ps')
+    expect(detectFileType(rsWb)).toBe('rs')
+  })
+
+  test('db wins even when it also has a Form sheet', () => {
+    const both = wbOf({ ElementTypes: aoa([['Ref']]), PositionTypes: aoa([['Ref']]), Form: aoa([['ProductCode']]) })
+    expect(detectFileType(both)).toBe('db')
   })
 
   test('a Form sheet with neither marker, and unreadable bytes, are unclassified', () => {
@@ -193,12 +201,11 @@ describe('detection', () => {
   })
 
   test('detectFiles ignores non-xlsx, sorts, and takes the first match of each type', () => {
-    const db = read('tests/fixtures/sample_db.xlsx')
     const out = detectFiles([
-      { name: 'notes.txt', data: db },
-      { name: 'b_second.xlsx', data: db },
-      { name: 'a_first.xlsx', data: db },
-      { name: 'ps.xlsx', data: read('tests/fixtures/sample_ps.xlsx') },
+      { name: 'notes.txt', data: dbWb },
+      { name: 'b_second.xlsx', data: dbWb },
+      { name: 'a_first.xlsx', data: dbWb },
+      { name: 'ps.xlsx', data: psWb },
     ])
     expect(out.all_xlsx).toEqual(['a_first.xlsx', 'b_second.xlsx', 'ps.xlsx'])
     expect(out.db).toBe('a_first.xlsx')   // sorted order → deterministic
