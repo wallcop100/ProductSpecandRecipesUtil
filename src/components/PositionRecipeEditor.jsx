@@ -8,6 +8,7 @@ import IconButton from './IconButton'
 import PositionValidationBadge from './PositionValidationBadge'
 import ConnectorSuggestions from './ConnectorSuggestions'
 import RecipeErrorBanner from './RecipeErrorBanner'
+import FormSpecPane from './FormSpecPane'
 import { colorsForType, ICONS, ACTION_ICONS } from '../utils/entityStyle'
 
 // Group container-internal rows by ContextRef so each container gets a section
@@ -52,6 +53,7 @@ export default function PositionRecipeEditor({
   const copyPositionRecipe = useStore(s => s.copyPositionRecipe)
   const requestPaste = useStore(s => s.requestPaste)
   const rowClipboard = useStore(s => s.rowClipboard)
+  const formCaptures = useStore(s => s.formCaptures)
   const [pasteMsg, setPasteMsg] = useState(null)
 
   const ref = posRef
@@ -156,8 +158,13 @@ export default function PositionRecipeEditor({
         </div>
       )}
 
-      {/* Body */}
-      <div style={embedded ? { padding: '0.5rem 0.25rem' } : { flex: 1, overflowY: 'auto', padding: '1rem 1.25rem' }}>
+      {/* Body. When a Form template is attached the surface splits: the recipe on the
+          left, the Form's spec on the right behind a rule. Never a modal — you
+          compare while you work. */}
+      <div className="d-flex" style={embedded ? { minHeight: 0 } : { flex: 1, minHeight: 0 }}>
+      <div style={embedded
+        ? { padding: '0.5rem 0.25rem', flex: 1, minWidth: 0 }
+        : { flex: 1, minWidth: 0, overflowY: 'auto', padding: '1rem 1.25rem' }}>
         {count === 0 && (
           <div className="text-muted small mb-3">
             No recipe yet — drag an element from the palette, use the Templates tab to apply
@@ -195,6 +202,8 @@ export default function PositionRecipeEditor({
             <span className="fw-semibold"> Edit internals → </span> to change them.
           </div>
         )}
+      </div>
+      {formCaptures && <FormSpecPane posRef={ref} />}
       </div>
     </div>
   )

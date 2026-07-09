@@ -44,7 +44,7 @@ function describe(a) {
 const Ref = ({ r }) => <span style={{ fontFamily: 'monospace' }}>{r}</span>
 const Dim = ({ children }) => <span className="text-muted" style={{ fontSize: 10 }}>{children}</span>
 
-export default function BulkApplyModal({ show, onHide, plan, collectionName, onConfirm }) {
+export default function BulkApplyModal({ show, onHide, plan, collectionName, onConfirm, title }) {
   if (!plan) return null
 
   const counts = plan.counts || {}
@@ -55,7 +55,7 @@ export default function BulkApplyModal({ show, onHide, plan, collectionName, onC
     <Modal show={show} onHide={onHide} size="lg" scrollable>
       <Modal.Header closeButton>
         <Modal.Title style={{ fontSize: 15 }}>
-          Apply “{collectionName}” to {positions.length} position{positions.length === 1 ? '' : 's'}
+          {title || <>Apply “{collectionName}” to {positions.length} position{positions.length === 1 ? '' : 's'}</>}
         </Modal.Title>
       </Modal.Header>
 

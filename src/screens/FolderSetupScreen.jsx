@@ -208,7 +208,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
       try { localElementTypes = await window.electronAPI.db.getLocalETs(projectId) || [] } catch { /* none */ }
 
       // 3. Load SQLite data
-      const [positionUIArr, templates, slotMappings, containerETPref, containerExcludePref, etCollections, ignoredFamiliesPref, tagRulesPref, tagPalettePref, tagSnapshotsPref, favorites, tagColorsPref] = await Promise.all([
+      const [positionUIArr, templates, slotMappings, containerETPref, containerExcludePref, etCollections, ignoredFamiliesPref, tagRulesPref, tagPalettePref, tagSnapshotsPref, favorites, tagColorsPref, formCapturesPref] = await Promise.all([
         window.electronAPI.db.getAllPositionUI(projectId),
         window.electronAPI.db.getAllTemplates(projectId),
         window.electronAPI.db.getAllSlotMappings(projectId), // already { templateId: { slotKey: ref } }
@@ -221,10 +221,15 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
         window.electronAPI.db.getPref(projectId, 'tag_snapshots'),
         window.electronAPI.db.getFavorites(),
         window.electronAPI.db.getPref(projectId, 'tag_colors'),
+        window.electronAPI.db.getPref(projectId, 'form_captures'),
       ])
 
       let tagColors = {}
       try { tagColors = tagColorsPref ? JSON.parse(tagColorsPref) : {} } catch { tagColors = {} }
+
+      // The Form's spec, captured at import. null when no Form template is attached.
+      let formCaptures = null
+      try { formCaptures = formCapturesPref ? JSON.parse(formCapturesPref) : null } catch { formCaptures = null }
 
       // 3b. Tag rules + palette. Seed from bundled defaults the first time a
       // config is opened, then persist so each config owns its own copy.
@@ -313,6 +318,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
         tagSnapshots,
         tagDrift,
         tagColors,
+        formCaptures,
         dbWriteEnabled,
         localElementTypes,
       })

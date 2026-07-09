@@ -43,6 +43,23 @@ export function registerFile(handle) {
   return token
 }
 
+/**
+ * Identity of a picked workbook: `{ name, lastModified }`, or null once the token
+ * is stale. The token is opaque by design, but the Form's captures need to record
+ * WHICH sheet they came from — otherwise a pane built from them can't say so, and
+ * a re-import can't tell you the file even changed.
+ */
+export async function fileMeta(fileToken) {
+  const handle = fileTokens.get(fileToken)
+  if (!handle) return null
+  try {
+    const file = await handle.getFile()
+    return { name: handle.name, lastModified: file.lastModified }
+  } catch {
+    return null   // permission lapsed or the file moved
+  }
+}
+
 // --- the three former routes -------------------------------------------------
 
 /** Classify every xlsx in the project folder. → { db, ps, rs, all_xlsx } */

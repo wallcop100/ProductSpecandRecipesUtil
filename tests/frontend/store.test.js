@@ -19,6 +19,8 @@ vi.stubGlobal('window', {
       upsertPositionUI: vi.fn().mockResolvedValue({}),
       upsertSlotMapping: vi.fn().mockResolvedValue({}),
       upsertTemplate: vi.fn().mockResolvedValue({}),
+      setPref: vi.fn().mockResolvedValue(undefined),
+      getPref: vi.fn().mockResolvedValue(null),
     },
   },
 })
@@ -35,6 +37,7 @@ vi.mock('../../src/utils/backend.js', () => ({
 
 import { importFiles } from '../../src/utils/backend.js'
 import useStore, { getRecipeForPosition } from '../../src/store/useStore.js'
+import { containerForPosition } from '../../src/utils/recipePresence.js'
 
 // ---------------------------------------------------------------------------
 // Fixture data
@@ -159,6 +162,8 @@ function resetStore(overrides = {}) {
     containerETManualRefs: [],
     isLoading: false,
     loadError: null,
+    formCaptures: null,
+    recipeError: null,
     ...overrides,
   })
 }
@@ -1293,5 +1298,131 @@ describe('catalogue — enabling DB writes promotes staged ETs', () => {
     expect(dbChanges).toHaveLength(1)
     expect(dbChanges[0].elementTypeRef).toBe('ET-STAGED-01')
     expect(dbChanges[0]._isNew).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// duplicateET — forking a shared wrapper
+// ---------------------------------------------------------------------------
+describe('duplicateET forks a wrapper and actually repoints the position', () => {
+  const pos = (posRef, ref, extra = {}) => ({
+    _id: `${posRef}-pos-${ref}`, PositionTypeRef: posRef, ContextType: 'PositionType',
+    ContextRef: posRef, ElementTypeRef: ref, Quantity: 1, ...extra,
+  })
+  // parseRs projects one shared sheet row onto EVERY position using the wrapper,
+  // so both copies carry the SAME _row_num.
+  const inside = (posRef, container, ref, rowNum) => ({
+    _id: `${posRef}-${container}-${ref}`, PositionTypeRef: posRef, ContextType: 'ElementType',
+    ContextRef: container, ElementTypeRef: ref, RecipeIndex: 1, Quantity: 1, _row_num: rowNum,
+  })
+
+  const shared = () => [
+    pos('C01r', 'ET-LIN-01', { IsDesign: 'Y' }),
+    pos('C03r', 'ET-LIN-01', { IsDesign: 'Y' }),
+    inside('C01r', 'ET-LIN-01', 'ET-PROF-01', 10),
+    inside('C03r', 'ET-LIN-01', 'ET-PROF-01', 10),   // same sheet row, projected
+  ]
+  const rowsFor = posRef => useStore.getState().recipes.filter(r => r.PositionTypeRef === posRef)
+
+  beforeEach(() => resetStore({ recipes: shared() }))
+
+  test('the forked position now points at the new wrapper', () => {
+    useStore.getState().duplicateET('ET-LIN-01', 'ET-LIN-07', 'C01r')
+    const design = rowsFor('C01r').find(r => r.ContextType === 'PositionType')
+    expect(design.ElementTypeRef).toBe('ET-LIN-07')
+  })
+
+  test('containerForPosition resolves to the fork — the whole point', () => {
+    useStore.getState().duplicateET('ET-LIN-01', 'ET-LIN-07', 'C01r')
+    const { recipes, containerETRefs } = useStore.getState()
+    expect(containerForPosition(recipes, 'C01r', containerETRefs)).toBe('ET-LIN-07')
+  })
+
+  test('the internals are cloned under the fork, and the stale projection is gone', () => {
+    useStore.getState().duplicateET('ET-LIN-01', 'ET-LIN-07', 'C01r')
+    const internals = rowsFor('C01r').filter(r => r.ContextType === 'ElementType')
+    expect(internals.map(r => r.ContextRef)).toEqual(['ET-LIN-07'])
+    expect(internals[0].ElementTypeRef).toBe('ET-PROF-01')
+  })
+
+  test('the clone is an append, not an edit of the shared sheet row', () => {
+    useStore.getState().duplicateET('ET-LIN-01', 'ET-LIN-07', 'C01r')
+    const clone = rowsFor('C01r').find(r => r.ContextType === 'ElementType')
+    expect(clone._row_num).toBeUndefined()
+  })
+
+  test('the sharing position is untouched, and its shared row is never soft-deleted', () => {
+    useStore.getState().duplicateET('ET-LIN-01', 'ET-LIN-07', 'C01r')
+    const c03 = rowsFor('C03r')
+    expect(c03.find(r => r.ContextType === 'PositionType').ElementTypeRef).toBe('ET-LIN-01')
+    expect(c03.find(r => r.ContextType === 'ElementType')).toMatchObject({
+      ContextRef: 'ET-LIN-01', ElementTypeRef: 'ET-PROF-01',
+    })
+    // dropping C01r's projection must NOT queue a delete against the shared row
+    expect(useStore.getState().rsChanges.some(c => c.action === 'delete')).toBe(false)
+  })
+
+  test('the fork gets a Product Spec row', () => {
+    useStore.getState().duplicateET('ET-LIN-01', 'ET-LIN-07', 'C01r')
+    expect(useStore.getState().psRows.some(r => (r.ElementTypeRef || r.elementTypeRef) === 'ET-LIN-07')).toBe(true)
+  })
+
+  test('a missing ref, or no target position, is a no-op', () => {
+    const before = useStore.getState().recipes.length
+    useStore.getState().duplicateET('ET-LIN-01', '  ', 'C01r')
+    useStore.getState().duplicateET('', 'ET-LIN-07', 'C01r')
+    expect(useStore.getState().recipes).toHaveLength(before)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Form captures — persisted so the Side-by-Side pane survives a reload
+// ---------------------------------------------------------------------------
+describe('form captures persist per project', () => {
+  const captures = {
+    version: 1,
+    source: { name: 'Form V3.6.xlsx', lastModified: 1, sheet: 'PositionTypeSpec' },
+    byPosition: { C01r: [{ elementTypeRef: 'ET-PROF-01', code: 'FPS2020', formRef: 'C01' }] },
+  }
+
+  // An earlier test replaces setPref with a plain function, which survives into this
+  // block. Reinstall the spy rather than depend on file ordering.
+  beforeEach(() => {
+    resetStore()
+    window.electronAPI.db.setPref = vi.fn().mockResolvedValue(undefined)
+  })
+
+  test('saveFormCaptures sets state and writes the pref as JSON', async () => {
+    await useStore.getState().saveFormCaptures(captures)
+    expect(useStore.getState().formCaptures).toEqual(captures)
+    expect(window.electronAPI.db.setPref).toHaveBeenCalledWith(
+      PROJECT_ID, 'form_captures', JSON.stringify(captures)
+    )
+  })
+
+  test('formEtsForPosition reads the RESOLVED position ref', () => {
+    resetStore({ formCaptures: captures })
+    expect(useStore.getState().formEtsForPosition('C01r')).toHaveLength(1)
+    expect(useStore.getState().formEtsForPosition('C01')).toEqual([])   // the Form's own ref
+    expect(useStore.getState().formEtsForPosition('nope')).toEqual([])
+  })
+
+  test('with no captures attached, every position yields nothing', () => {
+    expect(useStore.getState().formCaptures).toBeNull()
+    expect(useStore.getState().formEtsForPosition('C01r')).toEqual([])
+  })
+
+  test('clearFormCaptures wipes state and persists the null', async () => {
+    resetStore({ formCaptures: captures })
+    await useStore.getState().clearFormCaptures()
+    expect(useStore.getState().formCaptures).toBeNull()
+    expect(window.electronAPI.db.setPref).toHaveBeenCalledWith(PROJECT_ID, 'form_captures', 'null')
+  })
+
+  test('no project open: state changes, nothing is persisted', async () => {
+    resetStore({ projectId: null })
+    await useStore.getState().saveFormCaptures(captures)
+    expect(useStore.getState().formCaptures).toEqual(captures)
+    expect(window.electronAPI.db.setPref).not.toHaveBeenCalled()
   })
 })

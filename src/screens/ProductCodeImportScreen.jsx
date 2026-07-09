@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import { Button, Form, Alert, Spinner } from 'react-bootstrap'
 import useStore from '../store/useStore'
-import { readSheet as readSheetFrom } from '../utils/backend'
+import { readSheet as readSheetFrom, fileMeta } from '../utils/backend'
 import MaterialIcon from '../components/MaterialIcon'
 import IconButton from '../components/IconButton'
 import CodeChips from '../components/CodeChips'
@@ -24,6 +24,7 @@ import {
 } from '../utils/codeLearning'
 import { inferConvention, reuseCandidates, suggestRef } from '../utils/etRefSuggest'
 import { resolveFormRefs, buildRefMap, targetFor } from '../utils/ptResolve'
+import { diffCaptures, wrapperDivergence } from '../utils/formSpec'
 
 /** Fuzzy header match: exact normalised hit first, else shortest header containing it. */
 const nh = h => String(h || '').toLowerCase().replace(/[^a-z0-9]/g, '')
@@ -60,6 +61,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   const updatePSRow = useStore(s => s.updatePSRow)
   const updateElementType = useStore(s => s.updateElementType)
   const prepopulateRecipe = useStore(s => s.prepopulateRecipe)
+  const saveFormCaptures = useStore(s => s.saveFormCaptures)
+  const formCaptures = useStore(s => s.formCaptures)
+  const containerETRefs = useStore(s => s.containerETRefs)
 
   const [step, setStep] = useState('pick')
   const [busy, setBusy] = useState(false)
@@ -479,7 +483,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     assignET(entry.text, ref)
   }
 
-  function handleStage() {
+  async function handleStage() {
     // 1. Stage the Product Spec: product code + manufacturer per code, note → ET Description.
     let n = 0
     const codeToEt = new Map()
@@ -507,18 +511,30 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     //    ExtRef="C01" and is where the recipe lives. Resolved (and confirmable) in
     //    the resolve step; a ref left unresolved prefills nothing rather than
     //    prefilling the wrong position.
-    const byPos = new Map()   // target PositionTypeRef -> [{ elementTypeRef, code, note }]
+    const byPos = new Map()   // target PositionTypeRef -> [{ elementTypeRef, code, note, manufacturer, formRef }]
+    const contextByPosition = {}
     let unrouted = 0
     for (const row of confirmed) {
       if (!row.positionType) continue
       const target = map.pt ? ptTarget(row.positionType) : row.positionType
       if (!target) { unrouted++; continue }
+      // The context columns the user picked at the mapping step — the same ones shown
+      // above the paint surface. Carried through so the Side-by-Side pane can show
+      // them, keeping the user grounded in what the sheet actually said.
+      if (!contextByPosition[target] && Object.keys(row.context || {}).length) {
+        contextByPosition[target] = row.context
+      }
       for (const cap of deriveCaptures(row, captureOpts).captures) {
         const et = codeToEt.get(norm(cap.code))
         if (!et) continue
         if (!byPos.has(target)) byPos.set(target, [])
         const list = byPos.get(target)
-        if (!list.some(x => x.elementTypeRef === et)) list.push({ elementTypeRef: et, code: cap.code, note: cap.note })
+        if (!list.some(x => x.elementTypeRef === et)) {
+          list.push({
+            elementTypeRef: et, code: cap.code, note: cap.note,
+            manufacturer: row.manufacturer || '', formRef: row.positionType,
+          })
+        }
       }
     }
     let rowsAdded = 0
@@ -529,7 +545,31 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       if (res.existed && res.added > 0) reviewPositions.push(pos)
     }
 
-    setStaged({ codes: n, rows: rowsAdded, review: reviewPositions, unrouted })
+    // 3. Persist the Form's spec, and diff it against the previous import — the
+    //    manual compare the user does whenever the spreadsheet is revised.
+    const nextCaptures = {
+      version: 1,
+      source: { ...(await fileMeta(filepath) || {}), sheet },
+      importedAt: new Date().toISOString(),
+      byPosition: Object.fromEntries(byPos),
+      contextByPosition,
+      orphansByPosition: {},
+      unrouted: resolutions.filter(r => !r.target).map(r => ({ formRef: r.formRef, rows: r.rows })),
+    }
+    const diff = diffCaptures(formCaptures, nextCaptures)
+
+    // A code that has left the Form is not deleted — its row is flagged in the pane.
+    for (const r of diff.removed) {
+      const ref = r.entry.elementTypeRef
+      if (!ref) continue
+      ;(nextCaptures.orphansByPosition[r.posRef] ||= []).push(ref)
+    }
+
+    // A changed code inside a SHARED wrapper is the fork decision (see formSpec).
+    const divergence = wrapperDivergence(useStore.getState().recipes, diff, containerETRefs)
+
+    await saveFormCaptures(nextCaptures)
+    setStaged({ codes: n, rows: rowsAdded, review: reviewPositions, unrouted, diff, divergence })
   }
 
   const remaining = resolved.filter(r => !r.confirmed).length
@@ -837,6 +877,45 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                     <div className="mt-1 text-muted">
                       {staged.unrouted} row{staged.unrouted === 1 ? '' : 's'} prefilled nothing — their Form ref
                       resolves to no PositionType, or you skipped it.
+                    </div>
+                  )}
+
+                  {/* What changed since the last import — the manual compare, done. */}
+                  {staged.diff && (staged.diff.added.length + staged.diff.removed.length
+                    + staged.diff.changed.length + staged.diff.moved.length) > 0 && (
+                    <div className="mt-2 pt-1 border-top">
+                      <div className="fw-semibold" style={{ fontSize: 10, textTransform: 'uppercase' }}>
+                        Since the last import
+                      </div>
+                      <div className="text-muted">
+                        {staged.diff.added.length} added · {staged.diff.removed.length} removed ·{' '}
+                        {staged.diff.changed.length} changed · {staged.diff.moved.length} moved
+                      </div>
+                      {staged.diff.removed.length > 0 && (
+                        <div className="text-muted" style={{ fontSize: 10 }}>
+                          Removed codes are flagged on their recipe, never deleted for you.
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* A changed code inside a SHARED wrapper: edit it, or fork it. */}
+                  {staged.divergence?.length > 0 && (
+                    <div className="mt-2 px-2 py-1 rounded" style={{ background: '#fff3cd', border: '1px solid #f0e0a8', color: '#856404' }}>
+                      {staged.divergence.map(d => (
+                        <div key={d.wrapper} className="mb-1">
+                          <MaterialIcon name="warning" size={11} />{' '}
+                          <span style={{ fontFamily: 'monospace' }}>{d.wrapper}</span> is shared by{' '}
+                          {d.sharers.join(', ')}.{' '}
+                          {d.consistent
+                            ? <>Every position changed alike — safe to edit it in place.</>
+                            : <>
+                                Only {d.changedPositions.join(', ')} changed; {d.unchangedPositions.join(', ')} did
+                                not. One wrapper cannot hold both — fork it from the position's recipe
+                                (<em>Duplicate element type</em>).
+                              </>}
+                        </div>
+                      ))}
                     </div>
                   )}
                   {staged.review.length > 0 && (

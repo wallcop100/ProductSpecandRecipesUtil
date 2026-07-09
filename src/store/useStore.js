@@ -401,6 +401,11 @@ const useStore = create((set, get) => ({
   // it). Surfaced as a banner; a refusal is always better than a blank ContextRef.
   recipeError: null,
 
+  // The Form's captures: what the imported spreadsheet says each PositionType uses.
+  // Persisted per project (pref `form_captures`) so the Side-by-Side pane renders
+  // after a reload without re-importing. null = no Form template attached.
+  formCaptures: null,
+
   // Undo/redo history — snapshots of { recipes, psRows, rsChanges, psChanges }
   past: [],
   future: [],
@@ -444,6 +449,7 @@ const useStore = create((set, get) => ({
       tagPalette,
       tagSnapshots,
       tagDrift,
+      formCaptures,
     } = data
 
     const stampedPsRows = stampIds(psRows ?? [])
@@ -492,6 +498,7 @@ const useStore = create((set, get) => ({
       containerReasons: containerInfo.reasons,
       dbWriteEnabled: !!data.dbWriteEnabled,
       localElementTypes: data.localElementTypes ?? [],
+      formCaptures: formCaptures ?? null,
       // Reset transient state
       psChanges: [],
       rsChanges: [],
@@ -1256,6 +1263,38 @@ const useStore = create((set, get) => ({
   },
 
   clearRecipeError() { set({ recipeError: null }) },
+
+  // -------------------------------------------------------------------------
+  // Form captures — what the imported spreadsheet says each PositionType uses
+  // -------------------------------------------------------------------------
+
+  /**
+   * saveFormCaptures(captures) — persist the Form's spec for this project.
+   *
+   * Keyed by the RESOLVED PositionTypeRef (see ptResolve: the Form says C01, the
+   * recipe lives on C01r). Without this the import's knowledge dies with the
+   * screen — the prefilled rows carry `_origin:'form'` in memory only.
+   */
+  async saveFormCaptures(captures) {
+    const { projectId } = get()
+    set({ formCaptures: captures })
+    if (projectId != null) {
+      await window.electronAPI.db.setPref(projectId, 'form_captures', JSON.stringify(captures))
+    }
+  },
+
+  async clearFormCaptures() {
+    const { projectId } = get()
+    set({ formCaptures: null })
+    if (projectId != null) {
+      await window.electronAPI.db.setPref(projectId, 'form_captures', JSON.stringify(null))
+    }
+  },
+
+  /** The Form's entries for one PositionType, or [] when it says nothing about it. */
+  formEtsForPosition(posRef) {
+    return get().formCaptures?.byPosition?.[posRef] ?? []
+  },
 
   /**
    * moveRecipeRowToSection(posRef, rowId, section)
@@ -2455,9 +2494,26 @@ const useStore = create((set, get) => ({
 
   /**
    * duplicateET(etRef, newRef, posRef)
+   *
    * Forks the source ET's internal recipe under newRef for a SINGLE position
-   * (posRef) — the position the user is working on. Other positions that use
-   * the source ET are untouched. Opens the new ET for editing.
+   * (posRef) — the position the user is working on. Other positions that use the
+   * source ET are untouched. Opens the new ET for editing.
+   *
+   * Three things must happen, and only the first used to:
+   *
+   *   1. clone the source's internals under `newRef` for this position
+   *   2. REPOINT this position's position-level row to `newRef`. Without this the
+   *      position still uses the old wrapper, `containerForPosition` still resolves
+   *      to it, and the clone is filed under a wrapper nobody uses — the fork
+   *      silently does nothing. (See recipePresence.js: containment is strict.)
+   *   3. drop this position's now-stale projections of the OLD wrapper's internals
+   *
+   * On (3): parseRs duplicates each internal row once per position that uses the
+   * wrapper as its design element, so those copies SHARE one `_row_num`. They are
+   * projections of a single sheet row, not rows this position owns. Soft-deleting
+   * them would write IsDeleted=Y to the shared row and strip the ingredient from
+   * every other position too. So they are dropped from `recipes` only — never
+   * queued as a delete.
    */
   duplicateET(etRef, newRef, posRef) {
     const { recipes, activePositionRef } = get()
@@ -2465,31 +2521,56 @@ const useStore = create((set, get) => ({
     const trimmedRef = (newRef || '').trim()
     if (!etRef || !trimmedRef || !targetPos) return
 
+    const ctxOf = r => r.ContextType || r.contextType
+    const crefOf = r => r.ContextRef || r.contextRef
+    const posOf = r => r.PositionTypeRef || r.positionTypeRef
+    const etOf = r => r.ElementTypeRef || r.elementTypeRef
+
     // Collect unique internal rows for the source ET (deduplicate across position copies)
-    const allETRows = recipes.filter(r =>
-      (r.ContextType || r.contextType) === 'ElementType' &&
-      (r.ContextRef || r.contextRef) === etRef
-    )
+    const allETRows = recipes.filter(r => ctxOf(r) === 'ElementType' && crefOf(r) === etRef)
     const seen = new Set()
     const uniqueRows = allETRows.filter(r => {
-      const key = `${r.ElementTypeRef || r.elementTypeRef}-${r.RecipeIndex ?? r.recipeIndex}`
+      const key = `${etOf(r)}-${r.RecipeIndex ?? r.recipeIndex}`
       if (seen.has(key)) return false
       seen.add(key); return true
     })
 
+    // 1. the clone
     const newRows = uniqueRows.map(row => ({
       ...row,
       ContextRef: trimmedRef, contextRef: trimmedRef,
       PositionTypeRef: targetPos, positionTypeRef: targetPos,
+      _row_num: undefined,          // a fresh row: appended, never an edit of the source
       _id: uuidv4(),
     }))
 
-    const newChanges = newRows.map(row => ({
-      _id: row._id, positionTypeRef: row.PositionTypeRef, action: 'upsert', row,
-    }))
+    // 2. repoint this position onto the fork
+    const repointed = recipes
+      .filter(r => posOf(r) === targetPos && ctxOf(r) === 'PositionType' && etOf(r) === etRef
+        && (r.IsDeleted || r.isDeleted) !== 'Y')
+      .map(r => ({ ...r, ElementTypeRef: trimmedRef, elementTypeRef: trimmedRef }))
+    const repointedById = new Map(repointed.map(r => [r._id, r]))
+
+    // 3. this position's projections of the old wrapper's internals
+    const staleIds = new Set(
+      recipes.filter(r => posOf(r) === targetPos && ctxOf(r) === 'ElementType' && crefOf(r) === etRef)
+        .map(r => r._id)
+    )
+
+    const changes = [
+      ...newRows.map(row => ({ _id: row._id, positionTypeRef: targetPos, action: 'upsert', row })),
+      ...repointed.map(row => ({ _id: row._id, positionTypeRef: targetPos, action: 'upsert', row })),
+    ]
 
     get()._pushHistory()
-    set(s => ({ recipes: [...s.recipes, ...newRows], rsChanges: mergeRsChanges(s.rsChanges, newChanges, s.recipes) }))
+    set(s => ({
+      recipes: [
+        ...s.recipes.filter(r => !staleIds.has(r._id)).map(r => repointedById.get(r._id) || r),
+        ...newRows,
+      ],
+      rsChanges: mergeRsChanges(s.rsChanges, changes, s.recipes),
+    }))
+    get().ensurePSRow(trimmedRef)
     get().openETRecipe(trimmedRef)
   },
 

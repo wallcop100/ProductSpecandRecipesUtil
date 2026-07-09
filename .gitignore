@@ -4,3 +4,4 @@ samplefiles/
 .env
 .env.local
 BUILD_CHECKLIST.md
+*.md

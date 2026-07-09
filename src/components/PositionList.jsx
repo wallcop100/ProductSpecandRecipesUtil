@@ -2,6 +2,7 @@ import React, { useMemo } from 'react'
 import useStore from '../store/useStore'
 import TagBadge from './TagBadge'
 import PositionValidationBadge from './PositionValidationBadge'
+import FormCoverageBadge from './FormCoverageBadge'
 import { positionFamilyOf } from '../utils/positionFamily'
 
 /**
@@ -71,6 +72,7 @@ export default function PositionList({ filter = '' }) {
                 >
                   {ref}
                 </span>
+                <FormCoverageBadge posRef={ref} />
                 <PositionValidationBadge posRef={ref} showOk />
               </div>
 
