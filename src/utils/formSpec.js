@@ -120,6 +120,54 @@ export function formCoverage(recipes, posRef, formEts, containerETRefs) {
   return compareFormToRecipe(recipes, posRef, formEts, containerETRefs).coverage
 }
 
+/**
+ * formWorklist(recipes, formCaptures, containerETRefs) — what is left to reconcile.
+ *
+ * Reconciliation is per-position, but nothing told you WHICH positions still needed
+ * it; you had to open each one and look. Every position the Form speaks about, that
+ * does not yet hold everything the Form specifies — or that still carries a code the
+ * Form has dropped — in ref order.
+ *
+ * `orphans` are counted but never make a position "incomplete": an orphan is a soft
+ * hint, not a defect (see §2(a)). A position with only orphans still appears, because
+ * it needs a look, but its coverage is complete.
+ */
+export function formWorklist(recipes, formCaptures, containerETRefs = new Set()) {
+  const byPosition = formCaptures?.byPosition || {}
+  const orphansBy = formCaptures?.orphansByPosition || {}
+
+  const refs = [...new Set([...Object.keys(byPosition), ...Object.keys(orphansBy)])].sort()
+  const out = []
+  for (const posRef of refs) {
+    const formEts = byPosition[posRef] || []
+    const orphanRefs = orphansBy[posRef] || []
+    const r = compareFormToRecipe(recipes, posRef, formEts, containerETRefs, { orphanRefs })
+    if (r.missing.length === 0 && r.orphaned.length === 0) continue
+    out.push({
+      posRef,
+      coverage: r.coverage,
+      missing: r.missing.length,
+      orphans: r.orphaned.length,
+    })
+  }
+  return out
+}
+
+/** Totals for the header: positions done, positions total, products still missing. */
+export function formProgress(recipes, formCaptures, containerETRefs = new Set()) {
+  const byPosition = formCaptures?.byPosition || {}
+  const total = Object.keys(byPosition).length
+  if (total === 0) return null
+  const work = formWorklist(recipes, formCaptures, containerETRefs)
+  const incomplete = work.filter(w => w.missing > 0).length
+  return {
+    total,
+    complete: total - incomplete,
+    missing: work.reduce((n, w) => n + w.missing, 0),
+    orphans: work.reduce((n, w) => n + w.orphans, 0),
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Re-import: what changed since last time
 // ---------------------------------------------------------------------------

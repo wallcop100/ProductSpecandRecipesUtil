@@ -164,6 +164,8 @@ function resetStore(overrides = {}) {
     loadError: null,
     formCaptures: null,
     recipeError: null,
+    importDraft: null,
+    pendingScreen: null,
     ...overrides,
   })
 }
@@ -1424,5 +1426,101 @@ describe('form captures persist per project', () => {
     await useStore.getState().saveFormCaptures(captures)
     expect(useStore.getState().formCaptures).toEqual(captures)
     expect(window.electronAPI.db.setPref).not.toHaveBeenCalled()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// The import draft — the wizard used to destroy all its work on Back
+// ---------------------------------------------------------------------------
+describe('import draft survives leaving the wizard', () => {
+  const draft = {
+    version: 1,
+    source: { name: 'Form V3.6.xlsx', sheet: 'PositionTypeSpec' },
+    step: 'review',
+    map: { pt: 'PositionTypeRef', code: 'ProductCode', mfr: '', exclude: '', context: [] },
+    rows: [{ id: 0, rawText: 'Tape LL240272024', positionType: 'C01', confirmed: true, overrides: { 1: 'code' }, noteOverride: {} }],
+    rules: { tape: 'note' },
+    assignments: { LL240272024: 'ET-TAPE-01' },
+    idx: 18,
+    resolutions: [], refOverrides: {}, keptSeparate: [], dirStats: { forward: 1, backward: 0 },
+  }
+
+  beforeEach(() => {
+    resetStore()
+    window.electronAPI.db.setPref = vi.fn().mockResolvedValue(undefined)
+  })
+
+  test('saveImportDraft sets state and persists as JSON', async () => {
+    await useStore.getState().saveImportDraft(draft)
+    expect(useStore.getState().importDraft).toEqual(draft)
+    expect(window.electronAPI.db.setPref).toHaveBeenCalledWith(PROJECT_ID, 'form_import_draft', JSON.stringify(draft))
+  })
+
+  test('clearImportDraft wipes it — staging means the work has landed', async () => {
+    resetStore({ importDraft: draft })
+    await useStore.getState().clearImportDraft()
+    expect(useStore.getState().importDraft).toBeNull()
+    expect(window.electronAPI.db.setPref).toHaveBeenCalledWith(PROJECT_ID, 'form_import_draft', 'null')
+  })
+
+  test('the draft carries decisions, never derived tokens or roles', () => {
+    // makeRow rebuilds tokens/roles from rawText; persisting them would bloat the pref.
+    const row = draft.rows[0]
+    expect(row).not.toHaveProperty('tokens')
+    expect(row).not.toHaveProperty('roles')
+    expect(row.rawText).toBeTruthy()
+  })
+
+  test('no project open: state changes, nothing is persisted', async () => {
+    resetStore({ projectId: null })
+    await useStore.getState().saveImportDraft(draft)
+    expect(useStore.getState().importDraft).toEqual(draft)
+    expect(window.electronAPI.db.setPref).not.toHaveBeenCalled()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// One-shot screen request (the pane is nested too deep to reach App directly)
+// ---------------------------------------------------------------------------
+describe('requestScreen', () => {
+  beforeEach(() => resetStore())
+
+  test('sets and clears a pending screen', () => {
+    expect(useStore.getState().pendingScreen).toBeNull()
+    useStore.getState().requestScreen('product-code-import')
+    expect(useStore.getState().pendingScreen).toBe('product-code-import')
+    useStore.getState().consumePendingScreen()
+    expect(useStore.getState().pendingScreen).toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// dismissDivergence — the fork question for a wrapper is settled
+// ---------------------------------------------------------------------------
+describe('dismissDivergence', () => {
+  const captures = {
+    version: 1, byPosition: {},
+    divergence: [
+      { wrapper: 'ET-LIN-01', consistent: false, sharers: ['C01r', 'C03r'] },
+      { wrapper: 'ET-DL-04', consistent: true, sharers: ['A02m'] },
+    ],
+  }
+  beforeEach(() => {
+    resetStore({ formCaptures: captures })
+    window.electronAPI.db.setPref = vi.fn().mockResolvedValue(undefined)
+  })
+
+  test('removes only that wrapper, and re-persists', async () => {
+    await useStore.getState().dismissDivergence('ET-LIN-01')
+    expect(useStore.getState().formCaptures.divergence.map(d => d.wrapper)).toEqual(['ET-DL-04'])
+    expect(window.electronAPI.db.setPref).toHaveBeenCalledWith(
+      PROJECT_ID, 'form_captures', expect.stringContaining('ET-DL-04')
+    )
+  })
+
+  test('a no-op when there is nothing to dismiss', async () => {
+    resetStore({ formCaptures: { version: 1, byPosition: {} } })
+    await useStore.getState().dismissDivergence('ET-LIN-01')
+    expect(useStore.getState().formCaptures.divergence).toBeUndefined()
   })
 })

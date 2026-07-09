@@ -5,6 +5,7 @@ import {
   clusterSimilar, rowConfidence, sortByConfidence, setNoteOverride, segmentsOf,
   pendingResolutions, groupKey, productKey, duplicateProductKeys, findProductET,
 } from '../../src/utils/productCodes.js'
+import { applyRules } from '../../src/utils/codeLearning.js'
 
 // Real strings from samplefiles/5642 - Form V3.6.xlsx, sheet PositionTypeSpec.
 const REAL = {
@@ -503,5 +504,57 @@ describe('product identity', () => {
       expect(classify('ABC-EM', { master: m }, 'Orluna').status).toBe('amber')
       expect(classify('ABC-EM', { master: m }, 'Phos').status).toBe('grey')
     })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// A row rebuilds exactly from its decisions — what the import draft relies on
+// ---------------------------------------------------------------------------
+describe('a row is fully reconstructible from rawText + overrides', () => {
+  const rules = { tape: 'note', '+': 'discard' }
+
+  /** Exactly what saveImportDraft persists. */
+  const serialise = row => ({
+    id: row.id, rawText: row.rawText, positionType: row.positionType,
+    manufacturer: row.manufacturer, context: row.context,
+    overrides: row.overrides, noteOverride: row.noteOverride, confirmed: row.confirmed,
+  })
+  /** Exactly what resumeDraft does. */
+  const rehydrate = d => ({
+    ...makeRow(d.id, d.rawText, { positionType: d.positionType, manufacturer: d.manufacturer, context: d.context }),
+    overrides: d.overrides || {}, noteOverride: d.noteOverride || {}, confirmed: !!d.confirmed,
+  })
+
+  test('tokens, roles and captures survive a round trip through JSON', () => {
+    let row = makeRow(3, REAL.D02, { positionType: 'C01', manufacturer: 'Nichia', context: { Finish: 'Black' } })
+    row = mark(row, 'code', 'NF240272009', '021-7309-02')
+    // the paint is recorded as overrides, which is what actually persists
+    row = { ...row, overrides: { [idxOf(row, 'NF240272009')]: 'code', [idxOf(row, '021-7309-02')]: 'code' }, confirmed: true }
+
+    const back = rehydrate(JSON.parse(JSON.stringify(serialise(row))))
+    const [a] = applyRules([row], rules)
+    const [b] = applyRules([back], rules)
+
+    expect(b.tokens).toEqual(a.tokens)
+    expect(b.roles).toEqual(a.roles)
+    expect(deriveCodes(b)).toEqual(deriveCodes(a))
+    expect(b.confirmed).toBe(true)
+    expect(b.positionType).toBe('C01')
+    expect(b.manufacturer).toBe('Nichia')
+    expect(b.context).toEqual({ Finish: 'Black' })
+  })
+
+  test('an edited note survives, since noteOverride is a decision', () => {
+    let row = makeRow(0, 'Tape NF240272009')
+    row = { ...row, overrides: { 1: 'code' } }
+    row = setNoteOverride(row, 'NF240272009', 'trimmed note')
+    const back = rehydrate(JSON.parse(JSON.stringify(serialise(row))))
+    expect(back.noteOverride).toEqual({ NF240272009: 'trimmed note' })
+  })
+
+  test('the serialised row carries no derived state', () => {
+    const s = serialise(makeRow(0, REAL.C07))
+    expect(s).not.toHaveProperty('tokens')
+    expect(s).not.toHaveProperty('roles')
   })
 })

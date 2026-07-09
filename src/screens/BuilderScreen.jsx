@@ -19,6 +19,7 @@ import DuplicateETModal from '../components/DuplicateETModal'
 import ConnectorWizardModal from '../components/ConnectorWizardModal'
 import Breadcrumbs from '../components/Breadcrumbs'
 import ProjectIdPill from '../components/ProjectIdPill'
+import FormProgressChip from '../components/FormProgressChip'
 import ElementPalette from '../components/ElementPalette'
 import ValidationPanel from '../components/ValidationPanel'
 import TemplatePicker from '../components/TemplatePicker'
@@ -80,6 +81,13 @@ export default function BuilderScreen({
   const [showLinWizard, setShowLinWizard] = useState(false)
   const [showReview, setShowReview] = useState(false)
   const [reviewInitialRefs, setReviewInitialRefs] = useState(null)
+
+  /** Step through the positions the Form is not yet satisfied on. */
+  function startReconcile(refs) {
+    if (!refs?.length) return
+    setReviewInitialRefs(refs)
+    setShowReview(true)
+  }
 
   // Arriving with positions to review (e.g. from the product-code import) opens
   // ReviewModal straight into them; consume once so it doesn't reopen on its own.
@@ -400,6 +408,9 @@ export default function BuilderScreen({
         {projectNumber && (
           <ProjectIdPill number={projectNumber} configName={configName} size="sm" className="me-1" />
         )}
+        {/* Silent unless a Form template is attached. "Reconcile →" steps through
+            every position that still misses a Form product. */}
+        <FormProgressChip onReconcile={startReconcile} />
         <IconButton variant="outline-secondary" bsSize="sm" icon="dashboard_customize"
           title="Template Editor" onClick={onOpenTemplateEditor} />
         <IconButton variant="outline-secondary" bsSize="sm" icon={ACTION_ICONS.productSpec}

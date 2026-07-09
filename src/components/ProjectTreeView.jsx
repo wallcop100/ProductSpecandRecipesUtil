@@ -9,6 +9,8 @@ import IconButton from './IconButton'
 import PositionValidationBadge from './PositionValidationBadge'
 import ConnectorSuggestions from './ConnectorSuggestions'
 import CollectionBadge from './CollectionBadge'
+import FormCoverageBadge from './FormCoverageBadge'
+import { formWorklist } from '../utils/formSpec'
 import EmptyPositionWizard from './EmptyPositionWizard'
 import TagDriftWizard from './TagDriftWizard'
 import { colorsForType, ICONS, ACTION_ICONS } from '../utils/entityStyle'
@@ -38,6 +40,7 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
   const tagDrift = useStore(s => s.tagDrift)
 
   const [filter, setFilter] = useState('')
+  const [formOnly, setFormOnly] = useState(false)   // "Form incomplete" chip
   const [activeTags, setActiveTags] = useState([])
   const [showEmptyWizard, setShowEmptyWizard] = useState(false)
   const [showDriftWizard, setShowDriftWizard] = useState(false)
@@ -139,12 +142,21 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
   }
 
   // ---- Overview list ----
+  // Positions the Form is not yet satisfied on. Silent when no Form is attached.
+  const formCaptures = useStore(s => s.formCaptures)
+  const containerETRefs = useStore(s => s.containerETRefs)
+  const incompleteRefs = useMemo(
+    () => new Set(formWorklist(recipes, formCaptures, containerETRefs).map(w => w.posRef)),
+    [recipes, formCaptures, containerETRefs]
+  )
+
   const q = filter.trim().toLowerCase()
   const visible = positionTypes.filter(pt => {
     const ref = pt.PositionTypeRef || ''
     const name = pt.Name || pt.name || ''
     const tags = positionUI[ref]?.tags || []
     if (activeTags.length > 0 && !activeTags.every(t => tags.includes(t))) return false
+    if (formOnly && !incompleteRefs.has(ref)) return false
     if (!q) return true
     return ref.toLowerCase().includes(q) ||
       name.toLowerCase().includes(q) ||
@@ -207,6 +219,8 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
           />
         )}
         <CollectionBadge posRef={ref} />
+        {/* Silent unless a Form template is attached and mentions this position. */}
+        <FormCoverageBadge posRef={ref} />
         <div className="flex-grow-1" />
         {count > 0
           ? <span className="badge bg-light text-dark border" style={{ fontSize: 10 }}>{count} {count === 1 ? 'row' : 'rows'}</span>
@@ -276,6 +290,13 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
               tagOptions={availableTags}
               activeTags={activeTags}
               onToggleTag={toggleTag}
+              extraChips={formCaptures ? [{
+                key: 'form-incomplete',
+                label: `Form incomplete${incompleteRefs.size ? ` (${incompleteRefs.size})` : ''}`,
+                active: formOnly,
+                onToggle: () => setFormOnly(v => !v),
+                title: 'Only positions missing a product the Form specifies, or holding one it has dropped',
+              }] : []}
             />
           </div>
         </div>

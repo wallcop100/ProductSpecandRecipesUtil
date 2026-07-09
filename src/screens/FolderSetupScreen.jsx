@@ -208,7 +208,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
       try { localElementTypes = await window.electronAPI.db.getLocalETs(projectId) || [] } catch { /* none */ }
 
       // 3. Load SQLite data
-      const [positionUIArr, templates, slotMappings, containerETPref, containerExcludePref, etCollections, ignoredFamiliesPref, tagRulesPref, tagPalettePref, tagSnapshotsPref, favorites, tagColorsPref, formCapturesPref] = await Promise.all([
+      const [positionUIArr, templates, slotMappings, containerETPref, containerExcludePref, etCollections, ignoredFamiliesPref, tagRulesPref, tagPalettePref, tagSnapshotsPref, favorites, tagColorsPref, formCapturesPref, importDraftPref] = await Promise.all([
         window.electronAPI.db.getAllPositionUI(projectId),
         window.electronAPI.db.getAllTemplates(projectId),
         window.electronAPI.db.getAllSlotMappings(projectId), // already { templateId: { slotKey: ref } }
@@ -222,6 +222,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
         window.electronAPI.db.getFavorites(),
         window.electronAPI.db.getPref(projectId, 'tag_colors'),
         window.electronAPI.db.getPref(projectId, 'form_captures'),
+        window.electronAPI.db.getPref(projectId, 'form_import_draft'),
       ])
 
       let tagColors = {}
@@ -230,6 +231,10 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
       // The Form's spec, captured at import. null when no Form template is attached.
       let formCaptures = null
       try { formCaptures = formCapturesPref ? JSON.parse(formCapturesPref) : null } catch { formCaptures = null }
+
+      // An unfinished import, offered as "Resume?" on the import screen.
+      let importDraft = null
+      try { importDraft = importDraftPref ? JSON.parse(importDraftPref) : null } catch { importDraft = null }
 
       // 3b. Tag rules + palette. Seed from bundled defaults the first time a
       // config is opened, then persist so each config owns its own copy.
@@ -319,6 +324,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
         tagDrift,
         tagColors,
         formCaptures,
+        importDraft,
         dbWriteEnabled,
         localElementTypes,
       })

@@ -13,7 +13,7 @@ import { ACTION_ICONS } from '../utils/entityStyle'
  * for the current position (posRef). The source ET and other positions that use
  * it are left untouched.
  */
-export default function DuplicateETModal({ show, etRef, posRef, onClose }) {
+export default function DuplicateETModal({ show, etRef, posRef, onClose, onDuplicated }) {
   const elementTypes = useStore(s => s.elementTypes)
   const psRows = useStore(s => s.psRows)
   const recipes = useStore(s => s.recipes)
@@ -54,6 +54,7 @@ export default function DuplicateETModal({ show, etRef, posRef, onClose }) {
   function handleConfirm() {
     if (!valid) return
     duplicateET(etRef, trimmed, posRef)
+    onDuplicated?.(trimmed)   // only on a real fork, never on cancel
     onClose()
   }
 

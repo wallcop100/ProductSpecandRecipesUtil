@@ -16,14 +16,18 @@ import MaterialIcon from './MaterialIcon'
  *   familyOptions? string[]  — when present, renders a select
  *   family?        string    — selected family ('' = all)
  *   onFamily?      (value) => void
+ *   extraChips?    [{ key, label, active, onToggle, title, variant }]
+ *                            — non-tag toggles (e.g. "Form incomplete"), same row
  *   compact?       boolean   — tighter spacing for sidebars
  */
 export default function FilterBar({
   text, onText, placeholder = 'Filter…',
   tagOptions, activeTags = [], onToggleTag,
   familyOptions, family = '', onFamily,
+  extraChips = [],
   compact = false,
 }) {
+  const hasChips = (tagOptions && tagOptions.length > 0) || extraChips.length > 0
   return (
     <div className={compact ? 'px-2 py-2' : 'px-0'} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       <div className="d-flex align-items-center gap-2">
@@ -63,9 +67,21 @@ export default function FilterBar({
         )}
       </div>
 
-      {tagOptions && tagOptions.length > 0 && (
+      {hasChips && (
         <div className="d-flex flex-wrap gap-1">
-          {tagOptions.map(tag => {
+          {extraChips.map(c => (
+            <button
+              key={c.key}
+              type="button"
+              className={`btn btn-sm ${c.active ? (c.variant || 'btn-warning') : 'btn-outline-secondary'}`}
+              style={{ fontSize: 10, padding: '0px 6px', borderRadius: 10 }}
+              onClick={c.onToggle}
+              title={c.title}
+            >
+              {c.label}
+            </button>
+          ))}
+          {(tagOptions || []).map(tag => {
             const active = activeTags.includes(tag)
             return (
               <button

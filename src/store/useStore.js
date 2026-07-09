@@ -406,6 +406,15 @@ const useStore = create((set, get) => ({
   // after a reload without re-importing. null = no Form template attached.
   formCaptures: null,
 
+  // An in-progress product-code import. All the wizard's state used to live in the
+  // screen's useState, so Back or the Review hand-off destroyed it silently. Saved
+  // on a debounce, offered as "Resume?", cleared once staging lands the work.
+  importDraft: null,
+
+  // A one-shot screen request from deep in the tree (App consumes it). Mirrors
+  // pendingReviewRefs — the pane is nested too far to reach App's navigateTo.
+  pendingScreen: null,
+
   // Undo/redo history — snapshots of { recipes, psRows, rsChanges, psChanges }
   past: [],
   future: [],
@@ -450,6 +459,7 @@ const useStore = create((set, get) => ({
       tagSnapshots,
       tagDrift,
       formCaptures,
+      importDraft,
     } = data
 
     const stampedPsRows = stampIds(psRows ?? [])
@@ -499,6 +509,8 @@ const useStore = create((set, get) => ({
       dbWriteEnabled: !!data.dbWriteEnabled,
       localElementTypes: data.localElementTypes ?? [],
       formCaptures: formCaptures ?? null,
+      importDraft: importDraft ?? null,
+      pendingScreen: null,
       // Reset transient state
       psChanges: [],
       rsChanges: [],
@@ -1294,6 +1306,49 @@ const useStore = create((set, get) => ({
   /** The Form's entries for one PositionType, or [] when it says nothing about it. */
   formEtsForPosition(posRef) {
     return get().formCaptures?.byPosition?.[posRef] ?? []
+  },
+
+  /**
+   * saveImportDraft(draft) — the wizard's decisions, not its derived state.
+   *
+   * `rows` keep rawText + overrides + confirmed; `tokens` and `roles` are rebuilt by
+   * makeRow/applyRules on resume, so a thousand-row sheet doesn't bloat the pref.
+   * The workbook token is deliberately absent: it is an in-memory id that cannot
+   * survive a reload, and a draft resumed at `review` never re-reads the sheet.
+   */
+  async saveImportDraft(draft) {
+    const { projectId } = get()
+    set({ importDraft: draft })
+    if (projectId != null) {
+      await window.electronAPI.db.setPref(projectId, 'form_import_draft', JSON.stringify(draft))
+    }
+  },
+
+  /** The work has landed (or been abandoned). Nothing to resume. */
+  async clearImportDraft() {
+    const { projectId } = get()
+    set({ importDraft: null })
+    if (projectId != null) {
+      await window.electronAPI.db.setPref(projectId, 'form_import_draft', JSON.stringify(null))
+    }
+  },
+
+  /** Ask App to change screen. One-shot: App clears it on consume. */
+  requestScreen(name) { set({ pendingScreen: name }) },
+  consumePendingScreen() { set({ pendingScreen: null }) },
+
+  /**
+   * dismissDivergence(wrapper) — the fork question for this wrapper is settled
+   * (forked, or accepted as-is). A re-import recomputes it from the fresh diff.
+   */
+  async dismissDivergence(wrapper) {
+    const { formCaptures } = get()
+    if (!formCaptures?.divergence?.length) return
+    const next = {
+      ...formCaptures,
+      divergence: formCaptures.divergence.filter(d => d.wrapper !== wrapper),
+    }
+    await get().saveFormCaptures(next)
   },
 
   /**

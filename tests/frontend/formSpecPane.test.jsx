@@ -3,6 +3,7 @@ import { render, screen, fireEvent, within } from '@testing-library/react'
 
 // Augment jsdom's window — never replace it, or React has no DOM to render into.
 window.electronAPI = { db: { setPref: vi.fn().mockResolvedValue(undefined) } }
+window.confirm = vi.fn(() => true)
 vi.mock('../../src/utils/backend.js', () => ({
   importFiles: vi.fn(), detectFiles: vi.fn(), readSheet: vi.fn(),
   registerFile: vi.fn(), setActiveDirectory: vi.fn(), getActiveDirectory: vi.fn(), fileMeta: vi.fn(),
@@ -193,5 +194,109 @@ describe('manufacturer + product code are one identity', () => {
     expect(screen.queryByText('in the spec')).toBeNull()
     expect(screen.getByText('missing from the recipe')).toBeInTheDocument()
     expect(screen.queryByText('ET-OTHER')).toBeNull()
+  })
+})
+
+describe('the attached-Form strip', () => {
+  test('names the workbook and when it was imported', () => {
+    setup({ formCaptures: { ...captures, importedAt: new Date(Date.now() - 2 * 3600e3).toISOString() } })
+    expect(screen.getByText(/5642 - Form V3\.6\.xlsx/)).toBeInTheDocument()
+    expect(screen.getByText(/2h ago/)).toBeInTheDocument()
+  })
+
+  test('Re-import asks App to change screen — the pane is too nested to navigate itself', () => {
+    setup()
+    fireEvent.click(screen.getByText('Re-import'))
+    expect(useStore.getState().pendingScreen).toBe('product-code-import')
+  })
+
+  test('Detach confirms, then clears the captures', () => {
+    setup()
+    fireEvent.click(screen.getByText('Detach'))
+    expect(window.confirm).toHaveBeenCalled()
+    expect(useStore.getState().formCaptures).toBeNull()
+  })
+
+  test('the strip is reachable even when the Form is silent about this position', () => {
+    setup({ formCaptures: { ...captures, byPosition: {}, contextByPosition: {} } })
+    expect(screen.getByText('Detach')).toBeInTheDocument()
+    expect(screen.getByText(/The Form says nothing about C01r/)).toBeInTheDocument()
+  })
+})
+
+describe('the fork decision is durable and actionable', () => {
+  const shared = () => [
+    pos('C01r', 'ET-LIN-01', { IsDesign: 'Y' }),
+    pos('C03r', 'ET-LIN-01', { IsDesign: 'Y' }),
+    inside('C01r', 'ET-LIN-01', 'ET-PROF-01'),
+  ]
+  const withDivergence = {
+    ...captures,
+    divergence: [{
+      wrapper: 'ET-LIN-01', consistent: false,
+      sharers: ['C01r', 'C03r'], changedPositions: ['C01r'], unchangedPositions: ['C03r'],
+    }],
+  }
+
+  test('an inconsistent shared wrapper is surfaced on the position, with a Fork', () => {
+    setup({ recipes: shared(), formCaptures: withDivergence })
+    expect(screen.getByText(/is\s+shared by C01r, C03r/)).toBeInTheDocument()
+    expect(screen.getByText(/Fork it for C01r/)).toBeInTheDocument()
+  })
+
+  test('"Keep shared" settles the question without forking', () => {
+    setup({ recipes: shared(), formCaptures: withDivergence })
+    fireEvent.click(screen.getByText('Keep shared'))
+    expect(useStore.getState().formCaptures.divergence).toEqual([])
+  })
+
+  test('a CONSISTENT wrapper raises no fork question', () => {
+    const caps = { ...captures, divergence: [{ wrapper: 'ET-LIN-01', consistent: true, sharers: ['C01r'] }] }
+    setup({ recipes: shared(), formCaptures: caps })
+    expect(screen.queryByText(/Fork it/)).toBeNull()
+  })
+
+  test('divergence about a wrapper this position does not use is not shown', () => {
+    const caps = { ...captures, divergence: [{ wrapper: 'ET-DL-99', consistent: false, sharers: ['X'], changedPositions: ['X'], unchangedPositions: ['Y'] }] }
+    setup({ recipes: shared(), formCaptures: caps })
+    expect(screen.queryByText(/Fork it/)).toBeNull()
+  })
+})
+
+describe('Next unreconciled', () => {
+  // C01r is complete; C03r still misses the profile.
+  const recipes2 = () => [
+    pos('C01r', 'ET-LIN-01', { IsDesign: 'Y' }), inside('C01r', 'ET-LIN-01', 'ET-PROF-01'),
+    pos('C01r', 'ET-TAPE-01'),
+    pos('C03r', 'ET-LAMP', { IsDesign: 'Y' }),
+  ]
+  const caps = {
+    ...captures,
+    byPosition: {
+      C01r: [{ elementTypeRef: 'ET-PROF-01', code: 'A', manufacturer: 'M' }, { elementTypeRef: 'ET-TAPE-01', code: 'B', manufacturer: 'M' }],
+      C03r: [{ elementTypeRef: 'ET-PROF-01', code: 'A', manufacturer: 'M' }],
+    },
+  }
+
+  test('jumps to the next position the Form is not satisfied on', () => {
+    setup({ recipes: recipes2(), formCaptures: caps })
+    fireEvent.click(screen.getByText(/Next unreconciled/))
+    expect(useStore.getState().activePositionRef).toBe('C03r')
+  })
+
+  test('hidden when everything is reconciled', () => {
+    const done = { ...captures, byPosition: { C01r: [{ elementTypeRef: 'ET-PROF-01', code: 'A' }] } }
+    setup({ recipes: recipes2(), formCaptures: done })
+    expect(screen.queryByText(/Next unreconciled/)).toBeNull()
+  })
+
+  test('hidden in embedded mode — ReviewModal owns its own prev/next', () => {
+    useStore.setState({
+      projectId: 42, recipes: recipes2(), containerETRefs: new Set(['et-lin-01']),
+      formCaptures: caps, psRows: [], elementTypes: [], rsChanges: [], past: [], future: [],
+      activeContextType: 'PositionType', activeETRef: null, recipeError: null, dbWriteEnabled: false,
+    })
+    render(<FormSpecPane posRef="C01r" embedded />)
+    expect(screen.queryByText(/Next unreconciled/)).toBeNull()
   })
 })

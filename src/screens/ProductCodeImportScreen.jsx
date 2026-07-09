@@ -64,6 +64,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   const saveFormCaptures = useStore(s => s.saveFormCaptures)
   const formCaptures = useStore(s => s.formCaptures)
   const containerETRefs = useStore(s => s.containerETRefs)
+  const importDraft = useStore(s => s.importDraft)
+  const saveImportDraft = useStore(s => s.saveImportDraft)
+  const clearImportDraft = useStore(s => s.clearImportDraft)
 
   const [step, setStep] = useState('pick')
   const [busy, setBusy] = useState(false)
@@ -92,6 +95,10 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   const [refOverrides, setRefOverrides] = useState({})
   const [keptSeparate, setKeptSeparate] = useState(new Set())   // dismissed similar-groups
   const [mergingGroup, setMergingGroup] = useState(null)        // codes awaiting one new ET
+  // Identity of the picked workbook. `filepath` is an in-memory token that cannot
+  // survive a reload, so the draft (and the captures) carry this instead.
+  const [source, setSource] = useState(null)
+  const [resumeDismissed, setResumeDismissed] = useState(false)
 
   const knownPTs = useMemo(
     () => new Set(positionTypes.map(p => p.PositionTypeRef || p.positionTypeRef).filter(Boolean)),
@@ -157,6 +164,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     const path = await window.electronAPI?.openXlsxDialog?.()
     if (!path) return
     setFilepath(path)
+    setSource(await fileMeta(path))
     loadWorkbook(path)
   }
 
@@ -196,6 +204,61 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     setStep('review')
     // Teach the dialect from a few covering examples before the queue starts.
     if (built.length >= 3) setPriming(true)
+  }
+
+  // ---- draft ------------------------------------------------------------------
+  // Every decision in this wizard used to live in local state, so Back or the
+  // "Review now" hand-off destroyed forty painted rows without a word. Save the
+  // DECISIONS (not the derived tokens/roles) and offer to resume.
+
+  /** Only from `resolve` onward: earlier steps still need the workbook itself. */
+  const draftable = rows.length > 0 && (step === 'resolve' || step === 'review') && !staged
+
+  const draftFromState = useCallback(() => ({
+    version: 1,
+    source: { ...(source || {}), sheet },
+    step, map, rules, assignments, idx, resolutions, refOverrides, dirStats,
+    keptSeparate: [...keptSeparate],
+    rows: rows.map(r => ({
+      id: r.id, rawText: r.rawText, positionType: r.positionType, manufacturer: r.manufacturer,
+      context: r.context, overrides: r.overrides, noteOverride: r.noteOverride, confirmed: r.confirmed,
+    })),
+  }), [source, sheet, step, map, rules, assignments, idx, resolutions, refOverrides, dirStats, keptSeparate, rows])
+
+  // Debounced: painting a token must not write a pref on every keystroke.
+  useEffect(() => {
+    if (!draftable) return
+    const t = setTimeout(() => { saveImportDraft(draftFromState()) }, 1000)
+    return () => clearTimeout(t)
+  }, [draftable, draftFromState, saveImportDraft])
+
+  /** Rebuild tokens/roles from the raw text — makeRow is the only source of truth. */
+  function resumeDraft(d) {
+    setRows((d.rows || []).map(r => ({
+      ...makeRow(r.id, r.rawText, {
+        positionType: r.positionType, manufacturer: r.manufacturer, context: r.context,
+      }),
+      overrides: r.overrides || {},
+      noteOverride: r.noteOverride || {},
+      confirmed: !!r.confirmed,
+    })))
+    setRules(d.rules || {})
+    setAssignments(d.assignments || {})
+    setIdx(d.idx || 0)
+    setResolutions(d.resolutions || [])
+    setRefOverrides(d.refOverrides || {})
+    setKeptSeparate(new Set(d.keptSeparate || []))
+    setDirStats(d.dirStats || { forward: 0, backward: 0 })
+    setMap(d.map || { pt: '', code: '', mfr: '', exclude: '', context: [] })
+    setSource(d.source || null)
+    setSheet(d.source?.sheet || '')
+    setStaged(null); setUndoSnap(null)
+    setStep(d.step === 'resolve' ? 'resolve' : 'review')   // never back to pick/map: no workbook
+  }
+
+  async function discardDraft() {
+    await clearImportDraft()
+    setResumeDismissed(true)
   }
 
   // ---- review ---------------------------------------------------------------
@@ -550,7 +613,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     //    manual compare the user does whenever the spreadsheet is revised.
     const nextCaptures = {
       version: 1,
-      source: { ...(await fileMeta(filepath) || {}), sheet },
+      source: { ...(source || await fileMeta(filepath) || {}), sheet },
       importedAt: new Date().toISOString(),
       byPosition: Object.fromEntries(byPos),
       contextByPosition,
@@ -569,7 +632,11 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     // A changed code inside a SHARED wrapper is the fork decision (see formSpec).
     const divergence = wrapperDivergence(useStore.getState().recipes, diff, containerETRefs)
 
+    // The fork decision must outlive this screen, which unmounts on "Review now".
+    nextCaptures.divergence = divergence
+
     await saveFormCaptures(nextCaptures)
+    await clearImportDraft()          // the work has landed; nothing to resume
     setStaged({ codes: n, rows: rowsAdded, review: reviewPositions, unrouted, diff, divergence })
   }
 
@@ -591,6 +658,28 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       </div>
 
       {error && <Alert variant="danger" style={{ fontSize: 12 }}>{error}</Alert>}
+
+      {step === 'pick' && importDraft && !resumeDismissed && (
+        <div className="mx-auto mb-4 px-3 py-2 rounded" style={{ maxWidth: 520, background: '#e7f1ff', border: '1px solid #b6d4fe' }}>
+          <div className="fw-semibold d-flex align-items-center gap-1" style={{ fontSize: 13 }}>
+            <MaterialIcon name="history" size={16} /> Resume your import?
+          </div>
+          <div className="text-muted my-1" style={{ fontSize: 12 }}>
+            {importDraft.source?.name && <span style={{ fontFamily: 'monospace' }}>{importDraft.source.name}</span>}
+            {importDraft.source?.name && ' — '}
+            {(importDraft.rows || []).filter(r => r.confirmed).length} of {(importDraft.rows || []).length} rows
+            confirmed. The spreadsheet is not re-read; your painted codes and rules are restored.
+          </div>
+          <div className="d-flex gap-2">
+            <Button size="sm" variant="primary" style={{ fontSize: 11 }} onClick={() => resumeDraft(importDraft)}>
+              Resume
+            </Button>
+            <Button size="sm" variant="outline-secondary" style={{ fontSize: 11 }} onClick={discardDraft}>
+              Start over
+            </Button>
+          </div>
+        </div>
+      )}
 
       {step === 'pick' && (
         <div className="text-center py-5">

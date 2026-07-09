@@ -203,7 +203,7 @@ export default function PositionRecipeEditor({
           </div>
         )}
       </div>
-      {formCaptures && <FormSpecPane posRef={ref} />}
+      {formCaptures && <FormSpecPane posRef={ref} embedded={embedded} />}
       </div>
     </div>
   )

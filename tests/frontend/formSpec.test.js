@@ -1,7 +1,7 @@
 import { describe, test, expect } from 'vitest'
 import {
   formPresence, compareFormToRecipe, formCoverage, classifyExtra,
-  diffCaptures, wrapperDivergence, associations,
+  diffCaptures, wrapperDivergence, associations, formWorklist, formProgress,
 } from '../../src/utils/formSpec.js'
 import { buildPresence } from '../../src/utils/recipePresence.js'
 
@@ -251,5 +251,90 @@ describe('associations — "X consistently has Y"', () => {
   test('no captures, no associations', () => {
     expect(associations(recipes, { byPosition: {} }).size).toBe(0)
     expect(associations(recipes, null).size).toBe(0)
+  })
+})
+
+describe('formWorklist — what is left to reconcile', () => {
+  // C01r holds the profile inside its wrapper; C03r has a plain design element and
+  // holds nothing; D01r is complete. NOTE C03r must NOT share ET-LIN-01 — a shared
+  // wrapper's internals count for every position using it (see below).
+  const recipes = [
+    pos('C01r', 'ET-LIN-01', { IsDesign: 'Y' }), inside('C01r', 'ET-LIN-01', 'ET-PROF-01'),
+    pos('C03r', 'ET-LAMP', { IsDesign: 'Y' }),
+    pos('D01r', 'ET-TAPE-01'),
+  ]
+  const captures = {
+    byPosition: {
+      C01r: [ent('ET-PROF-01', 'A'), ent('ET-TAPE-01', 'B')],   // 1 of 2
+      C03r: [ent('ET-PROF-01', 'A')],                            // 0 of 1
+      D01r: [ent('ET-TAPE-01', 'B')],                            // complete
+    },
+    orphansByPosition: {},
+  }
+
+  test('only incomplete positions appear, ref-sorted', () => {
+    const w = formWorklist(recipes, captures, new Set())
+    expect(w.map(x => x.posRef)).toEqual(['C01r', 'C03r'])
+  })
+
+  test('each entry carries its coverage and how many products are missing', () => {
+    const [c01, c03] = formWorklist(recipes, captures, new Set())
+    expect(c01).toMatchObject({ coverage: { present: 1, total: 2 }, missing: 1, orphans: 0 })
+    expect(c03).toMatchObject({ coverage: { present: 0, total: 1 }, missing: 1 })
+  })
+
+  test('a position with only orphans appears, but its coverage is complete', () => {
+    const caps = { byPosition: { D01r: [ent('ET-TAPE-01', 'B')] }, orphansByPosition: { D01r: ['ET-GONE'] } }
+    const rows = [...recipes, pos('D01r', 'ET-GONE')]
+    const [d] = formWorklist(rows, caps, new Set())
+    expect(d).toMatchObject({ posRef: 'D01r', orphans: 1, missing: 0 })
+    expect(d.coverage).toEqual({ present: 1, total: 1 })
+  })
+
+  test('no Form attached, no worklist', () => {
+    expect(formWorklist(recipes, null, new Set())).toEqual([])
+    expect(formWorklist(recipes, { byPosition: {} }, new Set())).toEqual([])
+  })
+
+  test('everything reconciled, empty worklist', () => {
+    const caps = { byPosition: { D01r: [ent('ET-TAPE-01', 'B')] } }
+    expect(formWorklist(recipes, caps, new Set())).toEqual([])
+  })
+
+  test('a Form ET inside the wrapper counts as present here too', () => {
+    // C01r's profile lives inside ET-LIN-01: it must not appear as missing.
+    const caps = { byPosition: { C01r: [ent('ET-PROF-01', 'A')] } }
+    expect(formWorklist(recipes, caps, new Set())).toEqual([])
+  })
+
+  test('a SHARED wrapper satisfies every position that uses it', () => {
+    // C03r uses ET-LIN-01 too; the profile inside it is genuinely present for C03r,
+    // even though the row is stored under C01r. Neither position is on the worklist.
+    const shared = [...recipes.filter(r => r.PositionTypeRef !== 'C03r'), pos('C03r', 'ET-LIN-01', { IsDesign: 'Y' })]
+    const caps = { byPosition: { C01r: [ent('ET-PROF-01', 'A')], C03r: [ent('ET-PROF-01', 'A')] } }
+    expect(formWorklist(shared, caps, new Set())).toEqual([])
+  })
+})
+
+describe('formProgress — the header roll-up', () => {
+  const recipes = [pos('C01r', 'ET-PROF-01'), pos('C03r', 'ET-X')]
+  const captures = {
+    byPosition: { C01r: [ent('ET-PROF-01', 'A')], C03r: [ent('ET-PROF-01', 'A'), ent('ET-TAPE-01', 'B')] },
+    orphansByPosition: {},
+  }
+
+  test('counts positions complete and products still missing', () => {
+    expect(formProgress(recipes, captures, new Set())).toEqual({ total: 2, complete: 1, missing: 2, orphans: 0 })
+  })
+
+  test('silent when no Form is attached', () => {
+    expect(formProgress(recipes, null, new Set())).toBeNull()
+    expect(formProgress(recipes, { byPosition: {} }, new Set())).toBeNull()
+  })
+
+  test('orphans are counted but never make a position incomplete', () => {
+    const caps = { byPosition: { C01r: [ent('ET-PROF-01', 'A')] }, orphansByPosition: { C01r: ['ET-X'] } }
+    const rows = [pos('C01r', 'ET-PROF-01'), pos('C01r', 'ET-X')]
+    expect(formProgress(rows, caps, new Set())).toEqual({ total: 1, complete: 1, missing: 0, orphans: 1 })
   })
 })

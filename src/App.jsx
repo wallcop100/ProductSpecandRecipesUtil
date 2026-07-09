@@ -47,6 +47,17 @@ export default function App() {
     setActiveScreen(screen)
   }
 
+  // A one-shot screen request from deep in the tree. FormSpecPane sits four levels
+  // down (and again inside ReviewModal), so it cannot reach navigateTo through
+  // props. Same shape as the reviewPositionRefs hand-off above.
+  const pendingScreen = useStore(s => s.pendingScreen)
+  const consumePendingScreen = useStore(s => s.consumePendingScreen)
+  useEffect(() => {
+    if (!pendingScreen) return
+    navigateTo(pendingScreen)
+    consumePendingScreen()
+  }, [pendingScreen, consumePendingScreen])
+
   return (
     <div className={debugIds ? 'debug-ids' : ''} style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <FileWatchBanner />
