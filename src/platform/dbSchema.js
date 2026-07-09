@@ -1,11 +1,14 @@
 /**
  * dbSchema.js — the project database: schema, migrations and queries.
  *
- * Formerly `electron/db.js`, running on better-sqlite3. **The SQL is unchanged**;
- * only the connection is injected. `db` is any object with the better-sqlite3
- * shape (`prepare` / `exec` / `pragma` / `transaction`) — in the browser that is
- * the sql.js shim in `sqlShim.js`, so all 45 prepared statements keep their
- * exact semantics rather than being re-derived over IndexedDB.
+ * Formerly `electron/db.js`, running on better-sqlite3. The connection is injected:
+ * `db` is any object with the better-sqlite3 shape (`prepare` / `exec` / `pragma` /
+ * `transaction`) — in the browser that is the sql.js shim in `sqlShim.js`, so all
+ * 45 prepared statements keep their exact semantics rather than being re-derived
+ * over IndexedDB.
+ *
+ * The SQL was carried over verbatim, with one later exception: the two ORDER BY
+ * last_opened queries gained an `id DESC` tie-break (see getConfigsForFolder).
  */
 
 let db = null
@@ -244,10 +247,16 @@ function getProject(folderPath, configName = 'Base') {
     .get(folderPath, configName || 'Base') || null
 }
 
-/** All configs saved for a folder, most-recently-opened first. */
+/**
+ * All configs saved for a folder, most-recently-opened first.
+ *
+ * `last_opened` is an ISO string with millisecond precision, so two rows written in
+ * the same millisecond tie and SQLite may return them in either order. `id DESC`
+ * breaks the tie by insertion order, which is what the timestamp meant anyway.
+ */
 function getConfigsForFolder(folderPath) {
   return getDb()
-    .prepare('SELECT * FROM projects WHERE folder_path = ? ORDER BY last_opened DESC')
+    .prepare('SELECT * FROM projects WHERE folder_path = ? ORDER BY last_opened DESC, id DESC')
     .all(folderPath)
 }
 
@@ -264,10 +273,11 @@ function deleteProject(projectId) {
   return true
 }
 
+/** The most recently opened config. `id DESC` breaks a same-millisecond tie. */
 function getLastProject() {
   return (
     getDb()
-      .prepare('SELECT * FROM projects WHERE last_opened IS NOT NULL ORDER BY last_opened DESC LIMIT 1')
+      .prepare('SELECT * FROM projects WHERE last_opened IS NOT NULL ORDER BY last_opened DESC, id DESC LIMIT 1')
       .get() || null
   )
 }

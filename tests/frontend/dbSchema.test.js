@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach } from 'vitest'
+import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest'
 import initSqlJs from 'sql.js'
 import path from 'node:path'
 import { wrapSqlJs } from '../../src/platform/sqlShim.js'
@@ -67,6 +67,32 @@ describe('named (@name) and positional (?) binding both work', () => {
     schema.upsertProject('/proj/a', 'Base')
     schema.upsertProject('/proj/b', 'Base')
     expect(schema.getLastProject().folder_path).toBe('/proj/b')
+  })
+
+  /**
+   * last_opened is an ISO string with millisecond precision, so two projects opened
+   * in the same millisecond tie and SQLite may return either first. This suite
+   * failed about half the time until `id DESC` broke the tie. Freeze the clock so
+   * the tie is guaranteed, rather than depending on how fast the machine is.
+   */
+  describe('a tie on last_opened resolves by insertion order', () => {
+    let clock
+    beforeEach(() => {
+      clock = vi.spyOn(Date.prototype, 'toISOString').mockReturnValue('2026-01-01T00:00:00.000Z')
+    })
+    afterEach(() => clock.mockRestore())
+
+    test('getLastProject picks the later insert when the timestamps are identical', () => {
+      schema.upsertProject('/proj/a', 'Base')
+      schema.upsertProject('/proj/b', 'Base')
+      expect(schema.getLastProject().folder_path).toBe('/proj/b')
+    })
+
+    test('getConfigsForFolder lists the later insert first', () => {
+      schema.upsertProject('/proj/a', 'Base')
+      schema.upsertProject('/proj/a', 'Alt')
+      expect(schema.getConfigsForFolder('/proj/a').map(c => c.config_name)).toEqual(['Alt', 'Base'])
+    })
   })
 })
 
