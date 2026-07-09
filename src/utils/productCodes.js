@@ -210,16 +210,71 @@ export function promoteNoteToCode(row, tokenIdx) {
 export const norm = c => String(c || '').trim().toUpperCase()
 
 // ---------------------------------------------------------------------------
+// Product identity
+//
+// A product is (MANUFACTURER, PRODUCT CODE) — never the code alone. Codes are only
+// unique inside a maker's catalogue: this project's Product Spec has "PLASTER IN
+// KIT" from both Orluna and Phos, which are two different things to buy. Treating
+// the code as the identity reports that as a duplicate, which it is not.
+// ---------------------------------------------------------------------------
+
+/** The identity of a product. Blank manufacturer is a value, not a wildcard. */
+export const productKey = (manufacturer, code) => `${norm(manufacturer)} ${norm(code)}`
+
+/** A code carrying no product identity — nothing to compare. */
+const notAProduct = code => !norm(code) || norm(code) === 'N/A'
+
+const mfrOf = r => r.Manufacturer || r.manufacturer || ''
+const codeOf = r => r.ProductCode || r.productCode || ''
+const etOfRow = r => r.ElementTypeRef || r.elementTypeRef || ''
+
+/**
+ * The product identities that appear on more than one live spec row — a genuine
+ * duplicate, i.e. the SAME maker's SAME code entered twice.
+ */
+export function duplicateProductKeys(psRows) {
+  const counts = new Map()
+  for (const r of psRows || []) {
+    if ((r.IsDeleted || r.isDeleted) === 'Y') continue
+    if (notAProduct(codeOf(r))) continue
+    const k = productKey(mfrOf(r), codeOf(r))
+    counts.set(k, (counts.get(k) || 0) + 1)
+  }
+  return new Set([...counts].filter(([, n]) => n > 1).map(([k]) => k))
+}
+
+/**
+ * findProductET(psRows, manufacturer, code) → the ElementType already specified for
+ * this product, or null.
+ *
+ * The shopping-list lookup: you have a maker and a code, and the spec may already
+ * name the thing you want. Exact identity wins. Failing that, a code matching
+ * exactly one row is unambiguous enough to offer — but a code shared by two makers
+ * is not, and returns null rather than guessing.
+ */
+export function findProductET(psRows, manufacturer, code) {
+  if (notAProduct(code)) return null
+  const live = (psRows || []).filter(r => (r.IsDeleted || r.isDeleted) !== 'Y' && etOfRow(r))
+  const key = productKey(manufacturer, code)
+
+  const exact = live.find(r => productKey(mfrOf(r), codeOf(r)) === key)
+  if (exact) return etOfRow(exact)
+
+  const sameCode = live.filter(r => norm(codeOf(r)) === norm(code))
+  return sameCode.length === 1 ? etOfRow(sameCode[0]) : null
+}
+
+// ---------------------------------------------------------------------------
 // Batch-level derivation — the distinct list and the holistic comparison
 // ---------------------------------------------------------------------------
 
-/** Master index from the Product Spec: a code both flags green AND names its ET. */
+/** Master index from the Product Spec: a product both flags green AND names its ET. */
 export function buildMaster(psRows) {
   const out = []
   for (const r of psRows || []) {
-    const code = (r.ProductCode || r.productCode || '').trim()
-    const ref = r.ElementTypeRef || r.elementTypeRef || ''
-    if (code && ref) out.push({ code, ref })
+    const code = codeOf(r).trim()
+    const ref = etOfRow(r)
+    if (code && ref) out.push({ code, ref, manufacturer: mfrOf(r).trim() })
   }
   return out
 }
@@ -285,19 +340,36 @@ export function duplicateSet(rows) {
  *   blue   novel, but appears in more than one row of THIS batch
  *   grey   novel
  */
-export function classify(code, { master = [], duplicates = new Set() } = {}) {
+export function classify(code, { master = [], duplicates = new Set() } = {}, manufacturer = '') {
   const n = norm(code)
+  const m = norm(manufacturer)
   const duplicate = duplicates.has(n)
 
-  const exact = master.find(m => norm(m.code) === n)
-  if (exact) return { status: 'green', elementTypeRef: exact.ref, base: exact.code, duplicate }
+  // A product is (maker, code). A blank maker on either side cannot distinguish
+  // anything, so it matches — but two NAMED makers sharing a code are two products.
+  const sameMaker = other => !norm(other) || !m || norm(other) === m
+
+  const exact = master.find(x => norm(x.code) === n && sameMaker(x.manufacturer))
+  if (exact) {
+    return { status: 'green', elementTypeRef: exact.ref, base: exact.code, manufacturer: exact.manufacturer, duplicate }
+  }
+
+  // Same code, a different maker: NOT this product. Say so rather than matching it.
+  const otherMaker = master.find(x => norm(x.code) === n)
+  if (otherMaker) {
+    return {
+      status: duplicate ? 'blue' : 'grey', elementTypeRef: null, base: null, duplicate,
+      otherMaker: { ref: otherMaker.ref, manufacturer: otherMaker.manufacturer },
+    }
+  }
 
   let best = null
-  for (const m of master) {
-    const mn = norm(m.code)
+  for (const x of master) {
+    const mn = norm(x.code)
     if (mn === n) continue
+    if (!sameMaker(x.manufacturer)) continue
     if (n.startsWith(mn) || mn.startsWith(n)) {
-      if (!best || mn.length > norm(best.code).length) best = m
+      if (!best || mn.length > norm(best.code).length) best = x
     }
   }
   if (best) return { status: 'amber', elementTypeRef: null, base: best.code, masterRef: best.ref, duplicate }
@@ -368,7 +440,8 @@ export function pendingResolutions(entries, dismissed = new Set()) {
 export function rowConfidence(row, ctx) {
   const codes = deriveCodes(row)
   if (codes.length === 0) return 'none'
-  if (codes.length === 1 && classify(codes[0], ctx).status === 'green') return 'high'
+  // The row's own manufacturer decides whether its code really is the spec's product.
+  if (codes.length === 1 && classify(codes[0], ctx, row.manufacturer).status === 'green') return 'high'
   return 'low'
 }
 

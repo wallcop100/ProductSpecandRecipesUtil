@@ -7,6 +7,8 @@
  *   { severity: 'error'|'warning', rule: string, message: string, ref: string|null }
  */
 
+import { productKey } from './productCodes'
+
 import { DIM_QTY_COMPONENTS } from './constants.js'
 import { connectorGapsForPosition } from './collectionStatus.js'
 
@@ -216,30 +218,34 @@ function checkDuplicateIsDesign(rsRows, positionUI) {
 
 // ---------------------------------------------------------------------------
 // Rule 3 — DUPLICATE_PRODUCT_CODE
-// Product codes must be unique across psRows (except "N/A")
+//
+// A product is (MANUFACTURER, PRODUCT CODE). Only that pair must be unique.
+// Codes are unique inside a maker's catalogue, not across makers: this project's
+// spec has "PLASTER IN KIT" from Orluna AND from Phos — two different things to
+// buy. Keying on the code alone reported that as an error every single time.
 // ---------------------------------------------------------------------------
 function checkDuplicateProductCode(psRows) {
   const issues = []
-  const seen = {}
+  const seen = new Map()
 
   for (const row of psRows) {
-    const code = row.productCode || row.ProductCode || null
-    if (!code || code.trim().toUpperCase() === 'N/A') continue
+    if ((row.IsDeleted || row.isDeleted) === 'Y') continue
+    const code = (row.productCode || row.ProductCode || '').trim()
+    if (!code || code.toUpperCase() === 'N/A') continue
 
-    const upper = code.trim().toUpperCase()
-    if (seen[upper]) {
-      seen[upper].count++
-    } else {
-      seen[upper] = { count: 1, ref: row.elementTypeRef || row.ElementTypeRef || null }
-    }
+    const manufacturer = (row.Manufacturer || row.manufacturer || '').trim()
+    const key = productKey(manufacturer, code)
+    if (seen.has(key)) seen.get(key).count++
+    else seen.set(key, { count: 1, code, manufacturer, ref: row.elementTypeRef || row.ElementTypeRef || null })
   }
 
-  for (const [code, info] of Object.entries(seen)) {
+  for (const info of seen.values()) {
     if (info.count > 1) {
+      const maker = info.manufacturer || 'no manufacturer'
       issues.push({
         severity: 'error',
         rule: 'DUPLICATE_PRODUCT_CODE',
-        message: `Product code "${code}" appears ${info.count} times. Product codes must be unique.`,
+        message: `"${info.code}" from ${maker} appears ${info.count} times. A manufacturer's product code must be unique.`,
         ref: info.ref,
       })
     }

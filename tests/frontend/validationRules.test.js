@@ -591,3 +591,42 @@ describe('MISSING_PRODUCT_SPEC_ROW', () => {
     expect(only(runValidation(db([]), [], rows, ui))[0].severity).toBe('warning')
   })
 })
+
+// ---------------------------------------------------------------------------
+// DUPLICATE_PRODUCT_CODE — identity is (manufacturer, product code)
+// ---------------------------------------------------------------------------
+describe('DUPLICATE_PRODUCT_CODE keys on manufacturer + code', () => {
+  const row = (ref, mfr, code, extra = {}) => ({ elementTypeRef: ref, Manufacturer: mfr, ProductCode: code, ...extra })
+  const only = ps => runValidation(dbData, ps, [], {}).filter(i => i.rule === 'DUPLICATE_PRODUCT_CODE')
+
+  test('one code from two makers is NOT an error — the real Orluna/Phos case', () => {
+    const ps = [
+      row('ET-PLASTERKIT-01', 'Orluna', 'PLASTER IN KIT'),
+      row('ET-PLASTERKIT-02', 'Phos', 'PLASTER IN KIT'),
+    ]
+    expect(only(ps)).toHaveLength(0)
+  })
+
+  test('the same maker entering the same code twice IS an error', () => {
+    const ps = [row('ET-A', 'Orluna', 'PLASTER IN KIT'), row('ET-B', 'Orluna', 'PLASTER IN KIT')]
+    const issues = only(ps)
+    expect(issues).toHaveLength(1)
+    expect(issues[0].severity).toBe('error')
+    expect(issues[0].message).toMatch(/from Orluna/)
+  })
+
+  test('two blank makers sharing a code are still an error', () => {
+    const ps = [row('ET-A', '', 'ABC-1'), row('ET-B', '', 'ABC-1')]
+    expect(only(ps)[0].message).toMatch(/no manufacturer/)
+  })
+
+  test('N/A is still exempt, whatever the maker', () => {
+    const ps = [row('ET-A', 'Ideaworks', 'N/A'), row('ET-B', 'Ideaworks', 'n/a')]
+    expect(only(ps)).toHaveLength(0)
+  })
+
+  test('a deleted row does not create a duplicate', () => {
+    const ps = [row('ET-A', 'Orluna', 'X1'), row('ET-B', 'Orluna', 'X1', { IsDeleted: 'Y' })]
+    expect(only(ps)).toHaveLength(0)
+  })
+})

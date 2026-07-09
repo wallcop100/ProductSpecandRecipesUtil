@@ -3,7 +3,7 @@ import {
   tokenize, makeRow, codeRuns, deriveCaptures, deriveCodes, promoteNoteToCode,
   buildMaster, buildDistinct, hasNoteCollision, duplicateSet, classify,
   clusterSimilar, rowConfidence, sortByConfidence, setNoteOverride, segmentsOf,
-  pendingResolutions, groupKey,
+  pendingResolutions, groupKey, productKey, duplicateProductKeys, findProductET,
 } from '../../src/utils/productCodes.js'
 
 // Real strings from samplefiles/5642 - Form V3.6.xlsx, sheet PositionTypeSpec.
@@ -397,5 +397,111 @@ describe('pendingResolutions — what actually blocks the batch', () => {
     const { collisions, similar } = pendingResolutions([twoNotes('250-1CH'), entry('250-1CH-A')])
     expect(collisions).toHaveLength(1)
     expect(similar).toEqual([])          // don't ask two questions about one code
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Product identity — a product is (MANUFACTURER, PRODUCT CODE), never code alone
+// ---------------------------------------------------------------------------
+describe('product identity', () => {
+  const row = (ref, mfr, code, extra = {}) => ({ ElementTypeRef: ref, Manufacturer: mfr, ProductCode: code, ...extra })
+
+  // The real project: "PLASTER IN KIT" is sold by both Orluna and Phos.
+  const twoMakers = [
+    row('ET-PLASTERKIT-01', 'Orluna', 'PLASTER IN KIT'),
+    row('ET-PLASTERKIT-02', 'Phos', 'PLASTER IN KIT'),
+  ]
+
+  test('the key pairs maker with code, case- and space-insensitively', () => {
+    expect(productKey(' orluna ', ' abc-1 ')).toBe(productKey('ORLUNA', 'ABC-1'))
+    expect(productKey('Orluna', 'ABC-1')).not.toBe(productKey('Phos', 'ABC-1'))
+  })
+
+  describe('duplicateProductKeys', () => {
+    test('one code, two makers, is NOT a duplicate', () => {
+      expect(duplicateProductKeys(twoMakers).size).toBe(0)
+    })
+
+    test('the same maker entering the same code twice IS a duplicate', () => {
+      const rows = [row('ET-A', 'Orluna', 'PLASTER IN KIT'), row('ET-B', 'Orluna', 'plaster in kit')]
+      expect(duplicateProductKeys(rows).has(productKey('Orluna', 'PLASTER IN KIT'))).toBe(true)
+    })
+
+    test('N/A and blank codes are never duplicates', () => {
+      const rows = [row('ET-A', 'Ideaworks', 'N/A'), row('ET-B', 'Ideaworks', 'n/a'), row('ET-C', 'X', ''), row('ET-D', 'X', '')]
+      expect(duplicateProductKeys(rows).size).toBe(0)
+    })
+
+    test('two blank makers sharing a code are a duplicate — blank is a value, not a wildcard', () => {
+      const rows = [row('ET-A', '', 'ABC-1'), row('ET-B', '', 'ABC-1')]
+      expect(duplicateProductKeys(rows).size).toBe(1)
+    })
+
+    test('deleted rows do not create duplicates', () => {
+      const rows = [row('ET-A', 'Orluna', 'X1'), row('ET-B', 'Orluna', 'X1', { IsDeleted: 'Y' })]
+      expect(duplicateProductKeys(rows).size).toBe(0)
+    })
+  })
+
+  describe('findProductET — the shopping-list lookup', () => {
+    test('an exact maker+code pair names its ElementType', () => {
+      expect(findProductET(twoMakers, 'Phos', 'PLASTER IN KIT')).toBe('ET-PLASTERKIT-02')
+      expect(findProductET(twoMakers, 'Orluna', 'plaster in kit')).toBe('ET-PLASTERKIT-01')
+    })
+
+    test('a code shared by two makers, with no maker given, is ambiguous → null', () => {
+      expect(findProductET(twoMakers, '', 'PLASTER IN KIT')).toBeNull()
+      expect(findProductET(twoMakers, 'Someone Else', 'PLASTER IN KIT')).toBeNull()
+    })
+
+    test('a code held by exactly one row resolves even without a maker', () => {
+      const rows = [row('ET-TAPE-01', 'Nichia', 'NF240272009')]
+      expect(findProductET(rows, '', 'NF240272009')).toBe('ET-TAPE-01')
+    })
+
+    test('an unknown product, N/A, or blank resolves to nothing', () => {
+      expect(findProductET(twoMakers, 'Orluna', 'NOPE')).toBeNull()
+      expect(findProductET(twoMakers, 'Orluna', 'N/A')).toBeNull()
+      expect(findProductET(twoMakers, 'Orluna', '')).toBeNull()
+    })
+
+    test('a deleted spec row is not on the shopping list', () => {
+      const rows = [row('ET-A', 'Orluna', 'X1', { IsDeleted: 'Y' })]
+      expect(findProductET(rows, 'Orluna', 'X1')).toBeNull()
+    })
+  })
+
+  describe('classify is pair-aware', () => {
+    const master = buildMaster(twoMakers)
+
+    test('the master index carries the manufacturer', () => {
+      expect(master).toContainEqual({ code: 'PLASTER IN KIT', ref: 'ET-PLASTERKIT-01', manufacturer: 'Orluna' })
+    })
+
+    test('the right maker matches green, and names its ET', () => {
+      expect(classify('PLASTER IN KIT', { master }, 'Phos')).toMatchObject({
+        status: 'green', elementTypeRef: 'ET-PLASTERKIT-02',
+      })
+    })
+
+    test('the same code from a DIFFERENT maker is not green, and says why', () => {
+      const c = classify('PLASTER IN KIT', { master }, 'Acme')
+      expect(c.status).toBe('grey')
+      expect(c.elementTypeRef).toBeNull()
+      expect(c.otherMaker.manufacturer).toBe('Orluna')
+    })
+
+    test('a blank maker on either side cannot distinguish, so it still matches', () => {
+      const single = buildMaster([row('ET-TAPE-01', 'Nichia', 'NF1')])
+      expect(classify('NF1', { master: single }, '').status).toBe('green')
+      const noMaker = buildMaster([row('ET-TAPE-01', '', 'NF1')])
+      expect(classify('NF1', { master: noMaker }, 'Nichia').status).toBe('green')
+    })
+
+    test('a prefix match only counts within the same maker', () => {
+      const m = buildMaster([row('ET-A', 'Orluna', 'ABC')])
+      expect(classify('ABC-EM', { master: m }, 'Orluna').status).toBe('amber')
+      expect(classify('ABC-EM', { master: m }, 'Phos').status).toBe('grey')
+    })
   })
 })

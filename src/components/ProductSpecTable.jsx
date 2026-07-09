@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect, useRef } from 'react'
 import { Table, Form, Button } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import FlagPill from './FlagPill'
+import { productKey, duplicateProductKeys } from '../utils/productCodes'
 
 /**
  * ProductSpecTable — table of PS rows with inline editing.
@@ -21,15 +22,9 @@ export default function ProductSpecTable({ showDeleted = false, etUsedIn = {}, s
 
   const rowRefs = useRef({})
 
-  const duplicateCodes = useMemo(() => {
-    const counts = {}
-    for (const row of psRows) {
-      const code = (row.ProductCode || row.productCode || '').trim().toUpperCase()
-      if (!code || code === 'N/A') continue
-      counts[code] = (counts[code] || 0) + 1
-    }
-    return new Set(Object.keys(counts).filter(k => counts[k] > 1))
-  }, [psRows])
+  // A product is (manufacturer, code) — "PLASTER IN KIT" from Orluna and from Phos
+  // are two different things to buy, not a duplicate.
+  const duplicateKeys = useMemo(() => duplicateProductKeys(psRows), [psRows])
 
   const filtered = useMemo(() => {
     const visible = showDeleted
@@ -74,8 +69,9 @@ export default function ProductSpecTable({ showDeleted = false, etUsedIn = {}, s
   }
 
   function isDuplicate(row) {
-    const code = (row.ProductCode || row.productCode || '').trim().toUpperCase()
-    return code && code !== 'N/A' && duplicateCodes.has(code)
+    const code = (row.ProductCode || row.productCode || '').trim()
+    if (!code || code.toUpperCase() === 'N/A') return false
+    return duplicateKeys.has(productKey(row.Manufacturer || row.manufacturer, code))
   }
 
   return (

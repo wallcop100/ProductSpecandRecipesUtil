@@ -4,6 +4,7 @@ import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import BulkApplyModal from './BulkApplyModal'
 import { compareFormToRecipe, associations } from '../utils/formSpec'
+import { findProductET } from '../utils/productCodes'
 import { ACTION_ICONS } from '../utils/entityStyle'
 
 /**
@@ -46,6 +47,7 @@ function FoundIn({ foundIn, container }) {
 
 export default function FormSpecPane({ posRef }) {
   const recipes = useStore(s => s.recipes)
+  const psRows = useStore(s => s.psRows)
   const containerETRefs = useStore(s => s.containerETRefs)
   const formCaptures = useStore(s => s.formCaptures)
   const addRecipeRow = useStore(s => s.addRecipeRow)
@@ -55,9 +57,20 @@ export default function FormSpecPane({ posRef }) {
   const [dest, setDest] = useState('auto')      // 'position' | 'internal'
   const [preview, setPreview] = useState(null)
 
-  const formEts = formCaptures?.byPosition?.[posRef] ?? []
+  const captured = formCaptures?.byPosition?.[posRef] ?? []
   const context = formCaptures?.contextByPosition?.[posRef] ?? {}
   const orphanRefs = formCaptures?.orphansByPosition?.[posRef] ?? []
+
+  /**
+   * The shopping list. A product is (manufacturer, code); if the Product Spec
+   * already names an ElementType for that pair, THAT is what to add — the spec is
+   * authoritative and may have moved on since the import. The captured ET is only
+   * the fallback.
+   */
+  const formEts = useMemo(() => captured.map(e => {
+    const inSpec = findProductET(psRows, e.manufacturer, e.code)
+    return { ...e, elementTypeRef: inSpec || e.elementTypeRef, inSpec: !!inSpec }
+  }), [captured, psRows])
 
   const result = useMemo(
     () => compareFormToRecipe(recipes, posRef, formEts, containerETRefs, { orphanRefs }),
@@ -164,16 +177,28 @@ export default function FormSpecPane({ posRef }) {
                   title="Tick to add" aria-label={`Add ${e.elementTypeRef}`} />
               : <MaterialIcon name={ACTION_ICONS.complete} size={13} style={{ color: '#198754', flexShrink: 0, marginTop: 1 }} />}
             <div style={{ minWidth: 0, flex: 1 }}>
+              {/* Manufacturer and product code are one thing, and always shown together. */}
               <div className="d-flex align-items-baseline gap-1">
                 <Ref>{e.code || e.elementTypeRef}</Ref>
                 {e.formRef && <span className="text-muted" style={{ fontSize: 9 }}>{e.formRef}</span>}
               </div>
-              <div className="text-truncate" style={{ fontFamily: 'monospace', fontSize: 10, color: '#6c757d' }}>
-                {e.elementTypeRef}
+              <div className="text-truncate" style={{ fontSize: 10, color: e.manufacturer ? '#495057' : '#adb5bd' }}>
+                {e.manufacturer || 'no manufacturer'}
+              </div>
+              <div className="d-flex align-items-baseline gap-1 text-truncate">
+                <span style={{ fontFamily: 'monospace', fontSize: 10, color: '#6c757d' }}>{e.elementTypeRef}</span>
+                {e.inSpec && (
+                  <span className="rounded px-1" style={{ fontSize: 9, background: '#d1e7dd', color: '#0f5132' }}
+                    title="This manufacturer + product code already names an ElementType in the Product Spec">
+                    in the spec
+                  </span>
+                )}
               </div>
               {e.note && <div className="text-muted" style={{ fontSize: 10 }}>{e.note}</div>}
               {isMissing
-                ? <span className="text-danger" style={{ fontSize: 10 }}>missing from the recipe</span>
+                ? <span className="text-danger" style={{ fontSize: 10 }}>
+                    {e.inSpec ? 'already an ElementType — tick to add it' : 'missing from the recipe'}
+                  </span>
                 : <FoundIn foundIn={e.foundIn} container={container} />}
             </div>
           </div>

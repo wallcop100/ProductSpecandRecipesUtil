@@ -382,7 +382,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   const convention = useMemo(() => inferConvention(elementTypes), [elementTypes])
 
   const entries = useMemo(() => buildDistinct(confirmed, captureOpts).map(e => {
-    const c = classify(e.text, ctx)
+    // A product is (maker, code): the same code from another maker is another product.
+    const c = classify(e.text, ctx, e.manufacturers[0] || '')
     const etRef = c.elementTypeRef || assignments[norm(e.text)] || null
     const note = e.variants[0]?.note || ''
     // Only unresolved codes need a suggestion / reuse candidates.
@@ -411,7 +412,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       if (!primary || !row.positionType) continue
       const target = map.pt ? ptTarget(row.positionType) : row.positionType
       if (!target) continue
-      const et = classify(primary.code, ctx).elementTypeRef || assignments[norm(primary.code)]
+      const et = classify(primary.code, ctx, row.manufacturer).elementTypeRef || assignments[norm(primary.code)]
       if (!et) continue
       if (!byEt.has(et)) byEt.set(et, new Set())
       byEt.get(et).add(target)

@@ -25,8 +25,8 @@ const captures = {
   source: { name: '5642 - Form V3.6.xlsx', sheet: 'PositionTypeSpec' },
   byPosition: {
     C01r: [
-      { elementTypeRef: 'ET-PROF-01', code: 'FPS2020BG2000', note: 'Profile 2020', formRef: 'C01' },
-      { elementTypeRef: 'ET-TAPE-01', code: 'LL240272024', note: 'Tape', formRef: 'C01' },
+      { elementTypeRef: 'ET-PROF-01', code: 'FPS2020BG2000', manufacturer: 'Flexalighting', note: 'Profile 2020', formRef: 'C01' },
+      { elementTypeRef: 'ET-TAPE-01', code: 'LL240272024', manufacturer: 'Nichia', note: 'Tape', formRef: 'C01' },
     ],
   },
   contextByPosition: { C01r: { ProductName: 'Linear LED', Finish: 'Black anodised' } },
@@ -44,6 +44,7 @@ function setup(over = {}) {
   useStore.setState({
     projectId: 42, recipes: recipes(), containerETRefs: new Set(['et-lin-01']),
     formCaptures: captures, psRows: [], elementTypes: [], rsChanges: [], past: [], future: [],
+    // psRows can be overridden per-test to exercise the shopping-list lookup
     activeContextType: 'PositionType', activeETRef: null, recipeError: null, dbWriteEnabled: false,
     ...over,
   })
@@ -147,5 +148,50 @@ describe('FormSpecPane renders the Form beside the recipe', () => {
   test('no Form attached: the pane renders nothing at all', () => {
     const { container } = setup({ formCaptures: null })
     expect(container).toBeEmptyDOMElement()
+  })
+})
+
+describe('manufacturer + product code are one identity', () => {
+  test('the manufacturer is always shown beside the code', () => {
+    setup()
+    expect(screen.getByText('FPS2020BG2000')).toBeInTheDocument()
+    expect(screen.getByText('Flexalighting')).toBeInTheDocument()
+    expect(screen.getByText('LL240272024')).toBeInTheDocument()
+    expect(screen.getByText('Nichia')).toBeInTheDocument()
+  })
+
+  test('a product with no manufacturer says so rather than showing nothing', () => {
+    setup({
+      formCaptures: { ...captures, byPosition: { C01r: [{ elementTypeRef: 'ET-X', code: 'ABC', formRef: 'C01' }] } },
+    })
+    expect(screen.getByText('no manufacturer')).toBeInTheDocument()
+  })
+
+  test('a maker+code already in the spec is offered as a shopping-list add', () => {
+    // The spec already names ET-TAPE-99 for Nichia / LL240272024.
+    setup({ psRows: [{ ElementTypeRef: 'ET-TAPE-99', Manufacturer: 'Nichia', ProductCode: 'LL240272024' }] })
+    expect(screen.getByText('in the spec')).toBeInTheDocument()
+    expect(screen.getByText('already an ElementType — tick to add it')).toBeInTheDocument()
+    expect(screen.getByText('ET-TAPE-99')).toBeInTheDocument()   // the spec's ET, not the captured one
+  })
+
+  test('ticking it adds the SPEC\'s ElementType, not the stale captured one', () => {
+    setup({ psRows: [{ ElementTypeRef: 'ET-TAPE-99', Manufacturer: 'Nichia', ProductCode: 'LL240272024' }] })
+    fireEvent.click(screen.getByTitle('Tick to add'))
+    fireEvent.click(screen.getByText(/Preview 1 change/))
+    fireEvent.click(within(screen.getByRole('dialog')).getByText(/Apply 1 change/))
+    expect(useStore.getState().recipes.some(r => r.ElementTypeRef === 'ET-TAPE-99')).toBe(true)
+    expect(useStore.getState().recipes.some(r => r.ElementTypeRef === 'ET-TAPE-01')).toBe(false)
+  })
+
+  test('the same code under a DIFFERENT maker is not treated as the same product', () => {
+    // The spec has this code, but from Phos. Our Form product is Nichia's.
+    setup({ psRows: [
+      { ElementTypeRef: 'ET-OTHER', Manufacturer: 'Phos', ProductCode: 'LL240272024' },
+      { ElementTypeRef: 'ET-DECOY', Manufacturer: 'Acme', ProductCode: 'LL240272024' },
+    ] })
+    expect(screen.queryByText('in the spec')).toBeNull()
+    expect(screen.getByText('missing from the recipe')).toBeInTheDocument()
+    expect(screen.queryByText('ET-OTHER')).toBeNull()
   })
 })

@@ -4,6 +4,7 @@ import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { familyOf } from '../utils/etRef'
 import { ACTION_ICONS } from '../utils/entityStyle'
+import { productKey, duplicateProductKeys } from '../utils/productCodes'
 
 const STATUS_COLOR = {
   complete:  '#22c55e',
@@ -13,7 +14,7 @@ const STATUS_COLOR = {
   duplicate: '#dc3545',
 }
 
-function completenessOf(ref, psRowMap, missingSet, duplicateCodes) {
+function completenessOf(ref, psRowMap, missingSet, duplicateKeys) {
   const key = ref.toLowerCase()
   if (missingSet.has(key) && !psRowMap.has(key)) return 'missing'
   const row = psRowMap.get(key)
@@ -22,10 +23,10 @@ function completenessOf(ref, psRowMap, missingSet, duplicateCodes) {
   const tbc = (row.IsTBC || row.isTBC) === 'Y'
   const code = (row.ProductCode || row.productCode || '').trim()
   if (!code || tbc) return 'partial'
-  // A complete-looking row that shares its product code with another ET is a
-  // warning, not "ok" — never show it green.
-  const upper = code.toUpperCase()
-  if (duplicateCodes && upper !== 'N/A' && duplicateCodes.has(upper)) return 'duplicate'
+  // A row sharing its PRODUCT IDENTITY (maker + code) with another ET is a warning,
+  // never "ok". Two makers using the same code are two products, not a duplicate.
+  if (duplicateKeys && code.toUpperCase() !== 'N/A'
+      && duplicateKeys.has(productKey(row.Manufacturer || row.manufacturer, code))) return 'duplicate'
   return 'complete'
 }
 
@@ -85,15 +86,8 @@ export default function ETSpecBrowser({
     return m
   }, [elementTypes])
 
-  const duplicateCodes = useMemo(() => {
-    const counts = {}
-    for (const r of psRows) {
-      const code = (r.ProductCode || r.productCode || '').trim().toUpperCase()
-      if (!code || code === 'N/A') continue
-      counts[code] = (counts[code] || 0) + 1
-    }
-    return new Set(Object.entries(counts).filter(([, v]) => v > 1).map(([k]) => k))
-  }, [psRows])
+  // A product is (manufacturer, code). See productCodes.duplicateProductKeys.
+  const duplicateCodes = useMemo(() => duplicateProductKeys(psRows), [psRows])
 
   const allRefs = useMemo(() => {
     const set = new Set()
@@ -126,7 +120,8 @@ export default function ETSpecBrowser({
       const group = getGroupKey(ref, viewMode, psRowMap, etObjMap)
       const code = (psRow?.ProductCode || psRow?.productCode || '').trim().toUpperCase()
       const isDeleted = (psRow?.IsDeleted || psRow?.isDeleted) === 'Y'
-      const isDup = code && code !== 'N/A' && duplicateCodes.has(code)
+      const isDup = code && code !== 'N/A'
+        && duplicateCodes.has(productKey(psRow?.Manufacturer || psRow?.manufacturer, code))
 
       if (groupFilter && group !== groupFilter) return false
 

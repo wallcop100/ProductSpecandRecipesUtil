@@ -75,12 +75,22 @@ export default function CompareCodesPanel({ entries, knownPTs, ptTarget, onCreat
               <span className="text-muted ms-auto">{e.rowRefs.length} row{e.rowRefs.length === 1 ? '' : 's'}</span>
             </div>
 
-            <PositionTypes pts={e.positionTypes} knownPTs={knownPTs} ptTarget={ptTarget} />
-            {e.manufacturers.length > 1 && (
-              <div className="text-warning" style={{ fontSize: 10 }}>
-                <MaterialIcon name="warning" size={10} /> {e.manufacturers.join(' / ')}
+            {/* A product is (maker, code). The two are never shown apart. */}
+            <div style={{ fontSize: 10 }} className={e.manufacturers.length > 1 ? 'text-warning' : 'text-muted'}>
+              {e.manufacturers.length > 1 && <MaterialIcon name="warning" size={10} />}{' '}
+              {e.manufacturers.length ? e.manufacturers.join(' / ') : <span className="fst-italic">no manufacturer</span>}
+              {e.manufacturers.length > 1 && ' — one code, two makers'}
+            </div>
+
+            {/* The spec already has this code, but under a different maker: a different product. */}
+            {e.otherMaker && (
+              <div style={{ fontSize: 10, color: '#b45309' }}>
+                <MaterialIcon name="call_split" size={10} /> {e.otherMaker.manufacturer || 'another maker'} uses this
+                code for <span style={{ fontFamily: 'monospace' }}>{e.otherMaker.ref}</span> — not the same product.
               </div>
             )}
+
+            <PositionTypes pts={e.positionTypes} knownPTs={knownPTs} ptTarget={ptTarget} />
 
             {/* Reuse: existing ETs this code might already be. One click assigns
                 the existing ref — the dedup win, no new ET minted. */}
