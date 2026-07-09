@@ -114,6 +114,16 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
     return (!countByRef[ref] && !isIgnoredPt(pt)) ? n + 1 : n
   }, 0), [positionTypes, countByRef, positionUI, ignoredFamilySet])
 
+  // Positions the Form is not yet satisfied on. Silent when no Form is attached.
+  // MUST live above the early returns below: hooks cannot be conditional, and the
+  // focused-editor return fires exactly when a position is selected.
+  const formCaptures = useStore(s => s.formCaptures)
+  const containerETRefs = useStore(s => s.containerETRefs)
+  const incompleteRefs = useMemo(
+    () => new Set(formWorklist(recipes, formCaptures, containerETRefs).map(w => w.posRef)),
+    [recipes, formCaptures, containerETRefs]
+  )
+
   const activePt = activePositionRef
     ? positionTypes.find(pt => pt.PositionTypeRef === activePositionRef)
     : null
@@ -142,14 +152,6 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
   }
 
   // ---- Overview list ----
-  // Positions the Form is not yet satisfied on. Silent when no Form is attached.
-  const formCaptures = useStore(s => s.formCaptures)
-  const containerETRefs = useStore(s => s.containerETRefs)
-  const incompleteRefs = useMemo(
-    () => new Set(formWorklist(recipes, formCaptures, containerETRefs).map(w => w.posRef)),
-    [recipes, formCaptures, containerETRefs]
-  )
-
   const q = filter.trim().toLowerCase()
   const visible = positionTypes.filter(pt => {
     const ref = pt.PositionTypeRef || ''
