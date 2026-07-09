@@ -1,7 +1,12 @@
-'use strict'
-
-const Database = require('better-sqlite3')
-const path = require('path')
+/**
+ * dbSchema.js — the project database: schema, migrations and queries.
+ *
+ * Formerly `electron/db.js`, running on better-sqlite3. **The SQL is unchanged**;
+ * only the connection is injected. `db` is any object with the better-sqlite3
+ * shape (`prepare` / `exec` / `pragma` / `transaction`) — in the browser that is
+ * the sql.js shim in `sqlShim.js`, so all 45 prepared statements keep their
+ * exact semantics rather than being re-derived over IndexedDB.
+ */
 
 let db = null
 
@@ -9,9 +14,10 @@ let db = null
 // Init
 // ---------------------------------------------------------------------------
 
-function initDb(dbPath) {
-  db = new Database(dbPath)
-  db.pragma('journal_mode = WAL')
+/** Adopt an already-open connection, then create and migrate the schema. */
+function initDb(database) {
+  db = database
+  db.pragma('journal_mode = WAL')   // no-op under sql.js — there is no journal file
   db.pragma('foreign_keys = ON')
   createTables()
   migrate()
@@ -1064,7 +1070,7 @@ function applyConfigData(projectId, data = {}) {
 // Exports
 // ---------------------------------------------------------------------------
 
-module.exports = {
+export {
   initDb,
   getDb,
   upsertProject,

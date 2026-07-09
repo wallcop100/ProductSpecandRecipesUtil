@@ -2,21 +2,22 @@ import React, { useState, useEffect } from 'react'
 import {
   Container, Card, Button, Alert, Spinner, Badge, Form, ListGroup, Row, Col,
 } from 'react-bootstrap'
-import axios from 'axios'
 import useStore from '../store/useStore'
 import { evaluateTags, effectiveTags, computeTagDrift } from '../utils/tagRules'
-import { FLASK_PORT } from '../utils/constants'
 import { extractProjectId } from '../utils/projectId'
+import { detectFiles as detectProjectFiles, importFiles } from '../utils/backend'
 import ProjectConfirmModal from '../components/ProjectConfirmModal'
 import ProjectManager from '../components/ProjectManager'
 import MaterialIcon from '../components/MaterialIcon'
 import { ACTION_ICONS } from '../utils/entityStyle'
 
-const API = `http://localhost:${FLASK_PORT}`
-
 /**
  * FolderSetupScreen
  * Step 1 — pick a folder, detect files, open the project.
+ *
+ * `folderPath` is an opaque directory-handle id, not an absolute path — a browser
+ * never exposes one. It is the project's stable identity key; the folder's
+ * display name comes from the handle.
  */
 export default function FolderSetupScreen({ onProjectLoaded }) {
   const loadProject = useStore(s => s.loadProject)
@@ -35,6 +36,8 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
   const [opening, setOpening] = useState(false)
   const [openError, setOpenError] = useState(null)
   const [flaskError, setFlaskError] = useState(null)
+  const [folderName, setFolderName] = useState('')
+  const [resumeProject, setResumeProject] = useState(null)
 
   // Project identity — shown inline; the ProjectConfirmModal stays reachable
   // behind the "Advanced / edit identity" link for the rare edit case.
@@ -50,28 +53,28 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
     window.electronAPI.getAppVersion?.().then(v => setAppVersion(v || '')).catch(() => {})
   }, [])
 
-  // Listen for Flask startup status from main process
+  // Folder access is a Chromium-only API. Say so up front rather than failing at
+  // the picker with an opaque error.
   useEffect(() => {
-    window.electronAPI.onFlaskStatus(({ ready }) => {
-      if (!ready) {
-        setFlaskError('The backend service failed to start. Try restarting the application. Check the application logs for details.')
-      }
-    })
+    if (window.electronAPI.isFolderAccessSupported?.() === false) {
+      setFlaskError('This browser cannot open a project folder. The File System Access API is required — please use Chrome or Edge.')
+    }
   }, [])
 
-  // On mount: try to resume last project
+  // On mount: remember the last project, but do NOT touch its folder yet. The
+  // File System Access API never persists a permission grant, so reading it
+  // requires a user gesture — the user clicks "Reopen" below.
   useEffect(() => {
     async function tryResume() {
       try {
         const last = await window.electronAPI.db.getLastProject()
         if (last && last.folder_path) {
           setFolderPath(last.folder_path)
+          setFolderName(last.project_label || (await window.electronAPI.getFolderName?.(last.folder_path)) || '')
           setDbFilename(last.db_filename || '')
           setPsFilename(last.ps_filename || '')
           setRsFilename(last.rs_filename || '')
-          // Auto-detect for this folder, then prime the inline identity fields
-          await runDetect(last.folder_path)
-          await prepareIdentity(last.folder_path, last.db_filename, last.config_name)
+          setResumeProject(last)
         }
       } catch {
         // No last project — fine
@@ -81,10 +84,34 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  /** Re-grant access to the remembered folder, then detect as usual. */
+  async function handleResume() {
+    const last = resumeProject
+    if (!last) return
+    setDetectError(null)
+    const granted = await window.electronAPI.requestFolderAccess?.(last.folder_path)
+    if (!granted) {
+      setDetectError('Access to that folder was not granted. Choose it again.')
+      setResumeProject(null)
+      return
+    }
+    setResumeProject(null)
+    const data = await runDetect(last.folder_path)
+    if (data) await prepareIdentity(last.folder_path, last.db_filename, last.config_name)
+  }
+
   async function handleSelectFolder() {
-    const path = await window.electronAPI.openFolderDialog()
+    let path
+    try {
+      path = await window.electronAPI.openFolderDialog()
+    } catch (err) {
+      setDetectError(err.message)
+      return
+    }
     if (!path) return
     setFolderPath(path)
+    setFolderName((await window.electronAPI.getFolderName?.(path)) || '')
+    setResumeProject(null)
     setDetectedFiles(null)
     setDetectError(null)
     setDbFilename('')
@@ -98,15 +125,14 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
     setDetecting(true)
     setDetectError(null)
     try {
-      const resp = await axios.get(`${API}/detect-files`, { params: { folder: path } })
-      const data = resp.data
+      const data = await detectProjectFiles(path)
       setDetectedFiles(data)
       setDbFilename(data.db || '')
       setPsFilename(data.ps || '')
       setRsFilename(data.rs || '')
       return data
     } catch (err) {
-      setDetectError('Could not detect files: ' + (err.response?.data?.error || err.message))
+      setDetectError('Could not detect files: ' + err.message)
       return null
     } finally {
       setDetecting(false)
@@ -135,27 +161,25 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
     setOpening(true)
     setOpenError(null)
     try {
-      const absDbs = `${folderPath}\\${dbFilename}`
-      const absPs = `${folderPath}\\${psFilename}`
-      const absRs = `${folderPath}\\${rsFilename}`
+      // Files are addressed by name inside the project folder's handle.
+      const absDbs = dbFilename
+      const absPs = psFilename
+      const absRs = rsFilename
 
       // 1. Upsert project (config) in SQLite
       const project = await window.electronAPI.db.upsertProject({
         folderPath,
         configName,
         projectNumber,
-        projectLabel: null,
+        projectLabel: folderName || null,   // the folder's display name; folderPath is an id
         dbFilename,
         psFilename,
         rsFilename,
       })
       const projectId = project?.id
 
-      // 2. Import via Flask
-      const resp = await axios.post(`${API}/import`, {
-        db: absDbs, ps: absPs, rs: absRs,
-      })
-      const { db: db_data, ps: ps_rows, rs: rs_rows } = resp.data
+      // 2. Parse the three workbooks in-browser
+      const { db: db_data, ps: ps_rows, rs: rs_rows } = await importFiles({ db: absDbs, ps: absPs, rs: absRs })
       const elementTypes = db_data?.element_types ?? []
       const positionTypes = db_data?.position_types ?? []
 
@@ -348,20 +372,32 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
 
           {/* Step 1: Select folder */}
           <div className="mb-4">
-            <div className="d-flex gap-2 align-items-center">
+            <div className="d-flex gap-2 align-items-center flex-wrap">
               <Button variant="outline-primary" onClick={handleSelectFolder} disabled={detecting || opening}>
                 Select Project Folder
               </Button>
+              {resumeProject && (
+                <Button variant="primary" onClick={handleResume} disabled={detecting || opening}
+                  title="The browser must ask again for permission to read this folder">
+                  <MaterialIcon name="folder_open" size={15} /> Reopen “{folderName || 'last project'}”
+                </Button>
+              )}
               {detecting && <Spinner size="sm" animation="border" />}
             </div>
-            {folderPath && (
+            {folderName && !resumeProject && (
               <div className="mt-2 text-muted small" style={{ wordBreak: 'break-all' }}>
-                {folderPath}
+                {folderName}
+              </div>
+            )}
+            {resumeProject && (
+              <div className="mt-2 text-muted" style={{ fontSize: 11 }}>
+                Your last project is remembered. Browsers don’t keep folder permission between visits,
+                so reopening needs one click.
               </div>
             )}
           </div>
 
-          {flaskError && <Alert variant="danger" className="py-2"><strong>Backend unavailable:</strong> {flaskError}</Alert>}
+          {flaskError && <Alert variant="danger" className="py-2"><strong>Unsupported browser:</strong> {flaskError}</Alert>}
           {detectError && !flaskError && <Alert variant="danger" className="py-2">{detectError}</Alert>}
 
           {/* Step 2: File detection */}

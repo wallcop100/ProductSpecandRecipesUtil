@@ -1,18 +1,31 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import pkg from './package.json'
 
 export default defineConfig({
   plugins: [react()],
+  // Relative base — resolves correctly under the GitHub Pages project subpath
+  // (/ProductSpecandRecipesUtil/) as well as at a domain root.
   base: './',
-  // electron/main.js loads http://localhost:5173 in dev. Without strictPort, Vite
-  // silently moves to 5174 when 5173 is taken (another project's dev server), and
-  // Electron then loads THAT project. Fail loudly instead of showing a stranger's app.
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   server: {
+    // Fail loudly if 5173 is taken rather than silently moving to 5174.
     port: 5173,
     strictPort: true,
   },
+  optimizeDeps: {
+    // sql.js ships its own wasm loader; leave it alone.
+    exclude: ['sql.js'],
+  },
   build: {
     outDir: 'dist',
+    // SheetJS and SQLite-WASM are both large and reached only via dynamic
+    // import(), so Rollup splits them out and they stay off the first page load.
+    // Do NOT list them in manualChunks — that would pull them into the initial
+    // graph and have Vite modulepreload them.
+    chunkSizeWarningLimit: 800,
   },
   test: {
     environment: 'jsdom',

@@ -1,8 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import { Button, Form, Alert, Spinner } from 'react-bootstrap'
-import axios from 'axios'
 import useStore from '../store/useStore'
-import { FLASK_PORT } from '../utils/constants'
+import { readSheet as readSheetFrom } from '../utils/backend'
 import MaterialIcon from '../components/MaterialIcon'
 import IconButton from '../components/IconButton'
 import CodeChips from '../components/CodeChips'
@@ -21,8 +20,6 @@ import {
   discardsFromNoteEdit, pickExamples,
 } from '../utils/codeLearning'
 import { inferConvention, reuseCandidates, suggestRef } from '../utils/etRefSuggest'
-
-const API = `http://localhost:${FLASK_PORT}`
 
 /** Fuzzy header match: exact normalised hit first, else shortest header containing it. */
 const nh = h => String(h || '').toLowerCase().replace(/[^a-z0-9]/g, '')
@@ -96,9 +93,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   const ctx = useMemo(() => ({ master, duplicates }), [master, duplicates])
 
   // ---- load -----------------------------------------------------------------
+  /** `path` is the opaque token for the picked workbook (see utils/backend.js). */
   async function readSheet(path, sheetName) {
-    const { data } = await axios.post(`${API}/read-sheet`, { filepath: path, sheet: sheetName || undefined })
-    return data
+    return readSheetFrom(path, sheetName || undefined)
   }
 
   /** Default to the first sheet that actually has a product-code column. */

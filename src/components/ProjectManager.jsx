@@ -83,8 +83,10 @@ export default function ProjectManager({ show, onHide, onOpen }) {
               {configs.map(p => (
                 <div key={p.id} className="d-flex align-items-center gap-2 py-2 border-bottom" style={{ fontSize: 13 }}>
                   <Badge bg="secondary">{p.config_name}</Badge>
-                  <span className="text-muted text-truncate" style={{ fontSize: 11, maxWidth: 260 }} title={p.folder_path}>
-                    {p.folder_path}
+                  {/* folder_path is an opaque handle id in the browser — show the folder's name. */}
+                  <span className="text-muted text-truncate" style={{ fontSize: 11, maxWidth: 260 }}
+                    title={p.project_label || p.folder_path}>
+                    {p.project_label || p.folder_path}
                   </span>
                   <div className="ms-auto d-flex gap-1">
                     {onOpen && (

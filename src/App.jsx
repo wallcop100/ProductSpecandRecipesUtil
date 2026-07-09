@@ -8,7 +8,6 @@ import ProductCodeImportScreen from './screens/ProductCodeImportScreen'
 import ConnectorsScreen from './screens/ConnectorsScreen'
 import TagManagerScreen from './screens/TagManagerScreen'
 import FileWatchBanner from './components/FileWatchBanner'
-import UpdateBanner from './components/UpdateBanner'
 
 /**
  * App — top-level screen router.
@@ -24,8 +23,6 @@ export default function App() {
   // reviewPositionRefs: PositionTypeRefs to jump straight into reviewing (e.g. from
   // the product-code import's "review what was prefilled" hand-off)
   const [reviewPositionRefs, setReviewPositionRefs] = useState(null)
-  const [updateStatus, setUpdateStatus] = useState(null)
-  // updateStatus shape: { status: 'available'|'downloading'|'ready', version, percent, releaseNotes }
   const [debugIds, setDebugIds] = useState(false)
 
   const setFileWatchAlert = useStore(s => s.setFileWatchAlert)
@@ -33,17 +30,10 @@ export default function App() {
   const setRootView = useStore(s => s.setRootView)
 
   useEffect(() => {
-    // Listen for file-changed events from the main process
+    // The file watcher polls the project folder and reports external edits.
     if (window.electronAPI?.onFileChanged) {
       window.electronAPI.onFileChanged((data) => {
         setFileWatchAlert(data)
-      })
-    }
-
-    // Listen for auto-updater status changes
-    if (window.electronAPI?.updater?.onStatusChange) {
-      window.electronAPI.updater.onStatusChange((data) => {
-        setUpdateStatus(data)
       })
     }
 
@@ -121,7 +111,6 @@ export default function App() {
         )}
       </div>
 
-      <UpdateBanner updateStatus={updateStatus} onDismiss={() => setUpdateStatus(null)} />
     </div>
   )
 }

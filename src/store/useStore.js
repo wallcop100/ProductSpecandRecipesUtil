@@ -6,7 +6,7 @@
  */
 
 import { create } from 'zustand'
-import axios from 'axios'
+import { importFiles } from '../utils/backend'
 import { v4 as uuidv4 } from 'uuid'
 import { findBestTemplate, recipeToTemplate } from '../utils/templateLoader.js'
 import { resolveTemplate, applyResolvedTemplate } from '../utils/slotResolver.js'
@@ -15,10 +15,8 @@ import { runValidation } from '../utils/validationRules.js'
 import { computeContainerInfo, looksLikeContainer, getNextAvailableRef } from '../utils/containerUtils.js'
 import { positionFamilyOf } from '../utils/positionFamily.js'
 import { familyOf } from '../utils/etRef.js'
-import { FLASK_PORT, DIM_QTY_COMPONENTS, AUTO_CONTRACT_ITEMS } from '../utils/constants.js'
+import { DIM_QTY_COMPONENTS, AUTO_CONTRACT_ITEMS } from '../utils/constants.js'
 import { CONNECTOR_TEMPLATES } from '../data/connectorTemplates.js'
-
-const API = `http://localhost:${FLASK_PORT}`
 
 // Max number of undo snapshots retained.
 const HISTORY_LIMIT = 50
@@ -508,16 +506,15 @@ const useStore = create((set, get) => ({
 
   /**
    * importFromFlask(paths)
-   * paths: { db, ps, rs } absolute paths
-   * POST /import → db_data + ps_rows + rs_rows
+   * paths: { db, ps, rs } — filenames inside the project folder
+   * Parses the three workbooks in-browser (see utils/backend.js).
    * Derives tags for all position types, merges with existing positionUI from SQLite.
    * Returns parsed data for the caller.
    */
   async importFromFlask(paths) {
     set({ isLoading: true, loadError: null })
     try {
-      const response = await axios.post(`${API}/import`, { db: paths.db, ps: paths.ps, rs: paths.rs })
-      const { db: db_data, ps: ps_rows, rs: rs_rows } = response.data
+      const { db: db_data, ps: ps_rows, rs: rs_rows } = await importFiles(paths)
 
       const elementTypes = db_data?.element_types ?? []
       const positionTypes = db_data?.position_types ?? []
@@ -2472,16 +2469,16 @@ const useStore = create((set, get) => ({
   /**
    * reloadFileFromDisk(file)
    * file: 'ps' | 'rs' | 'db'
-   * POST /import, replaces that file's rows, and discards its dirty registry +
-   * undo stacks (EXPORT_PLAN §3.7): nothing stale can be re-exported or undone.
+   * Re-reads the workbooks, replaces that file's rows, and discards its dirty
+   * registry + undo stacks (EXPORT_PLAN §3.7): nothing stale can be re-exported
+   * or undone.
    */
   async reloadFileFromDisk(file) {
     const { paths } = get()
     set({ isLoading: true })
 
     try {
-      const body = { db: paths.db, ps: paths.ps, rs: paths.rs }
-      const response = await axios.post(`${API}/import`, body)
+      const response = { data: await importFiles(paths) }
 
       if (file === 'ps') {
         const psRows = stampIds(response.data.ps ?? [])

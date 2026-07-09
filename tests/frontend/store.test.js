@@ -23,15 +23,17 @@ vi.stubGlobal('window', {
   },
 })
 
-// Mock axios
-vi.mock('axios', () => ({
-  default: {
-    post: vi.fn(),
-    get: vi.fn(),
-  },
+// Workbook parsing now happens in-browser (utils/backend), not over HTTP.
+vi.mock('../../src/utils/backend.js', () => ({
+  importFiles: vi.fn(),
+  detectFiles: vi.fn(),
+  readSheet: vi.fn(),
+  registerFile: vi.fn(),
+  setActiveDirectory: vi.fn(),
+  getActiveDirectory: vi.fn(),
 }))
 
-import axios from 'axios'
+import { importFiles } from '../../src/utils/backend.js'
 import useStore, { getRecipeForPosition } from '../../src/store/useStore.js'
 
 // ---------------------------------------------------------------------------
@@ -606,22 +608,18 @@ describe('reloadFileFromDisk', () => {
     vi.clearAllMocks()
   })
 
-  test('reloadFileFromDisk calls /import and merges single file (ps)', async () => {
+  test('reloadFileFromDisk re-parses the workbooks and merges a single file (ps)', async () => {
     const freshPsRows = [
       { ElementTypeRef: 'ET-DL-SPOT-01', ProductCode: 'PC-001', _id: 'existing' },
     ]
-    // Store reads response.data.ps (not ps_rows)
-    axios.post.mockResolvedValueOnce({ data: { ps: freshPsRows } })
+    importFiles.mockResolvedValueOnce({ ps: freshPsRows })
 
     useStore.setState({ fileWatchAlert: { file: 'ps', path: '/ps.xlsx' } })
 
     await useStore.getState().reloadFileFromDisk('ps')
 
-    // Store sends { db, ps, rs } flat — not wrapped in { paths: ... }
-    expect(axios.post).toHaveBeenCalledWith(
-      expect.stringContaining('/import'),
-      expect.objectContaining({ ps: '/ps.xlsx' })
-    )
+    // paths are filenames inside the project folder handle
+    expect(importFiles).toHaveBeenCalledWith(expect.objectContaining({ ps: '/ps.xlsx' }))
 
     const { psRows, fileWatchAlert } = useStore.getState()
     // rows get re-stamped with new _ids, so just check content
@@ -630,7 +628,7 @@ describe('reloadFileFromDisk', () => {
     expect(fileWatchAlert).toBeNull()
   })
 
-  test('reloadFileFromDisk calls /import and merges single file (rs)', async () => {
+  test('reloadFileFromDisk re-parses the workbooks and merges a single file (rs)', async () => {
     const freshRsRows = [
       {
         PositionTypeRef: POS_REF,
@@ -639,8 +637,7 @@ describe('reloadFileFromDisk', () => {
         RecipeIndex: 1,
       },
     ]
-    // Store reads response.data.rs (not rs_rows)
-    axios.post.mockResolvedValueOnce({ data: { rs: freshRsRows } })
+    importFiles.mockResolvedValueOnce({ rs: freshRsRows })
 
     useStore.setState({ fileWatchAlert: { file: 'rs', path: '/rs.xlsx' } })
 
