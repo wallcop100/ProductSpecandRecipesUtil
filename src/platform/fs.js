@@ -8,20 +8,17 @@
  * project can be reopened without re-picking. **Permission does not persist** —
  * on reload the user must re-grant with a gesture (`ensurePermission`).
  *
- * THE FORMS ARE READ-ONLY. The DesignDB, Product Spec and Recipes Spec workbooks
- * are never modified by this tool — updates leave as Office Scripts patches the
- * user runs themselves. That invariant is enforced twice, not merely documented:
+ * THE PROJECT FOLDER IS READ-ONLY, and this module has no way to write to it.
  *
- *   1. The folder is granted in `mode: 'read'`. The browser itself rejects any
- *      write. Escalating means calling `ensureWritePermission`, which only the
- *      snapshot and config-yaml paths do — from a click, because escalation
- *      needs a user gesture.
- *   2. `writeFile` refuses to write a workbook unless the caller passes
- *      `allowWorkbook`, which only `snapshot` does (into `snapshot/<date>/`,
- *      never the project root). So even a write-granted folder cannot lose a form.
+ * The DesignDB, Product Spec and Recipes Spec workbooks are never modified by this
+ * tool — updates leave as Office Scripts patches the user runs in Excel. That
+ * invariant is enforced by the browser, not by convention: the directory handle is
+ * granted in `mode: 'read'`, and nothing here ever calls `requestPermission` for
+ * 'readwrite' or opens a writable stream. There is no writeFile, and no snapshot.
  *
- * So a bug in a caller cannot silently overwrite a form: it has to get past a
- * permission the app never asked for and a guard it never opted out of.
+ * Files that DO leave the app (config yaml, the personal library) go out through
+ * `saveAs`/`download`, which write wherever the user points the browser — never
+ * into the project folder behind their back.
  */
 
 import { idbGet, idbSet, idbDel } from './idb'
@@ -79,6 +76,9 @@ export async function clearDirectories() { await idbDel(HANDLE_KEY) }
 /**
  * Re-grant access after a reload. Must be called from a user gesture, otherwise
  * `requestPermission` rejects. Returns true when usable.
+ *
+ * `mode` is 'read', always. Nothing in this module writes to the project folder,
+ * so there is nothing to escalate for.
  */
 export async function ensurePermission(handle, mode = 'read') {
   if (!handle) return false
@@ -86,13 +86,6 @@ export async function ensurePermission(handle, mode = 'read') {
   if ((await handle.queryPermission(opts)) === 'granted') return true
   return (await handle.requestPermission(opts)) === 'granted'
 }
-
-/**
- * Escalate a read-only folder to writable. Only the snapshot path needs this, and
- * it too must run from a user gesture. Kept separate from `ensurePermission` so
- * that asking for write is always a deliberate, greppable act.
- */
-export const ensureWritePermission = handle => ensurePermission(handle, 'readwrite')
 
 // --- reading ----------------------------------------------------------------
 
@@ -137,88 +130,6 @@ export async function pickXlsxFile() {
     multiple: false,
   })
   return handle ? { name: handle.name, handle } : null
-}
-
-// --- writing ----------------------------------------------------------------
-
-const isWorkbook = name => /\.(xlsx|xlsm)$/i.test(String(name || ''))
-
-/**
- * `allowWorkbook` is the opt-out, and only `snapshot` takes it — a snapshot copies
- * workbooks into `snapshot/<date>/`, which is the one legitimate workbook write.
- * Everything else (config yaml) is refused outright, so no future caller can reach
- * a form by accident.
- */
-export async function writeFile(dirHandle, name, contents, { allowWorkbook = false } = {}) {
-  if (isWorkbook(name) && !allowWorkbook) {
-    throw new Error(`Refusing to write "${name}": the design workbooks are read-only. Export a patch script instead.`)
-  }
-  const fileHandle = await dirHandle.getFileHandle(name, { create: true })
-  const w = await fileHandle.createWritable()
-  await w.write(contents)
-  await w.close()
-}
-
-/** mkdir -p, relative to a directory handle. */
-async function ensureDir(dirHandle, segments) {
-  let cur = dirHandle
-  for (const s of segments) cur = await cur.getDirectoryHandle(s, { create: true })
-  return cur
-}
-
-async function dirExists(dirHandle, name) {
-  try { await dirHandle.getDirectoryHandle(name); return true } catch { return false }
-}
-
-/**
- * Copy the project files into `<folder>/snapshot/<date>/`, matching Electron's
- * behaviour (a same-day snapshot gets a time suffix rather than overwriting).
- * `overlay` is written beside them when provided.
- *
- * The only writer of workbooks, and the only caller that needs write permission.
- * It escalates the folder grant here, so it must be reached from a user gesture.
- * Sources are read from `dirHandle`; nothing in the project root is ever touched.
- */
-export async function snapshot(dirHandle, files, overlay) {
-  if (!(await ensureWritePermission(dirHandle))) {
-    throw new Error('Write access to the project folder was declined, so no snapshot was taken.')
-  }
-  const dateStr = new Date().toISOString().slice(0, 10)
-  const snapRoot = await ensureDir(dirHandle, ['snapshot'])
-
-  let leaf = dateStr
-  if (await dirExists(snapRoot, dateStr)) {
-    leaf = `${dateStr}_${new Date().toTimeString().slice(0, 8).replace(/:/g, '')}`
-  }
-  const target = await snapRoot.getDirectoryHandle(leaf, { create: true })
-
-  const copied = []
-  for (const name of files || []) {
-    if (!name) continue
-    const bytes = await readFileNamed(dirHandle, name)
-    if (!bytes) continue
-    await writeFile(target, name, bytes, { allowWorkbook: true })   // a copy, inside snapshot/
-    copied.push(name)
-  }
-  if (overlay?.name && overlay.contents != null) await writeFile(target, overlay.name, overlay.contents)
-
-  return { ok: true, dir: `snapshot/${leaf}`, copied }
-}
-
-/** Newest snapshot's mtime, or null. Used to decide whether to nag on export. */
-export async function lastSnapshotTime(dirHandle) {
-  if (!(await dirExists(dirHandle, 'snapshot'))) return null
-  const root = await dirHandle.getDirectoryHandle('snapshot')
-  let newest = null
-  for await (const [, child] of root.entries()) {
-    if (child.kind !== 'directory') continue
-    for await (const [, f] of child.entries()) {
-      if (f.kind !== 'file') continue
-      const t = (await f.getFile()).lastModified
-      if (newest === null || t > newest) newest = t
-    }
-  }
-  return newest
 }
 
 // --- watching ---------------------------------------------------------------

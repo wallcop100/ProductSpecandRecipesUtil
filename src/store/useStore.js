@@ -2402,20 +2402,6 @@ const useStore = create((set, get) => ({
   },
 
   /**
-   * snapshotProject()
-   * Copies the three project files + the config overlay into
-   * <folder>/snapshot/<date>/ (EXPORT_PLAN §6). Returns { dir }.
-   */
-  async snapshotProject() {
-    const { folderPath, paths, projectId, configName } = get()
-    if (!folderPath || !window.electronAPI?.snapshotProject) return null
-    const files = [paths.db, paths.ps, paths.rs]
-      .filter(Boolean)
-      .map(p => p.split(/[\\/]/).pop())
-    return window.electronAPI.snapshotProject({ folderPath, files, projectId, configName })
-  },
-
-  /**
    * setFileWatchAlert(alert)
    * alert: { file: 'ps'|'rs', path } or null
    */

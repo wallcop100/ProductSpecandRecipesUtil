@@ -487,10 +487,8 @@ export default function BuilderScreen({
           title={hasRecipeRows ? 'Transform the active position into a template' : 'Select a position with rows to transform into a template'}
         />
         {/* No snapshot button: export writes nothing — it produces a patch script the
-            user runs in Excel — so there is nothing to back up first. The snapshot
-            machinery (platform/fs.js, store.snapshotProject) is currently unreachable
-            from the UI; it is the only thing that would ever escalate the folder's
-            read-only grant. */}
+            user runs in Excel — so there is nothing to back up first. The project
+            folder is opened read-only and nothing can write to it. */}
         {/* Appears only when there are pending ElementType changes to write
             into the shared DesignDB ElementTypes table. */}
         {dbWriteEnabled && dbChanges.length > 0 && (

@@ -151,42 +151,9 @@ export function installPlatform() {
 
     db: dbBridge(),
 
-    // --- snapshots (written into the project folder)
-    snapshotProject: async ({ folderPath, files, projectId, configName }) => {
-      try {
-        const dir = await backend.setActiveDirectory(folderPath)
-        if (!dir) return { ok: false, error: 'No project folder is open.' }
-        await openDatabase()
-        let overlay
-        if (projectId != null) {
-          overlay = {
-            name: `${configName || 'config'}.config.yaml`,
-            contents: yamlDump(dbApi.collectConfigData(projectId), { noRefs: true }),
-          }
-        }
-        return await fsx.snapshot(dir, files, overlay)
-      } catch (err) {
-        return { ok: false, error: err.message }
-      }
-    },
-    lastSnapshotTime: async folderPath => {
-      const dir = await backend.setActiveDirectory(folderPath)
-      return dir ? fsx.lastSnapshotTime(dir) : null
-    },
-    configWriteYaml: async ({ projectId, filePath }) => {
-      await openDatabase()
-      const contents = yamlDump(dbApi.collectConfigData(projectId), { noRefs: true })
-      const name = String(filePath || 'config.config.yaml').split(/[\\/]/).pop()
-      const dir = backend.getActiveDirectory()
-      // The folder is granted read-only. A config yaml is not a form, so escalate —
-      // but if the user declines, hand them the file rather than failing.
-      if (dir && await fsx.ensureWritePermission(dir)) {
-        await fsx.writeFile(dir, name, contents)
-        return { ok: true, path: name }
-      }
-      fsx.download(name, contents)
-      return { ok: true, path: name }
-    },
+    // No snapshotProject / lastSnapshotTime / configWriteYaml: nothing writes into
+    // the project folder. Export produces a patch script, and the config yaml goes
+    // out through the save picker (db.exportConfigYAML).
 
     // --- personal library (global settings, shareable)
     libraryExportYaml: async () => {
