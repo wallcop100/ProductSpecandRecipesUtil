@@ -145,8 +145,31 @@ export default function FormSpecPane({ posRef, embedded = false }) {
     }
   }
 
-  // Nothing to say about this position.
-  if (!formCaptures) return null
+  // Stage ① has not happened. Say so once, clearly, and offer the one thing to do.
+  if (!formCaptures) {
+    if (embedded) return null   // the Review modal is not the place to start a workflow
+    return (
+      <div className="border-start ps-3" style={{ width: 340, flexShrink: 0, overflowY: 'auto' }}>
+        <SectionLabel>Form spec</SectionLabel>
+        <div className="px-3 py-4 rounded text-center"
+          style={{ background: '#f8f9fa', border: '1px dashed #ced4da' }}>
+          <MaterialIcon name="auto_fix_high" size={28} style={{ color: '#adb5bd' }} />
+          <div className="fw-semibold mt-2" style={{ fontSize: 12 }}>No Form template yet</div>
+          <div className="text-muted mt-1 mb-3" style={{ fontSize: 11, lineHeight: 1.5 }}>
+            Import the Form and this panel shows, for every position, exactly which products it
+            asks for and which are already in the recipe.
+          </div>
+          <Button size="sm" variant="primary" style={{ fontSize: 11 }} onClick={handleReimport}>
+            Import the Form template →
+          </Button>
+          <div className="text-muted mt-3" style={{ fontSize: 10, lineHeight: 1.6 }}>
+            <div><strong>①</strong> Identify codes &nbsp;<strong>②</strong> Assign ElementTypes</div>
+            <div><strong>③</strong> Add them here, where they belong</div>
+          </div>
+        </div>
+      </div>
+    )
+  }
   if (formEts.length === 0 && result.orphaned.length === 0) {
     return (
       <div className="border-start ps-3" style={{ width: 340, flexShrink: 0, overflowY: 'auto' }}>
@@ -198,7 +221,12 @@ export default function FormSpecPane({ posRef, embedded = false }) {
   function applyPlan() {
     // One undo step for the whole batch: only the first add records history.
     preview.actions.forEach((a, i) => {
-      addRecipeRow(posRef, a.rawSection, { elementTypeRef: a.ref }, { recordHistory: i === 0 })
+      const entry = formEts.find(e => e.elementTypeRef === a.ref)
+      addRecipeRow(posRef, a.rawSection, {
+        elementTypeRef: a.ref,
+        // Stage ③: you added this, deliberately, from the Form. The badge says so.
+        _origin: 'form', _formCode: entry?.code ?? null, _formNote: entry?.note ?? null,
+      }, { recordHistory: i === 0 })
     })
     setPreview(null)
     setTicked(new Set())

@@ -410,7 +410,7 @@ export default function BuilderScreen({
         )}
         {/* Silent unless a Form template is attached. "Reconcile →" steps through
             every position that still misses a Form product. */}
-        <FormProgressChip onReconcile={startReconcile} onAttach={onOpenCodeImport} />
+        <FormProgressChip onReconcile={startReconcile} />
         <IconButton variant="outline-secondary" bsSize="sm" icon="dashboard_customize"
           title="Template Editor" onClick={onOpenTemplateEditor} />
         <IconButton variant="outline-secondary" bsSize="sm" icon={ACTION_ICONS.productSpec}

@@ -27,28 +27,20 @@ function setup(over = {}, props = {}) {
   return render(<FormProgressChip {...props} />)
 }
 
-describe('the chip is the way into the workflow when no Form is attached', () => {
-  const onAttach = vi.fn()
+describe('the chip reports Form progress, and only that', () => {
   const onReconcile = vi.fn()
   beforeEach(() => vi.clearAllMocks())
 
-  test('with no Form, it offers to attach one', () => {
-    setup({}, { onAttach, onReconcile })
-    fireEvent.click(screen.getByText('Attach a Form'))
-    expect(onAttach).toHaveBeenCalled()
-  })
-
-  test('with no Form and no handler, it stays silent rather than dangling', () => {
-    const { container } = setup({}, {})
+  test('with no Form it is silent — the pane carries the prompt', () => {
+    const { container } = setup({}, { onReconcile })
     expect(container).toBeEmptyDOMElement()
   })
 
-  test('with a Form, it shows progress instead of the attach button', () => {
+  test('with a Form, it shows progress', () => {
     setup({
       formCaptures: { version: 1, byPosition: { C01r: [ent('ET-PROF-01')], C03r: [ent('ET-PROF-01')] } },
-    }, { onAttach, onReconcile })
+    }, { onReconcile })
 
-    expect(screen.queryByText('Attach a Form')).toBeNull()
     expect(screen.getByText('Form: 1/2')).toBeInTheDocument()   // C03r lacks the profile
     expect(screen.getByText(/1 missing/)).toBeInTheDocument()
   })
@@ -56,7 +48,7 @@ describe('the chip is the way into the workflow when no Form is attached', () =>
   test('Reconcile hands the incomplete positions to the step-through', () => {
     setup({
       formCaptures: { version: 1, byPosition: { C01r: [ent('ET-PROF-01')], C03r: [ent('ET-PROF-01')] } },
-    }, { onAttach, onReconcile })
+    }, { onReconcile })
 
     fireEvent.click(screen.getByText(/Reconcile/))
     expect(onReconcile).toHaveBeenCalledWith(['C03r'])
@@ -65,7 +57,7 @@ describe('the chip is the way into the workflow when no Form is attached', () =>
   test('nothing left to reconcile: no Reconcile link', () => {
     setup({
       formCaptures: { version: 1, byPosition: { C01r: [ent('ET-PROF-01')] } },
-    }, { onAttach, onReconcile })
+    }, { onReconcile })
 
     expect(screen.getByText('Form: 1/1')).toBeInTheDocument()
     expect(screen.queryByText(/Reconcile/)).toBeNull()

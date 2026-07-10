@@ -146,8 +146,22 @@ describe('FormSpecPane renders the Form beside the recipe', () => {
     expect(screen.getByText(/The Form says nothing about C01r/)).toBeInTheDocument()
   })
 
-  test('no Form attached: the pane renders nothing at all', () => {
-    const { container } = setup({ formCaptures: null })
+  test('no Form attached: one clear prompt, not a blank panel', () => {
+    setup({ formCaptures: null })
+    expect(screen.getByText('No Form template yet')).toBeInTheDocument()
+    expect(screen.getByText(/Import the Form template/)).toBeInTheDocument()
+    expect(screen.getByText(/Identify codes/)).toBeInTheDocument()   // the 1-2-3
+  })
+
+  test('the prompt starts stage ① by asking App to change screen', () => {
+    setup({ formCaptures: null })
+    fireEvent.click(screen.getByText(/Import the Form template/))
+    expect(useStore.getState().pendingScreen).toBe('product-code-import')
+  })
+
+  test('embedded (Review modal) is not the place to start a workflow', () => {
+    useStore.setState({ formCaptures: null, recipes: recipes(), containerETRefs: new Set(), psRows: [] })
+    const { container } = render(<FormSpecPane posRef="C01r" embedded />)
     expect(container).toBeEmptyDOMElement()
   })
 })

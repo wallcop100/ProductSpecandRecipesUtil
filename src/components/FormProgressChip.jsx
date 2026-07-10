@@ -12,15 +12,13 @@ import { formProgress, formWorklist } from '../utils/formSpec'
  * project-level answer to "is a Form attached at all?" — the pane's strip only shows
  * while you stand on a position the Form mentions.
  *
- * With no Form attached it is not silent — it offers to attach one. That is the
- * state where you most need to find the workflow, and the only other way in used to
- * be a button buried inside the Product Spec screen.
+ * Silent when no Form is attached: the Side-by-Side pane carries that prompt, and
+ * the toolbar keeps a discreet way in.
  *
  * Props:
  *   onReconcile(refs) — start a step-through of the incomplete positions
- *   onAttach()        — open the product-code import
  */
-export default function FormProgressChip({ onReconcile, onAttach }) {
+export default function FormProgressChip({ onReconcile }) {
   const recipes = useStore(s => s.recipes)
   const containerETRefs = useStore(s => s.containerETRefs)
   const formCaptures = useStore(s => s.formCaptures)
@@ -34,16 +32,9 @@ export default function FormProgressChip({ onReconcile, onAttach }) {
     [progress, recipes, formCaptures, containerETRefs]
   )
 
-  if (!progress) {
-    if (!onAttach) return null
-    return (
-      <Button size="sm" variant="outline-secondary" className="d-inline-flex align-items-center gap-1"
-        style={{ fontSize: 11, flexShrink: 0 }} onClick={onAttach}
-        title="Import product codes from a Form template, then reconcile them against your recipes">
-        <MaterialIcon name="auto_fix_high" size={13} /> Attach a Form
-      </Button>
-    )
-  }
+  // Silent with no Form attached. The prompt lives in the Side-by-Side pane, where
+  // the absence is actually felt; a second button up here was just noise.
+  if (!progress) return null
 
   const done = progress.complete === progress.total
   const colour = done ? '#0f5132' : '#856404'

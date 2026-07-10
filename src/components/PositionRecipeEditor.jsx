@@ -53,7 +53,6 @@ export default function PositionRecipeEditor({
   const copyPositionRecipe = useStore(s => s.copyPositionRecipe)
   const requestPaste = useStore(s => s.requestPaste)
   const rowClipboard = useStore(s => s.rowClipboard)
-  const formCaptures = useStore(s => s.formCaptures)
   const [pasteMsg, setPasteMsg] = useState(null)
 
   const ref = posRef
@@ -203,7 +202,8 @@ export default function PositionRecipeEditor({
           </div>
         )}
       </div>
-      {formCaptures && <FormSpecPane posRef={ref} embedded={embedded} />}
+      {/* Always rendered: with no Form attached it is the prompt to start stage ①. */}
+      <FormSpecPane posRef={ref} embedded={embedded} />
       </div>
     </div>
   )

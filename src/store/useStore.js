@@ -1257,6 +1257,13 @@ const useStore = create((set, get) => ({
       Notes: ingredientData.notes ?? null,
       slotKey: ingredientData.slotKey ?? null,
       resolved: true,
+      // Provenance, when the caller knows it. The Side-by-Side pane sets this so a
+      // row you added from the Form stays visibly Form-derived. Never exported.
+      ...(ingredientData._origin ? {
+        _origin: ingredientData._origin,
+        _formCode: ingredientData._formCode ?? null,
+        _formNote: ingredientData._formNote ?? null,
+      } : null),
       _id: uuidv4(),
     }
 
@@ -1458,75 +1465,6 @@ const useStore = create((set, get) => ({
     return newRows[0]
   },
 
-  /**
-   * prepopulateRecipe(posRef, ets)
-   * Seed a PositionType's recipe from imported captures — flat, position-level,
-   * one row per ET, tagged `_origin:'form'` so the source stays visible while the
-   * user structures it into DLs/wrappers. Skips ETs already in the recipe (never
-   * duplicates) and registers each in the Product Spec. Returns
-   * `{ added, existed }` so the caller can offer a review pass on positions that
-   * had already been started.
-   *
-   * ponytail: form rows are real (resolved) rows, NOT `resolved:false` "primed"
-   * slots — that flag means "unfilled placeholder awaiting an ET" and would raise
-   * UNRESOLVED_TEMPLATE_SLOT errors. Provisional-ness is carried by the Form badge,
-   * a review pass, and the already-manual export — not by holding rows back.
-   */
-  prepopulateRecipe(posRef, ets, { recordHistory = true } = {}) {
-    if (!posRef || !ets || ets.length === 0) return { added: 0, existed: false }
-    const { recipes, rsChanges } = get()
-
-    const posRows = recipes.filter(r =>
-      (r.positionTypeRef || r.PositionTypeRef) === posRef && (r.IsDeleted || r.isDeleted) !== 'Y')
-    const existed = posRows.length > 0
-    const present = new Set(
-      posRows.map(r => (r.elementTypeRef || r.ElementTypeRef || '').toLowerCase()).filter(Boolean))
-
-    const toAdd = ets.filter(e => {
-      const ref = (e.elementTypeRef || e.ElementTypeRef || '').toLowerCase()
-      return ref && !present.has(ref)
-    })
-    if (toAdd.length === 0) return { added: 0, existed }
-
-    if (recordHistory) get()._pushHistory()
-
-    const { contextType, contextRef } = contextForSection('position', posRef, recipes)
-    let maxIndex = posRows
-      .filter(r => sectionOfRow(r) === 'position')
-      .reduce((m, r) => Math.max(m, r.RecipeIndex ?? r.recipeIndex ?? 0), 0)
-
-    const newRows = toAdd.map(e => {
-      const etRef = e.elementTypeRef || e.ElementTypeRef
-      const etToken = etRef.toUpperCase()
-      const isDim = DIM_QTY_COMPONENTS.some(t => etToken.includes(t))
-      const isContract = AUTO_CONTRACT_ITEMS.some(t => etToken.includes(t))
-      maxIndex += 1
-      return {
-        positionTypeRef: posRef, PositionTypeRef: posRef,
-        contextType, ContextType: contextType,
-        contextRef, ContextRef: contextRef,
-        recipeIndex: maxIndex, RecipeIndex: maxIndex,
-        elementTypeRef: etRef, ElementTypeRef: etRef,
-        quantity: etToken.includes('CAP') ? 2 : 1, Quantity: etToken.includes('CAP') ? 2 : 1,
-        dimQtyMultiplier: isDim ? 1 : null, Dim_QuantityMultiplier: isDim ? 1 : null,
-        isContractItem: isContract ? 'Y' : null, IsContractItem: isContract ? 'Y' : null,
-        isDesign: null, IsDesign: null,
-        slotKey: null, resolved: true,
-        _origin: 'form', _formCode: e.code ?? null, _formNote: e.note ?? null,
-        _id: uuidv4(),
-      }
-    })
-
-    const newChanges = newRows.map(row => ({
-      _id: row._id, positionTypeRef: posRef, action: 'upsert', row }))
-    set({
-      recipes: [...recipes, ...newRows],
-      rsChanges: mergeRsChanges(rsChanges, newChanges, recipes),
-      lastAddedRowId: newRows[newRows.length - 1]._id,
-    })
-    for (const r of newRows) get().ensurePSRow(r.ElementTypeRef)
-    return { added: newRows.length, existed }
-  },
 
   /**
    * ensurePSRow(etRef)

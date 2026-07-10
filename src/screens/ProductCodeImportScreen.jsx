@@ -12,6 +12,7 @@ import CaptureLines from '../components/CaptureLines'
 import PrimingModal from '../components/PrimingModal'
 import NewETModal from '../components/NewETModal'
 import ResolveRefsStep from '../components/ResolveRefsStep'
+import StageBar from '../components/StageBar'
 import {
   makeRow, deriveCaptures, buildDistinct, buildMaster, classify, duplicateSet,
   hasNoteCollision, rowConfidence, sortByConfidence, norm, setNoteOverride,
@@ -61,7 +62,6 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   const ensurePSRow = useStore(s => s.ensurePSRow)
   const updatePSRow = useStore(s => s.updatePSRow)
   const updateElementType = useStore(s => s.updateElementType)
-  const prepopulateRecipe = useStore(s => s.prepopulateRecipe)
   const saveFormCaptures = useStore(s => s.saveFormCaptures)
   const formCaptures = useStore(s => s.formCaptures)
   const containerETRefs = useStore(s => s.containerETRefs)
@@ -594,15 +594,18 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       if (note) updateElementType(e.etRef, { Description: note })
     }
 
-    // 2. Prepopulate each PositionType's recipe from its assigned captures (flat,
-    //    form-badged). Positions with an existing recipe get the additions too, and
-    //    are reported so the user can review them.
+    // 2. Collect what the Form says each PositionType uses. THIS IS ALL IT DOES.
     //
-    //    The recipe belongs to the PositionType the DesignDB points at, which is not
-    //    always the one the Form names: the Form says C01, but C01r declares
-    //    ExtRef="C01" and is where the recipe lives. Resolved (and confirmable) in
-    //    the resolve step; a ref left unresolved prefills nothing rather than
-    //    prefilling the wrong position.
+    //    The import never writes a recipe row. A one-click "add everything, everywhere"
+    //    is a black box: it lands rows in positions the user never looked at, and the
+    //    only way to check is to visit each one anyway. Stage ③ is the builder, where
+    //    the Side-by-Side pane offers each Form product for the user to add, one tick
+    //    at a time, into a slot they choose.
+    //
+    //    The captures are keyed by the PositionType the DesignDB points at, not the
+    //    one the Form names: the Form says C01, but C01r declares ExtRef="C01" and is
+    //    where the recipe lives. Resolved (and confirmable) in the resolve step; a ref
+    //    left unresolved is captured against nothing rather than the wrong position.
     const byPos = new Map()   // target PositionTypeRef -> [{ elementTypeRef, code, note, manufacturer, formRef }]
     const contextByPosition = {}
     let unrouted = 0
@@ -629,14 +632,6 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
         }
       }
     }
-    let rowsAdded = 0
-    const reviewPositions = []
-    for (const [pos, ets] of byPos) {
-      const res = prepopulateRecipe(pos, ets)
-      rowsAdded += res.added
-      if (res.existed && res.added > 0) reviewPositions.push(pos)
-    }
-
     // 3. Persist the Form's spec, and diff it against the previous import — the
     //    manual compare the user does whenever the spreadsheet is revised.
     const nextCaptures = {
@@ -665,7 +660,13 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
 
     await saveFormCaptures(nextCaptures)
     await clearImportDraft()          // the work has landed; nothing to resume
-    setStaged({ codes: n, rows: rowsAdded, review: reviewPositions, unrouted, diff, divergence })
+    setStaged({
+      codes: n,
+      byPosition: Object.fromEntries(byPos),
+      positions: byPos.size,
+      products: [...byPos.values()].reduce((t, l) => t + l.length, 0),
+      unrouted, diff, divergence,
+    })
   }
 
   const remaining = resolved.filter(r => !r.confirmed).length
@@ -694,7 +695,20 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
         <h5 className="mb-0 d-flex align-items-center gap-2" style={{ fontSize: 16 }}>
           <MaterialIcon name="auto_fix_high" size={20} /> Import product codes
         </h5>
-        {filepath && <span className="text-muted ms-2" style={{ fontSize: 11 }}>{filepath}</span>}
+        {source?.name && <span className="text-muted ms-2 text-truncate" style={{ fontSize: 11, maxWidth: 260 }}>{source.name}</span>}
+      </div>
+
+      {/* The whole workflow, in three. The import owns ① and ②; the builder owns ③. */}
+      <div className="mb-3">
+        <StageBar
+          current={staged ? 3 : step === 'review' ? (canStage ? 2 : 1) : 1}
+          done={staged ? [1, 2] : []}
+          progress={{
+            1: rows.length ? `${rows.length - remaining}/${rows.length} rows` : undefined,
+            2: entries.length ? `${entries.length - unassigned.length}/${entries.length} codes` : undefined,
+            3: staged ? 'nothing written yet — add them in the builder' : 'in the builder',
+          }}
+        />
       </div>
 
       {error && <Alert variant="danger" style={{ fontSize: 12 }}>{error}</Alert>}
@@ -1033,12 +1047,18 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
               {staged && (
                 <Alert variant="success" className="mt-2 py-1 px-2" style={{ fontSize: 11 }}>
                   <div>
-                    Staged {staged.codes} code{staged.codes === 1 ? '' : 's'} and pre-filled {staged.rows} recipe
-                    row{staged.rows === 1 ? '' : 's'} (badged <MaterialIcon name="token" size={11} />).
+                    <strong>Form template attached.</strong> {staged.products} product
+                    {staged.products === 1 ? '' : 's'} across {staged.positions} PositionType
+                    {staged.positions === 1 ? '' : 's'}
+                    {staged.codes > 0 && <> · {staged.codes} product spec row{staged.codes === 1 ? '' : 's'} staged</>}.
+                  </div>
+                  <div className="mt-1 text-muted">
+                    No recipe was touched. Go to the builder and add each product where it belongs —
+                    the Side-by-Side pane shows what the Form asks for, position by position.
                   </div>
                   {staged.unrouted > 0 && (
                     <div className="mt-1 text-muted">
-                      {staged.unrouted} row{staged.unrouted === 1 ? '' : 's'} prefilled nothing — their Form ref
+                      {staged.unrouted} row{staged.unrouted === 1 ? '' : 's'} captured nothing — their Form ref
                       resolves to no PositionType, or you skipped it.
                     </div>
                   )}
@@ -1056,7 +1076,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                       </div>
                       {staged.diff.removed.length > 0 && (
                         <div className="text-muted" style={{ fontSize: 10 }}>
-                          Removed codes are flagged on their recipe, never deleted for you.
+                          Removed codes are flagged where they appear, never deleted for you.
                         </div>
                       )}
                     </div>
@@ -1081,20 +1101,17 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                       ))}
                     </div>
                   )}
-                  {staged.review.length > 0 && (
-                    <div className="mt-1">
-                      {staged.review.length} position{staged.review.length === 1 ? '' : 's'} already had a recipe
-                      — the additions need a look ({staged.review.join(', ')}).
-                      {onReviewPositions && (
-                        <Button size="sm" variant="outline-success" className="ms-2"
-                          style={{ fontSize: 10, padding: '0 6px' }}
-                          onClick={() => onReviewPositions(staged.review)}>
-                          Review now →
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                  <div className="mt-1">Open <strong>Export changes</strong> to copy the patch.</div>
+                  <div className="mt-2 d-flex align-items-center gap-2">
+                    {onReviewPositions && (
+                      <Button size="sm" variant="success" style={{ fontSize: 11 }}
+                        onClick={() => onReviewPositions(Object.keys(staged.byPosition || {}))}>
+                        <MaterialIcon name="playlist_add_check" size={13} /> Build recipes →
+                      </Button>
+                    )}
+                    <span className="text-muted" style={{ fontSize: 10 }}>
+                      Product Spec changes leave via <strong>Export changes</strong>.
+                    </span>
+                  </div>
                 </Alert>
               )}
             </div>
