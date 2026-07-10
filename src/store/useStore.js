@@ -18,6 +18,8 @@ import { planCollectionBulk, effectiveActions } from '../utils/collectionStatus.
 import { positionFamilyOf, ignoredPositionRefs } from '../utils/positionFamily.js'
 import { alignmentGaps } from '../utils/specAlignment.js'
 import { planSwap, swapPatch } from '../utils/swapPlan.js'
+import { guessCollection, missingFamilies } from '../utils/collectionGuess.js'
+import { hasProductIdentity } from '../utils/productCodes.js'
 import { familyOf } from '../utils/etRef.js'
 import { DIM_QTY_COMPONENTS, AUTO_CONTRACT_ITEMS } from '../utils/constants.js'
 import { CONNECTOR_TEMPLATES } from '../data/connectorTemplates.js'
@@ -2720,50 +2722,120 @@ const useStore = create((set, get) => ({
   },
 
   /**
-   * queueMissingDbRows(refs?) — teach the DesignDB about ElementTypes it has never
-   * heard of, via the ElementTypes patch. The only route into the master.
+   * dbRowProposals() — what the ElementTypes patch WOULD write for each master gap.
    *
-   * Name and Description come from the Product Spec's ComponentDescription where one
-   * exists: it is the only prose anyone has written about the thing. `ParentRef` is
-   * left blank — filing it under a collection is a human decision.
-   *
-   * Returns the number queued. Never overwrites: every row here is an insert, because
-   * by construction the master does not have it.
+   * Read-only, so the export summary can show it and let the user edit a `Family` before
+   * anything is queued. Nothing here is applied on its own: a collection guess is a
+   * proposal, and a two-segment guess is frequently wrong (see collectionGuess).
    */
-  queueMissingDbRows(refs, { recordHistory = true } = {}) {
+  dbRowProposals(refs) {
     const wanted = refs && refs.length ? new Set(refs.map(r => r.toLowerCase())) : null
     const gaps = get().alignmentGaps().dbRows.filter(d => !wanted || wanted.has(d.ref.toLowerCase()))
-    if (gaps.length === 0) return 0
+    const { psRows, elementTypes, dbCollectionRefs, containerETRefs } = get()
 
-    const { psRows, containerETRefs } = get()
     const specOf = ref => psRows.find(
       r => (r.IsDeleted || r.isDeleted) !== 'Y' &&
            (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === ref.toLowerCase()
     )
 
+    return gaps.map(gap => {
+      const spec = specOf(gap.ref)
+      const mfr = (spec?.Manufacturer || '').trim()
+      const code = (spec?.ProductCode || '').trim()
+      return {
+        ref: gap.ref,
+        isWrapper: gap.isWrapper,
+        // The only prose anyone has written about the thing.
+        name: (spec?.ComponentDescription || '').trim() || null,
+        // A product is (manufacturer, code) and the two never travel apart. Details is
+        // the sheet's free-form attribute column ("Colour: Blue"), so it is where the
+        // identity belongs — Description stays for a human.
+        details: hasProductIdentity(code) ? [mfr, code].filter(Boolean).join(' ') || null : null,
+        guess: guessCollection(gap.ref, elementTypes, dbCollectionRefs),
+      }
+    })
+  },
+
+  /**
+   * queueMissingDbRows(refs?, { families }) — teach the DesignDB about ElementTypes it
+   * has never heard of, via the ElementTypes patch. The only route into the master.
+   *
+   * `Name` is the Product Spec's ComponentDescription; `Details` is the product identity
+   * (manufacturer + code). `Description` is left alone — writing the same string into two
+   * columns is not information.
+   *
+   * `families` optionally maps ref → ParentRef, from proposals the user approved. A
+   * collection is NEVER guessed into the patch on its own.
+   */
+  queueMissingDbRows(refs, { recordHistory = true, families = {} } = {}) {
+    const proposals = get().dbRowProposals(refs)
+    if (proposals.length === 0) return 0
+    const gaps = proposals
+
+    const { containerETRefs } = get()
+
     if (recordHistory) get()._pushHistory()
     let dbChanges = get().dbChanges
     for (const gap of gaps) {
-      const spec = specOf(gap.ref)
-      const desc = (spec?.ComponentDescription || '').trim() || null
       dbChanges = mergeDbChanges(dbChanges, {
         elementTypeRef: gap.ref,
         updates: {
           ElementTypeRef: gap.ref,
-          Name: desc,
-          Description: desc,
-          Family: null,
+          Name: gap.name,
+          Details: gap.details,
+          Family: families[gap.ref] ?? null,
           // A wrapper is IsCollection: it carries detail rather than a product.
           // parseDb strips collections by PARENT usage, not by this flag, so a
           // wrapper marked here still comes back as an ElementType on reload.
           IsCollection: containerETRefs.has(gap.ref.toLowerCase()) ? 'Y' : null,
-          SortOrder: get().suggestSortOrder(null),
+          SortOrder: get().suggestSortOrder(families[gap.ref] ?? null),
         },
         _isNew: true,
       })
     }
     set({ dbChanges })
     return gaps.length
+  },
+
+  /**
+   * proposedFamilies(refs?) — the house-style collections this DesignDB lacks that would
+   * give one of the gap refs a home. Read-only; see collectionGuess.STYLE_GUIDE.
+   *
+   * On project 5642 this is exactly ET-DL (adopts 8 wrappers), ET-LIN (6) and ET-PS (14):
+   * the three families the workbook never had, which is precisely why nothing could be
+   * guessed for them from siblings.
+   */
+  proposedFamilies(refs) {
+    const gapRefs = get().alignmentGaps().dbRows.map(d => d.ref)
+    const wanted = refs && refs.length ? new Set(refs.map(r => r.toLowerCase())) : null
+    const scope = wanted ? gapRefs.filter(r => wanted.has(r.toLowerCase())) : gapRefs
+    const { elementTypes, dbCollectionRefs } = get()
+    return missingFamilies(scope, elementTypes, dbCollectionRefs)
+  },
+
+  /**
+   * createFamilies(families) — queue new IsCollection rows into the ElementTypes patch,
+   * and file their members under them.
+   *
+   * Created parent-first (missingFamilies sorts shallow → deep), so a patch adding
+   * ET-PS-MOUNTING-FRAME under ET-PS-MOUNTING never references a row it has not yet
+   * written. This writes to the master, so it is offered and never automatic.
+   */
+  createFamilies(families = []) {
+    if (!families || families.length === 0) return 0
+    get()._pushHistory()
+
+    for (const fam of families) {
+      get().createElementType({
+        ref: fam.ref, name: fam.name, family: fam.parent ?? null, isCollection: true,
+      })
+    }
+
+    const assignment = {}
+    for (const fam of families) for (const ref of fam.adopts) assignment[ref] = fam.ref
+    get().queueMissingDbRows(Object.keys(assignment), { recordHistory: false, families: assignment })
+
+    return families.length
   },
 
   /**

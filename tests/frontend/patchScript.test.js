@@ -110,3 +110,68 @@ describe('buildRsScript', () => {
     expect(s).not.toContain('col["Quantity"], 2')
   })
 })
+
+/**
+ * `_isNew` is a belief about the workbook, not a fact about it. After you paste a patch
+ * the tool still holds the OLD workbook in memory, so the next export re-declares the
+ * same rows as new. The scripts used to append on that belief, so pasting a patch twice —
+ * or exporting twice — duplicated every new row in all three files.
+ *
+ * Every "add" is now an upsert. Running any script a second time is a no-op.
+ */
+describe('the patches are idempotent — a second run must not duplicate', () => {
+  const dbNew = [{ elementTypeRef: 'ET-PS-01', updates: { ElementTypeRef: 'ET-PS-01', Name: 'XAL Move It' }, _isNew: true }]
+  const psNew = [{ elementTypeRef: 'ET-PS-01', updates: { ProductCode: 'C-1' }, _isNew: true }]
+  const rsNew = [{ _id: 'r1', positionTypeRef: 'C01r', action: 'upsert', row: {
+    PositionTypeRef: 'C01r', ContextType: 'PositionType', ContextRef: 'C01r', ElementTypeRef: 'ET-X', RecipeIndex: 1,
+  } }]
+
+  test('the DesignDB patch looks the ref up before appending it', () => {
+    const s = buildDbScript(dbNew)
+    expect(s).toContain('const r = rowByKey(S, col["Ref"], "ET-PS-01")')
+    expect(s).toContain('if (r < 0)')
+    // the append is inside the not-found branch
+    expect(s.indexOf('rowByKey')).toBeLessThan(s.indexOf('writeCell(S, apR'))
+  })
+
+  test('an existing row is updated in place, and says so in Excel', () => {
+    const s = buildDbScript(dbNew)
+    expect(s).toContain('already present - updated in place, not duplicated')
+    expect(s).toContain('writeCell(S, r, col["Name"], "XAL Move It")')
+  })
+
+  test('the Product Spec patch has the same guard', () => {
+    const s = buildPsScript(psNew)
+    expect(s).toContain('const r = rowByKey(S, col["EntityRef"], "ET-PS-01")')
+    expect(s.indexOf('rowByKey')).toBeLessThan(s.indexOf('writeCell(S, apR'))
+  })
+
+  test('the Recipe patch upserts on its composite key', () => {
+    const s = buildRsScript(rsNew)
+    expect(s).toContain('const r = rowWhere(data, [{ c: col["ContextType"]')
+    expect(s).toContain('const data = S.getUsedRange().getValues()')   // needed by the lookup
+    expect(s.indexOf('rowWhere')).toBeLessThan(s.indexOf('writeCell(S, apR'))
+  })
+
+  test('data is read BEFORE any row is appended, so a second run sees the first', () => {
+    const s = buildRsScript(rsNew)
+    expect(s.indexOf('const data =')).toBeLessThan(s.indexOf('let apR ='))
+  })
+
+  test('a blank value never clears a cell the sheet already has', () => {
+    const s = buildDbScript([{ elementTypeRef: 'ET-A', updates: { ElementTypeRef: 'ET-A', Name: 'N', Description: '' }, _isNew: true }])
+    expect(s).toContain('col["Name"]')
+    expect(s).not.toContain('col["Description"]')
+  })
+
+  test('a row created then deleted is still a no-op', () => {
+    expect(buildDbScript([{ elementTypeRef: 'ET-A', updates: { IsDeleted: 'Y' }, _isNew: true }])).toBe('')
+  })
+})
+
+describe('a new ElementType records its product identity in Details', () => {
+  test('Details maps to the Details column', () => {
+    const s = buildDbScript([{ elementTypeRef: 'ET-A', updates: { ElementTypeRef: 'ET-A', Details: 'XAL 011-8000018M' }, _isNew: true }])
+    expect(s).toContain('writeCell(S, apR, col["Details"], "XAL 011-8000018M")')
+  })
+})

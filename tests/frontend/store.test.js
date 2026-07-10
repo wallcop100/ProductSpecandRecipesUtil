@@ -1262,18 +1262,44 @@ describe('queueMissingDbRows — teaching the master about ElementTypes it never
   test('an ET in the Product Spec but not the DesignDB is queued as an insert', () => {
     resetStore({
       dbChanges: [], elementTypes: [], dbCollectionRefs: [], recipes: [],
-      psRows: [{ _id: 'p1', ElementTypeRef: 'ET-PS-01', ComponentDescription: 'XAL Move It 45' }],
+      psRows: [{ _id: 'p1', ElementTypeRef: 'ET-PS-01', ComponentDescription: 'XAL Move It 45',
+                 Manufacturer: 'XAL', ProductCode: '011-8000018M' }],
     })
     const n = useStore.getState().queueMissingDbRows()
     expect(n).toBe(1)
     const { dbChanges } = useStore.getState()
     expect(dbChanges[0].elementTypeRef).toBe('ET-PS-01')
     expect(dbChanges[0]._isNew).toBe(true)
-    // Name and Description come from the only prose anyone wrote about the thing.
+    // Name is the only prose anyone wrote about the thing.
     expect(dbChanges[0].updates.Name).toBe('XAL Move It 45')
-    expect(dbChanges[0].updates.Description).toBe('XAL Move It 45')
+    // Details carries the product identity: a product is (manufacturer, code).
+    expect(dbChanges[0].updates.Details).toBe('XAL 011-8000018M')
+    // Description is NOT the Name again. Writing one string into two columns is not
+    // information; it just made the DesignDB look filled-in.
+    expect(dbChanges[0].updates.Description).toBeUndefined()
     // Filing it under a collection is a human decision.
     expect(dbChanges[0].updates.Family).toBeNull()
+  })
+
+  test('a wrapper has no product, so Details stays empty', () => {
+    resetStore({
+      dbChanges: [], elementTypes: [], dbCollectionRefs: [], recipes: [],
+      containerETRefs: new Set(['et-lin-01']),
+      psRows: [{ _id: 'p1', ElementTypeRef: 'ET-LIN-01', Manufacturer: 'Ideaworks', ProductCode: 'N/A' }],
+    })
+    useStore.getState().queueMissingDbRows()
+    const u = useStore.getState().dbChanges[0].updates
+    expect(u.Details).toBeNull()          // "N/A" identifies nothing
+    expect(u.IsCollection).toBe('Y')
+  })
+
+  test('an approved family lands in ParentRef', () => {
+    resetStore({
+      dbChanges: [], elementTypes: [], dbCollectionRefs: [], recipes: [],
+      psRows: [{ _id: 'p1', ElementTypeRef: 'ET-PS-01' }],
+    })
+    useStore.getState().queueMissingDbRows(null, { families: { 'ET-PS-01': 'ET-PS' } })
+    expect(useStore.getState().dbChanges[0].updates.Family).toBe('ET-PS')
   })
 
   test('an ET already in the master workbook is not queued', () => {
@@ -1294,6 +1320,60 @@ describe('queueMissingDbRows — teaching the master about ElementTypes it never
     })
     useStore.getState().queueMissingDbRows()
     expect(useStore.getState().dbChanges[0].updates.IsCollection).toBe('Y')
+  })
+})
+
+describe('createFamilies — the house style, offered and never automatic', () => {
+  /**
+   * The DesignDB has ET-LIN-COMPONENTS but no ET-LIN, no ET-DL and no ET-PS, which is
+   * exactly why nothing could be guessed for the wrappers and the point sources. The
+   * style guide supplies the families; creating them is a write to the master.
+   */
+  const seed = () => resetStore({
+    dbChanges: [], elementTypes: [], dbCollectionRefs: [], recipes: [], psRows: [
+      { _id: 'p1', ElementTypeRef: 'ET-PS-01' },
+      { _id: 'p2', ElementTypeRef: 'ET-DL-01' },
+    ],
+    localElementTypes: [], past: [],
+  })
+
+  test('it proposes only families that would adopt something', () => {
+    seed()
+    const fams = useStore.getState().proposedFamilies()
+    expect(fams.map(f => f.ref).sort()).toEqual(['ET-DL', 'ET-PS'])
+    expect(fams.find(f => f.ref === 'ET-PS').adopts).toEqual(['ET-PS-01'])
+  })
+
+  test('creating them queues the collection rows AND files their members', () => {
+    seed()
+    const fams = useStore.getState().proposedFamilies()
+    expect(useStore.getState().createFamilies(fams)).toBe(2)
+
+    const { dbChanges } = useStore.getState()
+    const byRef = Object.fromEntries(dbChanges.map(c => [c.elementTypeRef, c.updates]))
+    expect(byRef['ET-PS'].IsCollection).toBe('Y')
+    expect(byRef['ET-PS'].Name).toBe('Point Source Family')
+    expect(byRef['ET-PS-01'].Family).toBe('ET-PS')
+    expect(byRef['ET-DL-01'].Family).toBe('ET-DL')
+  })
+
+  test('a family the workbook already has is never proposed', () => {
+    seed()
+    useStore.setState({ dbCollectionRefs: ['ET-PS'] })
+    expect(useStore.getState().proposedFamilies().map(f => f.ref)).toEqual(['ET-DL'])
+  })
+
+  test('one undo step for the whole thing', () => {
+    seed()
+    const before = useStore.getState().past.length
+    useStore.getState().createFamilies(useStore.getState().proposedFamilies())
+    expect(useStore.getState().past.length).toBe(before + 1)
+  })
+
+  test('creating nothing does nothing', () => {
+    seed()
+    expect(useStore.getState().createFamilies([])).toBe(0)
+    expect(useStore.getState().dbChanges).toHaveLength(0)
   })
 })
 

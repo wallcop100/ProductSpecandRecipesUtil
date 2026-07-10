@@ -4,6 +4,7 @@ import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { buildPsScript, buildRsScript, buildDbScript } from '../utils/patchScript'
 import { ConceptHint, CONCEPTS } from './ConceptCard'
+import MasterGapPanel from './MasterGapPanel'
 
 /**
  * ChangeSummaryModal — review pending changes and copy per-file patch scripts.
@@ -183,7 +184,6 @@ export default function ChangeSummaryModal({ show, onHide, scope = 'export', not
 
   const alignmentGaps = useStore(s => s.alignmentGaps)
   const fillWrapperSpecRows = useStore(s => s.fillWrapperSpecRows)
-  const queueMissingDbRows = useStore(s => s.queueMissingDbRows)
 
   const [copiedKey, setCopiedKey] = useState(null)
   useEffect(() => { if (show) setCopiedKey(null) }, [show])
@@ -301,27 +301,9 @@ export default function ChangeSummaryModal({ show, onHide, scope = 'export', not
           </div>
         )}
 
-        {/* The DesignDB is the master list. Anything absent from it is drift. */}
-        {gaps.dbRows.length > 0 && (
-          <div className="mb-3 px-2 py-2 rounded" style={{ background: '#cfe2ff', border: '1px solid #b6d4fe' }}>
-            <div className="fw-semibold d-flex align-items-center gap-1" style={{ fontSize: 11, color: '#084298' }}>
-              <MaterialIcon name="hub" size={13} />
-              {gaps.dbRows.length} ElementType{gaps.dbRows.length === 1 ? '' : 's'} missing from the DesignDB master
-            </div>
-            <div className="text-muted my-1" style={{ fontSize: 11 }}>
-              The DesignDB is the master list: everything in the Product Spec or a recipe must exist in it.
-              These reach it through the ElementTypes patch. <span className="fst-italic">ParentRef is left
-              blank — filing them under a collection is yours to decide.</span>
-            </div>
-            <div style={{ fontFamily: 'monospace', fontSize: 10, color: '#6c757d', maxHeight: 60, overflowY: 'auto' }}>
-              {gaps.dbRows.map(d => d.ref).join(', ')}
-            </div>
-            <Button size="sm" variant="outline-primary" className="mt-2" style={{ fontSize: 11 }}
-              onClick={() => queueMissingDbRows()}>
-              <MaterialIcon name="playlist_add_check" size={13} /> Add {gaps.dbRows.length} to the ElementTypes patch
-            </Button>
-          </div>
-        )}
+        {/* The DesignDB is the master list. Anything absent from it is drift — and each
+            row needs a family, which is guessed from siblings, never inferred from the ref. */}
+        <MasterGapPanel gaps={gaps} />
 
         {sections.length === 0 && gaps.dbRows.length === 0 &&
          gaps.specRows.wrappers.length === 0 && gaps.specRows.products.length === 0 && (

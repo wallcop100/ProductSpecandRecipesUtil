@@ -11,6 +11,15 @@
  *
  * Duplicates are resolved HERE (before generating): entries are coalesced to
  * one deterministic operation per target — update / append / soft-delete.
+ *
+ * EVERY SCRIPT IS IDEMPOTENT. A row the tool believes is new is still looked up by its
+ * key before being appended, because `_isNew` is a belief about the workbook, not a fact
+ * about it: after you paste a patch, the tool still has the old workbook in memory, so
+ * the next export would append the same rows again. It used to. Pasting a patch twice —
+ * or exporting twice — duplicated every new row in the DesignDB, the Product Spec and
+ * the Recipes alike.
+ *
+ * Running any script a second time is now a no-op.
  */
 
 // Canonical field → Excel column header (ported from backend/app.py).
@@ -45,6 +54,9 @@ const DB_FIELD_TO_EXCEL = {
   ElementTypeRef: 'Ref',
   Name: 'Name',
   Description: 'Description',
+  // Free-form attributes ("Colour: Blue"). A new ElementType records its product
+  // identity here — a product is (manufacturer, code) and the two never travel apart.
+  Details: 'Details',
   Family: 'ParentRef',
   IsCollection: 'IsCollection',
   IsDeleted: 'IsDeleted',
@@ -162,16 +174,35 @@ function buildUniqueKeyScript(changes, map, sheet, keyHeader, filename, { withEn
     const fields = Object.entries(updates).filter(([f]) => f !== 'ElementTypeRef' && map[f])
 
     if (isNew) {
+      // UPSERT, never a blind append. `_isNew` says the TOOL has not seen this ref; the
+      // sheet may disagree — because you already pasted this patch, or a colleague added
+      // the row by hand. Appending on that belief is what duplicated the DesignDB.
       needAppend = true
-      const l = [`    // add ${ref}`, `    writeCell(S, apR, col[${q(keyHeader)}], ${q(ref)});`]
-      if (withEntityType) { used.add('EntityType'); l.push('    writeCell(S, apR, col["EntityType"], "ElementType");') }
-      for (const [f, v] of fields) {
-        if (isBlank(v)) continue   // blank on a fresh row = leave empty
-        used.add(map[f])
-        l.push(`    writeCell(S, apR, col[${q(map[f])}], ${literal(f, v)});`)
+      const write = target => {
+        const l = []
+        for (const [f, v] of fields) {
+          if (isBlank(v)) continue   // a blank never clears a cell the sheet already has
+          used.add(map[f])
+          l.push(`        writeCell(S, ${target}, col[${q(map[f])}], ${literal(f, v)});`)
+        }
+        return l
       }
-      l.push('    apR++;')
-      blocks.push(l.join('\n'))
+      const add = [`        writeCell(S, apR, col[${q(keyHeader)}], ${q(ref)});`]
+      if (withEntityType) { used.add('EntityType'); add.push('        writeCell(S, apR, col["EntityType"], "ElementType");') }
+      add.push(...write('apR'), '        apR++;')
+
+      blocks.push([
+        `    // add ${ref} (idempotent: updates in place if it is already there)`,
+        '    {',
+        `      const r = rowByKey(S, col[${q(keyHeader)}], ${q(ref)});`,
+        '      if (r < 0) {',
+        add.join('\n'),
+        '      } else {',
+        `        console.log(${q('NOTE: ' + ref + ' already present - updated in place, not duplicated.')});`,
+        write('r').join('\n'),
+        '      }',
+        '    }',
+      ].filter(Boolean).join('\n'))
     } else {
       if (fields.length === 0) continue
       const l = [`    // update ${ref}`, '    {',
@@ -251,17 +282,37 @@ export function buildRsScript(rsChanges, filename = 'Recipe Spec') {
         '      else { writeCell(S, r, col["IsDeleted"], "Y"); }\n    }'
       )
     } else if (isAppend) {
+      // UPSERT on the composite key. A recipe row the tool believes is new may already
+      // be on the sheet — you pasted this patch once already. Appending on that belief
+      // duplicated it. `data` is read before any append, so a second run finds it.
       needAppend = true
+      needData = true
       used.add('EntityType')
-      const l = ['    // add recipe row', '    writeCell(S, apR, col["EntityType"], "ElementType");']
-      for (const f of Object.keys(RS_FIELD_TO_EXCEL)) {
-        const v = rsValue(row, f)
-        if (isBlank(v)) continue
-        used.add(RS_FIELD_TO_EXCEL[f])
-        l.push(`    writeCell(S, apR, col[${q(RS_FIELD_TO_EXCEL[f])}], ${literal(f, v)});`)
+
+      const write = target => {
+        const l = []
+        for (const f of Object.keys(RS_FIELD_TO_EXCEL)) {
+          const v = rsValue(row, f)
+          if (isBlank(v)) continue
+          used.add(RS_FIELD_TO_EXCEL[f])
+          l.push(`        writeCell(S, ${target}, col[${q(RS_FIELD_TO_EXCEL[f])}], ${literal(f, v)});`)
+        }
+        return l
       }
-      l.push('    apR++;')
-      appendBlocks.push(l.join('\n'))
+      const add = ['        writeCell(S, apR, col["EntityType"], "ElementType");', ...write('apR'), '        apR++;']
+
+      appendBlocks.push([
+        '    // add recipe row (idempotent: updates in place if it is already there)',
+        '    {',
+        `      const r = rowWhere(data, ${rsCriteria(entry)});`,
+        '      if (r < 0) {',
+        add.join('\n'),
+        '      } else {',
+        '        console.log("NOTE: recipe row already present - updated in place, not duplicated.");',
+        write('r').join('\n'),
+        '      }',
+        '    }',
+      ].join('\n'))
     } else {
       const changed = entry.changedFields || {}
       const fields = Object.entries(changed).filter(([f]) => RS_FIELD_TO_EXCEL[f])
