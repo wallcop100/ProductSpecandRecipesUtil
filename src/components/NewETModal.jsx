@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useId } from 'react'
+import React, { useRef, useState, useMemo, useEffect, useId } from 'react'
 import { Modal, Button, Form } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
@@ -27,6 +27,18 @@ export default function NewETModal({
   contextLabel = null,
   confirmLabel = 'Create Element Type',
   prefill = {},
+  /**
+   * What the import knows about this product, shown read-only at the top: the
+   * captured code, the maker, the note, and which PositionTypes asked for it. The
+   * note in particular is the whole reason you can tell two similar codes apart.
+   */
+  importContext = null,
+  /**
+   * Identity of the thing being created. Closing and reopening the SAME draftKey
+   * keeps everything you typed — you can go back to the panel, look at a sibling
+   * code, and come back. A different draftKey seeds fresh.
+   */
+  draftKey = null,
 }) {
   const elementTypes      = useStore(s => s.elementTypes)
   const psRows            = useStore(s => s.psRows)
@@ -51,9 +63,15 @@ export default function NewETModal({
   const [showSpec, setShowSpec]     = useState(false)
   const [saving, setSaving]         = useState(false)
 
-  // Reset on open, seeded from prefill (e.g. a captured product code + its note).
+  // Seed on open, but ONLY for a draft we have not started. The modal stays mounted,
+  // so re-opening the same draftKey returns you to exactly what you had typed.
+  const seededFor = useRef(Symbol('none'))
   useEffect(() => {
     if (!show) return
+    const key = draftKey ?? prefill.ref ?? prefill.productCode ?? null
+    if (seededFor.current === key) return
+    seededFor.current = key
+
     setRef(prefill.ref || '')
     setName(prefill.name || '')
     setDescription(prefill.description || '')
@@ -64,7 +82,10 @@ export default function NewETModal({
     setShowSpec(!!(prefill.manufacturer || prefill.productCode))
     setSaving(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [show])
+  }, [show, draftKey])
+
+  /** After a successful create, the next open of this key must seed afresh. */
+  const clearSeed = () => { seededFor.current = Symbol('done') }
 
   const familyOptions = useMemo(() => {
     const s = new Set()
@@ -156,6 +177,7 @@ export default function NewETModal({
         else addPSRow(trimRef, psDefaults)
       }
 
+      clearSeed()
       onCreated(trimRef)
     } finally {
       setSaving(false)
@@ -173,6 +195,40 @@ export default function NewETModal({
       </Modal.Header>
 
       <Modal.Body>
+        {/* What the Form actually said. Read-only: it is evidence, not a field. */}
+        {importContext && (
+          <div className="mb-3 px-2 py-2 rounded" style={{ background: '#f8f9fa', border: '1px solid #e9ecef', fontSize: 11 }}>
+            <div className="fw-semibold text-muted mb-1" style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '.05em' }}>
+              From the Form
+            </div>
+            <div className="d-flex align-items-baseline gap-2">
+              <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{importContext.code}</span>
+              <span className={importContext.manufacturer ? 'text-muted' : 'text-muted fst-italic'}>
+                {importContext.manufacturer || 'no manufacturer'}
+              </span>
+              {importContext.rowCount > 0 && (
+                <span className="text-muted ms-auto" style={{ fontSize: 10 }}>
+                  {importContext.rowCount} row{importContext.rowCount === 1 ? '' : 's'}
+                </span>
+              )}
+            </div>
+            {importContext.note && (
+              <div className="mt-1"><span className="text-muted">note:</span> {importContext.note}</div>
+            )}
+            {importContext.positionTypes?.length > 0 && (
+              <div className="text-muted mt-1" style={{ fontSize: 10 }}>
+                used by <span style={{ fontFamily: 'monospace' }}>{importContext.positionTypes.join(', ')}</span>
+              </div>
+            )}
+            {importContext.mergedCodes?.length > 1 && (
+              <div className="mt-1" style={{ color: '#856404' }}>
+                <MaterialIcon name="merge" size={11} /> merging {importContext.mergedCodes.length} codes onto one
+                ElementType: <span style={{ fontFamily: 'monospace' }}>{importContext.mergedCodes.join(', ')}</span>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Ref field */}
         <Form.Group className="mb-3">
           <Form.Label style={{ fontSize: 12, fontWeight: 600 }}>

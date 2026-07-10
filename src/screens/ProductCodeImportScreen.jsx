@@ -557,6 +557,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       ref: lead.suggestedRef || '',
       manufacturer: lead.manufacturers[0] || '',
       description: lead.variants[0]?.note || '',
+      note: lead.variants[0]?.note || '',
+      positionTypes: [...new Set(group.flatMap(e => e.positionTypes))],
+      rowCount: group.reduce((n, e) => n + e.rowRefs.length, 0),
     })
   }
 
@@ -1007,6 +1010,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                 ref: e.suggestedRef || '',
                 manufacturer: e.manufacturers[0] || '',
                 description: e.variants[0]?.note || '',
+                note: e.variants[0]?.note || '',
+                positionTypes: e.positionTypes,
+                rowCount: e.rowRefs.length,
               })}
             />
 
@@ -1140,6 +1146,16 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
         contextLabel={creatingFor
           ? (mergingGroup ? `for ${mergingGroup.length} merged codes` : `for ${creatingFor.text}`)
           : null}
+        // Closing to compare against a sibling code must not lose what you typed.
+        draftKey={creatingFor ? `${mergingGroup ? mergingGroup.join('|') : ''}::${norm(creatingFor.text)}` : null}
+        importContext={creatingFor ? {
+          code: creatingFor.text,
+          manufacturer: creatingFor.manufacturer,
+          note: creatingFor.note,
+          positionTypes: creatingFor.positionTypes,
+          rowCount: creatingFor.rowCount,
+          mergedCodes: mergingGroup,
+        } : null}
         prefill={creatingFor ? {
           ref: creatingFor.ref,
           manufacturer: creatingFor.manufacturer,
