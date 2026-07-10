@@ -24,6 +24,7 @@ import FormProgressChip from '../components/FormProgressChip'
 import ElementPalette from '../components/ElementPalette'
 import ValidationPanel from '../components/ValidationPanel'
 import ReadinessPanel from '../components/ReadinessPanel'
+import TagRulesModal from '../components/TagRulesModal'
 import TemplatePicker from '../components/TemplatePicker'
 import PasteMergeModal from '../components/PasteMergeModal'
 import FavoritesPanel from '../components/FavoritesPanel'
@@ -115,6 +116,7 @@ export default function BuilderScreen({
   const validateBtnRef = React.useRef(null)
   const [, setActiveId] = useState(null)  // drag tracking
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)   // Transform-into-template modal (T-F4)
+  const [showTags, setShowTags] = useState(false)                   // the tags modal (rules + colours)
   // Track which template (if any) was applied to each position { [posRef]: templateId }
   const [appliedTemplateId, setAppliedTemplateId] = useState({})
 
@@ -424,7 +426,7 @@ export default function BuilderScreen({
             title="Import product codes from a Form template" onClick={onOpenCodeImport} />
         )}
         <IconButton variant="outline-secondary" bsSize="sm" icon={ACTION_ICONS.tags}
-          title="Tags" onClick={onOpenTags} />
+          title="Tags" onClick={() => setShowTags(true)} />
 
         <ButtonGroup size="sm" className="ms-2">
           <Button
@@ -852,6 +854,8 @@ export default function BuilderScreen({
         show={!!changeSummary}
         onHide={() => setChangeSummary(false)}
       />
+
+      <TagRulesModal show={showTags} onHide={() => setShowTags(false)} />
     </div>
   )
 }

@@ -6,7 +6,6 @@ import TemplateEditorScreen from './screens/TemplateEditorScreen'
 import ProductSpecScreen from './screens/ProductSpecScreen'
 import ProductCodeImportScreen from './screens/ProductCodeImportScreen'
 import ConnectorsScreen from './screens/ConnectorsScreen'
-import TagManagerScreen from './screens/TagManagerScreen'
 import FileWatchBanner from './components/FileWatchBanner'
 import ErrorBoundary from './components/ErrorBoundary'
 
@@ -91,7 +90,6 @@ export default function App() {
               setConnectorsFocusRef(posRef || null)
               navigateTo('connectors')
             }}
-            onOpenTags={() => navigateTo('tags')}
             onOpenCodeImport={() => openCodeImport('builder')}
             onBackToSetup={() => navigateTo('folder-setup')}
             pendingReviewRefs={reviewPositionRefs}
@@ -131,9 +129,6 @@ export default function App() {
               navigateTo('builder')
             }}
           />
-        )}
-        {activeScreen === 'tags' && (
-          <TagManagerScreen onBack={() => navigateTo('builder')} />
         )}
       </div>
       </ErrorBoundary>
