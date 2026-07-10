@@ -420,9 +420,15 @@ export default function ChangeSummaryModal({ show, onHide }) {
   const sections = useMemo(() => buildSummary({ psChanges, rsChanges, dbChanges }), [psChanges, rsChanges, dbChanges])
   const patchFiles = useMemo(() => patchFilesFor({ psChanges, rsChanges, dbChanges }), [psChanges, rsChanges, dbChanges])
 
+  // A master gap whose fix already sits in the ElementTypes patch is queued, not open —
+  // it should not keep the "Resolve first" tab lit. (The panel itself shows the queued
+  // count; the badge counts only what still needs a decision.)
+  const queuedDb = useMemo(() => new Set(dbChanges.map(c => (c.elementTypeRef || '').toLowerCase())), [dbChanges])
+  const openDbRows = gaps.dbRows.filter(d => !queuedDb.has((d.ref || '').toLowerCase())).length
+
   const changeCount = sections.reduce((n, sec) => n + sec.lines.length, 0)
   const resolveCount = overwrites.length + gaps.specRows.wrappers.length +
-    gaps.specRows.products.length + gaps.dbRows.length
+    gaps.specRows.products.length + openDbRows
 
   async function copy(text, key) {
     try {
