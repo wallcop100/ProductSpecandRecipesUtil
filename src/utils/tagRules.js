@@ -1,11 +1,19 @@
 /**
  * tagRules.js — user-defined tag derivation.
  *
- * Replaces the old hardcoded heuristics (tagEngine.js + TAG_GROUPS). Tags are
- * free-form strings; a config owns a list of rules that map a PositionType
- * column value to a tag, plus per-position add/remove exceptions.
+ * Tags are free-form strings; a config owns a list of rules, plus per-position
+ * add/remove exceptions.
  *
- * Rule shape: { id, column, op: 'equals' | 'contains', value, tag, enabled }
+ * A rule is CONDITIONAL, like an email filter:
+ *
+ *   { id, tag, enabled, match: 'all' | 'any', conditions: [{ column, op, value }] }
+ *
+ * `match: 'all'` = every condition (AND); `match: 'any'` = at least one (OR). Several
+ * rules producing the same tag union (OR), as before. So "X AND Y AND Z → tag" is one
+ * rule with three conditions and match 'all'.
+ *
+ * The old single-condition shape { column, op, value, tag } is migrated on the way in
+ * (see migrateRule), so nothing downstream ever sees it.
  */
 
 /**
@@ -49,21 +57,103 @@ export const TAG_COLUMNS = [
   'BallastCountPerUoM',
 ]
 
-export const TAG_OPS = ['equals', 'contains']
+/**
+ * Operators a condition can use. `needsValue: false` ops (isEmpty/isNotEmpty) ignore
+ * `value`; the numeric ops parse both sides as numbers. `label` drives the UI.
+ */
+export const TAG_OPS = [
+  { op: 'equals', label: 'equals', needsValue: true },
+  { op: 'notEquals', label: 'is not', needsValue: true },
+  { op: 'contains', label: 'contains', needsValue: true },
+  { op: 'notContains', label: "doesn't contain", needsValue: true },
+  { op: 'startsWith', label: 'starts with', needsValue: true },
+  { op: 'isEmpty', label: 'is empty', needsValue: false },
+  { op: 'isNotEmpty', label: 'is not empty', needsValue: false },
+  { op: 'gt', label: '>', needsValue: true, numeric: true },
+  { op: 'lt', label: '<', needsValue: true, numeric: true },
+  { op: 'between', label: 'between', needsValue: true, numeric: true, twoValues: true },
+]
+const OP_SET = new Map(TAG_OPS.map(o => [o.op, o]))
 
 function fieldValue(pt, column) {
   const v = pt?.[column]
   return v == null ? '' : String(v)
 }
 
-/** True if a single rule matches a PositionType. */
+const num = s => {
+  const n = Number(String(s ?? '').trim())
+  return Number.isFinite(n) ? n : null
+}
+
+/** True if one condition holds for a PositionType. Unknown ops never match. */
+export function conditionMatches(cond, pt) {
+  if (!cond || !cond.column) return false
+  const raw = fieldValue(pt, cond.column)
+  const fv = raw.toLowerCase()
+  const target = String(cond.value ?? '').toLowerCase()
+
+  switch (cond.op) {
+    case 'equals': return fv === target
+    case 'notEquals': return fv !== target
+    case 'contains': return target !== '' && fv.includes(target)
+    case 'notContains': return target === '' || !fv.includes(target)
+    case 'startsWith': return target !== '' && fv.startsWith(target)
+    case 'isEmpty': return raw.trim() === ''
+    case 'isNotEmpty': return raw.trim() !== ''
+    case 'gt': { const a = num(raw), b = num(cond.value); return a !== null && b !== null && a > b }
+    case 'lt': { const a = num(raw), b = num(cond.value); return a !== null && b !== null && a < b }
+    case 'between': {
+      // value holds the two bounds, comma-separated: "10,20". Order-independent.
+      const a = num(raw)
+      const [loS, hiS] = String(cond.value ?? '').split(',')
+      const lo = num(loS), hi = num(hiS)
+      return a !== null && lo !== null && hi !== null && a >= Math.min(lo, hi) && a <= Math.max(lo, hi)
+    }
+    default: return false
+  }
+}
+
+/** The conditions of a rule, whatever shape it arrived in. */
+export function ruleConditions(rule) {
+  if (!rule) return []
+  if (Array.isArray(rule.conditions)) return rule.conditions
+  // Legacy single-condition rule.
+  if (rule.column) return [{ column: rule.column, op: rule.op || 'equals', value: rule.value }]
+  return []
+}
+
+/**
+ * True if a rule matches. `match: 'any'` needs one condition; anything else means ALL
+ * (the safe default — a multi-condition rule is an AND unless it says otherwise). An
+ * empty condition list never matches, so a half-built rule tags nothing.
+ */
 export function ruleMatches(rule, pt) {
-  if (!rule || rule.enabled === false || !rule.tag || !rule.column) return false
-  const fv = fieldValue(pt, rule.column).toLowerCase()
-  const target = String(rule.value ?? '').toLowerCase()
-  if (rule.op === 'contains') return target !== '' && fv.includes(target)
-  // default: equals
-  return fv === target
+  if (!rule || rule.enabled === false || !rule.tag) return false
+  const conds = ruleConditions(rule)
+  if (conds.length === 0) return false
+  return rule.match === 'any'
+    ? conds.some(c => conditionMatches(c, pt))
+    : conds.every(c => conditionMatches(c, pt))
+}
+
+/** Normalise any rule (legacy or partial) into the conditional shape. */
+export function migrateRule(rule) {
+  if (!rule) return rule
+  if (Array.isArray(rule.conditions)) {
+    return { match: 'all', enabled: true, ...rule }
+  }
+  const { column, op, value, ...rest } = rule
+  return {
+    match: 'all',
+    enabled: rule.enabled !== false,
+    ...rest,
+    conditions: column ? [{ column, op: op || 'equals', value: value ?? '' }] : [],
+  }
+}
+
+/** Migrate a whole rule set. Idempotent — already-conditional rules pass through. */
+export function migrateRules(rules) {
+  return (rules || []).map(migrateRule)
 }
 
 /**
@@ -100,7 +190,11 @@ export function effectiveTags(ruleTags = [], tagAdd = [], tagRemove = []) {
 
 /** All PositionType columns referenced by a rule set (for drift detection). */
 export function columnsUsedByRules(rules) {
-  return [...new Set((rules || []).map(r => r.column).filter(Boolean))]
+  const cols = new Set()
+  for (const r of rules || []) {
+    for (const c of ruleConditions(r)) if (c.column) cols.add(c.column)
+  }
+  return [...cols]
 }
 
 // ---------------------------------------------------------------------------

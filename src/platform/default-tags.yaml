@@ -2,12 +2,21 @@
 # Edit freely — these are only the starting point; each config owns its own copy
 # once seeded, so changes here affect new configs only.
 #
-# Rule shape: { column, op, value, tag }
-#   column — a PositionType field: PositionTypeRef, Name, ParentRef,
-#            DriverLocation, SecondaryPowerType, ControlTypeRef, SecondaryPowerNodes_+ve
-#   op     — equals | contains   (case-insensitive)
-#   value  — the value to compare against
-#   tag    — the tag applied when the rule matches
+# A rule is conditional (like an email filter):
+#   { tag, match: all|any, conditions: [ { column, op, value } ] }
+#   match — all = every condition (AND); any = at least one (OR)
+#   op    — equals | is (not) | contains | doesn't contain | starts with |
+#           is (not) empty | > | < | between   (string ops are case-insensitive)
+#
+# The legacy single-condition shape { column, op, value, tag } below is still
+# accepted and upgraded automatically on load — one condition, match: all.
+# A compound example (uncomment to seed it):
+#   - tag: DL-Local-DALI
+#     match: all
+#     conditions:
+#       - { column: PositionTypeRef, op: contains, value: DL }
+#       - { column: DriverLocation,  op: equals,   value: Local }
+#       - { column: ControlTypeRef,  op: equals,   value: DALI }
 
 palette:
   - DL

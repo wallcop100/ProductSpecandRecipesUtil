@@ -10,7 +10,7 @@ import { importFiles } from '../utils/backend'
 import { v4 as uuidv4 } from 'uuid'
 import { findBestTemplate, recipeToTemplate } from '../utils/templateLoader.js'
 import { resolveTemplate, applyResolvedTemplate } from '../utils/slotResolver.js'
-import { evaluateTags, effectiveTags, snapshotForPosition } from '../utils/tagRules.js'
+import { evaluateTags, effectiveTags, snapshotForPosition, migrateRules } from '../utils/tagRules.js'
 import { runValidation } from '../utils/validationRules.js'
 import { computeContainerInfo, looksLikeContainer, getNextAvailableRef } from '../utils/containerUtils.js'
 import { containerForPosition } from '../utils/recipePresence.js'
@@ -498,7 +498,9 @@ const useStore = create((set, get) => ({
       templates: [...(templates ?? []), ...CONNECTOR_TEMPLATES],
       slotMappings: slotMappings ?? {},
       positionUI: positionUI ?? {},
-      tagRules: tagRules ?? [],
+      // Upgrade legacy single-condition rules to the conditional shape on the way in,
+      // so nothing downstream ever sees the old form.
+      tagRules: migrateRules(tagRules),
       tagPalette: tagPalette ?? [],
       tagColors: data.tagColors ?? {},
       tagSnapshots: tagSnapshots ?? {},
@@ -756,8 +758,9 @@ const useStore = create((set, get) => ({
    * Editing rules is intentional, so we re-baseline drift snapshots (the new
    * rule output becomes the accepted state) and clear any outstanding drift.
    */
-  async setTagRules(rules) {
+  async setTagRules(rulesIn) {
     const { projectId, positionTypes } = get()
+    const rules = migrateRules(rulesIn)   // defensive; the editor already emits the new shape
     set({ tagRules: rules })
     get().recomputeAllTags()
 
