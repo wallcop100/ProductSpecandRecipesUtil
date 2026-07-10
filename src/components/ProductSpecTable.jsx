@@ -3,6 +3,7 @@ import { Table, Form, Button } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import FlagPill from './FlagPill'
 import { productKey, duplicateProductKeys, hasProductIdentity } from '../utils/productCodes'
+import UsagePopover from './UsagePopover'
 
 /**
  * ProductSpecTable — table of PS rows with inline editing.
@@ -189,7 +190,9 @@ export default function ProductSpecTable({ showDeleted = false, etUsedIn = {}, s
                       opacity: isDeleted ? 0.6 : 1,
                     }}
                   >
-                    <td style={{ fontWeight: 500, fontSize: 11 }}>{ref}</td>
+                    <td style={{ fontWeight: 500, fontSize: 11 }}>
+                      <UsagePopover etRef={ref}>{ref}</UsagePopover>
+                    </td>
                     <EditableCell
                       value={mfr}
                       onChange={val => updatePSRow(ref, { Manufacturer: val })}

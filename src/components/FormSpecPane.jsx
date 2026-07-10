@@ -4,6 +4,7 @@ import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import BulkApplyModal from './BulkApplyModal'
 import DuplicateETModal from './DuplicateETModal'
+import UsagePopover from './UsagePopover'
 import { compareFormToRecipe, associations, formWorklist } from '../utils/formSpec'
 import { findProductET } from '../utils/productCodes'
 import { ACTION_ICONS } from '../utils/entityStyle'
@@ -308,7 +309,9 @@ export default function FormSpecPane({ posRef, embedded = false }) {
                 {e.manufacturer || 'no manufacturer'}
               </div>
               <div className="d-flex align-items-baseline gap-1 text-truncate">
-                <span style={{ fontFamily: 'monospace', fontSize: 10, color: '#6c757d' }}>{e.elementTypeRef}</span>
+                <UsagePopover etRef={e.elementTypeRef} placement="left">
+                  <span style={{ fontFamily: 'monospace', fontSize: 10, color: '#6c757d' }}>{e.elementTypeRef}</span>
+                </UsagePopover>
                 {e.inSpec && (
                   <span className="rounded px-1" style={{ fontSize: 9, background: '#d1e7dd', color: '#0f5132' }}
                     title="This manufacturer + product code already names an ElementType in the Product Spec">
@@ -388,7 +391,9 @@ export default function FormSpecPane({ posRef, embedded = false }) {
           </div>
           {extra.map(x => (
             <div key={x.elementTypeRef} className="d-flex align-items-baseline gap-2 py-1" style={{ fontSize: 11 }}>
-              <span style={{ fontFamily: 'monospace', color: '#6c757d' }}>{x.elementTypeRef}</span>
+              <UsagePopover etRef={x.elementTypeRef} placement="left">
+                <span style={{ fontFamily: 'monospace', color: '#6c757d' }}>{x.elementTypeRef}</span>
+              </UsagePopover>
               <span className="ms-auto text-muted" style={{ fontSize: 9 }}>{KIND_LABEL[x.kind]}</span>
             </div>
           ))}

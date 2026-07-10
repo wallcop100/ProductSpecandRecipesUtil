@@ -13,6 +13,7 @@ import PrimingModal from '../components/PrimingModal'
 import NewETModal from '../components/NewETModal'
 import ResolveRefsStep from '../components/ResolveRefsStep'
 import StageBar from '../components/StageBar'
+import MapColumnsStep from '../components/MapColumnsStep'
 import {
   makeRow, deriveCaptures, buildDistinct, buildMaster, classify, duplicateSet,
   hasNoteCollision, rowConfidence, sortByConfidence, norm, setNoteOverride,
@@ -99,6 +100,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   // Identity of the picked workbook. `filepath` is an in-memory token that cannot
   // survive a reload, so the draft (and the captures) carry this instead.
   const [source, setSource] = useState(null)
+  const [autoMap, setAutoMap] = useState({})   // what the tool guessed, so it can say so
   const [resumeDismissed, setResumeDismissed] = useState(false)
   // Stage ①: what the Product Spec already knows. Exact hits are painted for you.
   const [knownStats, setKnownStats] = useState(null)   // { exactCount, variantCount, adjacentCount, byRow }
@@ -147,13 +149,14 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
 
   function applySheet(data) {
     setSheets(data.sheets); setSheet(data.sheet); setHeaders(data.headers); setRawRows(data.rows)
-    setMap({
+    const guessed = {
       pt: detect(data.headers, 'positiontype'),
       code: detect(data.headers, 'productcode'),
       mfr: detect(data.headers, 'manufacturer'),
       exclude: detect(data.headers, 'exclude'),
-      context: CONTEXT_WANTS.map(w => detect(data.headers, w)).filter(Boolean),
-    })
+    }
+    setAutoMap(guessed)
+    setMap({ ...guessed, context: CONTEXT_WANTS.map(w => detect(data.headers, w)).filter(Boolean) })
     setStep('map')
   }
 
@@ -751,54 +754,12 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       )}
 
       {step === 'map' && (
-        <div style={{ maxWidth: 560 }}>
-          {sheets.length > 1 && (
-            <Form.Group className="mb-3">
-              <Form.Label style={{ fontSize: 12, fontWeight: 600 }}>Sheet</Form.Label>
-              <Form.Select size="sm" value={sheet} onChange={e => pickSheet(e.target.value)} disabled={busy}>
-                {sheets.map(s => <option key={s} value={s}>{s}</option>)}
-              </Form.Select>
-            </Form.Group>
-          )}
-
-          {[
-            ['code', 'ProductCode column', true],
-            ['pt', 'PositionType column (the key)', false],
-            ['mfr', 'Manufacturer column', false],
-            ['exclude', 'Exclude rows where this column is set', false],
-          ].map(([key, label, req]) => (
-            <Form.Group className="mb-2" key={key}>
-              <Form.Label style={{ fontSize: 12, fontWeight: 600 }}>
-                {label} {req && <span className="text-danger">*</span>}
-              </Form.Label>
-              <Form.Select size="sm" value={map[key]} onChange={e => setMap(m => ({ ...m, [key]: e.target.value }))}>
-                <option value="">— none —</option>
-                {headers.filter(Boolean).map(h => <option key={h} value={h}>{h}</option>)}
-              </Form.Select>
-            </Form.Group>
-          ))}
-
-          <Form.Label className="mt-2" style={{ fontSize: 12, fontWeight: 600 }}>
-            Context columns <span className="text-muted fw-normal">— shown beside the field to help you decide</span>
-          </Form.Label>
-          <div className="border rounded p-2 mb-3" style={{ maxHeight: 130, overflowY: 'auto' }}>
-            {headers.filter(Boolean).map(h => (
-              <Form.Check key={h} type="checkbox" id={`ctx-${h}`} label={h} style={{ fontSize: 11 }}
-                checked={map.context.includes(h)}
-                onChange={e => setMap(m => ({
-                  ...m,
-                  context: e.target.checked ? [...m.context, h] : m.context.filter(x => x !== h),
-                }))} />
-            ))}
-          </div>
-
-          <div className="text-muted mb-3" style={{ fontSize: 11 }}>
-            {rawRows.length} rows in “{sheet}”{skipped > 0 && <> · {skipped} skipped as excluded</>}
-          </div>
-          <Button variant="primary" size="sm" disabled={!map.code || busy} onClick={startResolve}>
-            {map.pt ? 'Resolve PositionTypes →' : 'Start review →'}
-          </Button>
-        </div>
+        <MapColumnsStep
+          sheets={sheets} sheet={sheet} onSheet={pickSheet}
+          headers={headers} rawRows={rawRows}
+          map={map} onMap={setMap} autoMap={autoMap}
+          skipped={skipped} busy={busy} onStart={startResolve}
+        />
       )}
 
       {step === 'resolve' && (

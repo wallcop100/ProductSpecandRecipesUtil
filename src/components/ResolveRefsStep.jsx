@@ -1,7 +1,9 @@
 import React, { useMemo } from 'react'
 import { Button, Form } from 'react-bootstrap'
 import MaterialIcon from './MaterialIcon'
+import useStore from '../store/useStore'
 import { VIA } from '../utils/ptResolve'
+import { unmatchedFormPositions } from '../utils/usage'
 
 /**
  * ResolveRefsStep — where a Form ref becomes a project PositionType.
@@ -23,6 +25,7 @@ const STYLE = {
 }
 
 export default function ResolveRefsStep({ resolutions, overrides, onOverride, positionTypes, onBack, onConfirm }) {
+  const recipes = useStore(s => s.recipes)
   const ptRefs = useMemo(
     () => positionTypes.map(p => p.PositionTypeRef || p.positionTypeRef).filter(Boolean).sort(),
     [positionTypes]
@@ -39,6 +42,12 @@ export default function ResolveRefsStep({ resolutions, overrides, onOverride, po
 
   const redirects = resolutions.filter(r => r.via === VIA.EXT_REF)
   const ambiguous = resolutions.filter(r => r.ambiguous.length > 0)
+
+  // Two different problems, needing two different fixes: a PositionType the DesignDB
+  // has never heard of, and one it knows but which has no recipe yet.
+  const unmatched = useMemo(() => unmatchedFormPositions(resolutions, recipes), [resolutions, recipes])
+  const notInDb = unmatched.filter(u => u.reason === 'notInDb')
+  const noRecipe = unmatched.filter(u => u.reason === 'noRecipe')
 
   return (
     <div style={{ maxWidth: 720, display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 }}>
@@ -59,6 +68,30 @@ export default function ResolveRefsStep({ resolutions, overrides, onOverride, po
             {redirects.slice(0, 4).map(r => `${r.formRef}→${r.target}`).join(', ')}
             {redirects.length > 4 && ` +${redirects.length - 4} more`}
           </span>
+        </div>
+      )}
+
+      {/* The Form names positions this project does not have. They need adding. */}
+      {(notInDb.length > 0 || noRecipe.length > 0) && (
+        <div className="px-2 py-2 mb-2 rounded" style={{ background: '#f8d7da', color: '#842029', fontSize: 11 }}>
+          {notInDb.length > 0 && (
+            <div className="mb-1">
+              <MaterialIcon name="report" size={13} /> <strong>{notInDb.length} PositionType
+              {notInDb.length === 1 ? '' : 's'} in the Form are not in the DesignDB.</strong>{' '}
+              They must be added to the DB before their products can be recipe'd:{' '}
+              <span style={{ fontFamily: 'monospace' }}>{notInDb.map(u => u.formRef).join(', ')}</span>
+            </div>
+          )}
+          {noRecipe.length > 0 && (
+            <div style={{ color: '#856404' }}>
+              <MaterialIcon name="warning" size={12} /> {noRecipe.length} resolve to a PositionType with{' '}
+              <strong>no recipe yet</strong>:{' '}
+              <span style={{ fontFamily: 'monospace' }}>{noRecipe.map(u => `${u.formRef}→${u.target}`).join(', ')}</span>
+            </div>
+          )}
+          <div className="mt-1" style={{ fontSize: 10, opacity: 0.85 }}>
+            Skipped refs capture nothing. The Form template records them so you can come back.
+          </div>
         </div>
       )}
 

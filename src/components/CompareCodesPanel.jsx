@@ -2,6 +2,7 @@ import React from 'react'
 import { Button } from 'react-bootstrap'
 import MaterialIcon from './MaterialIcon'
 import { hasNoteCollision } from '../utils/productCodes'
+import UsagePopover from './UsagePopover'
 
 /**
  * CompareCodesPanel — the distinct codes, and where each one is going.
@@ -118,7 +119,8 @@ export default function CompareCodesPanel({ entries, knownPTs, ptTarget, onCreat
             <div className="d-flex align-items-center gap-1 mt-1">
               {e.etRef
                 ? <span className="text-success" style={{ fontFamily: 'monospace' }}>
-                    <MaterialIcon name="check" size={11} /> {e.etRef}
+                    <MaterialIcon name="check" size={11} />{' '}
+                    <UsagePopover etRef={e.etRef} placement="left">{e.etRef}</UsagePopover>
                   </span>
                 : blocked
                   ? <span className="text-muted fst-italic" style={{ fontSize: 10 }}>resolve above first</span>
