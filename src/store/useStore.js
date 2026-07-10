@@ -15,7 +15,8 @@ import { runValidation } from '../utils/validationRules.js'
 import { computeContainerInfo, looksLikeContainer, getNextAvailableRef } from '../utils/containerUtils.js'
 import { containerForPosition } from '../utils/recipePresence.js'
 import { planCollectionBulk, effectiveActions } from '../utils/collectionStatus.js'
-import { positionFamilyOf } from '../utils/positionFamily.js'
+import { positionFamilyOf, ignoredPositionRefs } from '../utils/positionFamily.js'
+import { alignmentGaps } from '../utils/specAlignment.js'
 import { familyOf } from '../utils/etRef.js'
 import { DIM_QTY_COMPONENTS, AUTO_CONTRACT_ITEMS } from '../utils/constants.js'
 import { CONNECTOR_TEMPLATES } from '../data/connectorTemplates.js'
@@ -389,7 +390,7 @@ const useStore = create((set, get) => ({
   dbChanges: [],         // writable DesignDB ElementTypes catalogue (EXPORT_PLAN §4)
 
   // DesignDB writes are opt-in per project (off by default, easily enabled).
-  dbWriteEnabled: false,
+  dbCollectionRefs: [],   // ElementType collections parseDb strips; still in the master
 
   // Locally-created ETs (SQLite staging) — kept to re-merge after a DB reload.
   localElementTypes: [],
@@ -506,7 +507,7 @@ const useStore = create((set, get) => ({
       containerETExcludeRefs: excludeRefs,
       containerETRefs: containerInfo.refs,
       containerReasons: containerInfo.reasons,
-      dbWriteEnabled: !!data.dbWriteEnabled,
+      dbCollectionRefs: data.dbCollectionRefs ?? [],
       localElementTypes: data.localElementTypes ?? [],
       formCaptures: formCaptures ?? null,
       importDraft: importDraft ?? null,
@@ -1487,86 +1488,27 @@ const useStore = create((set, get) => ({
    * code. Both are written now.
    *
    * Wrappers are virtual assemblies with nothing to buy, so they default to
-   * Ideaworks / N/A — which is also the primary signal that marks them wrappers.
+   * Ideaworks / N/A. That mark CORROBORATES wrapper-ness; it does not establish it.
+   * Detection is a multi-signal soft match (containerUtils) and finds 39 of this
+   * project's 43 wrappers with no Product Spec at all. Do not treat the row as the
+   * source of truth, or removing it will appear to un-wrap an assembly.
    */
   ensurePSRow(etRef) {
     if (!etRef) return null
-    const { containerETRefs, psRows, elementTypes, dbWriteEnabled } = get()
+    const { containerETRefs, psRows, elementTypes } = get()
     const key = etRef.toLowerCase()
     const isContainer = containerETRefs.has(key) || looksLikeContainer(etRef)
 
-    if (dbWriteEnabled) {
-      const known = elementTypes.some(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === key)
-      if (!known) get().createElementType({ ref: etRef, isCollection: isContainer })
-    }
+    // The DesignDB is the master: an ElementType we are about to spec must exist in
+    // it. Unconditional — there is no "DB write" to opt into, only a patch script.
+    const known = elementTypes.some(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === key)
+    if (!known) get().createElementType({ ref: etRef, isCollection: isContainer })
 
     const exists = psRows.some(r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === key)
     if (exists) return null
 
     const defaults = isContainer ? { Manufacturer: 'Ideaworks', ProductCode: 'N/A' } : {}
     return get().addPSRow(etRef, defaults, { recordHistory: false })
-  },
-
-  /**
-   * unspecifiedElementTypes() — ETs that ought to have a Product Spec row and do not.
-   *
-   * "Where there is a spec defined, PS and DB must be aligned." An ElementType used
-   * in a live recipe row, or present in the DB catalogue, needs a spec row: without
-   * one there is nowhere to record its manufacturer and product code, and the BoM
-   * cannot be priced.
-   *
-   * Returns [{ ref, isContainer, usedInRecipe, inDb }], ordered ref-ascending.
-   * Read-only; the export flow offers to append them.
-   */
-  unspecifiedElementTypes() {
-    const { recipes, psRows, elementTypes, containerETRefs } = get()
-    const spec = new Set(psRows
-      .filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
-      .map(r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase())
-      .filter(Boolean))
-
-    const used = new Set(recipes
-      .filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
-      .map(r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase())
-      .filter(Boolean))
-
-    const inDb = new Map()
-    for (const e of elementTypes) {
-      const ref = e.ElementTypeRef || e.elementTypeRef
-      // Collections are groupings, not purchasable items — they carry no spec.
-      if (ref && (e.IsCollection || e.isCollection) !== 'Y') inDb.set(ref.toLowerCase(), ref)
-    }
-
-    const out = new Map()
-    const consider = (key, ref) => {
-      if (spec.has(key) || out.has(key)) return
-      out.set(key, {
-        ref,
-        isContainer: containerETRefs.has(key) || looksLikeContainer(ref),
-        usedInRecipe: used.has(key),
-        inDb: inDb.has(key),
-      })
-    }
-    for (const r of recipes) {
-      const ref = r.ElementTypeRef || r.elementTypeRef
-      if (ref && (r.IsDeleted || r.isDeleted) !== 'Y') consider(ref.toLowerCase(), ref)
-    }
-    for (const [key, ref] of inDb) consider(key, ref)
-
-    return [...out.values()].sort((a, b) => a.ref.localeCompare(b.ref))
-  },
-
-  /** Append a Product Spec row for each ET that lacks one (wrappers → Ideaworks / N/A). */
-  specifyMissingElementTypes(refs) {
-    const wanted = refs && refs.length ? new Set(refs.map(r => r.toLowerCase())) : null
-    const targets = get().unspecifiedElementTypes().filter(e => !wanted || wanted.has(e.ref.toLowerCase()))
-    if (targets.length === 0) return 0
-    get()._pushHistory()
-    for (const t of targets) {
-      const defaults = t.isContainer ? { Manufacturer: 'Ideaworks', ProductCode: 'N/A' } : {}
-      get().addPSRow(t.ref, defaults, { recordHistory: false })
-    }
-    return targets.length
   },
 
   /**
@@ -2572,10 +2514,14 @@ const useStore = create((set, get) => ({
    * Runs validation rules and stores results.
    */
   runValidation() {
-    const { elementTypes, positionTypes, psRows, recipes, positionUI, ignoredPositionFamilies, etCollections } = get()
+    const { elementTypes, positionTypes, psRows, recipes, positionUI, ignoredPositionFamilies,
+            etCollections, containerETRefs, dbCollectionRefs } = get()
 
     const dbData = { element_types: elementTypes, position_types: positionTypes }
-    const results = runValidation(dbData, psRows, recipes, positionUI, { collections: etCollections })
+    const ignoredPosRefs = ignoredPositionRefs({ positionTypes, positionUI, ignoredPositionFamilies })
+    const results = runValidation(dbData, psRows, recipes, positionUI, {
+      collections: etCollections, containerETRefs, collectionRefs: dbCollectionRefs, ignoredPosRefs,
+    })
 
     // Ignored positions/families are out-of-scope — drop their issues so they
     // don't count toward validation totals.
@@ -2627,8 +2573,8 @@ const useStore = create((set, get) => ({
   /**
    * addLocalElementType(ref, name?, family?)
    * Back-compat shim — every ET now lives in the DB catalogue, so this
-   * delegates to createElementType (staging-table backed, queues a DB row when
-   * DB writes are enabled).
+   * delegates to createElementType (staging-table backed; always queues a
+   * DesignDB patch row, because the patch is the only route into the master).
    */
   addLocalElementType(ref, name = null, family = null) {
     return get().createElementType({ ref, name, family })
@@ -2694,43 +2640,92 @@ const useStore = create((set, get) => ({
   },
 
   // -------------------------------------------------------------------------
-  // DesignDB catalogue (EXPORT_PLAN §4) — writable ElementTypes
+  // DesignDB catalogue — the master list, reached only by patch script
   // -------------------------------------------------------------------------
 
   /**
-   * setDbWriteEnabled(enabled) — opt-in per project; persisted as a pref.
+   * alignmentGaps() — the ONE answer to "do the three documents agree?".
+   *
+   * Superseded `unspecifiedElementTypes()`, which asked the question backwards
+   * (catalogue → spec) and so flagged every cable nobody bought. See specAlignment.
    */
-  async setDbWriteEnabled(enabled) {
-    const { projectId, elementTypes, localElementTypes, dbChanges } = get()
+  alignmentGaps() {
+    const { elementTypes, psRows, recipes, containerETRefs, dbCollectionRefs,
+            positionTypes, positionUI, ignoredPositionFamilies } = get()
+    return alignmentGaps({
+      elementTypes, psRows, recipes, containerETRefs,
+      collectionRefs: dbCollectionRefs,
+      ignoredPosRefs: ignoredPositionRefs({ positionTypes, positionUI, ignoredPositionFamilies }),
+    })
+  },
 
-    // Turning writes ON promotes already-staged local ETs (created while off,
-    // never written to disk) into the catalogue queue — the staging table is
-    // the promotion queue (EXPORT_PLAN §4).
-    let nextDbChanges = dbChanges
-    if (enabled) {
-      const stagedRefs = new Set(localElementTypes.map(e => (e.ElementTypeRef || '').toLowerCase()))
-      for (const e of elementTypes) {
-        const ref = e.ElementTypeRef || e.elementTypeRef
-        const key = (ref || '').toLowerCase()
-        if (!ref || !stagedRefs.has(key)) continue
-        if (e._row_num != null) continue                        // already on disk
-        if (nextDbChanges.some(c => (c.elementTypeRef || '').toLowerCase() === key)) continue
-        nextDbChanges = mergeDbChanges(nextDbChanges, {
-          elementTypeRef: ref,
-          updates: {
-            ElementTypeRef: ref, Name: e.Name ?? null, Description: e.Description ?? null,
-            Family: e.Family ?? null, IsCollection: e.IsCollection ?? null,
-            SortOrder: e.SortOrder ?? get().suggestSortOrder(e.Family ?? null),
-          },
-          _isNew: true,
-        })
-      }
-    }
+  /**
+   * queueMissingDbRows(refs?) — teach the DesignDB about ElementTypes it has never
+   * heard of, via the ElementTypes patch. The only route into the master.
+   *
+   * Name and Description come from the Product Spec's ComponentDescription where one
+   * exists: it is the only prose anyone has written about the thing. `ParentRef` is
+   * left blank — filing it under a collection is a human decision.
+   *
+   * Returns the number queued. Never overwrites: every row here is an insert, because
+   * by construction the master does not have it.
+   */
+  queueMissingDbRows(refs, { recordHistory = true } = {}) {
+    const wanted = refs && refs.length ? new Set(refs.map(r => r.toLowerCase())) : null
+    const gaps = get().alignmentGaps().dbRows.filter(d => !wanted || wanted.has(d.ref.toLowerCase()))
+    if (gaps.length === 0) return 0
 
-    set({ dbWriteEnabled: !!enabled, dbChanges: nextDbChanges })
-    if (projectId != null) {
-      await window.electronAPI.db.setPref(projectId, 'db_write_enabled', JSON.stringify(!!enabled))
+    const { psRows, containerETRefs } = get()
+    const specOf = ref => psRows.find(
+      r => (r.IsDeleted || r.isDeleted) !== 'Y' &&
+           (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === ref.toLowerCase()
+    )
+
+    if (recordHistory) get()._pushHistory()
+    let dbChanges = get().dbChanges
+    for (const gap of gaps) {
+      const spec = specOf(gap.ref)
+      const desc = (spec?.ComponentDescription || '').trim() || null
+      dbChanges = mergeDbChanges(dbChanges, {
+        elementTypeRef: gap.ref,
+        updates: {
+          ElementTypeRef: gap.ref,
+          Name: desc,
+          Description: desc,
+          Family: null,
+          // A wrapper is IsCollection: it carries detail rather than a product.
+          // parseDb strips collections by PARENT usage, not by this flag, so a
+          // wrapper marked here still comes back as an ElementType on reload.
+          IsCollection: containerETRefs.has(gap.ref.toLowerCase()) ? 'Y' : null,
+          SortOrder: get().suggestSortOrder(null),
+        },
+        _isNew: true,
+      })
     }
+    set({ dbChanges })
+    return gaps.length
+  },
+
+  /**
+   * fillWrapperSpecRows(refs?) — a wrapper's spec is fully determined: Ideaworks / N/A.
+   * No human knowledge is needed, so this one is safe in bulk. A REAL product is not:
+   * appending a blank row only trades MISSING_PRODUCT_SPEC_ROW for MISSING_PRODUCT_CODE,
+   * so those go one at a time through NewETModal.
+   *
+   * Also teaches the master, because a wrapper needs both to be real.
+   */
+  fillWrapperSpecRows(refs) {
+    const wanted = refs && refs.length ? new Set(refs.map(r => r.toLowerCase())) : null
+    const wrappers = get().alignmentGaps().specRows.wrappers
+      .filter(w => !wanted || wanted.has(w.ref.toLowerCase()))
+    if (wrappers.length === 0) return 0
+
+    get()._pushHistory()
+    for (const w of wrappers) {
+      get().addPSRow(w.ref, { Manufacturer: 'Ideaworks', ProductCode: 'N/A' }, { recordHistory: false })
+    }
+    get().queueMissingDbRows(wrappers.map(w => w.ref), { recordHistory: false })
+    return wrappers.length
   },
 
   /**
@@ -2756,7 +2751,7 @@ const useStore = create((set, get) => ({
   createElementType({ ref, name = null, description = null, family = null, isCollection = false } = {}) {
     const trimmed = (ref || '').trim()
     if (!trimmed) return null
-    const { elementTypes, projectId, dbWriteEnabled, dbChanges } = get()
+    const { elementTypes, projectId, dbChanges } = get()
     if (elementTypes.some(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === trimmed.toLowerCase())) return null
 
     const sortOrder = get().suggestSortOrder(family)
@@ -2770,16 +2765,17 @@ const useStore = create((set, get) => ({
       elementTypes: [...elementTypes, etObj],
       localElementTypes: [...get().localElementTypes, etObj],
     }
-    if (dbWriteEnabled) {
-      patch.dbChanges = mergeDbChanges(dbChanges, {
-        elementTypeRef: trimmed,
-        updates: {
-          ElementTypeRef: trimmed, Name: name, Description: description,
-          Family: family, IsCollection: isCollection ? 'Y' : null, SortOrder: sortOrder,
-        },
-        _isNew: true,
-      })
-    }
+    // Always queued. The patch script is the ONLY route into the DesignDB, so an ET
+    // that skips it exists in the Product Spec and the Recipes and nowhere else —
+    // which is how 45 of them drifted out of the master.
+    patch.dbChanges = mergeDbChanges(dbChanges, {
+      elementTypeRef: trimmed,
+      updates: {
+        ElementTypeRef: trimmed, Name: name, Description: description,
+        Family: family, IsCollection: isCollection ? 'Y' : null, SortOrder: sortOrder,
+      },
+      _isNew: true,
+    })
     set(patch)
 
     // Persist to the staging table (best-effort)
@@ -2803,7 +2799,7 @@ const useStore = create((set, get) => ({
   updateElementType(ref, updates = {}) {
     const trimmed = (ref || '').trim()
     if (!trimmed || Object.keys(updates).length === 0) return
-    const { elementTypes, dbChanges, dbWriteEnabled, projectId } = get()
+    const { elementTypes, dbChanges, projectId } = get()
     const lc = trimmed.toLowerCase()
     const hit = elementTypes.find(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === lc)
     if (!hit) return
@@ -2822,11 +2818,11 @@ const useStore = create((set, get) => ({
         (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === lc ? { ...e, ...changed } : e
       ),
     }
-    if (dbWriteEnabled) {
-      const before = {}
-      for (const k of Object.keys(changed)) before[k] = hit[k] ?? null
-      patch.dbChanges = mergeDbChanges(dbChanges, { elementTypeRef: trimmed, updates: changed, before })
-    }
+    // `before` is what the DesignDB holds today. Keep it: the export summary reads it
+    // to warn before a patch overwrites a value the master already has.
+    const before = {}
+    for (const k of Object.keys(changed)) before[k] = hit[k] ?? null
+    patch.dbChanges = mergeDbChanges(dbChanges, { elementTypeRef: trimmed, updates: changed, before })
     set(patch)
 
     // Persist to the staging table (best-effort)
@@ -2867,14 +2863,11 @@ const useStore = create((set, get) => ({
 
     // 2. DB catalogue change (rename by writing the new Ref into the row found
     //    by the old Ref)
-    let dbChanges = state.dbChanges
-    if (state.dbWriteEnabled) {
-      dbChanges = mergeDbChanges(dbChanges, {
-        elementTypeRef: from,
-        updates: { ElementTypeRef: to },
-        before: { ElementTypeRef: from },
-      })
-    }
+    let dbChanges = mergeDbChanges(state.dbChanges, {
+      elementTypeRef: from,
+      updates: { ElementTypeRef: to },
+      before: { ElementTypeRef: from },
+    })
 
     // 3. PS rows — the ref IS the key, so this is a keyed rename
     let psRows = state.psRows
@@ -2925,7 +2918,7 @@ const useStore = create((set, get) => ({
   deleteElementType(ref) {
     const trimmed = (ref || '').trim()
     if (!trimmed) return
-    const { elementTypes, dbChanges, dbWriteEnabled, projectId } = get()
+    const { elementTypes, dbChanges, projectId } = get()
     const lc = trimmed.toLowerCase()
     const hit = elementTypes.find(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === lc)
     if (!hit) return
@@ -2937,13 +2930,11 @@ const useStore = create((set, get) => ({
         ? { ...e, IsDeleted: 'Y' } : e
     )
     const patch = { elementTypes: nextEts }
-    if (dbWriteEnabled) {
-      patch.dbChanges = mergeDbChanges(dbChanges, {
-        elementTypeRef: trimmed,
-        updates: { IsDeleted: 'Y' },
-        before: { IsDeleted: hit.IsDeleted ?? null },
-      })
-    }
+    patch.dbChanges = mergeDbChanges(dbChanges, {
+      elementTypeRef: trimmed,
+      updates: { IsDeleted: 'Y' },
+      before: { IsDeleted: hit.IsDeleted ?? null },
+    })
     set(patch)
 
     if (projectId != null && window.electronAPI?.db?.deleteLocalET) {

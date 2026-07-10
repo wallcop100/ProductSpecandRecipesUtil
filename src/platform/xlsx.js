@@ -199,9 +199,14 @@ function collectionRefs(rawRows, parentField) {
 // --- Public parsers ---------------------------------------------------------
 
 /**
- * Parse a DesignDB workbook → { element_types, position_types }.
+ * Parse a DesignDB workbook → { element_types, position_types, collection_refs }.
  * Collections and IsDeleted rows are filtered out. ElementTypes keep `_row_num`
  * (that sheet is writable); PositionTypes are read-only, so theirs is stripped.
+ *
+ * `collection_refs` names the ElementType collections that were filtered out. The
+ * DesignDB is the master list, and a collection IS in it — so anything checking
+ * "does this ref exist in the DesignDB?" must consult these too, or `ET-CABLE`
+ * would be reported missing from the very sheet that defines it.
  */
 export function parseDb(data) {
   const wb = readWorkbook(data)
@@ -232,7 +237,7 @@ export function parseDb(data) {
     position_types.push(r)
   }
 
-  return { element_types, position_types }
+  return { element_types, position_types, collection_refs: [...etCollections] }
 }
 
 /** Parse a Product Spec workbook → rows that have an ElementTypeRef. */

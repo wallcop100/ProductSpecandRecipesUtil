@@ -21,3 +21,26 @@ export function positionFamilyOf(pt) {
   const trimmed = parent != null ? String(parent).trim() : ''
   return trimmed || null
 }
+
+/**
+ * ignoredPositionRefs({ positionTypes, positionUI, ignoredPositionFamilies })
+ *   → Set of LOWERCASE PositionTypeRefs that are out of scope.
+ *
+ * A position is ignored outright, or by its family. The standing rule is that an
+ * ignored position leaves every total, so anything that counts outstanding work must
+ * subtract these — validation already did, by hand; nothing else did.
+ */
+export function ignoredPositionRefs({ positionTypes = [], positionUI = {}, ignoredPositionFamilies = [] } = {}) {
+  const families = new Set(ignoredPositionFamilies)
+  const out = new Set()
+  for (const [ref, ui] of Object.entries(positionUI)) {
+    if (ui?.ignored) out.add(String(ref).toLowerCase())
+  }
+  if (families.size > 0) {
+    for (const pt of positionTypes) {
+      const ref = pt.PositionTypeRef || pt.positionTypeRef
+      if (ref && families.has(positionFamilyOf(pt))) out.add(String(ref).toLowerCase())
+    }
+  }
+  return out
+}

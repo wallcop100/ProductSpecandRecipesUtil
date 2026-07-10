@@ -24,6 +24,8 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
   const updatePSRow  = useStore(s => s.updatePSRow)
   const addPSRow     = useStore(s => s.addPSRow)
   const deletePSRow  = useStore(s => s.deletePSRow)
+  const elementTypes = useStore(s => s.elementTypes)
+  const alignmentGaps = useStore(s => s.alignmentGaps)
 
   const [selectedRef,  setSelectedRef]  = useState(scrollToRef || null)
   const [bulkSelected, setBulkSelected] = useState(new Set())
@@ -69,18 +71,17 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
     return map
   }, [recipes])
 
-  // ETs in recipes with no PS row
-  const missingPsETs = useMemo(() => {
-    const psRefSet = new Set(
-      psRows.map(r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase())
-    )
-    const missing = new Set()
-    for (const row of recipes) {
-      const etRef = row.ElementTypeRef || row.elementTypeRef
-      if (etRef && !psRefSet.has(etRef.toLowerCase())) missing.add(etRef)
-    }
-    return [...missing].sort()
-  }, [psRows, recipes])
+  // ETs a recipe uses with no PS row. One definition, shared with validation and
+  // the export summary (specAlignment) — this screen used to compute its own and
+  // disagree with both, not least by counting deleted rows.
+  const gaps = useMemo(
+    () => alignmentGaps(),
+    [psRows, recipes, elementTypes, alignmentGaps]
+  )
+  const missingPsETs = useMemo(
+    () => [...gaps.specRows.wrappers, ...gaps.specRows.products].map(g => g.ref).sort(),
+    [gaps]
+  )
 
   // Completeness stats
   const stats = useMemo(() => {

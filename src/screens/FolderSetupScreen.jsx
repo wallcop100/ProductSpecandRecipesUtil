@@ -201,6 +201,8 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
       const { db: db_data, ps: ps_rows, rs: rs_rows } = await importFiles({ db: absDbs, ps: absPs, rs: absRs })
       const elementTypes = db_data?.element_types ?? []
       const positionTypes = db_data?.position_types ?? []
+      // Collections are stripped from element_types but ARE in the master list.
+      const dbCollectionRefs = db_data?.collection_refs ?? []
 
       // Read any crash-surviving pending changes BEFORE loadProject resets the
       // queues (the persistence subscription would otherwise overwrite them).
@@ -217,12 +219,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
         }
       } catch { /* none */ }
 
-      // DB-write setting + locally-created ETs (EXPORT_PLAN §4)
-      let dbWriteEnabled = false
-      try {
-        const raw = await window.electronAPI.db.getPref(projectId, 'db_write_enabled')
-        dbWriteEnabled = raw ? JSON.parse(raw) : false
-      } catch { /* default off */ }
+      // Locally-created ElementTypes: minted here, not yet in the DesignDB workbook.
       let localElementTypes = []
       try { localElementTypes = await window.electronAPI.db.getLocalETs(projectId) || [] } catch { /* none */ }
 
@@ -327,6 +324,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
         paths: { db: absDbs, ps: absPs, rs: absRs },
         elementTypes,
         positionTypes,
+        dbCollectionRefs,
         psRows: ps_rows,
         recipes: rs_rows,
         templates,
@@ -344,7 +342,6 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
         tagColors,
         formCaptures,
         importDraft,
-        dbWriteEnabled,
         localElementTypes,
       })
 

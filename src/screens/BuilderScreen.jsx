@@ -73,7 +73,6 @@ export default function BuilderScreen({
   const closeETRecipe = useStore(s => s.closeETRecipe)
   const undo = useStore(s => s.undo)
   const redo = useStore(s => s.redo)
-  const dbWriteEnabled = useStore(s => s.dbWriteEnabled)
   const dbChanges = useStore(s => s.dbChanges)
 
   const [showDupModal, setShowDupModal] = useState(false)
@@ -508,7 +507,7 @@ export default function BuilderScreen({
             folder is opened read-only and nothing can write to it. */}
         {/* Appears only when there are pending ElementType changes to write
             into the shared DesignDB ElementTypes table. */}
-        {dbWriteEnabled && dbChanges.length > 0 && (
+        {dbChanges.length > 0 && (
           <Button
             variant="warning"
             size="sm"

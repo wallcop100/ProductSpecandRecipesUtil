@@ -1150,18 +1150,26 @@ describe('dirty registry — coalescing + field-level entries', () => {
 // ---------------------------------------------------------------------------
 
 describe('catalogue — createElementType / rename / delete', () => {
-  test('createElementType with DB writes off: adds ET, stages it, no dbChanges', () => {
-    resetStore({ dbWriteEnabled: false, elementTypes: [], dbChanges: [] })
+  /**
+   * The DesignDB is the master list and a patch script is the only way in. Queuing
+   * used to be gated on `dbWriteEnabled`, which defaulted OFF — so every ET this app
+   * minted reached the Product Spec and the Recipes and never the master. 45 of them
+   * had drifted out on the real project. There is no gate now.
+   */
+  test('createElementType ALWAYS queues the catalogue row — the patch is the only route in', () => {
+    resetStore({ elementTypes: [], dbChanges: [] })
     useStore.getState().createElementType({ ref: 'ET-NEW-01', name: 'New', family: 'TAPE' })
     const s = useStore.getState()
     expect(s.elementTypes.some(e => e.ElementTypeRef === 'ET-NEW-01')).toBe(true)
     expect(s.localElementTypes.some(e => e.ElementTypeRef === 'ET-NEW-01')).toBe(true)
-    expect(s.dbChanges).toHaveLength(0)   // off → nothing queued for the DB
+    expect(s.dbChanges).toHaveLength(1)
+    expect(s.dbChanges[0].elementTypeRef).toBe('ET-NEW-01')
+    expect(s.dbChanges[0]._isNew).toBe(true)
   })
 
-  test('createElementType with DB writes on: queues a new catalogue row + SortOrder', () => {
+  test('createElementType queues a new catalogue row + SortOrder', () => {
     resetStore({
-      dbWriteEnabled: true, dbChanges: [],
+      dbChanges: [],
       elementTypes: [{ ElementTypeRef: 'ET-TAPE-01', Family: 'TAPE', SortOrder: 2 }],
     })
     useStore.getState().createElementType({ ref: 'ET-TAPE-09', name: 'Tape', family: 'TAPE' })
@@ -1172,20 +1180,22 @@ describe('catalogue — createElementType / rename / delete', () => {
     expect(dbChanges[0].updates.Name).toBe('Tape')
   })
 
-  test('updateElementType with DB writes off: patches the ET, queues no dbChanges', () => {
+  test('updateElementType on a blank field queues a change whose before-value is null', () => {
     resetStore({
-      dbWriteEnabled: false, dbChanges: [],
+      dbChanges: [],
       elementTypes: [{ ElementTypeRef: 'ET-A', Description: null }],
     })
     useStore.getState().updateElementType('ET-A', { Description: 'Nano Flex Solo 160' })
     const s = useStore.getState()
     expect(s.elementTypes[0].Description).toBe('Nano Flex Solo 160')
-    expect(s.dbChanges).toHaveLength(0)   // off → the note stays project-local
+    expect(s.dbChanges).toHaveLength(1)
+    // `before` is null, so the export summary knows this overwrites nothing.
+    expect(s.dbChanges[0].before.Description).toBeNull()
   })
 
-  test('updateElementType with DB writes on: queues the Description with its before-value', () => {
+  test('updateElementType queues the Description with its before-value', () => {
     resetStore({
-      dbWriteEnabled: true, dbChanges: [],
+      dbChanges: [],
       elementTypes: [{ ElementTypeRef: 'ET-A', Description: 'old' }],
     })
     useStore.getState().updateElementType('ET-A', { Description: 'new note' })
@@ -1248,24 +1258,78 @@ describe('catalogue — createElementType / rename / delete', () => {
   })
 })
 
-describe('catalogue — enabling DB writes promotes staged ETs', () => {
-  test('setDbWriteEnabled(true) queues staged local ETs not yet on disk', async () => {
-    const staged = { ElementTypeRef: 'ET-STAGED-01', Name: 'Staged', Family: 'CLIP', SortOrder: 1, _row_num: null }
+describe('queueMissingDbRows — teaching the master about ElementTypes it never heard of', () => {
+  test('an ET in the Product Spec but not the DesignDB is queued as an insert', () => {
     resetStore({
-      dbWriteEnabled: false, dbChanges: [],
-      elementTypes: [
-        staged,
-        { ElementTypeRef: 'ET-ONDISK', _row_num: 12 },   // already on disk → not promoted
-      ],
-      localElementTypes: [staged],
+      dbChanges: [], elementTypes: [], dbCollectionRefs: [], recipes: [],
+      psRows: [{ _id: 'p1', ElementTypeRef: 'ET-PS-01', ComponentDescription: 'XAL Move It 45' }],
     })
-    // getPref/setPref mock
-    window.electronAPI.db.setPref = () => Promise.resolve()
-    await useStore.getState().setDbWriteEnabled(true)
+    const n = useStore.getState().queueMissingDbRows()
+    expect(n).toBe(1)
     const { dbChanges } = useStore.getState()
-    expect(dbChanges).toHaveLength(1)
-    expect(dbChanges[0].elementTypeRef).toBe('ET-STAGED-01')
+    expect(dbChanges[0].elementTypeRef).toBe('ET-PS-01')
     expect(dbChanges[0]._isNew).toBe(true)
+    // Name and Description come from the only prose anyone wrote about the thing.
+    expect(dbChanges[0].updates.Name).toBe('XAL Move It 45')
+    expect(dbChanges[0].updates.Description).toBe('XAL Move It 45')
+    // Filing it under a collection is a human decision.
+    expect(dbChanges[0].updates.Family).toBeNull()
+  })
+
+  test('an ET already in the master workbook is not queued', () => {
+    resetStore({
+      dbChanges: [], recipes: [], dbCollectionRefs: [],
+      elementTypes: [{ ElementTypeRef: 'ET-ONDISK', _row_num: 12 }],
+      psRows: [{ _id: 'p1', ElementTypeRef: 'ET-ONDISK' }],
+    })
+    expect(useStore.getState().queueMissingDbRows()).toBe(0)
+    expect(useStore.getState().dbChanges).toHaveLength(0)
+  })
+
+  test('a wrapper is marked IsCollection — it carries detail, not a product', () => {
+    resetStore({
+      dbChanges: [], elementTypes: [], psRows: [], dbCollectionRefs: [],
+      containerETRefs: new Set(['et-lin-01']),
+      recipes: [{ _id: 'r1', PositionTypeRef: 'C01r', ContextType: 'PositionType', ContextRef: 'C01r', ElementTypeRef: 'ET-LIN-01' }],
+    })
+    useStore.getState().queueMissingDbRows()
+    expect(useStore.getState().dbChanges[0].updates.IsCollection).toBe('Y')
+  })
+})
+
+describe('fillWrapperSpecRows — the one bulk fix that needs no human knowledge', () => {
+  const wrapperState = () => ({
+    dbChanges: [], psChanges: [], elementTypes: [], psRows: [], dbCollectionRefs: [],
+    containerETRefs: new Set(['et-lin-01']),
+    recipes: [
+      { _id: 'r1', PositionTypeRef: 'C01r', ContextType: 'PositionType', ContextRef: 'C01r', ElementTypeRef: 'ET-LIN-01' },
+      { _id: 'r2', PositionTypeRef: 'C01r', ContextType: 'ElementType', ContextRef: 'ET-LIN-01', ElementTypeRef: 'ET-PROF-01' },
+    ],
+  })
+
+  test('a wrapper gets Ideaworks / N/A, and reaches the master too', () => {
+    resetStore(wrapperState())
+    expect(useStore.getState().fillWrapperSpecRows()).toBe(1)
+    const s = useStore.getState()
+    const row = s.psRows.find(r => r.ElementTypeRef === 'ET-LIN-01')
+    expect(row.Manufacturer).toBe('Ideaworks')
+    expect(row.ProductCode).toBe('N/A')
+    expect(s.dbChanges.some(c => c.elementTypeRef === 'ET-LIN-01')).toBe(true)
+  })
+
+  test('a REAL product is never bulk-filled — a blank row is not progress', () => {
+    resetStore(wrapperState())
+    useStore.getState().fillWrapperSpecRows()
+    // ET-PROF-01 needs a manufacturer and a code only a human knows.
+    expect(useStore.getState().psRows.some(r => r.ElementTypeRef === 'ET-PROF-01')).toBe(false)
+    expect(useStore.getState().alignmentGaps().specRows.products.map(p => p.ref)).toEqual(['ET-PROF-01'])
+  })
+
+  test('one undo step, not two', () => {
+    resetStore(wrapperState())
+    const before = useStore.getState().past.length
+    useStore.getState().fillWrapperSpecRows()
+    expect(useStore.getState().past.length).toBe(before + 1)
   })
 })
 

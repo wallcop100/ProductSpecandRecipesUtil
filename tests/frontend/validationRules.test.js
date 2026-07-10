@@ -399,7 +399,14 @@ describe('runValidation — valid recipe', () => {
       'PT-LIN-01': { tags: ['LIN', 'Local'] },
     }
 
-    const issues = runValidation(dbData, psRows, rsRows, ui)
+    // The DesignDB is the master list: an ET in the Product Spec or a recipe must
+    // exist in it. A parsed workbook row carries `_row_num`; that is what "in the
+    // master" means. Without this the six ETs below trip ELEMENT_TYPE_NOT_IN_DB.
+    const master = {
+      element_types: psRows.map((r, i) => ({ ElementTypeRef: r.elementTypeRef, _row_num: i + 2 })),
+      position_types: [],
+    }
+    const issues = runValidation(master, psRows, rsRows, ui)
     expect(issues).toHaveLength(0)
   })
 })
@@ -532,42 +539,62 @@ describe('BLANK_RECIPE_CONTAINER', () => {
 })
 
 // ---------------------------------------------------------------------------
-// Rule 14 — MISSING_PRODUCT_SPEC_ROW  (PS ↔ DB alignment)
+// Rule 14 — MISSING_PRODUCT_SPEC_ROW   (a recipe implies a spec)
+// Rule 17 — ELEMENT_TYPE_NOT_IN_DB     (the DesignDB is the master)
 // ---------------------------------------------------------------------------
+
+/** A row parsed from the DesignDB workbook carries its Excel row number. */
+const dbEt = (ref, n = 2) => ({ ElementTypeRef: ref, _row_num: n })
+
 describe('MISSING_PRODUCT_SPEC_ROW', () => {
   const ui = { 'PT-DL-LOCAL-01': { tags: [] } }
   const only = issues => issues.filter(i => i.rule === 'MISSING_PRODUCT_SPEC_ROW')
   const db = element_types => ({ element_types, position_types: [] })
 
-  test('an ET used in a recipe with no spec row is reported', () => {
+  test('a real product used in a recipe with no spec row is an ERROR — nothing to buy', () => {
     const rows = [makeRsRow({ elementTypeRef: 'ET-DRIVER-01' })]
-    const issues = only(runValidation(db([]), [], rows, ui))
+    const issues = only(runValidation(db([dbEt('ET-DRIVER-01')]), [], rows, ui))
     expect(issues).toHaveLength(1)
     expect(issues[0].ref).toBe('ET-DRIVER-01')
-    expect(issues[0].message).toMatch(/used in a recipe/)
+    expect(issues[0].severity).toBe('error')
+    expect(issues[0].message).toMatch(/no Product Spec row/)
     expect(issues[0].fixKind).toBe('spec')      // the fix lives on the Product Spec screen
   })
 
-  test('an ET catalogued in the DB with no spec row is reported', () => {
-    const issues = only(runValidation(db([{ ElementTypeRef: 'ET-ONLY-IN-DB' }]), [], [], {}))
+  test('a WRAPPER is only a warning — Ideaworks / N/A is one click away', () => {
+    const rows = [makeRsRow({ elementTypeRef: 'ET-LIN-01' })]
+    const issues = only(runValidation(db([dbEt('ET-LIN-01')]), [], rows, ui, {
+      containerETRefs: new Set(['et-lin-01']),
+    }))
     expect(issues).toHaveLength(1)
-    expect(issues[0].message).toMatch(/DesignDB catalogue/)
+    expect(issues[0].severity).toBe('warning')
+    expect(issues[0].message).toMatch(/Ideaworks \/ N\/A/)
+  })
+
+  /**
+   * THE BUG THIS RULE HAD. It demanded a spec row for every CATALOGUED ElementType,
+   * so on the real project it flagged 25 cables and connectors nobody ever bought
+   * and never once flagged a real product. The catalogue is a master list, not a
+   * shopping list.
+   */
+  test('an ET catalogued in the DB but used in no recipe needs NOTHING', () => {
+    expect(only(runValidation(db([dbEt('ET-ONLY-IN-DB')]), [], [], {}))).toHaveLength(0)
   })
 
   test('a spec row silences it', () => {
     const rows = [makeRsRow({ elementTypeRef: 'ET-DRIVER-01' })]
     const ps = [makePsRow('ET-DRIVER-01', 'CODE-1')]
-    expect(only(runValidation(db([{ ElementTypeRef: 'ET-DRIVER-01' }]), ps, rows, ui))).toHaveLength(0)
+    expect(only(runValidation(db([dbEt('ET-DRIVER-01')]), ps, rows, ui))).toHaveLength(0)
   })
 
   test('matching is case-insensitive', () => {
     const rows = [makeRsRow({ elementTypeRef: 'ET-Driver-01' })]
-    expect(only(runValidation(db([]), [makePsRow('et-driver-01', 'C')], rows, ui))).toHaveLength(0)
+    expect(only(runValidation(db([dbEt('ET-Driver-01')]), [makePsRow('et-driver-01', 'C')], rows, ui))).toHaveLength(0)
   })
 
-  test('DB collections are exempt — a grouping is not purchasable', () => {
-    const dbData2 = db([{ ElementTypeRef: 'ET-FAMILY', IsCollection: 'Y' }])
-    expect(only(runValidation(dbData2, [], [], {}))).toHaveLength(0)
+  test('a collection is a grouping, not a purchasable', () => {
+    const rows = [makeRsRow({ elementTypeRef: 'ET-FAMILY' })]
+    expect(only(runValidation(db([]), [], rows, ui, { collectionRefs: ['ET-FAMILY'] }))).toHaveLength(0)
   })
 
   test('a deleted recipe row does not demand a spec', () => {
@@ -578,17 +605,55 @@ describe('MISSING_PRODUCT_SPEC_ROW', () => {
   test('a deleted spec row does not count as specified', () => {
     const rows = [makeRsRow({ elementTypeRef: 'ET-DRIVER-01' })]
     const ps = [{ elementTypeRef: 'ET-DRIVER-01', productCode: 'C', isDeleted: 'Y' }]
-    expect(only(runValidation(db([]), ps, rows, ui))).toHaveLength(1)
+    expect(only(runValidation(db([dbEt('ET-DRIVER-01')]), ps, rows, ui))).toHaveLength(1)
   })
 
-  test('each ET is reported once, however many rows use it', () => {
-    const rows = [makeRsRow({ elementTypeRef: 'ET-X' }), makeRsRow({ elementTypeRef: 'ET-X', recipeIndex: 2 })]
-    expect(only(runValidation(db([{ ElementTypeRef: 'ET-X' }]), [], rows, ui))).toHaveLength(1)
-  })
-
-  test('it is a warning, not an error — the recipe still works', () => {
+  test('an ET used only by an ignored position is out of scope', () => {
     const rows = [makeRsRow({ elementTypeRef: 'ET-DRIVER-01' })]
-    expect(only(runValidation(db([]), [], rows, ui))[0].severity).toBe('warning')
+    const opts = { ignoredPosRefs: new Set(['pt-dl-local-01']) }
+    expect(only(runValidation(db([dbEt('ET-DRIVER-01')]), [], rows, ui, opts))).toHaveLength(0)
+  })
+})
+
+describe('ELEMENT_TYPE_NOT_IN_DB — the DesignDB is the master list', () => {
+  const ui = { 'PT-DL-LOCAL-01': { tags: [] } }
+  const only = issues => issues.filter(i => i.rule === 'ELEMENT_TYPE_NOT_IN_DB')
+  const db = element_types => ({ element_types, position_types: [] })
+
+  test('an ET in the Product Spec but not the DesignDB is an error', () => {
+    const issues = only(runValidation(db([]), [makePsRow('ET-PS-01', 'C')], [], {}))
+    expect(issues).toHaveLength(1)
+    expect(issues[0].severity).toBe('error')
+    expect(issues[0].message).toMatch(/master list/)
+  })
+
+  test('an ET in a recipe but not the DesignDB is an error', () => {
+    const rows = [makeRsRow({ elementTypeRef: 'ET-DL-01' })]
+    expect(only(runValidation(db([]), [], rows, ui))).toHaveLength(1)
+  })
+
+  test('a parsed workbook row satisfies it', () => {
+    expect(only(runValidation(db([dbEt('ET-PS-01')]), [makePsRow('ET-PS-01', 'C')], [], {}))).toHaveLength(0)
+  })
+
+  /**
+   * A locally-minted ET has no _row_num: the app knows it, the workbook does not.
+   * That is precisely the drift this rule exists to surface — it reaches the master
+   * through the ElementTypes patch or not at all.
+   */
+  test('a locally-minted ET has not reached the master yet', () => {
+    const local = { ElementTypeRef: 'ET-NEW-01', _row_num: null }
+    expect(only(runValidation(db([local]), [makePsRow('ET-NEW-01', 'C')], [], {}))).toHaveLength(1)
+  })
+
+  test('a collection stripped by parseDb is still in the master', () => {
+    const rows = [makeRsRow({ elementTypeRef: 'ET-CABLE' })]
+    expect(only(runValidation(db([]), [], rows, ui, { collectionRefs: ['ET-CABLE'] }))).toHaveLength(0)
+  })
+
+  test('the fix lives on the Product Spec screen', () => {
+    const issues = only(runValidation(db([]), [makePsRow('ET-PS-01', 'C')], [], {}))
+    expect(issues[0].fixKind).toBe('spec')
   })
 })
 

@@ -13,8 +13,12 @@ import { buildPsScript, buildRsScript, buildDbScript } from '../utils/patchScrip
  * −1 removed (…)" for a recipe — then offers a "Copy Patch for <file>" button
  * per changed file. The tool never writes the xlsx; the user runs each copied
  * script in Excel. Scoped to the action:
- *   scope 'export' — Product Spec + Recipe Spec
- *   scope 'db'     — the DesignDB ElementTypes table
+ *   scope 'export' — all three: Product Spec, Recipe Spec, DesignDB ElementTypes
+ *   scope 'db'     — the DesignDB ElementTypes table alone
+ *
+ * Export aligns all three documents or it aligns none of them: an ElementType that
+ * reaches the Product Spec without reaching the DesignDB master is exactly the drift
+ * this tool exists to prevent.
  */
 
 const refOf = r => (r?.ElementTypeRef || r?.elementTypeRef || '')
@@ -116,7 +120,28 @@ export function buildSummary({ psChanges = [], rsChanges = [], dbChanges = [] },
   return [
     { title: 'Product Spec — ElementTypes', lines: psLines(psChanges) },
     { title: 'Recipe Spec — PositionTypes', lines: rsLines(rsWritable) },
+    { title: 'DesignDB — ElementTypes table', lines: psLines(dbChanges) },
   ].filter(s => s.lines.length > 0)
+}
+
+/**
+ * Changes that would REPLACE a value the DesignDB already holds.
+ *
+ * An insert (`_isNew`) overwrites nothing. An update whose `before` value is non-blank
+ * does: the master said one thing, the patch will say another. Never silent.
+ */
+export function dbOverwrites(dbChanges = []) {
+  const out = []
+  for (const c of dbChanges) {
+    if (c._isNew) continue
+    for (const [field, next] of Object.entries(c.updates || {})) {
+      const prev = c.before?.[field]
+      if (prev == null || String(prev).trim() === '') continue
+      if (String(prev) === String(next ?? '')) continue
+      out.push({ ref: c.elementTypeRef, field, from: String(prev), to: String(next ?? '') })
+    }
+  }
+  return out
 }
 
 export function summaryMarkdown(sections, scopeLabel) {
@@ -144,6 +169,8 @@ function patchFilesFor(scope, { psChanges, rsChanges, dbChanges }) {
     : [
         { key: 'ps', label: 'Product Spec', script: buildPsScript(psChanges) },
         { key: 'rs', label: 'Recipe Spec', script: buildRsScript(rsChanges) },
+        // The master learns about new ElementTypes here or nowhere.
+        { key: 'db', label: 'ElementTypes (DB)', script: buildDbScript(dbChanges) },
       ]
   return files.filter(f => f.script)
 }
@@ -153,19 +180,21 @@ export default function ChangeSummaryModal({ show, onHide, scope = 'export', not
   const rsChanges = useStore(s => s.rsChanges)
   const dbChanges = useStore(s => s.dbChanges)
 
-  const unspecifiedElementTypes = useStore(s => s.unspecifiedElementTypes)
-  const specifyMissingElementTypes = useStore(s => s.specifyMissingElementTypes)
+  const alignmentGaps = useStore(s => s.alignmentGaps)
+  const fillWrapperSpecRows = useStore(s => s.fillWrapperSpecRows)
+  const queueMissingDbRows = useStore(s => s.queueMissingDbRows)
 
   const [copiedKey, setCopiedKey] = useState(null)
   useEffect(() => { if (show) setCopiedKey(null) }, [show])
 
-  // PS and DB must agree wherever a spec is defined. An ElementType used in a
-  // recipe, or catalogued in the DesignDB, with no Product Spec row has nowhere to
-  // carry its manufacturer and product code — the patch would leave the two apart.
-  const unspecified = useMemo(
-    () => (show && scope === 'export' ? unspecifiedElementTypes() : []),
-    [show, scope, psChanges, rsChanges, dbChanges, unspecifiedElementTypes]
+  // Two invariants, one selector (see specAlignment):
+  //   the DesignDB is the master   — everything in PS or RS must exist in it
+  //   a recipe implies a spec      — everything a recipe uses must have a spec row
+  const gaps = useMemo(
+    () => (show && scope === 'export' ? alignmentGaps() : { specRows: { wrappers: [], products: [] }, dbRows: [] }),
+    [show, scope, psChanges, rsChanges, dbChanges, alignmentGaps]
   )
+  const overwrites = useMemo(() => dbOverwrites(dbChanges), [dbChanges])
 
   const sections = useMemo(
     () => buildSummary({ psChanges, rsChanges, dbChanges }, scope),
@@ -203,30 +232,96 @@ export default function ChangeSummaryModal({ show, onHide, scope = 'export', not
       <Modal.Body style={{ maxHeight: '60vh' }}>
         {note && <div className="text-muted mb-2" style={{ fontSize: 12 }}>{note}</div>}
 
-        {/* PS ↔ DB alignment. Offered, never silent: appending spec rows is a real
-            change to the Product Spec, so it goes into psChanges like any other. */}
-        {unspecified.length > 0 && (
-          <div className="mb-3 px-2 py-2 rounded" style={{ background: '#fff3cd', border: '1px solid #f0e0a8' }}>
-            <div className="fw-semibold d-flex align-items-center gap-1" style={{ fontSize: 11, color: '#856404' }}>
+        {/* This patch will replace something the master already says. Never silent. */}
+        {overwrites.length > 0 && (
+          <div className="mb-3 px-2 py-2 rounded" style={{ background: '#f8d7da', border: '1px solid #f1aeb5' }}>
+            <div className="fw-semibold d-flex align-items-center gap-1" style={{ fontSize: 11, color: '#842029' }}>
               <MaterialIcon name="warning" size={13} />
-              {unspecified.length} ElementType{unspecified.length === 1 ? '' : 's'} with no Product Spec row
+              {overwrites.length} DesignDB value{overwrites.length === 1 ? '' : 's'} will be overwritten
             </div>
             <div className="text-muted my-1" style={{ fontSize: 11 }}>
-              Used in a recipe or catalogued in the DesignDB, but unspecified — nothing to buy, nothing to price.
-              Wrappers are appended as <span style={{ fontFamily: 'monospace' }}>Ideaworks / N/A</span>.
+              The master already holds a value here. Running the ElementTypes patch replaces it.
+            </div>
+            <div style={{ fontSize: 10, maxHeight: 80, overflowY: 'auto' }}>
+              {overwrites.map(o => (
+                <div key={`${o.ref}.${o.field}`}>
+                  <span style={{ fontFamily: 'monospace' }}>{o.ref}</span>
+                  <span className="text-muted"> · {o.field}: </span>
+                  <span style={{ textDecoration: 'line-through', color: '#842029' }}>{o.from}</span>
+                  <span className="text-muted"> → </span>
+                  <span>{o.to}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* A wrapper's spec is fully determined, so one click is safe. */}
+        {gaps.specRows.wrappers.length > 0 && (
+          <div className="mb-3 px-2 py-2 rounded" style={{ background: '#fff3cd', border: '1px solid #f0e0a8' }}>
+            <div className="fw-semibold d-flex align-items-center gap-1" style={{ fontSize: 11, color: '#856404' }}>
+              <MaterialIcon name="inventory_2" size={13} />
+              {gaps.specRows.wrappers.length} wrapper{gaps.specRows.wrappers.length === 1 ? '' : 's'} with no Product Spec row
+            </div>
+            <div className="text-muted my-1" style={{ fontSize: 11 }}>
+              A wrapper is a virtual assembly — its contents are what you buy. It takes{' '}
+              <span style={{ fontFamily: 'monospace' }}>Ideaworks / N/A</span>, so nothing here needs deciding.
             </div>
             <div style={{ fontFamily: 'monospace', fontSize: 10, color: '#6c757d', maxHeight: 60, overflowY: 'auto' }}>
-              {unspecified.map(u => u.ref).join(', ')}
+              {gaps.specRows.wrappers.map(w => w.ref).join(', ')}
             </div>
             <Button size="sm" variant="outline-warning" className="mt-2" style={{ fontSize: 11 }}
-              onClick={() => specifyMissingElementTypes()}>
-              <MaterialIcon name="playlist_add_check" size={13} /> Add {unspecified.length} spec row
-              {unspecified.length === 1 ? '' : 's'}
+              onClick={() => fillWrapperSpecRows()}>
+              <MaterialIcon name="playlist_add_check" size={13} /> Add {gaps.specRows.wrappers.length} wrapper
+              spec row{gaps.specRows.wrappers.length === 1 ? '' : 's'}
             </Button>
           </div>
         )}
 
-        {sections.length === 0 && unspecified.length === 0 && (
+        {/* A real product needs a manufacturer and a code. A blank row is not progress. */}
+        {gaps.specRows.products.length > 0 && (
+          <div className="mb-3 px-2 py-2 rounded" style={{ background: '#fdecec', border: '1px solid #f5c2c7' }}>
+            <div className="fw-semibold d-flex align-items-center gap-1" style={{ fontSize: 11, color: '#842029' }}>
+              <MaterialIcon name="error" size={13} />
+              {gaps.specRows.products.length} product{gaps.specRows.products.length === 1 ? '' : 's'} used in a recipe with no Product Spec row
+            </div>
+            <div className="text-muted my-1" style={{ fontSize: 11 }}>
+              Each needs a manufacturer and a product code, which only you know. Open it in the Product
+              Spec — appending a blank row would only trade one warning for another.
+            </div>
+            {gaps.specRows.products.map(p => (
+              <div key={p.ref} className="d-flex align-items-baseline gap-2" style={{ fontSize: 10 }}>
+                <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{p.ref}</span>
+                <span className="text-muted">used by {p.usedBy.join(', ')}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* The DesignDB is the master list. Anything absent from it is drift. */}
+        {gaps.dbRows.length > 0 && (
+          <div className="mb-3 px-2 py-2 rounded" style={{ background: '#cfe2ff', border: '1px solid #b6d4fe' }}>
+            <div className="fw-semibold d-flex align-items-center gap-1" style={{ fontSize: 11, color: '#084298' }}>
+              <MaterialIcon name="hub" size={13} />
+              {gaps.dbRows.length} ElementType{gaps.dbRows.length === 1 ? '' : 's'} missing from the DesignDB master
+            </div>
+            <div className="text-muted my-1" style={{ fontSize: 11 }}>
+              The DesignDB is the master list: everything in the Product Spec or a recipe must exist in it.
+              These reach it through the ElementTypes patch. <span className="fst-italic">ParentRef is left
+              blank — filing them under a collection is yours to decide.</span>
+            </div>
+            <div style={{ fontFamily: 'monospace', fontSize: 10, color: '#6c757d', maxHeight: 60, overflowY: 'auto' }}>
+              {gaps.dbRows.map(d => d.ref).join(', ')}
+            </div>
+            <Button size="sm" variant="outline-primary" className="mt-2" style={{ fontSize: 11 }}
+              onClick={() => queueMissingDbRows()}>
+              <MaterialIcon name="playlist_add_check" size={13} /> Add {gaps.dbRows.length} to the ElementTypes patch
+            </Button>
+          </div>
+        )}
+
+        {sections.length === 0 && gaps.dbRows.length === 0 &&
+         gaps.specRows.wrappers.length === 0 && gaps.specRows.products.length === 0 && (
           <div className="text-muted small fst-italic">No pending changes for this action.</div>
         )}
         {sections.map(s => (

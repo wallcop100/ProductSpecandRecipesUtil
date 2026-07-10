@@ -59,7 +59,6 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   const psRows = useStore(s => s.psRows)
   const positionTypes = useStore(s => s.positionTypes)
   const elementTypes = useStore(s => s.elementTypes)
-  const dbWriteEnabled = useStore(s => s.dbWriteEnabled)
   const ensurePSRow = useStore(s => s.ensurePSRow)
   const updatePSRow = useStore(s => s.updatePSRow)
   const updateElementType = useStore(s => s.updateElementType)
@@ -1021,12 +1020,10 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                   Assign an ElementType to at least one code before staging.
                 </div>
               )}
-              {!dbWriteEnabled && (
-                <div className="text-muted mt-1" style={{ fontSize: 10 }}>
-                  <MaterialIcon name="info" size={10} /> Notes are written to the ElementType Description, which
-                  lives in the DesignDB table. With DB writes off they stay project-local.
-                </div>
-              )}
+              <div className="text-muted mt-1" style={{ fontSize: 10 }}>
+                <MaterialIcon name="info" size={10} /> Notes become the ElementType Description in the DesignDB,
+                and reach it through the ElementTypes patch script at export.
+              </div>
               {staged && (
                 <Alert variant="success" className="mt-2 py-1 px-2" style={{ fontSize: 11 }}>
                   <div>

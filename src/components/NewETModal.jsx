@@ -46,8 +46,6 @@ export default function NewETModal({
   const createElementType = useStore(s => s.createElementType)
   const addPSRow          = useStore(s => s.addPSRow)
   const updatePSRow       = useStore(s => s.updatePSRow)
-  const dbWriteEnabled    = useStore(s => s.dbWriteEnabled)
-  const setDbWriteEnabled = useStore(s => s.setDbWriteEnabled)
 
   const uid = useId()
   const familyListId = `newet-family-${uid}`
@@ -312,19 +310,15 @@ export default function NewETModal({
           </datalist>
         </Form.Group>
 
-        {/* Where does this ET get saved? Teaches the catalogue concept in context. */}
+        {/* The DesignDB is the master list, so this is not a choice. Say so once. */}
         <div className="rounded p-2 mb-3" style={{ background: '#f0f4ff', border: '1px solid #c7d7f5' }}>
-          <Form.Check
-            type="switch"
-            id={`newet-db-write-${uid}`}
-            checked={dbWriteEnabled}
-            onChange={e => setDbWriteEnabled(e.target.checked)}
-            label={<span style={{ fontSize: 12, fontWeight: 600 }}>Also add to the DesignDB ElementTypes table</span>}
-          />
+          <div style={{ fontSize: 12, fontWeight: 600 }}>
+            <MaterialIcon name="hub" size={13} /> Added to the DesignDB ElementTypes table
+          </div>
           <div className="text-muted mt-1" style={{ fontSize: 11 }}>
-            {dbWriteEnabled
-              ? 'This element type is written into the DesignDB ElementTypes table when you press “Update ElementTypes”. Use this so the whole team’s design database knows about it.'
-              : 'Off: the element type is remembered in this project only. Turn on to write new/renamed element types back to the shared DesignDB file that the design pipeline reads.'}
+            The DesignDB is the master list of ElementTypes: anything in the Product Spec or a recipe has
+            to exist there too. This lands in the ElementTypes patch script at export, alongside the
+            Product Spec and Recipe Spec ones.
           </div>
         </div>
 

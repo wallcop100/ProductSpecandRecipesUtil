@@ -11,6 +11,7 @@ import { productKey, hasProductIdentity } from './productCodes'
 
 import { DIM_QTY_COMPONENTS } from './constants.js'
 import { connectorGapsForPosition } from './collectionStatus.js'
+import { alignmentGaps } from './specAlignment.js'
 
 // Ref-token vocabularies for tag-driven recipe checks. Tokens are matched as
 // hyphen-delimited segments of the (uppercased) ElementTypeRef, which avoids the
@@ -57,9 +58,10 @@ const refOf = r => r.elementTypeRef || r.ElementTypeRef || ''
  */
 // Rules whose fix lives on the Product Spec screen (ref is an ET ref); all
 // others are recipe rules whose ref is a PositionTypeRef.
-const SPEC_RULES = new Set(['DUPLICATE_PRODUCT_CODE', 'MISSING_PRODUCT_CODE', 'MISSING_PRODUCT_SPEC_ROW'])
+const SPEC_RULES = new Set(['DUPLICATE_PRODUCT_CODE', 'MISSING_PRODUCT_CODE', 'MISSING_PRODUCT_SPEC_ROW', 'ELEMENT_TYPE_NOT_IN_DB'])
 
-export function runValidation(dbData, psRows, rsRows, positionUI, { collections = [] } = {}) {
+export function runValidation(dbData, psRows, rsRows, positionUI,
+  { collections = [], containerETRefs = new Set(), collectionRefs = [], ignoredPosRefs = new Set() } = {}) {
   const issues = []
 
   issues.push(...checkMissingIsDesign(rsRows, positionUI))
@@ -75,7 +77,7 @@ export function runValidation(dbData, psRows, rsRows, positionUI, { collections 
   issues.push(...checkMissingProductSpecs(psRows))
   issues.push(...checkDanglingElementTypeRefs(dbData, psRows, rsRows))
   issues.push(...checkBlankRecipeContainer(rsRows))
-  issues.push(...checkUnspecifiedElementTypes(dbData, psRows, rsRows))
+  issues.push(...checkSpecAlignment(dbData, psRows, rsRows, ignoredPosRefs, containerETRefs, collectionRefs))
 
   // Tag each issue with where its "fix" lives so the UI can route correctly.
   for (const i of issues) i.fixKind = SPEC_RULES.has(i.rule) ? 'spec' : 'position'
@@ -114,46 +116,58 @@ function checkBlankRecipeContainer(rsRows) {
 }
 
 // ---------------------------------------------------------------------------
-// Rule 14 — MISSING_PRODUCT_SPEC_ROW
-// The DesignDB says an ElementType exists; the Product Spec says what to buy.
-// An ET used in a recipe, or catalogued in the DB, needs a spec row — otherwise
-// there is nowhere to record its manufacturer and product code, and the BoM
-// cannot be priced. Collections are groupings, not purchasables, so they are
-// exempt. Wrappers are not exempt: they take Ideaworks / N/A.
+// Rule 14 — MISSING_PRODUCT_SPEC_ROW   (a recipe implies a spec)
+// Rule 17 — ELEMENT_TYPE_NOT_IN_DB     (the DesignDB is the master)
+//
+// Both come from ONE selector (specAlignment). They used to be computed here, and
+// again in the store, and again on the Product Spec screen — three implementations,
+// three different numbers. Worse, this one asked the question backwards: it required
+// a spec row for every CATALOGUED ElementType, so it flagged every cable and
+// connector nobody ever bought, and never once flagged a real product.
+//
+// The catalogue is a master list, not a shopping list. An entry used in no recipe
+// needs nothing at all.
 // ---------------------------------------------------------------------------
-function checkUnspecifiedElementTypes(dbData, psRows, rsRows) {
-  const lc = s => String(s || '').toLowerCase()
-  const spec = new Set((psRows || [])
-    .filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
-    .map(r => lc(r.ElementTypeRef || r.elementTypeRef))
-    .filter(Boolean))
-
-  const elementTypes = dbData?.element_types || dbData?.elementTypes || []
-  const catalogued = new Map()
-  for (const e of elementTypes) {
-    const ref = e.ElementTypeRef || e.elementTypeRef
-    if (ref && (e.IsCollection || e.isCollection) !== 'Y') catalogued.set(lc(ref), ref)
-  }
+function checkSpecAlignment(dbData, psRows, rsRows, ignoredPosRefs, containerETRefs, collectionRefs) {
+  const gaps = alignmentGaps({
+    elementTypes: dbData?.element_types || dbData?.elementTypes || [],
+    psRows: psRows || [],
+    recipes: rsRows || [],
+    containerETRefs: containerETRefs || new Set(),
+    collectionRefs: collectionRefs || [],
+    ignoredPosRefs: ignoredPosRefs || new Set(),
+  })
 
   const issues = []
-  const seen = new Set()
-  const add = (ref, why) => {
-    const key = lc(ref)
-    if (!key || spec.has(key) || seen.has(key)) return
-    seen.add(key)
+
+  // A wrapper is one click away from correct; a real product needs a human.
+  for (const w of gaps.specRows.wrappers) {
     issues.push({
       severity: 'warning',
       rule: 'MISSING_PRODUCT_SPEC_ROW',
-      message: `"${ref}" ${why} but has no Product Spec row, so it carries no manufacturer or product code.`,
-      ref,
+      message: `"${w.ref}" is a wrapper used by ${w.usedBy.join(', ')} with no Product Spec row. It takes Ideaworks / N/A.`,
+      ref: w.ref,
+    })
+  }
+  for (const pr of gaps.specRows.products) {
+    issues.push({
+      severity: 'error',
+      rule: 'MISSING_PRODUCT_SPEC_ROW',
+      message: `"${pr.ref}" is used by ${pr.usedBy.join(', ')} but has no Product Spec row, so it carries no manufacturer or product code.`,
+      ref: pr.ref,
     })
   }
 
-  for (const r of rsRows || []) {
-    if ((r.IsDeleted || r.isDeleted) === 'Y') continue
-    add(r.ElementTypeRef || r.elementTypeRef, 'is used in a recipe')
+  for (const d of gaps.dbRows) {
+    const where = d.inSpec && d.inRecipe ? 'the Product Spec and a recipe'
+      : d.inSpec ? 'the Product Spec' : 'a recipe'
+    issues.push({
+      severity: 'error',
+      rule: 'ELEMENT_TYPE_NOT_IN_DB',
+      message: `"${d.ref}" is used in ${where} but does not exist in the DesignDB, which is the master list of ElementTypes.`,
+      ref: d.ref,
+    })
   }
-  for (const [, ref] of catalogued) add(ref, 'is in the DesignDB catalogue')
 
   return issues
 }
