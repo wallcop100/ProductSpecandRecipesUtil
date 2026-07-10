@@ -46,7 +46,7 @@ import { ACTION_ICONS, ICONS } from '../utils/entityStyle'
  * centre for a focused ET editor.
  */
 export default function BuilderScreen({
-  onOpenTemplateEditor, onOpenProductSpec, onOpenConnectors, onOpenTags, onBackToSetup,
+  onOpenTemplateEditor, onOpenProductSpec, onOpenConnectors, onOpenTags, onOpenCodeImport, onBackToSetup,
   pendingReviewRefs, onConsumePendingReview,
 }) {
   const rootView = useStore(s => s.rootView)
@@ -410,11 +410,17 @@ export default function BuilderScreen({
         )}
         {/* Silent unless a Form template is attached. "Reconcile →" steps through
             every position that still misses a Form product. */}
-        <FormProgressChip onReconcile={startReconcile} />
+        <FormProgressChip onReconcile={startReconcile} onAttach={onOpenCodeImport} />
         <IconButton variant="outline-secondary" bsSize="sm" icon="dashboard_customize"
           title="Template Editor" onClick={onOpenTemplateEditor} />
         <IconButton variant="outline-secondary" bsSize="sm" icon={ACTION_ICONS.productSpec}
           title="Product Spec" onClick={() => onOpenProductSpec()} />
+        {/* The Form → product-code workflow used to be reachable only from inside the
+            Product Spec screen, so nothing here said it existed. */}
+        {onOpenCodeImport && (
+          <IconButton variant="outline-secondary" bsSize="sm" icon="auto_fix_high"
+            title="Import product codes from a Form template" onClick={onOpenCodeImport} />
+        )}
         <IconButton variant="outline-secondary" bsSize="sm" icon={ACTION_ICONS.tags}
           title="Tags" onClick={onOpenTags} />
 

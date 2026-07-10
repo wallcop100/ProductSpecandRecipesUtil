@@ -23,6 +23,9 @@ export default function App() {
   // reviewPositionRefs: PositionTypeRefs to jump straight into reviewing (e.g. from
   // the product-code import's "review what was prefilled" hand-off)
   const [reviewPositionRefs, setReviewPositionRefs] = useState(null)
+  // Where the product-code import was opened from, so Back returns there rather
+  // than always dumping you on the Product Spec.
+  const [importOrigin, setImportOrigin] = useState('builder')
   const [debugIds, setDebugIds] = useState(false)
 
   const setFileWatchAlert = useStore(s => s.setFileWatchAlert)
@@ -54,9 +57,16 @@ export default function App() {
   const consumePendingScreen = useStore(s => s.consumePendingScreen)
   useEffect(() => {
     if (!pendingScreen) return
+    if (pendingScreen === 'product-code-import') setImportOrigin(activeScreen)
     navigateTo(pendingScreen)
     consumePendingScreen()
-  }, [pendingScreen, consumePendingScreen])
+  }, [pendingScreen, consumePendingScreen, activeScreen])
+
+  /** The one way into the Form → product-code workflow. Remembers where you were. */
+  function openCodeImport(from) {
+    setImportOrigin(from)
+    navigateTo('product-code-import')
+  }
 
   return (
     <div className={debugIds ? 'debug-ids' : ''} style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -78,6 +88,7 @@ export default function App() {
               navigateTo('connectors')
             }}
             onOpenTags={() => navigateTo('tags')}
+            onOpenCodeImport={() => openCodeImport('builder')}
             onBackToSetup={() => navigateTo('folder-setup')}
             pendingReviewRefs={reviewPositionRefs}
             onConsumePendingReview={() => setReviewPositionRefs(null)}
@@ -89,7 +100,7 @@ export default function App() {
         {activeScreen === 'product-spec' && (
           <ProductSpecScreen
             scrollToRef={psScrollToRef}
-            onOpenCodeImport={() => navigateTo('product-code-import')}
+            onOpenCodeImport={() => openCodeImport('product-spec')}
             onBack={() => {
               setPsScrollToRef(null)
               navigateTo('builder')
@@ -98,7 +109,7 @@ export default function App() {
         )}
         {activeScreen === 'product-code-import' && (
           <ProductCodeImportScreen
-            onBack={() => navigateTo('product-spec')}
+            onBack={() => navigateTo(importOrigin)}
             onReviewPositions={refs => { setReviewPositionRefs(refs); navigateTo('builder') }}
           />
         )}
