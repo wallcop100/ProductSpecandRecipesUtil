@@ -14,6 +14,7 @@ import { wrapperUsedBy } from '../utils/collectionStatus'
 import DuplicateETModal from './DuplicateETModal'
 import SharedEditGuard from './SharedEditGuard'
 import SwapEverywhereModal from './SwapEverywhereModal'
+import { ConceptHint, CONCEPTS } from './ConceptCard'
 import { familyOf } from '../utils/etRef'
 import { ACTION_ICONS } from '../utils/entityStyle'
 
@@ -318,6 +319,8 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                       title={`Shared assembly — its contents are the same for ${[posRef, ...sharedWith].join(', ')}`}>
                       <MaterialIcon name="warning" size={11} />
                       shared with {sharedWith.join(', ')}
+                      <ConceptHint concept={CONCEPTS.WRAPPER} size={11}
+                        title="What is a wrapper, and why is it shared?" />
                     </span>
                     <button
                       className="btn btn-link btn-sm p-0"

@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react'
 import { Button, Form } from 'react-bootstrap'
 import MaterialIcon from './MaterialIcon'
+import { ConceptHint, CONCEPTS } from './ConceptCard'
 import useStore from '../store/useStore'
 import { VIA } from '../utils/ptResolve'
 import { unmatchedFormPositions } from '../utils/usage'
@@ -52,7 +53,11 @@ export default function ResolveRefsStep({ resolutions, overrides, onOverride, po
   return (
     <div style={{ maxWidth: 720, display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 }}>
       <div className="mb-2">
-        <div className="fw-semibold" style={{ fontSize: 13 }}>Resolve the Form's PositionTypes</div>
+        <div className="fw-semibold d-flex align-items-center gap-1" style={{ fontSize: 13 }}>
+          Resolve the Form's PositionTypes
+          <ConceptHint concept={CONCEPTS.EXTREF} size={13}
+            title="Why does the Form say C01 when the recipe lives on C01r?" />
+        </div>
         <div className="text-muted" style={{ fontSize: 11 }}>
           Recipes hang off the DesignDB's PositionType, which is not always the one the Form names.
           Where a PositionType declares this ref as its <code>ExtRef</code>, it is the real target.

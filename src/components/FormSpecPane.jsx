@@ -7,6 +7,7 @@ import DuplicateETModal from './DuplicateETModal'
 import UsagePopover from './UsagePopover'
 import { compareFormToRecipe, associations, formWorklist, formPending } from '../utils/formSpec'
 import NewETModal from './NewETModal'
+import { ConceptHint, CONCEPTS } from './ConceptCard'
 import { findProductET } from '../utils/productCodes'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { ago } from '../utils/ago'
@@ -242,6 +243,8 @@ export default function FormSpecPane({ posRef, embedded = false }) {
       {/* Where this came from */}
       <div className="d-flex align-items-baseline gap-1 mb-1">
         <SectionLabel className="mb-0">Form spec</SectionLabel>
+        <ConceptHint concept={CONCEPTS.INTENT} size={11}
+          title="What the Form asks for vs what the recipe has" />
         <span className="ms-auto text-muted" style={{ fontSize: 10 }}
           title={pending.length > 0 ? `${pending.length} product${pending.length === 1 ? '' : 's'} still need an ElementType before they can be added` : ''}>
           {coverage.present}/{coverage.total + pending.length} present

@@ -3,6 +3,7 @@ import { Modal, Button } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { buildPsScript, buildRsScript, buildDbScript } from '../utils/patchScript'
+import { ConceptHint, CONCEPTS } from './ConceptCard'
 
 /**
  * ChangeSummaryModal — review pending changes and copy per-file patch scripts.
@@ -227,6 +228,8 @@ export default function ChangeSummaryModal({ show, onHide, scope = 'export', not
         <Modal.Title style={{ fontSize: 15 }} className="d-flex align-items-center gap-2">
           <MaterialIcon name="fact_check" size={18} />
           Change summary — {SCOPE_LABEL[scope]}
+          <ConceptHint concept={CONCEPTS.READONLY} size={14}
+            title="Why is there no Save button?" />
         </Modal.Title>
       </Modal.Header>
       <Modal.Body style={{ maxHeight: '60vh' }}>
