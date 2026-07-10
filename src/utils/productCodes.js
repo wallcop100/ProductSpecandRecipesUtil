@@ -224,17 +224,25 @@ export const productKey = (manufacturer, code) => `${norm(manufacturer)} ${norm(
 /**
  * Does this code identify a product at all?
  *
- * "N/A" does not. It is the convention for something with nothing to buy — a
- * virtual wrapper, a container, an Ideaworks assembly. EVERY such row carries the
- * same "N/A", so matching on it says nothing: this project has four, and all four
- * are drivers. Treating it as a code let a pendant wrapper silently adopt a
- * driver's ElementType, because both were `Ideaworks / N/A`.
+ * Two placeholders do not, and a blank does not.
  *
- * A blank code identifies nothing either.
+ *   "N/A" — there is nothing to buy: a virtual wrapper, a container, an Ideaworks
+ *           assembly. EVERY such row carries it, so matching on it says nothing.
+ *           This project has four, and all four are drivers. Treating it as a code
+ *           let a pendant wrapper silently adopt a driver's ElementType, because
+ *           both were `Ideaworks / N/A`.
+ *
+ *   "TBC"  — not decided yet. The app already says so elsewhere (the IsTBC flag,
+ *           and a TBC row reads "partial" in the spec browser). As a code it once
+ *           matched the literal word "TBC" wherever it appeared in a Form field.
+ *
+ * Only the WHOLE code is a placeholder: "TBC-1000" is a real product code.
  */
+const PLACEHOLDER_CODES = new Set(['N/A', 'TBC'])
+
 export const hasProductIdentity = code => {
   const n = norm(code)
-  return n !== '' && n !== 'N/A'
+  return n !== '' && !PLACEHOLDER_CODES.has(n)
 }
 
 const notAProduct = code => !hasProductIdentity(code)

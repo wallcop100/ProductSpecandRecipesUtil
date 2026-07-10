@@ -15,6 +15,11 @@ import React, { useEffect, useRef, useState } from 'react'
  *   brush            — 'code' | 'note' | 'discard', the colour you're painting with
  *   onSweep(idxs)    — the tokens the drag covered; the parent applies the brush
  *   suggested        — token indices that look like codes you've already marked
+ *   known            — Set of token indices painted from the Product Spec (a lookup,
+ *                      not a guess): tinted the same, marked with a subtle underline
+ *                      so you can see WHY they are already codes
+ *   variants         — Map<tokenIdx, { base, ref }>: this run carries a known code
+ *                      plus something more. Never painted. Amber, and it asks.
  *   showBoundaries   — reveal token edges
  */
 
@@ -31,7 +36,7 @@ function roleStyle(role) {
   return { color: BRUSH.note.fg }
 }
 
-export default function CodeChips({ row, brush = 'code', onSweep, suggested = [], showBoundaries = false }) {
+export default function CodeChips({ row, brush = 'code', onSweep, suggested = [], known = new Set(), variants = new Map(), showBoundaries = false }) {
   const [drag, setDrag] = useState(null)
   const [hover, setHover] = useState(-1)
   const dragRef = useRef(null)
@@ -66,6 +71,8 @@ export default function CodeChips({ row, brush = 'code', onSweep, suggested = []
     const role = row.roles[i]
     const sweeping = inSweep(i)
     const isSuggested = role === 'note' && !sweeping && suggestedSet.has(i)
+    const isKnown = !sweeping && known.has(i) && role === 'code'
+    const variant = !sweeping && variants.get(i)
     const base = roleStyle(sweeping ? brush : role)
 
     parts.push(
@@ -74,7 +81,11 @@ export default function CodeChips({ row, brush = 'code', onSweep, suggested = []
         onPointerDown={e => { e.preventDefault(); setDrag({ from: i, to: i }) }}
         onPointerEnter={() => { setHover(i); if (drag) setDrag(d => ({ ...d, to: i })) }}
         onPointerLeave={() => setHover(h => (h === i ? -1 : h))}
-        title={`“${tok.text}” — ${role}`}
+        title={
+          variant ? `“${tok.text}” carries the known code “${variant.base}” (${variant.ref}) plus more — is it a different product?`
+            : isKnown ? `“${tok.text}” — already a product code in your Product Spec`
+            : `“${tok.text}” — ${role}`
+        }
         style={{
           ...base,
           cursor: 'pointer',
@@ -83,11 +94,18 @@ export default function CodeChips({ row, brush = 'code', onSweep, suggested = []
           outline: showBoundaries ? '1px dotted #ced4da' : 'none',
           // A suggestion looks like a faint version of the Code colour — "this could
           // be a code" — rather than an unexplained blue underline.
-          boxShadow: isSuggested
-            ? `inset 0 -2px 0 ${BRUSH.code.swatch}`
-            : hover === i && !drag && !sweeping
-              ? 'inset 0 -2px 0 #adb5bd'
-              : 'none',
+          // amber under a variant ("known code + more"), a solid rule under a code
+          // that came from the spec, a faint rule under a mere suggestion.
+          ...(variant ? { background: '#fff3cd', color: '#856404', fontWeight: 700, borderRadius: 2 } : null),
+          boxShadow: variant
+            ? 'inset 0 -2px 0 #e0a800'
+            : isKnown
+              ? 'inset 0 -2px 0 #0f5132'
+              : isSuggested
+                ? `inset 0 -2px 0 ${BRUSH.code.swatch}`
+                : hover === i && !drag && !sweeping
+                  ? 'inset 0 -2px 0 #adb5bd'
+                  : 'none',
           opacity: isSuggested ? 0.9 : 1,
         }}
       >

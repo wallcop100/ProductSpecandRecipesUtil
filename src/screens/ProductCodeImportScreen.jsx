@@ -24,6 +24,7 @@ import {
 } from '../utils/codeLearning'
 import { inferConvention, reuseCandidates, suggestRef } from '../utils/etRefSuggest'
 import { resolveFormRefs, buildRefMap, targetFor } from '../utils/ptResolve'
+import { applyKnownCodes, knownTokenIndices } from '../utils/knownCodes'
 import { diffCaptures, wrapperDivergence } from '../utils/formSpec'
 
 /** Fuzzy header match: exact normalised hit first, else shortest header containing it. */
@@ -99,6 +100,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   // survive a reload, so the draft (and the captures) carry this instead.
   const [source, setSource] = useState(null)
   const [resumeDismissed, setResumeDismissed] = useState(false)
+  // Stage ①: what the Product Spec already knows. Exact hits are painted for you.
+  const [knownStats, setKnownStats] = useState(null)   // { exactCount, variantCount, adjacentCount, byRow }
+  const [preKnownRows, setPreKnownRows] = useState(null)   // one-shot undo of the auto-paint
 
   const knownPTs = useMemo(
     () => new Set(positionTypes.map(p => p.PositionTypeRef || p.positionTypeRef).filter(Boolean)),
@@ -189,7 +193,15 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
    * Skipped when the sheet has no PositionType column — nothing to resolve.
    */
   function startResolve() {
-    const built = buildRows()
+    const raw = buildRows()
+
+    // Stage ① — most of a revised Form is unchanged. Every run of tokens that IS a
+    // product code already in this project's spec is painted for you: a lookup, not
+    // a guess. Variants ("that code plus a bit more") are flagged, never painted.
+    const { rows: built, ...stats } = applyKnownCodes(raw, master)
+    setKnownStats(stats.exactCount || stats.variantCount || stats.adjacentCount ? stats : null)
+    setPreKnownRows(stats.exactCount ? raw : null)
+
     setRows(sortByConfidence(applyRules(built, {}), { master, duplicates: new Set() }))
     setRules({}); setIdx(0); setAssignments({}); setStaged(null); setUndoSnap(null)
     setKeptSeparate(new Set())
@@ -234,14 +246,22 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
 
   /** Rebuild tokens/roles from the raw text — makeRow is the only source of truth. */
   function resumeDraft(d) {
-    setRows((d.rows || []).map(r => ({
+    const restored = (d.rows || []).map(r => ({
       ...makeRow(r.id, r.rawText, {
         positionType: r.positionType, manufacturer: r.manufacturer, context: r.context,
       }),
       overrides: r.overrides || {},
       noteOverride: r.noteOverride || {},
       confirmed: !!r.confirmed,
-    })))
+    }))
+    setRows(restored)
+
+    // The auto-paint lives in `overrides` and came back with them; recompute the
+    // MATCH so the amber variant marks and the banner survive a resume too. It is
+    // idempotent, and there is nothing left to undo.
+    const { rows: _ignored, ...stats } = applyKnownCodes(restored, master)
+    setKnownStats(stats.exactCount || stats.variantCount || stats.adjacentCount ? stats : null)
+    setPreKnownRows(null)
     setRules(d.rules || {})
     setAssignments(d.assignments || {})
     setIdx(d.idx || 0)
@@ -254,6 +274,14 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     setSheet(d.source?.sheet || '')
     setStaged(null); setUndoSnap(null)
     setStep(d.step === 'resolve' ? 'resolve' : 'review')   // never back to pick/map: no workbook
+  }
+
+  /** Un-paint everything the spec matched, in one step. */
+  function undoKnownPaint() {
+    if (!preKnownRows) return
+    setRows(sortByConfidence(applyRules(preKnownRows, rules), ctx))
+    setPreKnownRows(null)
+    setKnownStats(s => (s ? { ...s, exactCount: 0 } : null))
   }
 
   async function discardDraft() {
@@ -642,6 +670,18 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
 
   const remaining = resolved.filter(r => !r.confirmed).length
   const easyLeft = resolved.filter(r => !r.confirmed && rowConfidence(r, ctx) === 'high').length
+  // What the spec matched on the row being reviewed.
+  const currentMatch = current && knownStats?.byRow?.get(current.id)
+  const knownIdx = useMemo(() => knownTokenIndices(currentMatch), [currentMatch])
+  const variantIdx = useMemo(() => {
+    const m = new Map()
+    for (const v of currentMatch?.variants || []) m.set(v.range[0], v)
+    for (const a of currentMatch?.adjacent || []) {
+      for (let k = a.range[0]; k <= a.range[1]; k++) m.set(k, { base: a.code, ref: a.ref })
+    }
+    return m
+  }, [currentMatch])
+
   const readout = current ? deriveCaptures(current, captureOpts) : null
   const learned = useMemo(() => learnedRules(rows, rules), [rows, rules])
   const tally = useMemo(() => roleTally(resolved), [resolved])
@@ -853,6 +893,37 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                   </div>
                 )}
 
+                {/* Stage ① — what the Product Spec already knew. */}
+                {knownStats && (
+                  <div className="mb-2 px-2 py-1 rounded d-flex align-items-center gap-2 flex-wrap"
+                    style={{ background: '#d1e7dd', border: '1px solid #a3cfbb', fontSize: 11, color: '#0f5132' }}>
+                    {knownStats.exactCount > 0 && (
+                      <span>
+                        <MaterialIcon name="check_circle" size={13} /> {knownStats.exactCount} code
+                        {knownStats.exactCount === 1 ? '' : 's'} already in your Product Spec — painted for you
+                      </span>
+                    )}
+                    {knownStats.variantCount > 0 && (
+                      <span style={{ color: '#856404' }}>
+                        <MaterialIcon name="warning" size={12} /> {knownStats.variantCount} look like a known code
+                        with something extra — amber; you decide
+                      </span>
+                    )}
+                    {knownStats.adjacentCount > 0 && (
+                      <span style={{ color: '#856404' }}>
+                        <MaterialIcon name="warning" size={12} /> {knownStats.adjacentCount} known codes sit side by
+                        side — painting both would merge them, so neither was
+                      </span>
+                    )}
+                    {preKnownRows && (
+                      <Button size="sm" variant="link" className="p-0 ms-auto" style={{ fontSize: 10 }}
+                        onClick={undoKnownPaint} title="Un-paint everything matched from the spec">
+                        Undo all
+                      </Button>
+                    )}
+                  </div>
+                )}
+
                 <PaintPalette
                   brush={brush} onBrush={setBrush}
                   scope={scope} onScope={setScope}
@@ -871,6 +942,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                       brush={brush}
                       onSweep={paint}
                       suggested={suggested}
+                      known={knownIdx}
+                      variants={variantIdx}
                       showBoundaries={showBoundaries}
                     />
                   </div>
