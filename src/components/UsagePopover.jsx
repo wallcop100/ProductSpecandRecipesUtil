@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useRef, useState } from 'react'
 import { Overlay, Popover } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
@@ -38,10 +38,19 @@ export default function UsagePopover({ etRef, children, placement = 'right' }) {
   const formCaptures = useStore(s => s.formCaptures)
   const containerETRefs = useStore(s => s.containerETRefs)
 
-  const usage = useMemo(
+  // Computed only while open — this runs over every recipe row, and a pane can hold
+  // dozens of these.
+  const computed = useMemo(
     () => (show && etRef ? elementTypeUsage(etRef, { recipes, psRows, elementTypes, formCaptures, containerETRefs }) : null),
     [show, etRef, recipes, psRows, elementTypes, formCaptures, containerETRefs]
   )
+
+  // Overlay fades OUT: it renders the popover one last time after `show` goes false,
+  // when `computed` is already null. Keep the last value so that final render has
+  // something to read instead of throwing and taking the whole app down with it.
+  const last = useRef(null)
+  if (computed) last.current = computed
+  const usage = computed || last.current
 
   if (!etRef) return children
 

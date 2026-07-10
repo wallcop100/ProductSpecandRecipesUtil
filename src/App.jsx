@@ -8,6 +8,7 @@ import ProductCodeImportScreen from './screens/ProductCodeImportScreen'
 import ConnectorsScreen from './screens/ConnectorsScreen'
 import TagManagerScreen from './screens/TagManagerScreen'
 import FileWatchBanner from './components/FileWatchBanner'
+import ErrorBoundary from './components/ErrorBoundary'
 
 /**
  * App — top-level screen router.
@@ -72,6 +73,9 @@ export default function App() {
     <div className={debugIds ? 'debug-ids' : ''} style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <FileWatchBanner />
 
+      {/* Keyed by screen: navigating away clears a caught error rather than
+          stranding you on the fallback. */}
+      <ErrorBoundary key={activeScreen}>
       <div style={{ flex: 1 }}>
         {activeScreen === 'folder-setup' && (
           <FolderSetupScreen onProjectLoaded={() => navigateTo('builder')} />
@@ -132,6 +136,7 @@ export default function App() {
           <TagManagerScreen onBack={() => navigateTo('builder')} />
         )}
       </div>
+      </ErrorBoundary>
 
     </div>
   )

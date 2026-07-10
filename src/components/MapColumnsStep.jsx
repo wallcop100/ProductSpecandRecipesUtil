@@ -114,13 +114,18 @@ export default function MapColumnsStep({
                 </div>
                 <div className="text-muted" style={{ fontSize: 10 }}>{f.hint}</div>
 
+                {/* A read-only glance at the column, not a field. No box, no white
+                    background — anything input-shaped invites a click. */}
                 {value && (
-                  <div className="mt-1 px-2 py-1 rounded text-truncate"
-                    style={{ background: '#fff', border: '1px solid #e9ecef', fontSize: 11, fontFamily: 'monospace' }}
-                    title={sample || '(every row is blank)'}>
-                    {sample === '' || sample === null
-                      ? <span className="text-muted fst-italic" style={{ fontFamily: 'inherit' }}>every row is blank</span>
-                      : sample}
+                  <div className="mt-1 d-flex align-items-baseline gap-1" style={{ cursor: 'default' }}>
+                    <MaterialIcon name="visibility" size={11} style={{ color: '#adb5bd', flexShrink: 0 }} />
+                    <span className="text-muted" style={{ fontSize: 9, flexShrink: 0 }}>this column holds</span>
+                    <span className="text-truncate" title={sample || '(every row is blank)'}
+                      style={{ fontSize: 11, fontFamily: 'ui-monospace, Menlo, monospace', color: '#6c757d', minWidth: 0 }}>
+                      {sample === '' || sample === null
+                        ? <span className="fst-italic" style={{ fontFamily: 'inherit' }}>every row is blank</span>
+                        : `“${sample}”`}
+                    </span>
                   </div>
                 )}
               </div>
