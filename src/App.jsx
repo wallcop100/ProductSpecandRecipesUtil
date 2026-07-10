@@ -22,7 +22,7 @@ export default function App() {
   // connectorsFocusRef: position ref to focus when opening the Connectors screen
   const [connectorsFocusRef, setConnectorsFocusRef] = useState(null)
   // reviewPositionRefs: PositionTypeRefs to jump straight into reviewing (e.g. from
-  // the product-code import's "review what was prefilled" hand-off)
+  // the product-code import's "review what the Form named" hand-off)
   const [reviewPositionRefs, setReviewPositionRefs] = useState(null)
   // Where the product-code import was opened from, so Back returns there rather
   // than always dumping you on the Product Spec.

@@ -4,7 +4,7 @@
  * The Form and the DesignDB do not always name the same thing the same way. In the
  * real data, the Form says `C01`, but the DB holds BOTH `C01` and `C01r` — and the
  * recipe hangs off `C01r`, never `C01`. Assigning captured product codes to `C01`
- * silently prefills a recipe on a PositionType that will never have one.
+ * silently captures codes against a PositionType that will never have a recipe.
  *
  * The DB already states the relationship, so nothing here is guessed:
  *
@@ -26,7 +26,7 @@ const key = r => norm(r).toUpperCase()
 export const VIA = {
   EXT_REF: 'extRef',   // a PositionType claims this ref as its ExtRef
   DIRECT: 'direct',    // the ref names a PositionType outright
-  MISSING: 'missing',  // no PositionType matches; nothing to prefill
+  MISSING: 'missing',  // no PositionType matches; nothing to capture against
 }
 
 const refOf = pt => norm(pt.PositionTypeRef ?? pt.positionTypeRef ?? pt.Ref ?? pt.ref)
@@ -86,7 +86,7 @@ export function resolveFormRefs(formRefs, positionTypes = []) {
  * `overrides` maps a Form ref to a chosen PositionTypeRef, or to '' meaning "skip".
  *
  * Returns Map<normalised form ref, target ref>. Skipped and unresolved refs are
- * absent, so a caller that misses one prefills nothing rather than guessing.
+ * absent, so a caller that misses one captures nothing rather than guessing.
  */
 export function buildRefMap(resolutions, overrides = {}) {
   const map = new Map()

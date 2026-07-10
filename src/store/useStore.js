@@ -1292,7 +1292,7 @@ const useStore = create((set, get) => ({
    *
    * Keyed by the RESOLVED PositionTypeRef (see ptResolve: the Form says C01, the
    * recipe lives on C01r). Without this the import's knowledge dies with the
-   * screen — the prefilled rows carry `_origin:'form'` in memory only.
+   * screen — rows added from the Form carry `_origin:'form'` in memory only.
    */
   async saveFormCaptures(captures) {
     const { projectId } = get()

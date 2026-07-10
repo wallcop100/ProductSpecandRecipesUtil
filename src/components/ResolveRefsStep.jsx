@@ -11,11 +11,11 @@ import { unmatchedFormPositions } from '../utils/usage'
  * The Form names things as the drawings do; the DesignDB may hold a different
  * PositionType for the same thing, and say so via ExtRef (C01r.ExtRef = "C01").
  * The recipe belongs to the DB's ref, not the Form's, so this step is what stops
- * captured codes prefilling a PositionType that will never carry a recipe.
+ * codes captured against a PositionType that will never carry a recipe.
  *
  * Nothing is inferred from names. Every redirect shown here was read out of the
  * DB; anything the DB is silent about is left to the user, and skipping is always
- * allowed — a skipped ref simply prefills no recipe.
+ * allowed — a skipped ref simply captures nothing.
  */
 
 const STYLE = {
@@ -129,7 +129,7 @@ export default function ResolveRefsStep({ resolutions, overrides, onOverride, po
                   <td>
                     <Form.Select size="sm" value={value} style={{ fontSize: 11, fontFamily: 'monospace' }}
                       onChange={e => onOverride(r.formRef, e.target.value)}>
-                      <option value="">— skip, prefill nothing —</option>
+                      <option value="">— skip, capture nothing —</option>
                       {ptRefs.map(p => (
                         <option key={p} value={p}>
                           {p}{p === r.target && r.via === VIA.EXT_REF ? '  (via ExtRef)' : ''}

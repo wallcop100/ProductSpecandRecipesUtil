@@ -46,6 +46,27 @@ export function revokeRule(rules, text) {
 }
 
 /**
+ * Withdraw per-row overrides on the given token texts.
+ *
+ * A batch paint means "every row". But an override outranks a rule (see
+ * resolveRoles), so any override still sitting on those tokens — the auto-paint's,
+ * or an earlier row-scoped paint — silently beats the new rule and the paint appears
+ * to do nothing at all. Painting the batch is therefore also withdrawing the
+ * exceptions to it.
+ */
+export function clearOverridesFor(rows = [], texts = []) {
+  const targets = new Set(texts.map(lower))
+  if (targets.size === 0) return rows
+  return rows.map(row => {
+    const entries = Object.entries(row.overrides || {})
+    if (entries.length === 0) return row
+    const kept = entries.filter(([i]) => !targets.has(lower(row.tokens?.[i]?.text)))
+    if (kept.length === entries.length) return row
+    return { ...row, overrides: Object.fromEntries(kept) }
+  })
+}
+
+/**
  * Resolve a row's roles. Precedence: per-row override > batch rule > default.
  *
  * The default is 'note' — the safe sink — EXCEPT when the whole field is a single

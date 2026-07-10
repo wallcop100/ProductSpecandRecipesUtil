@@ -5,7 +5,7 @@ import {
   ruleImpact, learnedRules, tokenFrequency, learnedCodeShapes, learnedSignals,
   suggestCodes, acceptSuggestions, punctuationSuggestion, acceptPunctuationSuggestion,
   learnedDelimiters, roleTally, discardsFromNoteEdit, pickExamples,
-  isTaught, teachingRows, learnCodeTokens,
+  isTaught, teachingRows, learnCodeTokens, clearOverridesFor,
 } from '../../src/utils/codeLearning.js'
 
 // Real ingredient rows — "Tape"/"Profile" are this project's dialect, not a spec.
@@ -63,6 +63,56 @@ describe('rules replay across the batch', () => {
     const rules = setRule({}, '2020', 'code')
     const row = { ...makeRow('C01', C01), overrides: { [idxOf(makeRow('C01', C01), '2020')]: 'note' } }
     expect(resolveRoles(row, rules)[idxOf(row, '2020')]).toBe('note')
+  })
+
+  /**
+   * The bug: auto-paint marks a known code with a per-row OVERRIDE. Painting that
+   * code back as a note is a batch rule, which an override outranks — so the token
+   * stayed a code, stayed green, and the banner cheerfully said it had been painted
+   * as a note in every row.
+   */
+  describe('clearOverridesFor — a batch paint withdraws the exceptions to it', () => {
+    const autoPainted = () => {
+      const rows = batch()
+      // what applyKnownCodes does: override the known code token on every row
+      return rows.map(r => {
+        const i = idxOf(r, 'FPSN0809BG2000')
+        return i >= 0 ? { ...r, overrides: { [i]: 'code' } } : r
+      })
+    }
+
+    test('repainting an auto-painted code as a note actually takes effect', () => {
+      let rows = autoPainted()
+      const i = idxOf(rows[0], 'FPSN0809BG2000')
+      expect(applyRules(rows, {})[0].roles[i]).toBe('code')      // the override
+
+      const rules = setRule({}, 'FPSN0809BG2000', 'note')
+      expect(applyRules(rows, rules)[0].roles[i]).toBe('code')   // rule alone loses
+
+      rows = clearOverridesFor(rows, ['FPSN0809BG2000'])
+      expect(applyRules(rows, rules)[0].roles[i]).toBe('note')   // now it wins
+    })
+
+    test('it is case-insensitive, like every other rule lookup', () => {
+      const rows = clearOverridesFor(autoPainted(), ['fpsn0809bg2000'])
+      expect(rows[0].overrides).toEqual({})
+    })
+
+    test('overrides on other tokens are left alone', () => {
+      const rows = autoPainted().map(r => ({ ...r, overrides: { ...r.overrides, [idxOf(r, 'Tape')]: 'discard' } }))
+      const out = clearOverridesFor(rows, ['FPSN0809BG2000'])
+      expect(Object.values(out[0].overrides)).toEqual(['discard'])
+    })
+
+    test('rows with no overrides come back untouched, by identity', () => {
+      const rows = batch()
+      expect(clearOverridesFor(rows, ['Tape'])[0]).toBe(rows[0])
+    })
+
+    test('painting nothing changes nothing', () => {
+      const rows = autoPainted()
+      expect(clearOverridesFor(rows, [])).toBe(rows)
+    })
   })
 
   test('unclassified tokens in a MULTI-token field stay note — the safe sink', () => {

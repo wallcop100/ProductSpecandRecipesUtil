@@ -37,7 +37,7 @@ function PositionTypes({ pts, knownPTs, ptTarget }) {
         const redirected = target && target !== pt
         return (
           <span key={pt}
-            title={!known ? 'Not a PositionType in this project — nothing will be prefilled'
+            title={!known ? 'Not a PositionType in this project — the Form names it but nothing here does'
               : redirected ? `Recipe goes to ${target} (the DesignDB's ExtRef says so)` : ''}
             style={{ fontFamily: 'monospace', color: known ? '#6c757d' : '#b45309' }}>
             {pt}{known ? '' : '?'}

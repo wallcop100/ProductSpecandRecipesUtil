@@ -22,7 +22,7 @@ import {
 import {
   setRule, revokeRule, applyRules, learnedRules, learnedSignals, suggestCodes,
   acceptSuggestions, punctuationSuggestion, acceptPunctuationSuggestion, roleTally,
-  discardsFromNoteEdit, pickExamples, learnCodeTokens,
+  discardsFromNoteEdit, pickExamples, learnCodeTokens, clearOverridesFor,
 } from '../utils/codeLearning'
 import { inferConvention, reuseCandidates, suggestRef } from '../utils/etRefSuggest'
 import { resolveFormRefs, buildRefMap, targetFor } from '../utils/ptResolve'
@@ -336,7 +336,11 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
         return { ...r, overrides }
       })
     } else {
-      setRules(rl => idxs.reduce((acc, i) => setRule(acc, row.tokens[i].text, role), rl))
+      const texts = idxs.map(i => row.tokens[i].text)
+      setRules(rl => texts.reduce((acc, t) => setRule(acc, t, role), rl))
+      // An override outranks a rule, so a token the auto-paint already marked would
+      // ignore this one. "Every row" has to mean every row.
+      setRows(rs => clearOverridesFor(rs, texts))
     }
   }, [resolved, patchRow, rules, rows])
 
@@ -492,7 +496,13 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     () => pendingResolutions(entries, keptSeparate), [entries, keptSeparate]
   )
   const unassigned = entries.filter(e => !e.etRef && !hasNoteCollision(e))
-  const canStage = entries.length > 0 && collisions.length === 0 && unassigned.length === 0
+  // Staging is incremental. handleStage only ever writes entries that HAVE an
+  // ElementType, so an unassigned or colliding code is simply left where it is —
+  // no reason to hold the finished ones hostage to it. The draft survives so the
+  // rest can be finished later.
+  const stageable = entries.filter(e => e.etRef).length
+  const leftBehind = entries.length - stageable
+  const canStage = stageable > 0
 
   // Shared point source: a position's PRIMARY captured code is its point source;
   // positions sharing that ET may share a DL. A prompt, not an automatic merge.
@@ -665,13 +675,16 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     nextCaptures.divergence = divergence
 
     await saveFormCaptures(nextCaptures)
-    await clearImportDraft()          // the work has landed; nothing to resume
+    // Staging is incremental: the assigned codes have landed, but painting that has
+    // not been assigned yet would be lost with the draft. Keep it until nothing is
+    // left behind.
+    if (leftBehind === 0) await clearImportDraft()
     setStaged({
       codes: n,
       byPosition: Object.fromEntries(byPos),
       positions: byPos.size,
       products: [...byPos.values()].reduce((t, l) => t + l.length, 0),
-      unrouted, diff, divergence,
+      unrouted, diff, divergence, leftBehind,
     })
   }
 
@@ -993,16 +1006,19 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
 
             <div className="mt-3">
               <Button variant="success" size="sm" className="w-100" disabled={!canStage} onClick={handleStage}>
-                Stage codes + prefill recipes
+                Stage {stageable} code{stageable === 1 ? '' : 's'}
               </Button>
-              {collisions.length > 0 && (
-                <div className="text-warning mt-1" style={{ fontSize: 10 }}>
-                  {collisions.length} code{collisions.length === 1 ? '' : 's'} captured with differing notes — resolve above.
+              {leftBehind > 0 && (
+                <div className="text-muted mt-1" style={{ fontSize: 10 }}>
+                  {leftBehind} other code{leftBehind === 1 ? '' : 's'} {leftBehind === 1 ? 'is' : 'are'} not
+                  ready — {collisions.length > 0 && <>{collisions.length} with differing notes, </>}
+                  {unassigned.length > 0 && <>{unassigned.length} with no ElementType</>}. They stay put, and your
+                  draft is kept so you can finish them.
                 </div>
               )}
-              {collisions.length === 0 && unassigned.length > 0 && (
+              {!canStage && entries.length > 0 && (
                 <div className="text-muted mt-1" style={{ fontSize: 10 }}>
-                  {unassigned.length} code{unassigned.length === 1 ? '' : 's'} still need an ElementType.
+                  Assign an ElementType to at least one code before staging.
                 </div>
               )}
               {!dbWriteEnabled && (
@@ -1027,6 +1043,12 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                     <div className="mt-1 text-muted">
                       {staged.unrouted} row{staged.unrouted === 1 ? '' : 's'} captured nothing — their Form ref
                       resolves to no PositionType, or you skipped it.
+                    </div>
+                  )}
+                  {staged.leftBehind > 0 && (
+                    <div className="mt-1 text-muted">
+                      {staged.leftBehind} code{staged.leftBehind === 1 ? '' : 's'} still {staged.leftBehind === 1 ? 'has' : 'have'} no
+                      ElementType. Your draft is kept — come back and stage them whenever you like.
                     </div>
                   )}
 

@@ -21,7 +21,7 @@ const EMPTY_FILTERS = { family: '', manufacturer: '', tag: '', containsET: '' }
  * with AND. This reviews RECIPES (not the product spec).
  *
  * initialRefs: PositionTypeRefs to jump straight into cycling, skipping the
- * filter-build step — e.g. "review what the product-code import just prefilled".
+ * filter-build step — e.g. "review the positions the Form just named".
  */
 export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEntity, onReplaceInReview, initialRefs }) {
   const positionTypes = useStore(s => s.positionTypes)
@@ -307,7 +307,7 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
                 onClick={() => { setUseInitialRefs(false); setPhase('build') }} />
               {useInitialRefs && (
                 <span className="badge" style={{ fontSize: 11, background: '#e7f1ff', color: '#084298' }}>
-                  Prefilled from product-code import
+                  Positions the Form named
                 </span>
               )}
               {activeFilterChips.map(([k, v]) => (
