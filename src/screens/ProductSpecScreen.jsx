@@ -253,7 +253,6 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
       {/* Change review — the shared per-entity summary (read-only here) */}
       <ChangeSummaryModal
         show={showChangelog}
-        scope="export"
         onHide={() => setShowChangelog(false)}
       />
 

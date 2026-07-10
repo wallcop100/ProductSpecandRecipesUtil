@@ -110,7 +110,7 @@ export default function BuilderScreen({
   const [showDeleted, setShowDeleted] = useState(false)
   const [leftOpen, setLeftOpen] = useState(false)
   const [rightOpen, setRightOpen] = useState(false)
-  const [changeSummary, setChangeSummary] = useState(null)   // { scope: 'export'|'db' } — review + copy patches
+  const [changeSummary, setChangeSummary] = useState(false)   // open the review + copy-patches modal
   const [showValidatePop, setShowValidatePop] = useState(false)
   const validateBtnRef = React.useRef(null)
   const [, setActiveId] = useState(null)  // drag tracking
@@ -388,12 +388,7 @@ export default function BuilderScreen({
   // Export is now review-and-copy: the Change Summary modal shows the per-file
   // patch scripts to copy into Excel; the tool never writes the xlsx.
   function requestExport() {
-    setChangeSummary({ scope: 'export' })
-  }
-
-  function requestExportCatalogue() {
-    if (dbChanges.length === 0) return
-    setChangeSummary({ scope: 'db' })
+    setChangeSummary(true)
   }
 
   const hasDirtyChanges = psChanges.length > 0 || rsChanges.length > 0
@@ -513,20 +508,8 @@ export default function BuilderScreen({
         {/* No snapshot button: export writes nothing — it produces a patch script the
             user runs in Excel — so there is nothing to back up first. The project
             folder is opened read-only and nothing can write to it. */}
-        {/* Appears only when there are pending ElementType changes to write
-            into the shared DesignDB ElementTypes table. */}
-        {dbChanges.length > 0 && (
-          <Button
-            variant="warning"
-            size="sm"
-            className="d-inline-flex align-items-center gap-1"
-            onClick={requestExportCatalogue}
-            title={`Update the ElementTypes table with ${dbChanges.length} new/edited ElementType${dbChanges.length === 1 ? '' : 's'} (ElementTypes table only)`}
-          >
-            <MaterialIcon name="inventory_2" size={15} />
-            Update ElementTypes ({dbChanges.length})
-          </Button>
-        )}
+        {/* The ElementTypes patch is part of Export now — it emits all three scripts.
+            A separate "Update ElementTypes" button was a second door to the same room. */}
         <Button
           variant={hasDirtyChanges ? 'primary' : 'outline-secondary'}
           size="sm"
@@ -782,7 +765,7 @@ export default function BuilderScreen({
             {rightTab === 'done' && (
               <ReadinessPanel
                 onOpenValidation={() => { runValidation(); setRightTab('validation') }}
-                onOpenExport={() => setChangeSummary({ scope: 'export' })}
+                onOpenExport={() => setChangeSummary(true)}
                 onOpenPosition={ref => focusPosition(ref)}
               />
             )}
@@ -867,11 +850,7 @@ export default function BuilderScreen({
       {/* Change Summary — review the pending changes and copy the per-file patch scripts */}
       <ChangeSummaryModal
         show={!!changeSummary}
-        scope={changeSummary?.scope || 'export'}
-        onHide={() => setChangeSummary(null)}
-        note={changeSummary?.scope === 'db'
-          ? 'Copy the ElementTypes patch and run it against the DesignDB file. Only the ElementTypes table is touched — Positions, Elements and LinksMap are left to the design pipeline.'
-          : 'Copy each patch and run it against its Excel file. The tool no longer edits the files itself.'}
+        onHide={() => setChangeSummary(false)}
       />
     </div>
   )
