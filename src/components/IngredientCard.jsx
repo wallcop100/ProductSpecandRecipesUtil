@@ -10,6 +10,8 @@ import ContentsBadge from './ContentsBadge'
 import MaterialIcon from './MaterialIcon'
 import IconButton from './IconButton'
 import { getUsedIn, getInternalItems } from '../utils/containerUtils'
+import { wrapperUsedBy } from '../utils/collectionStatus'
+import DuplicateETModal from './DuplicateETModal'
 import { familyOf } from '../utils/etRef'
 import { ACTION_ICONS } from '../utils/entityStyle'
 
@@ -94,6 +96,10 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
 
   // Container ET awareness
   const isContainer = etRef ? containerETRefs.has(etRef.toLowerCase()) : false
+  // A wrapper is an assembly, and assemblies get reused. Editing its internals changes
+  // every position in this list — so the list, and the escape hatch, belong right here
+  // rather than one screen deeper.
+  const sharedWith = isContainer ? wrapperUsedBy(recipes, etRef).filter(p => p !== posRef) : []
   const HINT_LABELS = { naming: 'DL/LIN name', ideaworksNA: 'Ideaworks/N-A spec', hasInternals: 'has internals', isCollection: 'IsCollection flag' }
   const reason = etRef ? containerReasons?.[etRef.toLowerCase()] : null
   const whyText = reason
@@ -107,6 +113,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   const internalItems = isContainer ? getInternalItems(etRef, recipes, elementTypes) : []
 
   const [showContents, setShowContents] = useState(false)
+  const [forking, setForking] = useState(false)
   const [replacing, setReplacing] = useState(false)
   const [keepFields, setKeepFields] = useState(true)
 
@@ -274,10 +281,32 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                     className="btn btn-link btn-sm p-0"
                     style={{ fontSize: 11, color: '#0d6efd', textDecoration: 'none' }}
                     onClick={() => openETRecipe(etRef)}
-                    title="Edit this element's internal recipe"
+                    title={sharedWith.length > 0
+                      ? `Edit this assembly's contents — it is shared, so this also changes ${sharedWith.join(', ')}`
+                      : "Edit this element's internal recipe"}
                   >
                     Edit internals →
                   </button>
+                )}
+
+                {/* Shared assembly: name the blast radius, and offer the way out. */}
+                {isContainer && etRef && sharedWith.length > 0 && (
+                  <>
+                    <span className="rounded px-1 d-inline-flex align-items-center gap-1"
+                      style={{ fontSize: 10, background: '#fff3cd', color: '#856404' }}
+                      title={`Shared assembly — its contents are the same for ${[posRef, ...sharedWith].join(', ')}`}>
+                      <MaterialIcon name="warning" size={11} />
+                      shared with {sharedWith.join(', ')}
+                    </span>
+                    <button
+                      className="btn btn-link btn-sm p-0"
+                      style={{ fontSize: 11, color: '#b45309', textDecoration: 'none' }}
+                      onClick={() => setForking(true)}
+                      title={`Give ${posRef} its own copy of ${etRef}, so changing it stops affecting ${sharedWith.join(', ')}`}
+                    >
+                      Fork for {posRef}
+                    </button>
+                  </>
                 )}
               </div>
 
@@ -468,6 +497,12 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
           </div>
         </Card.Body>
       </Card>
+
+      {/* Forking is the escape from a shared assembly. It belongs where the warning
+          is, and it repoints THIS position — see wrapperEditContext. */}
+      {forking && (
+        <DuplicateETModal show etRef={etRef} posRef={posRef} onClose={() => setForking(false)} />
+      )}
     </div>
   )
 }

@@ -11,6 +11,7 @@ import {
 } from '@dnd-kit/core'
 import useStore, { getRecipeForPosition } from '../store/useStore'
 import { getUsedIn } from '../utils/containerUtils'
+import { wrapperEditContext } from '../utils/collectionStatus'
 import ProjectNavigator from '../components/ProjectNavigator'
 import ProjectTreeView from '../components/ProjectTreeView'
 import ElementTypeTreeView from '../components/ElementTypeTreeView'
@@ -276,21 +277,26 @@ export default function BuilderScreen({
     setJustAdded({ etRef, posRef, sectionKey })
   }
 
-  // ET mode: deduplicated internal rows from the first position that uses this ET
-  const etModeRows = useMemo(() => {
-    if (activeContextType !== 'ElementType' || !activeETRef) return []
-    const allRows = recipes.filter(r =>
-      (r.ContextType || r.contextType) === 'ElementType' &&
-      (r.ContextRef || r.contextRef) === activeETRef
-    )
-    const firstPos = allRows[0]?.PositionTypeRef ?? allRows[0]?.positionTypeRef
-    if (!firstPos) return []
-    return allRows
-      .filter(r => (r.PositionTypeRef || r.positionTypeRef) === firstPos)
-      .sort((a, b) => ((a.RecipeIndex ?? a.recipeIndex ?? 0) - (b.RecipeIndex ?? b.recipeIndex ?? 0)))
-  }, [recipes, activeContextType, activeETRef])
+  // ET mode: the wrapper's internals are projected onto every position that uses it,
+  // so we render ONE position's copy. Which one matters — Fork repoints it. It is the
+  // position you came from, never "whichever row happened to be first".
+  const etModePosRef = useMemo(
+    () => (activeContextType === 'ElementType' && activeETRef
+      ? wrapperEditContext(recipes, activeETRef, activePositionRef)
+      : null),
+    [recipes, activeContextType, activeETRef, activePositionRef]
+  )
 
-  const etModePosRef = etModeRows[0]?.PositionTypeRef ?? etModeRows[0]?.positionTypeRef ?? activePositionRef
+  const etModeRows = useMemo(() => {
+    if (activeContextType !== 'ElementType' || !activeETRef || !etModePosRef) return []
+    return recipes
+      .filter(r =>
+        (r.ContextType || r.contextType) === 'ElementType' &&
+        (r.ContextRef || r.contextRef) === activeETRef &&
+        (r.PositionTypeRef || r.positionTypeRef) === etModePosRef
+      )
+      .sort((a, b) => ((a.RecipeIndex ?? a.recipeIndex ?? 0) - (b.RecipeIndex ?? b.recipeIndex ?? 0)))
+  }, [recipes, activeContextType, activeETRef, etModePosRef])
 
   const etModeUsedIn = useMemo(() => {
     if (!activeETRef) return []

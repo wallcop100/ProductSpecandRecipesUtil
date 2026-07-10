@@ -100,6 +100,34 @@ export function wrapperUsedBy(recipes, wrapperRef) {
 }
 
 /**
+ * wrapperEditContext(recipes, wrapperRef, activePositionRef)
+ *   → the PositionTypeRef whose copy of the wrapper's internals is being edited.
+ *
+ * parseRs projects one shared internal sheet row onto EVERY position that uses the
+ * wrapper, so the editor must pick one position's copy to render. It used to pick
+ * "the first", discarding the position the user was standing on — and Fork then
+ * repointed that first position. Measured: opening ET-LIN-01 from C03r forked C01r.
+ *
+ * The position you came from wins, whenever it genuinely uses the wrapper.
+ */
+export function wrapperEditContext(recipes, wrapperRef, activePositionRef = null) {
+  const users = wrapperUsedBy(recipes, wrapperRef)
+  if (activePositionRef && users.includes(activePositionRef)) return activePositionRef
+
+  // No active position, or it does not use this wrapper: fall back to a position
+  // whose internal rows we can actually render.
+  const lc = (wrapperRef || '').toLowerCase()
+  for (const r of recipes || []) {
+    if (ctxOf(r) !== 'ElementType') continue
+    if ((r.IsDeleted || r.isDeleted) === 'Y') continue
+    if (crefOf(r).toLowerCase() !== lc) continue
+    const p = posOf(r)
+    if (p) return p
+  }
+  return users[0] ?? activePositionRef ?? null
+}
+
+/**
  * collectionStatusForPosition(posRef, tags, recipe, collections, wrapperRefs)
  *
  * @param {string}   posRef      — PositionTypeRef for this position
