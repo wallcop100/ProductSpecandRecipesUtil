@@ -22,10 +22,13 @@ function textOn(hex) {
  */
 export default function TagBadge({ tag, onClick, title, className = '', style }) {
   const color = useStore(s => s.tagColors?.[tag])
-  const colorStyle = color ? { background: color, color: textOn(color) } : null
+  const colorStyle = color ? { backgroundColor: color, color: textOn(color) } : null
   return (
     <Badge
-      bg={color ? undefined : 'secondary'}
+      // A custom colour needs NO bg-* class: react-bootstrap defaults bg to 'primary',
+      // and bootstrap's .bg-primary sets background-color with !important, which an
+      // inline style cannot override. Empty bg = no class = our colour wins.
+      bg={color ? '' : 'secondary'}
       onClick={onClick}
       title={title}
       className={className}
