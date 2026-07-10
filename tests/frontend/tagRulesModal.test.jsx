@@ -33,6 +33,14 @@ describe('the rule editor is conditional', () => {
     expect(screen.getByText('2 matches')).toBeTruthy()
   })
 
+  test('a single-condition rule shows no AND/OR connector — it appears only when needed', () => {
+    render(<TagRulesModal show onHide={() => {}} />)
+    expect(screen.queryByText('AND')).toBeNull()
+    expect(screen.queryByText('OR')).toBeNull()
+    fireEvent.click(screen.getByText('Add condition'))
+    expect(screen.getByText('AND')).toBeTruthy()   // now there are two conditions
+  })
+
   test('adding a condition makes it an AND — the count drops to the intersection', () => {
     render(<TagRulesModal show onHide={() => {}} />)
     fireEvent.click(screen.getByText('Add condition'))
@@ -61,10 +69,10 @@ describe('the rule editor is conditional', () => {
     const valueBoxes = screen.getAllByPlaceholderText('value')
     fireEvent.change(valueBoxes[valueBoxes.length - 1], { target: { value: 'DALI' } })
 
-    // flip match to ANY
-    const matchSelect = screen.getAllByRole('combobox').find(s => within(s).queryByText('ALL'))
-    fireEvent.change(matchSelect, { target: { value: 'any' } })
+    // flip AND → OR via the connector pill between the two conditions
+    fireEvent.click(screen.getByText('AND'))
     expect(screen.getByText('3 matches')).toBeTruthy()
+    expect(screen.getByText('OR')).toBeTruthy()   // the connector now reads OR
   })
 
   test('a value-less operator hides the value box', () => {

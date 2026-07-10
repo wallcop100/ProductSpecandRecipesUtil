@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid'
 import useStore from '../store/useStore'
 import { TAG_COLUMNS, TAG_OPS, ruleMatches, ruleConditions } from '../utils/tagRules'
 import TagInput from './TagInput'
+import TagBadge from './TagBadge'
 import TagColorControl from './TagColorControl'
 import TagDriftWizard from './TagDriftWizard'
 import MaterialIcon from './MaterialIcon'
@@ -30,18 +31,19 @@ function ConditionRow({ cond, onChange, onRemove, canRemove }) {
   const [lo, hi] = String(cond.value ?? '').split(',')
 
   return (
-    <div className="d-flex align-items-center gap-1 mb-1">
-      <Form.Select size="sm" value={cond.column} style={{ maxWidth: 210, fontSize: 12 }}
+    <div className="tag-cond d-flex align-items-center gap-2 px-2 py-1 rounded"
+      style={{ background: '#f8f9fb', border: '1px solid #edeff2' }}>
+      <Form.Select size="sm" value={cond.column} style={{ flex: '1 1 150px', minWidth: 130, fontSize: 12 }}
         onChange={e => onChange({ column: e.target.value })}>
         {TAG_COLUMNS.map(c => <option key={c} value={c}>{c}</option>)}
       </Form.Select>
-      <Form.Select size="sm" value={cond.op} style={{ maxWidth: 140, fontSize: 12 }}
+      <Form.Select size="sm" value={cond.op} style={{ flex: '0 0 140px', fontSize: 12 }}
         onChange={e => onChange({ op: e.target.value })}>
         {TAG_OPS.map(o => <option key={o.op} value={o.op}>{o.label}</option>)}
       </Form.Select>
 
       {meta.twoValues ? (
-        <div className="d-flex align-items-center gap-1">
+        <div className="d-flex align-items-center gap-1" style={{ flex: '1 1 auto' }}>
           <Form.Control size="sm" type="number" value={lo ?? ''} placeholder="min" style={{ width: 76, fontSize: 12 }}
             onChange={e => setBound(0, e.target.value)} />
           <span className="text-muted" style={{ fontSize: 11 }}>and</span>
@@ -50,69 +52,111 @@ function ConditionRow({ cond, onChange, onRemove, canRemove }) {
         </div>
       ) : meta.needsValue ? (
         <Form.Control size="sm" type={meta.numeric ? 'number' : 'text'} value={cond.value ?? ''}
-          placeholder="value" style={{ maxWidth: 160, fontSize: 12 }}
+          placeholder="value" style={{ flex: '1 1 120px', minWidth: 90, fontSize: 12 }}
           onChange={e => onChange({ value: e.target.value })} />
       ) : (
-        <span className="text-muted fst-italic" style={{ fontSize: 11 }}>(no value)</span>
+        <span className="text-muted fst-italic" style={{ flex: '1 1 auto', fontSize: 11 }}>(no value)</span>
       )}
 
-      <Button variant="link" size="sm" className="text-danger p-0 ms-auto" title="Remove condition"
+      <button type="button" className="btn btn-sm text-danger p-0 border-0" title="Remove condition"
+        style={{ opacity: canRemove ? 0.6 : 0.2, lineHeight: 1 }}
         disabled={!canRemove} onClick={onRemove}>
-        <MaterialIcon name="close" size={14} />
-      </Button>
+        <MaterialIcon name="close" size={15} />
+      </button>
     </div>
   )
 }
 
-function RuleCard({ rule, matchCount, palette, onChange, onRemove }) {
+/**
+ * The AND / OR between two conditions. The first one is interactive and flips the whole
+ * rule's mode (a rule is all-or-any, not per-pair); the rest mirror it, so the column
+ * reads as one boolean expression — the Notion-filter pattern.
+ */
+function Connector({ match, interactive, onToggle }) {
+  const any = match === 'any'
+  const word = any ? 'OR' : 'AND'
+  const fg = any ? '#b45309' : '#0d6efd'
+  const bg = any ? '#fff4e5' : '#e7f1ff'
+  return (
+    <div className="d-flex align-items-center" style={{ paddingLeft: 6, height: 22 }}>
+      <div style={{ width: 2, background: '#e5e7eb', alignSelf: 'stretch', marginRight: 8 }} />
+      {interactive ? (
+        <button type="button" onClick={onToggle}
+          title={any ? 'OR — any condition matches. Click for AND.' : 'AND — every condition matches. Click for OR.'}
+          className="rounded-pill border-0 px-2"
+          style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, color: fg, background: bg, lineHeight: '18px', cursor: 'pointer' }}>
+          {word}
+        </button>
+      ) : (
+        <span className="rounded-pill px-2" style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, color: fg, background: bg, lineHeight: '18px' }}>
+          {word}
+        </span>
+      )}
+    </div>
+  )
+}
+
+function RuleCard({ rule, matchCount, onChange, onRemove }) {
   const conds = ruleConditions(rule)
+  const accent = useStore(s => (rule.tag ? s.tagColors?.[rule.tag] : null)) || '#cbd5e1'
+  const disabled = rule.enabled === false
+
   const patchCond = (i, patch) =>
     onChange({ conditions: conds.map((c, j) => (j === i ? { ...c, ...patch } : c)) })
   const addCond = () =>
     onChange({ conditions: [...conds, { column: 'PositionTypeRef', op: 'contains', value: '' }] })
   const removeCond = i =>
     onChange({ conditions: conds.filter((_, j) => j !== i) })
+  const toggleMatch = () => onChange({ match: rule.match === 'any' ? 'all' : 'any' })
 
   return (
-    <div className="mb-3 rounded" style={{ border: '1px solid #dee2e6', opacity: rule.enabled === false ? 0.55 : 1 }}>
-      <div className="d-flex align-items-center gap-2 px-2 py-2" style={{ background: '#f8f9fa', borderBottom: '1px solid #e9ecef' }}>
-        <Form.Check type="checkbox" checked={rule.enabled !== false} title="Enable / disable this rule"
-          onChange={e => onChange({ enabled: e.target.checked })} />
-        <span className="text-muted" style={{ fontSize: 11 }}>tag</span>
-        <Form.Control size="sm" list="tagrules-palette" value={rule.tag ?? ''} placeholder="tag name"
-          style={{ maxWidth: 200, fontSize: 12, fontWeight: 600 }}
+    <div className="mb-3" style={{
+      border: '1px solid #e5e7eb', borderLeft: `4px solid ${accent}`, borderRadius: 10,
+      background: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', opacity: disabled ? 0.6 : 1,
+    }}>
+      {/* Header: the tag this rule produces, its live colour, and how many positions it hits. */}
+      <div className="d-flex align-items-center gap-2 px-3 py-2" style={{ borderBottom: '1px solid #f1f3f5' }}>
+        {rule.tag
+          ? <TagBadge tag={rule.tag} />
+          : <span className="rounded px-2" style={{ fontSize: 10, background: '#f1f3f5', color: '#9aa0a6', fontStyle: 'italic' }}>unnamed</span>}
+        <Form.Control size="sm" list="tagrules-palette" value={rule.tag ?? ''} placeholder="tag name…"
+          style={{ maxWidth: 180, fontSize: 12, fontWeight: 600 }}
           onChange={e => onChange({ tag: e.target.value })} />
-        <span className="rounded px-1 ms-auto" style={{ fontSize: 10, background: matchCount > 0 ? '#e7f1ff' : '#f1f3f5', color: matchCount > 0 ? '#084298' : '#6c757d' }}
-          title="Positions this rule currently matches">
+
+        <span className="rounded-pill px-2 ms-auto" title="Positions this rule currently matches"
+          style={{ fontSize: 10, fontWeight: 600, background: matchCount > 0 ? '#d1e7dd' : '#f1f3f5', color: matchCount > 0 ? '#0f5132' : '#6c757d' }}>
           {matchCount} match{matchCount === 1 ? '' : 'es'}
         </span>
-        <Button variant="link" size="sm" className="text-danger p-0" title="Remove rule" onClick={onRemove}>
-          <MaterialIcon name="delete" size={15} />
-        </Button>
+        <Form.Check type="switch" checked={rule.enabled !== false} title="Enable / disable this rule"
+          onChange={e => onChange({ enabled: e.target.checked })} />
+        <button type="button" className="btn btn-sm text-danger p-0 border-0" title="Delete rule"
+          style={{ lineHeight: 1 }} onClick={onRemove}>
+          <MaterialIcon name="delete" size={16} />
+        </button>
       </div>
 
-      <div className="px-2 py-2">
-        <div className="d-flex align-items-center gap-2 mb-2" style={{ fontSize: 11 }}>
-          <span className="text-muted">Match</span>
-          <Form.Select size="sm" value={rule.match === 'any' ? 'any' : 'all'} style={{ width: 90, fontSize: 11 }}
-            onChange={e => onChange({ match: e.target.value })}>
-            <option value="all">ALL</option>
-            <option value="any">ANY</option>
-          </Form.Select>
-          <span className="text-muted">of these conditions{rule.match === 'any' ? ' (OR)' : ' (AND)'}:</span>
+      {/* Body: the boolean expression that produces the tag. */}
+      <div className="px-3 py-2">
+        <div className="text-muted mb-2" style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '.05em' }}>
+          Tag a position when it matches
         </div>
 
-        {conds.map((c, i) => (
-          <ConditionRow key={i} cond={c} canRemove={conds.length > 1}
-            onChange={patch => patchCond(i, patch)} onRemove={() => removeCond(i)} />
-        ))}
         {conds.length === 0 && (
-          <div className="text-muted fst-italic mb-1" style={{ fontSize: 11 }}>No conditions — this rule tags nothing.</div>
+          <div className="text-muted fst-italic mb-2" style={{ fontSize: 11 }}>No conditions — this rule tags nothing.</div>
         )}
+        {conds.map((c, i) => (
+          <React.Fragment key={i}>
+            {i > 0 && <Connector match={rule.match} interactive={i === 1} onToggle={toggleMatch} />}
+            <ConditionRow cond={c} canRemove={conds.length > 1}
+              onChange={patch => patchCond(i, patch)} onRemove={() => removeCond(i)} />
+          </React.Fragment>
+        ))}
 
-        <Button variant="link" size="sm" className="p-0" style={{ fontSize: 11 }} onClick={addCond}>
+        <button type="button" onClick={addCond}
+          className="btn btn-sm w-100 mt-2 d-inline-flex align-items-center justify-content-center gap-1"
+          style={{ fontSize: 11, color: '#6c757d', border: '1px dashed #cbd5e1', borderRadius: 8, background: 'transparent' }}>
           <MaterialIcon name="add" size={13} /> Add condition
-        </Button>
+        </button>
       </div>
     </div>
   )
@@ -139,21 +183,26 @@ function RulesSection({ positionTypes }) {
 
   return (
     <>
-      <div className="d-flex align-items-center mb-2">
-        <div className="text-muted" style={{ fontSize: 11 }}>
-          A rule tags every position that matches its conditions. Several rules can add the same tag.
+      <div className="d-flex align-items-center mb-3">
+        <div className="text-muted" style={{ fontSize: 11, maxWidth: 380 }}>
+          Each rule tags every position matching its conditions. Two rules can add the same tag.
         </div>
         <div className="ms-auto d-flex gap-2">
-          <Button size="sm" variant="outline-secondary" onClick={addRule}>+ Add rule</Button>
-          <Button size="sm" variant={dirty ? 'primary' : 'outline-primary'} onClick={apply} disabled={!dirty}>
-            {dirty ? 'Apply rules' : 'Applied'}
+          <Button size="sm" variant="outline-secondary" className="d-inline-flex align-items-center gap-1" onClick={addRule}>
+            <MaterialIcon name="add" size={14} /> Add rule
+          </Button>
+          <Button size="sm" variant={dirty ? 'primary' : 'outline-secondary'} onClick={apply} disabled={!dirty}
+            className="d-inline-flex align-items-center gap-1">
+            {dirty ? <><MaterialIcon name="check" size={14} /> Apply rules</> : 'Applied'}
           </Button>
         </div>
       </div>
 
       {draft.length === 0 && (
-        <div className="text-muted text-center py-4 fst-italic" style={{ fontSize: 12 }}>
-          No rules yet — add one to auto-tag positions.
+        <div className="text-center py-5" style={{ color: '#9aa0a6' }}>
+          <MaterialIcon name="sell" size={28} />
+          <div className="mt-2" style={{ fontSize: 12 }}>No rules yet.</div>
+          <Button size="sm" variant="outline-primary" className="mt-2" onClick={addRule}>Add your first rule</Button>
         </div>
       )}
       {draft.map(rule => (
