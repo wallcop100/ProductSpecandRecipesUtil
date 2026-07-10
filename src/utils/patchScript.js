@@ -139,16 +139,20 @@ function writeCell(S: ExcelScript.Worksheet, r: number, c: number, v: string | n
 /**
  * Wrap the operation blocks in a runnable main() + helpers. USED is a placeholder.
  *
- * The whole sheet is read ONCE (getUsedRange → getValues) and everything after —
- * column resolution AND row lookups — happens against that in-memory array. The only
- * live Excel calls are that one read and the setValue writes. No find(), no
- * getEntireRow, no getEntireColumn: those live searches are what froze Excel.
+ * The whole sheet is read ONCE, then column resolution AND row lookups happen against
+ * that in-memory array — no find(), no getEntireRow/Column live searches.
+ *
+ * CRITICAL: getUsedRange(true), not getUsedRange(). These DesignDB / spec templates carry
+ * formatting (borders, fills) applied to entire columns, so the plain used range extends
+ * to the bottom of the sheet — ~1,048,576 rows. getValues() on THAT materialises tens of
+ * millions of cells into JS and freezes Excel, even though only ~100 rows hold data. The
+ * `true` (valuesOnly) flag ignores formatting-only cells and returns the real data extent.
  */
 function wrapMain(filename, sheet, blocks, { needAppend }) {
   if (blocks.length === 0) return ''
   const pre = [
     `    const S = workbook.getWorksheet(${q(sheet)});`,
-    '    const used = S.getUsedRange();',
+    '    const used = S.getUsedRange(true);   // valuesOnly: ignore formatting-only cells',
     '    if (!used) { console.log("Sheet has no data - nothing to patch."); return; }',
     '    const data = used.getValues();',
     '    const col = colMap(data[0], USED);',

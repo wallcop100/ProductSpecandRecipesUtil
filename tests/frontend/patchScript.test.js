@@ -26,7 +26,7 @@ describe('buildPsScript', () => {
     const s = buildPsScript([
       { elementTypeRef: 'ET-NEW', _isNew: true, updates: { ProductCode: '0012' } },
     ])
-    expect(s).toContain('const used = S.getUsedRange();')
+    expect(s).toContain('const used = S.getUsedRange(true);')
     expect(s).toContain('const data = used.getValues();')
     expect(s).toContain('let apR = data.length;')  // reuse data, no second round-trip
     expect(s).toContain('writeCell(S, apR, col["EntityRef"], "ET-NEW")')
@@ -77,7 +77,7 @@ describe('buildRsScript', () => {
       { _id: '1', positionTypeRef: 'P1', action: 'upsert',
         row: { _row_num: 5, ...key }, changedFields: { Quantity: 2 }, before: { ...key, Quantity: 1 } },
     ])
-    expect(s).toContain('const used = S.getUsedRange();')
+    expect(s).toContain('const used = S.getUsedRange(true);')
     expect(s).toContain('const data = used.getValues();')
     expect(s).toContain('rowWhere(data, [{ c: col["ContextType"], v: "ElementType" }, { c: col["ContextRef"], v: "ET-DL-01" }, { c: col["RecipeIndex"], v: "3" }, { c: col["EntityRef"], v: "ET-SOCK-5P" }])')
     expect(s).toContain('writeCell(S, r, col["Quantity"], 2)') // bare number
