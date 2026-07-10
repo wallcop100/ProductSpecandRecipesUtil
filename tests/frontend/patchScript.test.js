@@ -8,22 +8,26 @@ describe('buildPsScript', () => {
     ])
     expect(s).toContain('function main(workbook: ExcelScript.Workbook)')
     expect(s).toContain('workbook.getWorksheet("Form")')
-    expect(s).toContain('const col = colMap(S, ["EntityRef"') // key header always in the used list
+    expect(s).toContain('const col = colMap(data[0], ["EntityRef"') // key header always in the used list
     expect(s).toContain('const r = findKey(data, col["EntityRef"], "ET-DL-01")')
     expect(s).toContain('writeCell(S, r, col["ProductCode"], "ABC-123")')
     expect(s).toContain('writeCell(S, r, col["IsTBC"], "Y")')
-    expect(s).toContain('function colMap(S: ExcelScript.Worksheet') // helpers appended
+    expect(s).toContain('function colMap(header') // helpers appended, mapping from the header row
     expect(s).not.toContain('apR') // no appends
-    // A lookup must NEVER be a live column search: find() on a miss scans a million
-    // cells and froze Excel. Everything reads the used range once, in memory.
+    // A lookup must NEVER be a live search. getEntireColumn().find() on a miss scanned a
+    // million cells; getEntireRow().find() per column scanned the 16,384-wide header row.
+    // Both froze Excel. Everything reads the used range ONCE and works in memory.
     expect(s).not.toContain('getEntireColumn')
+    expect(s).not.toContain('getEntireRow')
+    expect((s.match(/\.find\(/g) || []).length).toBe(0)   // .find in the comment only, code has none
   })
 
   test('new row appends with an append cursor and EntityType', () => {
     const s = buildPsScript([
       { elementTypeRef: 'ET-NEW', _isNew: true, updates: { ProductCode: '0012' } },
     ])
-    expect(s).toContain('const data = S.getUsedRange().getValues();')
+    expect(s).toContain('const used = S.getUsedRange();')
+    expect(s).toContain('const data = used.getValues();')
     expect(s).toContain('let apR = data.length;')  // reuse data, no second round-trip
     expect(s).toContain('writeCell(S, apR, col["EntityRef"], "ET-NEW")')
     expect(s).toContain('writeCell(S, apR, col["EntityType"], "ElementType")')
@@ -73,7 +77,8 @@ describe('buildRsScript', () => {
       { _id: '1', positionTypeRef: 'P1', action: 'upsert',
         row: { _row_num: 5, ...key }, changedFields: { Quantity: 2 }, before: { ...key, Quantity: 1 } },
     ])
-    expect(s).toContain('const data = S.getUsedRange().getValues();')
+    expect(s).toContain('const used = S.getUsedRange();')
+    expect(s).toContain('const data = used.getValues();')
     expect(s).toContain('rowWhere(data, [{ c: col["ContextType"], v: "ElementType" }, { c: col["ContextRef"], v: "ET-DL-01" }, { c: col["RecipeIndex"], v: "3" }, { c: col["EntityRef"], v: "ET-SOCK-5P" }])')
     expect(s).toContain('writeCell(S, r, col["Quantity"], 2)') // bare number
   })
@@ -153,7 +158,7 @@ describe('the patches are idempotent — a second run must not duplicate', () =>
   test('the Recipe patch upserts on its composite key', () => {
     const s = buildRsScript(rsNew)
     expect(s).toContain('const r = rowWhere(data, [{ c: col["ContextType"]')
-    expect(s).toContain('const data = S.getUsedRange().getValues()')   // needed by the lookup
+    expect(s).toContain('const data = used.getValues()')   // needed by the lookup
     expect(s.indexOf('rowWhere')).toBeLessThan(s.indexOf('writeCell(S, apR'))
   })
 
