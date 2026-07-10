@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { Form, Button } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import FlagPill from './FlagPill'
@@ -17,11 +17,18 @@ import { ACTION_ICONS } from '../utils/entityStyle'
  *   missingETs: string[]
  *   onNavigate: ('prev'|'next') => void
  */
-export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = [], onNavigate }) {
+export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = [], onNavigate, focusToken = 0 }) {
   const psRows      = useStore(s => s.psRows)
   const updatePSRow = useStore(s => s.updatePSRow)
   const addPSRow    = useStore(s => s.addPSRow)
   const elementTypes = useStore(s => s.elementTypes)
+  const mfrInputRef = useRef(null)
+
+  // "Fill next" bumps focusToken: jump the caret into the manufacturer field so the user
+  // can just type. Guard on the row existing so we don't focus an empty/missing panel.
+  useEffect(() => {
+    if (focusToken > 0) mfrInputRef.current?.focus()
+  }, [focusToken])
 
   const mfrOptions = useMemo(() => {
     const set = new Set()
@@ -175,15 +182,18 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
 
         {/* Manufacturer */}
         <Form.Group className="mb-3">
-          <Form.Label style={{ fontSize: 12, fontWeight: 600 }}>Manufacturer</Form.Label>
+          <Form.Label style={{ fontSize: 12, fontWeight: 600 }}>
+            Manufacturer{!manufacturer && !isDeleted && <span className="text-danger ms-1" style={{ fontSize: 10 }}>needed</span>}
+          </Form.Label>
           <Form.Control
+            ref={mfrInputRef}
             size="sm"
             list="etspec-mfr-list"
             key={`mfr-${selectedRef}-${manufacturer}`}
             defaultValue={manufacturer}
             onBlur={e => { const v = e.target.value.trim(); if (v !== manufacturer) updatePSRow(selectedRef, { Manufacturer: v }) }}
             onKeyDown={e => { if (e.key === 'Enter') e.target.blur() }}
-            style={{ fontSize: 12 }}
+            style={{ fontSize: 12, ...(!manufacturer && !isDeleted ? { borderColor: '#f5c2c7', background: '#fff8f8' } : null) }}
             disabled={isDeleted}
           />
           <datalist id="etspec-mfr-list">
@@ -193,14 +203,16 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
 
         {/* Product code */}
         <Form.Group className="mb-3">
-          <Form.Label style={{ fontSize: 12, fontWeight: 600 }}>Product Code</Form.Label>
+          <Form.Label style={{ fontSize: 12, fontWeight: 600 }}>
+            Product Code{!productCode && !isDeleted && <span className="text-danger ms-1" style={{ fontSize: 10 }}>needed</span>}
+          </Form.Label>
           <Form.Control
             size="sm"
             key={`code-${selectedRef}-${productCode}`}
             defaultValue={productCode}
             onBlur={e => { const v = e.target.value.trim(); if (v !== productCode) updatePSRow(selectedRef, { ProductCode: v }) }}
             onKeyDown={e => { if (e.key === 'Enter') e.target.blur() }}
-            style={{ fontSize: 12 }}
+            style={{ fontSize: 12, ...(!productCode && !isDeleted ? { borderColor: '#f5c2c7', background: '#fff8f8' } : null) }}
             disabled={isDeleted}
           />
         </Form.Group>

@@ -44,6 +44,9 @@ export default function ETSpecBrowser({
   viewMode, onViewModeChange,
   bulkSelected, onBulkToggle, onSelectAll,
   etUsedIn = {}, missingETs = [],
+  // Status filters are controlled by the screen so the header stat pills and these
+  // chips drive one shared filter — click "12 Missing" up top, this list narrows.
+  statusFilters = [], onToggleStatus,
 }) {
   const elementTypes = useStore(s => s.elementTypes)
   const psRows      = useStore(s => s.psRows)
@@ -59,7 +62,6 @@ export default function ETSpecBrowser({
 
   const [search, setSearch]               = useState('')
   const [groupFilter, setGroupFilter]     = useState('')
-  const [statusFilters, setStatusFilters] = useState([])
   const [usageFilters, setUsageFilters]   = useState([])
   const [expanded, setExpanded]           = useState({})
   const [missingOpen, setMissingOpen]     = useState(true)
@@ -170,7 +172,7 @@ export default function ETSpecBrowser({
   const forceOpen = search.trim() !== '' || groupFilter !== '' || statusFilters.length > 0 || usageFilters.length > 0
   const isOpen = g => forceOpen || !!expanded[g]
   function toggleGroup(g) { setExpanded(p => ({ ...p, [g]: !p[g] })) }
-  function toggleStatus(f) { setStatusFilters(p => p.includes(f) ? p.filter(x => x !== f) : [...p, f]) }
+  function toggleStatus(f) { onToggleStatus?.(f) }
   function toggleUsage(f)  { setUsageFilters(p =>  p.includes(f) ? p.filter(x => x !== f) : [...p, f]) }
 
   function handleKeyDown(e) {
