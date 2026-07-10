@@ -128,8 +128,19 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
     ? positionTypes.find(pt => pt.PositionTypeRef === activePositionRef)
     : null
 
+  // Positions come from the DesignDB and from nowhere else. If there are none, the
+  // workbook is the thing to look at — say so rather than showing a bare sentence.
   if (positionTypes.length === 0) {
-    return <div className="text-muted text-center mt-5">No positions loaded.</div>
+    return (
+      <div className="text-center mt-5 mx-auto" style={{ maxWidth: 380 }}>
+        <MaterialIcon name="table_chart" size={32} style={{ color: '#adb5bd' }} />
+        <div className="fw-semibold mt-2">No positions in this project</div>
+        <div className="text-muted mt-1" style={{ fontSize: 12, lineHeight: 1.6 }}>
+          PositionTypes are read from the DesignDB workbook. If you expected some here,
+          the DesignDB may be empty, or a different workbook was picked as the DB.
+        </div>
+      </div>
+    )
   }
 
   // ---- Focused editor: one position takes the whole surface ----

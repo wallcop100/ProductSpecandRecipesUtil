@@ -8,6 +8,7 @@ import UsagePopover from './UsagePopover'
 import { compareFormToRecipe, associations, formWorklist } from '../utils/formSpec'
 import { findProductET } from '../utils/productCodes'
 import { ACTION_ICONS } from '../utils/entityStyle'
+import { ago } from '../utils/ago'
 
 /**
  * FormSpecPane — the Form's spec beside the recipe it produced.
@@ -45,19 +46,6 @@ function FoundIn({ foundIn, container }) {
     : foundIn === 'internal' ? `inside ${container || 'the wrapper'}`
     : 'at position level and inside the wrapper'
   return <span className="text-muted" style={{ fontSize: 10 }}>{where}</span>
-}
-
-/** "2h ago" — enough to know whether the spec you're reading is the current one. */
-function ago(iso) {
-  if (!iso) return null
-  const ms = Date.now() - new Date(iso).getTime()
-  if (!Number.isFinite(ms) || ms < 0) return null
-  const m = Math.round(ms / 60000)
-  if (m < 1) return 'just now'
-  if (m < 60) return `${m}m ago`
-  const h = Math.round(m / 60)
-  if (h < 24) return `${h}h ago`
-  return `${Math.round(h / 24)}d ago`
 }
 
 /**

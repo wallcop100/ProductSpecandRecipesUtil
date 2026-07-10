@@ -10,6 +10,7 @@ import ProjectConfirmModal from '../components/ProjectConfirmModal'
 import ProjectManager from '../components/ProjectManager'
 import MaterialIcon from '../components/MaterialIcon'
 import { ACTION_ICONS } from '../utils/entityStyle'
+import { ago } from '../utils/ago'
 
 /**
  * FolderSetupScreen
@@ -37,7 +38,10 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
   const [openError, setOpenError] = useState(null)
   const [flaskError, setFlaskError] = useState(null)
   const [folderName, setFolderName] = useState('')
-  const [resumeProject, setResumeProject] = useState(null)
+  const [recents, setRecents] = useState([])
+  // Starting fresh: the DesignDB alone is enough, and a missing PS/RS is expected
+  // rather than broken. Only the wording differs — the path through is the same.
+  const [newMode, setNewMode] = useState(false)
 
   // Project identity — shown inline; the ProjectConfirmModal stays reachable
   // behind the "Advanced / edit identity" link for the rare edit case.
@@ -61,43 +65,48 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
     }
   }, [])
 
-  // On mount: remember the last project, but do NOT touch its folder yet. The
-  // File System Access API never persists a permission grant, so reading it
-  // requires a user gesture — the user clicks "Reopen" below.
+  // On mount: list what you last worked on, but do NOT touch any folder. The File
+  // System Access API never persists a permission grant, so reading one requires a
+  // user gesture — clicking a row below.
   useEffect(() => {
-    async function tryResume() {
-      try {
-        const last = await window.electronAPI.db.getLastProject()
-        if (last && last.folder_path) {
-          setFolderPath(last.folder_path)
-          setFolderName(last.project_label || (await window.electronAPI.getFolderName?.(last.folder_path)) || '')
-          setDbFilename(last.db_filename || '')
-          setPsFilename(last.ps_filename || '')
-          setRsFilename(last.rs_filename || '')
-          setResumeProject(last)
-        }
-      } catch {
-        // No last project — fine
-      }
-    }
-    tryResume()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    window.electronAPI.db.getRecentProjects?.(5)
+      .then(rows => setRecents(rows || []))
+      .catch(() => { /* first run: nothing recent */ })
   }, [])
 
-  /** Re-grant access to the remembered folder, then detect as usual. */
-  async function handleResume() {
-    const last = resumeProject
-    if (!last) return
+  /**
+   * Re-grant access, detect, and open — one click.
+   *
+   * `requestFolderAccess` MUST be the first await: Chrome only honours a permission
+   * request inside the user gesture that triggered it, and any earlier await ends it.
+   */
+  async function handleOpenRecent(p) {
     setDetectError(null)
-    const granted = await window.electronAPI.requestFolderAccess?.(last.folder_path)
+    const granted = await window.electronAPI.requestFolderAccess?.(p.folder_path)
     if (!granted) {
-      setDetectError('Access to that folder was not granted. Choose it again.')
-      setResumeProject(null)
+      setDetectError(`Access to “${p.project_label || 'that folder'}” was not granted. Choose it again.`)
       return
     }
-    setResumeProject(null)
-    const data = await runDetect(last.folder_path)
-    if (data) await prepareIdentity(last.folder_path, last.db_filename, last.config_name)
+    setFolderPath(p.folder_path)
+    setFolderName(p.project_label || '')
+
+    const data = await runDetect(p.folder_path)
+    if (!data) return
+
+    const db = data.db || p.db_filename || ''
+    if (!db) {
+      setDetectError('No DesignDB in that folder — it may have been renamed or moved.')
+      return
+    }
+    await doOpenProject({
+      projectNumber: p.project_number || extractProjectId(db),
+      configName: p.config_name || 'Base',
+      override: {
+        folderPath: p.folder_path,
+        folderName: p.project_label || '',
+        files: { db, ps: data.ps || '', rs: data.rs || '' },
+      },
+    })
   }
 
   async function handleSelectFolder() {
@@ -111,7 +120,6 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
     if (!path) return
     setFolderPath(path)
     setFolderName((await window.electronAPI.getFolderName?.(path)) || '')
-    setResumeProject(null)
     setDetectedFiles(null)
     setDetectError(null)
     setDbFilename('')
@@ -140,7 +148,9 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
   }
 
   const allXlsx = detectedFiles?.all_xlsx || []
-  const allFound = dbFilename && psFilename && rsFilename
+  // Only the DesignDB is required. A missing Product Spec / Recipes Spec is a new
+  // project, not a broken one: they are filled by patch scripts at export.
+  const dbFound = !!dbFilename
 
   // Prime the inline Project ID + config fields for a folder (suggested number
   // from the DB filename, configs from SQLite).
@@ -154,27 +164,36 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
     setConfigName(pre?.config_name || preselect || 'Base')
   }
 
-  // Actually open, with the confirmed Project ID + config name.
-  async function doOpenProject({ projectNumber, configName }) {
+  /**
+   * Actually open, with the confirmed Project ID + config name.
+   *
+   * `override` exists because a one-click recent has to detect and open in the same
+   * tick, and the filenames `runDetect` just set are not readable from state yet.
+   */
+  async function doOpenProject({ projectNumber, configName, override }) {
     setShowAdvanced(false)
-    if (!allFound) return
+    const folder = override?.folderPath ?? folderPath
+    const label = override?.folderName ?? folderName
+
+    // Files are addressed by name inside the project folder's handle. Only the
+    // DesignDB is required — see importFiles.
+    const absDbs = override?.files?.db ?? dbFilename
+    const absPs = override?.files?.ps ?? psFilename
+    const absRs = override?.files?.rs ?? rsFilename
+    if (!absDbs) return
+
     setOpening(true)
     setOpenError(null)
     try {
-      // Files are addressed by name inside the project folder's handle.
-      const absDbs = dbFilename
-      const absPs = psFilename
-      const absRs = rsFilename
-
       // 1. Upsert project (config) in SQLite
       const project = await window.electronAPI.db.upsertProject({
-        folderPath,
+        folderPath: folder,
         configName,
         projectNumber,
-        projectLabel: folderName || null,   // the folder's display name; folderPath is an id
-        dbFilename,
-        psFilename,
-        rsFilename,
+        projectLabel: label || null,   // the folder's display name; folderPath is an id
+        dbFilename: absDbs,
+        psFilename: absPs,
+        rsFilename: absRs,
       })
       const projectId = project?.id
 
@@ -304,7 +323,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
         projectNumber,
         configName,
         projectLabel: project?.project_label ?? null,
-        folderPath,
+        folderPath: folder,
         paths: { db: absDbs, ps: absPs, rs: absRs },
         elementTypes,
         positionTypes,
@@ -344,7 +363,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
       }
 
       // 9. Start file watcher
-      await window.electronAPI.startWatcher({ folderPath, psFilename, rsFilename })
+      await window.electronAPI.startWatcher({ folderPath: folder, psFilename: absPs, rsFilename: absRs })
 
       onProjectLoaded()
     } catch (err) {
@@ -354,7 +373,8 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
     }
   }
 
-  function FileStatus({ label, filename, found, badge }) {
+  /** `optional` files are absent on a new project. That is a fact, not an error. */
+  function FileStatus({ label, filename, found, badge, optional }) {
     return (
       <div className="d-flex align-items-center gap-2 mb-2">
         <span style={{ width: 140, fontWeight: 500 }}>{label}</span>
@@ -364,6 +384,11 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
             <span className="text-muted small">{filename}</span>
             {badge && <Badge bg="secondary">{badge}</Badge>}
           </>
+        ) : optional ? (
+          <span className="small" style={{ color: '#856404' }}>
+            <MaterialIcon name="add_circle" size={14} /> not found — starts empty, and your export
+            patches it in
+          </span>
         ) : (
           <span className="text-danger small">not found</span>
         )}
@@ -380,31 +405,61 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
       <Card style={{ width: 600, boxShadow: '0 4px 24px rgba(0,0,0,0.10)' }}>
         <Card.Body className="p-4">
           <h4 className="mb-1">Recipe Builder</h4>
-          <p className="text-muted mb-4">Open a project folder containing your Excel files.</p>
+          <p className="text-muted mb-4">
+            {newMode
+              ? 'Pick the folder holding the DesignDB. It defines the positions; everything else you build here.'
+              : 'Open a project folder containing your Excel files.'}
+          </p>
+
+          {/* Recents: what you were last working on, one click away. Hidden once a
+              folder is chosen — by then you have moved past choosing. */}
+          {recents.length > 0 && !detectedFiles && !opening && (
+            <div className="mb-3">
+              <div className="fw-semibold text-muted mb-1"
+                style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '.05em' }}>
+                Recent
+              </div>
+              <ListGroup>
+                {recents.map(p => (
+                  <ListGroup.Item action key={p.id} disabled={detecting || opening}
+                    onClick={() => handleOpenRecent(p)}
+                    className="d-flex align-items-center gap-2 py-2">
+                    <MaterialIcon name="folder_open" size={16} className="text-muted" />
+                    <span className="fw-semibold" style={{ fontFamily: 'monospace' }}>
+                      {p.project_number || '—'}
+                    </span>
+                    <span className="text-truncate" style={{ minWidth: 0, flex: 1 }}
+                      title={p.project_label || p.folder_path}>
+                      {p.project_label || p.folder_path}
+                    </span>
+                    <Badge bg="light" text="dark">{p.config_name}</Badge>
+                    <span className="text-muted small" style={{ flexShrink: 0 }}>{ago(p.last_opened)}</span>
+                  </ListGroup.Item>
+                ))}
+              </ListGroup>
+              <div className="mt-1 text-muted" style={{ fontSize: 11 }}>
+                Browsers don’t keep folder permission between visits, so reopening asks once.
+              </div>
+            </div>
+          )}
 
           {/* Step 1: Select folder */}
           <div className="mb-4">
             <div className="d-flex gap-2 align-items-center flex-wrap">
-              <Button variant="outline-primary" onClick={handleSelectFolder} disabled={detecting || opening}>
-                Select Project Folder
+              <Button variant="outline-primary" disabled={detecting || opening}
+                onClick={() => { setNewMode(false); handleSelectFolder() }}>
+                Open a folder…
               </Button>
-              {resumeProject && (
-                <Button variant="primary" onClick={handleResume} disabled={detecting || opening}
-                  title="The browser must ask again for permission to read this folder">
-                  <MaterialIcon name="folder_open" size={15} /> Reopen “{folderName || 'last project'}”
-                </Button>
-              )}
+              <Button variant="primary" disabled={detecting || opening}
+                title="A DesignDB is all you need — the Product Spec and Recipes Spec can start empty"
+                onClick={() => { setNewMode(true); handleSelectFolder() }}>
+                <MaterialIcon name="add" size={15} /> New project
+              </Button>
               {detecting && <Spinner size="sm" animation="border" />}
             </div>
-            {folderName && !resumeProject && (
+            {folderName && (
               <div className="mt-2 text-muted small" style={{ wordBreak: 'break-all' }}>
                 {folderName}
-              </div>
-            )}
-            {resumeProject && (
-              <div className="mt-2 text-muted" style={{ fontSize: 11 }}>
-                Your last project is remembered. Browsers don’t keep folder permission between visits,
-                so reopening needs one click.
               </div>
             )}
           </div>
@@ -422,17 +477,22 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
                   found={!!dbFilename}
                   badge="DB — read only"
                 />
-                <FileStatus label="Product Spec (PS)" filename={psFilename} found={!!psFilename} />
-                <FileStatus label="Recipe Spec (RS)" filename={rsFilename} found={!!rsFilename} />
+                <FileStatus label="Product Spec (PS)" filename={psFilename} found={!!psFilename} optional />
+                <FileStatus label="Recipe Spec (RS)" filename={rsFilename} found={!!rsFilename} optional />
               </Card.Body>
             </Card>
           )}
 
-          {/* Manual file selection for any missing files */}
+          {/* Manual file selection. A missing DesignDB is a problem; a missing PS/RS
+              is only worth mentioning in case they exist under an odd name. */}
           {detectedFiles && allXlsx.length > 0 && (!dbFilename || !psFilename || !rsFilename) && (
-            <Card className="mb-4 border-warning">
+            <Card className={`mb-4 ${dbFound ? 'border-0 bg-light' : 'border-warning'}`}>
               <Card.Body>
-                <p className="text-warning fw-semibold mb-3">Some files not detected — select manually:</p>
+                <p className={`fw-semibold mb-3 ${dbFound ? 'text-muted' : 'text-warning'}`}>
+                  {dbFound
+                    ? 'If a Product Spec or Recipes Spec already exists under another name, point at it:'
+                    : 'Some files not detected — select manually:'}
+                </p>
                 <Row className="g-2">
                   {!dbFilename && (
                     <Col xs={12}>
@@ -543,7 +603,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
             <Button
               variant="primary"
               onClick={() => doOpenProject({ projectNumber: projectNumber.trim(), configName: configName.trim() || 'Base' })}
-              disabled={!allFound || opening || detecting}
+              disabled={!dbFound || opening || detecting}
             >
               {opening ? <><Spinner size="sm" animation="border" className="me-2" />Opening…</> : 'Open Project'}
             </Button>

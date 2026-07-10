@@ -93,6 +93,34 @@ describe('named (@name) and positional (?) binding both work', () => {
       schema.upsertProject('/proj/a', 'Alt')
       expect(schema.getConfigsForFolder('/proj/a').map(c => c.config_name)).toEqual(['Alt', 'Base'])
     })
+
+    // The landing page leads with this list, so it must agree with getLastProject
+    // on which project is first — including under a same-millisecond tie.
+    test('getRecentProjects orders like getLastProject and breaks the tie the same way', () => {
+      schema.upsertProject('/proj/a', 'Base')
+      schema.upsertProject('/proj/b', 'Base')
+      schema.upsertProject('/proj/c', 'Base')
+      expect(schema.getRecentProjects().map(p => p.folder_path)).toEqual(['/proj/c', '/proj/b', '/proj/a'])
+      expect(schema.getRecentProjects()[0].folder_path).toBe(schema.getLastProject().folder_path)
+    })
+  })
+})
+
+describe('getRecentProjects — what the landing page leads with', () => {
+  test('honours the limit, and defaults to five', () => {
+    for (const f of ['/a', '/b', '/c']) schema.upsertProject(f, 'Base')
+    expect(schema.getRecentProjects(2)).toHaveLength(2)
+    expect(schema.getRecentProjects()).toHaveLength(3)
+  })
+
+  test('a project that was never opened is not recent', () => {
+    conn.prepare("INSERT INTO projects (folder_path, config_name, last_opened) VALUES ('/never', 'Base', NULL)").run()
+    schema.upsertProject('/opened', 'Base')
+    expect(schema.getRecentProjects().map(p => p.folder_path)).toEqual(['/opened'])
+  })
+
+  test('empty when nothing has been opened', () => {
+    expect(schema.getRecentProjects()).toEqual([])
   })
 })
 

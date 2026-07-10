@@ -88,6 +88,7 @@ export const dbApi = {
   getAllProjects: reader(schema.getAllProjects),
   deleteProject: writer(schema.deleteProject),
   getLastProject: reader(schema.getLastProject),
+  getRecentProjects: reader(schema.getRecentProjects),
   updateLastOpened: writer(schema.updateLastOpened),
 
   // position UI

@@ -74,7 +74,16 @@ export async function detectFiles(folderKey) {
   return classify(files)
 }
 
-/** Parse the three project workbooks. `paths` are filenames. */
+/**
+ * Parse the project workbooks. `paths` are filenames.
+ *
+ * Only the DesignDB is required: it is the sole source of PositionTypes and of the
+ * ExtRef convention (C01 → C01r), so nothing can be resolved without it. A new
+ * project legitimately has no Product Spec and no Recipes Spec yet — those start
+ * empty and are filled by patch scripts pasted into the fixed-schema workbook at
+ * export. `missing` names which, so the caller can say "will be created" rather
+ * than "not found".
+ */
 export async function importFiles({ db, ps, rs }) {
   const dir = requireDir()
   const { parseDb, parsePs, parseRs } = await xlsxModule()
@@ -82,12 +91,16 @@ export async function importFiles({ db, ps, rs }) {
   const [dbBytes, psBytes, rsBytes] = await Promise.all([
     fsx.readFileNamed(dir, db), fsx.readFileNamed(dir, ps), fsx.readFileNamed(dir, rs),
   ])
-  const missing = [['db', db, dbBytes], ['ps', ps, psBytes], ['rs', rs, rsBytes]]
-    .filter(([, , bytes]) => !bytes)
-    .map(([label, name]) => `${label}: '${name}' not found in the project folder`)
-  if (missing.length) throw new Error(missing.join('; '))
+  if (!dbBytes) throw new Error(`db: '${db || 'DesignDB'}' not found in the project folder`)
 
-  return { db: parseDb(dbBytes), ps: parsePs(psBytes), rs: parseRs(rsBytes) }
+  const missing = [['ps', psBytes], ['rs', rsBytes]].filter(([, bytes]) => !bytes).map(([l]) => l)
+
+  return {
+    db: parseDb(dbBytes),
+    ps: psBytes ? parsePs(psBytes) : [],
+    rs: rsBytes ? parseRs(rsBytes) : [],
+    missing,
+  }
 }
 
 /** Read one sheet of an arbitrary workbook picked via `openXlsxDialog`. */

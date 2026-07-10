@@ -32,6 +32,7 @@ function dbBridge() {
     getAllProjects: call(() => dbApi.getAllProjects()),
     deleteProject: call(projectId => dbApi.deleteProject(projectId)),
     getLastProject: call(() => dbApi.getLastProject()),
+    getRecentProjects: call(limit => dbApi.getRecentProjects(limit)),
 
     // Config YAML — a save/open picker instead of a native dialog
     exportConfigYAML: call(async (projectId, defaultName) => {

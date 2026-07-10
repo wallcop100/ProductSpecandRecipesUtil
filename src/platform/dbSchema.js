@@ -282,6 +282,13 @@ function getLastProject() {
   )
 }
 
+/** What the landing page leads with. The same ordering as getLastProject, n deep. */
+function getRecentProjects(limit = 5) {
+  return getDb()
+    .prepare('SELECT * FROM projects WHERE last_opened IS NOT NULL ORDER BY last_opened DESC, id DESC LIMIT ?')
+    .all(limit)
+}
+
 function updateLastOpened(projectId) {
   getDb()
     .prepare('UPDATE projects SET last_opened = ? WHERE id = ?')
@@ -1089,6 +1096,7 @@ export {
   getAllProjects,
   deleteProject,
   getLastProject,
+  getRecentProjects,
   updateLastOpened,
   upsertPositionUI,
   getPositionUI,
