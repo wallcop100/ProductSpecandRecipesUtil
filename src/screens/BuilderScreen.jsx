@@ -23,6 +23,7 @@ import ProjectIdPill from '../components/ProjectIdPill'
 import FormProgressChip from '../components/FormProgressChip'
 import ElementPalette from '../components/ElementPalette'
 import ValidationPanel from '../components/ValidationPanel'
+import ReadinessPanel from '../components/ReadinessPanel'
 import TemplatePicker from '../components/TemplatePicker'
 import PasteMergeModal from '../components/PasteMergeModal'
 import FavoritesPanel from '../components/FavoritesPanel'
@@ -75,6 +76,7 @@ export default function BuilderScreen({
   const undo = useStore(s => s.undo)
   const redo = useStore(s => s.redo)
   const dbChanges = useStore(s => s.dbChanges)
+  const focusPosition = useStore(s => s.focusPosition)
 
   const [showDupModal, setShowDupModal] = useState(false)
   const [showConnModal, setShowConnModal] = useState(false)
@@ -741,6 +743,9 @@ export default function BuilderScreen({
               <Nav.Item>
                 <Nav.Link eventKey="validation" className="py-1 px-2 small">Validation</Nav.Link>
               </Nav.Item>
+              <Nav.Item>
+                <Nav.Link eventKey="done" className="py-1 px-2 small" title="Am I done?">Done?</Nav.Link>
+              </Nav.Item>
             </Nav>
             <button className="btn btn-link p-0 me-2" style={{ color: '#888', lineHeight: 1 }} onClick={() => setRightOpen(false)} title="Close palette" aria-label="Close palette"><MaterialIcon name="close" size={18} /></button>
           </div>
@@ -771,6 +776,14 @@ export default function BuilderScreen({
               <ValidationPanel
                 onOpenProductSpec={onOpenProductSpec}
                 onOpenFixer={() => setShowFixer(true)}
+              />
+            )}
+            {/* The end state was computable and never stated. Now it is stated. */}
+            {rightTab === 'done' && (
+              <ReadinessPanel
+                onOpenValidation={() => { runValidation(); setRightTab('validation') }}
+                onOpenExport={() => setChangeSummary({ scope: 'export' })}
+                onOpenPosition={ref => focusPosition(ref)}
               />
             )}
           </div>
