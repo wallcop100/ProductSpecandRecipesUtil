@@ -5,7 +5,8 @@ import MaterialIcon from './MaterialIcon'
 import BulkApplyModal from './BulkApplyModal'
 import DuplicateETModal from './DuplicateETModal'
 import UsagePopover from './UsagePopover'
-import { compareFormToRecipe, associations, formWorklist } from '../utils/formSpec'
+import { compareFormToRecipe, associations, formWorklist, formPending } from '../utils/formSpec'
+import NewETModal from './NewETModal'
 import { findProductET } from '../utils/productCodes'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { ago } from '../utils/ago'
@@ -86,15 +87,21 @@ export default function FormSpecPane({ posRef, embedded = false }) {
   const dismissDivergence = useStore(s => s.dismissDivergence)
   const requestScreen = useStore(s => s.requestScreen)
   const setActivePosition = useStore(s => s.setActivePosition)
+  const promotePendingCapture = useStore(s => s.promotePendingCapture)
 
   const [ticked, setTicked] = useState(() => new Set())
   const [dest, setDest] = useState('auto')      // 'position' | 'internal'
   const [preview, setPreview] = useState(null)
   const [forking, setForking] = useState(false)
+  const [creating, setCreating] = useState(null)   // a pending Form product with no ElementType
 
   const captured = formCaptures?.byPosition?.[posRef] ?? []
   const context = formCaptures?.contextByPosition?.[posRef] ?? {}
   const orphanRefs = formCaptures?.orphansByPosition?.[posRef] ?? []
+  // Products the Form asks for here that nobody has named yet. Staging is incremental,
+  // so these are what you left for later. Without them the pane's promise — "what the
+  // Form asks for vs what the recipe has" — is false for exactly the unfinished part.
+  const pending = formPending(formCaptures, posRef)
 
   /**
    * The shopping list. A product is (manufacturer, code); if the Product Spec
@@ -159,7 +166,8 @@ export default function FormSpecPane({ posRef, embedded = false }) {
       </div>
     )
   }
-  if (formEts.length === 0 && result.orphaned.length === 0) {
+  // A position with ONLY pending products is not a position the Form is silent about.
+  if (formEts.length === 0 && result.orphaned.length === 0 && pending.length === 0) {
     return (
       <div className="border-start ps-3" style={{ width: 340, flexShrink: 0, overflowY: 'auto' }}>
         <SectionLabel>Form spec</SectionLabel>
@@ -228,8 +236,9 @@ export default function FormSpecPane({ posRef, embedded = false }) {
       {/* Where this came from */}
       <div className="d-flex align-items-baseline gap-1 mb-1">
         <SectionLabel className="mb-0">Form spec</SectionLabel>
-        <span className="ms-auto text-muted" style={{ fontSize: 10 }}>
-          {coverage.present}/{coverage.total} present
+        <span className="ms-auto text-muted" style={{ fontSize: 10 }}
+          title={pending.length > 0 ? `${pending.length} product${pending.length === 1 ? '' : 's'} still need an ElementType before they can be added` : ''}>
+          {coverage.present}/{coverage.total + pending.length} present
         </span>
       </div>
       <FormStrip formCaptures={formCaptures} onReimport={handleReimport} onDetach={handleDetach} />
@@ -264,6 +273,39 @@ export default function FormSpecPane({ posRef, embedded = false }) {
         <div className="mb-2 px-2 py-1 rounded" style={{ background: '#f8f9fa', fontSize: 11 }}>
           {Object.entries(context).map(([k, v]) => (
             <div key={k}><span className="text-muted">{k}:</span> {String(v)}</div>
+          ))}
+        </div>
+      )}
+
+      {/* The Form asked for these and nobody has said what they are. They cannot be
+          added to a recipe until they have an ElementType, so they are not a tick —
+          they are a question, asked where it matters. */}
+      {pending.length > 0 && (
+        <div className="mb-2 px-2 py-2 rounded" style={{ background: '#fdecec', border: '1px solid #f5c2c7' }}>
+          <div className="fw-semibold" style={{ fontSize: 10, color: '#842029' }}>
+            <MaterialIcon name="help" size={11} /> {pending.length} product
+            {pending.length === 1 ? '' : 's'} with no ElementType
+          </div>
+          <div className="text-muted mt-1 mb-2" style={{ fontSize: 10, lineHeight: 1.5 }}>
+            The Form asks for {pending.length === 1 ? 'it' : 'them'} here. Nothing can be added to the
+            recipe until {pending.length === 1 ? 'it has' : 'they have'} one.
+          </div>
+          {pending.map(p => (
+            <div key={p.code} className="d-flex align-items-baseline gap-1 py-1 border-top" style={{ fontSize: 10 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: 'monospace', fontWeight: 600 }} className="text-truncate" title={p.code}>
+                  {p.code}
+                </div>
+                <div className="text-muted text-truncate" title={`${p.manufacturer || 'no manufacturer'}${p.note ? ` · ${p.note}` : ''}`}>
+                  {p.manufacturer || <em>no manufacturer</em>}{p.note ? ` · ${p.note}` : ''}
+                </div>
+              </div>
+              <Button size="sm" variant="outline-danger" style={{ fontSize: 9, padding: '0 5px', flexShrink: 0 }}
+                onClick={() => setCreating(p)}
+                title={`Create an ElementType for ${p.manufacturer ? `${p.manufacturer} ` : ''}${p.code}`}>
+                Create
+              </Button>
+            </div>
           ))}
         </div>
       )}
@@ -408,6 +450,33 @@ export default function FormSpecPane({ posRef, embedded = false }) {
 
       {/* duplicateET repoints this position onto the fork. onDuplicated fires only on a
           real fork (never on cancel), so the question is marked settled exactly then. */}
+      {/* Reuses the import's own modal, with the import's own evidence: the code, the
+          maker, the note. The note is how you tell two similar codes apart. */}
+      {creating && (
+        <NewETModal
+          show
+          onHide={() => setCreating(null)}
+          contextLabel={`for ${creating.code}`}
+          draftKey={`pending::${posRef}::${creating.code}`}
+          importContext={{
+            code: creating.code,
+            manufacturer: creating.manufacturer,
+            note: creating.note,
+            positionTypes: [creating.formRef || posRef],
+            rowCount: 1,
+          }}
+          prefill={{
+            manufacturer: creating.manufacturer,
+            productCode: creating.code,
+            description: creating.note,
+          }}
+          onCreated={etRef => {
+            promotePendingCapture(posRef, creating.code, etRef)
+            setCreating(null)
+          }}
+        />
+      )}
+
       <DuplicateETModal
         show={forking}
         etRef={divergence?.wrapper}

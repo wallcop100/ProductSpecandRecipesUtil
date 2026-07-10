@@ -1303,6 +1303,38 @@ const useStore = create((set, get) => ({
     }
   },
 
+  /**
+   * promotePendingCapture(posRef, code, etRef) — a Form product that had no
+   * ElementType now has one.
+   *
+   * It moves out of `pendingByPosition` and into `byPosition`, where the pane can
+   * finally offer it as something to add. Idempotent: promoting the same code twice
+   * leaves one entry.
+   */
+  async promotePendingCapture(posRef, code, etRef) {
+    const { formCaptures } = get()
+    if (!formCaptures || !posRef || !code || !etRef) return
+
+    const key = s => String(s ?? '').trim().toLowerCase()
+    const pendingHere = formCaptures.pendingByPosition?.[posRef] ?? []
+    const entry = pendingHere.find(p => key(p.code) === key(code))
+    if (!entry) return
+
+    const remaining = pendingHere.filter(p => key(p.code) !== key(code))
+    const pendingByPosition = { ...(formCaptures.pendingByPosition ?? {}) }
+    if (remaining.length) pendingByPosition[posRef] = remaining
+    else delete pendingByPosition[posRef]
+
+    const here = formCaptures.byPosition?.[posRef] ?? []
+    const already = here.some(x => key(x.elementTypeRef) === key(etRef))
+    const byPosition = {
+      ...(formCaptures.byPosition ?? {}),
+      [posRef]: already ? here : [...here, { ...entry, elementTypeRef: etRef }],
+    }
+
+    await get().saveFormCaptures({ ...formCaptures, byPosition, pendingByPosition })
+  },
+
   async clearFormCaptures() {
     const { projectId } = get()
     set({ formCaptures: null })

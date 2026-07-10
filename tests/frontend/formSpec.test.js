@@ -288,7 +288,7 @@ describe('formWorklist — what is left to reconcile', () => {
     const rows = [...recipes, pos('D01r', 'ET-GONE')]
     const [d] = formWorklist(rows, caps, new Set())
     expect(d).toMatchObject({ posRef: 'D01r', orphans: 1, missing: 0 })
-    expect(d.coverage).toEqual({ present: 1, total: 1 })
+    expect(d.coverage).toEqual({ present: 1, total: 1, pending: 0 })
   })
 
   test('no Form attached, no worklist', () => {
@@ -324,7 +324,7 @@ describe('formProgress — the header roll-up', () => {
   }
 
   test('counts positions complete and products still missing', () => {
-    expect(formProgress(recipes, captures, new Set())).toEqual({ total: 2, complete: 1, missing: 2, orphans: 0 })
+    expect(formProgress(recipes, captures, new Set())).toEqual({ total: 2, complete: 1, missing: 2, orphans: 0, pending: 0 })
   })
 
   test('silent when no Form is attached', () => {
@@ -335,6 +335,6 @@ describe('formProgress — the header roll-up', () => {
   test('orphans are counted but never make a position incomplete', () => {
     const caps = { byPosition: { C01r: [ent('ET-PROF-01', 'A')] }, orphansByPosition: { C01r: ['ET-X'] } }
     const rows = [pos('C01r', 'ET-PROF-01'), pos('C01r', 'ET-X')]
-    expect(formProgress(rows, caps, new Set())).toEqual({ total: 1, complete: 1, missing: 0, orphans: 1 })
+    expect(formProgress(rows, caps, new Set())).toEqual({ total: 1, complete: 1, missing: 0, orphans: 1, pending: 0 })
   })
 })

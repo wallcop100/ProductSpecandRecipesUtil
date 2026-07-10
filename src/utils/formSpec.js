@@ -114,10 +114,30 @@ export function compareFormToRecipe(recipes, posRef, formEts = [], containerETRe
   }
 }
 
-/** Just the numbers, for the roll-up chip. Cheap enough to call per position. */
-export function formCoverage(recipes, posRef, formEts, containerETRefs) {
-  if (!formEts || formEts.length === 0) return null
-  return compareFormToRecipe(recipes, posRef, formEts, containerETRefs).coverage
+/**
+ * formPending(formCaptures, posRef) — products the Form asks for here that nobody has
+ * given an ElementType yet.
+ *
+ * Staging is incremental: you may stage the codes that are ready and leave the rest.
+ * Those left behind used to be dropped from the captures entirely, so the pane — whose
+ * whole promise is "what the Form asks for vs what the recipe has" — could never
+ * mention them. An intention with no name is still an intention.
+ */
+export function formPending(formCaptures, posRef) {
+  return formCaptures?.pendingByPosition?.[posRef] ?? []
+}
+
+/**
+ * Just the numbers, for the roll-up chip. Cheap enough to call per position.
+ *
+ * `pending` counts toward the total: the Form asked for it and the recipe has not got
+ * it. It is simply not addable until it has an ElementType. Counting only what can be
+ * added would report 12/12 on a Form that asked for 14.
+ */
+export function formCoverage(recipes, posRef, formEts, containerETRefs, pending = 0) {
+  if ((!formEts || formEts.length === 0) && !pending) return null
+  const c = compareFormToRecipe(recipes, posRef, formEts || [], containerETRefs).coverage
+  return { present: c.present, total: c.total + pending, pending }
 }
 
 /**
@@ -135,19 +155,26 @@ export function formCoverage(recipes, posRef, formEts, containerETRefs) {
 export function formWorklist(recipes, formCaptures, containerETRefs = new Set()) {
   const byPosition = formCaptures?.byPosition || {}
   const orphansBy = formCaptures?.orphansByPosition || {}
+  const pendingBy = formCaptures?.pendingByPosition || {}
 
-  const refs = [...new Set([...Object.keys(byPosition), ...Object.keys(orphansBy)])].sort()
+  const refs = [...new Set([
+    ...Object.keys(byPosition), ...Object.keys(orphansBy), ...Object.keys(pendingBy),
+  ])].sort()
   const out = []
   for (const posRef of refs) {
     const formEts = byPosition[posRef] || []
     const orphanRefs = orphansBy[posRef] || []
+    const pending = (pendingBy[posRef] || []).length
     const r = compareFormToRecipe(recipes, posRef, formEts, containerETRefs, { orphanRefs })
-    if (r.missing.length === 0 && r.orphaned.length === 0) continue
+    // A pending product is a product the Form asked for and the recipe has not got.
+    // It cannot be added yet, but the position is certainly not reconciled.
+    if (r.missing.length === 0 && r.orphaned.length === 0 && pending === 0) continue
     out.push({
       posRef,
-      coverage: r.coverage,
+      coverage: { present: r.coverage.present, total: r.coverage.total + pending, pending },
       missing: r.missing.length,
       orphans: r.orphaned.length,
+      pending,
     })
   }
   return out
@@ -156,15 +183,18 @@ export function formWorklist(recipes, formCaptures, containerETRefs = new Set())
 /** Totals for the header: positions done, positions total, products still missing. */
 export function formProgress(recipes, formCaptures, containerETRefs = new Set()) {
   const byPosition = formCaptures?.byPosition || {}
-  const total = Object.keys(byPosition).length
+  const pendingBy = formCaptures?.pendingByPosition || {}
+  const total = new Set([...Object.keys(byPosition), ...Object.keys(pendingBy)]).size
   if (total === 0) return null
   const work = formWorklist(recipes, formCaptures, containerETRefs)
-  const incomplete = work.filter(w => w.missing > 0).length
+  const incomplete = work.filter(w => w.missing > 0 || w.pending > 0).length
   return {
     total,
     complete: total - incomplete,
     missing: work.reduce((n, w) => n + w.missing, 0),
     orphans: work.reduce((n, w) => n + w.orphans, 0),
+    // Named separately: these are blocked on an ElementType, not on you adding a row.
+    pending: work.reduce((n, w) => n + (w.pending || 0), 0),
   }
 }
 

@@ -622,6 +622,10 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     //    where the recipe lives. Resolved (and confirmable) in the resolve step; a ref
     //    left unresolved is captured against nothing rather than the wrong position.
     const byPos = new Map()   // target PositionTypeRef -> [{ elementTypeRef, code, note, manufacturer, formRef }]
+    // Codes the Form asks for that have no ElementType yet. Staging is incremental, so
+    // these are the ones you deliberately left for later — and dropping them here would
+    // erase the Form's own request. The pane surfaces them and offers to create the ET.
+    const pendingByPos = new Map()
     const contextByPosition = {}
     let unrouted = 0
     for (const row of confirmed) {
@@ -636,7 +640,18 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       }
       for (const cap of deriveCaptures(row, captureOpts).captures) {
         const et = codeToEt.get(norm(cap.code))
-        if (!et) continue
+        if (!et) {
+          // The Form asked for this product. Nobody has said what it is yet.
+          if (!pendingByPos.has(target)) pendingByPos.set(target, [])
+          const pend = pendingByPos.get(target)
+          if (!pend.some(x => norm(x.code) === norm(cap.code))) {
+            pend.push({
+              code: cap.code, note: cap.note,
+              manufacturer: row.manufacturer || '', formRef: row.positionType,
+            })
+          }
+          continue
+        }
         if (!byPos.has(target)) byPos.set(target, [])
         const list = byPos.get(target)
         if (!list.some(x => x.elementTypeRef === et)) {
@@ -654,6 +669,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       source: { ...(source || await fileMeta(filepath) || {}), sheet },
       importedAt: new Date().toISOString(),
       byPosition: Object.fromEntries(byPos),
+      pendingByPosition: Object.fromEntries(pendingByPos),
       contextByPosition,
       orphansByPosition: {},
       unrouted: resolutions.filter(r => !r.target).map(r => ({ formRef: r.formRef, rows: r.rows })),
@@ -684,6 +700,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       positions: byPos.size,
       products: [...byPos.values()].reduce((t, l) => t + l.length, 0),
       unrouted, diff, divergence, leftBehind,
+      pending: [...pendingByPos.values()].reduce((n, l) => n + l.length, 0),
     })
   }
 
@@ -1046,6 +1063,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                     <div className="mt-1 text-muted">
                       {staged.leftBehind} code{staged.leftBehind === 1 ? '' : 's'} still {staged.leftBehind === 1 ? 'has' : 'have'} no
                       ElementType. Your draft is kept — come back and stage them whenever you like.
+                      {staged.pending > 0 && <> The Side-by-Side pane lists them where the Form asks for them.</>}
                     </div>
                   )}
 
