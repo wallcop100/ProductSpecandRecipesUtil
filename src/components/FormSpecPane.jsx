@@ -195,6 +195,12 @@ export default function FormSpecPane({ posRef, embedded = false }) {
   // position level; the wrapper is offered whenever one resolves.
   const effectiveDest = dest === 'auto' ? 'position' : dest
   const section = effectiveDest === 'internal' ? 'dl_internal' : 'position'
+  // Say where a row will land in the same words everywhere: the row, its tooltip, and
+  // the destination chooser. `container` is null when this position has no wrapper —
+  // honestly, and the store refuses an internal row without one.
+  const destLabel = effectiveDest === 'internal' && container
+    ? `inside ${container}`
+    : 'at position level'
 
   function toggle(ref) {
     setTicked(t => {
@@ -310,6 +316,15 @@ export default function FormSpecPane({ posRef, embedded = false }) {
         </div>
       )}
 
+      {/* The Form is silent about slots, and this position has no assembly to put
+          anything inside. Nothing is broken; say so before the chooser greys out. */}
+      {missing.length > 0 && !container && (
+        <div className="text-muted mb-1" style={{ fontSize: 10 }}>
+          <MaterialIcon name="info" size={10} /> {posRef} has no wrapper, so everything lands at
+          position level.
+        </div>
+      )}
+
       {/* What the Form asks for */}
       {missing.length > 0 && (
         <div className="d-flex align-items-center gap-1 mb-1">
@@ -327,7 +342,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
               ? <input type="checkbox" className="form-check-input mt-1" style={{ flexShrink: 0 }}
                   checked={ticked.has(e.elementTypeRef)}
                   onChange={() => toggle(e.elementTypeRef)}
-                  title="Tick to add" aria-label={`Add ${e.elementTypeRef}`} />
+                  title={`Tick to add — lands ${destLabel}`} aria-label={`Add ${e.elementTypeRef}`} />
               : <MaterialIcon name={ACTION_ICONS.complete} size={13} style={{ color: '#198754', flexShrink: 0, marginTop: 1 }} />}
             <div style={{ minWidth: 0, flex: 1 }}>
               {/* Manufacturer and product code are one thing, and always shown together. */}
@@ -350,6 +365,13 @@ export default function FormSpecPane({ posRef, embedded = false }) {
                 )}
               </div>
               {e.note && <div className="text-muted" style={{ fontSize: 10 }}>{e.note}</div>}
+              {/* A matched row says where it was found. A missing one should say where it
+                  will go — before you tick it, not after the store refuses the row. */}
+              {isMissing && (
+                <div className="text-muted" style={{ fontSize: 10 }}>
+                  <MaterialIcon name="subdirectory_arrow_right" size={10} /> will be added {destLabel}
+                </div>
+              )}
               {isMissing
                 ? <span className="text-danger" style={{ fontSize: 10 }}>
                     {e.inSpec ? 'already an ElementType — tick to add it' : 'missing from the recipe'}

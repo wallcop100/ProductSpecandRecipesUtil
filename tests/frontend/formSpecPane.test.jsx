@@ -78,7 +78,7 @@ describe('FormSpecPane renders the Form beside the recipe', () => {
     setup()
     expect(screen.getByText('LL240272024')).toBeInTheDocument()
     expect(screen.getByText('missing from the recipe')).toBeInTheDocument()
-    expect(screen.getAllByTitle('Tick to add')).toHaveLength(1)
+    expect(screen.getAllByTitle(/Tick to add/)).toHaveLength(1)
   })
 
   test('coverage counts what the Form specified', () => {
@@ -96,7 +96,7 @@ describe('FormSpecPane renders the Form beside the recipe', () => {
 
   test('ticking offers a destination, and the position\'s wrapper is one of them', () => {
     setup()
-    fireEvent.click(screen.getByTitle('Tick to add'))
+    fireEvent.click(screen.getByTitle(/Tick to add/))
     expect(screen.getByText('Add 1 to:')).toBeInTheDocument()
     // The Form carries no slot, so both destinations are offered and neither is assumed.
     expect(screen.getByLabelText(/Position level/)).not.toBeDisabled()
@@ -107,7 +107,7 @@ describe('FormSpecPane renders the Form beside the recipe', () => {
   test('nothing is written until the preview is confirmed', () => {
     setup()
     const before = useStore.getState().recipes.length
-    fireEvent.click(screen.getByTitle('Tick to add'))
+    fireEvent.click(screen.getByTitle(/Tick to add/))
     fireEvent.click(screen.getByText(/Preview 1 change/))
     expect(useStore.getState().recipes).toHaveLength(before)          // still untouched
 
@@ -118,7 +118,7 @@ describe('FormSpecPane renders the Form beside the recipe', () => {
 
   test('confirming adds the row at the chosen destination', () => {
     setup()
-    fireEvent.click(screen.getByTitle('Tick to add'))
+    fireEvent.click(screen.getByTitle(/Tick to add/))
     fireEvent.click(screen.getByLabelText(/inside/))
     fireEvent.click(screen.getByText(/Preview 1 change/))
     fireEvent.click(within(screen.getByRole('dialog')).getByText(/Apply 1 change/))
@@ -130,8 +130,23 @@ describe('FormSpecPane renders the Form beside the recipe', () => {
 
   test('a position with no wrapper cannot pick the internal destination', () => {
     setup({ recipes: [pos('C01r', 'ET-LAMP', { IsDesign: 'Y' })], containerETRefs: new Set() })
-    fireEvent.click(screen.getAllByTitle('Tick to add')[0])
+    fireEvent.click(screen.getAllByTitle(/Tick to add/)[0])
     expect(screen.getByLabelText(/no wrapper on this position/)).toBeDisabled()
+  })
+
+  /**
+   * A matched row says where it was FOUND. A missing row used to say nothing about
+   * where it would GO, so the destination was discovered only after ticking — or, on a
+   * position with no wrapper, after the store refused the row.
+   */
+  test('a missing row states its destination before you tick it', () => {
+    setup()
+    expect(screen.getByText(/will be added at position level/)).toBeInTheDocument()
+  })
+
+  test('a position with no wrapper says so up front, not in a greyed-out radio', () => {
+    setup({ recipes: [pos('C01r', 'ET-LAMP', { IsDesign: 'Y' })], containerETRefs: new Set() })
+    expect(screen.getByText(/has no wrapper, so everything lands at/)).toBeInTheDocument()
   })
 
   test('a code that left the Form is flagged, never deleted for you', () => {
@@ -192,7 +207,7 @@ describe('manufacturer + product code are one identity', () => {
 
   test('ticking it adds the SPEC\'s ElementType, not the stale captured one', () => {
     setup({ psRows: [{ ElementTypeRef: 'ET-TAPE-99', Manufacturer: 'Nichia', ProductCode: 'LL240272024' }] })
-    fireEvent.click(screen.getByTitle('Tick to add'))
+    fireEvent.click(screen.getByTitle(/Tick to add/))
     fireEvent.click(screen.getByText(/Preview 1 change/))
     fireEvent.click(within(screen.getByRole('dialog')).getByText(/Apply 1 change/))
     expect(useStore.getState().recipes.some(r => r.ElementTypeRef === 'ET-TAPE-99')).toBe(true)

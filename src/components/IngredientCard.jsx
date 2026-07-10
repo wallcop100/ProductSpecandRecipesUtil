@@ -12,6 +12,7 @@ import IconButton from './IconButton'
 import { getUsedIn, getInternalItems } from '../utils/containerUtils'
 import { wrapperUsedBy } from '../utils/collectionStatus'
 import DuplicateETModal from './DuplicateETModal'
+import SharedEditGuard from './SharedEditGuard'
 import { familyOf } from '../utils/etRef'
 import { ACTION_ICONS } from '../utils/entityStyle'
 
@@ -100,6 +101,22 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   // every position in this list — so the list, and the escape hatch, belong right here
   // rather than one screen deeper.
   const sharedWith = isContainer ? wrapperUsedBy(recipes, etRef).filter(p => p !== posRef) : []
+
+  // This row's own home. An internal row lives inside a wrapper, and that wrapper's
+  // contents belong to every position using it — so deleting or replacing the row here
+  // changes them too. The app knew this and said nothing at the point of danger.
+  const ownContainer = (row.ContextType || row.contextType) === 'ElementType'
+    ? (row.ContextRef || row.contextRef || '')
+    : ''
+  const containerSharedWith = ownContainer
+    ? wrapperUsedBy(recipes, ownContainer).filter(p => p !== posRef)
+    : []
+
+  /** Run a destructive edit, but not before naming who else it changes. */
+  const guarded = (verb, run) => () => {
+    if (containerSharedWith.length > 0) setGuard({ verb, run })
+    else run()
+  }
   const HINT_LABELS = { naming: 'DL/LIN name', ideaworksNA: 'Ideaworks/N-A spec', hasInternals: 'has internals', isCollection: 'IsCollection flag' }
   const reason = etRef ? containerReasons?.[etRef.toLowerCase()] : null
   const whyText = reason
@@ -114,6 +131,8 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
 
   const [showContents, setShowContents] = useState(false)
   const [forking, setForking] = useState(false)
+  const [guard, setGuard] = useState(null)   // { verb, run } — a destructive edit inside a shared wrapper
+  const [forkContainer, setForkContainer] = useState(false)
   const [replacing, setReplacing] = useState(false)
   const [keepFields, setKeepFields] = useState(true)
 
@@ -316,11 +335,11 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                   style={{ background: '#f0f4ff', border: '1px solid #c7d7f5', fontSize: 11 }}>
                   <span className="text-muted">Replace with:</span>
                   <Button variant="outline-primary" size="sm" style={{ padding: '1px 8px', fontSize: 11 }}
-                    onClick={() => { setReplacing(false); onReplace(posRef, rowId, { mode: 'existing', keepFields }) }}>
+                    onClick={guarded('replace', () => { setReplacing(false); onReplace(posRef, rowId, { mode: 'existing', keepFields }) })}>
                     Existing
                   </Button>
                   <Button variant="outline-success" size="sm" style={{ padding: '1px 8px', fontSize: 11 }}
-                    onClick={() => { setReplacing(false); onReplace(posRef, rowId, { mode: 'new', keepFields }) }}>
+                    onClick={guarded('replace', () => { setReplacing(false); onReplace(posRef, rowId, { mode: 'new', keepFields }) })}>
                     New ↗
                   </Button>
                   <Form.Check
@@ -478,8 +497,10 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                   className="text-danger p-0"
                   icon={ACTION_ICONS.delete}
                   size={16}
-                  onClick={() => removeRecipeRow(posRef, rowId)}
-                  title="Mark IsDeleted"
+                  onClick={guarded('delete', () => removeRecipeRow(posRef, rowId))}
+                  title={containerSharedWith.length > 0
+                    ? `Mark IsDeleted — inside ${ownContainer}, shared with ${containerSharedWith.join(', ')}`
+                    : 'Mark IsDeleted'}
                 />
                 {/* Container designation toggle — stacked under the delete action */}
                 {etRef && (
@@ -502,6 +523,26 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
           is, and it repoints THIS position — see wrapperEditContext. */}
       {forking && (
         <DuplicateETModal show etRef={etRef} posRef={posRef} onClose={() => setForking(false)} />
+      )}
+
+      {/* Destructive edit inside someone else's assembly, too. Name them first. */}
+      {guard && (
+        <SharedEditGuard
+          show
+          verb={guard.verb}
+          etRef={etRef}
+          container={ownContainer}
+          posRef={posRef}
+          sharedWith={containerSharedWith}
+          onCancel={() => setGuard(null)}
+          onProceed={() => { const run = guard.run; setGuard(null); run() }}
+          onFork={() => { setGuard(null); setForkContainer(true) }}
+        />
+      )}
+
+      {/* Fork the WRAPPER this row lives in, not the row's own ElementType. */}
+      {forkContainer && (
+        <DuplicateETModal show etRef={ownContainer} posRef={posRef} onClose={() => setForkContainer(false)} />
       )}
     </div>
   )
