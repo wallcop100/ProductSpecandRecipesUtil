@@ -7,7 +7,7 @@
  *   { severity: 'error'|'warning', rule: string, message: string, ref: string|null }
  */
 
-import { productKey } from './productCodes'
+import { productKey, hasProductIdentity } from './productCodes'
 
 import { DIM_QTY_COMPONENTS } from './constants.js'
 import { connectorGapsForPosition } from './collectionStatus.js'
@@ -231,7 +231,7 @@ function checkDuplicateProductCode(psRows) {
   for (const row of psRows) {
     if ((row.IsDeleted || row.isDeleted) === 'Y') continue
     const code = (row.productCode || row.ProductCode || '').trim()
-    if (!code || code.toUpperCase() === 'N/A') continue
+    if (!hasProductIdentity(code)) continue   // "N/A" names no product
 
     const manufacturer = (row.Manufacturer || row.manufacturer || '').trim()
     const key = productKey(manufacturer, code)

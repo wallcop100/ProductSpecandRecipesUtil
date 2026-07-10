@@ -13,6 +13,7 @@
 
 import { getNextAvailableRef } from './containerUtils'
 import { familyOf } from './etRef'
+import { hasProductIdentity } from './productCodes'
 
 const norm = s => String(s || '').trim().toUpperCase()
 const refOf = e => e.ElementTypeRef || e.elementTypeRef || ''
@@ -92,43 +93,62 @@ export function inferConvention(elementTypes = []) {
 }
 
 /**
- * Existing ETs this captured (code, note) might reuse, ranked. Searches each ET's
- * product code (from the Product Spec) plus its Name/Description — on the real
- * DesignDB the product code lives verbatim in the Name ("LEDFlex - FPSN0809ECG"),
- * so a verbatim token hit is a strong "same" signal.
+ * Existing ETs this captured product might reuse, ranked. Searches each ET's product
+ * code (from the Product Spec) plus its Name/Description — on the real DesignDB the
+ * product code lives verbatim in the Name ("LEDFlex - FPSN0809ECG"), so a verbatim
+ * token hit is a strong "same" signal.
+ *
+ * A PRODUCT IS (MANUFACTURER, CODE). Two consequences:
+ *
+ *   · A code with no identity ("N/A", blank) matches nothing. Every wrapper in the
+ *     sheet carries "N/A", so it is evidence of nothing — it once suggested reusing
+ *     a driver for a pendant, because both were `Ideaworks / N/A`.
+ *   · The same code from a DIFFERENT maker is a different product, and carries no
+ *     code evidence at all. It is not a weaker match; it is not a match.
  *
  * kind: 'same'    — likely the same product; reuse the ref
  *       'variant' — shares a stem but differs; offer the next counter on that stem
  */
-export function reuseCandidates(code, note, { psRows = [], elementTypes = [] }, limit = 3) {
+export function reuseCandidates(code, note, { psRows = [], elementTypes = [], manufacturer = '' } = {}, limit = 3) {
   const nc = norm(code)
-  if (!nc) return []
+  if (!hasProductIdentity(code)) return []
+  const nm = norm(manufacturer)
 
-  const codeByRef = new Map()
+  const specByRef = new Map()   // ref -> { code, manufacturer }
   for (const r of psRows) {
     const ref = norm(refOf(r))
     const pc = (r.ProductCode || r.productCode || '').trim()
-    if (ref && pc) codeByRef.set(ref, pc)
+    const pm = (r.Manufacturer || r.manufacturer || '').trim()
+    if (ref) specByRef.set(ref, { code: pc, manufacturer: pm })
   }
   const noteToks = tokens(note)
+
+  /** A blank maker on either side cannot distinguish anything, so it matches. */
+  const sameMaker = other => !norm(other) || !nm || norm(other) === nm
 
   const out = []
   for (const et of elementTypes) {
     const ref = refOf(et)
     if (!ref || (et.IsDeleted || et.isDeleted) === 'Y') continue
-    const pc = codeByRef.get(norm(ref)) || ''
+    const spec = specByRef.get(norm(ref)) || { code: '', manufacturer: '' }
+    // A wrapper's "N/A" is not a code; never let it match or fuzzy-match.
+    const pc = hasProductIdentity(spec.code) ? spec.code : ''
+    const pm = spec.manufacturer
     const name = et.Name || et.name || ''
     const desc = et.Description || et.description || ''
     const haystackToks = new Set([...tokens(pc), ...tokens(name), ...tokens(desc)])
 
-    // Only an exact/verbatim hit is 'same' (safe to reuse). Anything merely
-    // similar is a 'variant' — offered, but it earns its own ref by default, so
-    // a one-char attribute change (250-1CH vs 250-2CH) is never silently merged.
+    // Only an exact/verbatim hit BY THE SAME MAKER is 'same' (safe to reuse).
+    // Anything merely similar is a 'variant' — offered, but it earns its own ref by
+    // default, so a one-char attribute change (250-1CH vs 250-2CH) is never merged.
     let codeScore = 0
     let kind = 'variant'
-    if (pc && norm(pc) === nc) { codeScore = 1; kind = 'same' }
-    else if (haystackToks.has(nc)) { codeScore = 0.92; kind = 'same' }
-    else {
+    const codeMatches = pc && norm(pc) === nc
+
+    if (codeMatches && sameMaker(pm)) { codeScore = 1; kind = 'same' }
+    else if (codeMatches) { codeScore = 0 }   // same code, another maker: another product
+    else if (haystackToks.has(nc) && sameMaker(pm)) { codeScore = 0.92; kind = 'same' }
+    else if (!codeMatches) {
       const sim = pc ? similarity(nc, norm(pc)) : 0
       const stem = pc ? sharedStem(nc, norm(pc)) : 0
       const stemScore = stem >= 4 ? 0.5 + Math.min(stem / nc.length, 1) * 0.35 : 0
@@ -158,7 +178,7 @@ function skeletonToken(note, manufacturer, code) {
  *   new     — a skeleton ET-<guess>-01 in the project's convention; user fills the middle
  */
 export function suggestRef(code, note, manufacturer, convention, elementTypes = [], psRows = []) {
-  const cands = reuseCandidates(code, note, { psRows, elementTypes }, 3)
+  const cands = reuseCandidates(code, note, { psRows, elementTypes, manufacturer }, 3)
 
   const strong = cands.find(c => c.kind === 'same' && c.score >= 0.85)
   if (strong) return { ref: strong.ref, reason: 'reuse', candidate: strong }

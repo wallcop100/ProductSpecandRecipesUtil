@@ -8,6 +8,7 @@ import ChangeSummaryModal from '../components/ChangeSummaryModal'
 import IconButton from '../components/IconButton'
 import MaterialIcon from '../components/MaterialIcon'
 import { ACTION_ICONS } from '../utils/entityStyle'
+import { duplicateProductKeys } from '../utils/productCodes'
 
 /**
  * ProductSpecScreen — split-panel product spec editor.
@@ -84,12 +85,9 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
   // Completeness stats
   const stats = useMemo(() => {
     let complete = 0, partial = 0, deleted = 0
-    const dupCodes = new Map()
-    for (const r of psRows) {
-      const code = (r.ProductCode || r.productCode || '').trim().toUpperCase()
-      if (code && code !== 'N/A') dupCodes.set(code, (dupCodes.get(code) || 0) + 1)
-    }
-    const dupSet = new Set([...dupCodes.entries()].filter(([, v]) => v > 1).map(([k]) => k))
+    // A product is (manufacturer, code): "PLASTER IN KIT" from Orluna and from Phos
+    // are two products, not a duplicate. See productCodes.duplicateProductKeys.
+    const dupSet = duplicateProductKeys(psRows)
     for (const r of psRows) {
       if ((r.IsDeleted || r.isDeleted) === 'Y') { deleted++; continue }
       const tbc  = (r.IsTBC || r.isTBC) === 'Y'

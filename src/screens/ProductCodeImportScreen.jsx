@@ -451,7 +451,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     const note = e.variants[0]?.note || ''
     // Only unresolved codes need a suggestion / reuse candidates.
     const help = etRef ? {} : {
-      reuse: reuseCandidates(e.text, note, { psRows, elementTypes }, 3),
+      reuse: reuseCandidates(e.text, note, { psRows, elementTypes, manufacturer: e.manufacturers[0] || '' }, 3),
       suggestedRef: suggestRef(e.text, note, e.manufacturers[0] || '', convention, elementTypes, psRows).ref,
     }
     return { ...e, ...c, etRef, ...help }

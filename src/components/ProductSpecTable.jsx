@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useRef } from 'react'
 import { Table, Form, Button } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import FlagPill from './FlagPill'
-import { productKey, duplicateProductKeys } from '../utils/productCodes'
+import { productKey, duplicateProductKeys, hasProductIdentity } from '../utils/productCodes'
 
 /**
  * ProductSpecTable — table of PS rows with inline editing.
@@ -70,7 +70,7 @@ export default function ProductSpecTable({ showDeleted = false, etUsedIn = {}, s
 
   function isDuplicate(row) {
     const code = (row.ProductCode || row.productCode || '').trim()
-    if (!code || code.toUpperCase() === 'N/A') return false
+    if (!hasProductIdentity(code)) return false
     return duplicateKeys.has(productKey(row.Manufacturer || row.manufacturer, code))
   }
 

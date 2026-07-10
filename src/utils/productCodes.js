@@ -221,8 +221,23 @@ export const norm = c => String(c || '').trim().toUpperCase()
 /** The identity of a product. Blank manufacturer is a value, not a wildcard. */
 export const productKey = (manufacturer, code) => `${norm(manufacturer)} ${norm(code)}`
 
-/** A code carrying no product identity — nothing to compare. */
-const notAProduct = code => !norm(code) || norm(code) === 'N/A'
+/**
+ * Does this code identify a product at all?
+ *
+ * "N/A" does not. It is the convention for something with nothing to buy — a
+ * virtual wrapper, a container, an Ideaworks assembly. EVERY such row carries the
+ * same "N/A", so matching on it says nothing: this project has four, and all four
+ * are drivers. Treating it as a code let a pendant wrapper silently adopt a
+ * driver's ElementType, because both were `Ideaworks / N/A`.
+ *
+ * A blank code identifies nothing either.
+ */
+export const hasProductIdentity = code => {
+  const n = norm(code)
+  return n !== '' && n !== 'N/A'
+}
+
+const notAProduct = code => !hasProductIdentity(code)
 
 const mfrOf = r => r.Manufacturer || r.manufacturer || ''
 const codeOf = r => r.ProductCode || r.productCode || ''
@@ -268,13 +283,18 @@ export function findProductET(psRows, manufacturer, code) {
 // Batch-level derivation — the distinct list and the holistic comparison
 // ---------------------------------------------------------------------------
 
-/** Master index from the Product Spec: a product both flags green AND names its ET. */
+/**
+ * Master index from the Product Spec: a product both flags green AND names its ET.
+ *
+ * Rows with no product identity ("N/A", blank) are excluded. They are not products,
+ * and indexing them made every captured "N/A" match the first wrapper in the sheet.
+ */
 export function buildMaster(psRows) {
   const out = []
   for (const r of psRows || []) {
     const code = codeOf(r).trim()
     const ref = etOfRow(r)
-    if (code && ref) out.push({ code, ref, manufacturer: mfrOf(r).trim() })
+    if (ref && hasProductIdentity(code)) out.push({ code, ref, manufacturer: mfrOf(r).trim() })
   }
   return out
 }
@@ -344,6 +364,12 @@ export function classify(code, { master = [], duplicates = new Set() } = {}, man
   const n = norm(code)
   const m = norm(manufacturer)
   const duplicate = duplicates.has(n)
+
+  // "N/A" and blanks name no product, so they can match no product. Without this a
+  // captured "N/A" went green against whichever wrapper happened to sort first.
+  if (!hasProductIdentity(code)) {
+    return { status: duplicate ? 'blue' : 'grey', elementTypeRef: null, base: null, duplicate }
+  }
 
   // A product is (maker, code). A blank maker on either side cannot distinguish
   // anything, so it matches — but two NAMED makers sharing a code are two products.

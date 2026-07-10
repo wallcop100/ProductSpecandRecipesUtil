@@ -4,7 +4,7 @@ import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { familyOf } from '../utils/etRef'
 import { ACTION_ICONS } from '../utils/entityStyle'
-import { productKey, duplicateProductKeys } from '../utils/productCodes'
+import { productKey, duplicateProductKeys, hasProductIdentity } from '../utils/productCodes'
 
 const STATUS_COLOR = {
   complete:  '#22c55e',
@@ -25,7 +25,7 @@ function completenessOf(ref, psRowMap, missingSet, duplicateKeys) {
   if (!code || tbc) return 'partial'
   // A row sharing its PRODUCT IDENTITY (maker + code) with another ET is a warning,
   // never "ok". Two makers using the same code are two products, not a duplicate.
-  if (duplicateKeys && code.toUpperCase() !== 'N/A'
+  if (duplicateKeys && hasProductIdentity(code)
       && duplicateKeys.has(productKey(row.Manufacturer || row.manufacturer, code))) return 'duplicate'
   return 'complete'
 }
@@ -120,7 +120,7 @@ export default function ETSpecBrowser({
       const group = getGroupKey(ref, viewMode, psRowMap, etObjMap)
       const code = (psRow?.ProductCode || psRow?.productCode || '').trim().toUpperCase()
       const isDeleted = (psRow?.IsDeleted || psRow?.isDeleted) === 'Y'
-      const isDup = code && code !== 'N/A'
+      const isDup = hasProductIdentity(code)
         && duplicateCodes.has(productKey(psRow?.Manufacturer || psRow?.manufacturer, code))
 
       if (groupFilter && group !== groupFilter) return false

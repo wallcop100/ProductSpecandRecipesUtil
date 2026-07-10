@@ -107,3 +107,58 @@ describe('suggestRef', () => {
     expect(s.ref).toMatch(/^ET-[A-Z0-9]+-01$/)
   })
 })
+
+// ---------------------------------------------------------------------------
+// A product is (manufacturer, code) — reuse must honour both
+// ---------------------------------------------------------------------------
+describe('reuseCandidates respects product identity', () => {
+  const psRow = (ref, mfr, code) => ({ ElementTypeRef: ref, Manufacturer: mfr, ProductCode: code })
+  const et = ref => ({ ElementTypeRef: ref })
+
+  // "PLASTER IN KIT" is sold by Orluna AND Phos. Wrappers all carry Ideaworks / N/A.
+  const psRows = [
+    psRow('ET-PLASTERKIT-01', 'Orluna', 'PLASTER IN KIT'),
+    psRow('ET-PLASTERKIT-02', 'Phos', 'PLASTER IN KIT'),
+    psRow('ET-CCL-D-250-1CH-EM-01', 'Ideaworks', 'N/A'),
+    psRow('ET-CVR-D-24-2CH-01', 'Ideaworks', 'N/A'),
+  ]
+  const elementTypes = psRows.map(r => et(r.ElementTypeRef))
+  const suggest = (code, mfr, note = '') =>
+    reuseCandidates(code, note, { psRows, elementTypes, manufacturer: mfr }, 3)
+
+  test('"N/A" suggests nothing — it names no product', () => {
+    // The bug: a pendant with Ideaworks/N/A was offered a DRIVER wrapper to reuse,
+    // at score 1.00 "same", because both codes were "N/A".
+    expect(suggest('N/A', 'Ideaworks', 'Pendant')).toEqual([])
+    expect(suggest('n/a', '', 'Pendant')).toEqual([])
+    expect(suggest('', 'Ideaworks')).toEqual([])
+  })
+
+  test('the right maker reuses its own ElementType', () => {
+    expect(suggest('PLASTER IN KIT', 'Orluna')[0]).toMatchObject({ ref: 'ET-PLASTERKIT-01', kind: 'same' })
+    expect(suggest('PLASTER IN KIT', 'Phos')[0]).toMatchObject({ ref: 'ET-PLASTERKIT-02', kind: 'same' })
+  })
+
+  test('the same code from ANOTHER maker is not offered at all', () => {
+    // Not a weaker match — not a match. It is a different product.
+    expect(suggest('PLASTER IN KIT', 'Acme')).toEqual([])
+  })
+
+  test('with no maker given it cannot distinguish, so it offers both', () => {
+    const refs = suggest('PLASTER IN KIT', '').map(c => c.ref).sort()
+    expect(refs).toEqual(['ET-PLASTERKIT-01', 'ET-PLASTERKIT-02'])
+  })
+
+  test('a wrapper\'s N/A never fuzzy-matches a real code either', () => {
+    // similarity('NF240272009','N/A') must not drag a driver into the list.
+    expect(suggest('NF240272009', 'Nichia').map(c => c.ref)).not.toContain('ET-CCL-D-250-1CH-EM-01')
+  })
+
+  test('suggestRef proposes a NEW ref for N/A rather than reusing a driver', () => {
+    const conv = { prefix: 'ET', counterWidth: 2, stems: [] }
+    const r = suggestRef('N/A', 'Pendant', 'Astro', conv, elementTypes, psRows)
+    expect(r.reason).toBe('new')
+    expect(r.ref).toMatch(/^ET-/)
+    expect(r.ref).not.toMatch(/CCL|CVR/)
+  })
+})

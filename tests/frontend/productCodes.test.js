@@ -3,7 +3,7 @@ import {
   tokenize, makeRow, codeRuns, deriveCaptures, deriveCodes, promoteNoteToCode,
   buildMaster, buildDistinct, hasNoteCollision, duplicateSet, classify,
   clusterSimilar, rowConfidence, sortByConfidence, setNoteOverride, segmentsOf,
-  pendingResolutions, groupKey, productKey, duplicateProductKeys, findProductET,
+  pendingResolutions, groupKey, productKey, duplicateProductKeys, findProductET, hasProductIdentity,
 } from '../../src/utils/productCodes.js'
 import { applyRules } from '../../src/utils/codeLearning.js'
 
@@ -556,5 +556,59 @@ describe('a row is fully reconstructible from rawText + overrides', () => {
     const s = serialise(makeRow(0, REAL.C07))
     expect(s).not.toHaveProperty('tokens')
     expect(s).not.toHaveProperty('roles')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// "N/A" is not a product code — it means there is nothing to buy
+// ---------------------------------------------------------------------------
+describe('a code with no product identity matches nothing', () => {
+  const row = (ref, mfr, code) => ({ ElementTypeRef: ref, Manufacturer: mfr, ProductCode: code })
+
+  // The real project: every N/A row is an Ideaworks wrapper, and all four are drivers.
+  const wrappers = [
+    row('ET-CCL-D-250-1CH-EM-01', 'Ideaworks', 'N/A'),
+    row('ET-CVR-D-24-2CH-01', 'Ideaworks', 'N/A'),
+    row('ET-PENDANT-01', 'Ideaworks', 'N/A'),
+  ]
+
+  test('hasProductIdentity rejects N/A and blanks, whatever the case', () => {
+    expect(hasProductIdentity('FPS2020')).toBe(true)
+    for (const bad of ['N/A', 'n/a', ' N/A ', '', '   ', null, undefined]) {
+      expect(hasProductIdentity(bad)).toBe(false)
+    }
+  })
+
+  test('buildMaster never indexes an N/A row', () => {
+    const master = buildMaster([...wrappers, row('ET-TAPE-01', 'Nichia', 'NF240272009')])
+    expect(master.map(m => m.ref)).toEqual(['ET-TAPE-01'])
+  })
+
+  test('classify("N/A") never adopts a wrapper\'s ElementType', () => {
+    // This is the bug: a pendant marked Ideaworks/N/A went green against a DRIVER
+    // that was also Ideaworks/N/A, and silently took its ref.
+    const master = buildMaster(wrappers)
+    const c = classify('N/A', { master }, 'Ideaworks')
+    expect(c.status).toBe('grey')
+    expect(c.elementTypeRef).toBeNull()
+    expect(c.otherMaker).toBeUndefined()
+  })
+
+  test('a blank code likewise matches nothing', () => {
+    const master = buildMaster([row('ET-X', 'M', '')])
+    expect(classify('', { master }, 'M').elementTypeRef).toBeNull()
+  })
+
+  test('N/A is still reported as a batch duplicate if it recurs, but binds to nothing', () => {
+    const master = buildMaster(wrappers)
+    const c = classify('N/A', { master, duplicates: new Set(['N/A']) }, 'Ideaworks')
+    expect(c).toMatchObject({ status: 'blue', duplicate: true, elementTypeRef: null })
+  })
+
+  test('real products are unaffected', () => {
+    const master = buildMaster([...wrappers, row('ET-TAPE-01', 'Nichia', 'NF240272009')])
+    expect(classify('NF240272009', { master }, 'Nichia')).toMatchObject({
+      status: 'green', elementTypeRef: 'ET-TAPE-01',
+    })
   })
 })
