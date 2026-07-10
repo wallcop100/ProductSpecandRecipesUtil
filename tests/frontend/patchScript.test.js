@@ -9,18 +9,22 @@ describe('buildPsScript', () => {
     expect(s).toContain('function main(workbook: ExcelScript.Workbook)')
     expect(s).toContain('workbook.getWorksheet("Form")')
     expect(s).toContain('const col = colMap(S, ["EntityRef"') // key header always in the used list
-    expect(s).toContain('const r = rowByKey(S, col["EntityRef"], "ET-DL-01")')
+    expect(s).toContain('const r = findKey(data, col["EntityRef"], "ET-DL-01")')
     expect(s).toContain('writeCell(S, r, col["ProductCode"], "ABC-123")')
     expect(s).toContain('writeCell(S, r, col["IsTBC"], "Y")')
     expect(s).toContain('function colMap(S: ExcelScript.Worksheet') // helpers appended
     expect(s).not.toContain('apR') // no appends
+    // A lookup must NEVER be a live column search: find() on a miss scans a million
+    // cells and froze Excel. Everything reads the used range once, in memory.
+    expect(s).not.toContain('getEntireColumn')
   })
 
   test('new row appends with an append cursor and EntityType', () => {
     const s = buildPsScript([
       { elementTypeRef: 'ET-NEW', _isNew: true, updates: { ProductCode: '0012' } },
     ])
-    expect(s).toContain('let apR = S.getUsedRange().getRowCount();')
+    expect(s).toContain('const data = S.getUsedRange().getValues();')
+    expect(s).toContain('let apR = data.length;')  // reuse data, no second round-trip
     expect(s).toContain('writeCell(S, apR, col["EntityRef"], "ET-NEW")')
     expect(s).toContain('writeCell(S, apR, col["EntityType"], "ElementType")')
     // leading-zero product code stays a quoted string, not a bare number
@@ -79,7 +83,7 @@ describe('buildRsScript', () => {
       { _id: '2', positionTypeRef: 'P1', action: 'upsert',
         row: { ContextType: 'ElementType', ContextRef: 'ET-DL-01', RecipeIndex: 7, elementTypeRef: 'ET-CLIP', quantity: 1 } },
     ])
-    expect(s).toContain('let apR = S.getUsedRange().getRowCount();')
+    expect(s).toContain('let apR = data.length;')
     expect(s).toContain('writeCell(S, apR, col["EntityType"], "ElementType")')
     expect(s).toContain('writeCell(S, apR, col["EntityRef"], "ET-CLIP")')
     expect(s).toContain('writeCell(S, apR, col["Quantity"], 1)')
@@ -128,10 +132,10 @@ describe('the patches are idempotent — a second run must not duplicate', () =>
 
   test('the DesignDB patch looks the ref up before appending it', () => {
     const s = buildDbScript(dbNew)
-    expect(s).toContain('const r = rowByKey(S, col["Ref"], "ET-PS-01")')
+    expect(s).toContain('const r = findKey(data, col["Ref"], "ET-PS-01")')
     expect(s).toContain('if (r < 0)')
     // the append is inside the not-found branch
-    expect(s.indexOf('rowByKey')).toBeLessThan(s.indexOf('writeCell(S, apR'))
+    expect(s.indexOf('findKey')).toBeLessThan(s.indexOf('writeCell(S, apR'))
   })
 
   test('an existing row is updated in place, and says so in Excel', () => {
@@ -142,8 +146,8 @@ describe('the patches are idempotent — a second run must not duplicate', () =>
 
   test('the Product Spec patch has the same guard', () => {
     const s = buildPsScript(psNew)
-    expect(s).toContain('const r = rowByKey(S, col["EntityRef"], "ET-PS-01")')
-    expect(s.indexOf('rowByKey')).toBeLessThan(s.indexOf('writeCell(S, apR'))
+    expect(s).toContain('const r = findKey(data, col["EntityRef"], "ET-PS-01")')
+    expect(s.indexOf('findKey')).toBeLessThan(s.indexOf('writeCell(S, apR'))
   })
 
   test('the Recipe patch upserts on its composite key', () => {
