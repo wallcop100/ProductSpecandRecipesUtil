@@ -13,6 +13,7 @@ import { getUsedIn, getInternalItems } from '../utils/containerUtils'
 import { wrapperUsedBy } from '../utils/collectionStatus'
 import DuplicateETModal from './DuplicateETModal'
 import SharedEditGuard from './SharedEditGuard'
+import SwapEverywhereModal from './SwapEverywhereModal'
 import { familyOf } from '../utils/etRef'
 import { ACTION_ICONS } from '../utils/entityStyle'
 
@@ -133,6 +134,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   const [forking, setForking] = useState(false)
   const [guard, setGuard] = useState(null)   // { verb, run } — a destructive edit inside a shared wrapper
   const [forkContainer, setForkContainer] = useState(false)
+  const [swapping, setSwapping] = useState(false)
   const [replacing, setReplacing] = useState(false)
   const [keepFields, setKeepFields] = useState(true)
 
@@ -342,6 +344,13 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                     onClick={guarded('replace', () => { setReplacing(false); onReplace(posRef, rowId, { mode: 'new', keepFields }) })}>
                     New ↗
                   </Button>
+                  {/* "I am trying to swap ET-A for ET-B" — everywhere, not one row at a
+                      time. Previewed; a shared assembly is named before it changes. */}
+                  <Button size="sm" variant="outline-secondary" style={{ fontSize: 10, padding: '0 6px' }}
+                    onClick={() => { setReplacing(false); setSwapping(true) }}
+                    title={`Replace ${etRef} with another ElementType across this project`}>
+                    Swap everywhere…
+                  </Button>
                   <Form.Check
                     type="switch"
                     id={`replace-keep-${rowId}`}
@@ -543,6 +552,10 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
       {/* Fork the WRAPPER this row lives in, not the row's own ElementType. */}
       {forkContainer && (
         <DuplicateETModal show etRef={ownContainer} posRef={posRef} onClose={() => setForkContainer(false)} />
+      )}
+
+      {swapping && (
+        <SwapEverywhereModal show fromRef={etRef} posRef={posRef} onHide={() => setSwapping(false)} />
       )}
     </div>
   )

@@ -17,6 +17,7 @@ import { containerForPosition } from '../utils/recipePresence.js'
 import { planCollectionBulk, effectiveActions } from '../utils/collectionStatus.js'
 import { positionFamilyOf, ignoredPositionRefs } from '../utils/positionFamily.js'
 import { alignmentGaps } from '../utils/specAlignment.js'
+import { planSwap, swapPatch } from '../utils/swapPlan.js'
 import { familyOf } from '../utils/etRef.js'
 import { DIM_QTY_COMPONENTS, AUTO_CONTRACT_ITEMS } from '../utils/constants.js'
 import { CONNECTOR_TEMPLATES } from '../data/connectorTemplates.js'
@@ -1301,6 +1302,33 @@ const useStore = create((set, get) => ({
     if (projectId != null) {
       await window.electronAPI.db.setPref(projectId, 'form_captures', JSON.stringify(captures))
     }
+  },
+
+  /**
+   * swapElementType(fromRef, toRef, { scope, posRef, rowId, keepFields })
+   *
+   * "I am trying to swap ET-A for ET-B." There was no answer to that: handleReplace
+   * changes one row, so a product substitution mid-project cost one manual edit per
+   * position, with nothing to check them against afterwards.
+   *
+   * The plan (swapPlan) has already resolved the hard part — a row inside a shared
+   * wrapper is ONE assembly, claimed once, and it changes every position using it. This
+   * just applies it, in a single undo step, and registers the destination in the spec.
+   *
+   * Returns the number of rows rewritten.
+   */
+  swapElementType(fromRef, toRef, { scope = 'everywhere', posRef = null, rowId = null, keepFields = true } = {}) {
+    const { recipes } = get()
+    const plan = planSwap(recipes, fromRef, toRef, { scope, posRef, rowId })
+    if (plan.rows.length === 0) return 0
+
+    get()._pushHistory()
+    const patch = swapPatch(toRef, keepFields)
+    plan.rows.forEach((row, i) => {
+      get().updateRecipeRow(row.posRef, row._id, patch, { recordHistory: false })
+      if (i === 0) get().ensurePSRow(toRef)
+    })
+    return plan.rows.length
   },
 
   /**
