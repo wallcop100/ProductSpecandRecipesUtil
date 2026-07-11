@@ -114,6 +114,15 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
     return (!countByRef[ref] && !isIgnoredPt(pt)) ? n + 1 : n
   }, 0), [positionTypes, countByRef, positionUI, ignoredFamilySet])
 
+  // Recipe coverage. The Navigator drawer held this and nothing else the tree lacked —
+  // it was a second index of this very list — so it lives here now and the drawer is gone.
+  const scopedTotal = useMemo(
+    () => positionTypes.filter(pt => !isIgnoredPt(pt)).length,
+    [positionTypes, positionUI, ignoredFamilySet]
+  )
+  const reciped = scopedTotal - emptyCount
+  const pct = scopedTotal ? Math.round((reciped / scopedTotal) * 100) : 0
+
   // Positions the Form is not yet satisfied on. Silent when no Form is attached.
   // MUST live above the early returns below: hooks cannot be conditional, and the
   // focused-editor return fires exactly when a position is selected.
@@ -262,6 +271,20 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
         <strong className="small text-uppercase text-muted" style={{ letterSpacing: 0.5 }}>
           PositionTypes
         </strong>
+        {scopedTotal > 0 && (
+          <span className="d-inline-flex align-items-center gap-2"
+            title={`${reciped} of ${scopedTotal} in-scope positions have at least one recipe row (ignored ones don't count)`}>
+            <span style={{ fontSize: 11, color: '#555', whiteSpace: 'nowrap' }}>
+              <strong>{reciped}</strong>/{scopedTotal} reciped
+            </span>
+            <span style={{ width: 64, height: 4, background: '#e9ecef', borderRadius: 2, overflow: 'hidden' }}>
+              <span style={{
+                display: 'block', width: `${pct}%`, height: '100%',
+                background: pct === 100 ? '#198754' : '#0d6efd', transition: 'width .2s ease',
+              }} />
+            </span>
+          </span>
+        )}
         <Button
           variant={emptyCount > 0 ? 'outline-warning' : 'outline-secondary'}
           size="sm"

@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-07-11', note: 'Builder: the duplicate Navigator drawer is gone; palette opens with a position; Validation + Done? are one Status button' },
   { date: '2026-07-11', note: 'Validation no longer demands a socket/strain-relief on projects that use no connectors' },
   { date: '2026-07-11', note: 'Fix-validation step can flag a position (or its family) as "no recipe needed" right there' },
   { date: '2026-07-11', note: 'Recipe rows: one fork icon everywhere; shared-ET is a quiet icon, and never doubles up inside a wrapper' },

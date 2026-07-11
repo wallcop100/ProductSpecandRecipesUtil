@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import {
-  Button, ButtonGroup, Nav, Overlay, Popover,
+  Button, ButtonGroup, Nav, Modal,
 } from 'react-bootstrap'
 import {
   DndContext,
@@ -12,7 +12,6 @@ import {
 import useStore, { getRecipeForPosition } from '../store/useStore'
 import { getUsedIn } from '../utils/containerUtils'
 import { wrapperEditContext } from '../utils/collectionStatus'
-import ProjectNavigator from '../components/ProjectNavigator'
 import ProjectTreeView from '../components/ProjectTreeView'
 import ElementTypeTreeView from '../components/ElementTypeTreeView'
 import RecipeSection from '../components/RecipeSection'
@@ -73,6 +72,7 @@ export default function BuilderScreen({
   const reorderIngredients = useStore(s => s.reorderIngredients)
   const moveIngredientAcrossSections = useStore(s => s.moveIngredientAcrossSections)
   const runValidation = useStore(s => s.runValidation)
+  const validationResults = useStore(s => s.validationResults)
   const closeETRecipe = useStore(s => s.closeETRecipe)
   const undo = useStore(s => s.undo)
   const redo = useStore(s => s.redo)
@@ -109,11 +109,10 @@ export default function BuilderScreen({
   const [showFixer, setShowFixer] = useState(false)
   const [rightTab, setRightTab] = useState('palette')
   const [showDeleted, setShowDeleted] = useState(false)
-  const [leftOpen, setLeftOpen] = useState(false)
   const [rightOpen, setRightOpen] = useState(false)
+  const [showStatus, setShowStatus] = useState(false)          // where the project stands
+  const [statusTab, setStatusTab] = useState('done')
   const [changeSummary, setChangeSummary] = useState(false)   // open the review + copy-patches modal
-  const [showValidatePop, setShowValidatePop] = useState(false)
-  const validateBtnRef = React.useRef(null)
   const [, setActiveId] = useState(null)  // drag tracking
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)   // Transform-into-template modal (T-F4)
   const [showTags, setShowTags] = useState(false)                   // the tags modal (rules + colours)
@@ -124,8 +123,16 @@ export default function BuilderScreen({
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   )
 
+  // The palette is a source you pull FROM into a recipe, so it is only useful while a
+  // position is open — it opens with one, instead of hiding behind a handle nobody clicks.
+  useEffect(() => { if (activePositionRef) setRightOpen(true) }, [activePositionRef])
+
   const canUndo = past.length > 0
   const canRedo = future.length > 0
+
+  // Validation issues, for the toolbar's Status badge.
+  const issueCount = validationResults.length
+  const blockerCount = validationResults.filter(i => i.severity === 'error').length
 
   // Keyboard: Ctrl/Cmd+Z = undo, Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y = redo
   useEffect(() => {
@@ -462,36 +469,25 @@ export default function BuilderScreen({
           onClick={() => setShowDeleted(v => !v)}
           title={showDeleted ? 'Hide IsDeleted rows' : 'Show IsDeleted rows'}
         />
-        <span ref={validateBtnRef}>
-          <IconButton
-            variant="outline-primary"
-            bsSize="sm"
-            icon={ACTION_ICONS.validate}
-            onClick={() => setShowValidatePop(v => !v)}
-            title="Run validation"
-          />
-        </span>
-        <Overlay target={validateBtnRef.current} show={showValidatePop} placement="bottom"
-          rootClose onHide={() => setShowValidatePop(false)}>
-          <Popover style={{ maxWidth: 280 }}>
-            <Popover.Body className="py-2 px-2" style={{ fontSize: 12 }}>
-              <div className="fw-semibold mb-1">Run validation?</div>
-              <div className="text-muted mb-2" style={{ fontSize: 11 }}>
-                Checks every PositionType recipe against the rule set (missing design
-                element, connector completeness, duplicate product codes, etc.) and lists
-                any issues in the Validation panel. It doesn't change anything.
-              </div>
-              <div className="d-flex justify-content-end gap-2">
-                <Button variant="link" size="sm" style={{ fontSize: 11 }}
-                  onClick={() => setShowValidatePop(false)}>Cancel</Button>
-                <Button variant="primary" size="sm" style={{ fontSize: 11 }}
-                  onClick={() => { runValidation(); setShowValidatePop(false); setRightOpen(true); setRightTab('validation') }}>
-                  Run validation
-                </Button>
-              </div>
-            </Popover.Body>
-          </Popover>
-        </Overlay>
+        {/* Where the project stands. Validation and "Am I done?" were tabs in the palette
+            drawer — closed by default, so nobody saw them. They are answers about the
+            project, so they belong in the chrome, carrying their own count. */}
+        <Button
+          variant={blockerCount > 0 ? 'danger' : issueCount > 0 ? 'outline-warning' : 'outline-primary'}
+          size="sm"
+          className="d-inline-flex align-items-center gap-1"
+          onClick={() => { runValidation(); setShowStatus(true) }}
+          title="Validation and readiness — where the project stands"
+        >
+          <MaterialIcon name={ACTION_ICONS.validate} size={15} />
+          Status
+          {issueCount > 0 && (
+            <span className="badge rounded-pill"
+              style={{ background: blockerCount > 0 ? '#fff' : '#997404', color: blockerCount > 0 ? '#dc3545' : '#fff', fontSize: 10 }}>
+              {issueCount}
+            </span>
+          )}
+        </Button>
         <IconButton
           variant="outline-primary"
           bsSize="sm"
@@ -527,7 +523,10 @@ export default function BuilderScreen({
         <Breadcrumbs />
       </div>
 
-      {/* Main body: canvas with drawer toggles */}
+      {/* Main body: canvas + the palette drawer.
+          There is no left drawer. It held a Navigator that was a second, flatter index of
+          the very tree in the centre — same positions, same filter — so it was deleted and
+          its one unique reading, recipe coverage, now sits in the tree's own header. */}
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -535,31 +534,6 @@ export default function BuilderScreen({
         onDragEnd={handleDragEnd}
       >
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
-
-        {/* Left drawer toggle */}
-        <button
-          onClick={() => setLeftOpen(v => !v)}
-          title={leftOpen ? 'Close navigator' : 'Open navigator'}
-          style={{
-            position: 'absolute',
-            left: leftOpen ? 260 : 0,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            transition: 'left 0.2s ease',
-            zIndex: 10,
-            background: '#f8f9fa',
-            border: '1px solid #dee2e6',
-            borderLeft: 'none',
-            borderRadius: '0 4px 4px 0',
-            padding: '8px 4px',
-            cursor: 'pointer',
-            lineHeight: 1,
-            fontSize: 13,
-            color: '#555',
-          }}
-        >
-          <MaterialIcon name={leftOpen ? 'chevron_left' : 'chevron_right'} size={16} />
-        </button>
 
         {/* Right drawer toggle */}
         <button
@@ -585,28 +559,6 @@ export default function BuilderScreen({
         >
           <MaterialIcon name={rightOpen ? 'chevron_right' : 'chevron_left'} size={16} />
         </button>
-
-        {/* Left drawer: navigator — in-flow so it pushes the canvas */}
-        <div
-          style={{
-            width: leftOpen ? 260 : 0,
-            flexShrink: 0,
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-            background: '#f8f9fa',
-            borderRight: leftOpen ? '1px solid #dee2e6' : 'none',
-            transition: 'width 0.2s ease',
-          }}
-        >
-          <div className="d-flex align-items-center justify-content-between px-3 py-2 border-bottom" style={{ flexShrink: 0 }}>
-            <span style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#555' }}>Navigator</span>
-            <button className="btn btn-link p-0" style={{ color: '#888', lineHeight: 1 }} onClick={() => setLeftOpen(false)} title="Close navigator" aria-label="Close navigator"><MaterialIcon name="close" size={18} /></button>
-          </div>
-          <div style={{ flex: 1, overflow: 'hidden' }}>
-            <ProjectNavigator />
-          </div>
-        </div>
 
         {/* Centre: project tree outliner (or ET internal editor) */}
         <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }} data-debug-id="BuilderScreen/Centre (main surface)">
@@ -725,12 +677,8 @@ export default function BuilderScreen({
                   <MaterialIcon name={ACTION_ICONS.favorite} size={14} />
                 </Nav.Link>
               </Nav.Item>
-              <Nav.Item>
-                <Nav.Link eventKey="validation" className="py-1 px-2 small">Validation</Nav.Link>
-              </Nav.Item>
-              <Nav.Item>
-                <Nav.Link eventKey="done" className="py-1 px-2 small" title="Am I done?">Done?</Nav.Link>
-              </Nav.Item>
+              {/* Validation and "Done?" used to be tabs here. They are project answers, not
+                  things you drag into a recipe — they live in the toolbar's Status button. */}
             </Nav>
             <button className="btn btn-link p-0 me-2" style={{ color: '#888', lineHeight: 1 }} onClick={() => setRightOpen(false)} title="Close palette" aria-label="Close palette"><MaterialIcon name="close" size={18} /></button>
           </div>
@@ -757,20 +705,6 @@ export default function BuilderScreen({
               />
             )}
             {rightTab === 'favorites' && <FavoritesPanel />}
-            {rightTab === 'validation' && (
-              <ValidationPanel
-                onOpenProductSpec={onOpenProductSpec}
-                onOpenFixer={() => setShowFixer(true)}
-              />
-            )}
-            {/* The end state was computable and never stated. Now it is stated. */}
-            {rightTab === 'done' && (
-              <ReadinessPanel
-                onOpenValidation={() => { runValidation(); setRightTab('validation') }}
-                onOpenExport={() => setChangeSummary(true)}
-                onOpenPosition={ref => focusPosition(ref)}
-              />
-            )}
           </div>
         </div>
       </div>
@@ -800,6 +734,39 @@ export default function BuilderScreen({
         onReplaceInReview={handleReplaceFromReview}
         initialRefs={reviewInitialRefs}
       />
+
+      {/* Status: the two panels that used to hide in the palette drawer. Same panels,
+          somewhere you can actually find them. */}
+      <Modal show={showStatus} onHide={() => setShowStatus(false)} size="lg" centered scrollable>
+        <Modal.Header closeButton>
+          <Modal.Title style={{ fontSize: 15 }} className="d-flex align-items-center gap-2">
+            <MaterialIcon name={ACTION_ICONS.validate} size={18} /> Where the project stands
+          </Modal.Title>
+        </Modal.Header>
+        <Nav variant="tabs" activeKey={statusTab} onSelect={k => setStatusTab(k)} className="px-3 pt-2">
+          <Nav.Item><Nav.Link eventKey="done" className="py-1 px-3 small">Am I done?</Nav.Link></Nav.Item>
+          <Nav.Item>
+            <Nav.Link eventKey="validation" className="py-1 px-3 small">
+              Validation{issueCount > 0 ? ` (${issueCount})` : ''}
+            </Nav.Link>
+          </Nav.Item>
+        </Nav>
+        <Modal.Body>
+          {statusTab === 'done' && (
+            <ReadinessPanel
+              onOpenValidation={() => { runValidation(); setStatusTab('validation') }}
+              onOpenExport={() => { setShowStatus(false); setChangeSummary(true) }}
+              onOpenPosition={ref => { setShowStatus(false); focusPosition(ref) }}
+            />
+          )}
+          {statusTab === 'validation' && (
+            <ValidationPanel
+              onOpenProductSpec={ref => { setShowStatus(false); onOpenProductSpec(ref) }}
+              onOpenFixer={() => { setShowStatus(false); setShowFixer(true) }}
+            />
+          )}
+        </Modal.Body>
+      </Modal>
 
       <ValidationFixModal
         show={showFixer}
