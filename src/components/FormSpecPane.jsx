@@ -88,6 +88,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
   const dismissDivergence = useStore(s => s.dismissDivergence)
   const requestScreen = useStore(s => s.requestScreen)
   const setActivePosition = useStore(s => s.setActivePosition)
+  const requestPaletteTab = useStore(s => s.requestPaletteTab)
   const promotePendingCapture = useStore(s => s.promotePendingCapture)
 
   const [ticked, setTicked] = useState(() => new Set())
@@ -176,8 +177,18 @@ export default function FormSpecPane({ posRef, embedded = false }) {
         <div className="text-muted fst-italic" style={{ fontSize: 11 }}>
           The Form says nothing about {posRef}.
         </div>
+        {/* Silence is not an answer. It may well be a technical-only position — so offer
+            the thing that settles it: what do comparable positions actually do? */}
+        <div className="text-muted mt-1" style={{ fontSize: 10, lineHeight: 1.5 }}>
+          It may be a technical-only position. Compare it with the ones the Form does describe.
+        </div>
+        <Button size="sm" variant="outline-secondary" className="mt-2" style={{ fontSize: 10 }}
+          onClick={() => requestPaletteTab('similar')}
+          title={`Show positions like ${posRef} — same family, tags and recipe`}>
+          <MaterialIcon name="group" size={12} /> See positions like this →
+        </Button>
         {nextUnreconciled && (
-          <Button size="sm" variant="outline-primary" className="mt-2" style={{ fontSize: 10 }}
+          <Button size="sm" variant="outline-primary" className="mt-2 ms-2" style={{ fontSize: 10 }}
             onClick={() => setActivePosition(nextUnreconciled)}>
             Next unreconciled: {nextUnreconciled} →
           </Button>

@@ -1651,3 +1651,47 @@ describe('dismissDivergence', () => {
     expect(useStore.getState().formCaptures.divergence).toBeUndefined()
   })
 })
+
+/**
+ * "The Form says nothing about A02wE" — it may be a technical variant of a position the
+ * Form DOES describe, so you borrow that one's rows. Borrowing must not clobber whatever
+ * the user had on the row clipboard.
+ */
+describe('copyRecipeFrom — borrow a comparable position\'s rows', () => {
+  const rows = [
+    { _id: 'a', PositionTypeRef: 'A02r', ContextType: 'PositionType', ContextRef: 'A02r', ElementTypeRef: 'ET-DL-01', Quantity: 1 },
+    { _id: 'b', PositionTypeRef: 'A02r', ContextType: 'PositionType', ContextRef: 'A02r', ElementTypeRef: 'ET-SOCK-5P', Quantity: 2 },
+  ]
+
+  test('copies every row of the source into the target', () => {
+    resetStore({ recipes: rows, rowClipboard: null })
+    const n = useStore.getState().copyRecipeFrom('A02r', 'A02wE')
+    expect(n).toBe(2)
+    const got = useStore.getState().recipes
+      .filter(r => (r.PositionTypeRef || r.positionTypeRef) === 'A02wE')
+      .map(r => r.ElementTypeRef || r.elementTypeRef)
+    expect(got).toEqual(expect.arrayContaining(['ET-DL-01', 'ET-SOCK-5P']))
+  })
+
+  test('etRefs limits it to one row', () => {
+    resetStore({ recipes: rows, rowClipboard: null })
+    expect(useStore.getState().copyRecipeFrom('A02r', 'A02wE', { etRefs: ['ET-SOCK-5P'] })).toBe(1)
+    const got = useStore.getState().recipes
+      .filter(r => (r.PositionTypeRef || r.positionTypeRef) === 'A02wE')
+      .map(r => r.ElementTypeRef || r.elementTypeRef)
+    expect(got).toEqual(['ET-SOCK-5P'])
+  })
+
+  test('it never touches the row clipboard', () => {
+    const clip = { parts: [{ section: 'position', elementTypeRef: 'ET-KEEP', quantity: 1 }], count: 1, label: 'mine' }
+    resetStore({ recipes: rows, rowClipboard: clip })
+    useStore.getState().copyRecipeFrom('A02r', 'A02wE')
+    expect(useStore.getState().rowClipboard).toBe(clip)
+  })
+
+  test('an empty or unknown source copies nothing', () => {
+    resetStore({ recipes: rows, rowClipboard: null })
+    expect(useStore.getState().copyRecipeFrom('NOPE', 'A02wE')).toBe(0)
+    expect(useStore.getState().copyRecipeFrom('A02r', '')).toBe(0)
+  })
+})

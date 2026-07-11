@@ -23,6 +23,7 @@ import FormProgressChip from '../components/FormProgressChip'
 import ElementPalette from '../components/ElementPalette'
 import ValidationPanel from '../components/ValidationPanel'
 import ReadinessPanel from '../components/ReadinessPanel'
+import SimilarPositionsPanel from '../components/SimilarPositionsPanel'
 import TagRulesModal from '../components/TagRulesModal'
 import TemplatePicker from '../components/TemplatePicker'
 import PasteMergeModal from '../components/PasteMergeModal'
@@ -73,6 +74,8 @@ export default function BuilderScreen({
   const moveIngredientAcrossSections = useStore(s => s.moveIngredientAcrossSections)
   const runValidation = useStore(s => s.runValidation)
   const validationResults = useStore(s => s.validationResults)
+  const pendingPaletteTab = useStore(s => s.pendingPaletteTab)
+  const consumePendingPaletteTab = useStore(s => s.consumePendingPaletteTab)
   const closeETRecipe = useStore(s => s.closeETRecipe)
   const undo = useStore(s => s.undo)
   const redo = useStore(s => s.redo)
@@ -126,6 +129,14 @@ export default function BuilderScreen({
   // The palette is a source you pull FROM into a recipe, so it is only useful while a
   // position is open — it opens with one, instead of hiding behind a handle nobody clicks.
   useEffect(() => { if (activePositionRef) setRightOpen(true) }, [activePositionRef])
+
+  // The Form pane is nested too deep to reach this state, so it asks via the store.
+  useEffect(() => {
+    if (!pendingPaletteTab) return
+    setRightOpen(true)
+    setRightTab(pendingPaletteTab)
+    consumePendingPaletteTab()
+  }, [pendingPaletteTab, consumePendingPaletteTab])
 
   const canUndo = past.length > 0
   const canRedo = future.length > 0
@@ -677,6 +688,12 @@ export default function BuilderScreen({
                   <MaterialIcon name={ACTION_ICONS.favorite} size={14} />
                 </Nav.Link>
               </Nav.Item>
+              {/* A comparable position is just another source you can pull rows from —
+                  the answer to "the Form says nothing about A02wE, is it a variant?". */}
+              <Nav.Item>
+                <Nav.Link eventKey="similar" className="py-1 px-2 small"
+                  title="Positions like this one">Like this</Nav.Link>
+              </Nav.Item>
               {/* Validation and "Done?" used to be tabs here. They are project answers, not
                   things you drag into a recipe — they live in the toolbar's Status button. */}
             </Nav>
@@ -705,6 +722,7 @@ export default function BuilderScreen({
               />
             )}
             {rightTab === 'favorites' && <FavoritesPanel />}
+            {rightTab === 'similar' && <SimilarPositionsPanel posRef={activePositionRef} />}
           </div>
         </div>
       </div>

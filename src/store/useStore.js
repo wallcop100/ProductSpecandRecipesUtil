@@ -419,6 +419,9 @@ const useStore = create((set, get) => ({
   // pendingReviewRefs — the pane is nested too far to reach App's navigateTo.
   pendingScreen: null,
 
+  // Likewise, a one-shot request to open a palette-drawer tab (BuilderScreen consumes it).
+  pendingPaletteTab: null,
+
   // Undo/redo history — snapshots of { recipes, psRows, rsChanges, psChanges }
   past: [],
   future: [],
@@ -1411,6 +1414,13 @@ const useStore = create((set, get) => ({
   consumePendingScreen() { set({ pendingScreen: null }) },
 
   /**
+   * The Form pane sits four deep (tree → focused editor → recipe editor → pane), so it
+   * cannot reach BuilderScreen's drawer state. Same one-shot hand-off as pendingScreen.
+   */
+  requestPaletteTab(tab) { set({ pendingPaletteTab: tab }) },
+  consumePendingPaletteTab() { set({ pendingPaletteTab: null }) },
+
+  /**
    * dismissDivergence(wrapper) — the fork question for this wrapper is settled
    * (forked, or accepted as-is). A re-import recomputes it from the fresh diff.
    */
@@ -1679,6 +1689,28 @@ const useStore = create((set, get) => ({
   /** Copy the currently-selected rows into the clipboard. */
   copySelectedRows() {
     return get().copyRows(get().selectedRowIds)
+  },
+
+  /**
+   * copyRecipeFrom(sourceRef, targetRef, { merge, etRefs })
+   * Pull another position's rows straight into this one — the "A02wE is a technical
+   * variant of A02r" move. Additive, and it deliberately does NOT touch the row
+   * clipboard, so borrowing from a sibling never clobbers what the user had copied.
+   * `etRefs` (optional, lowercased) limits it to specific ElementTypes — one row at a time.
+   */
+  copyRecipeFrom(sourceRef, targetRef, { merge = true, etRefs = null } = {}) {
+    if (!sourceRef || !targetRef) return 0
+    const { recipes } = get()
+    const want = etRefs ? new Set(etRefs.map(r => r.toLowerCase())) : null
+    const rows = recipes.filter(r => {
+      if ((r.PositionTypeRef || r.positionTypeRef) !== sourceRef) return false
+      if (!want) return true
+      return want.has((r.ElementTypeRef || r.elementTypeRef || '').toLowerCase())
+    })
+    const parts = get()._rowsToParts(rows)
+    if (parts.length === 0) return 0
+    get().addConnection(targetRef, parts, { merge })
+    return parts.length
   },
 
   /** Copy a whole position's recipe (all sections) into the clipboard. */
