@@ -417,8 +417,27 @@ describe('runValidation — valid recipe', () => {
 describe('LOCAL_DRIVER_REQUIREMENTS', () => {
   const localUI = { 'PT-DL-LOCAL-01': { tags: ['DL', 'Local'] } }
 
-  test('warns when a Local position lacks driver, site socket, and strain relief', () => {
+  /**
+   * The site socket and the SR ARE the connector template's first-fix kit. A project that
+   * never set connectors up has no such ref anywhere, so asking for one it has no concept
+   * of is noise — it flagged 'A02m has no site-side strain relief' on a project with no
+   * connector templates at all. The driver is not connector-derived and still stands.
+   */
+  test('with no connectors anywhere, only the driver is demanded — not the first-fix kit', () => {
     const rsRows = [makeRsRow({ elementTypeRef: 'ET-DL-SPOT-01', isDesign: 'Y' })]
+    const issues = runValidation(dbData, [], rsRows, localUI)
+    const rules = issues.map(i => i.rule)
+    expect(rules).toContain('LOCAL_MISSING_DRIVER')
+    expect(rules).not.toContain('LOCAL_MISSING_SITE_SOCKET')
+    expect(rules).not.toContain('LOCAL_MISSING_STRAIN_RELIEF')
+  })
+
+  test('once the project uses connectors, a Local position missing the kit is flagged', () => {
+    const rsRows = [
+      makeRsRow({ elementTypeRef: 'ET-DL-SPOT-01', isDesign: 'Y' }),
+      // a DIFFERENT position carries a connector — so this project does do connectors
+      makeRsRow({ positionTypeRef: 'PT-OTHER', contextRef: 'PT-OTHER', elementTypeRef: 'ET-SOCK-5P-01' }),
+    ]
     const issues = runValidation(dbData, [], rsRows, localUI)
     const rules = issues.map(i => i.rule)
     expect(rules).toContain('LOCAL_MISSING_DRIVER')

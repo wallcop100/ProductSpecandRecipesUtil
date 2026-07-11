@@ -368,9 +368,22 @@ function checkMissingClipsDimQty(rsRows, positionUI) {
 // A local-driver position (tag 'Local') needs a driver in its assembly and a
 // site-side socket + strain relief at position level (the first-fix kit).
 // Only checked once a recipe has been started, to avoid noise on empty rows.
+//
+// The socket and the strain relief ARE the connector template's first-fix kit
+// (see connectorTemplates.js: socket + SR at position level, plug inside the DL).
+// A project that has never set connectors up carries no such ref anywhere, and
+// demanding one it has no concept of is pure noise — so those two checks wait
+// until the project demonstrably uses connectors, the same guard the IP-rated
+// connector rule already applies. The DRIVER check is not connector-derived and
+// always stands.
 // ---------------------------------------------------------------------------
+const CONNECTOR_KIT_TOKENS = [...CONNECTOR_TOKENS, ...STRAIN_RELIEF_TOKENS]
+
 function checkLocalDriverRequirements(rsRows, positionUI) {
   const issues = []
+
+  // Does this project do connectors at all? One connector ref anywhere is enough.
+  const usesConnectors = (rsRows || []).some(r => refHasToken(refOf(r), CONNECTOR_KIT_TOKENS))
 
   for (const [ref, ui] of Object.entries(positionUI || {})) {
     const tags = ui.tags || []
@@ -391,6 +404,8 @@ function checkLocalDriverRequirements(rsRows, positionUI) {
         ref,
       })
     }
+    if (!usesConnectors) continue   // no connectors in this project — nothing to be missing
+
     if (!posRows.some(r => refHasToken(refOf(r), SOCKET_TOKENS))) {
       issues.push({
         severity: 'warning',
