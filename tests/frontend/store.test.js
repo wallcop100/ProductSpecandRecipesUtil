@@ -196,11 +196,11 @@ describe('loadProject', () => {
     })
 
     const state = useStore.getState()
-    // loadProject appends the built-in CONNECTOR_TEMPLATES, so the loaded
-    // template is present (first) alongside those.
+    // loadProject no longer injects the built-in connector sets — the project's own
+    // templates are all there is.
+    expect(state.templates).toHaveLength(1)
     expect(state.templates[0].id).toBe(TEMPLATE_ID)
-    expect(state.templates.some(t => t.id === TEMPLATE_ID)).toBe(true)
-    expect(state.templates.length).toBeGreaterThan(1)
+    expect(state.templates.some(t => t.scope === 'connector')).toBe(false)
     expect(state.slotMappings).toEqual(slotMappingsData)
     expect(state.slotMappings[TEMPLATE_ID].DESIGN_ELEMENT).toBe('ET-DL-SPOT-01')
   })

@@ -6,10 +6,10 @@ const byId = id => GLOBAL_TEMPLATES.find(t => t.id === id)
 const keysOf = id => byId(id).ingredients.map(i => i.slotKey)
 
 /**
- * Sockets, plugs and strain reliefs are the connector wizard's job now
- * (CONNECTOR_TEMPLATES + ConnectorWizardModal). The built-in templates used to prime the
- * same rows, so every applied template shipped a half-built connector set for the wizard
- * to reconcile. They now carry only what the wizard cannot give you.
+ * Sockets, plugs and strain reliefs are the Connectors screen's job now (ConnectorsScreen
+ * + ConnectorWizardModal). The built-in templates used to prime the same rows, so every
+ * applied template shipped a half-built connector set for the wizard to reconcile. They
+ * now carry only what the wizard cannot give you.
  */
 const CONNECTOR_SLOTS = [
   'SITE_SOCKET', 'SITE_SR', 'DRIVER_PLUG', 'DC_SR', 'LIN_SOCKET', 'LIN_PLUG',

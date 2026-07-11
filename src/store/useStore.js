@@ -22,7 +22,6 @@ import { guessCollection, missingFamilies } from '../utils/collectionGuess.js'
 import { hasProductIdentity } from '../utils/productCodes.js'
 import { familyOf } from '../utils/etRef.js'
 import { DIM_QTY_COMPONENTS, AUTO_CONTRACT_ITEMS } from '../utils/constants.js'
-import { CONNECTOR_TEMPLATES } from '../data/connectorTemplates.js'
 
 // Max number of undo snapshots retained.
 const HISTORY_LIMIT = 50
@@ -498,7 +497,11 @@ const useStore = create((set, get) => ({
       positionTypes: positionTypes ?? [],
       psRows: stampedPsRows,
       recipes: stampedRecipes,
-      templates: [...(templates ?? []), ...CONNECTOR_TEMPLATES],
+      // No built-in connector sets are injected any more. The old CONNECTOR_TEMPLATES were
+      // a fixed grid (2/3/4/5-Pin × Local/Remote-CC/Remote-CV) of abstract, unmapped refs
+      // that showed up as just another template group. The Connectors screen and its wizard
+      // do that job properly, against the project's real ElementTypes.
+      templates: templates ?? [],
       slotMappings: slotMappings ?? {},
       positionUI: positionUI ?? {},
       // Upgrade legacy single-condition rules to the conditional shape on the way in,
@@ -1853,12 +1856,17 @@ const useStore = create((set, get) => ({
   },
 
   /**
-   * applyConnectorTemplate(posRef, templateId)
-   * Additively inserts connector rows into an existing recipe.
-   * Uses addConnection so each ingredient goes to its declared section.
-   * Never replaces existing rows.
+   * applyTemplateAdditive(posRef, templateId)
+   * Adds a template's rows to an existing recipe rather than replacing it (applyTemplate
+   * does the replacing). Each ingredient goes to its declared section, via addConnection.
+   *
+   * Was applyConnectorTemplate, back when the built-in connector sets existed — those are
+   * gone (the Connectors screen owns that now) and the behaviour was never connector-
+   * specific. NOTE it takes the ET ref straight from `slotLabel`, which only holds one for
+   * a template whose slots ARE refs; a template with human slot labels needs applyTemplate,
+   * which resolves slots properly through slotMappings.
    */
-  applyConnectorTemplate(posRef, templateId) {
+  applyTemplateAdditive(posRef, templateId) {
     const { templates } = get()
     const template = templates.find(t => t.id === templateId)
     if (!template || !posRef) return

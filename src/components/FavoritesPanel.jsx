@@ -18,7 +18,7 @@ export default function FavoritesPanel() {
   const addFavorite = useStore(s => s.addFavorite)
   const drawFavoriteElement = useStore(s => s.drawFavoriteElement)
   const togglePositionTag = useStore(s => s.togglePositionTag)
-  const applyConnectorTemplate = useStore(s => s.applyConnectorTemplate)
+  const applyTemplateAdditive = useStore(s => s.applyTemplateAdditive)
 
   const [tagInput, setTagInput] = useState('')
 
@@ -49,7 +49,7 @@ export default function FavoritesPanel() {
         {globalTemplates.length === 0 && <Empty>Save a template to your library to see it here.</Empty>}
         {globalTemplates.map(t => (
           <Row key={t.id}
-            onDraw={() => !noTarget && applyConnectorTemplate(activePositionRef, t.id)}
+            onDraw={() => !noTarget && applyTemplateAdditive(activePositionRef, t.id)}
             drawTitle={targetHint} noTarget={noTarget}
           >
             <MaterialIcon name="dashboard_customize" size={14} className="text-primary" />

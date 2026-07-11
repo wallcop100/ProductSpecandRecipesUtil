@@ -369,8 +369,8 @@ function checkMissingClipsDimQty(rsRows, positionUI) {
 // site-side socket + strain relief at position level (the first-fix kit).
 // Only checked once a recipe has been started, to avoid noise on empty rows.
 //
-// The socket and the strain relief ARE the connector template's first-fix kit
-// (see connectorTemplates.js: socket + SR at position level, plug inside the DL).
+// The socket and the strain relief ARE the first-fix kit the Connectors screen
+// configures (socket + SR at position level, plug inside the DL).
 // A project that has never set connectors up carries no such ref anywhere, and
 // demanding one it has no concept of is pure noise — so those two checks wait
 // until the project demonstrably uses connectors, the same guard the IP-rated

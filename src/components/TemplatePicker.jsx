@@ -5,12 +5,14 @@ import MaterialIcon from './MaterialIcon'
 import { ACTION_ICONS } from '../utils/entityStyle'
 
 /**
- * TemplatePicker — browsable list of templates with Apply / Add-connector buttons.
+ * TemplatePicker — browsable list of templates. Applying one replaces the full recipe,
+ * so it confirms first when the position already has rows.
  *
- * Connector templates (scope='connector') appear in their own section at the
- * top. Applying them is additive (addConnection) and never replaces existing
- * rows. Regular templates (scope='project' / 'global') replace the full recipe
- * and show a confirmation when the position already has rows.
+ * There is no "Connector Sets" section any more. It listed a fixed grid of built-ins
+ * (2/3/4/5-Pin × Local / Remote-CC / Remote-CV) whose refs were abstract placeholders no
+ * project ever mapped to a real product. The Connectors screen and its wizard configure
+ * connectors against the project's actual ElementTypes; a second, dumber copy of the same
+ * idea sitting in the template list only ever added rows nobody could buy.
  *
  * Props:
  *   posRef      — active position ref
@@ -21,11 +23,9 @@ import { ACTION_ICONS } from '../utils/entityStyle'
 export default function TemplatePicker({ posRef, activeTags, hasRows, onApply }) {
   const templates               = useStore(s => s.templates)
   const applyTemplate           = useStore(s => s.applyTemplate)
-  const applyConnectorTemplate  = useStore(s => s.applyConnectorTemplate)
 
   const [search, setSearch]           = useState('')
   const [pendingApply, setPendingApply] = useState(null)
-  const [connectorOpen, setConnectorOpen] = useState(true)
 
   function parseTags(raw) {
     if (Array.isArray(raw)) return raw
@@ -39,17 +39,8 @@ export default function TemplatePicker({ posRef, activeTags, hasRows, onApply })
 
   const q = search.toLowerCase().trim()
 
-  const connectorTemplates = useMemo(() =>
-    templates
-      .filter(t => t.scope === 'connector')
-      .filter(t => !q || t.name.toLowerCase().includes(q))
-      .map(t => ({ ...t, _isMatch: isMatch(t) }))
-      .sort((a, b) => (b._isMatch ? 1 : 0) - (a._isMatch ? 1 : 0))
-  , [templates, q, activeTags])
-
   const enriched = useMemo(() =>
     templates
-      .filter(t => t.scope !== 'connector')
       .filter(t => !q || t.name.toLowerCase().includes(q))
       .map(t => ({ ...t, _tags: parseTags(t.applicable_tags), _isMatch: isMatch(t) }))
   , [templates, q, activeTags])
@@ -76,11 +67,6 @@ export default function TemplatePicker({ posRef, activeTags, hasRows, onApply })
     applyTemplate(posRef, templateId)
     onApply(templateId)
     setPendingApply(null)
-  }
-
-  function handleAddConnector(templateId) {
-    if (!posRef) return
-    applyConnectorTemplate(posRef, templateId)
   }
 
   return (
@@ -112,47 +98,9 @@ export default function TemplatePicker({ posRef, activeTags, hasRows, onApply })
       )}
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
-
-        {/* ── Connector templates ─────────────────────────────────────── */}
-        {connectorTemplates.length > 0 && (
-          <div
-            className="mb-3 rounded"
-            style={{ border: '1px solid #c3e6cb', background: '#f0fff4' }}
-          >
-            {/* Section header */}
-            <div
-              className="d-flex align-items-center gap-1 px-2 py-1"
-              style={{ cursor: 'pointer', userSelect: 'none', borderBottom: '1px solid #c3e6cb' }}
-              onClick={() => setConnectorOpen(v => !v)}
-            >
-              <MaterialIcon name={connectorOpen ? ACTION_ICONS.expand : ACTION_ICONS.collapse} size={13} style={{ width: 13 }} />
-              <span
-                className="text-uppercase fw-bold"
-                style={{ fontSize: 10, letterSpacing: 0.5, color: '#276749' }}
-              >
-                Connector Sets
-              </span>
-              <span className="text-muted ms-1" style={{ fontSize: 10, fontWeight: 400 }}>
-                — additive, won't replace existing rows
-              </span>
-            </div>
-
-            {connectorOpen && (
-              <div className="p-1">
-                {connectorTemplates.map(tpl => (
-                  <ConnectorCard
-                    key={tpl.id}
-                    tpl={tpl}
-                    posRef={posRef}
-                    onAdd={() => handleAddConnector(tpl.id)}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── Regular templates ───────────────────────────────────────── */}
+        {/* The "Connector Sets" group lived here: a fixed grid of 2/3/4/5-Pin × Local /
+            Remote-CC / Remote-CV built from abstract refs no project ever mapped. The
+            Connectors screen and its wizard do that against real ElementTypes. */}
         {posRef && projectTemplates.length > 0 && (
           <TemplateGroup label="Project Templates" templates={projectTemplates} onApply={handleApply} />
         )}
@@ -161,75 +109,13 @@ export default function TemplatePicker({ posRef, activeTags, hasRows, onApply })
           <TemplateGroup label="Global Templates" templates={globalTemplates} onApply={handleApply} />
         )}
 
-        {connectorTemplates.length === 0 && enriched.length === 0 && (
+        {enriched.length === 0 && (
           <div className="text-muted small text-center py-3">No templates found.</div>
         )}
       </div>
     </div>
   )
 }
-
-// ── Connector card ────────────────────────────────────────────────────────────
-
-function ConnectorCard({ tpl, posRef, onAdd }) {
-  const ingredients = Array.isArray(tpl.ingredients)
-    ? tpl.ingredients
-    : (JSON.parse(tpl.ingredients || '[]'))
-
-  const positionETs   = ingredients.filter(i => i.section === 'position').map(i => i.slotLabel)
-  const dlInternalETs = ingredients.filter(i => i.section === 'dl_internal').map(i => i.slotLabel)
-
-  return (
-    <div
-      style={{
-        padding: '5px 8px',
-        marginBottom: 3,
-        borderRadius: 4,
-        background: tpl._isMatch ? '#d1fae5' : '#fff',
-        border: `1px solid ${tpl._isMatch ? '#6ee7b7' : '#dee2e6'}`,
-        fontSize: 12,
-      }}
-    >
-      <div className="d-flex align-items-center justify-content-between mb-1">
-        <span className="fw-semibold" style={{ fontSize: 12 }}>{tpl.name}</span>
-        {tpl._isMatch && (
-          <span className="d-inline-flex align-items-center gap-1" style={{ fontSize: 11, color: '#059669', fontWeight: 600 }}><MaterialIcon name={ACTION_ICONS.complete} size={13} /> match</span>
-        )}
-      </div>
-
-      {/* Show the section split visually */}
-      <div style={{ fontSize: 10, color: '#555', lineHeight: 1.6 }}>
-        {positionETs.length > 0 && (
-          <div>
-            <span className="text-muted">Position: </span>
-            {positionETs.join(', ')}
-          </div>
-        )}
-        {dlInternalETs.length > 0 && (
-          <div>
-            <span className="text-muted">DL internal: </span>
-            {dlInternalETs.join(', ')}
-          </div>
-        )}
-      </div>
-
-      <div className="d-flex justify-content-end mt-1">
-        <Button
-          variant={tpl._isMatch ? 'success' : 'outline-secondary'}
-          size="sm"
-          style={{ padding: '1px 10px', fontSize: 11 }}
-          disabled={!posRef}
-          onClick={onAdd}
-          title={posRef ? 'Add connector rows to this position' : 'Select a position first'}
-        >
-          + Add
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-// ── Regular template components ───────────────────────────────────────────────
 
 function TemplateGroup({ label, templates, onApply }) {
   return (
