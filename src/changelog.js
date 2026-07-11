@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-07-11', note: 'Built-in templates drop their connector slots — the connector wizard owns sockets, plugs and strain reliefs now' },
   { date: '2026-07-11', note: '"Like this" palette tab: when the Form is silent on a position, compare and borrow rows from comparable ones' },
   { date: '2026-07-11', note: 'Builder: the duplicate Navigator drawer is gone; palette opens with a position; Validation + Done? are one Status button' },
   { date: '2026-07-11', note: 'Validation no longer demands a socket/strain-relief on projects that use no connectors' },

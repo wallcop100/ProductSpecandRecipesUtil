@@ -80,6 +80,28 @@ function migrate() {
     rebuild()
     db.pragma('foreign_keys = ON')
   }
+
+  resyncBuiltInTemplates()
+}
+
+/**
+ * The ten built-in global templates are code-owned and read-only in the editor
+ * (TemplateEditorScreen disables them), so the DB copy should simply track the code.
+ * seedGlobalTemplates() only fires on an empty library, which would leave every existing
+ * install stuck with the old definitions — the ones that still carried connector slots.
+ *
+ * Rewrites ONLY these ten ids. A template you saved to your library has its own id and is
+ * never touched.
+ */
+function resyncBuiltInTemplates() {
+  const stmt = db.prepare(
+    `UPDATE templates SET name = ?, applicable_tags = ?, ingredients = ?, sort_order = ?, updated_at = ?
+       WHERE id = ? AND scope = 'global'`
+  )
+  const ts = now()
+  for (const t of GLOBAL_TEMPLATES) {
+    stmt.run(t.name, JSON.stringify(t.applicable_tags), JSON.stringify(t.ingredients), t.sort_order, ts, t.id)
+  }
 }
 
 function getDb() {
@@ -709,113 +731,87 @@ function makeSlot({
 // Per-template ingredient lists
 // ---------------------------------------------------------------------------
 
+// The built-in templates carry NO connector slots. Sockets, plugs and strain reliefs are
+// the connector wizard's job now (CONNECTOR_TEMPLATES + ConnectorWizardModal), and having
+// both prime the same rows meant every applied template shipped a half-built connector set
+// that the wizard then had to reconcile. What is left here is the part the wizard cannot
+// give you: the design element, the mounting, the driver, and the linear make-up.
+
 // 1. DL+Local — Local Downlight
 const ingredientsDLLocal = [
   makeSlot({ slotKey: 'DESIGN_ELEMENT', slotLabel: 'DL Virtual Element',  section: 'position',    recipeIndex: 1,  isDesign: 'Y' }),
-  makeSlot({ slotKey: 'SITE_SOCKET',    slotLabel: 'Site Socket',          section: 'position',    recipeIndex: 2,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'SITE_SR',        slotLabel: 'Site Strain Relief',   section: 'position',    recipeIndex: 3,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'MOUNT_COLLAR',   slotLabel: 'Mounting Collar',      section: 'position',    recipeIndex: 4,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'LOCAL_DRIVER',   slotLabel: 'Local Driver',         section: 'dl_internal', recipeIndex: 5,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'DRIVER_PLUG',    slotLabel: 'Driver Plug',          section: 'dl_internal', recipeIndex: 6,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'DC_SOCKET',      slotLabel: 'DC Socket',            section: 'dl_internal', recipeIndex: 7,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'DC_PLUG',        slotLabel: 'DC Plug',              section: 'dl_internal', recipeIndex: 8,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'DC_SR',          slotLabel: 'DC Strain Relief',     section: 'dl_internal', recipeIndex: 9,  isContractItem: 'Y' }),
+  makeSlot({ slotKey: 'MOUNT_COLLAR',   slotLabel: 'Mounting Collar',      section: 'position',    recipeIndex: 2,  isContractItem: 'Y' }),
+  makeSlot({ slotKey: 'LOCAL_DRIVER',   slotLabel: 'Local Driver',         section: 'dl_internal', recipeIndex: 3,  isContractItem: 'Y' }),
 ]
 
 // 2. DL+Remote-CC — Remote Driver CC
 const ingredientsDLRemoteCC = [
   makeSlot({ slotKey: 'DESIGN_ELEMENT', slotLabel: 'DL Virtual Element',  section: 'position',    recipeIndex: 1,  isDesign: 'Y' }),
   makeSlot({ slotKey: 'MOUNT_COLLAR',   slotLabel: 'Mounting Collar',      section: 'position',    recipeIndex: 2,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'REMOTE_SOCKET',  slotLabel: 'Remote Socket',        section: 'dl_internal', recipeIndex: 3,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'REMOTE_PLUG',    slotLabel: 'Remote Plug',          section: 'dl_internal', recipeIndex: 4,  isContractItem: 'Y' }),
 ]
 
 // 3. DL+Exterior — Exterior / IP-Rated
 const ingredientsDLExterior = [
   makeSlot({ slotKey: 'DESIGN_ELEMENT', slotLabel: 'DL Virtual Element (IP)',   section: 'position',    recipeIndex: 1,  isDesign: 'Y' }),
-  makeSlot({ slotKey: 'SITE_SOCKET',    slotLabel: 'IP Site Socket',             section: 'position',    recipeIndex: 2,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'SITE_SR',        slotLabel: 'IP Site Strain Relief',      section: 'position',    recipeIndex: 3,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'MOUNT_COLLAR',   slotLabel: 'IP Mounting Collar',         section: 'position',    recipeIndex: 4,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'LOCAL_DRIVER',   slotLabel: 'Exterior Driver',            section: 'dl_internal', recipeIndex: 5,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'DRIVER_PLUG',    slotLabel: 'Driver Plug',                section: 'dl_internal', recipeIndex: 6,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'DC_SOCKET',      slotLabel: 'DC Socket (IP)',             section: 'dl_internal', recipeIndex: 7,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'DC_PLUG',        slotLabel: 'DC Plug (IP)',               section: 'dl_internal', recipeIndex: 8,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'DC_SR',          slotLabel: 'DC Strain Relief (IP)',      section: 'dl_internal', recipeIndex: 9,  isContractItem: 'Y' }),
+  makeSlot({ slotKey: 'MOUNT_COLLAR',   slotLabel: 'IP Mounting Collar',         section: 'position',    recipeIndex: 2,  isContractItem: 'Y' }),
+  makeSlot({ slotKey: 'LOCAL_DRIVER',   slotLabel: 'Exterior Driver',            section: 'dl_internal', recipeIndex: 3,  isContractItem: 'Y' }),
 ]
 
 // 4. DL+Local+3Pin — Locally Switched (3-pin trailing edge)
 const ingredientsDLLocal3Pin = [
   makeSlot({ slotKey: 'DESIGN_ELEMENT', slotLabel: 'DL Virtual Element',         section: 'position',    recipeIndex: 1,  isDesign: 'Y' }),
-  makeSlot({ slotKey: 'SITE_SOCKET',    slotLabel: 'Site Socket',                 section: 'position',    recipeIndex: 2,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'SITE_SR',        slotLabel: 'Site Strain Relief',          section: 'position',    recipeIndex: 3,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'MOUNT_COLLAR',   slotLabel: 'Mounting Collar',             section: 'position',    recipeIndex: 4,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'LOCAL_DRIVER',   slotLabel: 'Local Driver (3-Pin TE)',     section: 'dl_internal', recipeIndex: 5,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'DRIVER_PLUG',    slotLabel: 'Driver Plug',                 section: 'dl_internal', recipeIndex: 6,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'DC_SOCKET',      slotLabel: 'DC Socket',                   section: 'dl_internal', recipeIndex: 7,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'DC_PLUG',        slotLabel: 'DC Plug',                     section: 'dl_internal', recipeIndex: 8,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'DC_SR',          slotLabel: 'DC Strain Relief',            section: 'dl_internal', recipeIndex: 9,  isContractItem: 'Y' }),
+  makeSlot({ slotKey: 'MOUNT_COLLAR',   slotLabel: 'Mounting Collar',             section: 'position',    recipeIndex: 2,  isContractItem: 'Y' }),
+  makeSlot({ slotKey: 'LOCAL_DRIVER',   slotLabel: 'Local Driver (3-Pin TE)',     section: 'dl_internal', recipeIndex: 3,  isContractItem: 'Y' }),
 ]
 
 // 5. DL+Local+4Pin — Tuneable White
 const ingredientsDLLocal4Pin = [
   makeSlot({ slotKey: 'DESIGN_ELEMENT', slotLabel: 'DL Virtual Element (TW)',     section: 'position',    recipeIndex: 1,  isDesign: 'Y' }),
-  makeSlot({ slotKey: 'SITE_SOCKET',    slotLabel: 'Site Socket',                  section: 'position',    recipeIndex: 2,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'SITE_SR',        slotLabel: 'Site Strain Relief',           section: 'position',    recipeIndex: 3,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'MOUNT_COLLAR',   slotLabel: 'Mounting Collar',              section: 'position',    recipeIndex: 4,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'LOCAL_DRIVER',   slotLabel: 'Local Driver (4-Pin TW)',      section: 'dl_internal', recipeIndex: 5,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'DRIVER_PLUG',    slotLabel: 'Driver Plug (4-Pin)',           section: 'dl_internal', recipeIndex: 6,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'DC_SOCKET',      slotLabel: 'DC Socket',                    section: 'dl_internal', recipeIndex: 7,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'DC_PLUG',        slotLabel: 'DC Plug',                      section: 'dl_internal', recipeIndex: 8,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'DC_SR',          slotLabel: 'DC Strain Relief',             section: 'dl_internal', recipeIndex: 9,  isContractItem: 'Y' }),
+  makeSlot({ slotKey: 'MOUNT_COLLAR',   slotLabel: 'Mounting Collar',              section: 'position',    recipeIndex: 2,  isContractItem: 'Y' }),
+  makeSlot({ slotKey: 'LOCAL_DRIVER',   slotLabel: 'Local Driver (4-Pin TW)',      section: 'dl_internal', recipeIndex: 3,  isContractItem: 'Y' }),
 ]
 
-// 6. DL+Local+TwinSpot — Twin Spot (quantity=2 on paired slots)
+// 6. DL+Local+TwinSpot — Twin Spot (two of everything that pairs up)
 const ingredientsDLTwinSpot = [
   makeSlot({ slotKey: 'DESIGN_ELEMENT', slotLabel: 'DL Virtual Element',  section: 'position',    recipeIndex: 1,  isDesign: 'Y' }),
-  makeSlot({ slotKey: 'SITE_SOCKET',    slotLabel: 'Site Socket',          section: 'position',    recipeIndex: 2,  isContractItem: 'Y', quantity: 2 }),
-  makeSlot({ slotKey: 'SITE_SR',        slotLabel: 'Site Strain Relief',   section: 'position',    recipeIndex: 3,  isContractItem: 'Y', quantity: 2 }),
-  makeSlot({ slotKey: 'MOUNT_COLLAR',   slotLabel: 'Mounting Collar',      section: 'position',    recipeIndex: 4,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'LOCAL_DRIVER',   slotLabel: 'Local Driver',         section: 'dl_internal', recipeIndex: 5,  isContractItem: 'Y', quantity: 2 }),
-  makeSlot({ slotKey: 'DRIVER_PLUG',    slotLabel: 'Driver Plug',          section: 'dl_internal', recipeIndex: 6,  isContractItem: 'Y', quantity: 2 }),
-  makeSlot({ slotKey: 'DC_SOCKET',      slotLabel: 'DC Socket',            section: 'dl_internal', recipeIndex: 7,  isContractItem: 'Y', quantity: 2 }),
-  makeSlot({ slotKey: 'DC_PLUG',        slotLabel: 'DC Plug',              section: 'dl_internal', recipeIndex: 8,  isContractItem: 'Y', quantity: 2 }),
-  makeSlot({ slotKey: 'DC_SR',          slotLabel: 'DC Strain Relief',     section: 'dl_internal', recipeIndex: 9,  isContractItem: 'Y' }),
+  makeSlot({ slotKey: 'MOUNT_COLLAR',   slotLabel: 'Mounting Collar',      section: 'position',    recipeIndex: 2,  isContractItem: 'Y' }),
+  makeSlot({ slotKey: 'LOCAL_DRIVER',   slotLabel: 'Local Driver',         section: 'dl_internal', recipeIndex: 3,  isContractItem: 'Y', quantity: 2 }),
 ]
 
 // 7. LIN+Tape+Profile — Linear Tape + Profile
 const ingredientsLINTapeProfile = [
   makeSlot({ slotKey: 'DESIGN_ELEMENT', slotLabel: 'LIN Virtual Element',  section: 'position',     recipeIndex: 1,  isDesign: 'Y' }),
-  makeSlot({ slotKey: 'LIN_SOCKET',     slotLabel: 'Linear Socket',         section: 'position',     recipeIndex: 2,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'CLIPS',          slotLabel: 'Retention Clips',       section: 'position',     recipeIndex: 3,  isContractItem: 'Y', isInteger: true }),
-  makeSlot({ slotKey: 'LOCKING_LEVER',  slotLabel: 'Locking Lever',         section: 'position',     recipeIndex: 4,  isContractItem: 'Y', fixed: true }),
-  makeSlot({ slotKey: 'TAPE',           slotLabel: 'LED Tape',              section: 'lin_internal', recipeIndex: 5,  dimQtyMultiplier: 1, fixed: true }),
-  makeSlot({ slotKey: 'PROFILE',        slotLabel: 'Extrusion Profile',     section: 'lin_internal', recipeIndex: 6,  dimQtyMultiplier: 1, fixed: true }),
-  makeSlot({ slotKey: 'DIFFUSER',       slotLabel: 'Diffuser',              section: 'lin_internal', recipeIndex: 7,  dimQtyMultiplier: 1, fixed: true }),
-  makeSlot({ slotKey: 'END_CAPS',       slotLabel: 'End Caps',              section: 'lin_internal', recipeIndex: 8,  isContractItem: 'Y', quantity: 2, fixed: true }),
-  makeSlot({ slotKey: 'LIN_PLUG',       slotLabel: 'Linear Plug',           section: 'lin_internal', recipeIndex: 9,  isContractItem: 'Y' }),
+  makeSlot({ slotKey: 'CLIPS',          slotLabel: 'Retention Clips',       section: 'position',     recipeIndex: 2,  isContractItem: 'Y', isInteger: true }),
+  makeSlot({ slotKey: 'LOCKING_LEVER',  slotLabel: 'Locking Lever',         section: 'position',     recipeIndex: 3,  isContractItem: 'Y', fixed: true }),
+  makeSlot({ slotKey: 'TAPE',           slotLabel: 'LED Tape',              section: 'lin_internal', recipeIndex: 4,  dimQtyMultiplier: 1, fixed: true }),
+  makeSlot({ slotKey: 'PROFILE',        slotLabel: 'Extrusion Profile',     section: 'lin_internal', recipeIndex: 5,  dimQtyMultiplier: 1, fixed: true }),
+  makeSlot({ slotKey: 'DIFFUSER',       slotLabel: 'Diffuser',              section: 'lin_internal', recipeIndex: 6,  dimQtyMultiplier: 1, fixed: true }),
+  makeSlot({ slotKey: 'END_CAPS',       slotLabel: 'End Caps',              section: 'lin_internal', recipeIndex: 7,  isContractItem: 'Y', quantity: 2, fixed: true }),
 ]
 
 // 8. LIN+Flex+Mount — Linear Flex + Mount
 const ingredientsLINFlexMount = [
   makeSlot({ slotKey: 'DESIGN_ELEMENT',  slotLabel: 'LIN Virtual Element',  section: 'position',     recipeIndex: 1,  isDesign: 'Y' }),
-  makeSlot({ slotKey: 'LIN_SOCKET',      slotLabel: 'Linear Socket',         section: 'position',     recipeIndex: 2,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'MOUNT_CHANNEL',   slotLabel: 'Mounting Channel',      section: 'position',     recipeIndex: 3,  isContractItem: 'Y', dimQtyMultiplier: 1, fixed: true }),
-  makeSlot({ slotKey: 'CLIPS',           slotLabel: 'Retention Clips',       section: 'position',     recipeIndex: 4,  isContractItem: 'Y', isInteger: true }),
-  makeSlot({ slotKey: 'TAPE',            slotLabel: 'LED Flex Strip',        section: 'lin_internal', recipeIndex: 5,  dimQtyMultiplier: 1, fixed: true }),
-  makeSlot({ slotKey: 'DIFFUSER',        slotLabel: 'Diffuser',              section: 'lin_internal', recipeIndex: 6,  dimQtyMultiplier: 1, fixed: true }),
-  makeSlot({ slotKey: 'END_CAPS',        slotLabel: 'End Caps',              section: 'lin_internal', recipeIndex: 7,  isContractItem: 'Y', quantity: 2, fixed: true }),
-  makeSlot({ slotKey: 'LIN_PLUG',        slotLabel: 'Linear Plug',           section: 'lin_internal', recipeIndex: 8,  isContractItem: 'Y' }),
+  makeSlot({ slotKey: 'MOUNT_CHANNEL',   slotLabel: 'Mounting Channel',      section: 'position',     recipeIndex: 2,  isContractItem: 'Y', dimQtyMultiplier: 1, fixed: true }),
+  makeSlot({ slotKey: 'CLIPS',           slotLabel: 'Retention Clips',       section: 'position',     recipeIndex: 3,  isContractItem: 'Y', isInteger: true }),
+  makeSlot({ slotKey: 'TAPE',            slotLabel: 'LED Flex Strip',        section: 'lin_internal', recipeIndex: 4,  dimQtyMultiplier: 1, fixed: true }),
+  makeSlot({ slotKey: 'DIFFUSER',        slotLabel: 'Diffuser',              section: 'lin_internal', recipeIndex: 5,  dimQtyMultiplier: 1, fixed: true }),
+  makeSlot({ slotKey: 'END_CAPS',        slotLabel: 'End Caps',              section: 'lin_internal', recipeIndex: 6,  isContractItem: 'Y', quantity: 2, fixed: true }),
 ]
 
 // 9. LIN+Flex — Linear Flex Only (no profile/channel)
 const ingredientsLINFlex = [
   makeSlot({ slotKey: 'DESIGN_ELEMENT', slotLabel: 'LIN Virtual Element',  section: 'position',     recipeIndex: 1,  isDesign: 'Y' }),
-  makeSlot({ slotKey: 'LIN_SOCKET',     slotLabel: 'Linear Socket',         section: 'position',     recipeIndex: 2,  isContractItem: 'Y' }),
-  makeSlot({ slotKey: 'TAPE',           slotLabel: 'LED Flex Strip',        section: 'lin_internal', recipeIndex: 3,  dimQtyMultiplier: 1, fixed: true }),
-  makeSlot({ slotKey: 'LIN_PLUG',       slotLabel: 'Linear Plug',           section: 'lin_internal', recipeIndex: 4,  isContractItem: 'Y' }),
+  makeSlot({ slotKey: 'TAPE',           slotLabel: 'LED Flex Strip',        section: 'lin_internal', recipeIndex: 2,  dimQtyMultiplier: 1, fixed: true }),
 ]
 
 // 10. PANEL — PSU Enclosure
+//
+// CAREFUL: this one's slot KEYS lie. REMOTE_SOCKET is the enclosure body, DC_PLUG is the
+// PSU itself, and REMOTE_PLUG / DC_SOCKET are cable glands — none of them is a connector,
+// and the wizard supplies none of them. The keys were recycled from the DL sets. So PANEL
+// keeps every slot: strip it by slotKey and you would delete the enclosure, the glands and
+// the power supply, leaving a template with nothing in it but the virtual element.
 const ingredientsPANEL = [
   makeSlot({ slotKey: 'DESIGN_ELEMENT', slotLabel: 'PSU Virtual Element',   section: 'position', recipeIndex: 1,  isDesign: 'Y' }),
   makeSlot({ slotKey: 'REMOTE_SOCKET',  slotLabel: 'PSU Enclosure Body',    section: 'position', recipeIndex: 2,  isContractItem: 'Y' }),
@@ -1090,6 +1086,7 @@ function applyConfigData(projectId, data = {}) {
 export {
   initDb,
   getDb,
+  GLOBAL_TEMPLATES,
   upsertProject,
   getProject,
   getConfigsForFolder,
