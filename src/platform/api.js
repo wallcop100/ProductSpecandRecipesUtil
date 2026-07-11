@@ -31,8 +31,16 @@ function dbBridge() {
     getConfigsForFolder: call(folderPath => dbApi.getConfigsForFolder(folderPath)),
     getAllProjects: call(() => dbApi.getAllProjects()),
     deleteProject: call(projectId => dbApi.deleteProject(projectId)),
-    getLastProject: call(() => dbApi.getLastProject()),
     getRecentProjects: call(limit => dbApi.getRecentProjects(limit)),
+
+    // Every project + what it actually HOLDS — "am I in the right one?" is the only
+    // question the landing page has to answer, and unexported changes are the answer.
+    getProjectSummaries: call(() => dbApi.getProjectSummaries()),
+    renameProject: call((projectId, label) => dbApi.renameProject(projectId, label)),
+    renameConfig: call((projectId, name) => dbApi.renameConfig(projectId, name)),
+    setProjectNumber: call((projectId, number) => dbApi.setProjectNumber(projectId, number)),
+    adoptDuplicateProject: call((projectId, folderPath, configName) =>
+      dbApi.adoptDuplicateProject(projectId, folderPath, configName)),
 
     // Config YAML — a save/open picker instead of a native dialog
     exportConfigYAML: call(async (projectId, defaultName) => {
@@ -99,16 +107,27 @@ export function installPlatform() {
 
   window.electronAPI = {
     // --- dialogs. `folderPath` is a directory-handle id, not a path.
+    /**
+     * → { key, name, known } | null (cancelled).
+     *
+     * `known` means we RECOGNISED this folder as one already held. It used to mint a fresh
+     * id on every pick, so re-picking a project forked a second, empty copy of it and the
+     * user's work appeared to vanish. The caller must resume, not re-create.
+     */
     openFolderDialog: async () => {
       try {
-        const { key } = await fsx.pickDirectory()
+        const { key, name, known } = await fsx.pickDirectory()
         await backend.setActiveDirectory(key)
-        return key
+        return { key, name, known }
       } catch (err) {
         if (err?.name === 'AbortError') return null
         throw err
       }
     },
+
+    /** Handle-id groups that point at the SAME folder — the wreckage of the old behaviour. */
+    findDuplicateFolders: async () => fsx.duplicateGroups(),
+    forgetFolder: async folderPath => fsx.forgetDirectory(folderPath),
     openXlsxDialog: async () => {
       try {
         const picked = await fsx.pickXlsxFile()
@@ -176,13 +195,10 @@ export function installPlatform() {
 
     getAppVersion: async () => APP_VERSION,
 
-    // --- no-ops: a web app is always current, and there is no native menu
+    // --- no-ops: there is no native menu. (The `updater` stub is gone with the
+    // "Check for updates" link that called it — a web app is always current, so the
+    // link could only ever say so, which is not a feature.)
     onDebugToggle: () => {},
     onFlaskStatus: () => {},
-    updater: {
-      onStatusChange: () => {},
-      checkNow: async () => ({ ok: true, status: 'current' }),
-      installNow: async () => ({ ok: true }),
-    },
   }
 }

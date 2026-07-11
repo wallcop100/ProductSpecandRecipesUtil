@@ -63,10 +63,10 @@ describe('named (@name) and positional (?) binding both work', () => {
     expect(schema.getConfigsForFolder('/proj/a').map(c => c.config_name).sort()).toEqual(['Alt', 'Base'])
   })
 
-  test('getLastProject returns the most recently opened', () => {
+  test('the most recently opened comes first', () => {
     schema.upsertProject('/proj/a', 'Base')
     schema.upsertProject('/proj/b', 'Base')
-    expect(schema.getLastProject().folder_path).toBe('/proj/b')
+    expect(schema.getRecentProjects()[0].folder_path).toBe('/proj/b')
   })
 
   /**
@@ -82,10 +82,10 @@ describe('named (@name) and positional (?) binding both work', () => {
     })
     afterEach(() => clock.mockRestore())
 
-    test('getLastProject picks the later insert when the timestamps are identical', () => {
+    test('the later insert wins when the timestamps are identical', () => {
       schema.upsertProject('/proj/a', 'Base')
       schema.upsertProject('/proj/b', 'Base')
-      expect(schema.getLastProject().folder_path).toBe('/proj/b')
+      expect(schema.getRecentProjects()[0].folder_path).toBe('/proj/b')
     })
 
     test('getConfigsForFolder lists the later insert first', () => {
@@ -94,14 +94,13 @@ describe('named (@name) and positional (?) binding both work', () => {
       expect(schema.getConfigsForFolder('/proj/a').map(c => c.config_name)).toEqual(['Alt', 'Base'])
     })
 
-    // The landing page leads with this list, so it must agree with getLastProject
-    // on which project is first — including under a same-millisecond tie.
-    test('getRecentProjects orders like getLastProject and breaks the tie the same way', () => {
+    // The landing page leads with this list, so the tie must break deterministically —
+    // it failed about half the time until `id DESC` was added.
+    test('getRecentProjects breaks a same-millisecond tie by insertion order', () => {
       schema.upsertProject('/proj/a', 'Base')
       schema.upsertProject('/proj/b', 'Base')
       schema.upsertProject('/proj/c', 'Base')
       expect(schema.getRecentProjects().map(p => p.folder_path)).toEqual(['/proj/c', '/proj/b', '/proj/a'])
-      expect(schema.getRecentProjects()[0].folder_path).toBe(schema.getLastProject().folder_path)
     })
   })
 })
@@ -214,5 +213,103 @@ describe('serialize / restore (what IndexedDB persistence relies on)', () => {
 
     expect(schema.getProject('/p', 'Base').project_number).toBe('5642')
     expect(schema.getPref(pid, 'k')).toBe('v')
+  })
+})
+
+/**
+ * Picking a folder used to mint a fresh handle id every time, and `folder_path` IS that id.
+ * So re-picking a project you already had inserted a SECOND row with an empty overlay, and
+ * your tags, templates and unexported changes appeared to have vanished — they were on the
+ * old row. These prove the repair, and that it never costs you anything.
+ */
+describe('naming a project', () => {
+  test('a project can be renamed — nothing in the app could do this before', () => {
+    const p = schema.upsertProject('dir_a', 'Base', '5642', 'my-folder')
+    schema.renameProject(p.id, 'Marlborough House')
+    expect(schema.getProject('dir_a', 'Base').project_label).toBe('Marlborough House')
+  })
+
+  /**
+   * The reason the column was dead: every open silently overwrote it with the folder name,
+   * so there was no point letting anyone rename anything.
+   */
+  test('re-opening does NOT clobber the name you gave it', () => {
+    const p = schema.upsertProject('dir_a', 'Base', '5642', 'my-folder')
+    schema.renameProject(p.id, 'Marlborough House')
+    schema.upsertProject('dir_a', 'Base', '5642', 'my-folder')   // open it again
+    expect(schema.getProject('dir_a', 'Base').project_label).toBe('Marlborough House')
+  })
+
+  test('a config can be renamed, and a clash fails cleanly instead of throwing', () => {
+    const base = schema.upsertProject('dir_a', 'Base', '5642', 'f')
+    schema.upsertProject('dir_a', 'Phase 2', '5642', 'f')
+
+    expect(schema.renameConfig(base.id, 'Tender').ok).toBe(true)
+    expect(schema.getProject('dir_a', 'Tender')).toBeTruthy()
+
+    // 'Phase 2' is taken on this folder — UNIQUE(folder_path, config_name) is real
+    const clash = schema.renameConfig(base.id, 'Phase 2')
+    expect(clash.ok).toBe(false)
+    expect(clash.reason).toBe('taken')
+    expect(schema.getProject('dir_a', 'Tender')).toBeTruthy()   // unchanged
+  })
+})
+
+describe('adopting a duplicate — a re-key, never an overlay merge', () => {
+  /**
+   * The overlay hangs off project_id, NOT folder_path. So moving the row onto the canonical
+   * folder carries the whole overlay with it, intact, and it simply becomes another config.
+   * That is the entire trick, and this is the test that proves nothing is lost.
+   */
+  test('the stray keeps every scrap of its work, as a new config of the real project', () => {
+    schema.upsertProject('dir_real', 'Base', '5642', 'folder')
+    const stray = schema.upsertProject('dir_stray', 'Base', '5642', 'folder')
+
+    // the stray is where the user actually did the work
+    schema.upsertPositionUI(stray.id, 'C01r', { tags: ['DL', 'Local'] })
+    schema.setPendingChanges(stray.id, [{ x: 1 }], [{ y: 2 }])
+    schema.upsertLocalElementType(stray.id, { ref: 'ET-MINE-01' })
+
+    const res = schema.adoptDuplicateProject(stray.id, 'dir_real', 'Base (2)')
+    expect(res.ok).toBe(true)
+
+    // it now lives on the real folder, as its own config
+    const moved = schema.getProject('dir_real', 'Base (2)')
+    expect(moved.id).toBe(stray.id)          // same row — so the overlay FKs still point at it
+    expect(schema.getConfigsForFolder('dir_real').map(c => c.config_name).sort())
+      .toEqual(['Base', 'Base (2)'])
+
+    // …and the work came with it
+    expect(schema.getAllPositionUI(stray.id).find(u => u.position_type_ref === 'C01r')).toBeTruthy()
+    const pending = schema.getPendingChanges(stray.id)
+    expect(pending.ps).toHaveLength(1)
+    expect(pending.rs).toHaveLength(1)
+    expect(schema.getLocalElementTypes(stray.id).map(e => e.ElementTypeRef)).toContain('ET-MINE-01')
+  })
+
+  test('it refuses a config name already taken on the target, rather than violating UNIQUE', () => {
+    schema.upsertProject('dir_real', 'Base', '5642', 'f')
+    const stray = schema.upsertProject('dir_stray', 'Base', '5642', 'f')
+    const res = schema.adoptDuplicateProject(stray.id, 'dir_real', 'Base')
+    expect(res).toEqual({ ok: false, reason: 'taken' })
+    expect(schema.getProject('dir_stray', 'Base')).toBeTruthy()   // untouched
+  })
+})
+
+describe('getProjectSummaries — "am I in the right project?"', () => {
+  test('it reports what each project actually HOLDS, so you can tell the real one from the empty copy', () => {
+    const real = schema.upsertProject('dir_real', 'Base', '5642', 'f')
+    schema.upsertProject('dir_empty', 'Base', '5642', 'f')
+
+    schema.upsertPositionUI(real.id, 'C01r', { tags: ['DL'] })
+    schema.setPendingChanges(real.id, [{ a: 1 }, { b: 2 }], [{ c: 3 }])
+
+    const byId = Object.fromEntries(schema.getProjectSummaries().map(s => [s.id, s]))
+    expect(byId[real.id].unexported).toBe(3)        // 2 ps + 1 rs
+    expect(byId[real.id].taggedPositions).toBe(1)
+
+    const emptyId = schema.getProject('dir_empty', 'Base').id
+    expect(byId[emptyId].unexported).toBe(0)
+    expect(byId[emptyId].taggedPositions).toBe(0)
   })
 })

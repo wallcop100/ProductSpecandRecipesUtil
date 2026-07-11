@@ -243,6 +243,15 @@ function parseTemplate(row) {
 // Projects
 // ---------------------------------------------------------------------------
 
+/**
+ * upsertProject — open (or re-open) one config of one folder.
+ *
+ * `project_label` is the NAME the user gave this project, and on conflict it is kept.
+ * It used to be overwritten with the folder handle's display name on every single open,
+ * which is why the column was dead: there was no point letting anyone rename a project
+ * when the next open would silently rename it back. COALESCE keeps a name once it exists
+ * and takes the folder name only as the initial default.
+ */
 function upsertProject(folderPath, configName = 'Base', projectNumber = null, projectLabel = null, dbFilename = null, psFilename = null, rsFilename = null) {
   const database = getDb()
   const ts = now()
@@ -253,7 +262,7 @@ function upsertProject(folderPath, configName = 'Base', projectNumber = null, pr
       VALUES (@folderPath, @config, @projectNumber, @projectLabel, @dbFilename, @psFilename, @rsFilename, @ts)
       ON CONFLICT(folder_path, config_name) DO UPDATE SET
         project_number = excluded.project_number,
-        project_label  = excluded.project_label,
+        project_label  = COALESCE(projects.project_label, excluded.project_label),
         db_filename    = excluded.db_filename,
         ps_filename    = excluded.ps_filename,
         rs_filename    = excluded.rs_filename,
@@ -261,6 +270,104 @@ function upsertProject(folderPath, configName = 'Base', projectNumber = null, pr
     `)
     .run({ folderPath, config, projectNumber, projectLabel, dbFilename, psFilename, rsFilename, ts })
   return database.prepare('SELECT * FROM projects WHERE folder_path = ? AND config_name = ?').get(folderPath, config)
+}
+
+// --- naming. Until now NOTHING in the app could rename a project or a config: there was
+// no UPDATE against either column anywhere. You told projects apart by a folder name you
+// could not edit.
+
+/** Name a project. This is the human identifier; the folder name is only its default. */
+function renameProject(projectId, projectLabel) {
+  const label = String(projectLabel ?? '').trim()
+  getDb().prepare('UPDATE projects SET project_label = ? WHERE id = ?').run(label || null, projectId)
+  return getDb().prepare('SELECT * FROM projects WHERE id = ?').get(projectId) || null
+}
+
+function setProjectNumber(projectId, projectNumber) {
+  const n = String(projectNumber ?? '').trim()
+  getDb().prepare('UPDATE projects SET project_number = ? WHERE id = ?').run(n || null, projectId)
+  return getDb().prepare('SELECT * FROM projects WHERE id = ?').get(projectId) || null
+}
+
+/**
+ * Rename a config. `config_name` is half of UNIQUE(folder_path, config_name), so a clash is
+ * a real constraint violation — check first and FAIL CLEANLY rather than letting SQLite
+ * throw from under the UI.
+ */
+function renameConfig(projectId, configName) {
+  const database = getDb()
+  const name = String(configName ?? '').trim() || 'Base'
+  const row = database.prepare('SELECT * FROM projects WHERE id = ?').get(projectId)
+  if (!row) return { ok: false, reason: 'missing' }
+
+  const clash = database
+    .prepare('SELECT id FROM projects WHERE folder_path = ? AND LOWER(config_name) = LOWER(?) AND id != ?')
+    .get(row.folder_path, name, projectId)
+  if (clash) return { ok: false, reason: 'taken' }
+
+  database.prepare('UPDATE projects SET config_name = ? WHERE id = ?').run(name, projectId)
+  return { ok: true, project: database.prepare('SELECT * FROM projects WHERE id = ?').get(projectId) }
+}
+
+/**
+ * adoptDuplicateProject(projectId, folderPath, configName) — collapse a stray copy back in.
+ *
+ * The old pickDirectory minted a fresh folder id on every pick, so re-picking a project
+ * forked a second row against a second (identical) folder. This RE-KEYS the stray onto the
+ * canonical folder, where it becomes another config.
+ *
+ * It is a re-key, NOT an overlay merge. Every overlay table — position_ui, templates,
+ * slot_mappings, project_prefs, et_collections, pending_changes, local_element_types —
+ * hangs off `project_id`, which does not change. So the row's tags, templates and unexported
+ * changes follow it, intact and untouched. Merging two overlays is where data dies; this
+ * never does it.
+ *
+ * The caller MUST pass a config name that is free on the target folder (see uniqueConfigName).
+ */
+function adoptDuplicateProject(projectId, folderPath, configName) {
+  const database = getDb()
+  const name = String(configName ?? '').trim() || 'Base'
+  const clash = database
+    .prepare('SELECT id FROM projects WHERE folder_path = ? AND LOWER(config_name) = LOWER(?) AND id != ?')
+    .get(folderPath, name, projectId)
+  if (clash) return { ok: false, reason: 'taken' }
+
+  database
+    .prepare('UPDATE projects SET folder_path = ?, config_name = ? WHERE id = ?')
+    .run(folderPath, name, projectId)
+  return { ok: true, project: database.prepare('SELECT * FROM projects WHERE id = ?').get(projectId) }
+}
+
+/**
+ * getProjectSummaries() — every project, plus what it actually HOLDS.
+ *
+ * "Am I in the right project?" is the only question the landing page has to answer, and the
+ * honest answer is what is in it: how many positions you have tagged, and how many changes
+ * are sitting there unexported. A count of unexported changes is the difference between
+ * opening the right copy and opening the empty one.
+ */
+function getProjectSummaries() {
+  const database = getDb()
+  const rows = database.prepare('SELECT * FROM projects').all()
+  const countIn = (table, id) =>
+    database.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE project_id = ?`).get(id)?.n ?? 0
+
+  return rows.map(r => {
+    const pending = database.prepare('SELECT ps, rs FROM pending_changes WHERE project_id = ?').get(r.id)
+    const len = raw => { try { return JSON.parse(raw || '[]').length } catch { return 0 } }
+    const dbPref = database
+      .prepare("SELECT value FROM project_prefs WHERE project_id = ? AND key = 'pending_db_changes'")
+      .get(r.id)
+
+    return {
+      ...r,
+      unexported: len(pending?.ps) + len(pending?.rs) + len(dbPref?.value),
+      taggedPositions: countIn('position_ui', r.id),
+      overlayRows:
+        countIn('templates', r.id) + countIn('et_collections', r.id) +
+        countIn('local_element_types', r.id) + countIn('slot_mappings', r.id),
+    }
+  })
 }
 
 function getProject(folderPath, configName = 'Base') {
@@ -295,26 +402,17 @@ function deleteProject(projectId) {
   return true
 }
 
-/** The most recently opened config. `id DESC` breaks a same-millisecond tie. */
-function getLastProject() {
-  return (
-    getDb()
-      .prepare('SELECT * FROM projects WHERE last_opened IS NOT NULL ORDER BY last_opened DESC, id DESC LIMIT 1')
-      .get() || null
-  )
-}
-
-/** What the landing page leads with. The same ordering as getLastProject, n deep. */
+/**
+ * What the landing page leads with. `last_opened` is an ISO string with millisecond
+ * precision, so `id DESC` breaks a same-millisecond tie by insertion order.
+ *
+ * (`getLastProject` and `updateLastOpened` lived here and had no callers at all —
+ * `last_opened` is only ever refreshed as a side effect of `upsertProject`.)
+ */
 function getRecentProjects(limit = 5) {
   return getDb()
     .prepare('SELECT * FROM projects WHERE last_opened IS NOT NULL ORDER BY last_opened DESC, id DESC LIMIT ?')
     .all(limit)
-}
-
-function updateLastOpened(projectId) {
-  getDb()
-    .prepare('UPDATE projects SET last_opened = ? WHERE id = ?')
-    .run(now(), projectId)
 }
 
 // ---------------------------------------------------------------------------
@@ -1093,9 +1191,12 @@ export {
   getConfigsForFolder,
   getAllProjects,
   deleteProject,
-  getLastProject,
   getRecentProjects,
-  updateLastOpened,
+  getProjectSummaries,
+  renameProject,
+  renameConfig,
+  setProjectNumber,
+  adoptDuplicateProject,
   upsertPositionUI,
   getPositionUI,
   getAllPositionUI,

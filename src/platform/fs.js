@@ -44,15 +44,81 @@ function assertSupported() {
  */
 const newProjectKey = () => `dir_${crypto.randomUUID()}`
 
+/**
+ * findHandleKey(handle) → the key we ALREADY store for this exact directory, or null.
+ *
+ * `folder_path` — the key every project, tag, template and pending change hangs off — is
+ * one of these generated ids. So if picking a folder always minted a fresh one, the folder
+ * would not actually be identified by the folder: re-picking a project you already have
+ * would fork a second, empty copy of it and your work would appear to have vanished. That
+ * is exactly what used to happen. `isSameEntry` is the browser telling us the truth.
+ *
+ * A stale or revoked handle can reject, so each comparison is guarded on its own — one bad
+ * handle must never blind the whole scan.
+ */
+export async function findHandleKey(handle) {
+  if (!handle) return null
+  const all = (await idbGet(HANDLE_KEY)) || {}
+  for (const [key, v] of Object.entries(all)) {
+    if (!v?.handle?.isSameEntry) continue
+    try {
+      if (await v.handle.isSameEntry(handle)) return key
+    } catch { /* stale handle — it identifies nothing, so it matches nothing */ }
+  }
+  return null
+}
+
+/**
+ * duplicateGroups() → [[keyA, keyB], …] — stored keys that point at the SAME folder.
+ *
+ * The wreckage of the old behaviour: one physical folder, several project rows, the work
+ * scattered across them. Surfaced so it can be collapsed back into one project.
+ */
+export async function duplicateGroups() {
+  const all = Object.entries((await idbGet(HANDLE_KEY)) || {})
+  const groups = []
+  const claimed = new Set()
+
+  for (let i = 0; i < all.length; i++) {
+    const [key, v] = all[i]
+    if (claimed.has(key) || !v?.handle?.isSameEntry) continue
+    const group = [key]
+    for (let j = i + 1; j < all.length; j++) {
+      const [other, ov] = all[j]
+      if (claimed.has(other) || !ov?.handle) continue
+      try {
+        if (await v.handle.isSameEntry(ov.handle)) { group.push(other); claimed.add(other) }
+      } catch { /* stale — leave it alone */ }
+    }
+    if (group.length > 1) { claimed.add(key); groups.push(group) }
+  }
+  return groups
+}
+
+/**
+ * Pick a folder. `known` is true when we recognised it as one we already hold — the caller
+ * must then RESUME that project rather than treating it as new.
+ */
 export async function pickDirectory() {
   assertSupported()
   // 'read' — the forms are never written. Snapshotting escalates on demand.
   const handle = await window.showDirectoryPicker({ id: 'recipe-builder-project', mode: 'read' })
+
+  const existing = await findHandleKey(handle)
+  if (existing) {
+    // Refresh the stored handle (the old one may be stale) but KEEP the key: it is the
+    // identity of every project row, tag and unexported change already filed under it.
+    const all = (await idbGet(HANDLE_KEY)) || {}
+    all[existing] = { handle, name: handle.name }
+    await idbSet(HANDLE_KEY, all)
+    return { key: existing, handle, name: handle.name, known: true }
+  }
+
   const key = newProjectKey()
   const all = (await idbGet(HANDLE_KEY)) || {}
   all[key] = { handle, name: handle.name }
   await idbSet(HANDLE_KEY, all)
-  return { key, handle, name: handle.name }
+  return { key, handle, name: handle.name, known: false }
 }
 
 export async function listDirectories() {

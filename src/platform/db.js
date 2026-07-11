@@ -87,9 +87,12 @@ export const dbApi = {
   getConfigsForFolder: reader(schema.getConfigsForFolder),
   getAllProjects: reader(schema.getAllProjects),
   deleteProject: writer(schema.deleteProject),
-  getLastProject: reader(schema.getLastProject),
   getRecentProjects: reader(schema.getRecentProjects),
-  updateLastOpened: writer(schema.updateLastOpened),
+  getProjectSummaries: reader(schema.getProjectSummaries),
+  renameProject: writer(schema.renameProject),
+  renameConfig: writer(schema.renameConfig),
+  setProjectNumber: writer(schema.setProjectNumber),
+  adoptDuplicateProject: writer(schema.adoptDuplicateProject),
 
   // position UI
   upsertPositionUI: writer(schema.upsertPositionUI),
