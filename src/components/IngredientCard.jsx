@@ -134,8 +134,16 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   // A plain (non-container) ElementType can still be used across several positions — the
   // "shared ElementType" the import step used to flag. It belongs here, where it is
   // actionable: fork it if this position needs its own copy.
-  const etSharedWith = (etRef && !isUnresolved && !isContainer)
+  //
+  // But NOT for a row that lives inside a wrapper (ownContainer): its appearance in other
+  // positions is entirely because the wrapper is shared — that is the wrapper's fact, shown
+  // on the wrapper row, and repeating it here is noise. The wrapper is one and the same.
+  const etSharedWith = (etRef && !isUnresolved && !isContainer && !ownContainer)
     ? getUsedIn(etRef, recipes, posRef) : []
+
+  // Who a fork would break this away from: the wrapper's sharers for a container row,
+  // otherwise the other positions using this plain ElementType.
+  const forkSharers = isContainer ? sharedWith : etSharedWith
 
   const [showContents, setShowContents] = useState(false)
   const [forking, setForking] = useState(false)
@@ -317,37 +325,25 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                   </button>
                 )}
 
-                {/* Shared assembly: name the blast radius, and offer the way out. */}
+                {/* Shared assembly: name the blast radius. The way out (fork) is the fork
+                    icon in the action stack, same as every other row. */}
                 {isContainer && etRef && sharedWith.length > 0 && (
-                  <>
-                    <span className="rounded px-1 d-inline-flex align-items-center gap-1"
-                      style={{ fontSize: 10, background: '#fff3cd', color: '#856404' }}
-                      title={`Shared assembly — its contents are the same for ${[posRef, ...sharedWith].join(', ')}`}>
-                      <MaterialIcon name="warning" size={11} />
-                      shared with {sharedWith.join(', ')}
-                      <ConceptHint concept={CONCEPTS.WRAPPER} size={11}
-                        title="What is a wrapper, and why is it shared?" />
-                    </span>
-                    <button
-                      className="btn btn-link btn-sm p-0"
-                      style={{ fontSize: 11, color: '#b45309', textDecoration: 'none' }}
-                      onClick={() => setForking(true)}
-                      title={`Give ${posRef} its own copy of ${etRef}, so changing it stops affecting ${sharedWith.join(', ')}`}
-                    >
-                      Fork for {posRef}
-                    </button>
-                  </>
+                  <span className="rounded px-1 d-inline-flex align-items-center gap-1"
+                    style={{ fontSize: 10, background: '#fff3cd', color: '#856404' }}
+                    title={`Shared assembly — its contents are the same for ${[posRef, ...sharedWith].join(', ')}`}>
+                    <MaterialIcon name="warning" size={11} />
+                    shared with {sharedWith.join(', ')}
+                    <ConceptHint concept={CONCEPTS.WRAPPER} size={11}
+                      title="What is a wrapper, and why is it shared?" />
+                  </span>
                 )}
 
-                {/* Shared ElementType (non-container): informational, not a warning —
-                    reusing a product across positions is normal. Fork lives in the
-                    action stack, near the container icon. */}
+                {/* Shared ElementType (non-container): a quiet icon only — reusing a product
+                    across positions is normal, so the detail lives in the tooltip. The fork
+                    itself is in the action stack, near the container icon. */}
                 {!isContainer && etRef && etSharedWith.length > 0 && (
-                  <span className="d-inline-flex align-items-center gap-1" style={{ fontSize: 10, color: '#6c757d' }}
-                    title={`This element type is also used by ${etSharedWith.join(', ')}`}>
-                    <MaterialIcon name="group" size={11} />
-                    shared with {etSharedWith.length} other position{etSharedWith.length === 1 ? '' : 's'}
-                  </span>
+                  <MaterialIcon name="group" size={13} style={{ color: '#adb5bd', flexShrink: 0 }}
+                    title={`Also used by ${etSharedWith.length} other position${etSharedWith.length === 1 ? '' : 's'}: ${etSharedWith.join(', ')}`} />
                 )}
               </div>
 
@@ -520,14 +516,15 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                     title="Replace this element type with another"
                   />
                 )}
-                {/* Fork a shared, non-container ElementType: give this position its own copy. */}
-                {!isContainer && etRef && etSharedWith.length > 0 && (
+                {/* Fork a shared element — a wrapper or a plain ET — so this position gets
+                    its own copy and stops affecting the others. */}
+                {etRef && !isUnresolved && forkSharers.length > 0 && (
                   <HoverIconButton
                     icon={ACTION_ICONS.fork}
                     size={16}
                     hoverColor="#b45309"
                     onClick={() => setForking(true)}
-                    title={`Fork ${etRef} for ${posRef} — its own copy, so changing it stops affecting ${etSharedWith.join(', ')}`}
+                    title={`Fork ${etRef} for ${posRef} — give it its own copy, so changing it stops affecting ${forkSharers.join(', ')}`}
                   />
                 )}
                 <HoverIconButton
