@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
-import { Button, Form, Alert, Spinner } from 'react-bootstrap'
+import { Button, Form, Alert, Spinner, Modal } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import { readSheet as readSheetFrom, fileMeta } from '../utils/backend'
 import MaterialIcon from '../components/MaterialIcon'
@@ -86,6 +86,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   const [assignments, setAssignments] = useState({})
   const [creatingFor, setCreatingFor] = useState(null)
   const [staged, setStaged] = useState(null)
+  const [stagedOpen, setStagedOpen] = useState(false)   // the result surfaces as a modal, not below the fold
   const [showBoundaries, setShowBoundaries] = useState(false)
   const [undoSnap, setUndoSnap] = useState(null)   // one-level undo of the last paint
   const [brush, setBrush] = useState('code')       // the colour you're painting with
@@ -503,28 +504,6 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   const leftBehind = entries.length - stageable
   const canStage = stageable > 0
 
-  // Shared point source: a position's PRIMARY captured code is its point source;
-  // positions sharing that ET may share a DL. A prompt, not an automatic merge.
-  //
-  // Grouped by the RESOLVED PositionType, the same one the recipe lands on — a hint
-  // naming C01 when the recipe went to C01r would send the user to the wrong place.
-  const sharedPointSources = useMemo(() => {
-    const byEt = new Map()   // etRef -> Set(target positionType)
-    for (const row of confirmed) {
-      const primary = deriveCaptures(row, captureOpts).captures[0]
-      if (!primary || !row.positionType) continue
-      const target = map.pt ? ptTarget(row.positionType) : row.positionType
-      if (!target) continue
-      const et = classify(primary.code, ctx, row.manufacturer).elementTypeRef || assignments[norm(primary.code)]
-      if (!et) continue
-      if (!byEt.has(et)) byEt.set(et, new Set())
-      byEt.get(et).add(target)
-    }
-    return [...byEt.entries()]
-      .filter(([, pts]) => pts.size > 1)
-      .map(([et, pts]) => ({ et, positionTypes: [...pts] }))
-  }, [confirmed, captureOpts, ctx, assignments, map.pt, ptTarget])
-
   /** Fold a variant's note into its code, on the rows behind it, so it earns its own ref. */
   function handlePromote(entry, variant) {
     for (const rowId of variant.rowRefs) {
@@ -702,6 +681,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       unrouted, diff, divergence, leftBehind,
       pending: [...pendingByPos.values()].reduce((n, l) => n + l.length, 0),
     })
+    setStagedOpen(true)
   }
 
   const remaining = resolved.filter(r => !r.confirmed).length
@@ -1006,20 +986,6 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
               })}
             />
 
-            {/* Shared point source — positions whose primary code is the same ET. */}
-            {sharedPointSources.length > 0 && (
-              <div className="mt-2 px-2 py-1 rounded" style={{ background: '#fff8e1', border: '1px solid #f0e0a8', fontSize: 10 }}>
-                <div className="fw-semibold" style={{ color: '#92400e' }}>
-                  <MaterialIcon name="hub" size={11} /> Shared point source — may share a DL
-                </div>
-                {sharedPointSources.map(g => (
-                  <div key={g.et} className="text-muted">
-                    <span style={{ fontFamily: 'monospace' }}>{g.et}</span> · {g.positionTypes.join(', ')}
-                  </div>
-                ))}
-              </div>
-            )}
-
             <div className="mt-3">
               <Button variant="success" size="sm" className="w-100" disabled={!canStage} onClick={handleStage}>
                 Stage {stageable} code{stageable === 1 ? '' : 's'}
@@ -1041,87 +1007,98 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                 <MaterialIcon name="info" size={10} /> Notes become the ElementType Description in the DesignDB,
                 and reach it through the ElementTypes patch script at export.
               </div>
-              {staged && (
-                <Alert variant="success" className="mt-2 py-1 px-2" style={{ fontSize: 11 }}>
-                  <div>
-                    <strong>Form template attached.</strong> {staged.products} product
-                    {staged.products === 1 ? '' : 's'} across {staged.positions} PositionType
-                    {staged.positions === 1 ? '' : 's'}
-                    {staged.codes > 0 && <> · {staged.codes} product spec row{staged.codes === 1 ? '' : 's'} staged</>}.
-                  </div>
-                  <div className="mt-1 text-muted">
-                    No recipe was touched. Go to the builder and add each product where it belongs —
-                    the Side-by-Side pane shows what the Form asks for, position by position.
-                  </div>
-                  {staged.unrouted > 0 && (
-                    <div className="mt-1 text-muted">
-                      {staged.unrouted} row{staged.unrouted === 1 ? '' : 's'} captured nothing — their Form ref
-                      resolves to no PositionType, or you skipped it.
-                    </div>
-                  )}
-                  {staged.leftBehind > 0 && (
-                    <div className="mt-1 text-muted">
-                      {staged.leftBehind} code{staged.leftBehind === 1 ? '' : 's'} still {staged.leftBehind === 1 ? 'has' : 'have'} no
-                      ElementType. Your draft is kept — come back and stage them whenever you like.
-                      {staged.pending > 0 && <> The Side-by-Side pane lists them where the Form asks for them.</>}
-                    </div>
-                  )}
-
-                  {/* What changed since the last import — the manual compare, done. */}
-                  {staged.diff && (staged.diff.added.length + staged.diff.removed.length
-                    + staged.diff.changed.length + staged.diff.moved.length) > 0 && (
-                    <div className="mt-2 pt-1 border-top">
-                      <div className="fw-semibold" style={{ fontSize: 10, textTransform: 'uppercase' }}>
-                        Since the last import
-                      </div>
-                      <div className="text-muted">
-                        {staged.diff.added.length} added · {staged.diff.removed.length} removed ·{' '}
-                        {staged.diff.changed.length} changed · {staged.diff.moved.length} moved
-                      </div>
-                      {staged.diff.removed.length > 0 && (
-                        <div className="text-muted" style={{ fontSize: 10 }}>
-                          Removed codes are flagged where they appear, never deleted for you.
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* A changed code inside a SHARED wrapper: edit it, or fork it. */}
-                  {staged.divergence?.length > 0 && (
-                    <div className="mt-2 px-2 py-1 rounded" style={{ background: '#fff3cd', border: '1px solid #f0e0a8', color: '#856404' }}>
-                      {staged.divergence.map(d => (
-                        <div key={d.wrapper} className="mb-1">
-                          <MaterialIcon name="warning" size={11} />{' '}
-                          <span style={{ fontFamily: 'monospace' }}>{d.wrapper}</span> is shared by{' '}
-                          {d.sharers.join(', ')}.{' '}
-                          {d.consistent
-                            ? <>Every position changed alike — safe to edit it in place.</>
-                            : <>
-                                Only {d.changedPositions.join(', ')} changed; {d.unchangedPositions.join(', ')} did
-                                not. One wrapper cannot hold both — fork it from the position's recipe
-                                (<em>Duplicate element type</em>).
-                              </>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <div className="mt-2 d-flex align-items-center gap-2">
-                    {onReviewPositions && (
-                      <Button size="sm" variant="success" style={{ fontSize: 11 }}
-                        onClick={() => onReviewPositions(Object.keys(staged.byPosition || {}))}>
-                        <MaterialIcon name="playlist_add_check" size={13} /> Build recipes →
-                      </Button>
-                    )}
-                    <span className="text-muted" style={{ fontSize: 10 }}>
-                      Product Spec changes leave via <strong>Export changes</strong>.
-                    </span>
-                  </div>
-                </Alert>
-              )}
             </div>
           </div>
         </div>
       )}
+
+      {/* Staging result — a popup, so it is unmissable rather than below the fold. */}
+      <Modal show={stagedOpen && !!staged} onHide={() => setStagedOpen(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title style={{ fontSize: 16 }}>
+            <MaterialIcon name="check_circle" size={18} style={{ color: '#198754' }} /> Form template attached
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body style={{ fontSize: 13 }}>
+          {staged && (
+            <>
+              <div>
+                <strong>{staged.products}</strong> product{staged.products === 1 ? '' : 's'} across{' '}
+                <strong>{staged.positions}</strong> PositionType{staged.positions === 1 ? '' : 's'}
+                {staged.codes > 0 && <> · {staged.codes} product spec row{staged.codes === 1 ? '' : 's'} staged</>}.
+              </div>
+              <div className="mt-2 text-muted">
+                No recipe was touched. Go to the builder and add each product where it belongs —
+                the Side-by-Side pane shows what the Form asks for, position by position.
+              </div>
+              {staged.unrouted > 0 && (
+                <div className="mt-2 text-muted">
+                  {staged.unrouted} row{staged.unrouted === 1 ? '' : 's'} captured nothing — their Form ref
+                  resolves to no PositionType, or you skipped it.
+                </div>
+              )}
+              {staged.leftBehind > 0 && (
+                <div className="mt-2 text-muted">
+                  {staged.leftBehind} code{staged.leftBehind === 1 ? '' : 's'} still {staged.leftBehind === 1 ? 'has' : 'have'} no
+                  ElementType. Your draft is kept — come back and stage them whenever you like.
+                  {staged.pending > 0 && <> The Side-by-Side pane lists them where the Form asks for them.</>}
+                </div>
+              )}
+
+              {/* What changed since the last import — the manual compare, done. */}
+              {staged.diff && (staged.diff.added.length + staged.diff.removed.length
+                + staged.diff.changed.length + staged.diff.moved.length) > 0 && (
+                <div className="mt-3 pt-2 border-top">
+                  <div className="fw-semibold" style={{ fontSize: 11, textTransform: 'uppercase' }}>
+                    Since the last import
+                  </div>
+                  <div className="text-muted">
+                    {staged.diff.added.length} added · {staged.diff.removed.length} removed ·{' '}
+                    {staged.diff.changed.length} changed · {staged.diff.moved.length} moved
+                  </div>
+                  {staged.diff.removed.length > 0 && (
+                    <div className="text-muted" style={{ fontSize: 11 }}>
+                      Removed codes are flagged where they appear, never deleted for you.
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* A changed code inside a SHARED wrapper: edit it, or fork it. */}
+              {staged.divergence?.length > 0 && (
+                <div className="mt-3 px-2 py-2 rounded" style={{ background: '#fff3cd', border: '1px solid #f0e0a8', color: '#856404', fontSize: 12 }}>
+                  {staged.divergence.map(d => (
+                    <div key={d.wrapper} className="mb-1">
+                      <MaterialIcon name="warning" size={12} />{' '}
+                      <span style={{ fontFamily: 'monospace' }}>{d.wrapper}</span> is shared by{' '}
+                      {d.sharers.join(', ')}.{' '}
+                      {d.consistent
+                        ? <>Every position changed alike — safe to edit it in place.</>
+                        : <>
+                            Only {d.changedPositions.join(', ')} changed; {d.unchangedPositions.join(', ')} did
+                            not. One wrapper cannot hold both — fork it from the position's recipe
+                            (<em>Duplicate element type</em>).
+                          </>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </Modal.Body>
+        <Modal.Footer className="d-flex align-items-center">
+          <span className="text-muted me-auto" style={{ fontSize: 11 }}>
+            Product Spec changes leave via <strong>Export changes</strong>.
+          </span>
+          <Button variant="outline-secondary" size="sm" onClick={() => setStagedOpen(false)}>Close</Button>
+          {onReviewPositions && staged && (
+            <Button size="sm" variant="success"
+              onClick={() => { setStagedOpen(false); onReviewPositions(Object.keys(staged.byPosition || {})) }}>
+              <MaterialIcon name="playlist_add_check" size={14} /> Build recipes →
+            </Button>
+          )}
+        </Modal.Footer>
+      </Modal>
 
       <PrimingModal
         show={priming && examples.length > 0}

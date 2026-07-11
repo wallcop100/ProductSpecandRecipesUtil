@@ -131,6 +131,12 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   const nextRef = isContainer ? suggestNextETRef(etRef) : null
   const internalItems = isContainer ? getInternalItems(etRef, recipes, elementTypes) : []
 
+  // A plain (non-container) ElementType can still be used across several positions — the
+  // "shared ElementType" the import step used to flag. It belongs here, where it is
+  // actionable: fork it if this position needs its own copy.
+  const etSharedWith = (etRef && !isUnresolved && !isContainer)
+    ? getUsedIn(etRef, recipes, posRef) : []
+
   const [showContents, setShowContents] = useState(false)
   const [forking, setForking] = useState(false)
   const [guard, setGuard] = useState(null)   // { verb, run } — a destructive edit inside a shared wrapper
@@ -332,6 +338,17 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                     </button>
                   </>
                 )}
+
+                {/* Shared ElementType (non-container): informational, not a warning —
+                    reusing a product across positions is normal. Fork lives in the
+                    action stack, near the container icon. */}
+                {!isContainer && etRef && etSharedWith.length > 0 && (
+                  <span className="d-inline-flex align-items-center gap-1" style={{ fontSize: 10, color: '#6c757d' }}
+                    title={`This element type is also used by ${etSharedWith.join(', ')}`}>
+                    <MaterialIcon name="group" size={11} />
+                    shared with {etSharedWith.length} other position{etSharedWith.length === 1 ? '' : 's'}
+                  </span>
+                )}
               </div>
 
               {/* Replace-entity fork (Existing / New) with a keep-fields toggle */}
@@ -495,30 +512,39 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
             ) : (
               <div className="d-flex flex-column align-items-center gap-1" style={{ alignSelf: 'flex-start' }}>
                 {onReplace && etRef && !isUnresolved && (
-                  <IconButton
-                    variant="link"
-                    className="text-secondary p-0"
+                  <HoverIconButton
                     icon="swap_horiz"
                     size={16}
+                    hoverColor="#495057"
                     onClick={() => setReplacing(v => !v)}
                     title="Replace this element type with another"
                   />
                 )}
-                <IconButton
-                  variant="link"
-                  className="text-danger p-0"
+                {/* Fork a shared, non-container ElementType: give this position its own copy. */}
+                {!isContainer && etRef && etSharedWith.length > 0 && (
+                  <HoverIconButton
+                    icon={ACTION_ICONS.fork}
+                    size={16}
+                    hoverColor="#b45309"
+                    onClick={() => setForking(true)}
+                    title={`Fork ${etRef} for ${posRef} — its own copy, so changing it stops affecting ${etSharedWith.join(', ')}`}
+                  />
+                )}
+                <HoverIconButton
                   icon={ACTION_ICONS.delete}
                   size={16}
+                  hoverColor="#dc3545"
                   onClick={guarded('delete', () => removeRecipeRow(posRef, rowId))}
                   title={containerSharedWith.length > 0
                     ? `Mark IsDeleted — inside ${ownContainer}, shared with ${containerSharedWith.join(', ')}`
                     : 'Mark IsDeleted'}
                 />
-                {/* Container designation toggle — stacked under the delete action */}
+                {/* Container designation toggle — stacked under the delete action. It has an
+                    active (orange) state, so it stays coloured rather than grey-until-hover. */}
                 {etRef && (
                   <IconButton
                     icon={ACTION_ICONS.container} size={15}
-                    style={{ color: isContainer ? '#bf6018' : '#ccc', padding: 0 }}
+                    style={{ color: isContainer ? '#bf6018' : ICON_GREY, padding: 0 }}
                     onClick={() => toggleContainerET(etRef)}
                     title={isContainer
                       ? `Container element — click to remove designation${whyText ? ` — ${whyText}` : ''}`
@@ -561,6 +587,27 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
         <SwapEverywhereModal show fromRef={etRef} posRef={posRef} onHide={() => setSwapping(false)} />
       )}
     </div>
+  )
+}
+
+// Right-side action icons read as clutter when always coloured. Keep them grey at rest
+// and reveal the semantic colour (danger red, fork amber) only on hover — the container
+// toggle is exempt because it carries its own active (orange) state.
+const ICON_GREY = '#adb5bd'
+function HoverIconButton({ icon, size = 16, onClick, title, disabled, restColor = ICON_GREY, hoverColor }) {
+  const [hover, setHover] = useState(false)
+  return (
+    <IconButton
+      variant="link"
+      icon={icon}
+      size={size}
+      onClick={onClick}
+      title={title}
+      disabled={disabled}
+      style={{ color: hover ? (hoverColor ?? restColor) : restColor, padding: 0 }}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    />
   )
 }
 

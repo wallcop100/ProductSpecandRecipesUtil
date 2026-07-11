@@ -63,6 +63,7 @@ export const ACTION_ICONS = {
   favorite:    'star',
   favoriteOff: 'star_border',
   container:   'inventory_2',
+  fork:        'call_split',
   // status
   complete:    'check_circle',
   incomplete:  'radio_button_unchecked',
