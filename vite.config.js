@@ -16,8 +16,13 @@ export default defineConfig({
     strictPort: true,
   },
   optimizeDeps: {
-    // sql.js ships its own wasm loader; leave it alone.
-    exclude: ['sql.js'],
+    // sql.js is CJS (`module.exports = initSqlJs`). Pre-bundle it so esbuild gives it a
+    // real ESM default export — excluding it makes dev serve raw CJS, where `module` is
+    // undefined in the browser and `(await import('sql.js')).default` is not a function.
+    // Its wasm is loaded separately (the `?url` import + our locateFile), so bundling the
+    // JS loader touches nothing. `include` bundles it upfront despite the dynamic import,
+    // avoiding a first-open re-optimize + reload.
+    include: ['sql.js'],
   },
   build: {
     outDir: 'dist',
