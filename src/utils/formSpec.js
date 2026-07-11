@@ -28,6 +28,8 @@
 import { buildPresence, containerForPosition, POSITION, INTERNAL } from './recipePresence'
 import { positionRecipeWithWrapperInternals, wrapperUsedBy } from './collectionStatus'
 import { isConnector } from './connectors'
+import { findProductET } from './productCodes'
+import { reuseCandidates } from './etRefSuggest'
 
 const lc = s => String(s ?? '').trim().toLowerCase()
 const etOf = r => r.ElementTypeRef || r.elementTypeRef || ''
@@ -128,6 +130,62 @@ export function formPending(formCaptures, posRef) {
 }
 
 /**
+ * An extra row can be the answer to a pending product — but only if it could be a PRODUCT.
+ * A wrapper is the assembly itself and a connector is derived detail; the Form never names
+ * either, and merging a Form product onto one would be a category error.
+ */
+const MERGEABLE_EXTRA = new Set(['contract', 'internal', 'other'])
+
+/**
+ * pendingCandidates(p, { extra, psRows, elementTypes }, limit)
+ *   → [{ ref, why: 'spec' | 'recipe' | 'reuse', description? }]   best first, deduped
+ *
+ * "The Form asks for `Light Sheet Custom` here and it has no ElementType" and "`ET-LS-01`
+ * is in the recipe and the Form doesn't mention it" are the same fact, stated twice. This
+ * finds the ET a pending Form product probably already IS.
+ *
+ * The obvious approach — match the text — CANNOT solve this: `reuseCandidates` scores
+ * `Light Sheet Custom` against `ET-LS-01` at zero, because they share no code text at all.
+ * The evidence that actually works is structural, and it is source 2 below.
+ */
+export function pendingCandidates(p, { extra = [], psRows = [], elementTypes = [] } = {}, limit = 3) {
+  if (!p?.code) return []
+
+  const out = []
+  const seen = new Set()
+  const push = (ref, why, description) => {
+    const k = lc(ref)
+    if (!k || seen.has(k)) return
+    seen.add(k)
+    out.push(description ? { ref, why, description } : { ref, why })
+  }
+
+  // 1. The Product Spec already names an ElementType for this exact (maker, code). That is
+  //    not a guess, it is the answer — so it outranks everything.
+  const inSpec = findProductET(psRows, p.manufacturer, p.code)
+  if (inSpec) push(inSpec, 'spec')
+
+  // 2. The recipe holds an ElementType the Form cannot account for, while the Form wants a
+  //    product that has none. Invisible to text matching; the strongest evidence there is.
+  for (const x of extra) {
+    if (!MERGEABLE_EXTRA.has(x.kind)) continue
+    push(x.elementTypeRef, 'recipe')
+  }
+
+  // 3. The same product, spelt the same way, elsewhere in the spec. `variant` is excluded
+  //    deliberately: it shares a stem but DIFFERS (250-1CH vs 250-2CH) and earns its own
+  //    ref — merging onto it is the very bug etRefSuggest exists to prevent.
+  for (const c of reuseCandidates(p.code, p.note, {
+    psRows, elementTypes, manufacturer: p.manufacturer,
+  }, limit)) {
+    if (c.kind !== 'same') continue
+    push(c.ref, 'reuse', c.description)
+  }
+
+  return out.slice(0, limit)
+}
+
+/**
  * Just the numbers, for the roll-up chip. Cheap enough to call per position.
  *
  * `pending` counts toward the total: the Form asked for it and the recipe has not got
@@ -211,6 +269,12 @@ function indexCaptures(byPosition = {}) {
     for (const e of entries || []) {
       const k = codeKey(e)
       if (k) map.set(k, { posRef, entry: e })
+      // A merged code (two Form codes found to be one product) is still a code the Form
+      // carried. Leave it unindexed and every re-import reports it as `added`, for ever.
+      for (const m of e.merged || []) {
+        const mk = lc(m.code)
+        if (mk) map.set(mk, { posRef, entry: e })
+      }
     }
   }
   return map

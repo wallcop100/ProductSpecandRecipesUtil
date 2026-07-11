@@ -115,3 +115,68 @@ describe('promotePendingCapture — naming it makes it addable', () => {
     expect(fc.byPosition.C01r).toHaveLength(1)
   })
 })
+
+/**
+ * Two Form codes can turn out to be one product ("Light Sheet 90CRI" and "Light Sheet
+ * Custom" are both ET-LS-01). Promoting the second onto an ET already captured here used
+ * to hit `already ? here : [...]` — the code was pulled out of pending and then dropped on
+ * the floor, code, note and manufacturer with it. It vanished from the record entirely.
+ */
+describe('promotePendingCapture — merging two codes onto one ET loses nothing', () => {
+  beforeEach(() => {
+    useStore.setState({
+      projectId: null,
+      formCaptures: {
+        byPosition: {},
+        pendingByPosition: {
+          C01r: [
+            { code: 'Light Sheet 90CRI', manufacturer: 'Applelec', note: '3mm diffuser' },
+            { code: 'Light Sheet Custom', manufacturer: 'Applelec', note: 'backlit' },
+          ],
+        },
+      },
+    })
+  })
+
+  test('the second code rides along in merged[], with its note', async () => {
+    const { promotePendingCapture } = useStore.getState()
+    await promotePendingCapture('C01r', 'Light Sheet 90CRI', 'ET-LS-01')
+    await promotePendingCapture('C01r', 'Light Sheet Custom', 'ET-LS-01')
+
+    const fc = useStore.getState().formCaptures
+    expect(fc.pendingByPosition.C01r).toBeUndefined()      // both cleared
+
+    // ONE entry per ET — coverage and the pane's React keys depend on it
+    expect(fc.byPosition.C01r).toHaveLength(1)
+    const entry = fc.byPosition.C01r[0]
+    expect(entry.elementTypeRef).toBe('ET-LS-01')
+    expect(entry.code).toBe('Light Sheet 90CRI')
+
+    // and the second code is still on the record, note and all
+    expect(entry.merged).toHaveLength(1)
+    expect(entry.merged[0].code).toBe('Light Sheet Custom')
+    expect(entry.merged[0].note).toBe('backlit')
+    expect(entry.merged[0].manufacturer).toBe('Applelec')
+  })
+
+  test('merging the same code twice does not duplicate it', async () => {
+    const { promotePendingCapture } = useStore.getState()
+    await promotePendingCapture('C01r', 'Light Sheet 90CRI', 'ET-LS-01')
+    await promotePendingCapture('C01r', 'Light Sheet Custom', 'ET-LS-01')
+    // it is no longer pending, so a repeat is a no-op — but assert the shape holds
+    await promotePendingCapture('C01r', 'Light Sheet Custom', 'ET-LS-01')
+
+    const entry = useStore.getState().formCaptures.byPosition.C01r[0]
+    expect(entry.merged).toHaveLength(1)
+  })
+
+  test('two codes onto DIFFERENT ETs stay two entries', async () => {
+    const { promotePendingCapture } = useStore.getState()
+    await promotePendingCapture('C01r', 'Light Sheet 90CRI', 'ET-LS-01')
+    await promotePendingCapture('C01r', 'Light Sheet Custom', 'ET-LS-02')
+
+    const here = useStore.getState().formCaptures.byPosition.C01r
+    expect(here).toHaveLength(2)
+    expect(here.every(e => !e.merged)).toBe(true)
+  })
+})

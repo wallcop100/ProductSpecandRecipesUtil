@@ -329,3 +329,64 @@ describe('Next unreconciled', () => {
     expect(screen.queryByText(/Next unreconciled/)).toBeNull()
   })
 })
+
+/**
+ * The pane could state a problem and its own answer side by side without noticing:
+ * a red "1 product with no ElementType" (Light Sheet Custom / Applelec) next to a grey
+ * "Not specified by the Form" (ET-LS-01). Same product. The only button was "Create",
+ * which would mint a duplicate of something already in the recipe.
+ */
+describe('a pending Form product can be merged into an ElementType you already have', () => {
+  const pendingCaps = {
+    ...captures,
+    byPosition: { C01r: [] },
+    pendingByPosition: {
+      C01r: [{ code: 'Light Sheet Custom', manufacturer: 'Applelec', note: 'backlit', formRef: 'C01' }],
+    },
+  }
+  // ET-LS-01 is in the recipe and the Form cannot account for it — it IS the pending product
+  const withLS = () => [pos('C01r', 'ET-LS-01')]
+
+  beforeEach(() => { vi.clearAllMocks() })
+
+  test('the unaccounted-for recipe row is offered as the answer', () => {
+    setup({ recipes: withLS(), containerETRefs: new Set(), formCaptures: pendingCaps })
+    expect(screen.getByText('1 product with no ElementType')).toBeInTheDocument()
+    expect(screen.getByText('already in this recipe, not accounted for by the Form')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /That's it/ })).toBeInTheDocument()
+  })
+
+  test("clicking \"That's it\" links it, and stamps the identity so it survives a re-import", async () => {
+    setup({
+      recipes: withLS(), containerETRefs: new Set(), formCaptures: pendingCaps,
+      psRows: [{ _id: 'p1', ElementTypeRef: 'ET-LS-01', Manufacturer: '', ProductCode: '' }],
+    })
+    fireEvent.click(screen.getByRole('button', { name: /That's it/ }))
+
+    await vi.waitFor(() => {
+      const fc = useStore.getState().formCaptures
+      expect(fc.pendingByPosition.C01r).toBeUndefined()            // blocker cleared
+      expect(fc.byPosition.C01r[0].elementTypeRef).toBe('ET-LS-01')
+    })
+    // the empty spec row was stamped, so findProductET resolves it for ever
+    const ps = useStore.getState().psRows.find(r => r.ElementTypeRef === 'ET-LS-01')
+    expect(ps.ProductCode).toBe('Light Sheet Custom')
+    expect(ps.Manufacturer).toBe('Applelec')
+  })
+
+  test('a wrapper is never offered — merging the Form product onto the assembly is a category error', () => {
+    // the only extra is the wrapper itself
+    setup({
+      recipes: [pos('C01r', 'ET-LIN-01', { IsDesign: 'Y' })],
+      containerETRefs: new Set(['et-lin-01']),
+      formCaptures: pendingCaps,
+    })
+    expect(screen.getByText('1 product with no ElementType')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /That's it/ })).toBeNull()
+  })
+
+  test('there is always a manual way out', () => {
+    setup({ recipes: withLS(), containerETRefs: new Set(), formCaptures: pendingCaps })
+    expect(screen.getByRole('button', { name: /Pick existing/ })).toBeInTheDocument()
+  })
+})

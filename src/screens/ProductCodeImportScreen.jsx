@@ -479,10 +479,32 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   const confirmed = useMemo(() => resolved.filter(r => r.confirmed), [resolved])
   const convention = useMemo(() => inferConvention(elementTypes), [elementTypes])
 
+  /**
+   * What you already decided this code was, last time.
+   *
+   * `classify` only knows what the Product Spec says. But a merge made in the Form pane is
+   * not always stamped onto the spec — a container must not be (its N/A is load-bearing),
+   * and a clash is never overwritten. Those merges would go pending again on every
+   * re-import. So the previous captures are consulted LAST, after the spec has had its say.
+   */
+  const priorEtByCode = useMemo(() => {
+    const m = new Map()
+    for (const entries of Object.values(formCaptures?.byPosition ?? {})) {
+      for (const e of entries || []) {
+        const ref = e.elementTypeRef
+        if (!ref) continue
+        if (e.code) m.set(norm(e.code), ref)
+        for (const mg of e.merged || []) if (mg.code) m.set(norm(mg.code), ref)
+      }
+    }
+    return m
+  }, [formCaptures])
+
   const entries = useMemo(() => buildDistinct(confirmed, captureOpts).map(e => {
     // A product is (maker, code): the same code from another maker is another product.
     const c = classify(e.text, ctx, e.manufacturers[0] || '')
-    const etRef = c.elementTypeRef || assignments[norm(e.text)] || null
+    // The spec wins; your past decision is only consulted where the spec is silent.
+    const etRef = c.elementTypeRef || assignments[norm(e.text)] || priorEtByCode.get(norm(e.text)) || null
     const note = e.variants[0]?.note || ''
     // Only unresolved codes need a suggestion / reuse candidates.
     const help = etRef ? {} : {
@@ -490,7 +512,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       suggestedRef: suggestRef(e.text, note, e.manufacturers[0] || '', convention, elementTypes, psRows).ref,
     }
     return { ...e, ...c, etRef, ...help }
-  }), [confirmed, ctx, assignments, captureOpts, psRows, elementTypes, convention])
+  }), [confirmed, ctx, assignments, captureOpts, psRows, elementTypes, convention, priorEtByCode])
 
   const { collisions, similar } = useMemo(
     () => pendingResolutions(entries, keptSeparate), [entries, keptSeparate]

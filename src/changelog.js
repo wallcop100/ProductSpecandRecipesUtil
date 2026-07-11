@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-07-11', note: 'Form spec: a pending product can be merged into an ElementType the recipe already has, instead of only "Create"' },
   { date: '2026-07-11', note: 'Removed the old built-in "Connector Sets" templates (2/3/4/5-Pin × Local/Remote) — the Connectors screen owns that' },
   { date: '2026-07-11', note: 'Built-in templates drop their connector slots — the connector wizard owns sockets, plugs and strain reliefs now' },
   { date: '2026-07-11', note: '"Like this" palette tab: when the Form is silent on a position, compare and borrow rows from comparable ones' },

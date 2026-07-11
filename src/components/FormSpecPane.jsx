@@ -5,10 +5,11 @@ import MaterialIcon from './MaterialIcon'
 import BulkApplyModal from './BulkApplyModal'
 import DuplicateETModal from './DuplicateETModal'
 import UsagePopover from './UsagePopover'
-import { compareFormToRecipe, associations, formWorklist, formPending } from '../utils/formSpec'
+import { compareFormToRecipe, associations, formWorklist, formPending, pendingCandidates } from '../utils/formSpec'
 import NewETModal from './NewETModal'
+import ETRefSelect from './ETRefSelect'
 import { ConceptHint, CONCEPTS } from './ConceptCard'
-import { findProductET } from '../utils/productCodes'
+import { findProductET, stampPlan } from '../utils/productCodes'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { ago } from '../utils/ago'
 
@@ -77,9 +78,17 @@ function FormStrip({ formCaptures, onReimport, onDetach }) {
   )
 }
 
+const WHY = {
+  spec:   'the Product Spec already names it for this code',
+  recipe: 'already in this recipe, not accounted for by the Form',
+  reuse:  'the same product elsewhere in the spec',
+}
+
 export default function FormSpecPane({ posRef, embedded = false }) {
   const recipes = useStore(s => s.recipes)
   const psRows = useStore(s => s.psRows)
+  const elementTypes = useStore(s => s.elementTypes)
+  const updatePSRow = useStore(s => s.updatePSRow)
   const containerETRefs = useStore(s => s.containerETRefs)
   const formCaptures = useStore(s => s.formCaptures)
   const addRecipeRow = useStore(s => s.addRecipeRow)
@@ -96,6 +105,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
   const [preview, setPreview] = useState(null)
   const [forking, setForking] = useState(false)
   const [creating, setCreating] = useState(null)   // a pending Form product with no ElementType
+  const [picking, setPicking] = useState(null)     // ...whose ElementType you are choosing by hand
 
   const captured = formCaptures?.byPosition?.[posRef] ?? []
   const context = formCaptures?.contextByPosition?.[posRef] ?? {}
@@ -126,6 +136,50 @@ export default function FormSpecPane({ posRef, embedded = false }) {
     () => (result.orphaned.length ? associations(recipes, formCaptures) : new Map()),
     [recipes, formCaptures, result.orphaned.length]
   )
+
+  /**
+   * The ElementType each pending product probably already IS. `result.extra` is the good
+   * bit: an ET the recipe holds and the Form cannot account for is very likely the answer
+   * to a Form product that has no ET — and no amount of text matching would ever find it.
+   */
+  const candsByCode = useMemo(
+    () => new Map(pending.map(p => [
+      p.code, pendingCandidates(p, { extra: result.extra, psRows, elementTypes }),
+    ])),
+    [pending, result.extra, psRows, elementTypes]
+  )
+
+  /**
+   * "This Form product IS that ElementType." Links it, and — where the spec row is empty —
+   * stamps the identity on so the link survives a re-import. See stampPlan for why each
+   * branch is what it is; `taken` STEERS rather than warns, because the pane re-resolves
+   * captured entries through findProductET on every render and a contradicting link would
+   * simply not stick.
+   */
+  async function mergePending(p, etRef) {
+    let ref = etRef
+    const plan = stampPlan(psRows, ref, p.manufacturer, p.code, {
+      isContainer: containerETRefs.has(String(ref).toLowerCase()),
+    })
+
+    if (plan.action === 'taken') {
+      if (!window.confirm(
+        `The Product Spec says "${p.code}" is ${plan.otherRef}, not ${ref}.\n\n` +
+        `Use ${plan.otherRef} instead? (Linking it to ${ref} would not stick — the spec wins.)`
+      )) return
+      ref = plan.otherRef
+    } else if (plan.action === 'conflict') {
+      if (!window.confirm(
+        `${ref} is already ${plan.current.manufacturer || 'no maker'} / ${plan.current.code} in the Product Spec.\n\n` +
+        `Link "${p.code}" to it anyway? The spec row is left exactly as it is.`
+      )) return
+    } else if (plan.action === 'stamp') {
+      updatePSRow(ref, plan.updates)
+    }
+
+    await promotePendingCapture(posRef, p.code, ref)
+    setPicking(null)
+  }
 
   /** The next position the Form is not yet satisfied on. */
   const nextUnreconciled = useMemo(() => {
@@ -310,23 +364,66 @@ export default function FormSpecPane({ posRef, embedded = false }) {
             The Form asks for {pending.length === 1 ? 'it' : 'them'} here. Nothing can be added to the
             recipe until {pending.length === 1 ? 'it has' : 'they have'} one.
           </div>
-          {pending.map(p => (
-            <div key={p.code} className="d-flex align-items-baseline gap-1 py-1 border-top" style={{ fontSize: 10 }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: 'monospace', fontWeight: 600 }} className="text-truncate" title={p.code}>
-                  {p.code}
+          {pending.map(p => {
+            const cands = candsByCode.get(p.code) ?? []
+            const top = cands[0]
+            return (
+              <div key={p.code} className="py-1 border-top" style={{ fontSize: 10 }}>
+                <div className="d-flex align-items-baseline gap-1">
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: 'monospace', fontWeight: 600 }} className="text-truncate" title={p.code}>
+                      {p.code}
+                    </div>
+                    <div className="text-muted text-truncate" title={`${p.manufacturer || 'no manufacturer'}${p.note ? ` · ${p.note}` : ''}`}>
+                      {p.manufacturer || <em>no manufacturer</em>}{p.note ? ` · ${p.note}` : ''}
+                    </div>
+                  </div>
+                  <Button size="sm" variant="outline-danger" style={{ fontSize: 9, padding: '0 5px', flexShrink: 0 }}
+                    onClick={() => setCreating(p)}
+                    title={`Create a NEW ElementType for ${p.manufacturer ? `${p.manufacturer} ` : ''}${p.code}`}>
+                    Create
+                  </Button>
+                  <Button size="sm" variant="outline-secondary" style={{ fontSize: 9, padding: '0 5px', flexShrink: 0 }}
+                    onClick={() => setPicking(picking === p.code ? null : p.code)}
+                    title={`Point ${p.code} at an ElementType you already have`}>
+                    Pick existing…
+                  </Button>
                 </div>
-                <div className="text-muted text-truncate" title={`${p.manufacturer || 'no manufacturer'}${p.note ? ` · ${p.note}` : ''}`}>
-                  {p.manufacturer || <em>no manufacturer</em>}{p.note ? ` · ${p.note}` : ''}
-                </div>
+
+                {/* It is probably something you already have. Creating a second one would
+                    be a duplicate of a product already sitting in this very recipe. */}
+                {top && picking !== p.code && (
+                  <div className="d-flex align-items-center gap-1 mt-1 px-1 py-1 rounded"
+                    style={{ background: '#fff', border: '1px solid #f5c2c7' }}>
+                    <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{top.ref}</span>
+                    <span className="text-muted text-truncate" style={{ flex: 1, minWidth: 0 }}
+                      title={top.description || WHY[top.why]}>
+                      {WHY[top.why]}
+                    </span>
+                    <Button size="sm" variant="success" style={{ fontSize: 9, padding: '0 5px', flexShrink: 0 }}
+                      onClick={() => mergePending(p, top.ref)}
+                      title={`"${p.code}" IS ${top.ref} — link them`}>
+                      That&apos;s it
+                    </Button>
+                  </div>
+                )}
+
+                {picking === p.code && (
+                  <div className="mt-1">
+                    <ETRefSelect
+                      placeholder="Which ElementType is it?"
+                      onCommit={ref => ref && mergePending(p, ref)}
+                    />
+                    {cands.length > 1 && (
+                      <div className="text-muted mt-1" style={{ fontSize: 9 }}>
+                        Also plausible: {cands.slice(1).map(c => c.ref).join(', ')}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-              <Button size="sm" variant="outline-danger" style={{ fontSize: 9, padding: '0 5px', flexShrink: 0 }}
-                onClick={() => setCreating(p)}
-                title={`Create an ElementType for ${p.manufacturer ? `${p.manufacturer} ` : ''}${p.code}`}>
-                Create
-              </Button>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 

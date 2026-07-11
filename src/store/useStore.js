@@ -1347,8 +1347,14 @@ const useStore = create((set, get) => ({
    * ElementType now has one.
    *
    * It moves out of `pendingByPosition` and into `byPosition`, where the pane can
-   * finally offer it as something to add. Idempotent: promoting the same code twice
-   * leaves one entry.
+   * finally offer it as something to add. `etRef` may be brand new OR one that has
+   * existed for years — that second case is the merge ("this Form product IS ET-LS-01").
+   * Idempotent: promoting the same code twice leaves one entry.
+   *
+   * ONE ENTRY PER ET, always. `compareFormToRecipe` counts coverage off this list and the
+   * pane keys rows by `elementTypeRef`, so a duplicate ref would corrupt both. When two
+   * Form codes turn out to be the same product, the second rides along in `merged[]` —
+   * it used to be dropped on the floor here, code, note and all, with no trace.
    */
   async promotePendingCapture(posRef, code, etRef) {
     const { formCaptures } = get()
@@ -1365,11 +1371,19 @@ const useStore = create((set, get) => ({
     else delete pendingByPosition[posRef]
 
     const here = formCaptures.byPosition?.[posRef] ?? []
-    const already = here.some(x => key(x.elementTypeRef) === key(etRef))
-    const byPosition = {
-      ...(formCaptures.byPosition ?? {}),
-      [posRef]: already ? here : [...here, { ...entry, elementTypeRef: etRef }],
-    }
+    const hit = here.find(x => key(x.elementTypeRef) === key(etRef))
+    const nextHere = hit
+      ? here.map(x => {
+          if (x !== hit) return x
+          // Already captured under this ET — keep BOTH codes. The note is often the only
+          // thing telling two near-identical codes apart, so carry the whole capture.
+          const merged = x.merged ?? []
+          if (merged.some(m => key(m.code) === key(entry.code))) return x
+          return { ...x, merged: [...merged, entry] }
+        })
+      : [...here, { ...entry, elementTypeRef: etRef }]
+
+    const byPosition = { ...(formCaptures.byPosition ?? {}), [posRef]: nextHere }
 
     await get().saveFormCaptures({ ...formCaptures, byPosition, pendingByPosition })
   },

@@ -287,6 +287,60 @@ export function findProductET(psRows, manufacturer, code) {
   return sameCode.length === 1 ? etOfRow(sameCode[0]) : null
 }
 
+/**
+ * stampPlan(psRows, etRef, manufacturer, code, { isContainer })
+ *   → { action: 'stamp' | 'skip' | 'conflict' | 'taken', updates?, current?, otherRef? }
+ *
+ * When you say "this Form product IS ET-LS-01", the link is only as durable as the Product
+ * Spec. `findProductET` is what resolves a Form code to an ElementType on every render and
+ * on every re-import — so unless the spec row actually CARRIES this (maker, code), the
+ * merge lives nowhere but the captures blob and the next import undoes it.
+ *
+ * Writing the spec is therefore the point. Doing it blindly is not:
+ *
+ *   stamp     — the row has no product identity yet. Fill it; the link becomes permanent.
+ *   skip      — a container. `Ideaworks / N/A` is a WRAPPER'S CORROBORATING MARK, which
+ *               computeContainerInfo reads; stamping a real product code over it can
+ *               un-wrapper an assembly. Also: nothing to do when the identity already matches.
+ *   conflict  — the row already names a different real product. Never silently overwrite.
+ *   taken     — this (maker, code) already names ANOTHER ElementType. Stamping would mint a
+ *               duplicate product key, and it would not stick anyway: the pane re-resolves
+ *               through findProductET every render, so it would keep showing the other ref.
+ *
+ * A non-empty Manufacturer is never overwritten.
+ */
+export function stampPlan(psRows, etRef, manufacturer, code, { isContainer = false } = {}) {
+  if (!etRef || notAProduct(code)) return { action: 'skip' }
+
+  // Is this product identity already spoken for by a DIFFERENT ElementType?
+  const owner = findProductET(psRows, manufacturer, code)
+  if (owner && norm(owner) !== norm(etRef)) {
+    return { action: 'taken', otherRef: owner }
+  }
+
+  const row = (psRows || []).find(
+    r => (r.IsDeleted || r.isDeleted) !== 'Y' && norm(etOfRow(r)) === norm(etRef)
+  )
+  const current = { manufacturer: mfrOf(row || {}).trim(), code: codeOf(row || {}).trim() }
+
+  // A wrapper's N/A is load-bearing. Link it, never stamp it.
+  if (isContainer) return { action: 'skip', current }
+
+  // Already says exactly this — nothing to write.
+  if (productKey(current.manufacturer, current.code) === productKey(manufacturer, code)) {
+    return { action: 'skip', current }
+  }
+
+  // A real, different code already sits there.
+  if (hasProductIdentity(current.code)) return { action: 'conflict', current }
+
+  const updates = { ProductCode: String(code).trim() }
+  if (!current.manufacturer && String(manufacturer ?? '').trim()) {
+    updates.Manufacturer = String(manufacturer).trim()
+  }
+  return { action: 'stamp', updates, current }
+}
+
 // ---------------------------------------------------------------------------
 // Batch-level derivation — the distinct list and the holistic comparison
 // ---------------------------------------------------------------------------
