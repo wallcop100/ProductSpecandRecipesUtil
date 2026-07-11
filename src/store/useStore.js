@@ -2777,6 +2777,20 @@ const useStore = create((set, get) => ({
 
     const { containerETRefs } = get()
 
+    // Distinct, ref-ordered SortOrder within each family. suggestSortOrder returns the
+    // family's max + 1, but it reads elementTypes — which we never mutate here — so calling
+    // it per row hands every sibling the SAME number. Walk a per-family counter instead, so
+    // a batch of ET-PS-01/-02/-03 sorts 6, 7, 8 rather than 6, 6, 6.
+    const famOf = gap => families[gap.ref] ?? null
+    const nextSort = {}
+    for (const gap of gaps) {
+      const fam = famOf(gap)
+      if (nextSort[fam ?? ''] === undefined) nextSort[fam ?? ''] = get().suggestSortOrder(fam)
+    }
+    const order = [...gaps].sort((a, b) => a.ref.localeCompare(b.ref))
+    const sortOf = {}
+    for (const gap of order) sortOf[gap.ref] = nextSort[famOf(gap) ?? '']++
+
     if (recordHistory) get()._pushHistory()
     let dbChanges = get().dbChanges
     for (const gap of gaps) {
@@ -2786,12 +2800,12 @@ const useStore = create((set, get) => ({
           ElementTypeRef: gap.ref,
           Name: gap.name,
           Details: gap.details,
-          Family: families[gap.ref] ?? null,
+          Family: famOf(gap),
           // A wrapper is IsCollection: it carries detail rather than a product.
           // parseDb strips collections by PARENT usage, not by this flag, so a
           // wrapper marked here still comes back as an ElementType on reload.
           IsCollection: containerETRefs.has(gap.ref.toLowerCase()) ? 'Y' : null,
-          SortOrder: get().suggestSortOrder(families[gap.ref] ?? null),
+          SortOrder: sortOf[gap.ref],
         },
         _isNew: true,
       })

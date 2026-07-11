@@ -1302,6 +1302,23 @@ describe('queueMissingDbRows — teaching the master about ElementTypes it never
     expect(useStore.getState().dbChanges[0].updates.Family).toBe('ET-PS')
   })
 
+  test('siblings queued into one family get distinct sequential SortOrders, not all max+1', () => {
+    // suggestSortOrder reads elementTypes, which the queue loop never mutates — so calling
+    // it per row once handed every sibling the same number (6, 6, 6). They must sort.
+    resetStore({
+      dbChanges: [], recipes: [], dbCollectionRefs: ['ET-PS'],
+      elementTypes: [{ ElementTypeRef: 'ET-PS-OLD', Family: 'ET-PS', SortOrder: 5 }],
+      psRows: [{ _id: 'a', ElementTypeRef: 'ET-PS-03' }, { _id: 'b', ElementTypeRef: 'ET-PS-01' },
+               { _id: 'c', ElementTypeRef: 'ET-PS-02' }],
+    })
+    useStore.getState().queueMissingDbRows(null, {
+      families: { 'ET-PS-01': 'ET-PS', 'ET-PS-02': 'ET-PS', 'ET-PS-03': 'ET-PS' },
+    })
+    const so = r => useStore.getState().dbChanges.find(c => c.elementTypeRef === r).updates.SortOrder
+    // ref-ordered from the family's max (5) + 1
+    expect([so('ET-PS-01'), so('ET-PS-02'), so('ET-PS-03')]).toEqual([6, 7, 8])
+  })
+
   test('an ET already in the master workbook is not queued', () => {
     resetStore({
       dbChanges: [], recipes: [], dbCollectionRefs: [],
