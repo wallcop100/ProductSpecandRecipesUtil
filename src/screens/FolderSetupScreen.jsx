@@ -11,6 +11,9 @@ import ProjectManager from '../components/ProjectManager'
 import MaterialIcon from '../components/MaterialIcon'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { ago } from '../utils/ago'
+import { LATEST } from '../changelog'
+
+const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev'
 
 /**
  * FolderSetupScreen
@@ -402,6 +405,10 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
       <Card style={{ width: 600, boxShadow: '0 4px 24px rgba(0,0,0,0.10)' }}>
         <Card.Body className="p-4">
           <h4 className="mb-1">Recipe Builder</h4>
+          {/* One-line changelog: proves at a glance whether a new build has loaded. */}
+          <div className="text-muted mb-2" style={{ fontSize: 11 }} title={`Build ${APP_VERSION} · ${LATEST.date}`}>
+            <span className="fw-semibold">v{APP_VERSION}</span> · {LATEST.date} · {LATEST.note}
+          </div>
           <p className="text-muted mb-4">
             {newMode
               ? 'Pick the folder holding the DesignDB. It defines the positions; everything else you build here.'
