@@ -17,6 +17,13 @@ import { elementTypeUsage } from '../utils/usage'
  * opened the popover to learn.
  *
  * Wrap any ElementType ref:  <UsagePopover etRef="ET-LIN-01"><code>ET-LIN-01</code></UsagePopover>
+ *
+ * `diverges` puts the disagreement ON THE TRIGGER, not only inside the popover. The
+ * divergence line ("the recipe has it in X, where the Form does not ask for it") is the most
+ * useful sentence this component knows, and for a long time you could only reach it by
+ * hovering the exact right ref — which means you had to already suspect it. The caller passes
+ * `diverges` from `divergingRefs`, which computes the whole set in one pass; the popover
+ * still owns the explanation.
  */
 
 const Label = ({ children }) => (
@@ -28,7 +35,7 @@ const Refs = ({ items }) => (
   <span style={{ fontFamily: 'monospace' }}>{items.join(', ')}</span>
 )
 
-export default function UsagePopover({ etRef, children, placement = 'right' }) {
+export default function UsagePopover({ etRef, children, placement = 'right', diverges = false }) {
   const [show, setShow] = useState(false)
   const [target, setTarget] = useState(null)
 
@@ -61,9 +68,17 @@ export default function UsagePopover({ etRef, children, placement = 'right' }) {
         onMouseEnter={() => setShow(true)}
         onMouseLeave={() => setShow(false)}
         onClick={e => { e.stopPropagation(); setShow(v => !v) }}
-        style={{ cursor: 'help', borderBottom: '1px dotted #adb5bd' }}
+        style={{ cursor: 'help', borderBottom: `1px dotted ${diverges ? '#856404' : '#adb5bd'}` }}
       >
         {children}
+        {/* MaterialIcon is aria-hidden, so an icon on its own has no accessible name. */}
+        {diverges && (
+          <span role="img" aria-label="the Form and the recipe disagree about where this is used">
+            <MaterialIcon name="warning" size={11}
+              title="The Form and the recipe disagree about where this is used — hover for the detail"
+              style={{ color: '#856404', marginLeft: 3, verticalAlign: 'text-top' }} />
+          </span>
+        )}
       </span>
 
       <Overlay target={target} show={show && !!usage} placement={placement}>
@@ -75,10 +90,10 @@ export default function UsagePopover({ etRef, children, placement = 'right' }) {
                 <div className="mb-2 px-2 py-1 rounded" style={{ background: '#fff3cd', color: '#856404', fontSize: 10 }}>
                   <MaterialIcon name="warning" size={11} />{' '}
                   {usage.onlyInForm.length > 0 && (
-                    <>The Form asks for it in <Refs items={usage.onlyInForm} />, where the recipe does not have it.</>
+                    <>The <u>Form</u> asks for it in <Refs items={usage.onlyInForm} />, where the recipe does not have it.</>
                   )}
                   {usage.onlyInRecipe.length > 0 && (
-                    <> The recipe has it in <Refs items={usage.onlyInRecipe} />, where the Form does not ask for it.</>
+                    <> The <u>recipe</u> has it in <Refs items={usage.onlyInRecipe} />, where the Form does not ask for it.</>
                   )}
                 </div>
               )}

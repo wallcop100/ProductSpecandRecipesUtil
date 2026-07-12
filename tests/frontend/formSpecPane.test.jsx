@@ -42,6 +42,9 @@ const recipes = () => [
 ]
 
 function setup(over = {}) {
+  // Only OUR key. Clearing all of localStorage also clears rb-tutorial-seen, which re-arms
+  // the pane's auto-opening tutorial card — a second dialog in every getByRole('dialog').
+  window.localStorage.removeItem('rb-form-columns')
   useStore.setState({
     projectId: 42, recipes: recipes(), containerETRefs: new Set(['et-lin-01']),
     formCaptures: captures, psRows: [], elementTypes: [], rsChanges: [], past: [], future: [],
@@ -52,14 +55,50 @@ function setup(over = {}) {
   return render(<FormSpecPane posRef="C01r" />)
 }
 
+/**
+ * The pane's default view is the comparison and nothing else. Reference — the Form's own
+ * columns, derived rows, departed codes — is one click away on the rail, and the rare acts
+ * (re-import, detach, choose columns) are one click away in the ⋮ menu.
+ */
+const RAIL = {
+  context: 'What the Form itself says about this position',
+  extra: 'In the recipe, not specified by the Form — derived detail, not a problem',
+  orphaned: 'No longer in the Form',
+}
+const openRail = id => fireEvent.click(screen.getByLabelText(RAIL[id]))
+const openMenu = () => fireEvent.click(screen.getByTitle('Form template options'))
+
 describe('FormSpecPane renders the Form beside the recipe', () => {
   beforeEach(() => { vi.clearAllMocks() })
 
-  test('shows the import wizard\'s context columns, to keep you grounded', () => {
+  test('the Form\'s own columns are reference: behind the rail, not in your face', () => {
     setup()
-    expect(screen.getByText('ProductName:')).toBeInTheDocument()
+    expect(screen.queryByText('Linear LED')).not.toBeInTheDocument()
+
+    openRail('context')
+    expect(screen.getByText('ProductName')).toBeInTheDocument()
     expect(screen.getByText('Linear LED')).toBeInTheDocument()
     expect(screen.getByText('Black anodised')).toBeInTheDocument()
+  })
+
+  test('the rail says how many are hiding, so nothing is silently lost', () => {
+    setup()
+    // Two context columns, two extras (the socket and the wrapper), no orphans.
+    expect(screen.getByLabelText(RAIL.context)).toHaveTextContent('2')
+    expect(screen.getByLabelText(RAIL.extra)).toHaveTextContent('2')
+    expect(screen.getByLabelText(RAIL.orphaned)).toBeDisabled()
+  })
+
+  test('which columns show is a preference, changeable without re-importing', () => {
+    setup()
+    openMenu()
+    fireEvent.click(screen.getByText('Show columns…'))
+    fireEvent.click(screen.getByLabelText('Finish'))     // untick it
+    fireEvent.click(screen.getByText('Done'))
+
+    openRail('context')
+    expect(screen.getByText('Linear LED')).toBeInTheDocument()
+    expect(screen.queryByText('Black anodised')).not.toBeInTheDocument()
   })
 
   test('names the source workbook', () => {
@@ -86,8 +125,24 @@ describe('FormSpecPane renders the Form beside the recipe', () => {
     expect(screen.getByText('1/2 present')).toBeInTheDocument()
   })
 
+  /**
+   * The divergence line was the most useful sentence the popover knew, and you could only
+   * reach it by hovering the exact ref you already suspected. It is now marked on the row.
+   */
+  test('an ET the Form and the recipe disagree about is marked, not left to a hover', () => {
+    // C03r's recipe holds ET-TAPE-01; the Form only asks for it on C01r.
+    setup({ recipes: [...recipes(), pos('C03r', 'ET-TAPE-01')] })
+    expect(screen.getAllByLabelText(/the Form and the recipe disagree/i).length).toBeGreaterThan(0)
+  })
+
+  test('an ET they agree about carries no warning', () => {
+    setup({ recipes: [...recipes(), pos('C01r', 'ET-TAPE-01')] })
+    expect(screen.queryByLabelText(/the Form and the recipe disagree/i)).not.toBeInTheDocument()
+  })
+
   test('recipe rows absent from the Form are derived detail, never errors', () => {
     setup()
+    openRail('extra')
     expect(screen.getByText('Not specified by the Form')).toBeInTheDocument()
     expect(screen.getByText('ET-2PIN-SOCK')).toBeInTheDocument()
     expect(screen.getByText('connector')).toBeInTheDocument()
@@ -99,9 +154,9 @@ describe('FormSpecPane renders the Form beside the recipe', () => {
     fireEvent.click(screen.getByTitle(/Tick to add/))
     expect(screen.getByText('Add 1 to:')).toBeInTheDocument()
     // The Form carries no slot, so both destinations are offered and neither is assumed.
-    expect(screen.getByLabelText(/Position level/)).not.toBeDisabled()
+    expect(screen.getByLabelText(/PositionType Level/)).not.toBeDisabled()
     expect(screen.getByLabelText(/inside ET-LIN-01/)).not.toBeDisabled()
-    expect(screen.getByLabelText(/Position level/)).toBeChecked()   // the safe default
+    expect(screen.getByLabelText(/PositionType Level/)).toBeChecked()   // the safe default
   })
 
   test('nothing is written until the preview is confirmed', () => {
@@ -141,7 +196,7 @@ describe('FormSpecPane renders the Form beside the recipe', () => {
    */
   test('a missing row states its destination before you tick it', () => {
     setup()
-    expect(screen.getByText(/will be added at position level/)).toBeInTheDocument()
+    expect(screen.getByText(/will be added at PositionType Level/)).toBeInTheDocument()
   })
 
   test('a position with no wrapper says so up front, not in a greyed-out radio', () => {
@@ -151,6 +206,7 @@ describe('FormSpecPane renders the Form beside the recipe', () => {
 
   test('a code that left the Form is flagged, never deleted for you', () => {
     setup({ formCaptures: { ...captures, byPosition: { C01r: [] }, orphansByPosition: { C01r: ['ET-PROF-01'] } } })
+    openRail('orphaned')
     expect(screen.getByText('No longer in the Form')).toBeInTheDocument()
     expect(screen.getByText('Remove')).toBeInTheDocument()
     expect(useStore.getState().recipes.find(r => r.ElementTypeRef === 'ET-PROF-01')).toBeTruthy()
@@ -235,21 +291,26 @@ describe('the attached-Form strip', () => {
 
   test('Re-import asks App to change screen — the pane is too nested to navigate itself', () => {
     setup()
+    openMenu()
     fireEvent.click(screen.getByText('Re-import'))
     expect(useStore.getState().pendingScreen).toBe('product-code-import')
   })
 
   test('Detach confirms, then clears the captures', () => {
     setup()
+    openMenu()
     fireEvent.click(screen.getByText('Detach'))
     expect(window.confirm).toHaveBeenCalled()
     expect(useStore.getState().formCaptures).toBeNull()
   })
 
-  test('the strip is reachable even when the Form is silent about this position', () => {
+  // Detach and Re-import moved into the ⋮ menu; that menu must exist in EVERY state the
+  // pane can be in, or the Form becomes unremovable from the position you happen to be on.
+  test('the menu is reachable even when the Form is silent about this position', () => {
     setup({ formCaptures: { ...captures, byPosition: {}, contextByPosition: {} } })
-    expect(screen.getByText('Detach')).toBeInTheDocument()
     expect(screen.getByText(/The Form says nothing about C01r/)).toBeInTheDocument()
+    openMenu()
+    expect(screen.getByText('Detach')).toBeInTheDocument()
   })
 })
 

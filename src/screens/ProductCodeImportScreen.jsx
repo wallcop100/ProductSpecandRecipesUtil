@@ -15,6 +15,8 @@ import ResolveRefsStep from '../components/ResolveRefsStep'
 import StageBar from '../components/StageBar'
 import TutorialHint from '../tutorial/TutorialHint'
 import MapColumnsStep from '../components/MapColumnsStep'
+import FormContext from '../components/FormContext'
+import { capturableColumns, captureContext } from '../utils/formColumns'
 import {
   makeRow, deriveCaptures, buildDistinct, buildMaster, classify, duplicateSet,
   hasNoteCollision, rowConfidence, sortByConfidence, norm, setNoteOverride,
@@ -181,6 +183,15 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     [rawRows, map.exclude]
   )
 
+  /**
+   * Every column worth carrying. CAPTURE is generous and SHOW is a preference: a column
+   * that was never captured can never be offered in the Side-by-Side pane later without a
+   * re-import, and "I want to see Wattage too" should not cost a re-import.
+   *
+   * `map.context` therefore no longer decides what is kept — only what is shown by default.
+   */
+  const capturable = useMemo(() => capturableColumns(headers, map), [headers, map])
+
   /** The rows the mapping selects, in queue order. */
   const buildRows = useCallback(() => rawRows
     .filter(r => !(map.exclude && isExcluded(r[map.exclude])))
@@ -188,8 +199,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     .map((r, i) => makeRow(i, String(r[map.code]), {
       positionType: String(r[map.pt] ?? '').trim(),
       manufacturer: String(r[map.mfr] ?? '').trim(),
-      context: Object.fromEntries(map.context.map(c => [c, r[c]]).filter(([, v]) => v != null && String(v).trim() !== '')),
-    })), [rawRows, map])
+      context: captureContext(r, capturable),
+    })), [rawRows, map, capturable])
 
   /**
    * Before reviewing a single code, settle where each Form ref's recipe belongs.
@@ -634,9 +645,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       if (!row.positionType) continue
       const target = map.pt ? ptTarget(row.positionType) : row.positionType
       if (!target) { unrouted++; continue }
-      // The context columns the user picked at the mapping step — the same ones shown
-      // above the paint surface. Carried through so the Side-by-Side pane can show
-      // them, keeping the user grounded in what the sheet actually said.
+      // EVERY column the sheet carries for this position, not just the ones ticked at the
+      // mapping step. What is shown is a preference the pane can change at any time; what
+      // is captured can only be changed by re-importing, so capture everything.
       if (!contextByPosition[target] && Object.keys(row.context || {}).length) {
         contextByPosition[target] = row.context
       }
@@ -673,6 +684,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       byPosition: Object.fromEntries(byPos),
       pendingByPosition: Object.fromEntries(pendingByPos),
       contextByPosition,
+      // What the sheet HAS (in sheet order), and what to show unless the pane says otherwise.
+      contextColumns: capturable,
+      contextDefaults: map.context,
       orphansByPosition: {},
       unrouted: resolutions.filter(r => !r.target).map(r => ({ formRef: r.formRef, rows: r.rows })),
     }
@@ -896,13 +910,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                   {current.manufacturer && <> · {current.manufacturer}</>}
                 </div>
 
-                {Object.keys(current.context).length > 0 && (
-                  <div className="mb-2 px-2 py-1 rounded" style={{ background: '#f8f9fa', fontSize: 11 }}>
-                    {Object.entries(current.context).map(([k, v]) => (
-                      <div key={k}><span className="text-muted">{k}:</span> {String(v)}</div>
-                    ))}
-                  </div>
-                )}
+                {/* Every column is captured, but only the ones you picked are shown — the
+                    sheet has ~180 of them and most are junk. */}
+                <FormContext context={current.context} columns={map.context} style={{ marginBottom: 8 }} />
 
                 {/* Stage ① — what the Product Spec already knew. */}
                 {knownStats && (

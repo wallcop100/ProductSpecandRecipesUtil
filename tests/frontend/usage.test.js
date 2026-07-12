@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest'
-import { elementTypeUsage, productUsage, wrapperUsage, unmatchedFormPositions } from '../../src/utils/usage.js'
+import { elementTypeUsage, productUsage, wrapperUsage, unmatchedFormPositions, divergingRefs } from '../../src/utils/usage.js'
 
 const pos = (posRef, ref, extra = {}) => ({
   PositionTypeRef: posRef, ContextType: 'PositionType', ContextRef: posRef, ElementTypeRef: ref, ...extra,
@@ -150,5 +150,60 @@ describe('unmatchedFormPositions — what the Form names that nothing has', () =
 
   test('nothing resolved, everything reported', () => {
     expect(unmatchedFormPositions(resolutions, [])).toHaveLength(3)
+  })
+})
+
+describe('divergingRefs — the whole set in one pass', () => {
+  const rec = (posRef, ref) => ({
+    _id: `${posRef}-${ref}`, PositionTypeRef: posRef, ContextType: 'PositionType',
+    ContextRef: posRef, ElementTypeRef: ref, Quantity: 1,
+  })
+  const captures = {
+    byPosition: {
+      C01r: [{ elementTypeRef: 'ET-TAPE-01' }],
+      C03r: [{ elementTypeRef: 'ET-TAPE-01' }],
+    },
+  }
+
+  test('the Form asks somewhere the recipe has not got it', () => {
+    const set = divergingRefs({ recipes: [rec('C01r', 'ET-TAPE-01')], formCaptures: captures })
+    expect(set.has('et-tape-01')).toBe(true)   // C03r asks, nothing built
+  })
+
+  test('the recipe has it somewhere the Form does not ask', () => {
+    const recipes = [rec('C01r', 'ET-TAPE-01'), rec('C03r', 'ET-TAPE-01'), rec('A02m', 'ET-TAPE-01')]
+    expect(divergingRefs({ recipes, formCaptures: captures }).has('et-tape-01')).toBe(true)
+  })
+
+  test('agreement is not divergence', () => {
+    const recipes = [rec('C01r', 'ET-TAPE-01'), rec('C03r', 'ET-TAPE-01')]
+    expect(divergingRefs({ recipes, formCaptures: captures }).size).toBe(0)
+  })
+
+  // Otherwise every connector and kit in the project would light up as a disagreement.
+  test('an ET the Form never mentions cannot diverge — it is derived detail', () => {
+    const recipes = [rec('C01r', 'ET-TAPE-01'), rec('C03r', 'ET-TAPE-01'), rec('C01r', 'ET-2PIN-SOCK')]
+    const set = divergingRefs({ recipes, formCaptures: captures })
+    expect(set.has('et-2pin-sock')).toBe(false)
+  })
+
+  test('a deleted row is not evidence of anything', () => {
+    const recipes = [
+      rec('C01r', 'ET-TAPE-01'), rec('C03r', 'ET-TAPE-01'),
+      { ...rec('A02m', 'ET-TAPE-01'), IsDeleted: 'Y' },
+    ]
+    expect(divergingRefs({ recipes, formCaptures: captures }).size).toBe(0)
+  })
+
+  test('no Form attached: nothing can diverge', () => {
+    expect(divergingRefs({ recipes: [rec('C01r', 'ET-TAPE-01')], formCaptures: null }).size).toBe(0)
+  })
+
+  // The same predicate elementTypeUsage() has always used, now computed for every ref at once.
+  test('agrees with elementTypeUsage().differs', () => {
+    const recipes = [rec('C01r', 'ET-TAPE-01')]
+    const set = divergingRefs({ recipes, formCaptures: captures })
+    const one = elementTypeUsage('ET-TAPE-01', { recipes, formCaptures: captures })
+    expect(set.has('et-tape-01')).toBe(one.differs)
   })
 })

@@ -20,7 +20,12 @@ import MaterialIcon from './MaterialIcon'
  *   iconStyle: object       — style passed to the icon (e.g. colour)
  *   ...rest                 — onClick, disabled, className, style, etc.
  */
-export default function IconButton({
+/**
+ * forwardRef, so this can be a react-bootstrap `Dropdown.Toggle as={IconButton}` — an
+ * overflow menu whose face is an icon is exactly what this component is for, and Dropdown
+ * positions its menu against the toggle's DOM node.
+ */
+const IconButton = React.forwardRef(function IconButton({
   icon,
   title,
   label,
@@ -32,13 +37,14 @@ export default function IconButton({
   className = '',
   style,
   ...rest
-}) {
+}, ref) {
   const linkReset = variant === 'link'
     ? { textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, lineHeight: 1 }
     : { display: 'inline-flex', alignItems: 'center', gap: 4 }
 
   return (
     <Button
+      ref={ref}
       variant={variant}
       size={bsSize}
       title={title}
@@ -53,4 +59,6 @@ export default function IconButton({
       )}
     </Button>
   )
-}
+})
+
+export default IconButton

@@ -416,7 +416,7 @@ function checkLocalDriverRequirements(rsRows, positionUI) {
       issues.push({
         severity: 'warning',
         rule: 'LOCAL_MISSING_SITE_SOCKET',
-        message: `Local position "${ref}" has no site-side socket at position level (first-fix).`,
+        message: `Local position "${ref}" has no site-side socket at PositionType level (first-fix).`,
         ref,
       })
     }
@@ -424,7 +424,7 @@ function checkLocalDriverRequirements(rsRows, positionUI) {
       issues.push({
         severity: 'warning',
         rule: 'LOCAL_MISSING_STRAIN_RELIEF',
-        message: `Local position "${ref}" has no site-side strain relief (SR) at position level.`,
+        message: `Local position "${ref}" has no site-side strain relief (SR) at PositionType level.`,
         ref,
       })
     }

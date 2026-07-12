@@ -91,7 +91,7 @@ export const TUTORIALS = {
     steps: [
       { blurb: 'Left: what the recipe has. Right: what the Form asks for. The gap between them is your work.', scene: 'formpane', beat: 0 },
       { blurb: 'A product the Form asks for that the recipe lacks is a defect. Tick it.', scene: 'formpane', beat: 1 },
-      { blurb: 'The Form carries no slots, so you choose where it lands: position level, or inside the wrapper.', scene: 'formpane', beat: 2 },
+      { blurb: 'The Form carries no slots, so you choose where it lands: PositionType level, or inside the wrapper.', scene: 'formpane', beat: 2 },
       { blurb: 'It lands, coverage rises — and rows the Form never mentioned (connectors, kits) are fine. Derived detail is never flagged.', scene: 'formpane', beat: 3 },
       { blurb: 'A product nobody has named yet is usually one the recipe already holds. "That\'s it" links them instead of minting a duplicate.', scene: 'formpane', beat: 4 },
     ],

@@ -1,11 +1,15 @@
 import React, { useMemo, useState } from 'react'
-import { Button, Form } from 'react-bootstrap'
+import { Button, Dropdown, Form, Modal } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
+import IconButton from './IconButton'
+import FormContext from './FormContext'
+import { loadVisible, saveVisible, clearVisible, visibleColumns } from '../utils/formColumns'
 import BulkApplyModal from './BulkApplyModal'
 import DuplicateETModal from './DuplicateETModal'
 import UsagePopover from './UsagePopover'
 import { compareFormToRecipe, associations, formWorklist, formPending, pendingCandidates } from '../utils/formSpec'
+import { divergingRefs } from '../utils/usage'
 import NewETModal from './NewETModal'
 import ETRefSelect from './ETRefSelect'
 import { ConceptHint, CONCEPTS } from './ConceptCard'
@@ -53,29 +57,138 @@ function FoundIn({ foundIn, container }) {
 }
 
 /**
- * Which workbook is attached, when it was imported, and the two things you can do
- * about it. `clearFormCaptures` had no UI caller at all before this.
+ * Which workbook is attached, and when. Re-import and Detach used to shout from here as two
+ * link buttons; they are rare, deliberate acts and now live in the ⋮ menu, which leaves this
+ * a single quiet line of provenance.
  */
-function FormStrip({ formCaptures, onReimport, onDetach }) {
+function FormStrip({ formCaptures }) {
   const when = ago(formCaptures.importedAt)
   return (
-    <div className="d-flex align-items-center gap-1 mb-2 px-2 py-1 rounded"
-      style={{ background: '#f8f9fa', border: '1px solid #e9ecef', fontSize: 10 }}>
-      <MaterialIcon name="description" size={12} style={{ flexShrink: 0, color: '#6c757d' }} />
-      <span className="text-truncate" style={{ minWidth: 0, flex: 1 }}
+    <div className="d-flex align-items-center gap-1 mb-2 text-muted" style={{ fontSize: 10 }}>
+      <MaterialIcon name="description" size={11} style={{ flexShrink: 0 }} />
+      <span className="text-truncate" style={{ minWidth: 0 }}
         title={`${formCaptures.source?.name || 'Form template'}${formCaptures.source?.sheet ? ` · ${formCaptures.source.sheet}` : ''}`}>
         {formCaptures.source?.name || 'Form template'}
-        {when && <span className="text-muted"> · {when}</span>}
+        {when && <> · {when}</>}
       </span>
-      <Button size="sm" variant="link" className="p-0" style={{ fontSize: 9 }}
-        onClick={onReimport} title="Re-import the Form; changes are shown as a diff">
-        Re-import
-      </Button>
-      <Button size="sm" variant="link" className="p-0 text-danger" style={{ fontSize: 9 }}
-        onClick={onDetach} title="Detach the Form template from this project">
-        Detach
-      </Button>
     </div>
+  )
+}
+
+/**
+ * A Form row's state, as an icon that is always there.
+ *
+ * It used to be carried by a `title` and a line of small red text, so you could not scan
+ * the column — you had to read it. The split that matters is ERROR vs QUESTION: a product
+ * the recipe lacks is a defect; a product with no ElementType is not wrong, it is unanswered,
+ * and the tool cannot even offer to add it. Different icons, different colours, on purpose.
+ */
+const ROW_STATUS = {
+  present:  { icon: ACTION_ICONS.complete, color: '#198754', title: 'in the recipe' },
+  addable:  { icon: 'add_circle', color: '#0d6efd', title: 'already an ElementType — tick to add it' },
+  missing:  { icon: 'error', color: '#dc3545', title: 'missing from the recipe' },
+  question: { icon: 'help', color: '#997404', title: 'no ElementType yet — nothing can be added until it has one' },
+}
+function RowStatus({ status }) {
+  const s = ROW_STATUS[status]
+  if (!s) return null
+  return (
+    <MaterialIcon name={s.icon} size={13} title={s.title}
+      style={{ color: s.color, flexShrink: 0, marginTop: 1 }} />
+  )
+}
+
+/**
+ * One face of the reference rail: an icon, its count, and whether it is open.
+ *
+ * A zero-count section still shows, greyed and inert — "there are no orphans" is worth
+ * knowing, and a rail that changes shape as you move between positions is a rail you cannot
+ * learn.
+ */
+function RailToggle({ id, icon, count, open, onToggle, title, tone }) {
+  const empty = count === 0
+  const on = open.has(id)
+  return (
+    <button type="button" title={`${title}${empty ? ' — none' : ` (${count})`}`}
+      aria-label={title} aria-pressed={on} disabled={empty}
+      onClick={() => onToggle(id)}
+      className="btn btn-sm d-inline-flex align-items-center gap-1"
+      style={{
+        fontSize: 10, padding: '1px 6px', borderRadius: 10, lineHeight: 1.4,
+        background: on ? '#e7f1ff' : 'transparent',
+        border: `1px solid ${on ? '#b6d4fe' : '#e9ecef'}`,
+        color: empty ? '#ced4da' : tone || '#6c757d',
+        opacity: empty ? 0.7 : 1,
+      }}>
+      <MaterialIcon name={icon} size={12} />
+      {count}
+    </button>
+  )
+}
+
+/**
+ * The ⋮ menu. Re-import and Detach are rare, deliberate acts — they do not deserve two link
+ * buttons shouting from the strip — but they must be reachable from EVERY state the pane can
+ * be in, including the one where the Form is silent about this position. Hence one component,
+ * rendered in both branches.
+ */
+function PaneMenu({ onColumns, onReimport, onDetach, columnsDisabled }) {
+  return (
+    <Dropdown align="end">
+      <Dropdown.Toggle as={IconButton} icon={ACTION_ICONS.more} size={14}
+        title="Form template options" className="p-0 text-muted" />
+      <Dropdown.Menu style={{ fontSize: 11 }}>
+        {onColumns && (
+          <>
+            <Dropdown.Item onClick={onColumns} disabled={columnsDisabled}>
+              <MaterialIcon name="notes" size={12} /> Show columns…
+            </Dropdown.Item>
+            <Dropdown.Divider />
+          </>
+        )}
+        <Dropdown.Item onClick={onReimport}>
+          <MaterialIcon name="sync" size={12} /> Re-import
+        </Dropdown.Item>
+        <Dropdown.Item onClick={onDetach} className="text-danger">
+          <MaterialIcon name={ACTION_ICONS.delete} size={12} /> Detach
+        </Dropdown.Item>
+      </Dropdown.Menu>
+    </Dropdown>
+  )
+}
+
+/**
+ * Which of the Form's columns to show. Every column the sheet carries is captured, so this
+ * never needs a re-import — it is a display preference, and it persists per project.
+ */
+function ColumnPicker({ show, onHide, available, shown, onChange, onReset }) {
+  const toggle = c => onChange(shown.includes(c) ? shown.filter(x => x !== c) : [...shown, c])
+  return (
+    <Modal show={show} onHide={onHide} size="sm" centered>
+      <Modal.Header closeButton>
+        <Modal.Title style={{ fontSize: 14 }}>
+          <MaterialIcon name="notes" size={16} /> Show columns
+        </Modal.Title>
+      </Modal.Header>
+      <Modal.Body style={{ maxHeight: 380, overflowY: 'auto' }}>
+        <div className="text-muted mb-2" style={{ fontSize: 11 }}>
+          Everything the Form carries for this position. Ticking one shows it here — no
+          re-import needed.
+        </div>
+        {available.map(c => (
+          <Form.Check key={c} type="checkbox" id={`col-${c}`}
+            checked={shown.includes(c)} onChange={() => toggle(c)}
+            label={<span style={{ fontSize: 11 }}>{c}</span>} />
+        ))}
+      </Modal.Body>
+      <Modal.Footer>
+        <Button size="sm" variant="link" className="text-muted me-auto" style={{ fontSize: 11 }}
+          onClick={onReset} title="Back to the columns chosen at import">
+          Reset to import defaults
+        </Button>
+        <Button size="sm" variant="primary" onClick={onHide}>Done</Button>
+      </Modal.Footer>
+    </Modal>
   )
 }
 
@@ -100,6 +213,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
   const setActivePosition = useStore(s => s.setActivePosition)
   const requestPaletteTab = useStore(s => s.requestPaletteTab)
   const promotePendingCapture = useStore(s => s.promotePendingCapture)
+  const projectId = useStore(s => s.projectId)
 
   const [ticked, setTicked] = useState(() => new Set())
   const [dest, setDest] = useState('auto')      // 'position' | 'internal'
@@ -108,8 +222,49 @@ export default function FormSpecPane({ posRef, embedded = false }) {
   const [creating, setCreating] = useState(null)   // a pending Form product with no ElementType
   const [picking, setPicking] = useState(null)     // ...whose ElementType you are choosing by hand
 
+  /**
+   * The pane does ONE job — what the Form asks for vs what the recipe has — and everything
+   * else in it is reference: the sheet's own columns, rows the Form never mentioned, codes
+   * that have left it. Reference starts CLOSED, behind a rail of counted icons, so the
+   * default view is the comparison and nothing else.
+   */
+  const [open, setOpen] = useState(() => new Set())
+  const [choosingCols, setChoosingCols] = useState(false)
+  const toggleSection = id => setOpen(o => {
+    const next = new Set(o)
+    next.has(id) ? next.delete(id) : next.add(id)
+    return next
+  })
+
   const captured = formCaptures?.byPosition?.[posRef] ?? []
   const context = formCaptures?.contextByPosition?.[posRef] ?? {}
+
+  /**
+   * Which of the Form's columns to show. The import captures every column the sheet has;
+   * which of them appear here is a display preference you can change without re-importing.
+   *
+   * A capture made before this existed has neither list — for those, everything captured is
+   * both available and default, which is exactly what it used to show. `colPref` is null
+   * when this project has never been asked, and an empty array is a real answer ("show me
+   * none"), so the two must not be conflated.
+   */
+  const [colPref, setColPref] = useState(() => loadVisible(projectId))
+  const allCols = formCaptures?.contextColumns ?? Object.keys(context)
+  const defaultCols = formCaptures?.contextDefaults ?? allCols
+  const shownCols = useMemo(
+    () => visibleColumns({ available: allCols, defaults: defaultCols, chosen: colPref })
+      .filter(c => context[c] != null && String(context[c]).trim() !== ''),
+    [allCols, defaultCols, colPref, context]
+  )
+  /** Only columns this position actually carries are worth offering. */
+  const offerCols = useMemo(
+    () => allCols.filter(c => context[c] != null && String(context[c]).trim() !== ''),
+    [allCols, context]
+  )
+  function chooseCols(next) {
+    setColPref(next)
+    saveVisible(projectId, next)
+  }
   const orphanRefs = formCaptures?.orphansByPosition?.[posRef] ?? []
   // Products the Form asks for here that nobody has named yet. Staging is incremental,
   // so these are what you left for later. Without them the pane's promise — "what the
@@ -131,6 +286,13 @@ export default function FormSpecPane({ posRef, embedded = false }) {
     () => compareFormToRecipe(recipes, posRef, formEts, containerETRefs, { orphanRefs }),
     [recipes, posRef, formEts, containerETRefs, orphanRefs]
   )
+
+  /**
+   * Every ET whose Form and recipe disagree about WHERE it is used. One pass for the whole
+   * set, so the panel can mark them; the popover still explains any one you ask about.
+   */
+  const diverging = useMemo(() => divergingRefs({ recipes, formCaptures }), [recipes, formCaptures])
+  const diverges = ref => diverging.has(String(ref).toLowerCase())
 
   // "X consistently has Y" — learned, advisory, only consulted for orphans.
   const assoc = useMemo(
@@ -227,8 +389,13 @@ export default function FormSpecPane({ posRef, embedded = false }) {
   if (formEts.length === 0 && result.orphaned.length === 0 && pending.length === 0) {
     return (
       <div className="border-start ps-3" style={{ width: 340, flexShrink: 0, overflowY: 'auto' }}>
-        <SectionLabel>Form spec</SectionLabel>
-        <FormStrip formCaptures={formCaptures} onReimport={handleReimport} onDetach={handleDetach} />
+        <div className="d-flex align-items-center gap-1">
+          <SectionLabel className="mb-0">Form spec</SectionLabel>
+          <span className="ms-auto">
+            <PaneMenu onReimport={handleReimport} onDetach={handleDetach} />
+          </span>
+        </div>
+        <FormStrip formCaptures={formCaptures} />
         <div className="text-muted fst-italic" style={{ fontSize: 11 }}>
           The Form says nothing about {posRef}.
         </div>
@@ -307,7 +474,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
   return (
     <div className="border-start ps-3" style={{ width: 340, flexShrink: 0, overflowY: 'auto' }}>
       {/* Where this came from */}
-      <div className="d-flex align-items-baseline gap-1 mb-1">
+      <div className="d-flex align-items-center gap-1 mb-1">
         <SectionLabel className="mb-0">Form spec</SectionLabel>
         <ConceptHint concept={CONCEPTS.INTENT} size={11}
           title="What the Form asks for vs what the recipe has" />
@@ -316,8 +483,22 @@ export default function FormSpecPane({ posRef, embedded = false }) {
           title={pending.length > 0 ? `${pending.length} product${pending.length === 1 ? '' : 's'} still need an ElementType before they can be added` : ''}>
           {coverage.present}/{coverage.total + pending.length} present
         </span>
+        <PaneMenu onColumns={() => setChoosingCols(true)} columnsDisabled={offerCols.length === 0}
+          onReimport={handleReimport} onDetach={handleDetach} />
       </div>
-      <FormStrip formCaptures={formCaptures} onReimport={handleReimport} onDetach={handleDetach} />
+      <FormStrip formCaptures={formCaptures} />
+
+      {/* The reference rail. Everything that is NOT the comparison lives behind one of
+          these, closed, with its count on the face — so you can see there is something
+          there without it taking up the panel. */}
+      <div className="d-flex align-items-center gap-1 mb-2">
+        <RailToggle id="context" icon="notes" count={shownCols.length} open={open} onToggle={toggleSection}
+          title="What the Form itself says about this position" />
+        <RailToggle id="extra" icon={ACTION_ICONS.suggest} count={extra.length} open={open} onToggle={toggleSection}
+          title="In the recipe, not specified by the Form — derived detail, not a problem" />
+        <RailToggle id="orphaned" icon="history" count={orphaned.length} open={open} onToggle={toggleSection}
+          title="No longer in the Form" tone={orphaned.length ? '#856404' : null} />
+      </div>
 
       {/* A changed product inside a SHARED wrapper: one wrapper cannot hold both
           states. Computed at import, persisted, and actionable here. */}
@@ -344,13 +525,10 @@ export default function FormSpecPane({ posRef, embedded = false }) {
         </div>
       )}
 
-      {/* The same context columns the import wizard shows above the paint surface. */}
-      {Object.keys(context).length > 0 && (
-        <div className="mb-2 px-2 py-1 rounded" style={{ background: '#f8f9fa', fontSize: 11 }}>
-          {Object.entries(context).map(([k, v]) => (
-            <div key={k}><span className="text-muted">{k}:</span> {String(v)}</div>
-          ))}
-        </div>
+      {/* The same context columns the import wizard shows above the paint surface — same
+          component, because it is the same sheet saying the same thing. */}
+      {open.has('context') && (
+        <FormContext context={context} columns={shownCols} style={{ marginBottom: 8 }} />
       )}
 
       {/* The Form asked for these and nobody has said what they are. They cannot be
@@ -373,8 +551,9 @@ export default function FormSpecPane({ posRef, embedded = false }) {
               <div key={p.code} className="py-1 border-top" style={{ fontSize: 10 }}>
                 <div className="d-flex align-items-baseline gap-1">
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: 'monospace', fontWeight: 600 }} className="text-truncate" title={p.code}>
-                      {p.code}
+                    <div className="d-flex align-items-baseline gap-1 text-truncate" title={p.code}>
+                      <RowStatus status="question" />
+                      <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{p.code}</span>
                     </div>
                     <div className="text-muted text-truncate" title={`${p.manufacturer || 'no manufacturer'}${p.note ? ` · ${p.note}` : ''}`}>
                       {p.manufacturer || <em>no manufacturer</em>}{p.note ? ` · ${p.note}` : ''}
@@ -449,6 +628,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
 
       {[...missing, ...matched].map(e => {
         const isMissing = e.have === 0
+        const status = !isMissing ? 'present' : e.inSpec ? 'addable' : 'missing'
         return (
           <div key={e.elementTypeRef} className="d-flex align-items-start gap-2 py-1 border-bottom" style={{ fontSize: 11 }}>
             {isMissing
@@ -456,10 +636,11 @@ export default function FormSpecPane({ posRef, embedded = false }) {
                   checked={ticked.has(e.elementTypeRef)}
                   onChange={() => toggle(e.elementTypeRef)}
                   title={`Tick to add — lands ${destLabel}`} aria-label={`Add ${e.elementTypeRef}`} />
-              : <MaterialIcon name={ACTION_ICONS.complete} size={13} style={{ color: '#198754', flexShrink: 0, marginTop: 1 }} />}
+              : <span style={{ width: 13, flexShrink: 0 }} />}
             <div style={{ minWidth: 0, flex: 1 }}>
               {/* Manufacturer and product code are one thing, and always shown together. */}
               <div className="d-flex align-items-baseline gap-1">
+                <RowStatus status={status} />
                 <Ref>{e.code || e.elementTypeRef}</Ref>
                 {e.formRef && <span className="text-muted" style={{ fontSize: 9 }}>{e.formRef}</span>}
               </div>
@@ -467,7 +648,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
                 {e.manufacturer || 'no manufacturer'}
               </div>
               <div className="d-flex align-items-baseline gap-1 text-truncate">
-                <UsagePopover etRef={e.elementTypeRef} placement="left">
+                <UsagePopover etRef={e.elementTypeRef} placement="left" diverges={diverges(e.elementTypeRef)}>
                   <span style={{ fontFamily: 'monospace', fontSize: 10, color: '#6c757d' }}>{e.elementTypeRef}</span>
                 </UsagePopover>
                 {e.inSpec && (
@@ -519,7 +700,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
       )}
 
       {/* Codes that have left the Form. A soft hint — never a validation error. */}
-      {orphaned.length > 0 && (
+      {orphaned.length > 0 && open.has('orphaned') && (
         <div className="mt-3">
           <SectionLabel>No longer in the Form</SectionLabel>
           {orphaned.map(o => {
@@ -548,7 +729,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
       )}
 
       {/* Derived detail. The Form never mentions it, and that is correct. */}
-      {extra.length > 0 && (
+      {extra.length > 0 && open.has('extra') && (
         <div className="mt-3">
           <SectionLabel>Not specified by the Form</SectionLabel>
           <div className="text-muted mb-1" style={{ fontSize: 10 }}>
@@ -556,7 +737,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
           </div>
           {extra.map(x => (
             <div key={x.elementTypeRef} className="d-flex align-items-baseline gap-2 py-1" style={{ fontSize: 11 }}>
-              <UsagePopover etRef={x.elementTypeRef} placement="left">
+              <UsagePopover etRef={x.elementTypeRef} placement="left" diverges={diverges(x.elementTypeRef)}>
                 <span style={{ fontFamily: 'monospace', color: '#6c757d' }}>{x.elementTypeRef}</span>
               </UsagePopover>
               <span className="ms-auto text-muted" style={{ fontSize: 9 }}>{KIND_LABEL[x.kind]}</span>
@@ -618,6 +799,15 @@ export default function FormSpecPane({ posRef, embedded = false }) {
         posRef={posRef}
         onClose={() => setForking(false)}
         onDuplicated={() => dismissDivergence(divergence.wrapper)}
+      />
+
+      <ColumnPicker
+        show={choosingCols}
+        onHide={() => setChoosingCols(false)}
+        available={offerCols}
+        shown={shownCols}
+        onChange={chooseCols}
+        onReset={() => { clearVisible(projectId); setColPref(null) }}
       />
     </div>
   )

@@ -92,6 +92,54 @@ export function elementTypeUsage(ref, { recipes = [], psRows = [], elementTypes 
 }
 
 /**
+ * divergingRefs({ recipes, formCaptures }) → Set of lowercased ElementType refs whose Form
+ * and recipe disagree about WHERE they are used.
+ *
+ * The same predicate as `elementTypeUsage(...).differs`, computed for every ref in ONE pass
+ * instead of one full scan of `recipes` per ref. That is the whole point: the divergence was
+ * only ever visible inside a popover, on hover, because computing it per-ref was too
+ * expensive to do for a panel full of rows. Once it is one pass, the panel can simply SHOW
+ * which rows disagree, and the popover is left to explain the ones you ask about.
+ *
+ * Pure, read-only, and null-safe: no Form attached means nothing can diverge.
+ */
+export function divergingRefs({ recipes = [], formCaptures = null } = {}) {
+  const out = new Set()
+  if (!formCaptures) return out
+
+  const inRecipe = new Map()   // lc(etRef) -> Set of lc(posRef)
+  for (const r of recipes) {
+    if (!live(r)) continue
+    const key = lc(etOf(r))
+    const pos = lc(posOf(r))
+    if (!key || !pos) continue
+    if (!inRecipe.has(key)) inRecipe.set(key, new Set())
+    inRecipe.get(key).add(pos)
+  }
+
+  const inForm = new Map()     // lc(etRef) -> Set of lc(posRef)
+  for (const [posRef, entries] of Object.entries(formCaptures.byPosition || {})) {
+    for (const e of entries || []) {
+      const key = lc(e.elementTypeRef)
+      if (!key) continue
+      if (!inForm.has(key)) inForm.set(key, new Set())
+      inForm.get(key).add(lc(posRef))
+    }
+  }
+
+  for (const [key, formPos] of inForm) {
+    const recipePos = inRecipe.get(key) || new Set()
+    // The Form asks for it somewhere the recipe has not got it — outstanding work.
+    const onlyInForm = [...formPos].some(p => !recipePos.has(p))
+    // ...or the recipe has it somewhere the Form does not. Only meaningful for an ET the
+    // Form mentions AT ALL; otherwise every connector and kit would "diverge".
+    const onlyInRecipe = [...recipePos].some(p => !formPos.has(p))
+    if (onlyInForm || onlyInRecipe) out.add(key)
+  }
+  return out
+}
+
+/**
  * productUsage(manufacturer, code, ctx) — the same question asked of a PRODUCT.
  *
  * A product is (manufacturer, code); it resolves to at most one ElementType (see
