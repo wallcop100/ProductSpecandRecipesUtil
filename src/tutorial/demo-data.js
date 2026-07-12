@@ -21,12 +21,16 @@
  * A source-scan test enforces it.
  */
 
-/** Positions, grouped as the tree groups them — by family (a PositionType collection). */
+/**
+ * Positions, grouped as the tree groups them: by FAMILY REF (positionFamilyOf = ParentRef).
+ * The tree prints that ref — DOWNLIGHT, LINEAR-HL-ARCHITECTURAL — not a friendly name, and
+ * it prints no description, because the DesignDB leaves PositionType.Name blank.
+ */
 export const DEMO_POSITIONS = [
-  { ref: 'A02m', family: 'Downlight', desc: 'Trimless adjustable downlight. Medium beam.', tags: ['DL', 'Local'], rows: 4 },
-  { ref: 'A02wE', family: 'Downlight', desc: 'Trimless adjustable downlight with Emergency', tags: ['DL'], rows: 0 },
-  { ref: 'C01r', family: 'Coffer and wall wash linear', desc: 'Linear LED in profile', tags: ['LIN'], rows: 2 },
-  { ref: 'C03r', family: 'Coffer and wall wash linear', desc: 'Linear LED in profile', tags: ['LIN'], rows: 2 },
+  { ref: 'A02m', family: 'DOWNLIGHT', tags: ['DL', 'Local'], rows: 4 },
+  { ref: 'A02wE', family: 'DOWNLIGHT', tags: ['DL'], rows: 0 },
+  { ref: 'C01r', family: 'LINEAR-HL-ARCHITECTURAL', tags: ['LIN'], rows: 2 },
+  { ref: 'C03r', family: 'LINEAR-HL-ARCHITECTURAL', tags: ['LIN'], rows: 2 },
 ]
 
 /** The shared linear wrapper, and the fork the source data really contains. */

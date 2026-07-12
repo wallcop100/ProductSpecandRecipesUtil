@@ -370,20 +370,24 @@ function checkMissingClipsDimQty(rsRows, positionUI) {
 // Only checked once a recipe has been started, to avoid noise on empty rows.
 //
 // The socket and the strain relief ARE the first-fix kit the Connectors screen
-// configures (socket + SR at position level, plug inside the DL).
-// A project that has never set connectors up carries no such ref anywhere, and
-// demanding one it has no concept of is pure noise — so those two checks wait
-// until the project demonstrably uses connectors, the same guard the IP-rated
-// connector rule already applies. The DRIVER check is not connector-derived and
-// always stands.
+// configures (socket + SR at position level, plug inside the DL). A position that
+// carries no connector at all is not doing connectors, and demanding half a kit it
+// has no concept of is pure noise.
+//
+// THE EVIDENCE MUST BE THIS POSITION'S. A project-wide check looks reasonable and is
+// not: `ET-2Pin-LIN-Socket` on a LINEAR position contains the segment SOCKET, so one
+// linear connector anywhere flipped the switch for every Local downlight in the job —
+// which is exactly how A02m came to be told it was missing a strain relief on a project
+// with no connector recipes on it whatsoever.
+//
+// A Local position holding a socket but no SR is a half-built kit and IS flagged. One
+// holding no connector at all is left alone. The DRIVER check is not connector-derived
+// and always stands.
 // ---------------------------------------------------------------------------
 const CONNECTOR_KIT_TOKENS = [...CONNECTOR_TOKENS, ...STRAIN_RELIEF_TOKENS]
 
 function checkLocalDriverRequirements(rsRows, positionUI) {
   const issues = []
-
-  // Does this project do connectors at all? One connector ref anywhere is enough.
-  const usesConnectors = (rsRows || []).some(r => refHasToken(refOf(r), CONNECTOR_KIT_TOKENS))
 
   for (const [ref, ui] of Object.entries(positionUI || {})) {
     const tags = ui.tags || []
@@ -404,7 +408,9 @@ function checkLocalDriverRequirements(rsRows, positionUI) {
         ref,
       })
     }
-    if (!usesConnectors) continue   // no connectors in this project — nothing to be missing
+
+    // Does THIS position do connectors? If not, it is not missing half a kit.
+    if (!allRows.some(r => refHasToken(refOf(r), CONNECTOR_KIT_TOKENS))) continue
 
     if (!posRows.some(r => refHasToken(refOf(r), SOCKET_TOKENS))) {
       issues.push({

@@ -96,10 +96,34 @@ export function Appear({ when, children }) {
 }
 
 /**
- * PositionRow — a replica of a real tree row (ProjectTreeView):
- * icon · ref · description · [badges] · spacer · row-count · ignore toggle · chevron.
+ * FamilyHeader — a real tree family header: chevron · THE FAMILY REF · (count) · Ignore family.
+ *
+ * The header shows the family's REF (DOWNLIGHT, LINEAR-HL-ARCHITECTURAL) — that is what the
+ * tree groups by (positionFamilyOf = ParentRef), not a friendly name.
  */
-export function PositionRow({ posRef, desc, rows, ignored, active, clickIgnore, clickRow }) {
+export function FamilyHeader({ family, count }) {
+  return (
+    <div className="d-flex align-items-center gap-1 px-1 py-1" style={{ fontSize: 9 }}>
+      <MaterialIcon name="expand_more" size={12} style={{ color: '#6c757d' }} />
+      <span className="fw-bold text-uppercase" style={{ fontSize: 8, letterSpacing: '.04em' }}>{family}</span>
+      <span className="text-muted" style={{ fontSize: 8 }}>({count})</span>
+      <div className="flex-grow-1" />
+      <span className="d-inline-flex align-items-center gap-1 text-muted" style={{ fontSize: 8 }}>
+        <MaterialIcon name="do_not_disturb_on" size={9} /> Ignore family
+      </span>
+    </div>
+  )
+}
+
+/**
+ * PositionRow — a replica of a real tree row (ProjectTreeView):
+ *   icon · ref · [Ignore badge] · spacer · row-count/empty · ignore toggle · chevron
+ *
+ * NO description. The DesignDB leaves PositionType.Name blank, and the row only prints a
+ * name when there IS one — so in real life a row is just the ref. The first version of this
+ * scene invented a description column that the app does not have.
+ */
+export function PositionRow({ posRef, rows, ignored, active, clickIgnore, clickRow }) {
   return (
     <Click on={clickRow} style={{ width: '100%' }}>
       <div className="d-flex align-items-center gap-2 px-2 py-1 mb-1" style={{
@@ -112,9 +136,8 @@ export function PositionRow({ posRef, desc, rows, ignored, active, clickIgnore, 
         transition: 'opacity .3s ease, background .3s ease',
         fontSize: 11,
       }}>
-        <MaterialIcon name="place" size={14} style={{ color: '#6f42c1' }} />
+        <MaterialIcon name="tab_unselected" size={14} style={{ color: '#6f42c1' }} />
         <span className="fw-semibold" style={{ fontSize: 11 }}>{posRef}</span>
-        <span className="text-muted text-truncate" style={{ fontSize: 10, minWidth: 0 }}>{desc}</span>
         {ignored && (
           <span className="badge" style={{ background: '#fff3cd', color: '#856404', fontSize: 8, border: '1px solid #ffc107' }}>
             Ignore

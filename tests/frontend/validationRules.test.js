@@ -432,18 +432,32 @@ describe('LOCAL_DRIVER_REQUIREMENTS', () => {
     expect(rules).not.toContain('LOCAL_MISSING_STRAIN_RELIEF')
   })
 
-  test('once the project uses connectors, a Local position missing the kit is flagged', () => {
+  /**
+   * THE REAL BUG. `ET-2Pin-LIN-Socket` is a LINEAR connector, and its ref carries the
+   * segment SOCKET. A project-wide "does anyone use connectors?" gate therefore saw that
+   * one row on C01r and started demanding a site-side strain relief from every Local
+   * downlight in the job — A02m included, which has no connector recipe at all.
+   * The evidence has to be the position's own.
+   */
+  test('a connector on ANOTHER position never makes this one owe a first-fix kit', () => {
     const rsRows = [
       makeRsRow({ elementTypeRef: 'ET-DL-SPOT-01', isDesign: 'Y' }),
-      // a DIFFERENT position carries a connector — so this project does do connectors
-      makeRsRow({ positionTypeRef: 'PT-OTHER', contextRef: 'PT-OTHER', elementTypeRef: 'ET-SOCK-5P-01' }),
+      // a LINEAR position's connector — nothing to do with this downlight
+      makeRsRow({ positionTypeRef: 'C01r', contextRef: 'C01r', elementTypeRef: 'ET-2Pin-LIN-Socket' }),
     ]
-    const issues = runValidation(dbData, [], rsRows, localUI)
-    const rules = issues.map(i => i.rule)
-    expect(rules).toContain('LOCAL_MISSING_DRIVER')
-    expect(rules).toContain('LOCAL_MISSING_SITE_SOCKET')
+    const rules = runValidation(dbData, [], rsRows, localUI).map(i => i.rule)
+    expect(rules).not.toContain('LOCAL_MISSING_SITE_SOCKET')
+    expect(rules).not.toContain('LOCAL_MISSING_STRAIN_RELIEF')
+  })
+
+  test('a HALF-built kit on this position is still flagged — a socket with no strain relief', () => {
+    const rsRows = [
+      makeRsRow({ elementTypeRef: 'ET-DL-SPOT-01', isDesign: 'Y' }),
+      makeRsRow({ elementTypeRef: 'ET-SOCK-5P-01' }),   // this position DOES do connectors
+    ]
+    const rules = runValidation(dbData, [], rsRows, localUI).map(i => i.rule)
     expect(rules).toContain('LOCAL_MISSING_STRAIN_RELIEF')
-    expect(issues.every(i => i.severity === 'warning' || i.rule === 'MISSING_IS_DESIGN' || i.severity === 'error')).toBe(true)
+    expect(rules).not.toContain('LOCAL_MISSING_SITE_SOCKET')   // it has the socket
   })
 
   test('clean Local assembly produces none of the Rule 7 warnings', () => {

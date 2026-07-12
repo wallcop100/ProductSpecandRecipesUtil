@@ -34,7 +34,7 @@ export const TUTORIALS = {
     steps: [
       { blurb: 'A row is an ingredient. The pill is the ElementType; after the arrow, the product the Product Spec says it is.', scene: 'recipe', beat: 0 },
       { blurb: 'Quantity hides behind the category icon — click it and a stepper slides open.', scene: 'recipe', beat: 1 },
-      { blurb: 'Flags say what a row IS: exactly one Design element per recipe; Contract items are supplied, not bought.', scene: 'recipe', beat: 2 },
+      { blurb: 'Flags say what a row IS: usually one IsDesign element per recipe; Contract items are supplied, but not managed in the Design.', scene: 'recipe', beat: 2 },
       { blurb: 'Add Entity forks: pick an ElementType you already have, or mint a new one without leaving the pane.', scene: 'recipe', beat: 3 },
       { blurb: 'The new row lands in the open section and reads New until it is exported.', scene: 'recipe', beat: 4 },
       { blurb: 'Delete marks IsDeleted — the row greys out, stays restorable, and syncs to Excel at export. Nothing is destroyed.', scene: 'recipe', beat: 5 },

@@ -89,8 +89,11 @@ export default function RecipeScene({ beat }) {
             <span className="text-muted" style={{ fontSize: 9 }}>{wrapper.mfr} – {wrapper.code}</span>
             <span className="rounded px-1 ms-1" style={{ fontSize: 8, color: '#0d6efd' }}>Edit internals →</span>
           </div>
-          <div className="d-flex align-items-center gap-1 flex-wrap">
+          <div className="d-flex gap-1 align-items-center flex-wrap">
             <FlagPill label="Design" value="Y" onChange={() => {}} activeVariant="primary" />
+            <FlagPill label="Contract" value={null} onChange={() => {}} activeVariant="success" />
+            <FlagPill label="Integer" value={null} onChange={() => {}} activeVariant="secondary" />
+            <FlagPill label="TBC" value={null} onChange={() => {}} activeVariant="danger" />
           </div>
         </Card>
 
@@ -103,12 +106,15 @@ export default function RecipeScene({ beat }) {
               <span className="text-muted" style={{ fontSize: 9 }}>{socket.mfr} – {socket.code}</span>
             </Pulse>
           </div>
-          {/* the FLAGS ROW — qty lives here, not on the right */}
-          <div className="d-flex align-items-center gap-1 flex-wrap">
+          {/* the FLAGS ROW — all four pills, then the qty chip, then the overflow. This is
+              where quantity actually lives; it is not on the right of the card. */}
+          <div className="d-flex gap-1 align-items-center flex-wrap">
             <Pulse on={beat === 2}>
               <span className="d-inline-flex gap-1">
                 <FlagPill label="Design" value={null} onChange={() => {}} activeVariant="primary" />
                 <FlagPill label="Contract" value={contract ? 'Y' : null} onChange={() => {}} activeVariant="success" />
+                <FlagPill label="Integer" value={null} onChange={() => {}} activeVariant="secondary" />
+                <FlagPill label="TBC" value={null} onChange={() => {}} activeVariant="danger" />
               </span>
             </Pulse>
             <Click on={beat === 1}>
@@ -116,10 +122,15 @@ export default function RecipeScene({ beat }) {
                 <span className="d-inline-flex align-items-center gap-1 rounded px-1 py-1"
                   style={{ border: '1px solid #dee2e6', background: '#fff' }}>
                   <MaterialIcon name="category" size={12} style={{ color: '#6c757d' }} />
-                  <span style={{ fontSize: 10, fontWeight: 600, color: qty > 1 ? '#212529' : '#adb5bd', transition: 'color .3s ease' }}>
-                    {qty}
-                  </span>
-                  {beat === 1 && <span style={{ fontSize: 9, color: '#adb5bd' }}>− +</span>}
+                  {beat >= 1 ? (
+                    <span className="d-inline-flex align-items-center gap-1">
+                      <span style={{ fontSize: 9, color: '#6c757d' }}>−</span>
+                      <span style={{ fontSize: 10, fontWeight: 600 }}>{qty}</span>
+                      <span style={{ fontSize: 9, color: '#6c757d' }}>+</span>
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: 10, fontWeight: 600, color: '#adb5bd' }}>{qty}</span>
+                  )}
                 </span>
               </Pulse>
             </Click>
