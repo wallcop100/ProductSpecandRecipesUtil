@@ -174,32 +174,90 @@ export const DEMO_COLLECTIONS = [
     ],
   },
   {
-    name: 'Local Driver Kit',
+    name: '5 Pin Connector Set',
     tags: ['Local'],
     ingredients: [
-      { ref: 'ET-CCL-D-250-1CH-01', section: 'position', qty: 1 },
-      { ref: 'LC2', section: 'position', qty: 1 },
+      { ref: 'ET-5PIN-SOCKET', section: 'position', qty: 1 },
+      { ref: 'ET-5PIN-PLUG', section: 'wrapper', qty: 1 },
     ],
   },
 ]
 
 export const DEMO_MATRIX = {
   rows: [
-    { ref: 'C01r', tags: ['LIN'], cells: { 'LIN 2-Pin Connectors': 'complete', 'Local Driver Kit': 'na' } },
-    { ref: 'A02m', tags: ['DL', 'Local'], cells: { 'LIN 2-Pin Connectors': 'na', 'Local Driver Kit': 'partial' } },
-    { ref: 'A02wE', tags: ['DL', 'Local'], cells: { 'LIN 2-Pin Connectors': 'na', 'Local Driver Kit': 'missing' } },
+    { ref: 'C01r', tags: ['LIN'], cells: { 'LIN 2-Pin Connectors': 'complete', '5 Pin Connector Set': 'na' } },
+    { ref: 'A02m', tags: ['DL', 'Local'], cells: { 'LIN 2-Pin Connectors': 'na', '5 Pin Connector Set': 'partial' } },
+    { ref: 'A02wE', tags: ['DL', 'Local'], cells: { 'LIN 2-Pin Connectors': 'na', '5 Pin Connector Set': 'missing' } },
   ],
   /** The cell the card opens: A02m has the cable but not the driver. */
-  cell: { posRef: 'A02m', collection: 'Local Driver Kit' },
-  present: ['LC2'],
-  missingRef: 'ET-CCL-D-250-1CH-01',
+  cell: { posRef: 'A02m', collection: '5 Pin Connector Set' },
+  present: ['ET-5PIN-PLUG'],
+  missingRef: 'ET-5PIN-SOCKET',
+}
+
+/**
+ * "Where the project stands" — the Status modal's two tabs, in the shapes they really use.
+ *
+ * CLAUSES (ReadinessPanel) are answerable sentences, each with its own DETAIL line naming the
+ * actual refs, and a count pill. Never a percentage: 87% done tells you nothing about what to
+ * do next, and the clauses always do.
+ *
+ * TASKS (ValidationPanel, buildTasks) are the point of the whole panel: issues are grouped by
+ * the ACTION that clears them, so 45 missing master rows is ONE task with one button, not 45
+ * alarms. `blocking` is red and means a pasted patch would be WRONG; everything else is amber
+ * and merely unfinished; `queued` has gone grey because the fix is already in the patch.
+ */
+export const DEMO_STATUS = {
+  clauses: [
+    {
+      label: 'Every position has a recipe',
+      detail: '1 of 4 have none: A02wE',
+      state: 'open', count: 1,
+    },
+    { label: 'Every Form product is placed', detail: 'All 2 products are in a recipe.', state: 'done' },
+    {
+      label: 'Nothing blocks a correct patch',
+      detail: '1 ElementType is not in the DesignDB master.',
+      state: 'open', count: 1,
+    },
+    { label: 'Every ElementType exists in all three documents', detail: '1 spec row still to write.', state: 'open', count: 1 },
+  ],
+  tasks: [
+    {
+      count: 1, title: 'ElementType missing from the DesignDB master',
+      hint: 'The DesignDB is the master list. These reach it through the ElementTypes patch.',
+      blocking: true, action: 'Fix all 1',
+      items: [{ ref: 'ET-LIN-END-01', message: 'used in a recipe but not in the DesignDB' }],
+    },
+    {
+      count: 1, title: 'product used in a recipe with no Product Spec row',
+      hint: 'Each needs a manufacturer and a product code, which only you know.',
+      blocking: false, action: 'Fix all 1',
+      items: [{ ref: 'ET-LIN-TAPE-01', message: 'no manufacturer or product code' }],
+    },
+    {
+      count: 1, title: 'wrapper needs its Ideaworks / N/A spec row',
+      hint: 'A wrapper is a virtual assembly — its contents are what you buy. Nothing here needs deciding.',
+      queued: true,
+      items: [{ ref: 'ET-LIN-01', message: 'queued for the Product Spec patch' }],
+    },
+  ],
+  /** The step-through fixer, on the position that genuinely needs no recipe. */
+  fixer: {
+    rule: 'POSITION_HAS_NO_RECIPE',
+    message: 'Position "A02wE" has no recipe rows.',
+    ref: 'A02wE',
+    family: 'DOWNLIGHT',
+    index: 1, total: 3,
+  },
 }
 
 /** A template: one fill-later slot, one exact ref. */
 export const DEMO_TEMPLATE = {
-  name: 'Local Downlight',
+  name: '250mA Local Downlight',
   slots: [
-    { label: 'DL Virtual Element', kind: 'slot' },
-    { label: 'Local driver', kind: 'exact', ref: 'ET-CCL-D-250-1CH-01' },
+    { label: 'ET-DL Wrapper', kind: 'slot' },
+    { label: 'Plaster In Kit ', kind: 'slot' },
+    { label: '250mA Local Driver', kind: 'exact', ref: 'ET-CCL-D-250-1CH-01' },
   ],
 }

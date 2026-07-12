@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-07-12', note: 'Status tutorial rebuilt: the real two-tab modal, the readiness clauses, and validation as task cards' },
   { date: '2026-07-12', note: 'Retired the old connector wizard: all connectors now go through Connector Templates and the coverage matrix' },
   { date: '2026-07-12', note: 'Tutorial cards now open in a declared order (recipe before palette), and the palette card looks like the actual drawer' },
   { date: '2026-07-12', note: 'Connector tutorial rebuilt: it now starts from an empty screen and MAKES a template, then shows the real matrix table' },

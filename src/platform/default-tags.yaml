@@ -19,31 +19,13 @@
 #       - { column: ControlTypeRef,  op: equals,   value: DALI }
 
 palette:
-  - DL
-  - LIN
-  - PS
-  - PANEL
   - Local
   - Remote-CC
   - Remote-CV
-  - 5Pin-DALI
-  - 3Pin-TE
-  - 4Pin-TW
-  - IP-Rated
-  - TwinSpot
-  - Exterior
-  - JunctionBox
 
 rules:
   - { column: DriverLocation,        op: equals,   value: Local, tag: Local }
   - { column: SecondaryPowerType,    op: equals,   value: CC,    tag: Remote-CC }
   - { column: SecondaryPowerType,    op: equals,   value: CV,    tag: Remote-CV }
-  - { column: ControlTypeRef,        op: equals,   value: DALI,  tag: 5Pin-DALI }
-  - { column: ControlTypeRef,        op: equals,   value: TE,    tag: 3Pin-TE }
-  - { column: ControlTypeRef,        op: equals,   value: TW,    tag: 4Pin-TW }
-  - { column: PositionTypeRef,       op: contains, value: LIN,   tag: LIN }
-  - { column: PositionTypeRef,       op: contains, value: PANEL, tag: PANEL }
-  - { column: PositionTypeRef,       op: contains, value: PS,    tag: PS }
-  - { column: PositionTypeRef,       op: contains, value: EXT,   tag: Exterior }
-  - { column: PositionTypeRef,       op: contains, value: IP,    tag: IP-Rated }
-  - { column: SecondaryPowerNodes_+ve, op: equals, value: "2",   tag: TwinSpot }
+
+

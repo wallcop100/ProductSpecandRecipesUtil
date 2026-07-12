@@ -160,10 +160,11 @@ export const TUTORIALS = {
     icon: 'rule',
     intro: '"Am I done?" answered as four checkable clauses — and validation that lists actions, not wreckage.',
     steps: [
-      { blurb: 'Four clauses with live counts: every position reciped or ignored, every Form product placed, nothing blocking a patch, every ElementType in all three documents. Deliberately never a percentage.', scene: 'status', beat: 0 },
-      { blurb: 'Validation groups issues into the ACTION that clears them — 45 missing master rows is one button, not 45 alarms.', scene: 'status', beat: 1 },
-      { blurb: 'The step-through fixer walks what is left, one issue at a time, jumping you to the right pane for each.', scene: 'status', beat: 2 },
-      { blurb: 'And not every flag is a defect: a position that genuinely needs no recipe can be flagged so — by itself, or with its whole family.', scene: 'status', beat: 3 },
+      { blurb: 'Two tabs. "Am I done?" answers it as four clauses — every position reciped or ignored, every Form product placed, nothing blocking a patch, every ElementType in all three documents. Each names the refs holding it up, and there is deliberately never a percentage: 87% tells you nothing about what to do next.', scene: 'status', beat: 0 },
+      { blurb: 'A clause is a door, not a scoreboard. The ones you have not finished are clickable and take you straight to the work.', scene: 'status', beat: 1 },
+      { blurb: 'The Validation tab does not list issues — it lists TASKS. Issues are grouped by the action that clears them, so 45 missing master rows is one card with one button, not 45 alarms. Red means a pasted patch would be WRONG; amber is merely unfinished; grey is already queued into the patch.', scene: 'status', beat: 2 },
+      { blurb: 'Expand a task and every ref is right there with its message — or hit "Fix all" and clear the whole class at once.', scene: 'status', beat: 3 },
+      { blurb: '"Step through" walks what is left one issue at a time, jumping you to the right pane for each. And not every flag is a defect: a position that genuinely needs no recipe can say so here — by itself, or with its whole family, which asks first.', scene: 'status', beat: 4 },
     ],
   },
 }
