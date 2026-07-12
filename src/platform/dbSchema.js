@@ -829,12 +829,12 @@ function makeSlot({
 // Per-template ingredient lists
 // ---------------------------------------------------------------------------
 
-// The built-in templates carry NO connector slots. Sockets, plugs and strain reliefs are
-// the Connectors screen's job now (ConnectorsScreen + ConnectorWizardModal), configured
-// against the project's real ElementTypes. Templates priming them too meant every applied
-// template shipped a half-built connector set for the wizard to reconcile. What is left
-// here is the part the wizard cannot give you: the design element, the mounting, the
-// driver, and the linear make-up.
+// The built-in templates carry NO connector slots. Sockets, plugs and strain reliefs are the
+// Connectors screen's job (ConnectorsScreen → CoverageMatrix), where they are Connector
+// Templates defined against the project's real ElementTypes. Templates priming them too meant
+// every applied template shipped a half-built connector set to reconcile. What is left here is
+// the part connectors have nothing to say about: the design element, the mounting, the driver,
+// and the linear make-up.
 
 // 1. DL+Local — Local Downlight
 const ingredientsDLLocal = [

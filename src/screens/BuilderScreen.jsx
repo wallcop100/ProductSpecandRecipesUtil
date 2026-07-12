@@ -16,7 +16,6 @@ import ProjectTreeView from '../components/ProjectTreeView'
 import ElementTypeTreeView from '../components/ElementTypeTreeView'
 import RecipeSection from '../components/RecipeSection'
 import DuplicateETModal from '../components/DuplicateETModal'
-import ConnectorWizardModal from '../components/ConnectorWizardModal'
 import Breadcrumbs from '../components/Breadcrumbs'
 import ProjectIdPill from '../components/ProjectIdPill'
 import FormProgressChip from '../components/FormProgressChip'
@@ -84,7 +83,6 @@ export default function BuilderScreen({
   const focusPosition = useStore(s => s.focusPosition)
 
   const [showDupModal, setShowDupModal] = useState(false)
-  const [showConnModal, setShowConnModal] = useState(false)
   const [showLinWizard, setShowLinWizard] = useState(false)
   const [showReview, setShowReview] = useState(false)
   const [reviewInitialRefs, setReviewInitialRefs] = useState(null)
@@ -614,16 +612,6 @@ export default function BuilderScreen({
                   size="sm"
                   className="d-inline-flex align-items-center gap-1"
                   style={{ fontSize: 11 }}
-                  onClick={() => setShowConnModal(true)}
-                  title="Add a connector to this element's internal recipe"
-                >
-                  <MaterialIcon name="cable" size={14} /> Connector
-                </Button>
-                <Button
-                  variant="outline-primary"
-                  size="sm"
-                  className="d-inline-flex align-items-center gap-1"
-                  style={{ fontSize: 11 }}
                   onClick={() => setShowDupModal(true)}
                   title="Duplicate this element type under a new ref"
                 >
@@ -736,13 +724,6 @@ export default function BuilderScreen({
         etRef={activeETRef}
         posRef={etModePosRef}
         onClose={() => setShowDupModal(false)}
-      />
-
-      <ConnectorWizardModal
-        show={showConnModal}
-        posRef={etModePosRef}
-        context="element"
-        onClose={() => setShowConnModal(false)}
       />
 
       <PasteMergeModal />
