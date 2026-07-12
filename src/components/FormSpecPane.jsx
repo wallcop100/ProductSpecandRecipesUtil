@@ -50,9 +50,9 @@ const Ref = ({ children }) => (
 
 /** Where a matched ET was found. The Form never said, so this is information, not judgement. */
 function FoundIn({ foundIn, container }) {
-  const where = foundIn === 'position' ? 'at position level'
+  const where = foundIn === 'position' ? 'at PositionType Level'
     : foundIn === 'internal' ? `inside ${container || 'the wrapper'}`
-    : 'at position level and inside the wrapper'
+    : 'at PositionType Level and inside the wrapper'
   return <span className="text-muted" style={{ fontSize: 10 }}>{where}</span>
 }
 
@@ -434,7 +434,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
   // honestly, and the store refuses an internal row without one.
   const destLabel = effectiveDest === 'internal' && container
     ? `inside ${container}`
-    : 'at position level'
+    : 'at PositionType Level'
 
   function toggle(ref) {
     setTicked(t => {
@@ -613,7 +613,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
       {missing.length > 0 && !container && (
         <div className="text-muted mb-1" style={{ fontSize: 10 }}>
           <MaterialIcon name="info" size={10} /> {posRef} has no wrapper, so everything lands at
-          position level.
+          PositionType Level.
         </div>
       )}
 
@@ -682,7 +682,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
           <div className="mb-1" style={{ fontSize: 11 }}>Add {ticked.size} to:</div>
           <Form.Check type="radio" name={`dest-${posRef}`} id={`dest-pos-${posRef}`}
             checked={effectiveDest === 'position'} onChange={() => setDest('position')}
-            label={<span style={{ fontSize: 11 }}>Position level</span>} />
+            label={<span style={{ fontSize: 11 }}>PositionType Level</span>} />
           <Form.Check type="radio" name={`dest-${posRef}`} id={`dest-int-${posRef}`}
             checked={effectiveDest === 'internal'} onChange={() => setDest('internal')}
             disabled={!container}

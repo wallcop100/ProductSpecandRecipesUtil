@@ -152,14 +152,46 @@ export const DEMO_PAINT = {
   ],
 }
 
-/** Connector coverage: positions × collections. */
+/**
+ * Connector coverage, in the shapes the real screen uses.
+ *
+ * A collection (the UI calls it a CONNECTOR TEMPLATE) is a NAME + APPLICABLE TAGS + a list of
+ * INGREDIENTS, and each ingredient carries a section: `position` is free-issued to site on its
+ * own, `lin_internal` / `dl_internal` land inside the wrapper the position actually has. The
+ * tags are the gate: a position whose tags do not match is not expected to carry the template
+ * at all, which is what N/A means — it is not a gap.
+ *
+ * The three demo positions deliberately cover all three live statuses, so the two column
+ * buttons (Apply all → the missing ones, Fill → the partial ones) both have something to do.
+ */
+export const DEMO_COLLECTIONS = [
+  {
+    name: 'LIN 2-Pin Connectors',
+    tags: ['LIN'],
+    ingredients: [
+      { ref: 'ET-2Pin-LIN-Socket', section: 'position', qty: 1 },
+      { ref: 'ET-2Pin-LIN-Plug', section: 'lin_internal', qty: 1 },
+    ],
+  },
+  {
+    name: 'Local Driver Kit',
+    tags: ['Local'],
+    ingredients: [
+      { ref: 'ET-CCL-D-250-1CH-01', section: 'position', qty: 1 },
+      { ref: 'LC2', section: 'position', qty: 1 },
+    ],
+  },
+]
+
 export const DEMO_MATRIX = {
-  collections: ['LIN connectors', 'Local driver kit'],
   rows: [
-    { ref: 'C01r', cells: { 'LIN connectors': 'complete', 'Local driver kit': 'na' } },
-    { ref: 'A02m', cells: { 'LIN connectors': 'na', 'Local driver kit': 'missing' } },
+    { ref: 'C01r', tags: ['LIN'], cells: { 'LIN 2-Pin Connectors': 'complete', 'Local Driver Kit': 'na' } },
+    { ref: 'A02m', tags: ['DL', 'Local'], cells: { 'LIN 2-Pin Connectors': 'na', 'Local Driver Kit': 'partial' } },
+    { ref: 'A02wE', tags: ['DL', 'Local'], cells: { 'LIN 2-Pin Connectors': 'na', 'Local Driver Kit': 'missing' } },
   ],
-  /** What the red cell is missing. */
+  /** The cell the card opens: A02m has the cable but not the driver. */
+  cell: { posRef: 'A02m', collection: 'Local Driver Kit' },
+  present: ['LC2'],
   missingRef: 'ET-CCL-D-250-1CH-01',
 }
 

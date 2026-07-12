@@ -124,15 +124,17 @@ export const TUTORIALS = {
   },
 
   'connectors': {
-    title: 'Connectors — the coverage matrix',
+    title: 'Connectors — templates and the coverage matrix',
     icon: 'cable',
-    intro: 'Collections are named ingredient sets (a 3-pin kit, the strain reliefs) gated by tags. The matrix shows which positions carry theirs.',
+    intro: 'A connector template is a named set of ingredients (a driver kit, a 2-pin pair) gated by tags. The matrix then shows, at a glance, which positions are actually carrying theirs.',
     steps: [
-      { blurb: 'A collection names the refs a position should carry, and the tags that make it apply. No matching tag — not expected, shown as N/A.', scene: 'matrix', beat: 0 },
-      { blurb: 'Rows are positions, columns are collections. Green complete, amber partial, red missing.', scene: 'matrix', beat: 1 },
-      { blurb: 'Click a red cell and the detail panel names exactly which refs are absent — no guessing.', scene: 'matrix', beat: 2 },
-      { blurb: 'Add the missing ref from right there. The cell turns green while you watch.', scene: 'matrix', beat: 3 },
-      { blurb: 'Apply all fills every incomplete cell in a column in one undoable step.', scene: 'matrix', beat: 4 },
+      { blurb: 'The screen starts empty, and that is the point: with no templates there is no matrix. Making a connector template is the first thing you do here.', scene: 'matrix', beat: 0 },
+      { blurb: 'A template is three things: a NAME, the TAGS that gate it, and its INGREDIENTS. Each ingredient says where it belongs — Free Issue is delivered to site on its own; Inside Wrapper lands in the assembly the position actually has.', scene: 'matrix', beat: 1 },
+      { blurb: 'Now the matrix: rows are positions, columns are your templates, and the Tags column is why each cell is what it is. Green complete, amber partial, red missing — and N/A is not a gap, it means the tags never matched, so this template was never expected there.', scene: 'matrix', beat: 2 },
+      { blurb: 'A02m is amber: it carries part of the driver kit, not all of it. Click the cell.', scene: 'matrix', beat: 3 },
+      { blurb: 'The detail panel opens on the right and names exactly what is absent, grouped by where it belongs. Add it from right there — no need to go to the recipe.', scene: 'matrix', beat: 4 },
+      { blurb: 'The cell turns green while you watch, and the count moves with it. Remove works the same way.', scene: 'matrix', beat: 5 },
+      { blurb: 'The column headers do the whole column at once: Apply all for the missing positions, Fill for the partial ones. Both are previewed before anything is written, and both are a single undo.', scene: 'matrix', beat: 6 },
     ],
   },
 
