@@ -1,7 +1,7 @@
 import React from 'react'
 import MaterialIcon from '../../components/MaterialIcon'
 import EntityPill from '../../components/EntityPill'
-import { Stage, Cursor, Pulse, Appear, MiniRow, Caption } from './atoms'
+import { Stage, Click, Pulse, Appear, MiniRow, Caption } from './atoms'
 import { DEMO_TEMPLATE } from '../demo-data'
 
 /**
@@ -14,7 +14,6 @@ import { DEMO_TEMPLATE } from '../demo-data'
  */
 export default function TemplateScene({ beat }) {
   const overridden = beat >= 1
-  const cursorAt = { 1: { x: 250, y: 40 }, 2: { x: 120, y: 108 }, 3: { x: 250, y: 170 } }[beat]
 
   return (
     <>
@@ -39,11 +38,13 @@ export default function TemplateScene({ beat }) {
                 </MiniRow>
               </Appear>
             ) : (
-              <Pulse on={beat === 1}>
-                <div className="rounded px-2 py-1" style={{ border: '1px dashed #ced4da', color: '#adb5bd' }}>
-                  Override for this project
-                </div>
-              </Pulse>
+              <Click on={beat === 1}>
+                <Pulse on={beat === 1}>
+                  <div className="rounded px-2 py-1" style={{ border: '1px dashed #ced4da', color: '#adb5bd' }}>
+                    Override for this project
+                  </div>
+                </Pulse>
+              </Click>
             )}
           </div>
         </div>
@@ -76,8 +77,6 @@ export default function TemplateScene({ beat }) {
             </div>
           </Appear>
         )}
-
-        <Cursor at={cursorAt} click={beat === 1 || beat === 3} />
       </Stage>
       <Caption>
         {[

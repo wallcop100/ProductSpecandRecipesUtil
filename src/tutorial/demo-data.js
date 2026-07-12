@@ -1,90 +1,112 @@
 /**
- * demo-data.js — the fictional mini-project every tutorial scene draws from.
+ * demo-data.js — the mini-project every tutorial scene draws from.
  *
- * One coherent little world, so a wrapper met in the recipe card is the same wrapper the
- * fork is taught on and the same one whose tape shows up in the Product Spec card.
+ * Its refs, families and naming follow the REAL conventions from a live project, because a
+ * tutorial that invents its own vocabulary teaches the wrong vocabulary:
  *
- * ENTIRELY FICTIONAL. Nothing here comes from samplefiles/ (real client data, gitignored):
- * fake manufacturers, fake codes, generic refs. Row shapes are the app's real ones
- * (PositionTypeRef / ContextType / ElementTypeRef / …) so scenes read naturally.
+ *   PositionTypes  A02m / A02w / A02wE  are downlights, under the family DOWNLIGHT.
+ *                  C01r / C03r are architectural linear, under LINEAR-HL-ARCHITECTURAL.
+ *                  The bare C01 exists too — it is the "parents" row whose ExtRef points at
+ *                  C01r, and C01r is where the recipe actually lives.
+ *                  Their Name is blank; the Description carries the words.
+ *   ElementTypes   ET-LIN-01 is the linear wrapper; ET-LIN-TAPE-01 / -PROF-01 / -DIFF-01 sit
+ *                  inside it. Connectors are ET-2Pin-LIN-Socket / -Plug (WAGO). Cables are
+ *                  bare refs: LC2, LC9. Drivers are ET-CCR-D-300-1CH-01 and friends.
+ *   Wrappers       carry Ideaworks / N/A in the Product Spec, on purpose.
  *
- * No scene, and nothing in src/tutorial/, may import useStore — the store is the user's
- * live project. This module is the only data a scene needs.
+ * ET-LIN-02 really is a fork of ET-LIN-01 in the source data — same profile, diffuser and
+ * plug, a different tape. The wrapper card teaches that exact story.
+ *
+ * Nothing in src/tutorial/ may import useStore: the store holds the user's live project.
+ * A source-scan test enforces it.
  */
 
-/** Positions: one downlight family, one linear family sharing a wrapper. */
+/** Positions, grouped as the tree groups them — by family (a PositionType collection). */
 export const DEMO_POSITIONS = [
-  { ref: 'D01', name: 'Lobby downlight', family: 'Downlights', tags: ['DL', 'Local'], reciped: true },
-  { ref: 'L01', name: 'Reception cove', family: 'Linear', tags: ['LIN'], reciped: true },
-  { ref: 'L02', name: 'Corridor cove', family: 'Linear', tags: ['LIN'], reciped: false },
-  { ref: 'X01', name: 'Feature chandelier', family: 'Specials', tags: [], reciped: false },
+  { ref: 'A02m', family: 'Downlight', desc: 'Trimless adjustable downlight. Medium beam.', tags: ['DL', 'Local'], rows: 4 },
+  { ref: 'A02wE', family: 'Downlight', desc: 'Trimless adjustable downlight with Emergency', tags: ['DL'], rows: 0 },
+  { ref: 'C01r', family: 'Coffer and wall wash linear', desc: 'Linear LED in profile', tags: ['LIN'], rows: 2 },
+  { ref: 'C03r', family: 'Coffer and wall wash linear', desc: 'Linear LED in profile', tags: ['LIN'], rows: 2 },
 ]
 
-/** The shared wrapper and what lives inside it. */
+/** The shared linear wrapper, and the fork the source data really contains. */
 export const DEMO_WRAPPER = {
   ref: 'ET-LIN-01',
-  usedBy: ['L01', 'L02'],
+  usedBy: ['C01r', 'C03r'],
   forkRef: 'ET-LIN-02',
   internals: [
-    { ref: 'ET-TAPE-01', name: 'LED tape 9W/m' },
-    { ref: 'ET-PROF-01', name: 'Extrusion profile' },
-    { ref: 'ET-DIFF-01', name: 'Opal diffuser' },
+    { ref: 'ET-LIN-TAPE-01', desc: 'LED tape' },
+    { ref: 'ET-LIN-PROF-01', desc: 'Extrusion profile' },
+    { ref: 'ET-LIN-DIFF-01', desc: 'Diffuser' },
+    { ref: 'ET-2Pin-LIN-Plug', desc: 'WAGO 890-292' },
+  ],
+  /** What the fork changes: a different tape, everything else the same. */
+  forkInternals: [
+    { ref: 'ET-LIN-TAPE-02', desc: 'LED tape (warmer)' },
+    { ref: 'ET-LIN-PROF-01', desc: 'Extrusion profile' },
+    { ref: 'ET-LIN-DIFF-01', desc: 'Diffuser' },
+    { ref: 'ET-2Pin-LIN-Plug', desc: 'WAGO 890-292' },
   ],
 }
 
-/** Recipe rows for the focused-editor card (D01's recipe). */
+/**
+ * C01r's real position-level recipe: the wrapper is the Design element; the socket is the
+ * free-issued contract item. (The plug lives INSIDE the wrapper — that is the pairing.)
+ */
 export const DEMO_RECIPE = [
-  { ref: 'ET-DL-01', label: 'Downlight fitting', qty: 1, isDesign: 'Y', manufacturer: 'Lumina', code: 'LM-D200' },
-  { ref: 'ET-SOCK-3P', label: 'Site socket', qty: 1, isContractItem: 'Y', manufacturer: 'Konek', code: 'K3-SOCK' },
+  { ref: 'ET-LIN-01', family: 'ET-LIN-COMPONENTS', qty: 1, isDesign: 'Y', mfr: 'Ideaworks', code: 'N/A', container: true },
+  { ref: 'ET-2Pin-LIN-Socket', family: 'ET-CONNECTORS', qty: 1, isContractItem: 'Y', mfr: 'WAGO', code: '890-282' },
 ]
 
-/** A row the demos add during their animations. */
-export const DEMO_NEW_ROW = { ref: 'ET-SR-01', label: 'Strain relief', qty: 1, isContractItem: 'Y' }
+/** The row the demo adds — a real cable from the ET-CABLE family. */
+export const DEMO_NEW_ROW = { ref: 'LC2', family: 'ET-CABLE', qty: 1, isContractItem: 'Y', desc: 'LV 2-core min 1.5mm cable' }
 
-/** Product Spec rows: one complete, one missing its identity, the wrapper's deliberate N/A. */
+/** Product Spec: a real product, a gap, and a wrapper whose N/A is deliberate. */
 export const DEMO_PS = [
-  { ref: 'ET-DL-01', manufacturer: 'Lumina', code: 'LM-D200', status: 'complete' },
-  { ref: 'ET-TAPE-01', manufacturer: '', code: '', status: 'missing' },
-  { ref: 'ET-LIN-01', manufacturer: 'Ideaworks', code: 'N/A', status: 'wrapper' },
+  { ref: 'ET-2Pin-LIN-Socket', mfr: 'WAGO', code: '890-282', status: 'complete' },
+  { ref: 'ET-LIN-TAPE-01', mfr: '', code: '', status: 'missing' },
+  { ref: 'ET-LIN-01', mfr: 'Ideaworks', code: 'N/A', status: 'wrapper' },
 ]
 
-/** The Form pathway: what the Form asks for vs what the recipe has. */
+/** The Form pathway. The Form says C01; ExtRef routes it to C01r, where the recipe lives. */
 export const DEMO_FORM = {
-  source: 'Demo - Form V1.xlsx',
-  formRef: 'L01',            // the Form says L01; ExtRef routes it to the recipe position
+  source: '5642 - Form V3.6.xlsx',
+  formRef: 'C01',
+  target: 'C01r',
   asks: [
-    { code: 'TP-940-24V', manufacturer: 'Brightline', inRecipe: true, ref: 'ET-TAPE-01' },
-    { code: 'DIF-OPAL-3M', manufacturer: 'Brightline', inRecipe: false, ref: 'ET-DIFF-01' },
+    { code: 'LL240272024', mfr: 'Nichia', inRecipe: true, ref: 'ET-LIN-TAPE-01' },
+    { code: 'FPS2020BG2000', mfr: 'Flexalighting', inRecipe: false, ref: 'ET-LIN-PROF-01' },
   ],
-  pending: { code: 'Light Panel Custom', manufacturer: 'Panelux', matches: 'ET-DL-01' },
+  /** A product the Form asks for that nobody has named — and the ET the recipe already has. */
+  pending: { code: 'Light Sheet Custom', mfr: 'Applelec', matches: 'ET-LS-01' },
 }
 
-/** A freehand spreadsheet cell for the paint-surface card, split into tokens. */
+/** A freehand ProductCode cell, as the paint surface sees it. */
 export const DEMO_PAINT = {
-  raw: 'Brightline TP-940-24V 940lm tape, cut to suit',
   tokens: [
-    { text: 'Brightline', role: null },
-    { text: 'TP-940-24V', role: 'code' },
-    { text: '940lm tape', role: 'note' },
+    { text: 'Nichia', role: null },
+    { text: 'LL240272024', role: 'code' },
+    { text: '2700K 24V', role: 'note' },
     { text: 'cut to suit', role: 'discard' },
   ],
 }
 
-/** Connector matrix: positions × collections for the coverage card. */
+/** Connector coverage: positions × collections. */
 export const DEMO_MATRIX = {
-  collections: ['3-Pin kit', 'Strain reliefs'],
-  cells: {
-    D01: { '3-Pin kit': 'complete', 'Strain reliefs': 'missing' },
-    L01: { '3-Pin kit': 'na', 'Strain reliefs': 'complete' },
-  },
+  collections: ['LIN connectors', 'Local driver kit'],
+  rows: [
+    { ref: 'C01r', cells: { 'LIN connectors': 'complete', 'Local driver kit': 'na' } },
+    { ref: 'A02m', cells: { 'LIN connectors': 'na', 'Local driver kit': 'missing' } },
+  ],
+  /** What the red cell is missing. */
+  missingRef: 'ET-CCL-D-250-1CH-01',
 }
 
-/** A template for the templates card: one exact ref, one fill-later slot. */
+/** A template: one fill-later slot, one exact ref. */
 export const DEMO_TEMPLATE = {
   name: 'Local Downlight',
-  scope: 'global',
   slots: [
     { label: 'DL Virtual Element', kind: 'slot' },
-    { label: 'Mounting collar', kind: 'exact', ref: 'ET-COLLAR-01' },
+    { label: 'Local driver', kind: 'exact', ref: 'ET-CCL-D-250-1CH-01' },
   ],
 }

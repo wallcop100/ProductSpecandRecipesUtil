@@ -1,6 +1,6 @@
 import React from 'react'
 import MaterialIcon from '../../components/MaterialIcon'
-import { Stage, Cursor, Pulse, Appear, MiniRow, Caption } from './atoms'
+import { Stage, Click, Pulse, Appear, MiniRow, Caption } from './atoms'
 
 /**
  * ExportScene — the way out: three patch scripts you paste into Excel yourself.
@@ -12,7 +12,6 @@ import { Stage, Cursor, Pulse, Appear, MiniRow, Caption } from './atoms'
  *        4 the Resolve-first tab gates a correct patch
  */
 export default function ExportScene({ beat }) {
-  const cursorAt = { 2: { x: 264, y: 96 }, 3: { x: 264, y: 150 }, 4: { x: 180, y: 8 } }[beat]
 
   return (
     <>
@@ -20,13 +19,15 @@ export default function ExportScene({ beat }) {
         {/* the three tabs */}
         <div className="d-flex gap-1 mb-2" style={{ fontSize: 9 }}>
           {['Changes', 'Patches', 'Resolve first'].map((t, i) => (
-            <Pulse key={t} on={beat === 4 && i === 2}>
+            <Click key={t} on={beat === 4 && i === 2}>
+            <Pulse on={beat === 4 && i === 2}>
               <span className="rounded-top px-2 py-1" style={{
                 background: (beat === 1 && i === 0) || ((beat === 2 || beat === 3) && i === 1) || (beat === 4 && i === 2) ? '#fff' : '#f8f9fa',
                 border: '1px solid #dee2e6', borderBottom: 'none',
                 color: i === 2 ? '#997404' : '#212529',
               }}>{t}{i === 2 ? ' (1)' : ''}</span>
             </Pulse>
+            </Click>
           ))}
         </div>
 
@@ -41,11 +42,11 @@ export default function ExportScene({ beat }) {
         {beat === 1 && (
           <Appear when>
             <MiniRow>
-              <span style={{ fontFamily: 'monospace', fontSize: 9, fontWeight: 600 }}>ET-TAPE-01</span>
+              <span style={{ fontFamily: 'monospace', fontSize: 9, fontWeight: 600 }}>ET-LIN-TAPE-01</span>
               <span className="text-muted" style={{ fontSize: 9 }}>ProductCode:</span>
               <span style={{ fontSize: 9, color: '#842029', textDecoration: 'line-through' }}>—</span>
               <MaterialIcon name="arrow_forward" size={10} style={{ color: '#ccc' }} />
-              <span style={{ fontSize: 9, color: '#0f5132', fontFamily: 'monospace' }}>TP-940-24V</span>
+              <span style={{ fontSize: 9, color: '#0f5132', fontFamily: 'monospace' }}>LL240272024</span>
             </MiniRow>
           </Appear>
         )}
@@ -56,11 +57,15 @@ export default function ExportScene({ beat }) {
               <MiniRow key={f} active={i === 0 && beat === 2}>
                 <MaterialIcon name="description" size={12} style={{ color: '#6c757d' }} />
                 <span style={{ fontSize: 10 }}>{f} patch</span>
-                <Pulse on={i === 0 && beat === 2} style={{ marginLeft: 'auto' }}>
-                  <span className="rounded px-1" style={{ background: beat >= 3 && i === 0 ? '#d1e7dd' : '#fff', border: '1px solid #dee2e6', fontSize: 9 }}>
-                    {beat >= 3 && i === 0 ? 'copied ✓' : 'Copy'}
-                  </span>
-                </Pulse>
+                <span className="ms-auto">
+                  <Click on={i === 0 && beat === 2}>
+                    <Pulse on={i === 0 && beat === 2}>
+                      <span className="rounded px-1" style={{ background: beat >= 3 && i === 0 ? '#d1e7dd' : '#fff', border: '1px solid #dee2e6', fontSize: 9 }}>
+                        {beat >= 3 && i === 0 ? 'copied ✓' : 'Copy'}
+                      </span>
+                    </Pulse>
+                  </Click>
+                </span>
               </MiniRow>
             ))}
           </Appear>
@@ -83,8 +88,6 @@ export default function ExportScene({ beat }) {
             </div>
           </Appear>
         )}
-
-        <Cursor at={cursorAt} click={beat === 2 || beat === 4} />
       </Stage>
       <Caption>
         {[

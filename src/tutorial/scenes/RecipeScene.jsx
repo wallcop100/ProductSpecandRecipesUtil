@@ -2,110 +2,158 @@ import React from 'react'
 import MaterialIcon from '../../components/MaterialIcon'
 import EntityPill from '../../components/EntityPill'
 import FlagPill from '../../components/FlagPill'
-import { Stage, Cursor, Pulse, Appear, MiniRow, Caption } from './atoms'
+import { Stage, Click, Pulse, Appear, Caption } from './atoms'
 import { DEMO_RECIPE, DEMO_NEW_ROW } from '../demo-data'
 
 /**
- * RecipeScene — the focused position editor, on D01's demo recipe.
+ * RecipeScene — a replica of a real IngredientCard, laid out as the real one is:
  *
- * beats: 0 row anatomy (ET pill → product code)
- *        1 the qty stepper opens and goes 1 → 2
- *        2 the flags: Design / Contract
- *        3 + Add Entity: the Existing / New fork
- *        4 the new row slides in
- *        5 delete marks IsDeleted — restorable, synced at export
+ *   [✓] [copy] [drag] │ EntityPill(stack: ref + family) → arrow → Mfr – Code   │ [swap]
+ *                     │ Design  Contract  Integer  TBC   [qty]  …              │ [delete]
+ *                     │                                                        │ [container]
+ *
+ * The quantity is a chip in the FLAGS row under the pill — not on the right — and the
+ * destructive actions are a vertical column on the far right. Getting that wrong made the
+ * first version of this card teach a layout the app does not have.
+ *
+ * beats: 0 the row: ElementType → the product it resolves to
+ *        1 quantity (in the flags row)
+ *        2 the flags themselves
+ *        3 + Add Entity — Existing / New
+ *        4 the new row arrives
+ *        5 delete = IsDeleted, restorable
  */
 export default function RecipeScene({ beat }) {
   const qty = beat >= 1 ? 2 : 1
+  const contract = beat >= 2
   const deleted = beat >= 5
+  const [wrapper, socket] = DEMO_RECIPE
 
-  const cursorAt = { 1: { x: 218, y: 62 }, 2: { x: 90, y: 92 }, 3: { x: 250, y: 8 }, 5: { x: 296, y: 62 } }[beat]
-
-  const socket = DEMO_RECIPE[1]
+  const Card = ({ row, children, dim, accent = '#bf6018' }) => (
+    <div className="mb-1" style={{
+      border: '1px solid #e9ecef', borderLeft: `3px solid ${accent}`, borderRadius: 6,
+      background: dim ? '#f8f9fa' : '#fff', opacity: dim ? 0.65 : 1,
+      transition: 'opacity .3s ease, background .3s ease',
+    }}>
+      <div className="d-flex align-items-start gap-1 px-2 py-1">
+        <MaterialIcon name="check_box_outline_blank" size={12} style={{ color: '#ccc', paddingTop: 2 }} />
+        <MaterialIcon name="content_copy" size={11} style={{ color: '#aaa', paddingTop: 2 }} />
+        <MaterialIcon name="drag_indicator" size={13} style={{ color: '#aaa', paddingTop: 1 }} />
+        <div style={{ flex: 1, minWidth: 0 }}>{children}</div>
+        {/* the right-hand action column, as in the real card */}
+        <div className="d-flex flex-column align-items-center gap-1" style={{ alignSelf: 'flex-start' }}>
+          <MaterialIcon name="swap_horiz" size={12} style={{ color: '#adb5bd' }} />
+          <Click on={beat === 5 && row === 'socket'}>
+            <MaterialIcon name="delete" size={12}
+              style={{ color: deleted && row === 'socket' ? '#dc3545' : '#adb5bd', transition: 'color .3s ease' }} />
+          </Click>
+          <MaterialIcon name="inventory_2" size={12}
+            style={{ color: row === 'wrapper' ? '#bf6018' : '#adb5bd' }} />
+        </div>
+      </div>
+    </div>
+  )
 
   return (
     <>
-      <Stage>
-        <div className="d-flex align-items-center gap-2 mb-2" style={{ fontSize: 10 }}>
-          <span className="fw-semibold text-uppercase text-muted" style={{ letterSpacing: '.05em' }}>
-            PositionType level — D01
+      <Stage height={240}>
+        <div className="d-flex align-items-center gap-2 mb-1">
+          <span className="fw-semibold text-uppercase text-muted" style={{ fontSize: 8, letterSpacing: '.05em' }}>
+            PositionType Level — C01r
           </span>
-          <Pulse on={beat === 3} style={{ marginLeft: 'auto' }}>
-            <span className="rounded px-2 py-1" style={{ background: '#fff', border: '1px solid #0d6efd', color: '#0d6efd' }}>
-              + Add Entity
-            </span>
-          </Pulse>
+          <div className="ms-auto">
+            <Click on={beat === 3}>
+              <Pulse on={beat === 3}>
+                <span className="rounded px-2 py-1" style={{ background: '#fff', border: '1px solid #0d6efd', color: '#0d6efd', fontSize: 9 }}>
+                  + Add Entity
+                </span>
+              </Pulse>
+            </Click>
+          </div>
         </div>
 
         {beat === 3 && (
           <Appear when>
-            <div className="d-flex gap-1 justify-content-end mb-1" style={{ fontSize: 10 }}>
+            <div className="d-flex gap-1 justify-content-end mb-1" style={{ fontSize: 9 }}>
               <span className="rounded px-2 py-1" style={{ background: '#e7f1ff', color: '#084298' }}>Existing…</span>
               <span className="rounded px-2 py-1" style={{ background: '#d1e7dd', color: '#0f5132' }}>New ↗</span>
             </div>
           </Appear>
         )}
 
-        {/* the design row */}
-        <MiniRow>
-          <EntityPill type="ElementType" label={DEMO_RECIPE[0].ref} />
-          <MaterialIcon name="arrow_forward" size={12} style={{ color: '#ccc' }} />
-          <Pulse on={beat === 0}>
-            <span className="text-muted">{DEMO_RECIPE[0].manufacturer} – {DEMO_RECIPE[0].code}</span>
-          </Pulse>
-          <span className="ms-auto d-inline-flex align-items-center gap-1">
+        {/* the wrapper — the Design element */}
+        <Card row="wrapper">
+          <div className="d-flex align-items-center gap-1 mb-1 flex-wrap">
+            <EntityPill type="ElementType" label={wrapper.ref} sublabel={wrapper.family} stack />
+            <MaterialIcon name="arrow_forward" size={11} style={{ color: '#ccc' }} />
+            <span className="text-muted" style={{ fontSize: 9 }}>{wrapper.mfr} – {wrapper.code}</span>
+            <span className="rounded px-1 ms-1" style={{ fontSize: 8, color: '#0d6efd' }}>Edit internals →</span>
+          </div>
+          <div className="d-flex align-items-center gap-1 flex-wrap">
             <FlagPill label="Design" value="Y" onChange={() => {}} activeVariant="primary" />
-          </span>
-        </MiniRow>
+          </div>
+        </Card>
 
-        {/* the socket row — qty, flags, delete all happen here */}
-        <MiniRow dim={deleted}>
-          <EntityPill type="ElementType" label={socket.ref} />
-          <MaterialIcon name="arrow_forward" size={12} style={{ color: '#ccc' }} />
-          <span className="text-muted">{socket.manufacturer} – {socket.code}</span>
-          <span className="ms-auto d-inline-flex align-items-center gap-1">
-            <Pulse on={beat === 2}>
-              <FlagPill label="Contract" value={beat >= 2 ? 'Y' : null} onChange={() => {}} activeVariant="success" />
+        {/* the socket — where qty, flags and delete are taught */}
+        <Card row="socket" dim={deleted} accent="#bf6018">
+          <div className="d-flex align-items-center gap-1 mb-1 flex-wrap">
+            <EntityPill type="ElementType" label={socket.ref} sublabel={socket.family} stack />
+            <MaterialIcon name="arrow_forward" size={11} style={{ color: '#ccc' }} />
+            <Pulse on={beat === 0}>
+              <span className="text-muted" style={{ fontSize: 9 }}>{socket.mfr} – {socket.code}</span>
             </Pulse>
-            <Pulse on={beat === 1}>
-              <span className="d-inline-flex align-items-center gap-1 rounded px-1"
-                style={{ border: '1px solid #dee2e6', background: '#fff' }}>
-                <MaterialIcon name="category" size={12} style={{ color: '#6c757d' }} />
-                <span style={{ fontWeight: 600, transition: 'color .3s ease', color: qty > 1 ? '#212529' : '#adb5bd' }}>{qty}</span>
+          </div>
+          {/* the FLAGS ROW — qty lives here, not on the right */}
+          <div className="d-flex align-items-center gap-1 flex-wrap">
+            <Pulse on={beat === 2}>
+              <span className="d-inline-flex gap-1">
+                <FlagPill label="Design" value={null} onChange={() => {}} activeVariant="primary" />
+                <FlagPill label="Contract" value={contract ? 'Y' : null} onChange={() => {}} activeVariant="success" />
               </span>
             </Pulse>
-            <Pulse on={beat === 5}>
-              <MaterialIcon name="delete" size={13} style={{ color: deleted ? '#dc3545' : '#adb5bd', transition: 'color .3s ease' }} />
-            </Pulse>
-          </span>
-        </MiniRow>
+            <Click on={beat === 1}>
+              <Pulse on={beat === 1}>
+                <span className="d-inline-flex align-items-center gap-1 rounded px-1 py-1"
+                  style={{ border: '1px solid #dee2e6', background: '#fff' }}>
+                  <MaterialIcon name="category" size={12} style={{ color: '#6c757d' }} />
+                  <span style={{ fontSize: 10, fontWeight: 600, color: qty > 1 ? '#212529' : '#adb5bd', transition: 'color .3s ease' }}>
+                    {qty}
+                  </span>
+                  {beat === 1 && <span style={{ fontSize: 9, color: '#adb5bd' }}>− +</span>}
+                </span>
+              </Pulse>
+            </Click>
+            <MaterialIcon name="more_horiz" size={13} style={{ color: '#adb5bd' }} />
+          </div>
+        </Card>
+
         {deleted && (
           <Appear when>
-            <div style={{ fontSize: 9, color: '#6c757d' }} className="ps-2">
-              <MaterialIcon name="delete" size={10} /> IsDeleted — restorable, and synced to Excel at export
+            <div style={{ fontSize: 8, color: '#6c757d' }} className="ps-2">
+              <MaterialIcon name="delete" size={9} /> IsDeleted — restorable, and synced to Excel at export
             </div>
           </Appear>
         )}
 
-        {/* the row the demo adds */}
-        <Appear when={beat >= 4}>
-          <MiniRow active style={{ borderColor: '#198754' }}>
-            <EntityPill type="ElementType" label={DEMO_NEW_ROW.ref} />
-            <span className="text-muted">{DEMO_NEW_ROW.label}</span>
-            <span className="ms-auto badge" style={{ background: '#198754', fontSize: 8 }}>New</span>
-          </MiniRow>
+        {/* the added row */}
+        <Appear when={beat === 4}>
+          <div className="mb-1" style={{ border: '1px solid #198754', borderLeft: '3px solid #198754', borderRadius: 6, background: '#f2fbf5' }}>
+            <div className="d-flex align-items-center gap-1 px-2 py-1">
+              <EntityPill type="ElementType" label={DEMO_NEW_ROW.ref} sublabel={DEMO_NEW_ROW.family} stack />
+              <span className="text-muted" style={{ fontSize: 9 }}>{DEMO_NEW_ROW.desc}</span>
+              <span className="badge ms-auto" style={{ background: '#198754', fontSize: 7 }}>New</span>
+            </div>
+          </div>
         </Appear>
-
-        <Cursor at={cursorAt} click={beat === 1 || beat === 3 || beat === 5} />
       </Stage>
       <Caption>
         {[
-          'A row is an ingredient: the ElementType, and the product the spec says it is.',
-          'The category icon is the quantity — click it and step 1 → 2.',
-          'Flags mark what a row IS: the Design element, a Contract item…',
-          'Add Entity forks: pick an Existing ElementType, or mint a New one.',
-          'The new row lands in this section, marked New until exported.',
-          'Delete never destroys — the row is marked IsDeleted and can be restored.',
+          'The pill is the ElementType (with its family under it); after the arrow, the product the spec says it is.',
+          'Quantity is the chip in the flags row — click the category icon and a stepper opens.',
+          'Flags sit beside it: exactly one Design element; Contract items are free-issued.',
+          'Add Entity forks: an ElementType you already have, or a new one.',
+          'The new row lands here, and reads New until you export.',
+          'Delete is the bin in the right-hand column — it marks IsDeleted, and never destroys.',
         ][beat]}
       </Caption>
     </>

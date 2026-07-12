@@ -1,7 +1,7 @@
 import React from 'react'
 import MaterialIcon from '../../components/MaterialIcon'
 import EntityPill from '../../components/EntityPill'
-import { Stage, Cursor, Pulse, Appear, MiniRow, Caption } from './atoms'
+import { Stage, Click, Pulse, Appear, MiniRow, Caption } from './atoms'
 
 /**
  * PaletteScene — the right-hand drawer: the four SOURCES you pull into a recipe.
@@ -15,7 +15,6 @@ import { Stage, Cursor, Pulse, Appear, MiniRow, Caption } from './atoms'
 export default function PaletteScene({ beat }) {
   const TABS = ['ElementTypes', 'Templates', '★', 'Like this']
   const activeTab = { 0: -1, 1: 0, 2: 1, 3: 2, 4: 3 }[beat]
-  const cursorAt = { 1: { x: 210, y: 78 }, 2: { x: 250, y: 78 }, 3: { x: 290, y: 108 }, 4: { x: 260, y: 108 } }[beat]
 
   return (
     <>
@@ -23,13 +22,13 @@ export default function PaletteScene({ beat }) {
         <div className="d-flex gap-2" style={{ height: '100%' }}>
           {/* the recipe being built */}
           <div style={{ flex: 1 }}>
-            <div className="text-muted mb-1" style={{ fontSize: 9, textTransform: 'uppercase' }}>D01 recipe</div>
+            <div className="text-muted mb-1" style={{ fontSize: 9, textTransform: 'uppercase' }}>C01r recipe</div>
             <MiniRow dim={beat === 2}>
-              <EntityPill type="ElementType" label="ET-DL-01" />
+              <EntityPill type="ElementType" label="ET-LIN-01" />
             </MiniRow>
             <Appear when={beat === 1}>
               <MiniRow active style={{ borderColor: '#198754' }}>
-                <EntityPill type="ElementType" label="ET-SOCK-3P" />
+                <EntityPill type="ElementType" label="ET-2Pin-LIN-Socket" />
                 <span className="badge ms-auto" style={{ background: '#198754', fontSize: 8 }}>added</span>
               </MiniRow>
             </Appear>
@@ -38,14 +37,14 @@ export default function PaletteScene({ beat }) {
                 <div className="rounded px-2 py-1 mb-1" style={{ background: '#fff3cd', border: '1px solid #f0e0a8', fontSize: 9, color: '#856404' }}>
                   <MaterialIcon name="warning" size={10} /> Applying a template REPLACES the recipe — it confirms first.
                 </div>
-                <MiniRow active><EntityPill type="ElementType" label="ET-DL-01" /><span className="text-muted" style={{ fontSize: 9 }}>from template</span></MiniRow>
-                <MiniRow active><EntityPill type="ElementType" label="ET-COLLAR-01" /><span className="text-muted" style={{ fontSize: 9 }}>from template</span></MiniRow>
+                <MiniRow active><EntityPill type="ElementType" label="ET-LIN-01" /><span className="text-muted" style={{ fontSize: 9 }}>from template</span></MiniRow>
+                <MiniRow active><EntityPill type="ElementType" label="ET-CCL-D-250-1CH-01" /><span className="text-muted" style={{ fontSize: 9 }}>from template</span></MiniRow>
               </Appear>
             )}
             <Appear when={beat === 4}>
               <MiniRow active style={{ borderColor: '#198754' }}>
-                <EntityPill type="ElementType" label="ET-SR-01" />
-                <span className="text-muted" style={{ fontSize: 9 }}>borrowed from L01</span>
+                <EntityPill type="ElementType" label="LC2" />
+                <span className="text-muted" style={{ fontSize: 9 }}>borrowed from C03r</span>
               </MiniRow>
             </Appear>
           </div>
@@ -66,28 +65,35 @@ export default function PaletteScene({ beat }) {
             </div>
             {(beat === 0 || beat === 1) && (
               <>
-                <MiniRow><EntityPill type="ElementType" label="ET-SOCK-3P" /></MiniRow>
-                <MiniRow><EntityPill type="ElementType" label="ET-SR-01" /></MiniRow>
+                <Click on={beat === 1}>
+                  <MiniRow><EntityPill type="ElementType" label="ET-2Pin-LIN-Socket" /></MiniRow>
+                </Click>
+                <MiniRow><EntityPill type="ElementType" label="LC2" /></MiniRow>
               </>
             )}
-            {beat === 2 && <MiniRow><MaterialIcon name="dashboard_customize" size={12} /><span style={{ fontSize: 9 }}>Local Downlight</span></MiniRow>}
+            {beat === 2 && (
+              <Click on>
+                <MiniRow><MaterialIcon name="dashboard_customize" size={12} /><span style={{ fontSize: 9 }}>Local Downlight</span></MiniRow>
+              </Click>
+            )}
             {beat === 3 && (
               <MiniRow>
-                <EntityPill type="ElementType" label="ET-SOCK-3P" />
-                <Pulse on style={{ marginLeft: 'auto' }}>
-                  <MaterialIcon name="star" size={14} style={{ color: '#ffc107' }} />
-                </Pulse>
+                <EntityPill type="ElementType" label="ET-2Pin-LIN-Socket" />
+                <span className="ms-auto">
+                  <Click on><Pulse on><MaterialIcon name="star" size={14} style={{ color: '#ffc107' }} /></Pulse></Click>
+                </span>
               </MiniRow>
             )}
             {beat === 4 && (
-              <MiniRow>
-                <EntityPill type="PositionType" label="L01" />
-                <span className="text-muted" style={{ fontSize: 8 }}>same family</span>
-              </MiniRow>
+              <Click on>
+                <MiniRow>
+                  <EntityPill type="PositionType" label="C03r" />
+                  <span className="text-muted" style={{ fontSize: 8 }}>same family</span>
+                </MiniRow>
+              </Click>
             )}
           </div>
         </div>
-        <Cursor at={cursorAt} click={beat >= 1} />
       </Stage>
       <Caption>
         {[

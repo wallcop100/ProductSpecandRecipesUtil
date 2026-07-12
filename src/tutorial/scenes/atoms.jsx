@@ -6,12 +6,16 @@ import MaterialIcon from '../../components/MaterialIcon'
  *
  * A scene is a pure function of `beat`: booleans derived from the beat toggle inline
  * `style={{ transition }}` (the QtyField idiom), and anything a transition cannot do uses
- * the one keyframe block below (the CaptureLines inline-<style> idiom). No animation
- * library — none exists in this app, and none is needed for a pointer that glides and a
- * ring that pulses.
+ * the keyframes below (the CaptureLines inline-<style> idiom). No animation library — none
+ * exists here, and none is needed for a ring that pulses and a pointer that appears.
  *
- * Nothing in this directory imports useStore. A scene that touched the live store could
- * corrupt the user's real project; a source-scan test enforces it.
+ * THE CURSOR IS ANCHORED, NOT POSITIONED. It used to be one absolutely-placed sprite driven
+ * by hand-written {x, y} per beat, and it pointed at the wrong thing in almost every scene —
+ * a scene's layout changes and the coordinates silently rot. `<Click on={…}>` wraps the
+ * element being acted on and draws the pointer at ITS corner, so the pointer is correct by
+ * construction and cannot drift.
+ *
+ * Nothing in this directory imports useStore.
  */
 
 export const SCENE_KEYFRAMES = `
@@ -19,6 +23,10 @@ export const SCENE_KEYFRAMES = `
   0%   { box-shadow: 0 0 0 0 rgba(13,110,253,.45); }
   70%  { box-shadow: 0 0 0 7px rgba(13,110,253,0); }
   100% { box-shadow: 0 0 0 0 rgba(13,110,253,0); }
+}
+@keyframes tut-ripple {
+  0%   { transform: scale(.4); opacity: .55; }
+  100% { transform: scale(1.6); opacity: 0; }
 }
 @keyframes tut-appear {
   from { opacity: 0; transform: translateY(-6px); }
@@ -29,8 +37,8 @@ export const SCENE_KEYFRAMES = `
 }
 `
 
-/** The stage every scene renders inside: fixed height so beats never resize the modal. */
-export function Stage({ children, height = 210 }) {
+/** The stage every scene renders inside. Fixed height so beats never resize the modal. */
+export function Stage({ children, height = 230 }) {
   return (
     <div className="tut-scene position-relative rounded px-3 py-3"
       style={{ height, background: '#f8f9fa', border: '1px solid #e9ecef', overflow: 'hidden' }}>
@@ -41,32 +49,37 @@ export function Stage({ children, height = 210 }) {
 }
 
 /**
- * The fake pointer. Give it a position per beat and it glides there — one absolutely
- * positioned sprite whose left/top transition IS the animation.
+ * Click — the pointer, anchored to the thing it is clicking.
+ *
+ * Wrap the element the beat acts on. When `on`, a ripple and a cursor appear at that
+ * element's own bottom-right, wherever it happens to be. No coordinates to get wrong.
  */
-export function Cursor({ at, click = false }) {
-  if (!at) return null
+export function Click({ on, children, style }) {
   return (
-    <div style={{
-      position: 'absolute', left: at.x, top: at.y, zIndex: 5, pointerEvents: 'none',
-      transition: 'left .5s ease, top .5s ease',
-    }}>
-      <MaterialIcon name="near_me" size={18}
-        style={{ color: '#212529', transform: 'scaleX(-1)', filter: 'drop-shadow(0 1px 1px rgba(0,0,0,.35))' }} />
-      {click && (
-        <span style={{
-          position: 'absolute', left: -4, top: -4, width: 24, height: 24, borderRadius: '50%',
-          animation: 'tut-pulse 1s ease-out infinite',
-        }} />
+    <span className="position-relative d-inline-flex" style={style}>
+      {children}
+      {on && (
+        <>
+          <span aria-hidden style={{
+            position: 'absolute', right: -6, bottom: -6, width: 20, height: 20, borderRadius: '50%',
+            background: 'rgba(13,110,253,.5)', animation: 'tut-ripple 1.1s ease-out infinite',
+            pointerEvents: 'none', zIndex: 4,
+          }} />
+          <MaterialIcon name="near_me" size={16} aria-hidden style={{
+            position: 'absolute', right: -11, bottom: -11, zIndex: 5, color: '#212529',
+            transform: 'scaleX(-1)', filter: 'drop-shadow(0 1px 1px rgba(0,0,0,.35))',
+            pointerEvents: 'none',
+          }} />
+        </>
       )}
-    </div>
+    </span>
   )
 }
 
 /** Glow on the thing the blurb is talking about. */
-export function Pulse({ on, children, style }) {
+export function Pulse({ on, children, style, className }) {
   return (
-    <div style={{
+    <div className={className} style={{
       borderRadius: 6,
       animation: on ? 'tut-pulse 1.4s ease-out infinite' : 'none',
       ...style,
@@ -76,13 +89,52 @@ export function Pulse({ on, children, style }) {
   )
 }
 
-/** A row that exists from a given beat: slides in when its moment comes. */
+/** Something that arrives at a given beat. */
 export function Appear({ when, children }) {
   if (!when) return null
   return <div style={{ animation: 'tut-appear .35s ease-out both' }}>{children}</div>
 }
 
-/** A generic mini list row — position, recipe row, spec row — kept deliberately small. */
+/**
+ * PositionRow — a replica of a real tree row (ProjectTreeView):
+ * icon · ref · description · [badges] · spacer · row-count · ignore toggle · chevron.
+ */
+export function PositionRow({ posRef, desc, rows, ignored, active, clickIgnore, clickRow }) {
+  return (
+    <Click on={clickRow} style={{ width: '100%' }}>
+      <div className="d-flex align-items-center gap-2 px-2 py-1 mb-1" style={{
+        width: '100%',
+        border: '1px solid #e5e7eb',
+        borderLeft: '3px solid #6f42c1',
+        borderRadius: 6,
+        background: active ? '#e7f1ff' : '#fff',
+        opacity: ignored ? 0.55 : 1,
+        transition: 'opacity .3s ease, background .3s ease',
+        fontSize: 11,
+      }}>
+        <MaterialIcon name="place" size={14} style={{ color: '#6f42c1' }} />
+        <span className="fw-semibold" style={{ fontSize: 11 }}>{posRef}</span>
+        <span className="text-muted text-truncate" style={{ fontSize: 10, minWidth: 0 }}>{desc}</span>
+        {ignored && (
+          <span className="badge" style={{ background: '#fff3cd', color: '#856404', fontSize: 8, border: '1px solid #ffc107' }}>
+            Ignore
+          </span>
+        )}
+        <div className="flex-grow-1" />
+        {rows > 0
+          ? <span className="badge bg-light text-dark border" style={{ fontSize: 8 }}>{rows} rows</span>
+          : <span className="text-muted fst-italic" style={{ fontSize: 9 }}>empty</span>}
+        <Click on={clickIgnore}>
+          <MaterialIcon name={ignored ? 'do_not_disturb_on' : 'do_not_disturb_off'} size={14}
+            style={{ color: ignored ? '#ffc107' : '#ccc', transition: 'color .3s ease' }} />
+        </Click>
+        <MaterialIcon name="chevron_right" size={14} className="text-muted" />
+      </div>
+    </Click>
+  )
+}
+
+/** A generic small row for the scenes that are not replicating a specific component. */
 export function MiniRow({ active, dim, children, style }) {
   return (
     <div className="d-flex align-items-center gap-2 px-2 py-1 rounded mb-1"
@@ -90,7 +142,7 @@ export function MiniRow({ active, dim, children, style }) {
         background: active ? '#e7f1ff' : '#fff',
         border: `1px solid ${active ? '#b6d4fe' : '#e9ecef'}`,
         opacity: dim ? 0.45 : 1,
-        fontSize: 11,
+        fontSize: 10,
         transition: 'background .3s ease, opacity .3s ease, border-color .3s ease',
         ...style,
       }}>
@@ -99,7 +151,7 @@ export function MiniRow({ active, dim, children, style }) {
   )
 }
 
-/** A coverage-matrix style status cell. */
+/** A coverage-matrix status cell. */
 export function MiniCell({ status }) {
   const bg = { complete: '#d1e7dd', partial: '#fff3cd', missing: '#f8d7da', na: '#f8f9fa' }[status] || '#f8f9fa'
   const icon = { complete: 'check_circle', partial: 'warning', missing: 'cancel', na: 'remove' }[status] || 'remove'
@@ -112,7 +164,7 @@ export function MiniCell({ status }) {
   )
 }
 
-/** The tiny caption under a scene naming what just happened (screen-reader friendly). */
+/** The caption under a scene, naming what just happened. */
 export function Caption({ children }) {
   return (
     <div className="text-muted text-center mt-2" style={{ fontSize: 10 }} aria-live="polite">

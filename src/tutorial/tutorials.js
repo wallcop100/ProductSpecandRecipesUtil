@@ -46,7 +46,7 @@ export const TUTORIALS = {
     icon: 'inventory_2',
     intro: 'A wrapper is an assembly: a virtual ElementType whose real deliverables are its contents. And an assembly is SHARED.',
     steps: [
-      { blurb: 'L01 and L02 both use ET-LIN-01. That is one assembly appearing in two recipes — not two copies.', scene: 'wrapper', beat: 0 },
+      { blurb: 'C01r and C03r both use ET-LIN-01. That is one assembly appearing in two recipes — not two copies.', scene: 'wrapper', beat: 0 },
       { blurb: 'Edit internals opens the assembly itself: the tape, profile and diffuser inside it.', scene: 'wrapper', beat: 1 },
       { blurb: 'Add something inside…', scene: 'wrapper', beat: 2 },
       { blurb: '…and every position using the wrapper now contains it. Edits ripple — the header names who is affected before you start.', scene: 'wrapper', beat: 3 },

@@ -81,6 +81,39 @@ describe('tutorials.js — the scripts are well-formed', () => {
   })
 
   /**
+   * The pointer used to be one absolutely-positioned sprite driven by hand-written {x, y}
+   * per beat — and it pointed at the wrong thing in nearly every scene, because a layout
+   * tweak silently rots the coordinates. <Click> anchors it to the element being acted on,
+   * so it is right by construction. Never go back.
+   */
+  test('no scene positions a cursor by hand-written coordinates', () => {
+    const dir = path.resolve(__dirname, '../../src/tutorial/scenes')
+    for (const f of fs.readdirSync(dir).filter(f => f.endsWith('Scene.jsx'))) {
+      const src = fs.readFileSync(path.join(dir, f), 'utf8')
+      expect(src, `${f} hand-places a cursor`).not.toMatch(/cursorAt|<Cursor\b/)
+      // …and every scene actually shows the pointer somewhere: a demo with nothing being
+      // clicked is a slideshow, not a simulation.
+      expect(src.includes('<Click'), `${f} never anchors a click`).toBe(true)
+    }
+  })
+
+  /**
+   * The demo must speak the project's own vocabulary. A02* are downlights, C0*r / D0*r are
+   * linear, ET-LIN-01 is the wrapper. Teaching invented refs teaches the wrong refs.
+   */
+  test('the demo data uses the real ref conventions, not invented ones', () => {
+    const dir = path.resolve(__dirname, '../../src/tutorial')
+    const walk = d => fs.readdirSync(d, { withFileTypes: true }).flatMap(e =>
+      e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)])
+    const INVENTED = /\bET-(DL|SOCK|SR|TAPE|PROF|DIFF|COLLAR)-\d|\bD01\b|\bL0[12]\b|Brightline|Lumina|Konek/
+    for (const f of walk(dir)) {
+      if (!/\.jsx?$/.test(f)) continue
+      const src = fs.readFileSync(f, 'utf8')
+      expect(INVENTED.test(src), `${path.basename(f)} uses an invented ref`).toBe(false)
+    }
+  })
+
+  /**
    * No linear tour. FEATURESET.md: "do not narrate a tour of a project the user does not
    * have." Cards are anchored, contextual, and never chain to another pane.
    */

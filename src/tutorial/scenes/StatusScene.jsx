@@ -1,6 +1,6 @@
 import React from 'react'
 import MaterialIcon from '../../components/MaterialIcon'
-import { Stage, Cursor, Pulse, Appear, MiniRow, Caption } from './atoms'
+import { Stage, Click, Pulse, Appear, MiniRow, Caption } from './atoms'
 
 /**
  * StatusScene — "where the project stands": readiness clauses + validation-as-actions.
@@ -11,7 +11,6 @@ import { Stage, Cursor, Pulse, Appear, MiniRow, Caption } from './atoms'
  *        3 "no recipe needed" — the honest escape for a position or family
  */
 export default function StatusScene({ beat }) {
-  const cursorAt = { 1: { x: 250, y: 92 }, 2: { x: 250, y: 128 }, 3: { x: 210, y: 164 } }[beat]
 
   const CLAUSES = [
     { text: 'Every position has a recipe (or is ignored)', ok: false, count: '2 left' },
@@ -39,8 +38,12 @@ export default function StatusScene({ beat }) {
             <MiniRow active={beat === 1}>
               <MaterialIcon name="playlist_add_check" size={12} style={{ color: '#0d6efd' }} />
               <span style={{ fontSize: 10 }}>45 ElementTypes missing from the DesignDB master</span>
-              <span className="rounded px-1 ms-auto" style={{ background: '#0d6efd', color: '#fff', fontSize: 8 }}>
-                Add all 45 to the patch
+              <span className="ms-auto">
+                <Click on={beat === 1}>
+                  <span className="rounded px-1" style={{ background: '#0d6efd', color: '#fff', fontSize: 8 }}>
+                    Add all 45 to the patch
+                  </span>
+                </Click>
               </span>
             </MiniRow>
           </Appear>
@@ -50,7 +53,11 @@ export default function StatusScene({ beat }) {
             <MiniRow active={beat === 2}>
               <MaterialIcon name="checklist" size={12} style={{ color: '#6c757d' }} />
               <span style={{ fontSize: 10 }}>Step through the rest, one at a time</span>
-              <span className="text-muted ms-auto" style={{ fontSize: 8 }}>issue 1 of 3 →</span>
+              <span className="ms-auto">
+                <Click on={beat === 2}>
+                  <span className="text-muted" style={{ fontSize: 8 }}>issue 1 of 3 →</span>
+                </Click>
+              </span>
             </MiniRow>
           </Appear>
         )}
@@ -63,8 +70,6 @@ export default function StatusScene({ beat }) {
             </div>
           </Appear>
         )}
-
-        <Cursor at={cursorAt} click={beat >= 1} />
       </Stage>
       <Caption>
         {[
