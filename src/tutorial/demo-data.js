@@ -85,13 +85,70 @@ export const DEMO_FORM = {
   pending: { code: 'Light Sheet Custom', mfr: 'Applelec', matches: 'ET-LS-01' },
 }
 
-/** A freehand ProductCode cell, as the paint surface sees it. */
+/**
+ * A freehand ProductCode cell, as the paint surface really sees one.
+ *
+ * This is shaped on a genuine linear row: FOUR products in one sentence, each with a
+ * superseded code sitting next to its current one. That messiness is the whole reason the
+ * paint surface exists — the field stays readable as prose precisely so you can tell that
+ * `021-1103` is what `FPS2020BG2000` replaced.
+ *
+ * Roles (confirmed against how the tool is actually used):
+ *   code     the current code, and only that
+ *   note     EVERYTHING else that carries meaning — the label words (Tape, Profile, opal)
+ *            AND the superseded codes. A note is not junk: it promotes onto its code's line
+ *            and travels with it.
+ *   discard  is rare. In practice it is the punctuation and the `+` separators — which the
+ *            tool suggests for you. Discarding `+` is what makes it a learned DELIMITER, and
+ *            the delimiter is what segments the row so each product's note attaches to ITS
+ *            code instead of drifting to whichever code is nearest (see noteOwnerOf).
+ *
+ * `at` is the beat at which a token stops being a note. Everything begins as a note.
+ */
 export const DEMO_PAINT = {
+  row: 'C01r',
+  mfr: 'LEDFlex',
   tokens: [
-    { text: 'Nichia', role: null },
-    { text: 'LL240272024', role: 'code' },
-    { text: '2700K 24V', role: 'note' },
-    { text: 'cut to suit', role: 'discard' },
+    { text: 'Tape', role: 'note' },
+    { text: 'LL240272024', role: 'code', at: 1 },
+    { text: '+', role: 'discard', at: 3 },
+    { text: 'Profile', role: 'note' },
+    { text: '021-1103', role: 'note' },
+    { text: '(', role: 'discard', at: 3, tight: true },
+    { text: 'new', role: 'note', tight: true },
+    { text: 'code', role: 'note' },
+    { text: 'FPS2020BG2000', role: 'code', at: 2 },
+    { text: ')', role: 'discard', at: 3, tight: true },
+    { text: '+', role: 'discard', at: 3 },
+    { text: 'Diffuser', role: 'note' },
+    { text: '022-1105', role: 'note' },
+    { text: '(', role: 'discard', at: 3, tight: true },
+    { text: 'old', role: 'note', tight: true },
+    { text: 'code', role: 'note' },
+    { text: '022-1102?', role: 'note' },
+    { text: ')', role: 'discard', at: 3, tight: true },
+    { text: '(', role: 'discard', at: 3, tight: true },
+    { text: 'opal', role: 'note', tight: true },
+    { text: '-', role: 'discard', at: 3 },
+    { text: 'FPS2020PCOPD2000', role: 'code', at: 4 },
+    { text: ')', role: 'discard', at: 3, tight: true },
+    { text: '+', role: 'discard', at: 3 },
+    { text: 'End', role: 'note' },
+    { text: 'cap', role: 'note' },
+    { text: '021-1111', role: 'note' },
+    { text: '(', role: 'discard', at: 3, tight: true },
+    { text: 'FPS2020ECG', role: 'code', at: 4 },
+    { text: ')', role: 'discard', at: 3, tight: true },
+  ],
+  /**
+   * What the field yields once painted — one line per code, carrying the note that sat in
+   * its `+` segment. `at` is the beat the line appears.
+   */
+  captures: [
+    { code: 'LL240272024', note: 'Tape', et: 'ET-LIN-TAPE-01', at: 1 },
+    { code: 'FPS2020BG2000', note: 'Profile 021-1103 new code', et: 'ET-LIN-PROF-01', at: 2 },
+    { code: 'FPS2020PCOPD2000', note: 'Diffuser 022-1105 old code 022-1102? opal', et: 'ET-LIN-DIFF-01', at: 4 },
+    { code: 'FPS2020ECG', note: 'End cap 021-1111', et: 'ET-LIN-END-01', at: 4 },
   ],
 }
 

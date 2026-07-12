@@ -74,9 +74,13 @@ export const TUTORIALS = {
     steps: [
       { blurb: 'The bar at the top IS the method: ① identify codes ② assign ElementTypes ③ build recipes. This screen owns ① and ② and stops there.', scene: 'paint', beat: 0 },
       { blurb: 'First, the Form\'s position names are routed to real PositionTypes via the DB\'s ExtRef column — never guessed from spelling.', scene: 'paint', beat: 1 },
-      { blurb: 'The cell stays readable as a sentence — you have to see "(old code 021-1102)" to judge it. So you pick a BRUSH (1/2/3 choose it) and DRAG across the words. Code goes green and bold; discarded text is struck through.', scene: 'paint', beat: 2 },
-      { blurb: 'What you painted promotes onto its own line below, as a distinct code — and the rule you just taught applies to every row containing that token. Each distinct code then needs an ElementType.', scene: 'paint', beat: 3 },
-      { blurb: 'Stage writes the Form template and the Product Spec rows — and deliberately not one recipe row. Stage ③ is yours, in the builder.', scene: 'paint', beat: 4 },
+      { blurb: 'Here is a real linear cell. FOUR products in one sentence, each with a superseded code sitting next to its current one. The field is not chopped into chips, because you have to READ it to tell which number you want — and every word starts out as a plain note. Nothing is a code until you say so.', scene: 'paint', beat: 2 },
+      { blurb: 'Pick the Code brush (1/2/3 pick the brush — they do not paint) and DRAG across the tape code. It promotes onto its own line underneath, carrying the word next to it as its note.', scene: 'paint', beat: 3 },
+      { blurb: 'Now the profile. Notice what you do NOT do: the superseded 021-1103 stays a note. A note is not junk — it promotes with its code, so the line still tells you what this part replaced.', scene: 'paint', beat: 4 },
+      { blurb: 'Discard is for the scaffolding: paint the "+" separators. That teaches the tool a DELIMITER, and the delimiter is what carves the row into one segment per product — so each note sticks to ITS code instead of drifting to whichever code is nearest.', scene: 'paint', beat: 5 },
+      { blurb: 'You have now shown it two codes, so it knows their shape and the words that precede one. The last two arrive already suggested, dashed green. Press A to accept them — you never paint the same shape twice.', scene: 'paint', beat: 6 },
+      { blurb: 'Four codes, four notes. Each one now needs the ElementType it belongs to — that is stage ②, and the codes you paint here apply to every row in the batch that contains them.', scene: 'paint', beat: 7 },
+      { blurb: 'Stage writes the Form template and the Product Spec rows — and deliberately not one recipe row. Stage ③ is yours, in the builder.', scene: 'paint', beat: 8 },
     ],
   },
 
