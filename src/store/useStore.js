@@ -80,6 +80,33 @@ function rsValue(row, field) {
   return alias !== undefined ? row[alias] : undefined
 }
 
+/** camelCase alias → canonical PascalCase field. The reverse of RS_FIELD_ALIASES. */
+const RS_FIELD_BY_ALIAS = Object.fromEntries(
+  Object.entries(RS_FIELD_ALIASES).map(([field, alias]) => [alias, field])
+)
+
+/**
+ * A recipe row carries every RS field under TWO names: the workbook's PascalCase (`Quantity`,
+ * on any row that came from Excel) and the app's camelCase (`quantity`). `rsValue` reads
+ * PascalCase FIRST, so a patch that writes only `quantity` leaves the stale `Quantity` sitting
+ * in front of it: the card re-renders (the UI reads camelCase first) while the export diff
+ * compares the untouched `Quantity` against its own baseline, finds them equal, and throws the
+ * change away. Editing a quantity produced no Export Changes at all.
+ *
+ * Callers had been coping by hand — `handleFlagChange` and the bulk-apply top-up both write
+ * the pair — which is a rule you have to remember, and `handleFieldChange` did not. So do it
+ * once, here, where every write to a recipe row already passes through: name a field under
+ * either casing and BOTH are set.
+ */
+function normalizeRsUpdates(updates = {}) {
+  const out = { ...updates }
+  for (const [key, value] of Object.entries(updates)) {
+    const twin = RS_FIELD_ALIASES[key] ?? RS_FIELD_BY_ALIAS[key]
+    if (twin) out[twin] = value
+  }
+  return out
+}
+
 /** Loose equality: null == '' , 1 == '1'. */
 function looseEqual(a, b) {
   const na = (a === '' || a === undefined) ? null : a
@@ -2046,8 +2073,12 @@ const useStore = create((set, get) => ({
    * Updates a specific recipe row identified by _id.
    * In ET mode, propagates to all position copies of that row.
    */
-  updateRecipeRow(posRef, rowId, updates, { recordHistory = true } = {}) {
+  updateRecipeRow(posRef, rowId, rawUpdates, { recordHistory = true } = {}) {
     const { recipes, rsChanges, activeContextType, activeETRef } = get()
+
+    // Write every RS field under both casings — see normalizeRsUpdates. Without this a
+    // camelCase-only edit is invisible to the export diff.
+    const updates = normalizeRsUpdates(rawUpdates)
 
     if (recordHistory) get()._pushHistory()
 

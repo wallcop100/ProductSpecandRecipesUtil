@@ -166,15 +166,12 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
     updateRecipeRow(posRef, rowId, { [field]: value })
   }
 
+  // Design and Contract are mutually exclusive: a row is either ours to manage or free-issued.
+  // (updateRecipeRow keeps each field's PascalCase twin in step — see normalizeRsUpdates.)
   function handleFlagChange(flag, value) {
-    const update = { [flag]: value, [flag.charAt(0).toUpperCase() + flag.slice(1)]: value }
-    if (flag === 'isDesign' && value === 'Y') {
-      update.isContractItem = null
-      update.IsContractItem = null
-    } else if (flag === 'isContractItem' && value === 'Y') {
-      update.isDesign = null
-      update.IsDesign = null
-    }
+    const update = { [flag]: value }
+    if (flag === 'isDesign' && value === 'Y') update.isContractItem = null
+    else if (flag === 'isContractItem' && value === 'Y') update.isDesign = null
     updateRecipeRow(posRef, rowId, update)
   }
 

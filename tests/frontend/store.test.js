@@ -1695,3 +1695,81 @@ describe('copyRecipeFrom — borrow a comparable position\'s rows', () => {
     expect(useStore.getState().copyRecipeFrom('A02r', '')).toBe(0)
   })
 })
+
+/**
+ * A recipe row carries every RS field under two names: the workbook's PascalCase (on any row
+ * that came from Excel) and the app's camelCase. The export diff reads PascalCase FIRST, so a
+ * patch that wrote only the camelCase key left the stale PascalCase value in front of it — the
+ * card re-rendered, the diff saw no change, and the edit never reached a patch script.
+ *
+ * Editing a quantity produced no Export Changes at all.
+ */
+describe('an edit to an existing row is always visible to the export diff', () => {
+  const excelRow = (over = {}) => ({
+    _id: 'r1',
+    _row_num: 12,                       // it exists on disk — this is what makes it a diff
+    PositionTypeRef: 'C01r',
+    ContextType: 'PositionType',
+    ContextRef: 'C01r',
+    RecipeIndex: 0,
+    ElementTypeRef: 'ET-LIN-01',
+    Quantity: 1,
+    ...over,
+  })
+
+  beforeEach(() => {
+    useStore.setState({
+      recipes: [excelRow()], rsChanges: [], past: [], future: [],
+      activeContextType: 'PositionType', activeETRef: null,
+    })
+  })
+
+  const changeFor = id => useStore.getState().rsChanges.find(c => c._id === id)
+
+  test('a camelCase quantity edit is exported', () => {
+    useStore.getState().updateRecipeRow('C01r', 'r1', { quantity: 2 })
+
+    const change = changeFor('r1')
+    expect(change).toBeDefined()
+    expect(change.changedFields.Quantity).toBe(2)
+    expect(change.before.Quantity).toBe(1)
+  })
+
+  test('both casings are kept in step, whichever one you write', () => {
+    useStore.getState().updateRecipeRow('C01r', 'r1', { quantity: 3 })
+    const row = useStore.getState().recipes[0]
+    expect(row.Quantity).toBe(3)
+    expect(row.quantity).toBe(3)
+
+    useStore.getState().updateRecipeRow('C01r', 'r1', { Quantity: 4 })
+    const again = useStore.getState().recipes[0]
+    expect(again.Quantity).toBe(4)
+    expect(again.quantity).toBe(4)
+  })
+
+  test('it holds for every RS field, not just quantity', () => {
+    useStore.getState().updateRecipeRow('C01r', 'r1', { isContractItem: 'Y', sortOrder: 7 })
+
+    const change = changeFor('r1')
+    expect(change.changedFields.IsContractItem).toBe('Y')
+    expect(change.changedFields.SortOrder).toBe(7)
+  })
+
+  // The registry drops a row whose edits are back where they started; that must still work
+  // now that a write touches two keys.
+  test('editing back to the original value clears the change', () => {
+    useStore.getState().updateRecipeRow('C01r', 'r1', { quantity: 2 })
+    expect(changeFor('r1')).toBeDefined()
+
+    useStore.getState().updateRecipeRow('C01r', 'r1', { quantity: 1 })
+    expect(changeFor('r1')).toBeUndefined()
+  })
+
+  // Fields that are not RS export fields must pass through untouched.
+  test('a non-RS field is not given a phantom twin', () => {
+    useStore.getState().updateRecipeRow('C01r', 'r1', { _origin: 'form' })
+    const row = useStore.getState().recipes[0]
+    expect(row._origin).toBe('form')
+    expect(Object.keys(row)).not.toContain('_Origin')
+  })
+})
