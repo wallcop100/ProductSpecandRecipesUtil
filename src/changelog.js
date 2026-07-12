@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-07-12', note: 'Import + Product Spec tutorials rebuilt: drag-a-brush over continuous text, and the real split-panel browser/editor' },
   { date: '2026-07-12', note: 'Strain-relief warning no longer fires on positions with no connectors; tutorial scenes rebuilt against the real rendered DOM' },
   { date: '2026-07-12', note: 'Tutorial scenes now mirror the real panes and use the real refs (A02m, C01r, ET-LIN-01) — the pointer is anchored, not guessed' },
   { date: '2026-07-12', note: 'Every pane now has a tutorial card: auto-opens once, replays from the ? chip, an animated demo of what the pane can do' },

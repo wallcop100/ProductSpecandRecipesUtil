@@ -74,8 +74,8 @@ export const TUTORIALS = {
     steps: [
       { blurb: 'The bar at the top IS the method: ① identify codes ② assign ElementTypes ③ build recipes. This screen owns ① and ② and stops there.', scene: 'paint', beat: 0 },
       { blurb: 'First, the Form\'s position names are routed to real PositionTypes via the DB\'s ExtRef column — never guessed from spelling.', scene: 'paint', beat: 1 },
-      { blurb: 'Then you paint. Keys 1/2/3 mark a token as code, note, or noise — and painting one token teaches every row that contains it.', scene: 'paint', beat: 2 },
-      { blurb: 'Each distinct code then needs an ElementType: reuse one the spec already has, or create one on the spot.', scene: 'paint', beat: 3 },
+      { blurb: 'The cell stays readable as a sentence — you have to see "(old code 021-1102)" to judge it. So you pick a BRUSH (1/2/3 choose it) and DRAG across the words. Code goes green and bold; discarded text is struck through.', scene: 'paint', beat: 2 },
+      { blurb: 'What you painted promotes onto its own line below, as a distinct code — and the rule you just taught applies to every row containing that token. Each distinct code then needs an ElementType.', scene: 'paint', beat: 3 },
       { blurb: 'Stage writes the Form template and the Product Spec rows — and deliberately not one recipe row. Stage ③ is yours, in the builder.', scene: 'paint', beat: 4 },
     ],
   },
@@ -98,9 +98,9 @@ export const TUTORIALS = {
     icon: 'list_alt',
     intro: 'Every ElementType\'s buying identity: (Manufacturer, ProductCode). The pair is the identity — the same code from another maker is another product.',
     steps: [
-      { blurb: 'A complete row names its manufacturer and code. That pair is what the ordering process buys.', scene: 'spec', beat: 0 },
+      { blurb: 'Pick a row on the left — its coloured dot is its status — and fill it in on the right. Green complete, amber TBC, red missing.', scene: 'spec', beat: 0 },
       { blurb: 'The status pills are filters. Click Missing and the list shrinks to the gaps.', scene: 'spec', beat: 1 },
-      { blurb: 'Fill next steps you to the first incomplete row, cursor already in the field that needs you.', scene: 'spec', beat: 2 },
+      { blurb: 'Fill next selects the first incomplete row and drops the cursor straight into the field that needs you.', scene: 'spec', beat: 2 },
       { blurb: 'Fill it and the counts move with you. The completeness bar is the same number the tree\'s header shows.', scene: 'spec', beat: 3 },
       { blurb: 'Wrappers read Ideaworks / N-A on purpose — that IS their mark. Writing a real code onto one can un-wrapper the assembly.', scene: 'spec', beat: 4 },
     ],
