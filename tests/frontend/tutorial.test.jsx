@@ -215,10 +215,40 @@ describe('TutorialHint — auto-open once, then a quiet ? for ever', () => {
   })
 
   test('an inactive hint (hidden pane) does not auto-open, and does when it becomes active', async () => {
+    markSeen('recipe-editor')     // the palette waits for it; see `after`
     const { rerender } = render(<TutorialHint id="palette" active={false} />)
     expect(screen.queryByText('The palette drawer')).toBeNull()
 
     rerender(<TutorialHint id="palette" active />)
     expect(await screen.findByText('The palette drawer')).toBeInTheDocument()
+  })
+
+  /**
+   * The mutex alone is a RACE, not an order: on the builder the drawer was mounting first and
+   * winning it, so you met the palette before the recipe it fills.
+   */
+  test('a card waits for the one it declares itself `after`', async () => {
+    render(<><TutorialHint id="recipe-editor" /><TutorialHint id="palette" /></>)
+
+    expect(await screen.findByText('The recipe editor')).toBeInTheDocument()
+    expect(screen.queryByText('The palette drawer')).toBeNull()
+  })
+
+  test('…and takes its turn the moment that card is dismissed — not on some later mount', async () => {
+    render(<><TutorialHint id="recipe-editor" /><TutorialHint id="palette" /></>)
+    await screen.findByText('The recipe editor')
+
+    fireEvent.click(screen.getByLabelText('Close'))
+
+    // Same screen, no remount: the palette must come up on its own.
+    expect(await screen.findByText('The palette drawer')).toBeInTheDocument()
+  })
+
+  test('every `after` names a card that exists', () => {
+    for (const [id, t] of Object.entries(TUTORIALS)) {
+      for (const other of t.after || []) {
+        expect(TUTORIALS[other], `${id} is after an unknown card "${other}"`).toBeDefined()
+      }
+    }
   })
 })

@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-07-12', note: 'Tutorial cards now open in a declared order (recipe before palette), and the palette card looks like the actual drawer' },
   { date: '2026-07-12', note: 'Connector tutorial rebuilt: it now starts from an empty screen and MAKES a template, then shows the real matrix table' },
   { date: '2026-07-12', note: 'Side-by-Side refresh: reference behind an icon rail, a ⋮ menu, per-row status icons, and Form/recipe divergence visible without hovering' },
   { date: '2026-07-12', note: 'Painting is now taught properly: a real 4-product linear cell, painted step by step — notes, learned delimiters, suggested codes' },

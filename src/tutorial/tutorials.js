@@ -57,13 +57,18 @@ export const TUTORIALS = {
   'palette': {
     title: 'The palette drawer',
     icon: 'widgets',
-    intro: 'Everything you can pull INTO a recipe, in one drawer: ElementTypes, templates, favourites, and what comparable positions already do.',
+    /**
+     * The drawer only makes sense once you know what it fills. It shares a screen with the
+     * recipe editor, and without this it won the mount race and opened FIRST.
+     */
+    after: ['recipe-editor'],
+    intro: 'Everything you can pull INTO the recipe, in one drawer on the right: ElementTypes, templates, favourites, and what comparable positions already do.',
     steps: [
-      { blurb: 'Four sources, four tabs. The drawer opens itself whenever a position is open — it is only useful while one is.', scene: 'palette', beat: 0 },
-      { blurb: 'ElementTypes: browse by ref or by manufacturer + code, then drag one in (or click it).', scene: 'palette', beat: 1 },
-      { blurb: 'Templates REPLACE the whole recipe — a confirm stands in the way when rows already exist. Additive things live elsewhere.', scene: 'palette', beat: 2 },
-      { blurb: 'Star anything you reach for often. Favourites are yours, across every project.', scene: 'palette', beat: 3 },
-      { blurb: '"Like this" ranks comparable positions — same family, tags, recipe overlap, never the ref spelling — and lets you borrow rows.', scene: 'palette', beat: 4 },
+      { blurb: 'Four sources, four tabs — ElementTypes, Templates, ★ Favourites, and "Like this". The drawer is only useful while a position is open, so that is when it opens.', scene: 'palette', beat: 0 },
+      { blurb: 'ElementTypes lists everything the project knows, grouped by family. Two ways to look at the same thing: by ET Ref, or by Mfr + Code when you know the product but not the ref.', scene: 'palette', beat: 1 },
+      { blurb: 'Search and the family filter narrow it, and a match force-opens the groups so you never hunt through collapsed headers.', scene: 'palette', beat: 2 },
+      { blurb: 'Every card is draggable — drag it onto a recipe section. The star saves it to your favourites, across every project. An amber card is a ref used in a recipe but in neither the DB nor the spec.', scene: 'palette', beat: 3 },
+      { blurb: 'Templates REPLACE the whole recipe — a confirm stands in the way when rows already exist. And "Like this" ranks comparable positions (same family, tags, recipe overlap — never the ref spelling) so you can borrow rows from one.', scene: 'palette', beat: 4 },
     ],
   },
 
