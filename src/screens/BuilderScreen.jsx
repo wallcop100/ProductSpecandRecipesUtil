@@ -24,6 +24,7 @@ import ElementPalette from '../components/ElementPalette'
 import ValidationPanel from '../components/ValidationPanel'
 import ReadinessPanel from '../components/ReadinessPanel'
 import SimilarPositionsPanel from '../components/SimilarPositionsPanel'
+import TutorialHint from '../tutorial/TutorialHint'
 import TagRulesModal from '../components/TagRulesModal'
 import TemplatePicker from '../components/TemplatePicker'
 import PasteMergeModal from '../components/PasteMergeModal'
@@ -583,6 +584,7 @@ export default function BuilderScreen({
                 <IconButton variant="outline-secondary" bsSize="sm" style={{ fontSize: 11 }}
                   icon={ACTION_ICONS.back} title="Back to tree" onClick={closeETRecipe} />
                 <span className="fw-semibold">Editing ET: {activeETRef}</span>
+                <TutorialHint id="wrapper-internals" />
                 {etModeUsedIn.length > 0 ? (
                   <span
                     className="badge"
@@ -697,6 +699,7 @@ export default function BuilderScreen({
               {/* Validation and "Done?" used to be tabs here. They are project answers, not
                   things you drag into a recipe — they live in the toolbar's Status button. */}
             </Nav>
+            <span className="me-1 d-inline-flex align-items-center"><TutorialHint id="palette" active={rightOpen} /></span>
             <button className="btn btn-link p-0 me-2" style={{ color: '#888', lineHeight: 1 }} onClick={() => setRightOpen(false)} title="Close palette" aria-label="Close palette"><MaterialIcon name="close" size={18} /></button>
           </div>
           <div style={{ flex: 1, overflowY: 'auto' }}>
@@ -759,6 +762,7 @@ export default function BuilderScreen({
         <Modal.Header closeButton>
           <Modal.Title style={{ fontSize: 15 }} className="d-flex align-items-center gap-2">
             <MaterialIcon name={ACTION_ICONS.validate} size={18} /> Where the project stands
+            <TutorialHint id="validation-status" />
           </Modal.Title>
         </Modal.Header>
         <Nav variant="tabs" activeKey={statusTab} onSelect={k => setStatusTab(k)} className="px-3 pt-2">

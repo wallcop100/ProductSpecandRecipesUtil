@@ -3,6 +3,7 @@ import { Button } from 'react-bootstrap'
 import useStore, { getRecipeForPosition } from '../store/useStore'
 import TagBadge from './TagBadge'
 import FilterBar from './FilterBar'
+import TutorialHint from '../tutorial/TutorialHint'
 import PositionRecipeEditor from './PositionRecipeEditor'
 import MaterialIcon from './MaterialIcon'
 import IconButton from './IconButton'
@@ -271,6 +272,7 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
         <strong className="small text-uppercase text-muted" style={{ letterSpacing: 0.5 }}>
           PositionTypes
         </strong>
+        <TutorialHint id="builder-tree" />
         {scopedTotal > 0 && (
           <span className="d-inline-flex align-items-center gap-2"
             title={`${reciped} of ${scopedTotal} in-scope positions have at least one recipe row (ignored ones don't count)`}>

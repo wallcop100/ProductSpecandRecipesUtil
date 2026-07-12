@@ -5,6 +5,7 @@ import CoverageMatrix from '../components/CoverageMatrix'
 import CollectionEditor from '../components/CollectionEditor'
 import CellDetailPanel from '../components/CellDetailPanel'
 import IconButton from '../components/IconButton'
+import TutorialHint from '../tutorial/TutorialHint'
 import { collectionStatusForPosition, positionRecipeWithWrapperInternals } from '../utils/collectionStatus'
 import { ACTION_ICONS } from '../utils/entityStyle'
 
@@ -107,6 +108,7 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
       <div className="d-flex align-items-center gap-2 px-3 py-2 border-bottom bg-white" style={{ flexShrink: 0 }}>
         <IconButton variant="outline-secondary" bsSize="sm" icon={ACTION_ICONS.back} title="Back to builder" onClick={onBack} />
         <span className="fw-semibold ms-1">Connectors</span>
+        <TutorialHint id="connectors" />
         <div className="flex-grow-1" />
         <Button variant="primary" size="sm" onClick={handleNew}>+ New Template</Button>
       </div>

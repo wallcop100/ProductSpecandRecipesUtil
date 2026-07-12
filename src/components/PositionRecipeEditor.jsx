@@ -4,6 +4,7 @@ import useStore, { getRecipeForPosition } from '../store/useStore'
 import RecipeSection from './RecipeSection'
 import TagBadge from './TagBadge'
 import PositionTagEditor from './PositionTagEditor'
+import TutorialHint from '../tutorial/TutorialHint'
 import MaterialIcon from './MaterialIcon'
 import IconButton from './IconButton'
 import PositionValidationBadge from './PositionValidationBadge'
@@ -113,6 +114,7 @@ export default function PositionRecipeEditor({
         <span className="fw-semibold" style={{ fontSize: 15 }}>{ref}</span>
         {name && name !== ref && <span className="text-muted" style={{ fontSize: 12 }}>{name}</span>}
         <PositionTagEditor posRef={ref} />
+        <TutorialHint id="recipe-editor" />
         <div className="flex-grow-1" />
         <IconButton
           variant="outline-secondary" bsSize="sm" style={{ fontSize: 11 }}

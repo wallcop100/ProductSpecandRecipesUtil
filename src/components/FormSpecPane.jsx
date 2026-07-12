@@ -9,6 +9,7 @@ import { compareFormToRecipe, associations, formWorklist, formPending, pendingCa
 import NewETModal from './NewETModal'
 import ETRefSelect from './ETRefSelect'
 import { ConceptHint, CONCEPTS } from './ConceptCard'
+import TutorialHint from '../tutorial/TutorialHint'
 import { findProductET, stampPlan } from '../utils/productCodes'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { ago } from '../utils/ago'
@@ -310,6 +311,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
         <SectionLabel className="mb-0">Form spec</SectionLabel>
         <ConceptHint concept={CONCEPTS.INTENT} size={11}
           title="What the Form asks for vs what the recipe has" />
+        <TutorialHint id="form-pane" size={12} />
         <span className="ms-auto text-muted" style={{ fontSize: 10 }}
           title={pending.length > 0 ? `${pending.length} product${pending.length === 1 ? '' : 's'} still need an ElementType before they can be added` : ''}>
           {coverage.present}/{coverage.total + pending.length} present

@@ -13,6 +13,7 @@ import PrimingModal from '../components/PrimingModal'
 import NewETModal from '../components/NewETModal'
 import ResolveRefsStep from '../components/ResolveRefsStep'
 import StageBar from '../components/StageBar'
+import TutorialHint from '../tutorial/TutorialHint'
 import MapColumnsStep from '../components/MapColumnsStep'
 import {
   makeRow, deriveCaptures, buildDistinct, buildMaster, classify, duplicateSet,
@@ -732,6 +733,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
         <h5 className="mb-0 d-flex align-items-center gap-2" style={{ fontSize: 16 }}>
           <MaterialIcon name="auto_fix_high" size={20} /> Import product codes
         </h5>
+        <TutorialHint id="code-import" />
         {source?.name && <span className="text-muted ms-2 text-truncate" style={{ fontSize: 11, maxWidth: 260 }}>{source.name}</span>}
       </div>
 

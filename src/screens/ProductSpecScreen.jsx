@@ -5,6 +5,7 @@ import ETSpecBrowser from '../components/ETSpecBrowser'
 import ETSpecEditor  from '../components/ETSpecEditor'
 import ChangeSummaryModal from '../components/ChangeSummaryModal'
 import IconButton from '../components/IconButton'
+import TutorialHint from '../tutorial/TutorialHint'
 import MaterialIcon from '../components/MaterialIcon'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { duplicateProductKeys } from '../utils/productCodes'
@@ -232,6 +233,7 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
         <IconButton variant="outline-secondary" bsSize="sm" icon={ACTION_ICONS.back}
           title="Back to builder" onClick={onBack} />
         <span className="fw-semibold ms-1">Product Spec</span>
+        <TutorialHint id="product-spec" />
         {onOpenCodeImport && (
           <Button variant="outline-primary" size="sm" className="d-inline-flex align-items-center gap-1 ms-2"
             style={{ fontSize: 11 }} onClick={onOpenCodeImport}

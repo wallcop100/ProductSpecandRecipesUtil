@@ -5,6 +5,7 @@ import MaterialIcon from './MaterialIcon'
 import { buildPsScript, buildRsScript, buildDbScript } from '../utils/patchScript'
 import { ConceptHint, CONCEPTS } from './ConceptCard'
 import MasterGapPanel from './MasterGapPanel'
+import TutorialHint from '../tutorial/TutorialHint'
 
 /**
  * ChangeSummaryModal — review every pending change, then copy the patch scripts.
@@ -447,6 +448,7 @@ export default function ChangeSummaryModal({ show, onHide }) {
           <MaterialIcon name="fact_check" size={18} />
           Review changes before export
           <ConceptHint concept={CONCEPTS.READONLY} size={14} title="Why is there no Save button?" />
+          <TutorialHint id="export" />
         </Modal.Title>
       </Modal.Header>
 

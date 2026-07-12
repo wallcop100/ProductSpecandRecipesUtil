@@ -7,6 +7,7 @@ import useStore from '../store/useStore'
 import { GLOBAL_TEMPLATE_IDS } from '../utils/constants'
 import TagInput from '../components/TagInput'
 import IconButton from '../components/IconButton'
+import TutorialHint from '../tutorial/TutorialHint'
 import MaterialIcon from '../components/MaterialIcon'
 import { ACTION_ICONS } from '../utils/entityStyle'
 
@@ -242,7 +243,7 @@ export default function TemplateEditorScreen({ onBack }) {
       >
         <div className="p-3 border-bottom d-flex align-items-center justify-content-between">
           <IconButton variant="link" bsSize="sm" className="p-0" icon={ACTION_ICONS.back} title="Back to builder" onClick={onBack} />
-          <span className="fw-semibold small">Templates</span>
+          <span className="fw-semibold small d-inline-flex align-items-center gap-1">Templates <TutorialHint id="templates" /></span>
         </div>
 
         {/* Global templates */}
