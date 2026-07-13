@@ -3,6 +3,15 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [master]
+    # Don't spend a build + deploy on a push that cannot change the built site.
+    # Everything NOT listed here still triggers — including tests/, which gate the deploy,
+    # and src/changelog.js, which is site content. Deliberately conservative: the cost of
+    # an unnecessary run is a few minutes, the cost of a missed one is a stale deploy.
+    paths-ignore:
+      - '**/*.md'
+      - '.vscode/**'
+      - '.codegraph/**'
+      - '.gitignore'
   workflow_dispatch:
 
 # Allow the workflow to publish to Pages via OIDC.
