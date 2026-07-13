@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import {
-  Button, ButtonGroup, Nav, Modal,
+  Button, ButtonGroup, Dropdown, Nav, Modal,
 } from 'react-bootstrap'
 import {
   DndContext,
@@ -432,18 +432,27 @@ export default function BuilderScreen({
         {/* Silent unless a Form template is attached. "Reconcile →" steps through
             every position that still misses a Form product. */}
         <FormProgressChip onReconcile={startReconcile} />
-        <IconButton variant="outline-secondary" bsSize="sm" icon="dashboard_customize"
-          title="Template Editor" onClick={onOpenTemplateEditor} />
-        <IconButton variant="outline-secondary" bsSize="sm" icon={ACTION_ICONS.productSpec}
-          title="Product Spec" onClick={() => onOpenProductSpec()} />
-        {/* The Form → product-code workflow used to be reachable only from inside the
-            Product Spec screen, so nothing here said it existed. */}
-        {onOpenCodeImport && (
-          <IconButton variant="outline-secondary" bsSize="sm" icon="auto_fix_high"
-            title="Import product codes from a Form template" onClick={onOpenCodeImport} />
-        )}
-        <IconButton variant="outline-secondary" bsSize="sm" icon={ACTION_ICONS.tags}
-          title="Tags" onClick={() => setShowTags(true)} />
+
+        {/* The other screens you actually move between while building a recipe. Everything
+            rarer lives in the ⋮ at the far end — the toolbar had fourteen controls in a row
+            and no way to tell the daily ones from the once-a-project ones. */}
+        <ButtonGroup size="sm" className="ms-1">
+          <IconButton variant="outline-secondary" icon={ACTION_ICONS.productSpec}
+            title="Product Spec" onClick={() => onOpenProductSpec()} />
+          {/* The Form → product-code workflow used to be reachable only from inside the
+              Product Spec screen, so nothing here said it existed. */}
+          {onOpenCodeImport && (
+            <IconButton variant="outline-secondary" icon="auto_fix_high"
+              title="Import product codes from a Form template" onClick={onOpenCodeImport} />
+          )}
+          {/* Connectors were reachable only from a position you had already opened, so the
+              matrix — the whole point of the screen — was unreachable from here. */}
+          {onOpenConnectors && (
+            <IconButton variant="outline-secondary" icon="cable"
+              title="Connectors — templates and the coverage matrix"
+              onClick={() => onOpenConnectors(null)} />
+          )}
+        </ButtonGroup>
 
         <ButtonGroup size="sm" className="ms-2">
           <Button
@@ -498,21 +507,27 @@ export default function BuilderScreen({
             </span>
           )}
         </Button>
-        <IconButton
-          variant="outline-primary"
-          bsSize="sm"
-          icon="fact_check"
-          onClick={() => setShowReview(true)}
-          title="Review recipes by family / manufacturer / tag / contains…"
-        />
-        <IconButton
-          variant="outline-secondary"
-          bsSize="sm"
-          icon={ACTION_ICONS.saveTemplate}
-          onClick={() => setShowSaveTemplate(true)}
-          disabled={!hasRecipeRows}
-          title={hasRecipeRows ? 'Transform the active position into a template' : 'Select a position with rows to transform into a template'}
-        />
+        {/* The once-in-a-while ones. They were four more icons competing with Export for
+            your eye, and none of them is something you reach for twice in an hour. */}
+        <Dropdown align="end">
+          <Dropdown.Toggle as={IconButton} bsSize="sm" variant="outline-secondary"
+            icon={ACTION_ICONS.more} title="More" />
+          <Dropdown.Menu style={{ fontSize: 12 }}>
+            <Dropdown.Item onClick={() => setShowReview(true)}>
+              <MaterialIcon name="fact_check" size={14} /> Review recipes…
+            </Dropdown.Item>
+            <Dropdown.Item onClick={() => setShowSaveTemplate(true)} disabled={!hasRecipeRows}>
+              <MaterialIcon name={ACTION_ICONS.saveTemplate} size={14} /> Save this position as a template
+            </Dropdown.Item>
+            <Dropdown.Divider />
+            <Dropdown.Item onClick={onOpenTemplateEditor}>
+              <MaterialIcon name="dashboard_customize" size={14} /> Template editor
+            </Dropdown.Item>
+            <Dropdown.Item onClick={() => setShowTags(true)}>
+              <MaterialIcon name={ACTION_ICONS.tags} size={14} /> Tags
+            </Dropdown.Item>
+          </Dropdown.Menu>
+        </Dropdown>
         {/* No snapshot button: export writes nothing — it produces a patch script the
             user runs in Excel — so there is nothing to back up first. The project
             folder is opened read-only and nothing can write to it. */}

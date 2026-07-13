@@ -7,7 +7,6 @@ import TutorialHint from '../tutorial/TutorialHint'
 import PositionRecipeEditor from './PositionRecipeEditor'
 import MaterialIcon from './MaterialIcon'
 import IconButton from './IconButton'
-import PositionValidationBadge from './PositionValidationBadge'
 import ConnectorSuggestions from './ConnectorSuggestions'
 import CollectionBadge from './CollectionBadge'
 import FormCoverageBadge from './FormCoverageBadge'
@@ -48,7 +47,6 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
   const [showIgnored, setShowIgnored] = useState(false)
   const [collapsedFamilies, setCollapsedFamilies] = useState(() => new Set())
   const [showTags, setShowTags] = useState(false)      // overview per-row tags (default off)
-  const [showStatus, setShowStatus] = useState(false)  // overview per-row validation/connector status (default off)
   const driftCount = Object.keys(tagDrift || {}).length
 
   const NO_FAMILY = '(no family)'
@@ -248,7 +246,6 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
         {count > 0
           ? <span className="badge bg-light text-dark border" style={{ fontSize: 10 }}>{count} {count === 1 ? 'row' : 'rows'}</span>
           : <span className="text-muted fst-italic" style={{ fontSize: 11 }}>empty</span>}
-        {showStatus && !isIgnored && <PositionValidationBadge posRef={ref} size={14} />}
         {/* Ignore toggle — stop propagation so it doesn't open the position */}
         <button
           className="btn btn-link p-0"
@@ -315,11 +312,6 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
             style={{ fontSize: 11 }} onClick={() => setShowTags(v => !v)}
             title="Show tags on each row"
           >Tags</Button>
-          <Button
-            variant={showStatus ? 'secondary' : 'outline-secondary'} size="sm"
-            style={{ fontSize: 11 }} onClick={() => setShowStatus(v => !v)}
-            title="Show validation / connector status on each row"
-          >Status</Button>
           <div style={{ width: 300 }}>
             <FilterBar
               text={filter}
