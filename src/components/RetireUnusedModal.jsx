@@ -3,6 +3,13 @@ import { Modal, Button } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 
+/** Which workbook a retire touches. */
+const Tag = ({ children }) => (
+  <span className="rounded px-1" style={{ fontSize: 9, background: '#f1f3f5', color: '#495057', border: '1px solid #e0e0e0' }}>
+    {children}
+  </span>
+)
+
 /**
  * RetireUnusedModal — review, then retire, the ElementTypes that exist only to serve dead
  * positions (excluded in the Form, or with no placed Position). Nothing is marked until you
@@ -43,18 +50,23 @@ export default function RetireUnusedModal({ show, onHide }) {
         ) : (
           <>
             <div className="text-muted mb-3" style={{ lineHeight: 1.5 }}>
-              These ElementTypes are used <strong>only</strong> by positions the Form excluded, or
-              that have no instances placed in the DesignDB. Marking them deleted writes an
-              IsDeleted patch to the <strong>Recipe Spec</strong>, the <strong>Product Spec</strong>,
-              and the <strong>DesignDB</strong>. Nothing here touches your files — it becomes part of
-              Export, and one undo puts it back.
+              No live recipe uses these ElementTypes — either the only position using one was
+              excluded or never placed, or its Product Spec row is an orphan nothing refers to.
+              Marking one deleted writes an <strong>IsDeleted</strong> patch to each workbook that
+              actually holds it (the tags on the right). Nothing here touches your files — it
+              becomes part of Export, and one undo puts the Recipe and Product Spec marks back.
             </div>
             {plan.map(p => (
-              <div key={p.ref} className="d-flex align-items-baseline gap-2 py-1 border-bottom">
+              <div key={p.ref} className="d-flex align-items-baseline gap-2 py-1 border-bottom" style={{ minWidth: 0 }}>
                 <MaterialIcon name="do_not_disturb_on" size={13} style={{ color: '#842029', flexShrink: 0 }} />
-                <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{p.ref}</span>
-                <span className="text-muted ms-auto text-truncate" style={{ minWidth: 0 }}>
-                  only in {p.onlyIn.join(', ')}
+                <span style={{ fontFamily: 'monospace', fontWeight: 600, flexShrink: 0 }}>{p.ref}</span>
+                <span className="text-muted text-truncate" style={{ minWidth: 0, flex: 1 }}>
+                  {p.onlyIn.length ? `only in ${p.onlyIn.join(', ')}` : 'not used by any recipe'}
+                </span>
+                <span className="d-flex gap-1 flex-shrink-0">
+                  {p.rsRowIds.length > 0 && <Tag>Recipe</Tag>}
+                  {p.inPs && <Tag>Spec</Tag>}
+                  {p.inDb && <Tag>DesignDB</Tag>}
                 </span>
               </div>
             ))}

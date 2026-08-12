@@ -103,4 +103,33 @@ describe('retirableElementTypes — solely-dead only', () => {
     const recipes = [pos('LIVE', 'ET-A')]
     expect(retirableElementTypes({ recipes, deadRefs: new Set() })).toEqual([])
   })
+
+  // ET-PS-14: a Product Spec row no recipe uses at all — an orphan, not "solely dead".
+  test('a Product Spec orphan (no recipe uses it) is retirable, tagged Spec only', () => {
+    const recipes = [pos('LIVE', 'ET-USED')]
+    const psRows = [
+      { EntityRef: 'ET-USED', _id: 'ps-used' },
+      { EntityRef: 'ET-PS-14', _id: 'ps-14' },   // no recipe references it
+    ]
+    const out = retirableElementTypes({ recipes, deadRefs: new Set(), psRows })
+    expect(out.map(o => o.ref)).toEqual(['ET-PS-14'])
+    expect(out[0]).toMatchObject({ inPs: true, inDb: false, rsRowIds: [], onlyIn: [] })
+  })
+
+  // The cascade: an orphan that ALSO has a DesignDB row is tagged for both.
+  test('an orphan present in the DesignDB cascades — tagged Spec + DesignDB', () => {
+    const recipes = [pos('LIVE', 'ET-USED')]
+    const psRows = [{ EntityRef: 'ET-CAT-01', _id: 'ps' }]
+    const elementTypes = [{ ElementTypeRef: 'ET-CAT-01' }, { ElementTypeRef: 'ET-USED' }]
+    const out = retirableElementTypes({ recipes, deadRefs: new Set(), psRows, elementTypes })
+    expect(out.map(o => o.ref)).toEqual(['ET-CAT-01'])
+    expect(out[0]).toMatchObject({ inPs: true, inDb: true })
+  })
+
+  // "All recipe items must have a PS entry" — a PS row a live recipe DOES use is never touched.
+  test('a Product Spec row a live recipe uses is kept', () => {
+    const recipes = [pos('LIVE', 'ET-USED')]
+    const psRows = [{ EntityRef: 'ET-USED', _id: 'ps' }]
+    expect(retirableElementTypes({ recipes, deadRefs: new Set(), psRows })).toEqual([])
+  })
 })

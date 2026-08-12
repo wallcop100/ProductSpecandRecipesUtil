@@ -2983,9 +2983,9 @@ const useStore = create((set, get) => ({
    * `retireDeadElementTypes` writes. See deadPositions.js.
    */
   retirablePlan() {
-    const { recipes, positions, positionTypes, formCaptures } = get()
+    const { recipes, positions, positionTypes, formCaptures, psRows, elementTypes } = get()
     const dead = deadPositionRefs({ recipes, positions, positionTypes, formCaptures })
-    return retirableElementTypes({ recipes, deadRefs: dead })
+    return retirableElementTypes({ recipes, deadRefs: dead, psRows, elementTypes })
   },
 
   /**

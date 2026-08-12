@@ -57,19 +57,29 @@ export function deadPositionRefs({ recipes = [], positions = [], positionTypes =
   return dead
 }
 
+const psRefOf = r => r.ElementTypeRef || r.elementTypeRef || r.EntityRef || r.entityRef || ''
+const dbRefOf = r => r.ElementTypeRef || r.elementTypeRef || ''
+
 /**
- * retirableElementTypes({ recipes, deadRefs, containerETRefs }) →
- *   [{ ref, rsRowIds, onlyIn }]
+ * retirableElementTypes({ recipes, deadRefs, psRows, elementTypes }) →
+ *   [{ ref, rsRowIds, onlyIn, inPs, inDb }]
  *
- * `ref` keeps its original casing. `rsRowIds` are every live recipe row that refers to it
- * (all of which sit in a dead subgraph, by construction). `onlyIn` names the dead positions
- * it appears under, for the preview.
+ * An ElementType is retirable when NO live recipe uses it — whether that is because the only
+ * recipe using it is on a dead position, or because it is a Product Spec entry no recipe uses
+ * at all (an orphan like ET-PS-14). "All recipe items must have a PS entry", so anything a
+ * live recipe uses is always kept; everything else with a record is cruft.
  *
  * The keep-set is what is reachable from a LIVE position: that position's own ElementTypes,
- * and — transitively — the internals of any wrapper it reaches. Anything used in a dead
- * position's subgraph but NOT in the keep-set is retirable.
+ * and — transitively — the internals of any wrapper it reaches. The candidate universe is
+ * anchored on real records: every ElementType named by a recipe row OR carrying a Product
+ * Spec row. Candidates minus keep is the retire set.
+ *
+ * Per item: `rsRowIds` are the (dead) recipe rows to soft-delete, `onlyIn` the positions it
+ * appears under (empty for a pure PS orphan), and `inPs` / `inDb` say which of the other two
+ * workbooks also carry it — the deletion cascades to those (IsDeleted), IF they exist.
+ * `ref` keeps its original casing.
  */
-export function retirableElementTypes({ recipes = [], deadRefs = new Set() } = {}) {
+export function retirableElementTypes({ recipes = [], deadRefs = new Set(), psRows = [], elementTypes = [] } = {}) {
   const liveRows = recipes.filter(live)
   const isDead = ref => deadRefs.has(lc(ref))
 
@@ -84,47 +94,53 @@ export function retirableElementTypes({ recipes = [], deadRefs = new Set() } = {
     }
   }
 
-  // Flood from a set of seed ET refs down through wrapper internals.
-  const flood = seedRows => {
-    const seen = new Set()
-    const queue = []
-    for (const r of seedRows) {
-      const k = lc(etOf(r))
-      if (k && !seen.has(k)) { seen.add(k); queue.push(k) }
-    }
-    while (queue.length) {
-      const container = queue.shift()
-      for (const r of internalByContainer.get(container) || []) {
-        const k = lc(etOf(r))
-        if (k && !seen.has(k)) { seen.add(k); queue.push(k) }
-      }
-    }
-    return seen
-  }
-
-  const positionRows = liveRows.filter(r => ctxOf(r) === 'PositionType' && etOf(r))
-  const keep = flood(positionRows.filter(r => !isDead(posOf(r))))
-  const deadUsed = flood(positionRows.filter(r => isDead(posOf(r))))
-
-  // Retirable = used by a dead position, and not kept alive by any live one.
-  const retireRefs = [...deadUsed].filter(k => !keep.has(k))
-  if (retireRefs.length === 0) return []
-  const retireSet = new Set(retireRefs)
-
-  // Gather rows + original casing + which dead positions each appears under.
-  const meta = new Map()   // lc ref -> { ref, rsRowIds:Set, onlyIn:Set }
-  const ensure = k => meta.get(k) || meta.set(k, { ref: null, rsRowIds: new Set(), onlyIn: new Set() }).get(k)
+  // Flood from live position-level rows down through the wrapper internals they reach.
+  const keep = new Set()
+  const queue = []
   for (const r of liveRows) {
+    if (ctxOf(r) !== 'PositionType' || !etOf(r) || isDead(posOf(r))) continue
     const k = lc(etOf(r))
-    if (!retireSet.has(k)) continue
-    const m = ensure(k)
-    if (!m.ref) m.ref = etOf(r)
-    if (r._id) m.rsRowIds.add(r._id)
-    if (posOf(r)) m.onlyIn.add(posOf(r))
+    if (!keep.has(k)) { keep.add(k); queue.push(k) }
+  }
+  while (queue.length) {
+    const container = queue.shift()
+    for (const r of internalByContainer.get(container) || []) {
+      const k = lc(etOf(r))
+      if (k && !keep.has(k)) { keep.add(k); queue.push(k) }
+    }
   }
 
-  return retireRefs.map(k => {
+  // Candidate universe: anything with a record — a recipe row, or a Product Spec row.
+  const psByRef = new Map()   // lc -> live PS row
+  for (const p of psRows) { if (live(p) && psRefOf(p)) psByRef.set(lc(psRefOf(p)), p) }
+  const dbByRef = new Map()   // lc -> live DB master row
+  for (const e of elementTypes) { if (live(e) && dbRefOf(e)) dbByRef.set(lc(dbRefOf(e)), e) }
+
+  const meta = new Map()   // lc ref -> { ref, rsRowIds:Set, onlyIn:Set }
+  const ensure = (k, ref) => {
+    if (!meta.has(k)) meta.set(k, { ref, rsRowIds: new Set(), onlyIn: new Set() })
     const m = meta.get(k)
-    return { ref: m.ref, rsRowIds: [...m.rsRowIds], onlyIn: [...m.onlyIn].sort() }
-  }).sort((a, b) => a.ref.localeCompare(b.ref))
+    if (!m.ref && ref) m.ref = ref
+    return m
+  }
+  for (const r of liveRows) { const k = lc(etOf(r)); if (k) ensure(k, etOf(r)) }
+  for (const [k, p] of psByRef) ensure(k, psRefOf(p))
+
+  const retire = []
+  for (const [k, m] of meta) {
+    if (keep.has(k)) continue
+    for (const r of liveRows) {
+      if (lc(etOf(r)) !== k) continue
+      if (r._id) m.rsRowIds.add(r._id)
+      if (posOf(r)) m.onlyIn.add(posOf(r))
+    }
+    retire.push({
+      ref: m.ref,
+      rsRowIds: [...m.rsRowIds],
+      onlyIn: [...m.onlyIn].sort(),
+      inPs: psByRef.has(k),
+      inDb: dbByRef.has(k),
+    })
+  }
+  return retire.sort((a, b) => a.ref.localeCompare(b.ref))
 }
