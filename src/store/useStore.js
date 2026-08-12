@@ -13,13 +13,14 @@ import { resolveTemplate, applyResolvedTemplate } from '../utils/slotResolver.js
 import { evaluateTags, effectiveTags, snapshotForPosition, migrateRules } from '../utils/tagRules.js'
 import { runValidation } from '../utils/validationRules.js'
 import { computeContainerInfo, looksLikeContainer, getNextAvailableRef } from '../utils/containerUtils.js'
-import { containerForPosition } from '../utils/recipePresence.js'
+import { containerForPosition, rowSlot, normalizeSection } from '../utils/recipePresence.js'
 import { planCollectionBulk, effectiveActions } from '../utils/collectionStatus.js'
 import { positionFamilyOf, ignoredPositionRefs } from '../utils/positionFamily.js'
 import { alignmentGaps } from '../utils/specAlignment.js'
 import { planSwap, swapPatch } from '../utils/swapPlan.js'
 import { guessCollection, missingFamilies } from '../utils/collectionGuess.js'
 import { hasProductIdentity } from '../utils/productCodes.js'
+import { deadPositionRefs, retirableElementTypes } from '../utils/deadPositions.js'
 import { familyOf } from '../utils/etRef.js'
 import { DIM_QTY_COMPONENTS, AUTO_CONTRACT_ITEMS } from '../utils/constants.js'
 
@@ -342,6 +343,27 @@ function sectionOfRow(row) {
   return etRef.includes('LIN') ? 'lin_internal' : 'dl_internal'
 }
 
+/**
+ * Does an existing recipe row occupy the same slot a paste part is targeting?
+ *
+ * The slot, not the ref. `sectionOfRow` above is the old approximate model — it decides
+ * dl vs lin from whether the ET NAME contains "LIN" — so a ref sitting at position level
+ * and the same ref pasted into a wrapper both looked like duplicates, and the paste offered
+ * to "merge" across layers. The canonical model (recipePresence.rowSlot / normalizeSection)
+ * keys on (section, container): position and internal can never match, and two internal
+ * rows match only when they name the same container.
+ *
+ * `partSection` is the part's target section (already re-homed to the position's real
+ * wrapper); `partContainer` is that wrapper's ref (lowercased) for an internal part, else null.
+ */
+function sameSlotAs(row, partSection, partContainer = null) {
+  const slot = rowSlot(row)
+  if (slot.section !== normalizeSection(partSection)) return false
+  if (slot.section === 'position') return true
+  // internal ↔ internal: only the same container is the same slot
+  return !partContainer || !slot.container || slot.container === partContainer
+}
+
 // ---------------------------------------------------------------------------
 // Store
 // ---------------------------------------------------------------------------
@@ -362,6 +384,7 @@ const useStore = create((set, get) => ({
   // Imported Excel data
   elementTypes: [],
   positionTypes: [],
+  positions: [],           // physical instances from the DesignDB Positions sheet (may be empty)
   psRows: [],
   recipes: [],
 
@@ -522,6 +545,7 @@ const useStore = create((set, get) => ({
       paths: paths ?? { db: null, ps: null, rs: null },
       elementTypes: mergedEts,
       positionTypes: positionTypes ?? [],
+      positions: data.positions ?? [],
       psRows: stampedPsRows,
       recipes: stampedRecipes,
       // No built-in connector sets are injected any more. The old CONNECTOR_TEMPLATES were
@@ -1125,7 +1149,6 @@ const useStore = create((set, get) => ({
       const etRef = ingredientData.elementTypeRef || ingredientData.ElementTypeRef || null
       const etToken = etRef ? etRef.toUpperCase() : ''
       const isDimComponent = DIM_QTY_COMPONENTS.some(t => etToken.includes(t))
-      const isAutoContract = AUTO_CONTRACT_ITEMS.some(t => etToken.includes(t))
 
       // Find all positions that have rows for this ET's internal recipe
       const existingETRows = recipes.filter(r =>
@@ -1151,9 +1174,12 @@ const useStore = create((set, get) => ({
         Dim_QuantityMultiplier: isDimComponent ? 1 : (ingredientData.dimQtyMultiplier ?? null),
         dimQuantity: ingredientData.dimQuantity ?? null, Dim_Quantity: ingredientData.dimQuantity ?? null,
         isInteger: ingredientData.isInteger ?? null, IsInteger: ingredientData.isInteger ?? null,
+        isTRItem: ingredientData.isTRItem ?? null, IsTRItem: ingredientData.isTRItem ?? null,
+        packQuantity: ingredientData.packQuantity ?? null, PackQuantity: ingredientData.packQuantity ?? null,
+        // Internal rows are never the design element, so they are contract items by default.
         isDesign: null, IsDesign: null,
-        isContractItem: isAutoContract ? 'Y' : (ingredientData.isContractItem ?? null),
-        IsContractItem: isAutoContract ? 'Y' : (ingredientData.isContractItem ?? null),
+        isContractItem: ingredientData.isContractItem ?? 'Y',
+        IsContractItem: ingredientData.isContractItem ?? 'Y',
         isTBC: ingredientData.isTBC ?? null, IsTBC: ingredientData.isTBC ?? null,
         isPropertiesTBC: ingredientData.isPropertiesTBC ?? null, IsPropertiesTBC: ingredientData.isPropertiesTBC ?? null,
         notes: ingredientData.notes ?? null, Notes: ingredientData.notes ?? null,
@@ -1194,6 +1220,13 @@ const useStore = create((set, get) => ({
       return null
     }
 
+    // Design-or-contract, always. A design row stays a design row (never also contract);
+    // everything else defaults to contract when the caller has not said.
+    const wantsDesign = (ingredientData.isDesign ?? null) === 'Y'
+    const contractFlag = wantsDesign ? null
+      : isAutoContract ? 'Y'
+      : (ingredientData.isContractItem ?? 'Y')
+
     const newRow = {
       positionTypeRef: posRef,
       PositionTypeRef: posRef,
@@ -1213,10 +1246,16 @@ const useStore = create((set, get) => ({
       Dim_Quantity: ingredientData.dimQuantity ?? null,
       isInteger: ingredientData.isInteger ?? null,
       IsInteger: ingredientData.isInteger ?? null,
+      isTRItem: ingredientData.isTRItem ?? null,
+      IsTRItem: ingredientData.isTRItem ?? null,
+      packQuantity: ingredientData.packQuantity ?? null,
+      PackQuantity: ingredientData.packQuantity ?? null,
       isDesign: ingredientData.isDesign ?? null,
       IsDesign: ingredientData.isDesign ?? null,
-      isContractItem: isAutoContract ? 'Y' : (ingredientData.isContractItem ?? null),
-      IsContractItem: isAutoContract ? 'Y' : (ingredientData.isContractItem ?? null),
+      // Every recipe row is design-or-contract: a row that is not the design element is a
+      // contract item unless told otherwise. Never born with both flags blank (see checkRowRole).
+      isContractItem: contractFlag,
+      IsContractItem: contractFlag,
       isTBC: ingredientData.isTBC ?? null,
       IsTBC: ingredientData.isTBC ?? null,
       isPropertiesTBC: ingredientData.isPropertiesTBC ?? null,
@@ -1586,17 +1625,21 @@ const useStore = create((set, get) => ({
           : p
       )
     }
+    // The container a re-homed internal part actually lands in — used to compare slots.
+    const targetContainer = wrapperRef ? wrapperRef.toLowerCase() : null
 
     get()._pushHistory()
     for (const part of valid) {
-      // When merging, fold a duplicate (same section + ET) into the existing
-      // row by summing quantities instead of appending a new row.
+      const partContainer = normalizeSection(part.section) === 'internal' ? targetContainer : null
+      // When merging, fold a duplicate into the existing row by summing quantities — but
+      // only a row in the SAME slot (see sameSlotAs). A position-level row and this part
+      // pasted into the wrapper are different slots and must never merge.
       if (merge) {
         const existing = get().recipes.find(r =>
           (r.PositionTypeRef || r.positionTypeRef) === posRef &&
-          sectionOfRow(r) === part.section &&
           (r.IsDeleted || r.isDeleted) !== 'Y' &&
-          (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === part.elementTypeRef.toLowerCase()
+          (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === part.elementTypeRef.toLowerCase() &&
+          sameSlotAs(r, part.section, partContainer)
         )
         if (existing) {
           const addQty = part.quantity != null ? Number(part.quantity) : 1
@@ -1610,10 +1653,11 @@ const useStore = create((set, get) => ({
           continue
         }
       }
+      // Carry the whole character of the copied row, not just ref + qty (see _rowsToParts).
       const ingredient = { elementTypeRef: part.elementTypeRef }
-      if (part.quantity != null) ingredient.quantity = part.quantity
-      if (part.dimQtyMultiplier != null) ingredient.dimQtyMultiplier = part.dimQtyMultiplier
-      if (part.isInteger != null) ingredient.isInteger = part.isInteger
+      for (const f of ['quantity', 'isDesign', 'isContractItem', 'isTRItem', 'packQuantity', 'dimQtyMultiplier', 'isInteger']) {
+        if (part[f] != null) ingredient[f] = part[f]
+      }
       get().addRecipeRow(posRef, part.section, ingredient, { recordHistory: false })
     }
   },
@@ -1633,14 +1677,27 @@ const useStore = create((set, get) => ({
 
   clearRowSelection() { set({ selectedRowIds: [] }) },
 
-  /** Build clipboard parts from a set of recipe rows. */
+  /**
+   * Build clipboard parts from a set of recipe rows.
+   *
+   * A part carries the WHOLE row's character, not just its ref: a copied Contract item
+   * must paste back a Contract item, a ×2 must stay ×2. Capturing only ref+qty+section
+   * (the old behaviour) meant every flag was silently dropped on paste.
+   */
   _rowsToParts(rows) {
+    const pick = (r, Pascal, camel) => r[Pascal] ?? r[camel] ?? null
     return rows
       .filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
       .map(r => ({
         section: sectionOfRow(r),
         elementTypeRef: r.ElementTypeRef || r.elementTypeRef,
         quantity: r.Quantity ?? r.quantity ?? null,
+        isDesign: pick(r, 'IsDesign', 'isDesign'),
+        isContractItem: pick(r, 'IsContractItem', 'isContractItem'),
+        isTRItem: pick(r, 'IsTRItem', 'isTRItem'),
+        packQuantity: pick(r, 'PackQuantity', 'packQuantity'),
+        dimQtyMultiplier: pick(r, 'Dim_QuantityMultiplier', 'dimQtyMultiplier'),
+        isInteger: pick(r, 'IsInteger', 'isInteger'),
       }))
       .filter(p => p.elementTypeRef)
   },
@@ -1717,20 +1774,29 @@ const useStore = create((set, get) => ({
   // user whether to merge quantities or keep separate rows.
   // ---------------------------------------------------------------------------
 
-  /** Count clipboard parts that already exist (same section + ET) in a position. */
+  /**
+   * Count clipboard parts that already exist IN THE SAME SLOT in a position.
+   *
+   * The slot, not just the ref (see sameSlotAs). Comparing by ref + approximate section
+   * made a position-level row read as a duplicate of the same ref pasted into the wrapper,
+   * so paste offered to "merge" across layers. An internal part is compared against the
+   * position's actual wrapper — the same container addConnection would file it under.
+   */
   pasteDuplicateCount(posRef, forceSection = null) {
-    const { rowClipboard, recipes } = get()
+    const { rowClipboard, recipes, containerETRefs } = get()
     if (!rowClipboard || !posRef) return 0
     const parts = forceSection
       ? rowClipboard.parts.map(p => ({ ...p, section: forceSection }))
       : rowClipboard.parts
+    const targetContainer = (containerForPosition(recipes, posRef, containerETRefs) || '').toLowerCase() || null
     let dups = 0
     for (const p of parts) {
+      const partContainer = normalizeSection(p.section) === 'internal' ? targetContainer : null
       const hit = recipes.some(r =>
         (r.PositionTypeRef || r.positionTypeRef) === posRef &&
-        sectionOfRow(r) === p.section &&
         (r.IsDeleted || r.isDeleted) !== 'Y' &&
-        (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === (p.elementTypeRef || '').toLowerCase()
+        (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === (p.elementTypeRef || '').toLowerCase() &&
+        sameSlotAs(r, p.section, partContainer)
       )
       if (hit) dups++
     }
@@ -2117,13 +2183,13 @@ const useStore = create((set, get) => ({
    * Removes a recipe row by _id.
    * In ET mode, propagates removal to all position copies.
    */
-  removeRecipeRow(posRef, rowId) {
+  removeRecipeRow(posRef, rowId, { recordHistory = true } = {}) {
     const { recipes, rsChanges, activeContextType, activeETRef } = get()
 
     const removedRow = recipes.find(r => r._id === rowId)
     if (!removedRow) return
 
-    get()._pushHistory()
+    if (recordHistory) get()._pushHistory()
 
     // Which rows this delete affects: the target + its ET-mode position copies
     const affected = [removedRow]
@@ -2286,10 +2352,10 @@ const useStore = create((set, get) => ({
    * updatePSRow(elementTypeRef, updates)
    * Updates a PS row and records it in psChanges (with before/after for change log).
    */
-  updatePSRow(elementTypeRef, updates) {
+  updatePSRow(elementTypeRef, updates, { recordHistory = true } = {}) {
     const { psRows, psChanges, containerETManualRefs, containerETExcludeRefs, elementTypes, recipes } = get()
 
-    get()._pushHistory()
+    if (recordHistory) get()._pushHistory()
 
     const existingRow = psRows.find(r => (r.ElementTypeRef || r.elementTypeRef) === elementTypeRef)
     const before = {}
@@ -2330,12 +2396,12 @@ const useStore = create((set, get) => ({
    * New (unsynced) rows are hard-removed and their queued changes purged; rows
    * that exist in the source spec are soft-deleted (IsDeleted=Y).
    */
-  deletePSRow(elementTypeRef) {
+  deletePSRow(elementTypeRef, { recordHistory = true } = {}) {
     const { psRows, psChanges, containerETManualRefs, containerETExcludeRefs, elementTypes, recipes } = get()
     const row = psRows.find(r => (r.ElementTypeRef || r.elementTypeRef) === elementTypeRef)
     if (!row) return
     if (row._row_num == null) {
-      get()._pushHistory()
+      if (recordHistory) get()._pushHistory()
       const newPsRows = psRows.filter(r => r._id !== row._id)
       const containerInfo = computeContainerInfo({
         elementTypes, psRows: newPsRows, recipes,
@@ -2348,7 +2414,7 @@ const useStore = create((set, get) => ({
         psChanges: psChanges.filter(c => c.elementTypeRef !== elementTypeRef),
       })
     } else {
-      get().updatePSRow(elementTypeRef, { IsDeleted: 'Y' })
+      get().updatePSRow(elementTypeRef, { IsDeleted: 'Y' }, { recordHistory })
     }
   },
 
@@ -2891,6 +2957,64 @@ const useStore = create((set, get) => ({
   },
 
   /**
+   * fixBlankRowRoles() — every live recipe row that is neither the design element nor a
+   * contract item becomes a contract item. That is the only correct answer: "exactly one
+   * IsDesign per position" already claims the design row, so everything else is contract.
+   * One undo for the batch. See checkRowRole (ROW_HAS_NO_ROLE).
+   */
+  fixBlankRowRoles() {
+    const blanks = get().recipes.filter(r =>
+      (r.IsDeleted || r.isDeleted) !== 'Y' &&
+      (r.IsDesign || r.isDesign) !== 'Y' &&
+      (r.IsContractItem || r.isContractItem) !== 'Y'
+    )
+    if (blanks.length === 0) return 0
+    get()._pushHistory()
+    for (const r of blanks) {
+      get().updateRecipeRow(r.PositionTypeRef || r.positionTypeRef, r._id,
+        { isContractItem: 'Y' }, { recordHistory: false })
+    }
+    return blanks.length
+  },
+
+  /**
+   * retirablePlan() — the ElementTypes that exist only to serve dead positions (excluded in
+   * the Form, or with no placed Position). Read-only; the preview renders this and only
+   * `retireDeadElementTypes` writes. See deadPositions.js.
+   */
+  retirablePlan() {
+    const { recipes, positions, positionTypes, formCaptures } = get()
+    const dead = deadPositionRefs({ recipes, positions, positionTypes, formCaptures })
+    return retirableElementTypes({ recipes, deadRefs: dead })
+  },
+
+  /**
+   * retireDeadElementTypes(items) — mark IsDeleted across all three workbooks for the given
+   * retirable ElementTypes: their recipe rows (RS), their Product Spec rows, and their
+   * DesignDB master rows. `items` come from retirablePlan(). Nothing is written to any
+   * workbook (it flows to Export as patches, like every change).
+   *
+   * ponytail: one undo restores the RS and PS marks (the history stack carries those). The
+   * DesignDB-master mark sits outside the undo stack — as it does for every deleteElementType
+   * call in the app — and is reversed by restoring/re-adding the ET or reloading. Bringing
+   * elementTypes/dbChanges under undo is a global history change, out of scope here.
+   */
+  retireDeadElementTypes(items) {
+    const plan = items && items.length ? items : get().retirablePlan()
+    if (plan.length === 0) return 0
+    get()._pushHistory()
+    for (const it of plan) {
+      for (const rowId of it.rsRowIds) {
+        const row = get().recipes.find(r => r._id === rowId)
+        if (row) get().removeRecipeRow(row.PositionTypeRef || row.positionTypeRef, rowId, { recordHistory: false })
+      }
+      get().deletePSRow(it.ref, { recordHistory: false })
+      get().deleteElementType(it.ref, { recordHistory: false })
+    }
+    return plan.length
+  },
+
+  /**
    * suggestSortOrder(family) — max SortOrder within a family + 1 (EXPORT_PLAN §6 answer).
    */
   suggestSortOrder(family) {
@@ -3077,7 +3201,7 @@ const useStore = create((set, get) => ({
    * row is never removed. Dangling PS/RS references are left in place and get
    * surfaced by validation, per the settled decision.
    */
-  deleteElementType(ref) {
+  deleteElementType(ref, { recordHistory = true } = {}) {
     const trimmed = (ref || '').trim()
     if (!trimmed) return
     const { elementTypes, dbChanges, projectId } = get()
@@ -3085,7 +3209,7 @@ const useStore = create((set, get) => ({
     const hit = elementTypes.find(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === lc)
     if (!hit) return
 
-    get()._pushHistory()
+    if (recordHistory) get()._pushHistory()
 
     const nextEts = elementTypes.map(e =>
       (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === lc

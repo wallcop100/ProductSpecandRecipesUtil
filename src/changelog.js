@@ -7,6 +7,9 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-07-13', note: 'Clean up unused ElementTypes: retire the ones only used by excluded or unplaced positions, across all three workbooks' },
+  { date: '2026-07-13', note: 'Copy/paste keeps a row’s flags and quantity, and no longer offers to merge a position-level row into a wrapper' },
+  { date: '2026-07-13', note: 'Every recipe row is now design-or-contract: new rows default to contract, and a validation fix clears any blanks' },
   { date: '2026-07-13', note: 'Tidier recipe toolbar: a Connectors button straight to the matrix, rare actions folded into a menu, broken tree Status toggle removed' },
   { date: '2026-07-12', note: 'Fixed: editing a quantity (or any field) on an existing recipe row now actually reaches the export patch' },
   { date: '2026-07-12', note: 'Status tutorial rebuilt: the real two-tab modal, the readiness clauses, and validation as task cards' },

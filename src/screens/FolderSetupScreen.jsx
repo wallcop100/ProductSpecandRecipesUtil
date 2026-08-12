@@ -287,6 +287,9 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
       const { db: db_data, ps: ps_rows, rs: rs_rows } = await importFiles({ db: absDbs, ps: absPs, rs: absRs })
       const elementTypes = db_data?.element_types ?? []
       const positionTypes = db_data?.position_types ?? []
+      // Physical instances (may be empty on older DesignDBs) — feeds the "no positions placed"
+      // signal for retiring unused ElementTypes.
+      const positions = db_data?.positions ?? []
       // Collections are stripped from element_types but ARE in the master list.
       const dbCollectionRefs = db_data?.collection_refs ?? []
 
@@ -410,6 +413,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
         paths: { db: absDbs, ps: absPs, rs: absRs },
         elementTypes,
         positionTypes,
+        positions,
         dbCollectionRefs,
         psRows: ps_rows,
         recipes: rs_rows,

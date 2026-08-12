@@ -687,6 +687,15 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       // What the sheet HAS (in sheet order), and what to show unless the pane says otherwise.
       contextColumns: capturable,
       contextDefaults: map.context,
+      // The Form's own "leave this out" flag (ExcludeFromOutput). The bare Form refs — dead
+      // positions resolve them to recipe space via ExtRef (see deadPositions.js). Empty when
+      // no exclude column was mapped.
+      excludedFormRefs: map.exclude
+        ? [...new Set(rawRows
+            .filter(r => isExcluded(r[map.exclude]))
+            .map(r => String(r[map.pt] ?? '').trim())
+            .filter(Boolean))]
+        : [],
       orphansByPosition: {},
       unrouted: resolutions.filter(r => !r.target).map(r => ({ formRef: r.formRef, rows: r.rows })),
     }

@@ -66,6 +66,7 @@ export function runValidation(dbData, psRows, rsRows, positionUI,
 
   issues.push(...checkMissingIsDesign(rsRows, positionUI))
   issues.push(...checkDuplicateIsDesign(rsRows, positionUI))
+  issues.push(...checkRowRole(rsRows, positionUI))
   issues.push(...checkDuplicateProductCode(psRows))
   issues.push(...checkMissingLockingLever(rsRows, positionUI))
   issues.push(...checkDimQtyMultNotOne(rsRows))
@@ -198,6 +199,32 @@ function checkMissingIsDesign(rsRows, positionUI) {
     }
   }
 
+  return issues
+}
+
+// ---------------------------------------------------------------------------
+// Every recipe row must declare what it IS: the design element, or a contract item.
+// A row with neither flag is undefined — combined with "exactly one IsDesign per
+// position", every non-design row must be IsContractItem=Y. One issue per blank row,
+// keyed to its position; the bulk fix sets IsContractItem=Y (see fixBlankRowRoles).
+// ---------------------------------------------------------------------------
+function checkRowRole(rsRows, positionUI) {
+  const inScope = new Set(Object.keys(positionUI || {}))
+  const issues = []
+  for (const r of rsRows) {
+    if ((r.IsDeleted || r.isDeleted) === 'Y') continue
+    const posRef = r.positionTypeRef || r.PositionTypeRef
+    if (!inScope.has(posRef)) continue
+    const design = (r.isDesign || r.IsDesign) === 'Y'
+    const contract = (r.isContractItem || r.IsContractItem) === 'Y'
+    if (design || contract) continue
+    issues.push({
+      severity: 'error',
+      rule: 'ROW_HAS_NO_ROLE',
+      message: `${r.ElementTypeRef || r.elementTypeRef || 'A row'} in "${posRef}" is neither the design element nor a contract item.`,
+      ref: posRef,
+    })
+  }
   return issues
 }
 

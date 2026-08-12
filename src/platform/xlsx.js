@@ -44,6 +44,11 @@ const PT_COLUMN_MAP = {
   'SecondaryPowerNodes_+ve': 'SecondaryPowerNodes_+ve',
 }
 
+// The physical Positions (instances). We only need which PositionType each is an instance
+// of (TypeRef) so a type with none placed can be spotted — see deadPositions.js.
+const POS_COLUMN_MAP = { Ref: 'Ref', TypeRef: 'TypeRef', IsDeleted: 'IsDeleted' }
+const POS_FLAG_COLS = new Set(['IsDeleted'])
+
 const PS_COLUMN_MAP = {
   EntityRef: 'ElementTypeRef',
   Manufacturer: 'Manufacturer',
@@ -237,7 +242,17 @@ export function parseDb(data) {
     position_types.push(r)
   }
 
-  return { element_types, position_types, collection_refs: [...etCollections] }
+  // Physical instances, optional — older DesignDBs may not carry a Positions sheet, in which
+  // case the "zero placed" signal simply never fires. Live rows only.
+  const positions = []
+  if (wb.SheetNames.includes('Positions')) {
+    for (const r of parseSheetByHeaders(wb.Sheets.Positions, POS_COLUMN_MAP, POS_FLAG_COLS)) {
+      if (r.IsDeleted === 'Y' || !r.TypeRef) continue
+      positions.push({ Ref: r.Ref, TypeRef: r.TypeRef })
+    }
+  }
+
+  return { element_types, position_types, positions, collection_refs: [...etCollections] }
 }
 
 /** Parse a Product Spec workbook → rows that have an ElementTypeRef. */

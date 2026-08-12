@@ -43,6 +43,7 @@ export const BLOCKING_RULES = new Set([
 export const ACTIONS = {
   COMPLETE_WRAPPERS: 'fillWrapperSpecRows',
   TEACH_MASTER: 'queueMissingDbRows',
+  SET_ROW_ROLE: 'fixBlankRowRoles',   // every non-design row is a contract item
   OPEN_SPEC: null,      // per-item: only a human can supply a manufacturer and a code
   GO_TO_POSITION: null, // per-item: the fix is a recipe edit
 }
@@ -130,6 +131,16 @@ export function buildTasks(issues = [], changes = {}) {
           titleOne: 'duplicate product',
           hint: 'The same manufacturer and product code on two ElementTypes.',
           action: ACTIONS.OPEN_SPEC,
+          blocking: false,
+        }, base)
+        break
+
+      case 'ROW_HAS_NO_ROLE':
+        put('rowRole', {
+          title: 'recipe rows that are neither design nor contract',
+          titleOne: 'recipe row that is neither design nor contract',
+          hint: 'Every row is one or the other. Anything that is not the design element is a contract item.',
+          action: ACTIONS.SET_ROW_ROLE,
           blocking: false,
         }, base)
         break

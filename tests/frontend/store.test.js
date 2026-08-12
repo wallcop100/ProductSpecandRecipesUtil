@@ -1773,3 +1773,141 @@ describe('an edit to an existing row is always visible to the export diff', () =
     expect(Object.keys(row)).not.toContain('_Origin')
   })
 })
+
+describe('copy/paste is faithful and slot-aware', () => {
+  // A DL position with a design wrapper, so internal parts resolve their container.
+  const withDesign = () => [{
+    positionTypeRef: POS_REF, PositionTypeRef: POS_REF,
+    contextType: 'PositionType', ContextType: 'PositionType',
+    contextRef: POS_REF, ContextRef: POS_REF,
+    elementTypeRef: 'ET-DL-01', ElementTypeRef: 'ET-DL-01',
+    isDesign: 'Y', IsDesign: 'Y', recipeIndex: 1, RecipeIndex: 1, _id: 'design',
+  }]
+
+  // 1a — a copied row must paste back with its character intact, not stripped to a plain row.
+  test('copy carries the flags and quantity through paste', () => {
+    resetStore({ psRows: [], recipes: [
+      ...withDesign(),
+      {
+        positionTypeRef: POS_REF, PositionTypeRef: POS_REF,
+        contextType: 'PositionType', ContextType: 'PositionType',
+        contextRef: POS_REF, ContextRef: POS_REF,
+        elementTypeRef: 'ET-SOCK-01', ElementTypeRef: 'ET-SOCK-01',
+        isContractItem: 'Y', IsContractItem: 'Y',
+        quantity: 2, Quantity: 2, recipeIndex: 2, RecipeIndex: 2, _id: 'sock',
+      },
+    ] })
+
+    useStore.getState().copyRows(['sock'])
+    useStore.getState().pasteClipboard('PT-LIN-01')   // different position
+
+    const pasted = useStore.getState().recipes.find(
+      r => (r.PositionTypeRef || r.positionTypeRef) === 'PT-LIN-01' &&
+           (r.ElementTypeRef || r.elementTypeRef) === 'ET-SOCK-01')
+    expect(pasted).toBeDefined()
+    expect(pasted.IsContractItem).toBe('Y')   // was dropped before the fix
+    expect(pasted.Quantity).toBe(2)
+  })
+
+  // 1b — the same ref at position level must not read as a duplicate of it in the wrapper.
+  test('a position-level ref pasted into the wrapper is a different slot, not a merge', () => {
+    resetStore({ psRows: [], containerETRefs: new Set(['et-dl-01']), recipes: [
+      ...withDesign(),
+      {
+        positionTypeRef: POS_REF, PositionTypeRef: POS_REF,
+        contextType: 'PositionType', ContextType: 'PositionType',
+        contextRef: POS_REF, ContextRef: POS_REF,
+        elementTypeRef: 'ET-X-01', ElementTypeRef: 'ET-X-01',
+        isContractItem: 'Y', IsContractItem: 'Y', recipeIndex: 2, RecipeIndex: 2, _id: 'outside',
+      },
+    ] })
+    useStore.setState({ rowClipboard: { parts: [
+      { section: 'position', elementTypeRef: 'ET-X-01', quantity: 1, isContractItem: 'Y' },
+    ], count: 1, label: '1 row' } })
+
+    // Pasting into the wrapper section: the outside copy is NOT a duplicate.
+    expect(useStore.getState().pasteDuplicateCount(POS_REF, 'dl_internal')).toBe(0)
+
+    useStore.getState().pasteClipboard(POS_REF, 'dl_internal')
+    const rows = useStore.getState().recipes.filter(r => (r.ElementTypeRef || r.elementTypeRef) === 'ET-X-01')
+    expect(rows).toHaveLength(2)                       // one outside, one inside — coexisting
+    const inside = rows.find(r => (r.ContextType || r.contextType) === 'ElementType')
+    expect(inside.ContextRef).toBe('ET-DL-01')
+  })
+
+  // 4 — a new non-design row is a contract item, never role-less.
+  test('a new non-design row defaults to IsContractItem=Y', () => {
+    resetStore({ psRows: [], recipes: withDesign() })
+    useStore.getState().addRecipeRow(POS_REF, 'position', { elementTypeRef: 'ET-PLAIN-01' })
+    const row = useStore.getState().recipes.find(r => (r.ElementTypeRef || r.elementTypeRef) === 'ET-PLAIN-01')
+    expect(row.IsContractItem).toBe('Y')
+    expect(row.IsDesign).toBeNull()
+  })
+
+  test('fixBlankRowRoles sets contract on every role-less row, in one undo', () => {
+    resetStore({ psRows: [], recipes: [
+      ...withDesign(),
+      { positionTypeRef: POS_REF, PositionTypeRef: POS_REF, contextType: 'PositionType', ContextType: 'PositionType',
+        contextRef: POS_REF, ContextRef: POS_REF, elementTypeRef: 'ET-BLANK-01', ElementTypeRef: 'ET-BLANK-01',
+        recipeIndex: 2, RecipeIndex: 2, _id: 'blank' },
+    ] })
+    expect(useStore.getState().fixBlankRowRoles()).toBe(1)
+    const fixed = useStore.getState().recipes.find(r => r._id === 'blank')
+    expect(fixed.IsContractItem).toBe('Y')
+    useStore.getState().undo()
+    expect(useStore.getState().recipes.find(r => r._id === 'blank').IsContractItem).not.toBe('Y')
+  })
+})
+
+describe('retire unused ElementTypes', () => {
+  const dbEt = ref => ({ ElementTypeRef: ref, elementTypeRef: ref })
+
+  test('retires an ET used only by a dead (unplaced) position across all three, one undo', () => {
+    resetStore({
+      elementTypes: [dbEt('ET-LIVE'), dbEt('ET-DEAD')],
+      psRows: [
+        { ElementTypeRef: 'ET-DEAD', elementTypeRef: 'ET-DEAD', _id: 'ps-dead', _row_num: 10 },
+        { ElementTypeRef: 'ET-LIVE', elementTypeRef: 'ET-LIVE', _id: 'ps-live', _row_num: 11 },
+      ],
+      positionTypes: [{ Ref: 'C01r' }, { Ref: 'C02r' }],
+      positions: [{ TypeRef: 'C01r' }],   // C02r has no instance → dead
+      recipes: [
+        { _id: 'r-live', PositionTypeRef: 'C01r', ContextType: 'PositionType', ContextRef: 'C01r',
+          ElementTypeRef: 'ET-LIVE', IsDesign: 'Y', _row_num: 2 },
+        { _id: 'r-dead', PositionTypeRef: 'C02r', ContextType: 'PositionType', ContextRef: 'C02r',
+          ElementTypeRef: 'ET-DEAD', IsDesign: 'Y', _row_num: 3 },
+      ],
+    })
+
+    const plan = useStore.getState().retirablePlan()
+    expect(plan.map(p => p.ref)).toEqual(['ET-DEAD'])
+
+    expect(useStore.getState().retireDeadElementTypes()).toBe(1)
+
+    const s = useStore.getState()
+    expect(s.recipes.find(r => r._id === 'r-dead').IsDeleted).toBe('Y')
+    expect(s.psRows.find(r => r._id === 'ps-dead').IsDeleted).toBe('Y')
+    expect(s.elementTypes.find(e => e.ElementTypeRef === 'ET-DEAD').IsDeleted).toBe('Y')
+    // The live ET is untouched.
+    expect(s.recipes.find(r => r._id === 'r-live').IsDeleted).not.toBe('Y')
+    expect(s.elementTypes.find(e => e.ElementTypeRef === 'ET-LIVE').IsDeleted).not.toBe('Y')
+
+    // One undo restores the recipe + spec marks (elementTypes sit outside the undo stack,
+    // as they do for every deleteElementType — see the action's ponytail note).
+    useStore.getState().undo()
+    const after = useStore.getState()
+    expect(after.recipes.find(r => r._id === 'r-dead').IsDeleted).not.toBe('Y')
+    expect(after.psRows.find(r => r._id === 'ps-dead').IsDeleted).not.toBe('Y')
+  })
+
+  test('no Positions data means nothing is retired (signal does not fire)', () => {
+    resetStore({
+      elementTypes: [dbEt('ET-A')],
+      positionTypes: [{ Ref: 'C01r' }],
+      positions: [],
+      recipes: [{ _id: 'r', PositionTypeRef: 'C01r', ContextType: 'PositionType', ContextRef: 'C01r',
+        ElementTypeRef: 'ET-A', IsDesign: 'Y', _row_num: 2 }],
+    })
+    expect(useStore.getState().retirablePlan()).toEqual([])
+  })
+})

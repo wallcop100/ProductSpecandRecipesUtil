@@ -26,6 +26,7 @@ export default function ValidationPanel({ onOpenProductSpec, onOpenFixer }) {
   const dbChanges         = useStore(s => s.dbChanges)
   const fillWrapperSpecRows = useStore(s => s.fillWrapperSpecRows)
   const queueMissingDbRows  = useStore(s => s.queueMissingDbRows)
+  const fixBlankRowRoles    = useStore(s => s.fixBlankRowRoles)
 
   const [open, setOpen] = useState(() => new Set())
 
@@ -55,6 +56,7 @@ export default function ValidationPanel({ onOpenProductSpec, onOpenFixer }) {
   function runAction(action) {
     if (action === 'fillWrapperSpecRows') fillWrapperSpecRows()
     else if (action === 'queueMissingDbRows') queueMissingDbRows()
+    else if (action === 'fixBlankRowRoles') fixBlankRowRoles()
     runValidation()
   }
 

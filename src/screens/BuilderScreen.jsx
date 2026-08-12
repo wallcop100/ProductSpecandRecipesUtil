@@ -16,6 +16,7 @@ import ProjectTreeView from '../components/ProjectTreeView'
 import ElementTypeTreeView from '../components/ElementTypeTreeView'
 import RecipeSection from '../components/RecipeSection'
 import DuplicateETModal from '../components/DuplicateETModal'
+import RetireUnusedModal from '../components/RetireUnusedModal'
 import Breadcrumbs from '../components/Breadcrumbs'
 import ProjectIdPill from '../components/ProjectIdPill'
 import FormProgressChip from '../components/FormProgressChip'
@@ -117,6 +118,7 @@ export default function BuilderScreen({
   const [changeSummary, setChangeSummary] = useState(false)   // open the review + copy-patches modal
   const [, setActiveId] = useState(null)  // drag tracking
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)   // Transform-into-template modal (T-F4)
+  const [showRetire, setShowRetire] = useState(false)               // Clean up unused ElementTypes
   const [showTags, setShowTags] = useState(false)                   // the tags modal (rules + colours)
   // Track which template (if any) was applied to each position { [posRef]: templateId }
   const [appliedTemplateId, setAppliedTemplateId] = useState({})
@@ -526,6 +528,10 @@ export default function BuilderScreen({
             <Dropdown.Item onClick={() => setShowTags(true)}>
               <MaterialIcon name={ACTION_ICONS.tags} size={14} /> Tags
             </Dropdown.Item>
+            <Dropdown.Divider />
+            <Dropdown.Item onClick={() => setShowRetire(true)}>
+              <MaterialIcon name="cleaning_services" size={14} /> Clean up unused ElementTypes…
+            </Dropdown.Item>
           </Dropdown.Menu>
         </Dropdown>
         {/* No snapshot button: export writes nothing — it produces a patch script the
@@ -742,6 +748,8 @@ export default function BuilderScreen({
       />
 
       <PasteMergeModal />
+
+      <RetireUnusedModal show={showRetire} onHide={() => setShowRetire(false)} />
 
       <ReviewModal
         show={showReview}

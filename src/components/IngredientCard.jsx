@@ -166,12 +166,23 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
     updateRecipeRow(posRef, rowId, { [field]: value })
   }
 
-  // Design and Contract are mutually exclusive: a row is either ours to manage or free-issued.
-  // (updateRecipeRow keeps each field's PascalCase twin in step — see normalizeRsUpdates.)
+  // Design and Contract are mutually exclusive, and a row must be ONE of them — never
+  // neither. Turning one on clears the other; turning the only one off falls back to
+  // contract rather than leaving the row role-less (see checkRowRole). updateRecipeRow
+  // keeps each field's PascalCase twin in step (normalizeRsUpdates).
   function handleFlagChange(flag, value) {
-    const update = { [flag]: value }
-    if (flag === 'isDesign' && value === 'Y') update.isContractItem = null
-    else if (flag === 'isContractItem' && value === 'Y') update.isDesign = null
+    if (value !== 'Y') {
+      // Un-setting. If this was the row's only role, become a contract item instead of blank.
+      const other = flag === 'isDesign' ? 'isContractItem' : 'isDesign'
+      const otherOn = (row[other] || row[other.charAt(0).toUpperCase() + other.slice(1)]) === 'Y'
+      updateRecipeRow(posRef, rowId, otherOn
+        ? { [flag]: null }
+        : { isDesign: null, isContractItem: 'Y' })
+      return
+    }
+    const update = { [flag]: 'Y' }
+    if (flag === 'isDesign') update.isContractItem = null
+    else if (flag === 'isContractItem') update.isDesign = null
     updateRecipeRow(posRef, rowId, update)
   }
 

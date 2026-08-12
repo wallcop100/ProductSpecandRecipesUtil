@@ -356,6 +356,7 @@ describe('runValidation — valid recipe', () => {
         contextRef: 'PT-DL-LOCAL-01',
         elementTypeRef: 'ET-SOCK-5P-01',
         isDesign: null,
+        isContractItem: 'Y',   // every non-design row is a contract item (ROW_HAS_NO_ROLE)
         dimQtyMultiplier: null,
       }),
       // Local first-fix kit: site strain relief + driver (so Rule 7 is satisfied)
@@ -365,6 +366,7 @@ describe('runValidation — valid recipe', () => {
         contextRef: 'PT-DL-LOCAL-01',
         elementTypeRef: 'ET-SR-DALI-01',
         isDesign: null,
+        isContractItem: 'Y',
         dimQtyMultiplier: null,
       }),
       makeRsRow({
@@ -373,6 +375,7 @@ describe('runValidation — valid recipe', () => {
         contextRef: 'ET-DL-SPOT-01',
         elementTypeRef: 'ET-DRIVER-CC-01',
         isDesign: null,
+        isContractItem: 'Y',
         dimQtyMultiplier: null,
       }),
       // LIN position — IsDesign=Y, has a lever, TAPE with mult=1
@@ -390,6 +393,7 @@ describe('runValidation — valid recipe', () => {
         contextRef: 'PT-LIN-01',
         elementTypeRef: 'ET-LLOCK-ALU-01',
         isDesign: null,
+        isContractItem: 'Y',
         dimQtyMultiplier: null,
       }),
     ]
@@ -726,5 +730,27 @@ describe('DUPLICATE_PRODUCT_CODE keys on manufacturer + code', () => {
   test('a deleted row does not create a duplicate', () => {
     const ps = [row('ET-A', 'Orluna', 'X1'), row('ET-B', 'Orluna', 'X1', { IsDeleted: 'Y' })]
     expect(only(ps)).toHaveLength(0)
+  })
+})
+
+describe('ROW_HAS_NO_ROLE — every row is design or contract', () => {
+  test('flags a row with neither flag, and not one that has either', () => {
+    const rsRows = [
+      makeRsRow({ elementTypeRef: 'ET-A', isDesign: 'Y' }),
+      makeRsRow({ elementTypeRef: 'ET-B', isContractItem: 'Y' }),
+      makeRsRow({ elementTypeRef: 'ET-C' }),   // neither → flagged
+    ]
+    const ui = { 'PT-DL-LOCAL-01': { tags: [] } }
+    const issues = runValidation({ element_types: [] }, [], rsRows, ui)
+    const role = issues.filter(i => i.rule === 'ROW_HAS_NO_ROLE')
+    expect(role).toHaveLength(1)
+    expect(role[0].message).toContain('ET-C')
+  })
+
+  test('a deleted role-less row is not flagged', () => {
+    const rsRows = [makeRsRow({ elementTypeRef: 'ET-C', isDeleted: 'Y' })]
+    const ui = { 'PT-DL-LOCAL-01': { tags: [] } }
+    const issues = runValidation({ element_types: [] }, [], rsRows, ui)
+    expect(issues.filter(i => i.rule === 'ROW_HAS_NO_ROLE')).toHaveLength(0)
   })
 })
