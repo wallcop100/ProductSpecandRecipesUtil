@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-07-13', note: 'Fork a position: copy its recipe into new position type(s), each with its own wrapper, untick the rows to drop — in one step' },
   { date: '2026-07-13', note: 'Clean up unused ElementTypes now also catches Product Spec orphans no recipe uses (e.g. ET-PS-14), cascading to the DesignDB if present' },
   { date: '2026-07-13', note: 'Clean up unused ElementTypes: retire the ones only used by excluded or unplaced positions, across all three workbooks' },
   { date: '2026-07-13', note: 'Copy/paste keeps a row’s flags and quantity, and no longer offers to merge a position-level row into a wrapper' },

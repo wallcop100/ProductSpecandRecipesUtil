@@ -11,6 +11,7 @@ import PositionValidationBadge from './PositionValidationBadge'
 import ConnectorSuggestions from './ConnectorSuggestions'
 import RecipeErrorBanner from './RecipeErrorBanner'
 import FormSpecPane from './FormSpecPane'
+import ForkPositionModal from './ForkPositionModal'
 import { colorsForType, ICONS, ACTION_ICONS } from '../utils/entityStyle'
 
 // Group container-internal rows by ContextRef so each container gets a section
@@ -56,6 +57,7 @@ export default function PositionRecipeEditor({
   const requestPaste = useStore(s => s.requestPaste)
   const rowClipboard = useStore(s => s.rowClipboard)
   const [pasteMsg, setPasteMsg] = useState(null)
+  const [forking, setForking] = useState(false)
 
   const ref = posRef
   const grouped = getRecipeForPosition(recipes, ref)
@@ -130,6 +132,13 @@ export default function PositionRecipeEditor({
           onClick={doPaste}
           disabled={!rowClipboard}
           title={rowClipboard ? `Paste ${rowClipboard.label} (Ctrl+V)` : 'Clipboard empty'}
+        />
+        <IconButton
+          variant="outline-secondary" bsSize="sm" style={{ fontSize: 11 }}
+          icon={ACTION_ICONS.fork}
+          onClick={() => setForking(true)}
+          disabled={count === 0}
+          title="Fork this position into new one(s) — an independent copy you can trim"
         />
         {onOpenConnectors && (
           <Button
@@ -208,6 +217,8 @@ export default function PositionRecipeEditor({
       {/* Always rendered: with no Form attached it is the prompt to start stage ①. */}
       <FormSpecPane posRef={ref} embedded={embedded} />
       </div>
+
+      <ForkPositionModal show={forking} sourceRef={ref} onHide={() => setForking(false)} />
     </div>
   )
 }

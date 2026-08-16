@@ -1911,3 +1911,102 @@ describe('retire unused ElementTypes', () => {
     expect(useStore.getState().retirablePlan()).toEqual([])
   })
 })
+
+describe('forkPosition — an independent copy of a recipe', () => {
+  // Source C01r: a wrapper (design element) with a tape inside, plus a driver inside and a
+  // position-level socket. containerETRefs marks the wrapper so internals resolve.
+  const source = () => [
+    { _id: 's-wrap', PositionTypeRef: 'C01r', ContextType: 'PositionType', ContextRef: 'C01r',
+      ElementTypeRef: 'ET-LIN-01', IsDesign: 'Y', Quantity: 1, _row_num: 2 },
+    { _id: 's-sock', PositionTypeRef: 'C01r', ContextType: 'PositionType', ContextRef: 'C01r',
+      ElementTypeRef: 'ET-2Pin-Socket', IsContractItem: 'Y', Quantity: 1, _row_num: 3 },
+    { _id: 's-tape', PositionTypeRef: 'C01r', ContextType: 'ElementType', ContextRef: 'ET-LIN-01',
+      ElementTypeRef: 'ET-LIN-TAPE-01', IsContractItem: 'Y', Quantity: 1, _row_num: 4 },
+    { _id: 's-drv', PositionTypeRef: 'C01r', ContextType: 'ElementType', ContextRef: 'ET-LIN-01',
+      ElementTypeRef: 'ET-CCL-DRIVER-01', IsContractItem: 'Y', Quantity: 1, _row_num: 5 },
+  ]
+  const setup = (over = {}) => resetStore({
+    psRows: [], containerETRefs: new Set(['et-lin-01']),
+    elementTypes: [{ ElementTypeRef: 'ET-LIN-01' }], recipes: source(), ...over,
+  })
+  const rowsOf = ref => useStore.getState().recipes.filter(
+    r => (r.PositionTypeRef || r.positionTypeRef) === ref && (r.IsDeleted || r.isDeleted) !== 'Y')
+
+  test('gives the target its own wrapper and independent rows; source untouched', () => {
+    setup()
+    expect(useStore.getState().forkPosition('C01r', ['C10r'])).toBe(1)
+
+    const forked = rowsOf('C10r')
+    expect(forked).toHaveLength(4)
+    // Its wrapper is a NEW ref, not ET-LIN-01.
+    const design = forked.find(r => r.IsDesign === 'Y')
+    expect(design.ElementTypeRef).not.toBe('ET-LIN-01')
+    const newWrap = design.ElementTypeRef
+    // Internals point at the new wrapper, with fresh ids.
+    const internals = forked.filter(r => r.ContextType === 'ElementType')
+    expect(internals.every(r => r.ContextRef === newWrap)).toBe(true)
+    expect(forked.every(r => r._id && !source().some(s => s._id === r._id))).toBe(true)
+    // Source is unchanged, still on ET-LIN-01.
+    expect(rowsOf('C01r').find(r => r.IsDesign === 'Y').ElementTypeRef).toBe('ET-LIN-01')
+    // The new wrapper got an Ideaworks / N/A spec row.
+    const ps = useStore.getState().psRows.find(r => (r.ElementTypeRef || r.elementTypeRef) === newWrap)
+    expect(ps).toBeTruthy()
+    expect(ps.ProductCode).toBe('N/A')
+  })
+
+  test('editing the fork\'s wrapper does not touch the source', () => {
+    setup()
+    useStore.getState().forkPosition('C01r', ['C10r'])
+    const newWrap = rowsOf('C10r').find(r => r.IsDesign === 'Y').ElementTypeRef
+    // Remove the driver from the FORK's wrapper.
+    const forkDriver = rowsOf('C10r').find(r => r.ElementTypeRef === 'ET-CCL-DRIVER-01')
+    useStore.getState().removeRecipeRow('C10r', forkDriver._id)
+    // Source still has its driver.
+    expect(rowsOf('C01r').some(r => r.ElementTypeRef === 'ET-CCL-DRIVER-01')).toBe(true)
+    expect(rowsOf('C10r').some(r => r.ElementTypeRef === 'ET-CCL-DRIVER-01')).toBe(false)
+    expect(newWrap).toBeTruthy()
+  })
+
+  test('trim: unticked rows are absent from the fork', () => {
+    setup()
+    // Drop the driver + the socket.
+    useStore.getState().forkPosition('C01r', ['C10r'], { excludeRowIds: ['s-drv', 's-sock'] })
+    const forked = rowsOf('C10r')
+    expect(forked).toHaveLength(2)
+    expect(forked.some(r => r.ElementTypeRef === 'ET-CCL-DRIVER-01')).toBe(false)
+    expect(forked.some(r => r.ElementTypeRef === 'ET-2Pin-Socket')).toBe(false)
+    expect(forked.some(r => r.ElementTypeRef === 'ET-LIN-TAPE-01')).toBe(true)
+  })
+
+  test('multi-target: each gets a DISTINCT wrapper ref, one undo for all', () => {
+    setup()
+    useStore.getState().forkPosition('C01r', ['C10r', 'C11r'])
+    const w10 = rowsOf('C10r').find(r => r.IsDesign === 'Y').ElementTypeRef
+    const w11 = rowsOf('C11r').find(r => r.IsDesign === 'Y').ElementTypeRef
+    expect(w10).not.toBe(w11)
+    expect(w10).not.toBe('ET-LIN-01')
+    expect(w11).not.toBe('ET-LIN-01')
+
+    useStore.getState().undo()
+    expect(rowsOf('C10r')).toHaveLength(0)
+    expect(rowsOf('C11r')).toHaveLength(0)
+  })
+
+  test('forkWrapper:false shares the original wrapper ref', () => {
+    setup()
+    useStore.getState().forkPosition('C01r', ['C10r'], { forkWrapper: false })
+    expect(rowsOf('C10r').find(r => r.IsDesign === 'Y').ElementTypeRef).toBe('ET-LIN-01')
+  })
+
+  test('a non-empty target is overwritten', () => {
+    setup({ recipes: [
+      ...source(),
+      { _id: 'old', PositionTypeRef: 'C10r', ContextType: 'PositionType', ContextRef: 'C10r',
+        ElementTypeRef: 'ET-OLD', IsDesign: 'Y', _row_num: 9 },
+    ] })
+    useStore.getState().forkPosition('C01r', ['C10r'])
+    const forked = rowsOf('C10r')
+    expect(forked.some(r => r.ElementTypeRef === 'ET-OLD')).toBe(false)   // old recipe gone
+    expect(forked).toHaveLength(4)
+  })
+})

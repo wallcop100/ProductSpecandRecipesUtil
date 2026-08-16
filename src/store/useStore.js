@@ -14,7 +14,7 @@ import { evaluateTags, effectiveTags, snapshotForPosition, migrateRules } from '
 import { runValidation } from '../utils/validationRules.js'
 import { computeContainerInfo, looksLikeContainer, getNextAvailableRef } from '../utils/containerUtils.js'
 import { containerForPosition, rowSlot, normalizeSection } from '../utils/recipePresence.js'
-import { planCollectionBulk, effectiveActions } from '../utils/collectionStatus.js'
+import { planCollectionBulk, effectiveActions, positionRecipeWithWrapperInternals } from '../utils/collectionStatus.js'
 import { positionFamilyOf, ignoredPositionRefs } from '../utils/positionFamily.js'
 import { alignmentGaps } from '../utils/specAlignment.js'
 import { planSwap, swapPatch } from '../utils/swapPlan.js'
@@ -2651,6 +2651,99 @@ const useStore = create((set, get) => ({
     }))
     get().ensurePSRow(trimmedRef)
     get().openETRecipe(trimmedRef)
+  },
+
+  /**
+   * forkPosition(sourceRef, targetRefs, { forkWrapper, excludeRowIds })
+   *
+   * Build an INDEPENDENT copy of a position's recipe onto one or more target positions —
+   * "make a variant of this". For each target: replace whatever recipe it has, copy the
+   * source's rows (position level + wrapper internals), optionally give it its OWN forked
+   * copy of each wrapper (auto-named, so trimming/editing it never leaks back to the source
+   * or a sibling), and drop the rows the user unticked (`excludeRowIds`, keyed by source
+   * row `_id`). One undo for the whole batch. See ForkPositionModal.
+   *
+   * `forkWrapper: false` keeps the original wrapper ref (shares it) — available, not default.
+   * The forked wrapper stays the design element; every flag and quantity carries over.
+   */
+  forkPosition(sourceRef, targetRefs, { forkWrapper = true, excludeRowIds = [] } = {}) {
+    const targets = [...new Set((targetRefs || []).filter(t => t && t !== sourceRef))]
+    if (!sourceRef || targets.length === 0) return 0
+
+    const excluded = excludeRowIds instanceof Set ? excludeRowIds : new Set(excludeRowIds)
+    const lc = s => String(s || '').toLowerCase()
+    const ctxOf = r => r.ContextType || r.contextType
+    const crefOf = r => r.ContextRef || r.contextRef || ''
+    const etOf = r => r.ElementTypeRef || r.elementTypeRef || ''
+
+    const { combined } = positionRecipeWithWrapperInternals(get().recipes, sourceRef)
+    const sourceRows = combined.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y' && !excluded.has(r._id))
+    if (sourceRows.length === 0) return 0
+
+    // The wrappers this recipe uses — their internals are what a fork gives a private copy of.
+    const wrapperRefs = [...new Set(
+      combined.filter(r => ctxOf(r) === 'ElementType' && crefOf(r)).map(r => crefOf(r))
+    )]
+
+    get()._pushHistory()
+
+    // Refs allocated across the WHOLE batch, so two targets never land on the same new ref.
+    const allocated = []
+    const nextRef = base => {
+      const known = [...get().elementTypes, ...allocated.map(r => ({ ElementTypeRef: r }))]
+      const ref = getNextAvailableRef(base, known)
+      allocated.push(ref)
+      return ref
+    }
+
+    const newWrapperRefs = new Set()
+
+    for (const target of targets) {
+      // Overwrite: a non-empty target's recipe is replaced (on-disk rows soft-delete, unsynced
+      // rows drop). Empty target → no-op. removeRecipeRow with no history, batched under ours.
+      const existing = get().recipes.filter(
+        r => (r.PositionTypeRef || r.positionTypeRef) === target && (r.IsDeleted || r.isDeleted) !== 'Y'
+      )
+      for (const r of existing) get().removeRecipeRow(target, r._id, { recordHistory: false })
+
+      const wrapperMap = new Map()   // lc(old wrapper) -> new forked ref
+      if (forkWrapper) {
+        for (const wref of wrapperRefs) {
+          const nref = nextRef(wref)
+          wrapperMap.set(lc(wref), nref)
+          newWrapperRefs.add(nref)
+        }
+      }
+
+      const newRows = sourceRows.map(row => {
+        const clone = {
+          ...row,
+          _id: uuidv4(), _row_num: undefined,
+          PositionTypeRef: target, positionTypeRef: target,
+        }
+        // An internal row: repoint its container to the fork.
+        if (ctxOf(row) === 'ElementType' && wrapperMap.has(lc(crefOf(row)))) {
+          const nref = wrapperMap.get(lc(crefOf(row)))
+          clone.ContextRef = nref; clone.contextRef = nref
+        }
+        // A position-level row whose ElementType IS a forked wrapper: swap it.
+        if (ctxOf(row) === 'PositionType' && wrapperMap.has(lc(etOf(row)))) {
+          const nref = wrapperMap.get(lc(etOf(row)))
+          clone.ElementTypeRef = nref; clone.elementTypeRef = nref
+        }
+        return clone
+      })
+
+      const changes = newRows.map(row => ({ _id: row._id, positionTypeRef: target, action: 'upsert', row }))
+      set(s => ({
+        recipes: [...s.recipes, ...newRows],
+        rsChanges: mergeRsChanges(s.rsChanges, changes, s.recipes),
+      }))
+    }
+
+    // Every forked wrapper is a virtual assembly → Ideaworks / N/A, like any wrapper.
+    for (const nref of newWrapperRefs) get().ensurePSRow(nref)
+    return targets.length
   },
 
   /**
