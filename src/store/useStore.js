@@ -444,6 +444,7 @@ const useStore = create((set, get) => ({
   rootView: 'positions',               // 'positions' | 'elements' — top-level browse mode
   activePositionRef: null,
   designPrompt: null,                 // { posRef, then } — see leavePosition
+  positionHistory: [],                // positions left behind, newest last — goBackPosition
   activeContextType: 'PositionType',  // 'PositionType' | 'ElementType'
   activeETRef: null,                   // ET ref being edited in canvas
   showContextTree: false,
@@ -454,6 +455,8 @@ const useStore = create((set, get) => ({
   // Dirty tracking (coalesced registries — one entry per dirty row)
   psChanges: [],
   rsChanges: [],
+  saveStatus: 'saved',   // 'saving' | 'saved' | 'error' — unexported changes kept in browser storage
+  savedAt: null,
   dbChanges: [],         // writable DesignDB ElementTypes catalogue (EXPORT_PLAN §4)
 
   // DesignDB writes are opt-in per project (off by default, easily enabled).
@@ -597,7 +600,7 @@ const useStore = create((set, get) => ({
       future: [],
       validationResults: [],
       fileWatchAlert: null,
-      activePositionRef: null,
+      activePositionRef: null, positionHistory: [],
       activeContextType: 'PositionType',
       activeETRef: null,
       showContextTree: false,
@@ -697,11 +700,23 @@ const useStore = create((set, get) => ({
 
   cancelDesignPrompt() { set({ designPrompt: null }) },
 
-  setActivePosition(ref) {
+  /** Back to the position you were on before (the opposite of Next). */
+  goBackPosition() {
+    const h = get().positionHistory
+    if (h.length === 0) return
+    set({ positionHistory: h.slice(0, -1) })
+    get().setActivePosition(h[h.length - 1], { back: true })
+  },
+
+  setActivePosition(ref, { back = false } = {}) {
     const from = get().activePositionRef
     if (from && ref !== from && get().settleDesign(from) === 'choose') {
-      set({ designPrompt: { posRef: from, then: () => get().setActivePosition(ref) } })
+      set({ designPrompt: { posRef: from, then: () => get().setActivePosition(ref, { back }) } })
       return
+    }
+    // Where you came from, so Next can be undone with Back.
+    if (from && ref !== from && !back) {
+      set(s => ({ positionHistory: [...s.positionHistory, from].slice(-50) }))
     }
     // Going to another position leaves any ElementType editor. Left open, it kept
     // addRecipeRow in "ET mode", so a Form product added on A7a was written into the open
@@ -3441,18 +3456,31 @@ useStore.subscribe((state, prev) => {
       state.dbChanges === prev.dbChanges) return
   if (typeof window === 'undefined' || !window.electronAPI?.db?.setPendingChanges) return
   clearTimeout(_pendingPersistTimer)
-  _pendingPersistTimer = setTimeout(() => {
-    const { projectId, psChanges, rsChanges, dbChanges } = useStore.getState()
-    if (projectId == null) return
-    try {
-      // dbChanges piggyback in the ps blob under a reserved key so no schema
-      // change is needed; restore splits them back out.
-      window.electronAPI.db.setPendingChanges(projectId, psChanges, rsChanges)?.catch?.(() => {})
-      if (window.electronAPI.db.setPref) {
-        window.electronAPI.db.setPref(projectId, 'pending_db_changes', JSON.stringify(dbChanges))?.catch?.(() => {})
-      }
-    } catch { /* persistence is best-effort */ }
-  }, 800)
+  if (useStore.getState().saveStatus !== 'saving') useStore.setState({ saveStatus: 'saving' })
+  _pendingPersistTimer = setTimeout(() => { savePendingNow() }, 800)
 })
+
+/**
+ * Write the unexported changes to browser storage now. Drives the save indicator
+ * ('saving' → 'saved' | 'error'); Ctrl+S calls it directly. → true when saved.
+ */
+export async function savePendingNow() {
+  clearTimeout(_pendingPersistTimer)
+  const api = typeof window !== 'undefined' ? window.electronAPI?.db : null
+  const { projectId, psChanges, rsChanges, dbChanges } = useStore.getState()
+  if (projectId == null || !api?.setPendingChanges) return false
+  try {
+    // dbChanges piggyback in the ps blob under a reserved key so no schema
+    // change is needed; restore splits them back out.
+    await api.setPendingChanges(projectId, psChanges, rsChanges)
+    if (api.setPref) await api.setPref(projectId, 'pending_db_changes', JSON.stringify(dbChanges))
+    if (api.flush) await api.flush()
+    useStore.setState({ saveStatus: 'saved', savedAt: Date.now() })
+    return true
+  } catch {
+    useStore.setState({ saveStatus: 'error' })
+    return false
+  }
+}
 
 export default useStore

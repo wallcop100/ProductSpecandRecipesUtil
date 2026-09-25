@@ -12,6 +12,7 @@ import CaptureLines from '../components/CaptureLines'
 import PrimingModal from '../components/PrimingModal'
 import NewETModal from '../components/NewETModal'
 import BulkCreateETModal from '../components/BulkCreateETModal'
+import ExistingETReviewModal from '../components/ExistingETReviewModal'
 import ResolveRefsStep from '../components/ResolveRefsStep'
 import StageBar from '../components/StageBar'
 import TutorialHint from '../tutorial/TutorialHint'
@@ -36,6 +37,7 @@ import { matchShape } from '../utils/codeShapes'
 import shippedShapes from '../data/codeShapes.json'
 import { resolveFormRefs, buildRefMap, targetFor } from '../utils/ptResolve'
 import { applyKnownCodes, knownTokenIndices } from '../utils/knownCodes'
+import { joinAccessories, isPlaceholder } from '../utils/accessories'
 import { diffCaptures, wrapperDivergence } from '../utils/formSpec'
 
 /** Fuzzy header match: exact normalised hit first, else shortest header containing it. */
@@ -91,12 +93,13 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   const [sheet, setSheet] = useState('')
   const [headers, setHeaders] = useState([])
   const [rawRows, setRawRows] = useState([])
-  const [map, setMap] = useState({ pt: '', code: '', mfr: '', exclude: '', context: [] })
+  const [map, setMap] = useState({ pt: '', code: '', mfr: '', exclude: '', acc: '', context: [] })
 
   const [rows, setRows] = useState([])
   const [rules, setRules] = useState({})
   const [idx, setIdx] = useState(0)
   const [assignments, setAssignments] = useState({})
+  const [reviewingExisting, setReviewingExisting] = useState(false)
   const [creatingFor, setCreatingFor] = useState(null)
   const [staged, setStaged] = useState(null)
   const [stagedOpen, setStagedOpen] = useState(false)   // the result surfaces as a modal, not below the fold
@@ -177,6 +180,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       code: detect(data.headers, 'productcode'),
       mfr: detect(data.headers, 'manufacturer'),
       exclude: detect(data.headers, 'exclude'),
+      // Optional, and often present but unused: only map it when some row fills it in.
+      acc: (h => (h && data.rows.some(r => !isPlaceholder(r[h])) ? h : ''))(detect(data.headers, 'accessor')),
     }
     setAutoMap(guessed)
     setMap({ ...guessed, context: CONTEXT_WANTS.map(w => detect(data.headers, w)).filter(Boolean) })
@@ -215,8 +220,10 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   /** The rows the mapping selects, in queue order. */
   const buildRows = useCallback(() => rawRows
     .filter(r => !(map.exclude && isExcluded(r[map.exclude])))
-    .filter(r => r[map.code] != null && String(r[map.code]).trim() !== '')
-    .map((r, i) => makeRow(i, String(r[map.code]), {
+    // The Accessories column (when mapped) is more codes for the same position.
+    .map(r => ({ r, text: joinAccessories(r[map.code], map.acc ? r[map.acc] : null) }))
+    .filter(({ text }) => text !== '')
+    .map(({ r, text }, i) => makeRow(i, text, {
       positionType: String(r[map.pt] ?? '').trim(),
       manufacturer: String(r[map.mfr] ?? '').trim(),
       context: captureContext(r, capturable),
@@ -304,7 +311,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     setRefOverrides(d.refOverrides || {})
     setKeptSeparate(new Set(d.keptSeparate || []))
     setDirStats(d.dirStats || { forward: 0, backward: 0 })
-    setMap(d.map || { pt: '', code: '', mfr: '', exclude: '', context: [] })
+    setMap(d.map ? { acc: '', ...d.map } : { pt: '', code: '', mfr: '', exclude: '', acc: '', context: [] })
     setSource(d.source || null)
     setSheet(d.source?.sheet || '')
     setStaged(null); setUndoSnap(null)
@@ -1036,7 +1043,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
 
                 {/* The Form's ProductCode cell as written, to copy while checking the spec. */}
                 <div className="d-flex align-items-start gap-2 mb-1 px-2" style={{ fontSize: 11 }}>
-                  <span className="fw-semibold flex-shrink-0" style={{ minWidth: 84 }}>{map.code || 'ProductCode'}</span>
+                  <span className="fw-semibold flex-shrink-0" style={{ minWidth: 84 }}>
+                    {map.code || 'ProductCode'}{map.acc && <span className="text-muted fw-normal"> + {map.acc}</span>}
+                  </span>
                   <span style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{current.rawText}</span>
                   <CopyButton text={current.rawText} what="the Form's product code cell" />
                 </div>
@@ -1174,6 +1183,12 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                 title="Propose an ElementType for every code that has none — untick the wrong ones">
                 <MaterialIcon name="playlist_add" size={14} /> Review all {unassigned.length} new ElementType
                 {unassigned.length === 1 ? '' : 's'}…
+              </Button>
+            )}
+            {elementTypes.length > 0 && (
+              <Button size="sm" variant="outline-secondary" className="w-100 mb-2" onClick={() => setReviewingExisting(true)}
+                title="Every ElementType in the project, by family: check and edit names, descriptions and families">
+                <MaterialIcon name="fact_check" size={14} /> Review all {elementTypes.length} existing ElementTypes…
               </Button>
             )}
             <CompareCodesPanel
@@ -1315,7 +1330,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
         families={knownFamilies}
         elementTypes={elementTypes}
         onApply={applyBulk}
+        onReviewExisting={() => setReviewingExisting(true)}
       />
+      <ExistingETReviewModal show={reviewingExisting} onHide={() => setReviewingExisting(false)} />
 
       <NewETModal
         show={!!creatingFor}

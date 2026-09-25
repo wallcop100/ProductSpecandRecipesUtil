@@ -420,6 +420,21 @@ describe('Next unreconciled', () => {
     expect(useStore.getState().activePositionRef).toBe('C03r')
   })
 
+  test('Next can be undone: Back returns to where you were', () => {
+    setup({ recipes: recipes2(), formCaptures: caps, activePositionRef: 'C01r', positionHistory: [] })
+    fireEvent.click(within(screen.getByTestId('form-all-present')).getByText(/Next:/))
+    expect(useStore.getState().activePositionRef).toBe('C03r')
+    useStore.getState().goBackPosition()
+    expect(useStore.getState().activePositionRef).toBe('C01r')
+    expect(useStore.getState().positionHistory).toEqual([])
+  })
+
+  test('the pane offers Back once you have moved', () => {
+    setup({ recipes: recipes2(), formCaptures: caps, positionHistory: ['C09r'] })
+    fireEvent.click(screen.getByText(/Back to/))
+    expect(useStore.getState().activePositionRef).toBe('C09r')
+  })
+
   test('hidden when everything is reconciled', () => {
     const done = { ...captures, byPosition: { C01r: [{ elementTypeRef: 'ET-PROF-01', code: 'A' }] } }
     setup({ recipes: recipes2(), formCaptures: done })
