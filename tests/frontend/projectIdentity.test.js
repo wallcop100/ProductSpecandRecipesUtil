@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest'
 import {
-  uniqueConfigName, groupProjects, adoptPlan, pickCanonical, holdsWork, UNASSIGNED,
+  uniqueConfigName, groupProjects, adoptPlan, pickCanonical, holdsWork, UNASSIGNED, dbFilesOf, pickDbs,
 } from '../../src/utils/projectIdentity'
 
 const p = (id, over = {}) => ({
@@ -117,5 +117,20 @@ describe('adoptPlan — collapse duplicates without ever merging an overlay', ()
   test('no action other than rekey or delete is ever proposed', () => {
     const plan = adoptPlan(p(1), [p(2, { unexported: 9 }), p(3)])
     expect(plan.every(x => x.action === 'rekey' || x.action === 'delete')).toBe(true)
+  })
+})
+
+describe('which DesignDBs a config reads', () => {
+  test('dbFilesOf prefers the stored list and falls back to the single filename', () => {
+    expect(dbFilesOf({ db_filenames: '["a.xlsx","b.xlsx"]', db_filename: 'a.xlsx' })).toEqual(['a.xlsx', 'b.xlsx'])
+    expect(dbFilesOf({ db_filename: 'old.xlsx' })).toEqual(['old.xlsx'])
+    expect(dbFilesOf({ db_filenames: 'not json', db_filename: 'x.xlsx' })).toEqual(['x.xlsx'])
+    expect(dbFilesOf(null)).toEqual([])
+  })
+
+  test('pickDbs: a saved config keeps its own choice; a new one ticks every DB found', () => {
+    expect(pickDbs(['main.xlsx'], ['guest.xlsx', 'main.xlsx'])).toEqual({ use: ['main.xlsx'], missing: [] })
+    expect(pickDbs([], ['guest.xlsx', 'main.xlsx'])).toEqual({ use: ['guest.xlsx', 'main.xlsx'], missing: [] })
+    expect(pickDbs(['main.xlsx', 'gone.xlsx'], ['main.xlsx'])).toEqual({ use: ['main.xlsx'], missing: ['gone.xlsx'] })
   })
 })

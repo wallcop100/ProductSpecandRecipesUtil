@@ -7,6 +7,8 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-09-25', note: 'A config can read several DesignDBs (tick each one); config YAML now saves the file pairing and unexported changes, and can restore a config' },
+  { date: '2026-09-25', note: 'Fixed: a Product Spec with an all-digit ProductCode no longer fails to open; big workbooks with scratch sheets open much faster' },
   { date: '2026-07-13', note: 'Fork a position: copy its recipe into new position type(s), each with its own wrapper, untick the rows to drop — in one step' },
   { date: '2026-07-13', note: 'Clean up unused ElementTypes now also catches Product Spec orphans no recipe uses (e.g. ET-PS-14), cascading to the DesignDB if present' },
   { date: '2026-07-13', note: 'Clean up unused ElementTypes: retire the ones only used by excluded or unplaced positions, across all three workbooks' },

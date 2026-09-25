@@ -6,7 +6,7 @@ import useStore from '../store/useStore'
 import { evaluateTags, effectiveTags, computeTagDrift } from '../utils/tagRules'
 import { extractProjectId } from '../utils/projectId'
 import { detectFiles as detectProjectFiles, importFiles } from '../utils/backend'
-import { groupProjects, adoptPlan, pickCanonical, UNASSIGNED } from '../utils/projectIdentity'
+import { groupProjects, adoptPlan, pickCanonical, UNASSIGNED, dbFilesOf, pickDbs } from '../utils/projectIdentity'
 import ProjectCard from '../components/ProjectCard'
 import ProjectIdPill from '../components/ProjectIdPill'
 import StageBar from '../components/StageBar'
@@ -36,9 +36,11 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
 
   const [folderPath, setFolderPath] = useState('')
   const [detectedFiles, setDetectedFiles] = useState(null)
-  // detectedFiles: { db: filename|null, ps: filename|null, rs: filename|null, all_xlsx: [] }
+  // detectedFiles: { db: filename|null, dbs: [filename], ps: filename|null, rs: filename|null, all_xlsx: [] }
 
-  const [dbFilename, setDbFilename] = useState('')
+  // The DesignDB(s) this config reads. Several when a project is split across workbooks
+  // (one per building) that share one Product Spec and Recipes Spec.
+  const [dbFilenames, setDbFilenames] = useState([])
   const [psFilename, setPsFilename] = useState('')
   const [rsFilename, setRsFilename] = useState('')
 
@@ -58,6 +60,8 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
   const [projectNumber, setProjectNumber] = useState('')
   const [configName, setConfigName] = useState('Base')
   const [existingConfigs, setExistingConfigs] = useState([])
+  // A config YAML being restored: { data, path }. Applied to the config as it opens.
+  const [restore, setRestore] = useState(null)
   const [showChangelog, setShowChangelog] = useState(false)
   const [libraryMsg, setLibraryMsg] = useState(null)
 
@@ -106,18 +110,33 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
     const data = await runDetect(p.folder_path)
     if (!data) return
 
-    const db = data.db || p.db_filename || ''
-    if (!db) {
-      setDetectError('No DesignDB in that folder — it may have been renamed or moved.')
+    // The config's OWN DesignDB list, not whatever sorts first in the folder.
+    // A saved name counts as present if the folder lists it at all — detection can fail to
+    // classify a workbook that is really there. A folder that lists nothing tells us
+    // nothing, so the saved names are tried as they are.
+    const saved = dbFilesOf(p)
+    const listed = [...new Set([...(data.dbs || []), ...(data.all_xlsx || [])])]
+    const { use, missing } = saved.length && listed.length
+      ? pickDbs(saved, listed)
+      : { use: saved.length ? saved : (data.dbs?.length ? data.dbs : (data.db ? [data.db] : [])), missing: [] }
+    const dbs = use
+    if (dbs.length === 0) {
+      setDetectError(saved.length
+        ? `This config's DesignDB${saved.length > 1 ? 's are' : ' is'} not in that folder: ${saved.join(', ')}. It may have been renamed or moved.`
+        : 'No DesignDB in that folder — it may have been renamed or moved.')
       return
     }
+    if (missing.length && !window.confirm(
+      `This config also reads ${missing.join(', ')}, which is no longer in the folder.\n\n` +
+      `Open with ${dbs.join(', ')} only? Positions placed only in the missing file will look unused.`
+    )) return
     await doOpenProject({
-      projectNumber: p.project_number || extractProjectId(db),
+      projectNumber: p.project_number || extractProjectId(dbs[0]),
       configName: p.config_name || 'Base',
       override: {
         folderPath: p.folder_path,
         folderName: p.project_label || '',
-        files: { db, ps: data.ps || '', rs: data.rs || '' },
+        files: { dbs, ps: data.ps || '', rs: data.rs || '' },
       },
     })
   }
@@ -141,11 +160,12 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
     setDetectedFiles(null)
     setDetectError(null)
     setRecognised(null)
-    setDbFilename(''); setPsFilename(''); setRsFilename('')
+    setDbFilenames([]); setPsFilename(''); setRsFilename('')
+    setRestore(null)
 
     const data = await runDetect(key)
     if (!data) return
-    const configs = await prepareIdentity(key, data.db)
+    const configs = await prepareIdentity(key, data.db, undefined, data.dbs)
 
     // We have opened this exact folder before. Say so — opening it again is a RESUME.
     if (known && configs.length > 0) setRecognised(configs)
@@ -157,7 +177,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
     try {
       const data = await detectProjectFiles(path)
       setDetectedFiles(data)
-      setDbFilename(data.db || '')
+      setDbFilenames(data.dbs?.length ? data.dbs : (data.db ? [data.db] : []))
       setPsFilename(data.ps || '')
       setRsFilename(data.rs || '')
       return data
@@ -170,19 +190,64 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
   }
 
   const allXlsx = detectedFiles?.all_xlsx || []
+  const detectedDbs = detectedFiles?.dbs || []
   // Only the DesignDB is required. A missing Product Spec / Recipes Spec is a new project,
   // not a broken one: they are filled by patch scripts at export.
-  const dbFound = !!dbFilename
+  const dbFound = dbFilenames.length > 0
 
   /** Prime the Project ID + config fields for a folder. Returns its existing configs. */
-  async function prepareIdentity(folder, dbFn, preselect) {
+  async function prepareIdentity(folder, dbFn, preselect, detected = []) {
     let configs = []
     try { configs = await window.electronAPI.db.getConfigsForFolder(folder) || [] } catch { /* none */ }
     setExistingConfigs(configs)
     const pre = configs.find(c => c.config_name === preselect) || configs[0]
     setProjectNumber(pre?.project_number || extractProjectId(dbFn || '') || '')
     setConfigName(pre?.config_name || preselect || 'Base')
+    if (pre && detected.length) setDbFilenames(pickDbs(dbFilesOf(pre), detected).use)
     return configs
+  }
+
+  /** Switching config re-ticks the DesignDBs that config was saved with. */
+  function chooseConfig(name) {
+    setConfigName(name)
+    const c = existingConfigs.find(x => x.config_name === name)
+    if (c && detectedDbs.length) setDbFilenames(pickDbs(dbFilesOf(c), detectedDbs).use)
+  }
+
+  function toggleDb(name) {
+    setDbFilenames(prev => prev.includes(name)
+      ? prev.filter(f => f !== name)
+      // keep folder order, so the first-listed DB (which wins a ref clash) is stable
+      : detectedDbs.filter(f => f === name || prev.includes(f)))
+  }
+
+  /**
+   * Restore a config from its YAML. It names the config, the project number and which
+   * workbooks the config pairs — so this fills the form in; nothing is written until Open.
+   * `readConfigYAML` must be the first await (the file picker needs the click's gesture).
+   */
+  async function handleRestorePick() {
+    const r = await window.electronAPI.db.readConfigYAML?.()
+    if (!r?.ok) {
+      if (r?.error) setOpenError(`Could not read that config: ${r.error}`)
+      return
+    }
+    const { data } = r
+    const files = data.files || {}
+    const wantDbs = files.design_dbs || []
+    const { use, missing } = pickDbs(wantDbs, detectedDbs)
+    if (wantDbs.length) setDbFilenames(use)
+    const has = f => f && allXlsx.includes(f)
+    if (has(files.product_spec)) setPsFilename(files.product_spec)
+    if (has(files.recipes_spec)) setRsFilename(files.recipes_spec)
+    if (data.project?.project_number) setProjectNumber(String(data.project.project_number))
+    if (data.project?.config_name) setConfigName(data.project.config_name)
+    const absent = [
+      ...missing,
+      ...[files.product_spec, files.recipes_spec].filter(f => f && !has(f)),
+    ]
+    setRestore({ data, path: r.path, absent })
+    setOpenError(null)
   }
 
   // --- managing (this page IS the manager now) --------------------------------
@@ -263,10 +328,11 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
 
     // Files are addressed by name inside the project folder's handle. Only the
     // DesignDB is required — see importFiles.
-    const absDbs = override?.files?.db ?? dbFilename
+    const absDbs = override?.files?.dbs ?? dbFilenames
     const absPs = override?.files?.ps ?? psFilename
     const absRs = override?.files?.rs ?? rsFilename
-    if (!absDbs) return
+    if (!absDbs.length) return
+    const restoring = override ? null : restore
 
     setOpening(true)
     setOpenError(null)
@@ -282,6 +348,19 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
         rsFilename: absRs,
       })
       const projectId = project?.id
+
+      // 1b. Restoring from a config YAML: merge it into this config before anything is read
+      // back, so the tags, templates and unexported changes below are the restored ones.
+      if (restoring && projectId != null) {
+        const rep = await window.electronAPI.db.applyConfigData(projectId, restoring.data)
+        if (rep?.pendingSkipped) {
+          window.alert(
+            `This config already has unexported changes, so the ${rep.pendingSkipped} in ` +
+            `${restoring.path} were not restored. Everything else was.`
+          )
+        }
+        setRestore(null)
+      }
 
       // 2. Parse the three workbooks in-browser
       const { db: db_data, ps: ps_rows, rs: rs_rows } = await importFiles({ db: absDbs, ps: absPs, rs: absRs })
@@ -410,7 +489,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
         configName,
         projectLabel: project?.project_label ?? null,
         folderPath: folder,
-        paths: { db: absDbs, ps: absPs, rs: absRs },
+        paths: { db: absDbs[0], dbs: absDbs, ps: absPs, rs: absRs },
         elementTypes,
         positionTypes,
         positions,
@@ -648,7 +727,27 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
           {picking && (
             <Card className="my-3 bg-light border-0">
               <Card.Body className="py-3">
-                <FileStatus label="Database (DB)" filename={dbFilename} found={!!dbFilename} badge="DB — read only" />
+                {detectedDbs.length > 1 ? (
+                  <div className="mb-2">
+                    <div className="d-flex align-items-center gap-2">
+                      <span style={{ width: 140, fontWeight: 500 }}>Database (DB)</span>
+                      <span className="text-muted small">{detectedDbs.length} found — tick each one this config covers</span>
+                      <Badge bg="secondary">DB — read only</Badge>
+                    </div>
+                    <div className="ms-1 mt-1" data-testid="db-picker">
+                      {detectedDbs.map(f => (
+                        <Form.Check key={f} id={`db-${f}`} type="checkbox" className="small"
+                          label={f} checked={dbFilenames.includes(f)} onChange={() => toggleDb(f)} />
+                      ))}
+                    </div>
+                    <div className="text-muted mt-1" style={{ fontSize: 10 }}>
+                      Ticked DesignDBs are read as one project: a position placed in any of them
+                      counts as used. They share the Product Spec and Recipes Spec below.
+                    </div>
+                  </div>
+                ) : (
+                  <FileStatus label="Database (DB)" filename={dbFilenames[0]} found={dbFound} badge="DB — read only" />
+                )}
                 <FileStatus label="Product Spec (PS)" filename={psFilename} found={!!psFilename} optional />
                 <FileStatus label="Recipe Spec (RS)" filename={rsFilename} found={!!rsFilename} optional />
               </Card.Body>
@@ -657,7 +756,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
 
           {/* Manual file selection. A missing DesignDB is a problem; a missing PS/RS is only
               worth mentioning in case they exist under an odd name. */}
-          {picking && allXlsx.length > 0 && (!dbFilename || !psFilename || !rsFilename) && (
+          {picking && allXlsx.length > 0 && (!dbFound || !psFilename || !rsFilename) && (
             <Card className={`mb-3 ${dbFound ? 'border-0 bg-light' : 'border-warning'}`}>
               <Card.Body>
                 <p className={`fw-semibold mb-3 ${dbFound ? 'text-muted' : 'text-warning'}`}>
@@ -666,11 +765,12 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
                     : 'Some files not detected — select manually:'}
                 </p>
                 <Row className="g-2">
-                  {!dbFilename && (
+                  {!dbFound && detectedDbs.length <= 1 && (
                     <Col xs={12}>
                       <Form.Group>
                         <Form.Label className="small fw-semibold">Database (DB)</Form.Label>
-                        <Form.Select size="sm" value={dbFilename} onChange={e => setDbFilename(e.target.value)}>
+                        <Form.Select size="sm" value={dbFilenames[0] || ''}
+                          onChange={e => setDbFilenames(e.target.value ? [e.target.value] : [])}>
                           <option value="">— select file —</option>
                           {allXlsx.map(f => <option key={f} value={f}>{f}</option>)}
                         </Form.Select>
@@ -725,7 +825,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
                         </span>
                       </Form.Label>
                       {existingConfigs.length > 0 ? (
-                        <Form.Select size="sm" value={configName} onChange={e => setConfigName(e.target.value)}>
+                        <Form.Select size="sm" value={configName} onChange={e => chooseConfig(e.target.value)}>
                           {!existingConfigs.some(c => c.config_name === configName) && (
                             <option value={configName}>{configName} (new)</option>
                           )}
@@ -744,12 +844,43 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
             </Card>
           )}
 
+          {picking && (
+            restore ? (
+              <Alert variant="info" className="py-2 px-2" style={{ fontSize: 12 }}>
+                <div className="fw-semibold">
+                  <MaterialIcon name="settings_backup_restore" size={14} /> Restoring from {restore.path}
+                </div>
+                <div className="text-muted mt-1" style={{ fontSize: 11 }}>
+                  Files, Project ID and config name are filled in from it. Its tags, templates and
+                  unexported changes are merged into this config when you open it.
+                </div>
+                {restore.absent.length > 0 && (
+                  <div className="text-danger mt-1" style={{ fontSize: 11 }}>
+                    Not in this folder: {restore.absent.join(', ')}
+                  </div>
+                )}
+                <Button variant="link" size="sm" className="p-0 mt-1" style={{ fontSize: 11 }}
+                  onClick={() => setRestore(null)}>
+                  Don’t restore
+                </Button>
+              </Alert>
+            ) : (
+              <div className="mb-3">
+                <Button variant="link" size="sm" className="p-0" style={{ fontSize: 11 }}
+                  title="Recover a config you exported earlier (another machine, or cleared browser storage)"
+                  onClick={handleRestorePick}>
+                  <MaterialIcon name="settings_backup_restore" size={13} /> Restore a config from YAML…
+                </Button>
+              </div>
+            )
+          )}
+
           {openError && <Alert variant="danger" className="py-2">{openError}</Alert>}
 
           {picking && (
             <div className="d-flex justify-content-between align-items-center">
               <Button variant="link" className="px-0" style={{ fontSize: 12 }}
-                onClick={() => { setDetectedFiles(null); setRecognised(null); setFolderName('') }}>
+                onClick={() => { setDetectedFiles(null); setRecognised(null); setFolderName(''); setRestore(null) }}>
                 ← Back to projects
               </Button>
               <Button variant="primary" disabled={!dbFound || opening || detecting}

@@ -81,6 +81,17 @@ function migrate() {
     db.pragma('foreign_keys = ON')
   }
 
+  // projects: a config can span several DesignDBs (one per building, sharing one PS and
+  // RS). `db_filenames` is the JSON list; `db_filename` stays as the first, for display
+  // and for anything older that reads it.
+  if (!hasColumn('projects', 'db_filenames')) {
+    db.exec(`ALTER TABLE projects ADD COLUMN db_filenames TEXT`)
+    const set = db.prepare('UPDATE projects SET db_filenames = ? WHERE id = ?')
+    for (const r of db.prepare('SELECT id, db_filename FROM projects WHERE db_filename IS NOT NULL').all()) {
+      set.run(JSON.stringify([r.db_filename]), r.id)
+    }
+  }
+
   resyncBuiltInTemplates()
 }
 
@@ -122,6 +133,7 @@ function createTables() {
       project_number TEXT,
       project_label  TEXT,
       db_filename    TEXT,
+      db_filenames   TEXT,
       ps_filename    TEXT,
       rs_filename    TEXT,
       last_opened    TEXT,
@@ -256,19 +268,27 @@ function upsertProject(folderPath, configName = 'Base', projectNumber = null, pr
   const database = getDb()
   const ts = now()
   const config = configName || 'Base'
+  // `dbFilename` may be one name or a list (a config spanning several DesignDBs).
+  const dbList = (Array.isArray(dbFilename) ? dbFilename : [dbFilename]).filter(Boolean)
   database
     .prepare(`
-      INSERT INTO projects (folder_path, config_name, project_number, project_label, db_filename, ps_filename, rs_filename, last_opened)
-      VALUES (@folderPath, @config, @projectNumber, @projectLabel, @dbFilename, @psFilename, @rsFilename, @ts)
+      INSERT INTO projects (folder_path, config_name, project_number, project_label, db_filename, db_filenames, ps_filename, rs_filename, last_opened)
+      VALUES (@folderPath, @config, @projectNumber, @projectLabel, @dbFilename, @dbFilenames, @psFilename, @rsFilename, @ts)
       ON CONFLICT(folder_path, config_name) DO UPDATE SET
         project_number = excluded.project_number,
         project_label  = COALESCE(projects.project_label, excluded.project_label),
         db_filename    = excluded.db_filename,
+        db_filenames   = excluded.db_filenames,
         ps_filename    = excluded.ps_filename,
         rs_filename    = excluded.rs_filename,
         last_opened    = excluded.last_opened
     `)
-    .run({ folderPath, config, projectNumber, projectLabel, dbFilename, psFilename, rsFilename, ts })
+    .run({
+      folderPath, config, projectNumber, projectLabel,
+      dbFilename: dbList[0] ?? null,
+      dbFilenames: dbList.length ? JSON.stringify(dbList) : null,
+      psFilename, rsFilename, ts,
+    })
   return database.prepare('SELECT * FROM projects WHERE folder_path = ? AND config_name = ?').get(folderPath, config)
 }
 
@@ -1113,6 +1133,31 @@ function deleteCollection(collectionId) {
 // and file dialogs; these just gather/apply plain JS objects.
 // ---------------------------------------------------------------------------
 
+/**
+ * The config YAML — everything needed to RECOVER a config on another machine or after the
+ * browser's storage is cleared. The Excel files are never in it (they live in the project
+ * folder); the YAML says WHICH of them the config reads, by filename relative to that folder.
+ *
+ *   version 2 adds, over version 1:
+ *     files               — the DesignDB(s), Product Spec and Recipes Spec this config pairs
+ *     local_element_types — ETs minted in the app and not yet in the DesignDB
+ *     pending_changes     — unexported PS/RS edits (DB edits already travel in prefs)
+ *     exported_at         — when, so two copies can be told apart
+ *
+ * Version 1 files still import; they simply lack those sections.
+ */
+const CONFIG_VERSIONS = [1, 2]
+const PENDING_DB_PREF = 'pending_db_changes'
+const jsonList = raw => { try { const v = JSON.parse(raw || '[]'); return Array.isArray(v) ? v : [] } catch { return [] } }
+
+function parseDbList(project) {
+  try {
+    const list = JSON.parse(project?.db_filenames || 'null')
+    if (Array.isArray(list) && list.length) return list
+  } catch { /* fall through */ }
+  return project?.db_filename ? [project.db_filename] : []
+}
+
 function collectConfigData(projectId) {
   const database = getDb()
   const project = database.prepare('SELECT * FROM projects WHERE id = ?').get(projectId)
@@ -1120,24 +1165,55 @@ function collectConfigData(projectId) {
     .prepare("SELECT * FROM templates WHERE project_id = ? AND scope = 'project'")
     .all(projectId)
     .map(parseTemplate)
+  const localEts = database
+    .prepare('SELECT ref, name, description, family, is_collection FROM local_element_types WHERE project_id = ? ORDER BY created_at ASC')
+    .all(projectId)
+    .map(r => ({ ref: r.ref, name: r.name, description: r.description, family: r.family, is_collection: !!r.is_collection }))
 
   return {
-    version: 1,
+    version: 2,
+    exported_at: now(),
     project: project ? {
       project_number: project.project_number,
       project_label:  project.project_label,
       config_name:    project.config_name,
+    } : null,
+    files: project ? {
+      design_dbs:    parseDbList(project),
+      product_spec:  project.ps_filename || null,
+      recipes_spec:  project.rs_filename || null,
     } : null,
     position_ui:   getAllPositionUI(projectId),
     collections:   getAllCollections(projectId),
     slot_mappings: getAllSlotMappings(projectId),   // { templateId: { slotKey: ref } }
     templates:     projectTemplates,
     prefs:         getAllPrefs(projectId),
+    local_element_types: localEts,
+    pending_changes: getPendingChanges(projectId),
   }
 }
 
+/** Throws on a file this build cannot read. */
+function checkConfigVersion(data) {
+  if (!CONFIG_VERSIONS.includes(data?.version)) {
+    throw new Error(`Unsupported config file version: ${data?.version ?? 'none'}`)
+  }
+}
+
+/**
+ * Merge a config YAML into a project. Upserts everything, overwriting nothing it does not
+ * name. Two deliberate exceptions:
+ *   - `files` is NOT applied here. It is read by the setup screen to pre-tick the
+ *     DesignDBs and pick the PS/RS; what the user confirms there is what gets stored.
+ *   - `pending_changes` restores only onto a config with none of its own. Merging two
+ *     change queues would replay edits twice; the report says when it was skipped.
+ *
+ * → { pendingRestored, pendingSkipped, localEts }
+ */
 function applyConfigData(projectId, data = {}) {
+  checkConfigVersion(data)
   const database = getDb()
+  const report = { pendingRestored: 0, pendingSkipped: 0, localEts: 0 }
   const apply = database.transaction(() => {
     // Project metadata (number/label) — config_name stays as the target's own
     if (data.project) {
@@ -1170,12 +1246,38 @@ function applyConfigData(projectId, data = {}) {
       upsertTemplate({ ...t, project_id: projectId, scope: 'project' })
     }
 
+    // Unexported DesignDB edits live in a pref; they follow the pending rule below.
     for (const [key, value] of Object.entries(data.prefs || {})) {
+      if (key === PENDING_DB_PREF) continue
       setPref(projectId, key, value)
+    }
+
+    for (const et of (data.local_element_types || [])) {
+      if (!et?.ref) continue
+      upsertLocalElementType(projectId, {
+        ref: et.ref, name: et.name ?? null, description: et.description ?? null,
+        family: et.family ?? null, isCollection: !!et.is_collection,
+      })
+      report.localEts++
+    }
+
+    const incoming = data.pending_changes || {}
+    const incomingDb = jsonList(data.prefs?.[PENDING_DB_PREF])
+    const n = (incoming.ps?.length || 0) + (incoming.rs?.length || 0) + incomingDb.length
+    if (n > 0) {
+      const own = getPendingChanges(projectId)
+      const ownDb = jsonList(getPref(projectId, PENDING_DB_PREF))
+      if ((own.ps.length + own.rs.length + ownDb.length) === 0) {
+        setPendingChanges(projectId, incoming.ps || [], incoming.rs || [])
+        setPref(projectId, PENDING_DB_PREF, JSON.stringify(incomingDb))
+        report.pendingRestored = n
+      } else {
+        report.pendingSkipped = n
+      }
     }
   })
   apply()
-  return true
+  return report
 }
 
 // ---------------------------------------------------------------------------
@@ -1220,6 +1322,7 @@ export {
   deleteFavorite,
   collectConfigData,
   applyConfigData,
+  checkConfigVersion,
   getPendingChanges,
   setPendingChanges,
   clearPendingChanges,

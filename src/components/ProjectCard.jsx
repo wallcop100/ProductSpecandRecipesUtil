@@ -4,6 +4,7 @@ import MaterialIcon from './MaterialIcon'
 import IconButton from './IconButton'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { ago } from '../utils/ago'
+import { dbFilesOf } from '../utils/projectIdentity'
 
 /**
  * ProjectCard — one config of one project, and what it actually HOLDS.
@@ -22,6 +23,7 @@ export default function ProjectCard({ project, onOpen, onRename, onRenameConfig,
   const [editing, setEditing] = useState(null)   // 'name' | 'config' | null
   const [draft, setDraft] = useState('')
   const [err, setErr] = useState(null)
+  const dbFiles = dbFilesOf(project)
 
   const name = project.project_label || 'Unnamed project'
   const unexported = project.unexported ?? 0
@@ -100,9 +102,9 @@ export default function ProjectCard({ project, onOpen, onRename, onRenameConfig,
           )}
         </div>
 
-        {project.db_filename && (
-          <div className="text-muted text-truncate mt-1" style={{ fontSize: 10 }} title={project.db_filename}>
-            {project.db_filename}
+        {dbFiles.length > 0 && (
+          <div className="text-muted text-truncate mt-1" style={{ fontSize: 10 }} title={dbFiles.join('\n')}>
+            {dbFiles[0]}{dbFiles.length > 1 && ` + ${dbFiles.length - 1} more DesignDB${dbFiles.length > 2 ? 's' : ''}`}
           </div>
         )}
         {err && <div className="text-danger mt-1" style={{ fontSize: 10 }}>{err}</div>}

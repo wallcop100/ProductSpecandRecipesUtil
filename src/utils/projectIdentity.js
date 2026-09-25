@@ -113,3 +113,34 @@ export function pickCanonical(projects = []) {
     String(b.last_opened ?? '').localeCompare(String(a.last_opened ?? ''))
   )[0] ?? null
 }
+
+/**
+ * dbFilesOf(project) → the DesignDB filenames a config reads.
+ *
+ * A config can span several DesignDBs (one per building, sharing one Product Spec and
+ * Recipes Spec). `db_filenames` is the JSON list; rows saved before it existed only have
+ * `db_filename`.
+ */
+export function dbFilesOf(project) {
+  try {
+    const list = JSON.parse(project?.db_filenames || 'null')
+    if (Array.isArray(list) && list.length) return list.filter(Boolean)
+  } catch { /* fall through */ }
+  return project?.db_filename ? [project.db_filename] : []
+}
+
+/**
+ * pickDbs(saved, detected) → { use, missing }
+ *
+ * Which DesignDBs to tick for a config. The config's own saved list wins, restricted to
+ * the files still in the folder; `missing` names the saved ones that are gone. With no
+ * saved list (a new config) every detected DB is ticked — a PositionType placed in ANY of
+ * them is live, so leaving one out is the choice that needs making on purpose.
+ */
+export function pickDbs(saved = [], detected = []) {
+  const here = new Set(detected)
+  const use = saved.filter(f => here.has(f))
+  const missing = saved.filter(f => !here.has(f))
+  if (saved.length === 0) return { use: [...detected], missing: [] }
+  return { use, missing }
+}

@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest'
 import * as XLSX from 'xlsx'
-import { parseDb, parsePs, parseRs, readSheet, detectFileType, detectFiles } from '../../src/platform/xlsx.js'
+import { parseDb, parsePs, parseRs, readSheet, detectFileType, detectFiles, mergeDbs } from '../../src/platform/xlsx.js'
 
 /**
  * The browser xlsx parser is a port of the old backend/parser.py. Its output was
@@ -211,5 +211,85 @@ describe('detection', () => {
     expect(out.db).toBe('a_first.xlsx')   // sorted order → deterministic
     expect(out.ps).toBe('ps.xlsx')
     expect(out.rs).toBeNull()
+    expect(out.dbs).toEqual(['a_first.xlsx', 'b_second.xlsx'])   // every DesignDB, for the tick list
+  })
+})
+
+describe('identifiers are always strings', () => {
+  // Excel stores an all-digit ProductCode or Ref as a NUMBER. Downstream code calls
+  // .trim() on these, and one numeric ProductCode made a real project fail to open.
+  test('a numeric ProductCode / EntityRef in the Product Spec becomes a string', () => {
+    const rows = parsePs(wbOf({ Form: aoa([
+      ['EntityRef', 'Manufacturer', 'ProductCode'],
+      ['ET-1', 'Acme', 39012025],
+      [101, 'Acme', 'ABC'],
+    ]) }))
+    expect(rows[0].ProductCode).toBe('39012025')
+    expect(rows[1].ElementTypeRef).toBe('101')
+  })
+
+  test('numeric refs in the DesignDB and Recipes Spec become strings; quantities stay numbers', () => {
+    const db = parseDb(wbOf({
+      ElementTypes: aoa([['Ref', 'Name', 'SortOrder'], [500, 'Five hundred', 3]]),
+      PositionTypes: aoa([['Ref', 'ExtRef'], [12, 12.5]]),
+      Positions: aoa([['Ref', 'TypeRef'], [1, 12]]),
+    }))
+    expect(db.element_types[0].ElementTypeRef).toBe('500')
+    expect(db.element_types[0].SortOrder).toBe(3)
+    expect(db.position_types[0].PositionTypeRef).toBe('12')
+    expect(db.position_types[0].ExtRef).toBe('12.5')
+    expect(db.positions[0]).toEqual({ Ref: '1', TypeRef: '12' })
+
+    const rs = parseRs(wbOf({ Form: aoa([
+      ['ContextType', 'ContextRef', 'EntityRef', 'Quantity'],
+      ['PositionType', 7, 99, 2],
+    ]) }))
+    expect(rs[0]).toMatchObject({ ContextRef: '7', ElementTypeRef: '99', PositionTypeRef: '7', Quantity: 2 })
+  })
+
+  test('scratch sheets are not parsed — only the sheets each file needs', () => {
+    const rows = parseRs(wbOf({
+      Form: aoa([['ContextType', 'ContextRef', 'EntityRef'], ['PositionType', 'C01', 'ET-1']]),
+      Sheet2: aoa([['junk'], ['junk']]),
+    }))
+    expect(rows).toHaveLength(1)
+    expect(readSheet(wbOf({ A: aoa([['x'], [1]]), B: aoa([['y'], [2]]) }), 'B').rows).toEqual([{ _row_num: 2, y: 2 }])
+  })
+})
+
+describe('mergeDbs — one project across several DesignDBs', () => {
+  const house = (name, pts, placed) => ({
+    name,
+    data: {
+      element_types: [{ ElementTypeRef: 'ET-1', Name: 'Profile' }],
+      position_types: pts.map(r => ({ PositionTypeRef: r, Name: r })),
+      positions: placed.map((t, i) => ({ Ref: `${name}-${i}`, TypeRef: t })),
+      collection_refs: ['ET-FAM'],
+    },
+  })
+
+  test('unions types by ref and keeps every placed position', () => {
+    const m = mergeDbs([house('main.xlsx', ['A1', 'B1'], ['A1']), house('guest.xlsx', ['a1', 'C1'], ['C1', 'C1'])])
+    expect(m.element_types).toHaveLength(1)
+    expect(m.position_types.map(p => p.PositionTypeRef)).toEqual(['A1', 'B1', 'C1'])   // first DB wins case
+    expect(m.positions).toHaveLength(3)
+    expect(m.collection_refs).toEqual(['ET-FAM'])
+    expect(m.sources.map(s => [s.name, s.positions])).toEqual([['main.xlsx', 1], ['guest.xlsx', 2]])
+    expect(m.conflicts).toEqual([])
+  })
+
+  test('a ref named differently in two DBs is reported, first DB kept', () => {
+    const a = house('main.xlsx', ['A1'], [])
+    const b = house('guest.xlsx', ['A1'], [])
+    b.data.position_types[0].Name = 'Something else'
+    const m = mergeDbs([a, b])
+    expect(m.position_types[0].Name).toBe('A1')
+    expect(m.conflicts).toEqual([{ kind: 'position_types', ref: 'A1', kept: 'main.xlsx', ignored: 'guest.xlsx' }])
+  })
+
+  test('a single DB passes through', () => {
+    const m = mergeDbs([house('only.xlsx', ['A1'], ['A1'])])
+    expect(m.position_types).toHaveLength(1)
+    expect(m.positions).toHaveLength(1)
   })
 })

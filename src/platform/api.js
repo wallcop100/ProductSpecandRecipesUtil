@@ -42,19 +42,36 @@ function dbBridge() {
     adoptDuplicateProject: call((projectId, folderPath, configName) =>
       dbApi.adoptDuplicateProject(projectId, folderPath, configName)),
 
-    // Config YAML — a save/open picker instead of a native dialog
+    // Config YAML — a save/open picker instead of a native dialog. See collectConfigData
+    // for what it holds; it is the way to recover a config (another machine, cleared storage).
     exportConfigYAML: call(async (projectId, defaultName) => {
-      const data = dbApi.collectConfigData(projectId)
+      const data = { ...dbApi.collectConfigData(projectId), app_version: APP_VERSION }
       return fsx.saveAs(`${defaultName || 'config'}.config.yaml`, yamlDump(data, { noRefs: true }),
         'YAML', { 'text/yaml': ['.yaml', '.yml'] })
     }),
+    /** Pick and parse a config YAML without applying it. → { ok, data, path } | { ok:false, error } */
+    readConfigYAML: async () => {
+      const res = await fsx.openTextFile('YAML', { 'text/yaml': ['.yaml', '.yml'] })
+      if (!res.ok) return res
+      try {
+        const data = yamlLoad(res.text) || {}
+        await openDatabase()
+        dbApi.checkConfigVersion(data)
+        return { ok: true, data, path: res.path }
+      } catch (err) {
+        return { ok: false, error: err.message }
+      }
+    },
+    applyConfigData: call((projectId, data) => dbApi.applyConfigData(projectId, data)),
     importConfigYAML: call(async projectId => {
       const res = await fsx.openTextFile('YAML', { 'text/yaml': ['.yaml', '.yml'] })
       if (!res.ok) return res
-      const data = yamlLoad(res.text) || {}
-      if (data.version !== 1) return { ok: false, error: `Unsupported config file version: ${data.version ?? 'none'}` }
-      dbApi.applyConfigData(projectId, data)
-      return { ok: true, path: res.path }
+      try {
+        const report = dbApi.applyConfigData(projectId, yamlLoad(res.text) || {})
+        return { ok: true, path: res.path, ...report }
+      } catch (err) {
+        return { ok: false, error: err.message }
+      }
     }),
 
     getDefaultTags: async () => {

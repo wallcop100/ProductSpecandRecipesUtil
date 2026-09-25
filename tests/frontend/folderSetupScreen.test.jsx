@@ -110,7 +110,7 @@ describe('the landing page IS the project list', () => {
     fireEvent.click((await screen.findAllByRole('button', { name: 'Open' }))[0])
 
     await waitFor(() => expect(window.electronAPI.db.upsertProject).toHaveBeenCalled())
-    expect(window.electronAPI.db.upsertProject.mock.calls[0][0].dbFilename).toBe('db.xlsx')
+    expect(window.electronAPI.db.upsertProject.mock.calls[0][0].dbFilename).toEqual(['db.xlsx'])
   })
 
   test('a project with no DesignDB anywhere is reported, not opened', async () => {
@@ -225,5 +225,86 @@ describe('someone who has never used this', () => {
   test('can reach the docs', async () => {
     render(<FolderSetupScreen onProjectLoaded={() => {}} />)
     expect((await screen.findByText(/How this works/)).closest('a')).toHaveAttribute('href')
+  })
+})
+
+describe('several DesignDBs in one folder', () => {
+  const twoDbs = { db: 'guest.xlsx', dbs: ['guest.xlsx', 'main.xlsx'], ps: 'ps.xlsx', rs: 'rs.xlsx', all_xlsx: ['guest.xlsx', 'main.xlsx', 'ps.xlsx', 'rs.xlsx'] }
+
+  async function pickFolder() {
+    window.electronAPI.db.getProjectSummaries = vi.fn().mockResolvedValue([])
+    render(<FolderSetupScreen onProjectLoaded={() => {}} />)
+    fireEvent.click(await screen.findByRole('button', { name: /Open the folder/ }))
+    return screen.findByTestId('db-picker')
+  }
+
+  test('every DB is offered as a tick box, all ticked, and the ticked ones are opened together', async () => {
+    detectFiles.mockResolvedValue(twoDbs)
+    await pickFolder()
+    const boxes = screen.getAllByRole('checkbox')
+    expect(boxes.map(b => b.checked)).toEqual([true, true])
+
+    fireEvent.click(screen.getByLabelText('guest.xlsx'))
+    fireEvent.click(screen.getByRole('button', { name: 'Open Project' }))
+    await waitFor(() => expect(importFiles).toHaveBeenCalled())
+    expect(importFiles.mock.calls[0][0].db).toEqual(['main.xlsx'])
+    expect(window.electronAPI.db.upsertProject.mock.calls[0][0].dbFilename).toEqual(['main.xlsx'])
+  })
+
+  test('with nothing ticked the project cannot be opened', async () => {
+    detectFiles.mockResolvedValue(twoDbs)
+    await pickFolder()
+    fireEvent.click(screen.getByLabelText('guest.xlsx'))
+    fireEvent.click(screen.getByLabelText('main.xlsx'))
+    expect(screen.getByRole('button', { name: 'Open Project' }).disabled).toBe(true)
+  })
+
+  test('reopening a saved config uses ITS DesignDBs, not the first file in the folder', async () => {
+    detectFiles.mockResolvedValue(twoDbs)
+    window.electronAPI.db.getProjectSummaries = vi.fn().mockResolvedValue([
+      { ...PROJECTS[0], db_filename: 'main.xlsx', db_filenames: '["main.xlsx"]' },
+    ])
+    render(<FolderSetupScreen onProjectLoaded={() => {}} />)
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Open' }))[0])
+    await waitFor(() => expect(importFiles).toHaveBeenCalled())
+    expect(importFiles.mock.calls[0][0].db).toEqual(['main.xlsx'])
+  })
+
+  test('a saved DB that has gone asks before opening without it', async () => {
+    detectFiles.mockResolvedValue({ ...twoDbs, dbs: ['main.xlsx'], all_xlsx: ['main.xlsx', 'ps.xlsx', 'rs.xlsx'] })
+    window.confirm = vi.fn(() => false)
+    window.electronAPI.db.getProjectSummaries = vi.fn().mockResolvedValue([
+      { ...PROJECTS[0], db_filenames: '["main.xlsx","guest.xlsx"]' },
+    ])
+    render(<FolderSetupScreen onProjectLoaded={() => {}} />)
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Open' }))[0])
+    await waitFor(() => expect(window.confirm).toHaveBeenCalled())
+    expect(window.confirm.mock.calls[0][0]).toMatch(/guest.xlsx/)
+    expect(importFiles).not.toHaveBeenCalled()
+  })
+
+  test('restoring from a config YAML fills in the pairing and applies the rest on open', async () => {
+    detectFiles.mockResolvedValue(twoDbs)
+    const yaml = {
+      version: 2,
+      project: { project_number: '5452', config_name: 'Houses' },
+      files: { design_dbs: ['main.xlsx'], product_spec: 'ps.xlsx', recipes_spec: 'rs.xlsx' },
+      prefs: {},
+    }
+    window.electronAPI.db.readConfigYAML = vi.fn().mockResolvedValue({ ok: true, data: yaml, path: 'houses.config.yaml' })
+    window.electronAPI.db.applyConfigData = vi.fn(async () => { calls.push('apply'); return { pendingRestored: 0, pendingSkipped: 0, localEts: 0 } })
+    await pickFolder()
+
+    fireEvent.click(screen.getByRole('button', { name: /Restore a config from YAML/ }))
+    expect(await screen.findByText(/Restoring from houses.config.yaml/)).toBeTruthy()
+    expect(screen.getByLabelText('main.xlsx').checked).toBe(true)
+    expect(screen.getByLabelText('guest.xlsx').checked).toBe(false)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Project' }))
+    await waitFor(() => expect(window.electronAPI.db.applyConfigData).toHaveBeenCalledWith(9, yaml))
+    expect(window.electronAPI.db.upsertProject.mock.calls[0][0]).toMatchObject({
+      configName: 'Houses', projectNumber: '5452', dbFilename: ['main.xlsx'],
+    })
+    expect(calls.indexOf('upsert')).toBeLessThan(calls.indexOf('apply'))
   })
 })
