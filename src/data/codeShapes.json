@@ -253,7 +253,7 @@
       "head": "ET-PS",
       "n": 5,
       "agree": 1,
-      "example": "##.####.##A",
+      "example": "03.####.##A",
       "status": "current"
     },
     {
@@ -264,7 +264,7 @@
       "head": "ET-PS",
       "n": 2,
       "agree": 1,
-      "example": "##.####.##ANI",
+      "example": "03.####.##ANI",
       "status": "current"
     },
     {
@@ -275,7 +275,7 @@
       "head": "ET-PS",
       "n": 3,
       "agree": 1,
-      "example": "##.####.##B",
+      "example": "03.####.##B",
       "status": "current"
     },
     {
@@ -286,7 +286,7 @@
       "head": "ET-PS",
       "n": 5,
       "agree": 1,
-      "example": "##.####.##BDA",
+      "example": "03.####.##BDA",
       "status": "current"
     },
     {
@@ -297,7 +297,7 @@
       "head": "ET-PS",
       "n": 2,
       "agree": 1,
-      "example": "##.####.##",
+      "example": "05.####.##",
       "status": "current"
     },
     {
@@ -308,7 +308,7 @@
       "head": "ET-PS-MOUNTING-FRAME",
       "n": 7,
       "agree": 0.86,
-      "example": "##.####.##",
+      "example": "08.####.##",
       "status": "current"
     },
     {
@@ -429,7 +429,7 @@
       "head": "ET-LIN-FLEX",
       "n": 2,
       "agree": 1,
-      "example": "###-####",
+      "example": "012-####",
       "status": "current"
     },
     {
@@ -440,7 +440,7 @@
       "head": "",
       "n": 55,
       "agree": 0.73,
-      "example": "###-####",
+      "example": "013-####",
       "status": "superseded"
     },
     {
@@ -451,7 +451,7 @@
       "head": "",
       "n": 99,
       "agree": 0.42,
-      "example": "###-####",
+      "example": "021-####",
       "status": "superseded"
     },
     {
@@ -462,7 +462,7 @@
       "head": "",
       "n": 30,
       "agree": 0.37,
-      "example": "###-####-##",
+      "example": "021-####-##",
       "status": "superseded"
     },
     {
@@ -473,7 +473,7 @@
       "head": "",
       "n": 6,
       "agree": 0.5,
-      "example": "###-####-##-BL",
+      "example": "021-####-##-BL",
       "status": "superseded"
     },
     {
@@ -484,7 +484,7 @@
       "head": "",
       "n": 22,
       "agree": 0.5,
-      "example": "###-####-BL",
+      "example": "021-####-BL",
       "status": "superseded"
     },
     {
@@ -495,7 +495,7 @@
       "head": "ET-LIN-DIFF",
       "n": 92,
       "agree": 1,
-      "example": "###-####",
+      "example": "022-####",
       "status": "superseded"
     },
     {
@@ -506,7 +506,7 @@
       "head": "",
       "n": 14,
       "agree": 0.71,
-      "example": "###-####-##",
+      "example": "022-####-##",
       "status": "superseded"
     },
     {
@@ -517,7 +517,7 @@
       "head": "ET-LIN-DIFF",
       "n": 3,
       "agree": 1,
-      "example": "###-####-##-BL",
+      "example": "022-####-##-BL",
       "status": "superseded"
     },
     {
@@ -528,7 +528,7 @@
       "head": "ET-LIN-DIFF",
       "n": 11,
       "agree": 1,
-      "example": "###-####-BL",
+      "example": "022-####-BL",
       "status": "superseded"
     },
     {
@@ -539,7 +539,7 @@
       "head": "ET-LIN-PROF",
       "n": 41,
       "agree": 1,
-      "example": "###-####",
+      "example": "023-####",
       "status": "superseded"
     },
     {
@@ -550,7 +550,7 @@
       "head": "ET-LIN-DIFF",
       "n": 7,
       "agree": 1,
-      "example": "###-####",
+      "example": "024-####",
       "status": "superseded"
     },
     {
@@ -561,7 +561,7 @@
       "head": "",
       "n": 11,
       "agree": 0.45,
-      "example": "###-####",
+      "example": "025-####",
       "status": "superseded"
     },
     {
@@ -572,7 +572,7 @@
       "head": "ET-DRIVER",
       "n": 38,
       "agree": 1,
-      "example": "###-####",
+      "example": "041-####",
       "status": "superseded"
     },
     {
@@ -583,7 +583,7 @@
       "head": "ET-DRIVER",
       "n": 7,
       "agree": 1,
-      "example": "###-####-#",
+      "example": "041-####-#",
       "status": "superseded"
     },
     {
@@ -3520,7 +3520,7 @@
       "head": "ET-DRIVER",
       "n": 2,
       "agree": 1,
-      "example": "###-####",
+      "example": "800-####",
       "status": "current"
     },
     {
@@ -3630,7 +3630,7 @@
       "head": "ET-CONNECTION",
       "n": 4,
       "agree": 1,
-      "example": "###-###",
+      "example": "221-###",
       "status": "current"
     },
     {
@@ -3641,7 +3641,7 @@
       "head": "ET-CONNECTION",
       "n": 24,
       "agree": 1,
-      "example": "###-###",
+      "example": "770-###",
       "status": "current"
     },
     {
@@ -3652,7 +3652,7 @@
       "head": "ET-CONNECTION",
       "n": 5,
       "agree": 1,
-      "example": "###-###/###-###",
+      "example": "770-###/###-###",
       "status": "current"
     },
     {
@@ -3663,7 +3663,7 @@
       "head": "ET-CONNECTION",
       "n": 14,
       "agree": 1,
-      "example": "###-###",
+      "example": "890-###",
       "status": "current"
     },
     {

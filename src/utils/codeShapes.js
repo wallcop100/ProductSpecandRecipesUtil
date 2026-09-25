@@ -47,15 +47,20 @@ export function shapeOf(code, level = 'coarse') {
 /**
  * An example code with its specifics masked, so the shipped table names no real product:
  * digits become `#`; letters are kept only where the fine shape keeps them (the first two
- * letter runs — the product line), later ones become `x`. Spaces and punctuation stay.
+ * letter runs — the product line), later ones become `x`. Spaces, punctuation and a short
+ * leading series number (770-, 021-) stay.
  *
  *   SL0240A3-260mA → SL####A#-###xx      FPS2020BG2000 → FPS####BG####
  *
  * Idempotent: masking a masked example changes nothing.
  */
 export function maskCode(code) {
+  const str = String(code ?? '')
+  // A short leading number is a series (WAGO 770-, LEDFlex 021-), not a product — the shape
+  // keeps it, so the example does too.
+  const series = str.match(/^[0-9]{1,3}(?=[^A-Za-z0-9\s])/)?.[0] || ''
   let lettersSeen = 0
-  return String(code ?? '').replace(/[A-Za-z]+|[0-9]/g, run => {
+  return series + str.slice(series.length).replace(/[A-Za-z]+|[0-9]/g, run => {
     if (/[0-9]/.test(run)) return '#'
     if (/^x+$/.test(run) && lettersSeen >= 2) return run
     lettersSeen++

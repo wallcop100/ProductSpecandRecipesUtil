@@ -20,6 +20,7 @@ describe('maskCode', () => {
     expect(maskCode('SL0240A3-260mA')).toBe('SL####A#-###xx')
     expect(maskCode('FPS2020BG2000')).toBe('FPS####BG####')
     expect(maskCode(maskCode('SL0240A3-260mA'))).toBe('SL####A#-###xx')
+    expect(maskCode('770-252')).toBe('770-###')   // the series stays, the product goes
   })
 
   test('a masked example has the same shape as the code it hides', () => {
@@ -59,7 +60,7 @@ describe('the shipped table', () => {
   const shapes = shipped.shapes
 
   test('it publishes no real code: every example is masked', () => {
-    for (const s of shapes) expect(s.example).not.toMatch(/[0-9]/)
+    for (const s of shapes) expect(s.example.replace(/^[0-9]{1,3}(?=[^A-Za-z0-9\s])/, '')).not.toMatch(/[0-9]/)
   })
 
   test('every family in it is a company family, and it holds no project data', () => {
