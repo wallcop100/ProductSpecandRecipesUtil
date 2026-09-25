@@ -87,3 +87,14 @@ describe('the shipped table', () => {
     expect(classifyText('')).toBeNull()
   })
 })
+
+describe('a code typed without its separators still matches its shape', () => {
+  const S = shipped.shapes || shipped
+  test('NFS240272009 is LEDFlex tape (NFS###-##-####), not a profile', () => {
+    expect(matchShape('NFS240272009', 'LEDFlex', S).current?.family).toBe('ET-LIN-TAPE')
+  })
+  test('text naming tape and profile together is flagged, not trusted', () => {
+    const w = classifyText('LED tape in aluminium profile')
+    expect(w.others.length).toBeGreaterThan(0)
+  })
+})

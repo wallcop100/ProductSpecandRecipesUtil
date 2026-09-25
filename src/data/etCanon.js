@@ -57,13 +57,21 @@ export const CANON_KEYWORDS = [
   { test: /\bSLEEVES?\b/, family: 'ET-PS-MOUNTING-SLEEVE', head: 'ET-PS-MOUNTING-SLEEVE' },
 ]
 
-/** → { family, head, keyword } for the first rule the text matches, else null. */
+/**
+ * → { family, head, keyword, others } for the first rule the text matches, else null.
+ * `others` lists the other families the text also names ("tape in aluminium profile"):
+ * the words alone cannot say which product this is, so the caller should flag the guess.
+ */
 export function classifyText(text) {
   const t = String(text ?? '').toUpperCase()
   if (!t.trim()) return null
+  let first = null
+  const others = new Set()
   for (const rule of CANON_KEYWORDS) {
     const m = t.match(rule.test)
-    if (m) return { family: rule.family, head: rule.head, keyword: m[0].trim() }
+    if (!m) continue
+    if (!first) first = { family: rule.family, head: rule.head, keyword: m[0].trim() }
+    else if (rule.head !== first.head) others.add(rule.head)
   }
-  return null
+  return first ? { ...first, others: [...others] } : null
 }

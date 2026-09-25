@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-09-25', note: 'Fixed: a code typed without its dashes (NFS240272009) matches its known shape, so LEDFlex tape is no longer filed as profile; a note naming two kinds of product is flagged' },
   { date: '2026-09-25', note: 'Fixed: adding from the Form no longer lands on another position when a wrapper recipe was open earlier' },
   { date: '2026-09-25', note: 'Side-by-Side: add a missing Form product in one click (+ Position / + in wrapper), Add all, Undo; Next when a position is done' },
   { date: '2026-09-25', note: 'Import: Stage sits on top and turns green when every code is done; pills say in spec / variant / repeated / new. Review: Next bottom-right, Close moved left, ← → keys' },
