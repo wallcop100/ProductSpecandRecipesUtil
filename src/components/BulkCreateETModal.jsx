@@ -50,7 +50,7 @@ const REUSE = '__reuse'
 const SKIP = '__skip'
 
 export default function BulkCreateETModal({
-  show, onHide, proposals: initial, newFamilies: initialFamilies, families = [], elementTypes = [], onApply,
+  show, onHide, proposals: initial, newFamilies: initialFamilies, families = [], elementTypes = [], onApply, onReviewExisting,
 }) {
   const [rows, setRows] = useState(initial || [])
   const [fams, setFams] = useState(initialFamilies || [])
@@ -165,6 +165,11 @@ export default function BulkCreateETModal({
         <Modal.Title style={{ fontSize: 16 }}>
           New ElementTypes for {rows.length} code{rows.length === 1 ? '' : 's'}
         </Modal.Title>
+        {onReviewExisting && elementTypes.length > 0 && (
+          <Button variant="link" size="sm" className="ms-auto me-2" style={{ fontSize: 12 }} onClick={onReviewExisting}>
+            Review existing ElementTypes ({elementTypes.length}) →
+          </Button>
+        )}
       </Modal.Header>
       <Modal.Body style={{ fontSize: 12 }}>
         <div className="d-flex align-items-start gap-2 mb-2">

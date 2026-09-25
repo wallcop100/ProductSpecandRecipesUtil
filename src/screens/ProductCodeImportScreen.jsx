@@ -12,6 +12,7 @@ import CaptureLines from '../components/CaptureLines'
 import PrimingModal from '../components/PrimingModal'
 import NewETModal from '../components/NewETModal'
 import BulkCreateETModal from '../components/BulkCreateETModal'
+import ExistingETReviewModal from '../components/ExistingETReviewModal'
 import ResolveRefsStep from '../components/ResolveRefsStep'
 import StageBar from '../components/StageBar'
 import TutorialHint from '../tutorial/TutorialHint'
@@ -97,6 +98,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   const [rules, setRules] = useState({})
   const [idx, setIdx] = useState(0)
   const [assignments, setAssignments] = useState({})
+  const [reviewingExisting, setReviewingExisting] = useState(false)
   const [creatingFor, setCreatingFor] = useState(null)
   const [staged, setStaged] = useState(null)
   const [stagedOpen, setStagedOpen] = useState(false)   // the result surfaces as a modal, not below the fold
@@ -1176,6 +1178,12 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                 {unassigned.length === 1 ? '' : 's'}…
               </Button>
             )}
+            {elementTypes.length > 0 && (
+              <Button size="sm" variant="outline-secondary" className="w-100 mb-2" onClick={() => setReviewingExisting(true)}
+                title="Every ElementType in the project, by family: check and edit names, descriptions and families">
+                <MaterialIcon name="fact_check" size={14} /> Review all {elementTypes.length} existing ElementTypes…
+              </Button>
+            )}
             <CompareCodesPanel
               entries={panelEntries}
               knownPTs={knownPTs}
@@ -1315,7 +1323,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
         families={knownFamilies}
         elementTypes={elementTypes}
         onApply={applyBulk}
+        onReviewExisting={() => setReviewingExisting(true)}
       />
+      <ExistingETReviewModal show={reviewingExisting} onHide={() => setReviewingExisting(false)} />
 
       <NewETModal
         show={!!creatingFor}

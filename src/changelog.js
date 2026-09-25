@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-09-25', note: 'Review all existing ElementTypes: every ET by family, unfiled first, with product and usage; edit Name, Description and Family, saved in one go' },
   { date: '2026-09-25', note: 'Save indicator (cloud) beside the project; Ctrl+S saves now and says what is still to export. Close project asks first; Back undoes Next' },
   { date: '2026-09-25', note: 'Every recipe gets one IsDesign item as you leave it: a lone row is marked for you, otherwise you pick one before moving on' },
   { date: '2026-09-25', note: 'A row has Quantity OR Dim_QuantityMultiplier, never both; profiles default to a multiplier of 1. Tutorials no longer stack over other windows' },
