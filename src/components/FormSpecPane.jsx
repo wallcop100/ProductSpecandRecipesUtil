@@ -5,7 +5,6 @@ import MaterialIcon from './MaterialIcon'
 import IconButton from './IconButton'
 import FormContext from './FormContext'
 import { loadVisible, saveVisible, clearVisible, visibleColumns } from '../utils/formColumns'
-import BulkApplyModal from './BulkApplyModal'
 import DuplicateETModal from './DuplicateETModal'
 import UsagePopover from './UsagePopover'
 import { compareFormToRecipe, associations, formWorklist, formPending, pendingCandidates } from '../utils/formSpec'
@@ -85,7 +84,7 @@ function FormStrip({ formCaptures }) {
  */
 const ROW_STATUS = {
   present:  { icon: ACTION_ICONS.complete, color: '#198754', title: 'in the recipe' },
-  addable:  { icon: 'add_circle', color: '#0d6efd', title: 'already an ElementType — tick to add it' },
+  addable:  { icon: 'add_circle', color: '#0d6efd', title: 'already an ElementType — add it' },
   missing:  { icon: 'error', color: '#dc3545', title: 'missing from the recipe' },
   question: { icon: 'help', color: '#997404', title: 'no ElementType yet — nothing can be added until it has one' },
 }
@@ -215,9 +214,9 @@ export default function FormSpecPane({ posRef, embedded = false }) {
   const promotePendingCapture = useStore(s => s.promotePendingCapture)
   const projectId = useStore(s => s.projectId)
 
-  const [ticked, setTicked] = useState(() => new Set())
-  const [dest, setDest] = useState('auto')      // 'position' | 'internal'
-  const [preview, setPreview] = useState(null)
+  const undo = useStore(s => s.undo)
+  // The last one-click add, for its "Added … · Undo" line. Cleared when the position changes.
+  const [lastAdded, setLastAdded] = useState(null)   // { posRef, refs: [ref], where }
   const [forking, setForking] = useState(false)
   const [creating, setCreating] = useState(null)   // a pending Form product with no ElementType
   const [picking, setPicking] = useState(null)     // ...whose ElementType you are choosing by hand
@@ -425,51 +424,38 @@ export default function FormSpecPane({ posRef, embedded = false }) {
   const divergence = (formCaptures.divergence || []).find(
     d => !d.consistent && container && d.wrapper === container
   ) || null
-  // The Form carries no slot, so the destination is genuinely unknown. Default to
-  // position level; the wrapper is offered whenever one resolves.
-  const effectiveDest = dest === 'auto' ? 'position' : dest
-  const section = effectiveDest === 'internal' ? 'dl_internal' : 'position'
-  // Say where a row will land in the same words everywhere: the row, its tooltip, and
-  // the destination chooser. `container` is null when this position has no wrapper —
-  // honestly, and the store refuses an internal row without one.
-  const destLabel = effectiveDest === 'internal' && container
-    ? `inside ${container}`
-    : 'at PositionType Level'
-
-  function toggle(ref) {
-    setTicked(t => {
-      const next = new Set(t)
-      next.has(ref) ? next.delete(ref) : next.add(ref)
-      return next
-    })
+  /**
+   * Where a product usually goes: inside the wrapper when that is where this ElementType sits
+   * in most other recipes (drivers, connectors), else position level. The Form carries no slot,
+   * so this only decides which button is the obvious one — both are always offered.
+   */
+  const usualPlace = ref => {
+    if (!container) return 'position'
+    let inside = 0, outside = 0
+    for (const r of recipes) {
+      if (String(r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() !== ref.toLowerCase()) continue
+      if ((r.ContextType || r.contextType) === 'ElementType') inside++
+      else outside++
+    }
+    return inside > outside ? 'internal' : 'position'
   }
 
-  /** Build a plan in the shape BulkApplyModal already renders. */
-  function buildPlan() {
-    const actions = [...ticked].map(ref => ({
-      posRef, ref, action: 'add',
-      section: effectiveDest, rawSection: section,
-      container, need: 1, have: 0, rows: [], foundAt: null,
-    }))
-    const counts = { add: actions.length }
-    return { actions, counts, byPosition: new Map([[posRef, actions]]) }
-  }
-
-  function applyPlan() {
-    // One undo step for the whole batch: only the first add records history.
-    preview.actions.forEach((a, i) => {
-      const entry = formEts.find(e => e.elementTypeRef === a.ref)
-      addRecipeRow(posRef, a.rawSection, {
-        elementTypeRef: a.ref,
+  /** One click, no preview: add Form products to THIS position. One undo step per click. */
+  function addNow(refs, where) {
+    refs.forEach((ref, i) => {
+      const w = where === 'usual' ? usualPlace(ref) : where
+      const entry = formEts.find(e => e.elementTypeRef === ref)
+      addRecipeRow(posRef, w === 'internal' && container ? 'dl_internal' : 'position', {
+        elementTypeRef: ref,
         // Stage ③: you added this, deliberately, from the Form. The badge says so.
         _origin: 'form', _formCode: entry?.code ?? null, _formNote: entry?.note ?? null,
-      }, { recordHistory: i === 0 })
+      }, { recordHistory: i === 0, asPosition: true })
     })
-    setPreview(null)
-    setTicked(new Set())
+    setLastAdded({ posRef, refs, where })
   }
 
-  const allTicked = missing.length > 0 && ticked.size === missing.length
+  const added = lastAdded && lastAdded.posRef === posRef ? lastAdded : null
+  const allPresent = missing.length === 0 && formEts.length > 0
 
   return (
     <div className="border-start ps-3" style={{ width: 340, flexShrink: 0, overflowY: 'auto' }}>
@@ -617,12 +603,47 @@ export default function FormSpecPane({ posRef, embedded = false }) {
         </div>
       )}
 
-      {/* What the Form asks for */}
-      {missing.length > 0 && (
-        <div className="d-flex align-items-center gap-1 mb-1">
-          <Form.Check type="checkbox" id={`fs-all-${posRef}`} checked={allTicked}
-            onChange={() => setTicked(allTicked ? new Set() : new Set(missing.map(m => m.elementTypeRef)))}
-            label={<span style={{ fontSize: 10 }} className="text-muted">select all missing</span>} />
+      {/* Done: say so at the top, with the next thing to do as the obvious button. */}
+      {allPresent && (
+        <div className="mb-2 px-2 py-2 rounded d-flex align-items-center gap-2 flex-wrap" data-testid="form-all-present"
+          style={{ background: '#d1e7dd', border: '1px solid #a3cfbb', color: '#0f5132', fontSize: 11 }}>
+          <MaterialIcon name="check_circle" size={14} /> All Form products present
+          {nextUnreconciled && (
+            <Button size="sm" variant="success" className="ms-auto" style={{ fontSize: 11 }}
+              onClick={() => setActivePosition(nextUnreconciled)}>
+              Next: <span style={{ fontFamily: 'monospace' }}>{nextUnreconciled}</span> →
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* The last one-click add, with its way back. */}
+      {added && (
+        <div className="mb-2 px-2 py-1 rounded d-flex align-items-center gap-2" data-testid="form-added"
+          style={{ background: '#e7f1ff', fontSize: 10, color: '#084298' }}>
+          <MaterialIcon name="done" size={12} />
+          <span className="text-truncate">
+            Added {added.refs.length === 1 ? added.refs[0] : `${added.refs.length} products`}
+          </span>
+          <Button variant="link" size="sm" className="p-0 ms-auto" style={{ fontSize: 10 }}
+            onClick={() => { undo(); setLastAdded(null) }}>Undo</Button>
+        </div>
+      )}
+
+      {/* What the Form asks for: add everything missing in one click. */}
+      {missing.length > 1 && (
+        <div className="d-flex align-items-center gap-1 mb-1 flex-wrap">
+          <Button size="sm" variant="primary" style={{ fontSize: 10, padding: '1px 8px' }}
+            onClick={() => addNow(missing.map(m => m.elementTypeRef), 'usual')}
+            title="Each where it usually goes: inside the wrapper if that is where it sits in other recipes, else position level">
+            <MaterialIcon name="playlist_add" size={12} /> Add all {missing.length}
+          </Button>
+          <Button size="sm" variant="link" className="p-0" style={{ fontSize: 10 }}
+            onClick={() => addNow(missing.map(m => m.elementTypeRef), 'position')}>all at position</Button>
+          {container && (
+            <Button size="sm" variant="link" className="p-0" style={{ fontSize: 10 }}
+              onClick={() => addNow(missing.map(m => m.elementTypeRef), 'internal')}>all inside {container}</Button>
+          )}
         </div>
       )}
 
@@ -631,12 +652,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
         const status = !isMissing ? 'present' : e.inSpec ? 'addable' : 'missing'
         return (
           <div key={e.elementTypeRef} className="d-flex align-items-start gap-2 py-1 border-bottom" style={{ fontSize: 11 }}>
-            {isMissing
-              ? <input type="checkbox" className="form-check-input mt-1" style={{ flexShrink: 0 }}
-                  checked={ticked.has(e.elementTypeRef)}
-                  onChange={() => toggle(e.elementTypeRef)}
-                  title={`Tick to add — lands ${destLabel}`} aria-label={`Add ${e.elementTypeRef}`} />
-              : <span style={{ width: 13, flexShrink: 0 }} />}
+            {!isMissing && <span style={{ width: 13, flexShrink: 0 }} />}
             <div style={{ minWidth: 0, flex: 1 }}>
               {/* Manufacturer and product code are one thing, and always shown together. */}
               <div className="d-flex align-items-baseline gap-1">
@@ -659,45 +675,37 @@ export default function FormSpecPane({ posRef, embedded = false }) {
                 )}
               </div>
               {e.note && <div className="text-muted" style={{ fontSize: 10 }}>{e.note}</div>}
-              {/* A matched row says where it was found. A missing one should say where it
-                  will go — before you tick it, not after the store refuses the row. */}
-              {isMissing && (
-                <div className="text-muted" style={{ fontSize: 10 }}>
-                  <MaterialIcon name="subdirectory_arrow_right" size={10} /> will be added {destLabel}
-                </div>
-              )}
+              {/* A missing row adds in one click, at the position or inside its wrapper; the
+                  usual place for this ElementType is the filled button. */}
+              {isMissing && (() => {
+                const usual = usualPlace(e.elementTypeRef)
+                return (
+                  <div className="d-flex align-items-center gap-1 mt-1">
+                    <Button size="sm" variant={usual === 'position' ? 'primary' : 'outline-primary'}
+                      style={{ fontSize: 10, padding: '0 6px' }} aria-label={`Add ${e.elementTypeRef} at position level`}
+                      onClick={() => addNow([e.elementTypeRef], 'position')}>
+                      + Position
+                    </Button>
+                    {container && (
+                      <Button size="sm" variant={usual === 'internal' ? 'primary' : 'outline-primary'}
+                        style={{ fontSize: 10, padding: '0 6px' }} aria-label={`Add ${e.elementTypeRef} inside ${container}`}
+                        title={`Inside the wrapper ${container}`}
+                        onClick={() => addNow([e.elementTypeRef], 'internal')}>
+                        + in <span style={{ fontFamily: 'monospace' }}>{container}</span>
+                      </Button>
+                    )}
+                  </div>
+                )
+              })()}
               {isMissing
                 ? <span className="text-danger" style={{ fontSize: 10 }}>
-                    {e.inSpec ? 'already an ElementType — tick to add it' : 'missing from the recipe'}
+                    {e.inSpec ? 'already an ElementType — add it' : 'missing from the recipe'}
                   </span>
                 : <FoundIn foundIn={e.foundIn} container={container} />}
             </div>
           </div>
         )
       })}
-
-      {/* Tick, choose where, preview. Nothing is written until you confirm. */}
-      {ticked.size > 0 && (
-        <div className="mt-2 px-2 py-2 rounded" style={{ background: '#e7f1ff', border: '1px solid #b6d4fe' }}>
-          <div className="mb-1" style={{ fontSize: 11 }}>Add {ticked.size} to:</div>
-          <Form.Check type="radio" name={`dest-${posRef}`} id={`dest-pos-${posRef}`}
-            checked={effectiveDest === 'position'} onChange={() => setDest('position')}
-            label={<span style={{ fontSize: 11 }}>PositionType Level</span>} />
-          <Form.Check type="radio" name={`dest-${posRef}`} id={`dest-int-${posRef}`}
-            checked={effectiveDest === 'internal'} onChange={() => setDest('internal')}
-            disabled={!container}
-            label={
-              <span style={{ fontSize: 11 }}>
-                inside <span style={{ fontFamily: 'monospace' }}>{container || '—'}</span>
-                {!container && <span className="text-muted"> (no wrapper on this position)</span>}
-              </span>
-            } />
-          <Button size="sm" variant="primary" className="mt-2" style={{ fontSize: 11 }}
-            onClick={() => setPreview(buildPlan())}>
-            Preview {ticked.size} change{ticked.size === 1 ? '' : 's'}
-          </Button>
-        </div>
-      )}
 
       {/* Codes that have left the Form. A soft hint — never a validation error. */}
       {orphaned.length > 0 && open.has('orphaned') && (
@@ -746,7 +754,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
         </div>
       )}
 
-      {nextUnreconciled && (
+      {nextUnreconciled && !allPresent && (
         <div className="mt-3 pt-2 border-top">
           <Button size="sm" variant="outline-primary" className="w-100" style={{ fontSize: 10 }}
             onClick={() => setActivePosition(nextUnreconciled)}
@@ -755,14 +763,6 @@ export default function FormSpecPane({ posRef, embedded = false }) {
           </Button>
         </div>
       )}
-
-      <BulkApplyModal
-        show={!!preview}
-        plan={preview}
-        title={`Add ${preview?.actions.length ?? 0} Form ${preview?.actions.length === 1 ? 'product' : 'products'} to ${posRef}`}
-        onHide={() => setPreview(null)}
-        onConfirm={applyPlan}
-      />
 
       {/* duplicateET repoints this position onto the fork. onDuplicated fires only on a
           real fork (never on cancel), so the question is marked settled exactly then. */}

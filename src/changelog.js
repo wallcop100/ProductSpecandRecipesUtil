@@ -7,6 +7,9 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-09-25', note: 'Fixed: adding from the Form no longer lands on another position when a wrapper recipe was open earlier' },
+  { date: '2026-09-25', note: 'Side-by-Side: add a missing Form product in one click (+ Position / + in wrapper), Add all, Undo; Next when a position is done' },
+  { date: '2026-09-25', note: 'Import: Stage sits on top and turns green when every code is done; pills say in spec / variant / repeated / new. Review: Next bottom-right, Close moved left, ← → keys' },
   { date: '2026-09-25', note: 'New ElementTypes review: drag a code by its grip (or its ⇄ menu) into another family, add your own family; refs renumber. A green tick replaces the repeated reason text' },
   { date: '2026-09-25', note: 'Style library: every project you open teaches the tool how its products were named; new ElementTypes copy that style, flagged "check ref" when unsure' },
   { date: '2026-09-25', note: 'New ElementTypes use the company families (ET-PS, ET-LIN-TAPE/PROF/DIFF…), from the Form page type, product words and a table of known code shapes; old LEDFlex numbering is flagged' },

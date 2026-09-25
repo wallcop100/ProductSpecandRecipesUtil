@@ -113,11 +113,12 @@ describe('FormSpecPane renders the Form beside the recipe', () => {
     expect(screen.queryByText(/misplaced/i)).toBeNull()
   })
 
-  test('an absent Form product is missing and offers a tick', () => {
+  test('an absent Form product is missing and offers one-click adds', () => {
     setup()
     expect(screen.getByText('LL240272024')).toBeInTheDocument()
     expect(screen.getByText('missing from the recipe')).toBeInTheDocument()
-    expect(screen.getAllByTitle(/Tick to add/)).toHaveLength(1)
+    expect(screen.getByLabelText('Add ET-TAPE-01 at position level')).toBeInTheDocument()
+    expect(screen.getByLabelText('Add ET-TAPE-01 inside ET-LIN-01')).toBeInTheDocument()
   })
 
   test('coverage counts what the Form specified', () => {
@@ -149,54 +150,67 @@ describe('FormSpecPane renders the Form beside the recipe', () => {
     expect(screen.getByText('the wrapper')).toBeInTheDocument()   // ET-LIN-01 itself
   })
 
-  test('ticking offers a destination, and the position\'s wrapper is one of them', () => {
-    setup()
-    fireEvent.click(screen.getByTitle(/Tick to add/))
-    expect(screen.getByText('Add 1 to:')).toBeInTheDocument()
-    // The Form carries no slot, so both destinations are offered and neither is assumed.
-    expect(screen.getByLabelText(/PositionType Level/)).not.toBeDisabled()
-    expect(screen.getByLabelText(/inside ET-LIN-01/)).not.toBeDisabled()
-    expect(screen.getByLabelText(/PositionType Level/)).toBeChecked()   // the safe default
-  })
-
-  test('nothing is written until the preview is confirmed', () => {
+  test('one click adds at position level — no preview', () => {
     setup()
     const before = useStore.getState().recipes.length
-    fireEvent.click(screen.getByTitle(/Tick to add/))
-    fireEvent.click(screen.getByText(/Preview 1 change/))
-    expect(useStore.getState().recipes).toHaveLength(before)          // still untouched
-
-    const dialog = screen.getByRole('dialog')
-    fireEvent.click(within(dialog).getByText(/Apply 1 change/))
+    fireEvent.click(screen.getByLabelText('Add ET-TAPE-01 at position level'))
     expect(useStore.getState().recipes).toHaveLength(before + 1)
+    const added = useStore.getState().recipes.find(r => r.ElementTypeRef === 'ET-TAPE-01')
+    expect(added.ContextType).toBe('PositionType')
+    expect(added.PositionTypeRef).toBe('C01r')
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 
-  test('confirming adds the row at the chosen destination', () => {
+  test('one click adds inside the wrapper', () => {
     setup()
-    fireEvent.click(screen.getByTitle(/Tick to add/))
-    fireEvent.click(screen.getByLabelText(/inside/))
-    fireEvent.click(screen.getByText(/Preview 1 change/))
-    fireEvent.click(within(screen.getByRole('dialog')).getByText(/Apply 1 change/))
-
+    fireEvent.click(screen.getByLabelText('Add ET-TAPE-01 inside ET-LIN-01'))
     const added = useStore.getState().recipes.find(r => r.ElementTypeRef === 'ET-TAPE-01')
     expect(added.ContextType).toBe('ElementType')
-    expect(added.ContextRef).toBe('ET-LIN-01')       // landed inside the wrapper
+    expect(added.ContextRef).toBe('ET-LIN-01')
   })
 
-  test('a position with no wrapper cannot pick the internal destination', () => {
-    setup({ recipes: [pos('C01r', 'ET-LAMP', { IsDesign: 'Y' })], containerETRefs: new Set() })
-    fireEvent.click(screen.getAllByTitle(/Tick to add/)[0])
-    expect(screen.getByLabelText(/no wrapper on this position/)).toBeDisabled()
-  })
-
-  /**
-   * A matched row says where it was FOUND. A missing row used to say nothing about
-   * where it would GO, so the destination was discovered only after ticking — or, on a
-   * position with no wrapper, after the store refused the row.
-   */
-  test('a missing row states its destination before you tick it', () => {
+  test('the add is confirmed inline, with Undo', () => {
     setup()
-    expect(screen.getByText(/will be added at PositionType Level/)).toBeInTheDocument()
+    const before = useStore.getState().recipes.length
+    fireEvent.click(screen.getByLabelText('Add ET-TAPE-01 at position level'))
+    const bar = screen.getByTestId('form-added')
+    expect(bar).toHaveTextContent('Added ET-TAPE-01')
+    fireEvent.click(within(bar).getByText('Undo'))
+    expect(useStore.getState().recipes).toHaveLength(before)
+  })
+
+  test('a position with no wrapper offers only the position button', () => {
+    setup({ recipes: [pos('C01r', 'ET-LAMP', { IsDesign: 'Y' })], containerETRefs: new Set() })
+    expect(screen.getAllByLabelText(/at position level/)).toHaveLength(2)
+    expect(screen.queryByLabelText(/inside/)).toBeNull()
+  })
+
+  test('Add all adds every missing product as one undo step', () => {
+    setup({ recipes: [pos('C01r', 'ET-LAMP', { IsDesign: 'Y' })], containerETRefs: new Set() })
+    const before = useStore.getState().recipes.length
+    fireEvent.click(screen.getByText(/Add all 2/))
+    expect(useStore.getState().recipes).toHaveLength(before + 2)
+    expect(screen.getByTestId('form-all-present')).toBeInTheDocument()
+    fireEvent.click(within(screen.getByTestId('form-added')).getByText('Undo'))
+    expect(useStore.getState().recipes).toHaveLength(before)
+  })
+
+  test('Add all puts a product where it usually sits in other recipes', () => {
+    // ET-TAPE-01 sits inside a wrapper on another position, so it goes inside here too.
+    setup({ recipes: [...recipes(), inside('C09r', 'ET-LIN-09', 'ET-TAPE-01')] })
+    expect(screen.getByLabelText('Add ET-TAPE-01 inside ET-LIN-01').className).toMatch(/btn-primary/)
+    fireEvent.click(screen.getByLabelText('Add ET-TAPE-01 inside ET-LIN-01'))
+    const added = useStore.getState().recipes.find(r => r.ElementTypeRef === 'ET-TAPE-01' && r.PositionTypeRef === 'C01r')
+    expect(added.ContextRef).toBe('ET-LIN-01')
+  })
+
+  test('Form adds go to this position even if a wrapper recipe was open elsewhere', () => {
+    setup({ activeContextType: 'ElementType', activeETRef: 'ET-DL-99' })
+    fireEvent.click(screen.getByLabelText('Add ET-TAPE-01 at position level'))
+    const added = useStore.getState().recipes.filter(r => r.ElementTypeRef === 'ET-TAPE-01')
+    expect(added).toHaveLength(1)
+    expect(added[0].PositionTypeRef).toBe('C01r')
+    expect(added[0].ContextType).toBe('PositionType')
   })
 
   test('a position with no wrapper says so up front, not in a greyed-out radio', () => {
@@ -257,15 +271,13 @@ describe('manufacturer + product code are one identity', () => {
     // The spec already names ET-TAPE-99 for Nichia / LL240272024.
     setup({ psRows: [{ ElementTypeRef: 'ET-TAPE-99', Manufacturer: 'Nichia', ProductCode: 'LL240272024' }] })
     expect(screen.getByText('in the spec')).toBeInTheDocument()
-    expect(screen.getByText('already an ElementType — tick to add it')).toBeInTheDocument()
+    expect(screen.getByText('already an ElementType — add it')).toBeInTheDocument()
     expect(screen.getByText('ET-TAPE-99')).toBeInTheDocument()   // the spec's ET, not the captured one
   })
 
-  test('ticking it adds the SPEC\'s ElementType, not the stale captured one', () => {
+  test('adding it adds the SPEC\'s ElementType, not the stale captured one', () => {
     setup({ psRows: [{ ElementTypeRef: 'ET-TAPE-99', Manufacturer: 'Nichia', ProductCode: 'LL240272024' }] })
-    fireEvent.click(screen.getByTitle(/Tick to add/))
-    fireEvent.click(screen.getByText(/Preview 1 change/))
-    fireEvent.click(within(screen.getByRole('dialog')).getByText(/Apply 1 change/))
+    fireEvent.click(screen.getByLabelText('Add ET-TAPE-99 at position level'))
     expect(useStore.getState().recipes.some(r => r.ElementTypeRef === 'ET-TAPE-99')).toBe(true)
     expect(useStore.getState().recipes.some(r => r.ElementTypeRef === 'ET-TAPE-01')).toBe(false)
   })
@@ -368,8 +380,16 @@ describe('Next unreconciled', () => {
     },
   }
 
-  test('jumps to the next position the Form is not satisfied on', () => {
+  test('a finished position says so at the top, with Next as the button', () => {
     setup({ recipes: recipes2(), formCaptures: caps })
+    const bar = screen.getByTestId('form-all-present')
+    fireEvent.click(within(bar).getByText(/Next:/))
+    expect(useStore.getState().activePositionRef).toBe('C03r')
+    expect(screen.queryByText(/Next unreconciled/)).toBeNull()
+  })
+
+  test('an unfinished position keeps Next unreconciled at the bottom', () => {
+    setup({ recipes: recipes2().filter(r => r.ElementTypeRef !== 'ET-TAPE-01'), formCaptures: caps })
     fireEvent.click(screen.getByText(/Next unreconciled/))
     expect(useStore.getState().activePositionRef).toBe('C03r')
   })
