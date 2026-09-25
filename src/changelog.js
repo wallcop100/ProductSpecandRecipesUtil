@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-09-25', note: 'New ElementTypes review: families come from the PositionType tree (A1b → ET-DOWNLIGHT), are created with their members, extra codes go to ET-ACCESSORIES' },
   { date: '2026-09-25', note: 'Import product codes: review every new ElementType at once, named by family (ET-PS-08) as "Maker - Code"; near-miss codes show a diff, not a %' },
   { date: '2026-09-25', note: 'Import product codes: line breaks split codes, lone + - / are discarded, no more phantom "**" codes; copy buttons and Form columns at the top' },
   { date: '2026-09-25', note: 'A config can read several DesignDBs (tick each one); config YAML now saves the file pairing and unexported changes, and can restore a config' },
