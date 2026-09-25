@@ -181,8 +181,12 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
   const current = matches[index] || null
   const canPrev = phase === 'cycle' && index > 0
   const canNext = phase === 'cycle' && index < matches.length - 1
-  const goPrev = () => setIndex(i => Math.max(0, i - 1))
-  const goNext = () => setIndex(i => Math.min(matches.length - 1, i + 1))
+  // Leaving a position settles its design item first (DesignPickerModal when it must ask).
+  const leave = then => useStore.getState().leavePosition(current?.kind === 'position' ? current.ref : null, then)
+  const goTo = i => leave(() => setIndex(i))
+  const goPrev = () => goTo(Math.max(0, index - 1))
+  const goNext = () => goTo(Math.min(matches.length - 1, index + 1))
+  const close = () => leave(onHide)
 
   // The next position after this one that the Form is still not satisfied on.
   const nextUnreconciled = useMemo(() => {
@@ -204,7 +208,7 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [show, phase, matches.length])
+  }, [show, phase, matches.length, index, current])
 
   // Recipe rows for the current match
   const grouped = useMemo(() => {
@@ -264,7 +268,7 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
   function setFilter(key, val) { setFilters(prev => ({ ...prev, [key]: val })) }
 
   return (
-    <Modal show={show} onHide={onHide} size="xl" centered>
+    <Modal show={show} onHide={close} size="xl" centered>
       <Modal.Header closeButton>
         <Modal.Title style={{ fontSize: 14 }} className="d-flex align-items-center gap-2">
           <MaterialIcon name={ACTION_ICONS.review} size={18} /> Review recipes
@@ -411,7 +415,7 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
       {/* Close is a quiet link on the left; the right-hand corner, where the eye and the
           mouse go for "next", is Next. */}
       <Modal.Footer className="d-flex align-items-center">
-        <Button variant="link" size="sm" className="text-muted me-auto p-0" onClick={onHide}>Close</Button>
+        <Button variant="link" size="sm" className="text-muted me-auto p-0" onClick={close}>Close</Button>
         {phase === 'cycle' && matches.length > 0 && (
           <>
             <Button variant="outline-secondary" size="sm" disabled={!canPrev} onClick={goPrev}
@@ -420,7 +424,7 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
             <Button variant={nextUnreconciled >= 0 ? 'outline-primary' : 'primary'} size="sm"
               disabled={!canNext} onClick={goNext} title="Next (→)">Next ›</Button>
             {nextUnreconciled >= 0 && (
-              <Button variant="primary" size="sm" onClick={() => setIndex(nextUnreconciled)}
+              <Button variant="primary" size="sm" onClick={() => goTo(nextUnreconciled)}
                 title="Skip positions the Form is already satisfied on">
                 Next unreconciled: <span style={{ fontFamily: 'monospace' }}>{matches[nextUnreconciled].ref}</span> →
               </Button>

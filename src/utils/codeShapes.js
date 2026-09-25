@@ -145,5 +145,18 @@ export function matchShape(code, maker, shapes = []) {
     }
     return null
   }
-  return { current: find('current'), superseded: find('superseded') }
+  // Same shape once separators are ignored: NFS240272009 is NFS###-##-#### typed without its
+  // dashes. Trusted only when every loose hit names the same family.
+  const loose = sh => sh.replace(/[^A-Z0-9]/g, '').replace(/9+/g, '9')
+  const findLoose = status => {
+    const want = loose(shapeOf(code, 'fine'))
+    if (!want || !/9/.test(want)) return null
+    const hits = shapes.filter(s => (s.level || 'coarse') === 'fine' && makerKey(s.maker) === m
+      && (s.status || 'current') === status && loose(s.shape) === want)
+    return hits.length > 0 && hits.every(h => h.family === hits[0].family) ? hits[0] : null
+  }
+  return {
+    current: find('current') || findLoose('current'),
+    superseded: find('superseded') || findLoose('superseded'),
+  }
 }

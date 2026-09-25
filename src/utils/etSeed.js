@@ -125,16 +125,18 @@ export function pickFamily(signals, ctx) {
   if (design.value) return done(design.value, 'design', { spread: design.distinct })
 
   const words = classifyText(signals.text)
+  // Text that names two kinds of product ("tape in profile") is a guess, not an answer.
+  const mixed = words?.others?.length > 0
   if (signals.pageType === 'point') {
     if (signals.role !== 'extra') return done(POINT, 'canon', { canon: 'Point page' })
-    if (words) return done(words.family, 'canon', { head: words.head, canon: words.keyword })
+    if (words) return done(words.family, 'canon', { head: words.head, canon: words.keyword, flag: mixed })
     return done(ACCESSORIES, 'canon', { canon: 'extra code on a Point page' })
   }
   if (signals.pageType === 'linear') {
-    if (words) return done(words.family, 'canon', { head: words.head, canon: words.keyword })
+    if (words) return done(words.family, 'canon', { head: words.head, canon: words.keyword, flag: mixed })
     return done(LINEAR_FALLBACK, 'canon', { canon: 'Linear page, no keyword', flag: true })
   }
-  if (words) return done(words.family, 'canon', { head: words.head, canon: words.keyword })
+  if (words) return done(words.family, 'canon', { head: words.head, canon: words.keyword, flag: mixed })
 
   const parent = mostCommon(signals.parents || [])
   if (parent.value) {

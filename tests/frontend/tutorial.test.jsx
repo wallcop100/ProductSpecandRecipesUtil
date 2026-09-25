@@ -244,6 +244,24 @@ describe('TutorialHint — auto-open once, then a quiet ? for ever', () => {
     expect(await screen.findByText('The palette drawer')).toBeInTheDocument()
   })
 
+  test('a card never auto-opens over another modal; it waits for that one to close', async () => {
+    const { Modal } = await import('react-bootstrap')
+    const { rerender } = render(<><Modal show><Modal.Body>Other</Modal.Body></Modal><TutorialHint id="builder-tree" /></>)
+    await screen.findByText('Other')
+    expect(screen.queryByText('The project tree')).toBeNull()
+
+    rerender(<><Modal show={false}><Modal.Body>Other</Modal.Body></Modal><TutorialHint id="builder-tree" /></>)
+    expect(await screen.findByText('The project tree')).toBeInTheDocument()
+  })
+
+  test('while a card is open, other modals are held back', async () => {
+    render(<TutorialHint id="builder-tree" />)
+    await screen.findByText('The project tree')
+    expect(document.body.classList.contains('tutorial-open')).toBe(true)
+    fireEvent.click(screen.getByLabelText('Close'))
+    await waitFor(() => expect(document.body.classList.contains('tutorial-open')).toBe(false))
+  })
+
   test('every `after` names a card that exists', () => {
     for (const [id, t] of Object.entries(TUTORIALS)) {
       for (const other of t.after || []) {

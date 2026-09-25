@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import MaterialIcon from '../components/MaterialIcon'
-import TutorialCard from './TutorialCard'
+import TutorialCard, { otherModalOpen } from './TutorialCard'
 import { TUTORIALS } from './tutorials'
 import { hasSeen, subscribeSeen } from './seen'
 
@@ -34,11 +34,20 @@ export default function TutorialHint({ id, size = 14, active = true }) {
 
   // Re-evaluate when any card is dismissed: this one may have been waiting for it.
   useEffect(() => subscribeSeen(() => bump(n => n + 1)), [])
+  // ...and when a modal closes: a card never auto-opens over (or inside) another modal,
+  // so it waits for that one to go. Bootstrap marks an open modal on <body>.
+  useEffect(() => {
+    if (typeof MutationObserver === 'undefined') return
+    const mo = new MutationObserver(() => bump(n => n + 1))
+    mo.observe(document.body, { attributes: true, attributeFilter: ['class'], childList: true })
+    return () => mo.disconnect()
+  }, [])
 
   useEffect(() => {
     if (fired.current || !active) return
     const t = TUTORIALS[id]
     if (!t || hasSeen(id) || autoOpenLock) return
+    if (otherModalOpen()) return
     // Wait our turn: something more fundamental has not been read yet.
     if ((t.after || []).some(other => !hasSeen(other))) return
 

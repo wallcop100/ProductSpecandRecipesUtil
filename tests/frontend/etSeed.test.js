@@ -157,3 +157,16 @@ describe('the tool-wide style library', () => {
     expect(proposals[0]).toMatchObject({ family: 'ET-REMOTE-DRIVERS', why: 'stem' })
   })
 })
+
+describe('the code beats the description', () => {
+  test('LEDFlex NFS tape with "profile" in its note is still tape', async () => {
+    const shipped = (await import('../../src/data/codeShapes.json')).default
+    const r = pickFamily({ code: 'NFS240272009', manufacturer: 'LEDFlex', text: 'LED tape in aluminium profile', pageType: 'linear', role: 'lead' },
+      { shapes: shipped.shapes || shipped })
+    expect(r.family).toBe('ET-LIN-TAPE')
+  })
+  test('a description naming two kinds of product is flagged', () => {
+    const r = pickFamily({ code: 'ZZ1', manufacturer: 'Nobody', text: 'LED tape in aluminium profile', pageType: 'linear', role: 'lead' }, {})
+    expect(r.flag).toBe(true)
+  })
+})

@@ -24,6 +24,20 @@ import { deadPositionRefs, retirableElementTypes } from '../utils/deadPositions.
 import { familyOf } from '../utils/etRef.js'
 import { DIM_QTY_COMPONENTS, AUTO_CONTRACT_ITEMS } from '../utils/constants.js'
 
+/**
+ * A row carries EITHER a Quantity OR a Dim_QuantityMultiplier, never both: a dimensioned
+ * item (tape, profile, diffuser…) is counted by length, everything else by count.
+ * Dimensioned items default to a multiplier of 1; a CAP defaults to 2.
+ */
+export function qtyPair(etRef, data = {}) {
+  const t = String(etRef || '').toUpperCase()
+  const given = data.dimQtyMultiplier ?? data.Dim_QuantityMultiplier ?? null
+  // An end cap is counted, even one named after its profile (ET-LIN-PROF-CAP).
+  const dim = given ?? (!t.includes('CAP') && DIM_QTY_COMPONENTS.some(k => t.includes(k)) ? 1 : null)
+  const quantity = dim != null ? null : (t.includes('CAP') ? 2 : (data.quantity ?? data.Quantity ?? 1))
+  return { quantity, dim }
+}
+
 // Max number of undo snapshots retained.
 const HISTORY_LIMIT = 50
 
@@ -429,6 +443,7 @@ const useStore = create((set, get) => ({
   // UI state
   rootView: 'positions',               // 'positions' | 'elements' — top-level browse mode
   activePositionRef: null,
+  designPrompt: null,                 // { posRef, then } — see leavePosition
   activeContextType: 'PositionType',  // 'PositionType' | 'ElementType'
   activeETRef: null,                   // ET ref being edited in canvas
   showContextTree: false,
@@ -637,7 +652,57 @@ const useStore = create((set, get) => ({
   /**
    * setActivePosition(ref)
    */
+  /**
+   * settleDesign(posRef) — every position recipe has one IsDesign item, settled as you
+   * leave it (not while you build it: the first thing added is often not the design item).
+   * → 'ok'       nothing to do (already has one, or the recipe is empty)
+   *   'assigned' it held exactly one position-level row; that row is now the design item
+   *   'choose'   several rows and none is the design item — the user must pick
+   */
+  settleDesign(posRef) {
+    if (!posRef) return 'ok'
+    const rows = get().recipes.filter(r => (r.PositionTypeRef || r.positionTypeRef) === posRef
+      && (r.IsDeleted || r.isDeleted) !== 'Y' && (r.ContextType || r.contextType) === 'PositionType')
+    if (rows.length === 0 || rows.some(r => (r.IsDesign || r.isDesign) === 'Y')) return 'ok'
+    if (rows.length === 1) {
+      // Design-or-contract: the design item is not also a contract item.
+      get().updateRecipeRow(posRef, rows[0]._id, { IsDesign: 'Y', IsContractItem: null })
+      return 'assigned'
+    }
+    return 'choose'
+  },
+
+  /**
+   * leavePosition(posRef, then) — run `then` once posRef has its design item. When the
+   * user has to choose one, `then` waits in `designPrompt` (DesignPickerModal) and runs
+   * after the pick; "Stay" drops it. → true when `then` ran now.
+   */
+  leavePosition(posRef, then) {
+    if (get().settleDesign(posRef) === 'choose') {
+      set({ designPrompt: { posRef, then } })
+      return false
+    }
+    then?.()
+    return true
+  },
+
+  /** The user picked the design item: set it, then carry on to where they were going. */
+  resolveDesignPrompt(rowId) {
+    const p = get().designPrompt
+    if (!p) return
+    get().updateRecipeRow(p.posRef, rowId, { IsDesign: 'Y', IsContractItem: null })
+    set({ designPrompt: null })
+    p.then?.()
+  },
+
+  cancelDesignPrompt() { set({ designPrompt: null }) },
+
   setActivePosition(ref) {
+    const from = get().activePositionRef
+    if (from && ref !== from && get().settleDesign(from) === 'choose') {
+      set({ designPrompt: { posRef: from, then: () => get().setActivePosition(ref) } })
+      return
+    }
     // Going to another position leaves any ElementType editor. Left open, it kept
     // addRecipeRow in "ET mode", so a Form product added on A7a was written into the open
     // wrapper's recipe on the positions using it (A5c) — and A7a still showed it missing.
@@ -656,6 +721,11 @@ const useStore = create((set, get) => ({
    */
   focusPosition(ref) {
     if (!ref) return
+    const from = get().activePositionRef
+    if (from && ref !== from && get().settleDesign(from) === 'choose') {
+      set({ designPrompt: { posRef: from, then: () => get().focusPosition(ref) } })
+      return
+    }
     set({
       rootView: 'positions',
       activeContextType: 'PositionType',
@@ -1160,7 +1230,6 @@ const useStore = create((set, get) => ({
     if (etMode) {
       const etRef = ingredientData.elementTypeRef || ingredientData.ElementTypeRef || null
       const etToken = etRef ? etRef.toUpperCase() : ''
-      const isDimComponent = DIM_QTY_COMPONENTS.some(t => etToken.includes(t))
 
       // Find all positions that have rows for this ET's internal recipe
       const existingETRows = recipes.filter(r =>
@@ -1180,10 +1249,10 @@ const useStore = create((set, get) => ({
         contextRef: activeETRef, ContextRef: activeETRef,
         recipeIndex: maxIndex + 1, RecipeIndex: maxIndex + 1,
         elementTypeRef: etRef, ElementTypeRef: etRef,
-        quantity: etToken.includes('CAP') ? 2 : (ingredientData.quantity ?? 1),
-        Quantity: etToken.includes('CAP') ? 2 : (ingredientData.quantity ?? 1),
-        dimQtyMultiplier: isDimComponent ? 1 : (ingredientData.dimQtyMultiplier ?? null),
-        Dim_QuantityMultiplier: isDimComponent ? 1 : (ingredientData.dimQtyMultiplier ?? null),
+        quantity: qtyPair(etRef, ingredientData).quantity,
+        Quantity: qtyPair(etRef, ingredientData).quantity,
+        dimQtyMultiplier: qtyPair(etRef, ingredientData).dim,
+        Dim_QuantityMultiplier: qtyPair(etRef, ingredientData).dim,
         dimQuantity: ingredientData.dimQuantity ?? null, Dim_Quantity: ingredientData.dimQuantity ?? null,
         isInteger: ingredientData.isInteger ?? null, IsInteger: ingredientData.isInteger ?? null,
         isTRItem: ingredientData.isTRItem ?? null, IsTRItem: ingredientData.isTRItem ?? null,
@@ -1222,7 +1291,6 @@ const useStore = create((set, get) => ({
     const etToken = etRef ? etRef.toUpperCase() : ''
 
     // Auto-derived fields
-    const isDimComponent = DIM_QTY_COMPONENTS.some(token => etToken.includes(token))
     const isAutoContract = AUTO_CONTRACT_ITEMS.some(token => etToken.includes(token))
 
     const { contextType, contextRef } = contextForSection(section, posRef, recipes, containerETRefs)
@@ -1250,10 +1318,10 @@ const useStore = create((set, get) => ({
       RecipeIndex: maxIndex + 1,
       elementTypeRef: etRef,
       ElementTypeRef: etRef,
-      quantity: etToken.includes('CAP') ? 2 : (ingredientData.quantity ?? 1),
-      Quantity: etToken.includes('CAP') ? 2 : (ingredientData.quantity ?? 1),
-      dimQtyMultiplier: isDimComponent ? 1 : (ingredientData.dimQtyMultiplier ?? null),
-      Dim_QuantityMultiplier: isDimComponent ? 1 : (ingredientData.dimQtyMultiplier ?? null),
+      quantity: qtyPair(etRef, ingredientData).quantity,
+      Quantity: qtyPair(etRef, ingredientData).quantity,
+      dimQtyMultiplier: qtyPair(etRef, ingredientData).dim,
+      Dim_QuantityMultiplier: qtyPair(etRef, ingredientData).dim,
       dimQuantity: ingredientData.dimQuantity ?? null,
       Dim_Quantity: ingredientData.dimQuantity ?? null,
       isInteger: ingredientData.isInteger ?? null,
@@ -1520,7 +1588,6 @@ const useStore = create((set, get) => ({
     if (recordHistory) get()._pushHistory()
 
     const etToken = etRef.toUpperCase()
-    const isDimComponent = DIM_QTY_COMPONENTS.some(t => etToken.includes(t))
     const isAutoContract = AUTO_CONTRACT_ITEMS.some(t => etToken.includes(t))
 
     const existingETRows = recipes.filter(r =>
@@ -1539,10 +1606,10 @@ const useStore = create((set, get) => ({
       contextRef: containerETRef, ContextRef: containerETRef,
       recipeIndex: maxIndex + 1, RecipeIndex: maxIndex + 1,
       elementTypeRef: etRef, ElementTypeRef: etRef,
-      quantity: etToken.includes('CAP') ? 2 : (ingredientData.quantity ?? 1),
-      Quantity: etToken.includes('CAP') ? 2 : (ingredientData.quantity ?? 1),
-      dimQtyMultiplier: isDimComponent ? 1 : (ingredientData.dimQtyMultiplier ?? null),
-      Dim_QuantityMultiplier: isDimComponent ? 1 : (ingredientData.dimQtyMultiplier ?? null),
+      quantity: qtyPair(etRef, ingredientData).quantity,
+      Quantity: qtyPair(etRef, ingredientData).quantity,
+      dimQtyMultiplier: qtyPair(etRef, ingredientData).dim,
+      Dim_QuantityMultiplier: qtyPair(etRef, ingredientData).dim,
       dimQuantity: ingredientData.dimQuantity ?? null, Dim_Quantity: ingredientData.dimQuantity ?? null,
       isInteger: ingredientData.isInteger ?? null, IsInteger: ingredientData.isInteger ?? null,
       isDesign: null, IsDesign: null,
@@ -2157,6 +2224,12 @@ const useStore = create((set, get) => ({
     // Write every RS field under both casings — see normalizeRsUpdates. Without this a
     // camelCase-only edit is invisible to the export diff.
     const updates = normalizeRsUpdates(rawUpdates)
+    // Quantity and Dim_QuantityMultiplier are exclusive: setting one clears the other.
+    if (updates.Dim_QuantityMultiplier != null && updates.Dim_QuantityMultiplier !== '') {
+      updates.Quantity = null; updates.quantity = null
+    } else if (updates.Quantity != null && updates.Quantity !== '') {
+      updates.Dim_QuantityMultiplier = null; updates.dimQtyMultiplier = null
+    }
 
     if (recordHistory) get()._pushHistory()
 
@@ -3139,6 +3212,26 @@ const useStore = create((set, get) => ({
    * to the local_element_types staging table (survives restart regardless of
    * the DB-write setting), and — when DB writes are on — queues a catalogue row.
    */
+  /**
+   * addWrapper(posRef, kind) — give a bare position a new wrapper: the next free
+   * ET-LIN-NN / ET-DL-NN, created as a collection in the ET-LIN / ET-DL family, placed as
+   * the position's design element, and specced Ideaworks / N/A like any wrapper.
+   * One undo step. → the new ref, or null when the position already has a design element.
+   */
+  addWrapper(posRef, kind = 'LIN', { name = null } = {}) {
+    const k = String(kind).toUpperCase() === 'DL' ? 'DL' : 'LIN'
+    const live = r => (r.IsDeleted || r.isDeleted) !== 'Y'
+    const hasDesign = get().recipes.some(r => live(r) && (r.PositionTypeRef || r.positionTypeRef) === posRef
+      && (r.ContextType || r.contextType) === 'PositionType' && (r.IsDesign || r.isDesign) === 'Y')
+    if (!posRef || hasDesign) return null
+    const ref = getNextAvailableRef(`ET-${k}-01`, get().elementTypes)
+    get()._pushHistory()
+    get().createElementType({ ref, name, family: `ET-${k}`, isCollection: true })
+    set(s => ({ containerETRefs: new Set([...s.containerETRefs, ref.toLowerCase()]) }))
+    get().addRecipeRow(posRef, 'position', { elementTypeRef: ref, isDesign: 'Y' }, { recordHistory: false, asPosition: true })
+    return ref
+  },
+
   createElementType({ ref, name = null, description = null, family = null, isCollection = false } = {}) {
     const trimmed = (ref || '').trim()
     if (!trimmed) return null

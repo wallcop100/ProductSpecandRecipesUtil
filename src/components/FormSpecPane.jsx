@@ -215,6 +215,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
   const projectId = useStore(s => s.projectId)
 
   const undo = useStore(s => s.undo)
+  const addWrapper = useStore(s => s.addWrapper)
   // The last one-click add, for its "Added … · Undo" line. Cleared when the position changes.
   const [lastAdded, setLastAdded] = useState(null)   // { posRef, refs: [ref], where }
   const [forking, setForking] = useState(false)
@@ -455,6 +456,13 @@ export default function FormSpecPane({ posRef, embedded = false }) {
   }
 
   const added = lastAdded && lastAdded.posRef === posRef ? lastAdded : null
+  // A position whose design element is not a wrapper (a lamp, say) is not offered one.
+  const hasDesign = recipes.some(r => (r.PositionTypeRef || r.positionTypeRef) === posRef
+    && (r.IsDeleted || r.isDeleted) !== 'Y'
+    && (r.ContextType || r.contextType) === 'PositionType' && (r.IsDesign || r.isDesign) === 'Y')
+  // Tape, profile, neon… is a linear assembly; anything else a downlight-style one.
+  const wrapperKind = formEts.some(e => /\b(TAPE|PROF\w*|FLEX|NEON|DIFF\w*|LIN\w*|STRIP)\b|-(TAPE|PROF|FLEX|LIN)-/i
+    .test(`${e.elementTypeRef} ${e.note || ''}`)) ? 'LIN' : 'DL'
   const allPresent = missing.length === 0 && formEts.length > 0
 
   return (
@@ -594,12 +602,24 @@ export default function FormSpecPane({ posRef, embedded = false }) {
         </div>
       )}
 
-      {/* The Form is silent about slots, and this position has no assembly to put
-          anything inside. Nothing is broken; say so before the chooser greys out. */}
+      {/* No wrapper yet (a blank position, usually). Offer one, rather than only saying
+          so: the kind that fits the Form's products is the filled button. */}
       {missing.length > 0 && !container && (
-        <div className="text-muted mb-1" style={{ fontSize: 10 }}>
-          <MaterialIcon name="info" size={10} /> {posRef} has no wrapper, so everything lands at
-          PositionType Level.
+        <div className="text-muted mb-2 d-flex align-items-center gap-1 flex-wrap" style={{ fontSize: 10 }} data-testid="no-wrapper">
+          <MaterialIcon name="info" size={10} /> {posRef} has no wrapper.
+          {!hasDesign ? (
+            <>
+              {['LIN', 'DL'].map(k => (
+                <Button key={k} size="sm" variant={k === wrapperKind ? 'primary' : 'outline-primary'}
+                  style={{ fontSize: 10, padding: '0 6px' }}
+                  title={`Create the next ET-${k}-NN and make it ${posRef}'s design element`}
+                  onClick={() => addWrapper(posRef, k, { name: formCaptures.contextByPosition?.[posRef]?.ProductName || null })}>
+                  + {k} wrapper
+                </Button>
+              ))}
+              <span>or add at position level.</span>
+            </>
+          ) : <span>Products land at position level.</span>}
         </div>
       )}
 

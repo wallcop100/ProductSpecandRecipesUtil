@@ -4,6 +4,13 @@ import MaterialIcon from '../components/MaterialIcon'
 import { TUTORIALS, ALL_TUTORIAL_IDS } from './tutorials'
 import { SCENES } from './scenes'
 import { markSeen, markAllSeen } from './seen'
+import './tutorial.css'
+
+/** Is some modal other than a tutorial card open? Tutorials never stack on one. */
+export function otherModalOpen() {
+  if (typeof document === 'undefined') return false
+  return !!document.querySelector('.modal:not(.tutorial-modal)')
+}
 
 /**
  * TutorialCard — the one shell every pane's tutorial plays in.
@@ -21,6 +28,12 @@ export default function TutorialCard({ id, show, onHide }) {
   const card = TUTORIALS[id]
   const [step, setStep] = useState(0)
   useEffect(() => { if (show) setStep(0) }, [show])
+  // While open, other modals are held back (tutorial.css) until this one closes.
+  useEffect(() => {
+    if (!show) return
+    document.body.classList.add('tutorial-open')
+    return () => document.body.classList.remove('tutorial-open')
+  }, [show])
 
   if (!card) return null
   const steps = card.steps
@@ -39,7 +52,7 @@ export default function TutorialCard({ id, show, onHide }) {
   }
 
   return (
-    <Modal show={show} onHide={dismiss} centered size="lg">
+    <Modal show={show} onHide={dismiss} centered size="lg" className="tutorial-modal" backdropClassName="tutorial-backdrop">
       <Modal.Header closeButton>
         <Modal.Title style={{ fontSize: 15 }} className="d-flex align-items-center gap-2">
           <MaterialIcon name={card.icon || 'school'} size={18} />

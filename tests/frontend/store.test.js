@@ -2052,3 +2052,73 @@ describe('Form adds land on the position you are on, even with a wrapper editor 
     expect(useStore.getState().activeETRef).toBe(W)
   })
 })
+
+describe('Quantity and Dim_QuantityMultiplier never coexist', () => {
+  beforeEach(() => resetStore({ recipes: [], activePositionRef: null, containerETRefs: new Set() }))
+  const row = ref => useStore.getState().recipes.find(r => r.ElementTypeRef === ref)
+
+  test('a profile defaults to a multiplier of 1 and no quantity', () => {
+    useStore.getState().addRecipeRow('B1', 'position', { elementTypeRef: 'ET-LIN-PROF-01' })
+    expect(row('ET-LIN-PROF-01')).toMatchObject({ Dim_QuantityMultiplier: 1, Quantity: null })
+  })
+
+  test('an end cap is counted, not measured', () => {
+    useStore.getState().addRecipeRow('B1', 'position', { elementTypeRef: 'ET-LIN-PROF-CAP-01' })
+    expect(row('ET-LIN-PROF-CAP-01')).toMatchObject({ Quantity: 2, Dim_QuantityMultiplier: null })
+  })
+
+  test('setting one clears the other', () => {
+    const r = useStore.getState().addRecipeRow('B1', 'position', { elementTypeRef: 'ET-LIN-TAPE-01' })
+    useStore.getState().updateRecipeRow('B1', r._id, { quantity: 3 })
+    expect(row('ET-LIN-TAPE-01')).toMatchObject({ Quantity: 3, Dim_QuantityMultiplier: null })
+    useStore.getState().updateRecipeRow('B1', r._id, { dimQtyMultiplier: 2 })
+    expect(row('ET-LIN-TAPE-01')).toMatchObject({ Quantity: null, Dim_QuantityMultiplier: 2 })
+  })
+})
+
+describe('every recipe has one IsDesign item, settled as you leave it', () => {
+  beforeEach(() => resetStore({ recipes: [], activePositionRef: null, containerETRefs: new Set(), designPrompt: null }))
+  const add = (pos, ref) => useStore.getState().addRecipeRow(pos, 'position', { elementTypeRef: ref })
+
+  test('a lone row is not marked while you build, only when you leave', () => {
+    useStore.getState().setActivePosition('B1')
+    const r = add('B1', 'ET-PS-01')
+    expect(r.IsDesign).toBeNull()
+    useStore.getState().setActivePosition('B2')
+    const after = useStore.getState().recipes.find(x => x._id === r._id)
+    expect(after.IsDesign).toBe('Y')
+    expect(after.IsContractItem).toBeNull()
+    expect(useStore.getState().activePositionRef).toBe('B2')
+  })
+
+  test('several rows and none marked: you stay until you pick one', () => {
+    useStore.getState().setActivePosition('B1')
+    add('B1', 'ET-PS-01'); const drv = add('B1', 'ET-DRIVER-01')
+    useStore.getState().setActivePosition('B2')
+    expect(useStore.getState().activePositionRef).toBe('B1')
+    expect(useStore.getState().designPrompt.posRef).toBe('B1')
+
+    useStore.getState().resolveDesignPrompt(drv._id)
+    expect(useStore.getState().recipes.find(x => x._id === drv._id).IsDesign).toBe('Y')
+    expect(useStore.getState().activePositionRef).toBe('B2')
+    expect(useStore.getState().designPrompt).toBeNull()
+  })
+
+  test('Stay keeps you on the position', () => {
+    useStore.getState().setActivePosition('B1')
+    add('B1', 'ET-PS-01'); add('B1', 'ET-PS-02')
+    useStore.getState().setActivePosition('B2')
+    useStore.getState().cancelDesignPrompt()
+    expect(useStore.getState().activePositionRef).toBe('B1')
+  })
+
+  test('an empty recipe, or one already marked, lets you go', () => {
+    useStore.getState().setActivePosition('B1')
+    useStore.getState().setActivePosition('B2')
+    expect(useStore.getState().activePositionRef).toBe('B2')
+    useStore.getState().addRecipeRow('B2', 'position', { elementTypeRef: 'ET-PS-01', isDesign: 'Y' })
+    add('B2', 'ET-DRIVER-01')
+    useStore.getState().setActivePosition('B3')
+    expect(useStore.getState().activePositionRef).toBe('B3')
+  })
+})
