@@ -37,6 +37,7 @@ import { matchShape } from '../utils/codeShapes'
 import shippedShapes from '../data/codeShapes.json'
 import { resolveFormRefs, buildRefMap, targetFor } from '../utils/ptResolve'
 import { applyKnownCodes, knownTokenIndices } from '../utils/knownCodes'
+import { joinAccessories } from '../utils/accessories'
 import { diffCaptures, wrapperDivergence } from '../utils/formSpec'
 
 /** Fuzzy header match: exact normalised hit first, else shortest header containing it. */
@@ -92,7 +93,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   const [sheet, setSheet] = useState('')
   const [headers, setHeaders] = useState([])
   const [rawRows, setRawRows] = useState([])
-  const [map, setMap] = useState({ pt: '', code: '', mfr: '', exclude: '', context: [] })
+  const [map, setMap] = useState({ pt: '', code: '', mfr: '', exclude: '', acc: '', context: [] })
 
   const [rows, setRows] = useState([])
   const [rules, setRules] = useState({})
@@ -179,6 +180,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       code: detect(data.headers, 'productcode'),
       mfr: detect(data.headers, 'manufacturer'),
       exclude: detect(data.headers, 'exclude'),
+      acc: detect(data.headers, 'accessor'),
     }
     setAutoMap(guessed)
     setMap({ ...guessed, context: CONTEXT_WANTS.map(w => detect(data.headers, w)).filter(Boolean) })
@@ -217,8 +219,10 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   /** The rows the mapping selects, in queue order. */
   const buildRows = useCallback(() => rawRows
     .filter(r => !(map.exclude && isExcluded(r[map.exclude])))
-    .filter(r => r[map.code] != null && String(r[map.code]).trim() !== '')
-    .map((r, i) => makeRow(i, String(r[map.code]), {
+    // The Accessories column (when mapped) is more codes for the same position.
+    .map(r => ({ r, text: joinAccessories(r[map.code], map.acc ? r[map.acc] : null) }))
+    .filter(({ text }) => text !== '')
+    .map(({ r, text }, i) => makeRow(i, text, {
       positionType: String(r[map.pt] ?? '').trim(),
       manufacturer: String(r[map.mfr] ?? '').trim(),
       context: captureContext(r, capturable),
@@ -306,7 +310,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     setRefOverrides(d.refOverrides || {})
     setKeptSeparate(new Set(d.keptSeparate || []))
     setDirStats(d.dirStats || { forward: 0, backward: 0 })
-    setMap(d.map || { pt: '', code: '', mfr: '', exclude: '', context: [] })
+    setMap(d.map ? { acc: '', ...d.map } : { pt: '', code: '', mfr: '', exclude: '', acc: '', context: [] })
     setSource(d.source || null)
     setSheet(d.source?.sheet || '')
     setStaged(null); setUndoSnap(null)
@@ -1038,7 +1042,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
 
                 {/* The Form's ProductCode cell as written, to copy while checking the spec. */}
                 <div className="d-flex align-items-start gap-2 mb-1 px-2" style={{ fontSize: 11 }}>
-                  <span className="fw-semibold flex-shrink-0" style={{ minWidth: 84 }}>{map.code || 'ProductCode'}</span>
+                  <span className="fw-semibold flex-shrink-0" style={{ minWidth: 84 }}>
+                    {map.code || 'ProductCode'}{map.acc && <span className="text-muted fw-normal"> + {map.acc}</span>}
+                  </span>
                   <span style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{current.rawText}</span>
                   <CopyButton text={current.rawText} what="the Form's product code cell" />
                 </div>

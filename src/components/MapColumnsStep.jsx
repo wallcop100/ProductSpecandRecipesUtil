@@ -30,6 +30,11 @@ const FIELDS = [
     hint: 'A product is (manufacturer, code) — the same code from two makers is two products.',
   },
   {
+    key: 'acc', icon: 'extension',
+    label: 'Accessories',
+    hint: 'More product codes for the same position (snoots, louvres, profiles). Read after the product code, as extras; "-" is ignored.',
+  },
+  {
     key: 'exclude', icon: 'filter_alt',
     label: 'Exclude rows where set',
     hint: 'Any non-blank value (other than "no") drops the row.',
@@ -174,6 +179,11 @@ export default function MapColumnsStep({
           <div className="mt-1" style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 12 }}>
             {String(preview[map.code])}
           </div>
+          {map.acc && preview[map.acc] != null && String(preview[map.acc]).trim() !== '' && (
+            <div className="mt-1" style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 12 }}>
+              <span className="text-muted" style={{ fontFamily: 'inherit', fontSize: 10 }}>+ accessories: </span>{String(preview[map.acc])}
+            </div>
+          )}
           {map.context.length > 0 && (
             <div className="mt-1 text-muted" style={{ fontSize: 10 }}>
               {map.context.filter(c => preview[c] != null && String(preview[c]).trim() !== '')
