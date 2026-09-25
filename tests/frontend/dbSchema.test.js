@@ -390,3 +390,23 @@ describe('config YAML — enough to recover a config', () => {
     expect(() => schema.applyConfigData(p.id, { version: 9 })).toThrow(/Unsupported config file version: 9/)
   })
 })
+
+describe('style library — tool-wide, travels with the personal library', () => {
+  const e = (code, ref) => ({ maker: 'LEDFlex', code, ref, family: 'ET-LIN-TAPE', name: 'n', description: 'd', source: 'P2' })
+
+  test('recording is idempotent per (maker, code, ref) and counts only new rows', () => {
+    expect(schema.recordStyleExemplars([e('A1', 'ET-LIN-TAPE-A-01'), e('B1', 'ET-LIN-TAPE-B-01')])).toBe(2)
+    expect(schema.recordStyleExemplars([e('A1', 'ET-LIN-TAPE-A-01'), { maker: '', code: 'x', ref: 'y', family: 'z' }])).toBe(0)
+    expect(schema.getStyleExemplars()).toHaveLength(2)
+    expect(schema.getStyleSummary()).toEqual({ count: 2, sources: ['P2'] })
+  })
+
+  test('exported with the library and merged back on import', () => {
+    schema.recordStyleExemplars([e('A1', 'ET-LIN-TAPE-A-01')])
+    const data = schema.collectLibraryData()
+    expect(data.styles).toHaveLength(1)
+    conn.exec('DELETE FROM style_exemplars')
+    expect(schema.applyLibraryData(data).stylesAdded).toBe(1)
+    expect(schema.getStyleExemplars()[0]).toMatchObject({ code: 'A1', ref: 'ET-LIN-TAPE-A-01' })
+  })
+})

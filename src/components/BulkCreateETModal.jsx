@@ -25,12 +25,13 @@ import { refamily, ACCESSORIES } from '../utils/etSeed'
 
 const WHY = {
   stem: 'same product line',
+  style: r => `styled like ${r.styledOn?.ref}${r.styledOn?.source ? ` (${r.styledOn.source})` : ''}`,
   design: "position's design element",
   parent: p => `position parent ${p}`,
   extra: 'extra code in its cell',
   you: 'you chose it',
 }
-const whyText = r => (r.why === 'parent' ? WHY.parent(r.parent) : WHY[r.why] || '')
+const whyText = r => (r.why === 'parent' ? WHY.parent(r.parent) : r.why === 'style' ? WHY.style(r) : WHY[r.why] || '')
 const NONE = '__none'
 const REUSE = '__reuse'
 const SKIP = '__skip'
@@ -197,6 +198,13 @@ export default function BulkCreateETModal({
                                 style={{ fontFamily: 'monospace', fontSize: 11 }}
                                 onChange={e => patch(i, { ref: e.target.value })} />
                               {bad && r.include && <div className="text-danger" style={{ fontSize: 10 }}>{bad}</div>}
+                              {!bad && r.checkRef && (
+                                <div style={{ fontSize: 10, color: '#856404' }}
+                                  title="Part of the example's ref could not be confirmed from this code or the Form, or equally close examples disagree">
+                                  <MaterialIcon name="warning" size={10} /> check ref
+                                  {r.alternatives?.length > 0 && <> — or {r.alternatives.join(', ')}</>}
+                                </div>
+                              )}
                               {whyText(r) && (
                                 <div className="text-muted" style={{ fontSize: 9 }}>
                                   {whyText(r)}{r.spread > 1 ? ` · used under ${r.spread} families` : ''}

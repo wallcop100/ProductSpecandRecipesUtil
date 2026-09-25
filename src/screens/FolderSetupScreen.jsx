@@ -6,6 +6,7 @@ import useStore from '../store/useStore'
 import { evaluateTags, effectiveTags, computeTagDrift } from '../utils/tagRules'
 import { extractProjectId } from '../utils/projectId'
 import { detectFiles as detectProjectFiles, importFiles } from '../utils/backend'
+import { harvestExemplars } from '../utils/styleLibrary'
 import { groupProjects, adoptPlan, pickCanonical, UNASSIGNED, dbFilesOf, pickDbs } from '../utils/projectIdentity'
 import ProjectCard from '../components/ProjectCard'
 import ProjectIdPill from '../components/ProjectIdPill'
@@ -64,6 +65,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
   const [restore, setRestore] = useState(null)
   const [showChangelog, setShowChangelog] = useState(false)
   const [libraryMsg, setLibraryMsg] = useState(null)
+  const [styleSummary, setStyleSummary] = useState(null)
 
   // Folder access is a Chromium-only API. Say so up front rather than failing at the picker.
   useEffect(() => {
@@ -83,6 +85,9 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
     try {
       setDuplicates(await window.electronAPI.findDuplicateFolders?.() || [])
     } catch { /* no handles, or a browser that cannot compare them */ }
+    try {
+      setStyleSummary(await window.electronAPI.db.getStyleSummary?.() || null)
+    } catch { /* no library yet */ }
   }, [])
 
   useEffect(() => { refresh() }, [refresh])
@@ -371,6 +376,14 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
       const positions = db_data?.positions ?? []
       // Collections are stripped from element_types but ARE in the master list.
       const dbCollectionRefs = db_data?.collection_refs ?? []
+
+      // Feed the tool-wide style library: how this project named its products' ElementTypes.
+      // Best-effort and silent — it only ever helps a later import seed refs.
+      try {
+        await window.electronAPI.db.recordStyleExemplars?.(harvestExemplars({
+          elementTypes, psRows: ps_rows, source: [projectNumber, label].filter(Boolean).join(' ') || folder,
+        }))
+      } catch { /* the library is a convenience, never a reason not to open */ }
 
       // Read any crash-surviving pending changes BEFORE loadProject resets the
       // queues (the persistence subscription would otherwise overwrite them).
@@ -904,12 +917,22 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
               title="Merge a library YAML into your favourites + global templates"
               onClick={async () => {
                 const r = await window.electronAPI.libraryImportYaml?.()
-                if (r?.ok) setLibraryMsg(`Imported: ${r.favAdded} favourite(s) added, ${r.favSkipped} already present, ${r.tplUpserted} template(s)`)
+                if (r?.ok) {
+                  setLibraryMsg(`Imported: ${r.favAdded} favourite(s) added, ${r.favSkipped} already present, ${r.tplUpserted} template(s), ${r.stylesAdded ?? 0} style example(s)`)
+                  refresh()
+                }
                 else if (r?.error) setLibraryMsg(`Import failed: ${r.error}`)
               }}>
               Import library
             </Button>
           </div>
+          {styleSummary?.count > 0 && (
+            <div className="text-muted mt-1" style={{ fontSize: 10 }}
+              title={`Learned from: ${styleSummary.sources.join(', ')}`}>
+              Style library: {styleSummary.count} products from {styleSummary.sources.length} project
+              {styleSummary.sources.length === 1 ? '' : 's'} — used to name new ElementTypes
+            </div>
+          )}
           {libraryMsg && <div className="text-muted small mt-1">{libraryMsg}</div>}
         </Card.Body>
       </Card>

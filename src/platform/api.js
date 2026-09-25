@@ -106,6 +106,11 @@ function dbBridge() {
     getFavorites: call(() => dbApi.getFavorites()),
     deleteFavorite: call(id => dbApi.deleteFavorite(id)),
 
+    // Style library: tool-wide exemplars of how products became ElementTypes.
+    recordStyleExemplars: call(exemplars => dbApi.recordStyleExemplars(exemplars)),
+    getStyleExemplars: call(() => dbApi.getStyleExemplars()),
+    getStyleSummary: call(() => dbApi.getStyleSummary()),
+
     getPendingChanges: call(projectId => dbApi.getPendingChanges(projectId)),
     setPendingChanges: call((projectId, ps, rs) => dbApi.setPendingChanges(projectId, ps, rs)),
     clearPendingChanges: call(projectId => dbApi.clearPendingChanges(projectId)),
@@ -203,8 +208,8 @@ export function installPlatform() {
       if (!res.ok) return res
       await openDatabase()
       try {
-        dbApi.applyLibraryData(yamlLoad(res.text) || {})
-        return { ok: true, path: res.path }
+        const report = dbApi.applyLibraryData(yamlLoad(res.text) || {})
+        return { ok: true, path: res.path, ...report }
       } catch (err) {
         return { ok: false, error: err.message }
       }

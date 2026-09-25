@@ -109,6 +109,15 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   const [keptSeparate, setKeptSeparate] = useState(new Set())   // dismissed similar-groups
   const [mergingGroup, setMergingGroup] = useState(null)        // codes awaiting one new ET
   const [bulkProposals, setBulkProposals] = useState(null)      // the bulk "create them all" review
+  // The tool-wide style library: how products became ElementTypes on every project opened.
+  const [styleLibrary, setStyleLibrary] = useState([])
+  useEffect(() => {
+    let live = true
+    Promise.resolve(window.electronAPI?.db?.getStyleExemplars?.())
+      .then(rows => { if (live && Array.isArray(rows)) setStyleLibrary(rows) })
+      .catch(() => { /* no library yet */ })
+    return () => { live = false }
+  }, [])
   // Identity of the picked workbook. `filepath` is an in-memory token that cannot
   // survive a reload, so the draft (and the captures) carry this instead.
   const [source, setSource] = useState(null)
@@ -638,8 +647,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       elementTypes, psRows, recipes, positionTypes, collectionRefs: dbCollectionRefs,
       ptTarget: map.pt ? ptTarget : r => r, contextFor,
       roleOf: e => (leads.has(norm(e.text)) ? 'lead' : 'extra'),
+      library: styleLibrary,
     })
-  }, [unassigned, confirmed, captureOpts, elementTypes, psRows, recipes, positionTypes, dbCollectionRefs, map.pt, ptTarget])
+  }, [unassigned, confirmed, captureOpts, elementTypes, psRows, recipes, positionTypes, dbCollectionRefs, map.pt, ptTarget, styleLibrary])
 
   /** Every family the project already has: collection rows, and the ParentRefs in use. */
   const knownFamilies = useMemo(() => [...new Set([

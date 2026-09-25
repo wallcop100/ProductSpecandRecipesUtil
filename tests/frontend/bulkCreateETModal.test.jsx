@@ -64,3 +64,14 @@ describe('BulkCreateETModal — weed out, don\'t build', () => {
     expect(onApply.mock.calls[0][0].items.map(p => p.code)).toEqual(['A1'])
   })
 })
+
+describe('style-library proposals', () => {
+  test('say which example they copy, and flag a ref to check with its alternative', () => {
+    renderIt([P('SL0240A3-350mA', 'ET-CCL-D-350-1CH-01', 'ET-DRIVER', {
+      why: 'style', styledOn: { ref: 'ET-CCL-D-260-1CH-01', source: '5642 LIGHTING' },
+      checkRef: true, alternatives: ['ET-CCR-D-350-1CH'],
+    })], [])
+    expect(screen.getByText('styled like ET-CCL-D-260-1CH-01 (5642 LIGHTING)')).toBeTruthy()
+    expect(screen.getByText(/check ref/).textContent).toContain('or ET-CCR-D-350-1CH')
+  })
+})

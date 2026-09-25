@@ -17,6 +17,9 @@
  *
  *   stem      — an existing product from the same maker whose code shares a real stem
  *               (FPSN0809BG3000 beside FPSN0809BG2000). Specific enough to trust.
+ *   style     — the tool-wide style library (styleLibrary.js): how this maker's product line
+ *               was named on ANY project opened before. Copies that ref's shape, swapping
+ *               the parts that came from the code; `partial` when a part can't be vouched for.
  *   design    — the family of the design (IsDesign) ElementType already in the recipe of
  *               the positions asking for this code. Only fires once recipes exist.
  *   parent    — the LEAD code of a Form cell is the luminaire: its family is named after
@@ -34,6 +37,7 @@
 
 import { sharedStem } from './etRefSuggest'
 import { hasProductIdentity } from './productCodes'
+import { styleFor } from './styleLibrary'
 
 const lc = s => String(s ?? '').trim().toLowerCase()
 const refOf = e => e.ElementTypeRef || e.elementTypeRef || ''
@@ -89,8 +93,8 @@ function mostCommon(values) {
 /**
  * The family for one code. → { family, why, parent?, spread }
  *
- * `signals` = { code, manufacturer, role: 'lead'|'extra', designFamilies: [f], parents: [ptParent] }
- * `ctx`     = { products: [{ code, maker (lc), family }] }
+ * `signals` = { code, manufacturer, text, role: 'lead'|'extra', designFamilies: [f], parents: [ptParent] }
+ * `ctx`     = { products: [{ code, maker (lc), family }], library: [exemplar] }
  */
 export function pickFamily(signals, ctx) {
   // stem: the same maker's product line, already filed somewhere
@@ -101,6 +105,9 @@ export function pickFamily(signals, ctx) {
     if (stem >= 4 && (!best || stem > best.stem)) best = { family, stem }
   }
   if (best) return { family: best.family, why: 'stem', spread: 1 }
+
+  const style = styleFor(signals.code, signals.manufacturer, ctx.library || [], signals.text || '')
+  if (style) return { family: style.family, why: 'style', spread: 1, style }
 
   const design = mostCommon(signals.designFamilies || [])
   if (design.value) return { family: design.value, why: 'design', spread: design.distinct }
@@ -118,10 +125,10 @@ export function pickFamily(signals, ctx) {
  *
  * entries  — distinct codes: { text, manufacturers, positionTypes, variants, reuse, blocked }
  * project  — { elementTypes, psRows, recipes, positionTypes, collectionRefs,
- *              ptTarget(formRef), contextFor(entry), roleOf(entry) }
+ *              ptTarget(formRef), contextFor(entry), roleOf(entry), library: [exemplar] }
  *
  * → { proposals: [{ code, manufacturer, include, action: 'create'|'reuse'|'skip', reuseRef, family,
- *                   ref, name, description, why, parent, spread }],
+ *                   ref, name, description, why, parent, spread, styledOn, checkRef, alternatives }],
  *     newFamilies: [{ ref, description, include, from }] }
  *
  * A code that already matches an existing product is proposed as a REUSE of it.
@@ -129,7 +136,7 @@ export function pickFamily(signals, ctx) {
 export function proposeElementTypes(entries = [], project = {}) {
   const {
     elementTypes = [], psRows = [], recipes = [], positionTypes = [], collectionRefs = [],
-    ptTarget = r => r, contextFor = () => '', roleOf = () => 'lead',
+    ptTarget = r => r, contextFor = () => '', roleOf = () => 'lead', library = [],
   } = project
 
   const etFamily = new Map(elementTypes.map(e => [lc(refOf(e)), famOf(e)]))
@@ -172,27 +179,29 @@ export function proposeElementTypes(entries = [], project = {}) {
       continue
     }
 
+    const context = contextFor(e) || ''
     const pick = pickFamily({
       code: e.text,
       manufacturer,
+      text: `${context} ${note}`,
       role: roleOf(e),
       designFamilies: targets.flatMap(t => designFamilyOf.get(t) || []),
       parents: targets.map(t => parentOf.get(t)).filter(Boolean),
-    }, { products })
+    }, { products, library })
 
     const family = pick.family
     if (family && !same && !existingFamilies.has(lc(family)) && !newFamilies.has(lc(family))) {
       newFamilies.set(lc(family), {
         ref: family,
-        description: family === ACCESSORIES ? 'Accessories family' : familyDescription(pick.parent),
+        description: family === ACCESSORIES ? 'Accessories family'
+          : familyDescription(pick.parent || family.replace(/^ET-/i, '')),
         include: true,
         from: pick.parent || null,
       })
     }
-    const ref = family && !same ? nextRef(family, taken) : ''
+    const ref = family && !same ? nextRef(pick.style?.refBase || family, taken) : ''
     if (ref) taken.add(ref)
 
-    const context = contextFor(e) || ''
     proposals.push({
       code: e.text,
       manufacturer,
@@ -206,6 +215,9 @@ export function proposeElementTypes(entries = [], project = {}) {
       why: pick.why,
       parent: pick.parent || null,
       spread: pick.spread,
+      styledOn: pick.style ? { ref: pick.style.exemplar.ref, code: pick.style.exemplar.code, source: pick.style.exemplar.source } : null,
+      checkRef: !!pick.style?.partial,
+      alternatives: pick.style?.alternatives || [],
     })
   }
   return { proposals, newFamilies: [...newFamilies.values()] }

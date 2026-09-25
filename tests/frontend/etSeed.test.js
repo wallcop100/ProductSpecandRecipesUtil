@@ -105,3 +105,22 @@ describe('helpers', () => {
     expect(moved[0].why).toBe('you')
   })
 })
+
+describe('the tool-wide style library', () => {
+  const library = [{ maker: 'LEDFlex', code: 'NFS160-27-2009', ref: 'ET-LIN-TAPE-NANO160-01', family: 'ET-LIN-TAPE', name: '', description: '', source: 'P2' }]
+
+  test('a product line seen on another project is named the same way, before the PositionType parent', () => {
+    const { proposals, newFamilies } = proposeElementTypes([entry('NFS160-27-5404', 'LEDFlex', ['A1b'])], { ...base, library })
+    expect(proposals[0]).toMatchObject({
+      family: 'ET-LIN-TAPE', ref: 'ET-LIN-TAPE-NANO160-01', why: 'style', checkRef: false,
+      styledOn: { ref: 'ET-LIN-TAPE-NANO160-01', code: 'NFS160-27-2009', source: 'P2' },
+    })
+    expect(newFamilies.map(f => f.ref)).toEqual(['ET-LIN-TAPE'])
+  })
+
+  test('this project\'s own product line still wins over the library', () => {
+    const lib = [{ maker: 'Phos', code: 'INF105006D', ref: 'ET-ELSEWHERE-01', family: 'ET-ELSEWHERE', name: '', description: '', source: 'P9' }]
+    const { proposals } = proposeElementTypes([entry('INF105008D', 'Phos', ['A1b'])], { ...base, library: lib })
+    expect(proposals[0]).toMatchObject({ family: 'ET-REMOTE-DRIVERS', why: 'stem' })
+  })
+})
