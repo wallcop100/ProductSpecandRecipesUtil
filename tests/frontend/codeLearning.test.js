@@ -115,9 +115,10 @@ describe('rules replay across the batch', () => {
     })
   })
 
-  test('unclassified tokens in a MULTI-token field stay note — the safe sink', () => {
-    const roles = resolveRoles(makeRow('D02', D02), {})
-    expect(roles.every(r => r === 'note')).toBe(true)
+  test('unclassified tokens in a MULTI-token field stay note — the safe sink (bare punctuation aside)', () => {
+    const row = makeRow('D02', D02)
+    const roles = resolveRoles(row, {})
+    row.tokens.forEach((t, i) => expect(roles[i]).toBe(/[A-Za-z0-9]/.test(t.text) ? 'note' : 'discard'))
   })
 
   test('a single-token field IS the code — it is a ProductCode column, after all', () => {
@@ -139,7 +140,7 @@ describe('rules replay across the batch', () => {
   test('the moment a field has two tokens, nothing is assumed', () => {
     const row = makeRow('x', 'UN16TVC2715, Rigid profile')
     expect(row.tokens.length).toBeGreaterThan(1)
-    expect(resolveRoles(row, {}).every(r => r === 'note')).toBe(true)
+    expect(resolveRoles(row, {}).every(r => r !== 'code')).toBe(true)
     expect(deriveCodes({ ...row, roles: resolveRoles(row, {}) })).toEqual([])
   })
 
@@ -346,8 +347,15 @@ describe('punctuation is suggested, never assumed', () => {
     expect(deriveCodes(row)).toEqual(['NF240272009'])
   })
 
-  test('until accepted, punctuation is just a note — nothing is assumed', () => {
+  test('bare punctuation starts as discard; "*" (an unchosen option) stays a note', () => {
     const row = applyRules(batch(), {})[0]
+    expect(row.roles[idxOf(row, '+')]).toBe('discard')
+    const star = applyRules([makeRow('x', 'BE/ZEP/IB/**')], {})[0]
+    expect(star.tokens.map((t, i) => [t.text, star.roles[i]]).filter(([t]) => t === '*').every(([, r]) => r === 'note')).toBe(true)
+  })
+
+  test('a rule still beats the punctuation default', () => {
+    const row = applyRules(batch(), setRule({}, '+', 'note'))[0]
     expect(row.roles[idxOf(row, '+')]).toBe('note')
   })
 })

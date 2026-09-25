@@ -17,7 +17,7 @@ import { getNextAvailableRef } from '../utils/containerUtils'
  *                       if the user resolves a duplicate Manufacturer+Code onto it)
  *   contextLabel      — optional muted suffix in the title (e.g. "into PT-001")
  *   confirmLabel      — footer button text
- *   prefill           — { ref, name, description, manufacturer, productCode,
+ *   prefill           — { ref, name, description, family, manufacturer, productCode,
  *                         componentDescription }
  *                       `description` is the ElementType's catalogue Description.
  *                       Any spec prefill opens the Product Spec section expanded.
@@ -73,7 +73,7 @@ export default function NewETModal({
     setRef(prefill.ref || '')
     setName(prefill.name || '')
     setDescription(prefill.description || '')
-    setFamily('')
+    setFamily(prefill.family || '')
     setMfr(prefill.manufacturer || '')
     setCode(prefill.productCode || '')
     setPsDesc(prefill.componentDescription || '')

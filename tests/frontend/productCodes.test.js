@@ -612,3 +612,36 @@ describe('a code with no product identity matches nothing', () => {
     })
   })
 })
+
+describe('line breaks, phantom codes and glued notes', () => {
+  const painted = (raw, codeTexts) => {
+    const row = makeRow('x', raw)
+    return { ...row, roles: row.tokens.map(t => (codeTexts.includes(t.text) ? 'code' : /[A-Za-z0-9]/.test(t.text) || t.text === '*' ? 'note' : 'discard')) }
+  }
+
+  test('a line break splits two stacked codes', () => {
+    const raw = 'TRY-CONTINUITY-M-27K-LL-H\r\nCM109274091'
+    const row = makeRow('x', raw)
+    expect(row.tokens[1].lineBreakBefore).toBe(true)
+    const all = { ...row, roles: ['code', 'code'] }
+    expect(deriveCodes(all)).toEqual(['TRY-CONTINUITY-M-27K-LL-H', 'CM109274091'])
+  })
+
+  test('a plain space does not split a code (adjacent code tokens still join)', () => {
+    const row = makeRow('x', 'V6815 000')
+    expect(deriveCodes({ ...row, roles: ['code', 'code'] })).toEqual(['V6815 000'])
+  })
+
+  test('"**" painted as code is not a product — it falls back to a note', () => {
+    const row = makeRow('x', 'BE/ZEP/IB/**/**')
+    const roles = row.tokens.map(t => (t.text === '/' ? 'discard' : 'code'))
+    const { captures } = deriveCaptures({ ...row, roles })
+    expect(captures.map(c => c.code)).toEqual(['BE/ZEP/IB'])
+    expect(captures[0].note).toBe('** **')
+  })
+
+  test('note tokens that touched in the cell stay touching', () => {
+    const { captures } = deriveCaptures(painted('ABC123 (RAL9011)', ['ABC123']))
+    expect(captures[0].note).toBe('RAL9011')
+  })
+})

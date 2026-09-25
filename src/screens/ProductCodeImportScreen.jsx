@@ -11,11 +11,14 @@ import NeedsResolving from '../components/NeedsResolving'
 import CaptureLines from '../components/CaptureLines'
 import PrimingModal from '../components/PrimingModal'
 import NewETModal from '../components/NewETModal'
+import BulkCreateETModal from '../components/BulkCreateETModal'
 import ResolveRefsStep from '../components/ResolveRefsStep'
 import StageBar from '../components/StageBar'
 import TutorialHint from '../tutorial/TutorialHint'
 import MapColumnsStep from '../components/MapColumnsStep'
 import FormContext from '../components/FormContext'
+import CopyButton from '../components/CopyButton'
+import ContextColumnChips from '../components/ContextColumnChips'
 import { capturableColumns, captureContext } from '../utils/formColumns'
 import {
   makeRow, deriveCaptures, buildDistinct, buildMaster, classify, duplicateSet,
@@ -28,6 +31,7 @@ import {
   discardsFromNoteEdit, pickExamples, learnCodeTokens, clearOverridesFor,
 } from '../utils/codeLearning'
 import { inferConvention, reuseCandidates, suggestRef } from '../utils/etRefSuggest'
+import { proposeElementTypes } from '../utils/etSeed'
 import { resolveFormRefs, buildRefMap, targetFor } from '../utils/ptResolve'
 import { applyKnownCodes, knownTokenIndices } from '../utils/knownCodes'
 import { diffCaptures, wrapperDivergence } from '../utils/formSpec'
@@ -69,6 +73,10 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   const formCaptures = useStore(s => s.formCaptures)
   const containerETRefs = useStore(s => s.containerETRefs)
   const importDraft = useStore(s => s.importDraft)
+  const recipes = useStore(s => s.recipes)
+  const dbCollectionRefs = useStore(s => s.dbCollectionRefs)
+  const createElementType = useStore(s => s.createElementType)
+  const addPSRow = useStore(s => s.addPSRow)
   const saveImportDraft = useStore(s => s.saveImportDraft)
   const clearImportDraft = useStore(s => s.clearImportDraft)
 
@@ -100,6 +108,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   const [refOverrides, setRefOverrides] = useState({})
   const [keptSeparate, setKeptSeparate] = useState(new Set())   // dismissed similar-groups
   const [mergingGroup, setMergingGroup] = useState(null)        // codes awaiting one new ET
+  const [bulkProposals, setBulkProposals] = useState(null)      // the bulk "create them all" review
   // Identity of the picked workbook. `filepath` is an in-memory token that cannot
   // survive a reload, so the draft (and the captures) carry this instead.
   const [source, setSource] = useState(null)
@@ -521,7 +530,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     // Only unresolved codes need a suggestion / reuse candidates.
     const help = etRef ? {} : {
       reuse: reuseCandidates(e.text, note, { psRows, elementTypes, manufacturer: e.manufacturers[0] || '' }, 3),
-      suggestedRef: suggestRef(e.text, note, e.manufacturers[0] || '', convention, elementTypes, psRows).ref,
+      suggested: suggestRef(e.text, note, e.manufacturers[0] || '', convention, elementTypes, psRows),
     }
     return { ...e, ...c, etRef, ...help }
   }), [confirmed, ctx, assignments, captureOpts, psRows, elementTypes, convention, priorEtByCode])
@@ -579,7 +588,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     setMergingGroup(group.map(e => e.text))
     setCreatingFor({
       text: lead.text,
-      ref: lead.suggestedRef || '',
+      ref: lead.suggested?.ref || '',
       manufacturer: lead.manufacturers[0] || '',
       description: lead.variants[0]?.note || '',
       note: lead.variants[0]?.note || '',
@@ -597,6 +606,62 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     setAssignments(a => ({ ...a, [norm(codeText)]: ref }))
     setRules(rl => learnCodeTokens(rl, codeText))
   }, [])
+
+  /**
+   * An ElementType proposal for EVERY code still without one (etSeed.js): family-based
+   * ref, "Maker - Code" name, description seeded from the Form's product name column.
+   * The bulk review starts from these, and a single "Create" uses the same ref.
+   */
+  const proposals = useMemo(() => {
+    const byId = new Map(confirmed.map(r => [r.id, r]))
+    const pick = c => {
+      const keys = Object.keys(c || {})
+      const k = keys.find(h => /product\s*name/i.test(h)) || keys.find(h => /description/i.test(h))
+      return k ? String(c[k] ?? '').trim() : ''
+    }
+    const contextFor = e => {
+      for (const id of e.rowRefs) {
+        const text = pick(byId.get(id)?.context)
+        if (text) return text
+      }
+      return ''
+    }
+    return proposeElementTypes(unassigned, {
+      elementTypes, psRows, recipes, collectionRefs: dbCollectionRefs,
+      ptTarget: map.pt ? ptTarget : r => r, contextFor,
+    })
+  }, [unassigned, confirmed, elementTypes, psRows, recipes, dbCollectionRefs, map.pt, ptTarget])
+
+  // What a single "Create" offers: reuse/variant from suggestRef, else the family ref.
+  const panelEntries = useMemo(() => {
+    const seed = new Map(proposals.map(p => [norm(p.code), p]))
+    return entries.map(e => {
+      if (e.etRef || !e.suggested) return e
+      const p = seed.get(norm(e.text))
+      const ref = e.suggested.reason === 'new' && p?.ref ? p.ref : e.suggested.ref
+      return { ...e, suggestedRef: ref, seed: p }
+    })
+  }, [entries, proposals])
+
+  function openBulkCreate() {
+    setBulkProposals(proposals)
+  }
+
+  /** Apply the reviewed proposals: reuse or create, give each a spec row, assign. */
+  function applyBulk(list) {
+    for (const p of list) {
+      if (p.action === 'reuse' && p.reuseRef) { assignET(p.code, p.reuseRef); continue }
+      const ref = p.ref.trim()
+      createElementType({
+        ref, name: p.name.trim() || null, description: p.description.trim() || null, family: p.family || null,
+      })
+      const spec = { ProductCode: p.code, ...(p.manufacturer ? { Manufacturer: p.manufacturer } : {}) }
+      if (psRows.some(r => (r.ElementTypeRef || '').toLowerCase() === ref.toLowerCase())) updatePSRow(ref, spec)
+      else addPSRow(ref, spec)
+      assignET(p.code, ref)
+    }
+    setBulkProposals(null)
+  }
 
   /** Assign an existing ElementType to a distinct code — the reuse/dedup win. */
   function handleReuse(entry, ref) {
@@ -919,9 +984,22 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                   {current.manufacturer && <> · {current.manufacturer}</>}
                 </div>
 
+                {/* The Form's ProductCode cell as written, to copy while checking the spec. */}
+                <div className="d-flex align-items-start gap-2 mb-1 px-2" style={{ fontSize: 11 }}>
+                  <span className="fw-semibold flex-shrink-0" style={{ minWidth: 84 }}>{map.code || 'ProductCode'}</span>
+                  <span style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{current.rawText}</span>
+                  <CopyButton text={current.rawText} what="the Form's product code cell" />
+                </div>
+
                 {/* Every column is captured, but only the ones you picked are shown — the
-                    sheet has ~180 of them and most are junk. */}
-                <FormContext context={current.context} columns={map.context} style={{ marginBottom: 8 }} />
+                    sheet has ~180 of them and most are junk. Add or drop one right here. */}
+                <FormContext context={current.context} columns={map.context} style={{ marginBottom: 4 }} />
+                <ContextColumnChips
+                  context={current.context}
+                  available={capturable}
+                  shown={map.context}
+                  onChange={next => setMap(m => ({ ...m, context: next }))}
+                />
 
                 {/* Stage ① — what the Product Spec already knew. */}
                 {knownStats && (
@@ -1012,8 +1090,15 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
             <div className="fw-semibold text-muted mb-2" style={{ fontSize: 10, textTransform: 'uppercase' }}>
               Distinct codes ({entries.length})
             </div>
+            {unassigned.length > 0 && (
+              <Button size="sm" variant="primary" className="w-100 mb-2" onClick={openBulkCreate}
+                title="Propose an ElementType for every code that has none — untick the wrong ones">
+                <MaterialIcon name="playlist_add" size={14} /> Review all {unassigned.length} new ElementType
+                {unassigned.length === 1 ? '' : 's'}…
+              </Button>
+            )}
             <CompareCodesPanel
-              entries={entries}
+              entries={panelEntries}
               knownPTs={knownPTs}
               ptTarget={map.pt ? ptTarget : null}
               onJump={jumpToCode}
@@ -1022,7 +1107,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                 text: e.text,
                 ref: e.suggestedRef || '',
                 manufacturer: e.manufacturers[0] || '',
-                description: e.variants[0]?.note || '',
+                description: e.seed?.description || e.variants[0]?.note || '',
+                name: e.seed?.name || '',
+                family: e.seed?.family || '',
                 note: e.variants[0]?.note || '',
                 positionTypes: e.positionTypes,
                 rowCount: e.rowRefs.length,
@@ -1158,6 +1245,15 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
         onDone={finishPriming}
       />
 
+      <BulkCreateETModal
+        show={!!bulkProposals}
+        onHide={() => setBulkProposals(null)}
+        proposals={bulkProposals}
+        families={dbCollectionRefs}
+        elementTypes={elementTypes}
+        onApply={applyBulk}
+      />
+
       <NewETModal
         show={!!creatingFor}
         onHide={() => { setCreatingFor(null); setMergingGroup(null) }}
@@ -1176,6 +1272,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
         } : null}
         prefill={creatingFor ? {
           ref: creatingFor.ref,
+          name: creatingFor.name || '',
+          family: creatingFor.family || '',
           manufacturer: creatingFor.manufacturer,
           productCode: creatingFor.text,
           description: creatingFor.description,

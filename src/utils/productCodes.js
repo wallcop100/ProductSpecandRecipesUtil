@@ -31,15 +31,23 @@
  *   "021-7309-02"       -> "021-7309-02"      (hyphens are internal, kept whole)
  *   "name:"             -> "name"  ":"
  *   "+"                 -> "+"
+ *
+ * A token that starts a new LINE of the cell carries `lineBreakBefore`. A line break
+ * is the one separator that always means something: two codes stacked in one cell
+ * ("TRY-CONTINUITY-M-27K-LL-H⏎CM109274091") are two products, never one.
  */
 export function tokenize(rawText) {
   const text = rawText == null ? '' : String(rawText)
   const tokens = []
   const isAlnum = ch => /[A-Za-z0-9]/.test(ch)
 
+  let prevEnd = 0
   for (const m of text.matchAll(/\S+/g)) {
     const chunk = m[0]
     const base = m.index
+    const lineBreak = tokens.length > 0 && /[\r\n]/.test(text.slice(prevEnd, base))
+    const first = tokens.length
+    prevEnd = base + chunk.length
     let lo = 0
     let hi = chunk.length - 1
     while (lo < chunk.length && !isAlnum(chunk[lo])) lo++
@@ -50,11 +58,12 @@ export function tokenize(rawText) {
       for (let i = 0; i < chunk.length; i++) {
         tokens.push({ text: chunk[i], start: base + i, end: base + i + 1 })
       }
-      continue
+    } else {
+      for (let i = 0; i < lo; i++) tokens.push({ text: chunk[i], start: base + i, end: base + i + 1 })
+      tokens.push({ text: chunk.slice(lo, hi + 1), start: base + lo, end: base + hi + 1 })
+      for (let i = hi + 1; i < chunk.length; i++) tokens.push({ text: chunk[i], start: base + i, end: base + i + 1 })
     }
-    for (let i = 0; i < lo; i++) tokens.push({ text: chunk[i], start: base + i, end: base + i + 1 })
-    tokens.push({ text: chunk.slice(lo, hi + 1), start: base + lo, end: base + hi + 1 })
-    for (let i = hi + 1; i < chunk.length; i++) tokens.push({ text: chunk[i], start: base + i, end: base + i + 1 })
+    if (lineBreak) tokens[first].lineBreakBefore = true
   }
   return tokens
 }
@@ -93,16 +102,30 @@ export function setNoteOverride(row, code, text) {
   return { ...row, noteOverride: next }
 }
 
-/** Maximal runs of adjacent 'code' tokens: [[startIdx, endIdx], ...]. */
+const hasAlnum = text => /[A-Za-z0-9]/.test(String(text || ''))
+
+/**
+ * Maximal runs of adjacent 'code' tokens: [[startIdx, endIdx], ...].
+ *
+ * Two limits on "adjacent":
+ *   - a line break ends a run — stacked codes in one cell are separate products;
+ *   - a run with no letter or digit in it is not a code. "BE/ZEP/IB/**" with the "/"
+ *     discarded left "*" "*" painted code, and "**" appeared as a product of its own.
+ *     Such tokens fall back to being notes.
+ */
 export function codeRuns(row) {
   const runs = []
   let start = -1
+  const close = end => {
+    if (row.tokens.slice(start, end + 1).some(t => hasAlnum(t.text))) runs.push([start, end])
+    start = -1
+  }
   for (let i = 0; i < row.tokens.length; i++) {
     const isCode = row.roles[i] === 'code'
+    if (start >= 0 && (!isCode || row.tokens[i].lineBreakBefore)) close(i - 1)
     if (isCode && start < 0) start = i
-    if (!isCode && start >= 0) { runs.push([start, i - 1]); start = -1 }
   }
-  if (start >= 0) runs.push([start, row.tokens.length - 1])
+  if (start >= 0) close(row.tokens.length - 1)
   return runs
 }
 
@@ -178,9 +201,10 @@ export function deriveCaptures(row, opts = {}) {
   const discarded = []
   const unattached = []
 
+  const inRun = new Set(runs.flatMap(([a, b]) => Array.from({ length: b - a + 1 }, (_, k) => a + k)))
   for (let i = 0; i < row.tokens.length; i++) {
     const role = row.roles[i]
-    if (role === 'code') continue
+    if (role === 'code' && inRun.has(i)) continue   // a code token outside any run is a note
     if (role === 'discard') { discarded.push(row.tokens[i].text); continue }
     const owner = noteOwnerOf(row, i, runs, opts)
     if (owner < 0) unattached.push(row.tokens[i].text)
@@ -188,7 +212,12 @@ export function deriveCaptures(row, opts = {}) {
   }
 
   for (const c of captures) {
-    c.note = c.noteTokens.map(i => row.tokens[i].text).join(' ').trim()
+    // Tokens that touched in the cell stay touching: "**", not "* *".
+    c.note = c.noteTokens.map((i, k) => {
+      const prev = c.noteTokens[k - 1]
+      const glued = k > 0 && prev === i - 1 && row.tokens[prev].end === row.tokens[i].start
+      return (k > 0 && !glued ? ' ' : '') + row.tokens[i].text
+    }).join('').trim()
     const edited = row.noteOverride && row.noteOverride[c.code]
     if (edited != null) { c.note = edited; c.noteEdited = true }
   }
