@@ -153,10 +153,12 @@ export function applyResolvedTemplate(resolvedIngredients, positionTypeRef) {
       const isDimComponent = DIM_QTY_COMPONENTS.some(token =>
         entityRefContains(entityRef, token)
       )
-      if (isDimComponent && dimQtyMultiplier === null) {
+      if (isDimComponent && dimQtyMultiplier === null && !entityRefContains(entityRef, 'CAP')) {
         dimQtyMultiplier = 1
       }
     }
+    // Quantity and Dim_QuantityMultiplier never coexist: a dimensioned row has no count.
+    if (dimQtyMultiplier !== null) quantity = null
 
     // isContractItem: auto-set Y for AUTO_CONTRACT_ITEMS tokens
     let isContractItem = rawIsContractItem || null

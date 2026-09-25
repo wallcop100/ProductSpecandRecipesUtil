@@ -1,3 +1,4 @@
+import DesignPickerModal from './components/DesignPickerModal'
 import React, { useState, useEffect } from 'react'
 import useStore from './store/useStore'
 import FolderSetupScreen from './screens/FolderSetupScreen'
@@ -47,6 +48,11 @@ export default function App() {
   }, [setFileWatchAlert])
 
   function navigateTo(screen) {
+    // Leaving the builder is leaving its position: settle that recipe's design item first.
+    if (activeScreen === 'builder' && screen !== 'builder') {
+      useStore.getState().leavePosition(useStore.getState().activePositionRef, () => setActiveScreen(screen))
+      return
+    }
     setActiveScreen(screen)
   }
 
@@ -71,6 +77,7 @@ export default function App() {
   return (
     <div className={debugIds ? 'debug-ids' : ''} style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <FileWatchBanner />
+      <DesignPickerModal />
 
       {/* Keyed by screen: navigating away clears a caught error rather than
           stranding you on the fallback. */}

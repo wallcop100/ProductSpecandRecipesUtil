@@ -1,0 +1,6 @@
+/* While a tutorial card is open, no other modal shows: one that opens meanwhile waits,
+   hidden, and appears when the card closes. See TutorialCard. */
+body.tutorial-open .modal:not(.tutorial-modal),
+body.tutorial-open .modal-backdrop:not(.tutorial-backdrop) {
+  display: none !important;
+}

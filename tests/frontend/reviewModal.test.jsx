@@ -51,3 +51,20 @@ describe('ReviewModal footer', () => {
     expect(screen.getByTestId('review-counter')).toHaveTextContent('3 of 3')
   })
 })
+
+describe('ReviewModal settles the design item on the way out', () => {
+  test('Next asks for the design item when several rows have none', async () => {
+    const { default: DesignPickerModal } = await import('../../src/components/DesignPickerModal.jsx')
+    useStore.setState({
+      projectId: 1, positionTypes: [{ PositionTypeRef: 'A1' }, { PositionTypeRef: 'A2' }],
+      recipes: [pos('A1', 'ET-X'), pos('A1', 'ET-Y'), pos('A2', 'ET-X')],
+      containerETRefs: new Set(), psRows: [], elementTypes: [], positionUI: {}, formCaptures: null, designPrompt: null,
+    })
+    render(<><ReviewModal show onHide={vi.fn()} initialRefs={['A1', 'A2']} /><DesignPickerModal /></>)
+    fireEvent.click(screen.getByText('Next ›'))
+    expect(screen.getByTestId('review-counter')).toHaveTextContent('1 of 2')
+    fireEvent.click(await screen.findByRole('button', { name: 'ET-Y' }))
+    expect(screen.getByTestId('review-counter')).toHaveTextContent('2 of 2')
+    expect(useStore.getState().recipes.find(r => r._id === 'A1-ET-Y').IsDesign).toBe('Y')
+  })
+})

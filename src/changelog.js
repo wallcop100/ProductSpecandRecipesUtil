@@ -7,6 +7,8 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-09-25', note: 'Every recipe gets one IsDesign item as you leave it: a lone row is marked for you, otherwise you pick one before moving on' },
+  { date: '2026-09-25', note: 'A row has Quantity OR Dim_QuantityMultiplier, never both; profiles default to a multiplier of 1. Tutorials no longer stack over other windows' },
   { date: '2026-09-25', note: 'Side-by-Side: a position with no wrapper offers + LIN wrapper / + DL wrapper (next free ET-LIN-NN / ET-DL-NN, Ideaworks N/A), so Form products can go inside it' },
   { date: '2026-09-25', note: 'Fixed: a code typed without its dashes (NFS240272009) matches its known shape, so LEDFlex tape is no longer filed as profile; a note naming two kinds of product is flagged' },
   { date: '2026-09-25', note: 'Fixed: adding from the Form no longer lands on another position when a wrapper recipe was open earlier' },

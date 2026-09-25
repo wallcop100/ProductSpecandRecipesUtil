@@ -70,6 +70,7 @@ export function runValidation(dbData, psRows, rsRows, positionUI,
   issues.push(...checkDuplicateProductCode(psRows))
   issues.push(...checkMissingLockingLever(rsRows, positionUI))
   issues.push(...checkDimQtyMultNotOne(rsRows))
+  issues.push(...checkQtyAndDimMult(rsRows))
   issues.push(...checkMissingClipsDimQty(rsRows, positionUI))
   issues.push(...checkLocalDriverRequirements(rsRows, positionUI))
   issues.push(...checkConnectorSetIncomplete(rsRows, positionUI, collections))
@@ -327,6 +328,30 @@ function checkMissingLockingLever(rsRows, positionUI) {
     }
   }
 
+  return issues
+}
+
+// ---------------------------------------------------------------------------
+// QTY_AND_DIM_MULT — a row is counted (Quantity) OR measured (Dim_QuantityMultiplier),
+// never both.
+// ---------------------------------------------------------------------------
+function checkQtyAndDimMult(rsRows) {
+  const issues = []
+  const set = v => v !== null && v !== undefined && v !== ''
+  for (const row of rsRows || []) {
+    if ((row.IsDeleted || row.isDeleted) === 'Y') continue
+    const qty = row.Quantity ?? row.quantity
+    const mult = row.Dim_QuantityMultiplier ?? row.dimQtyMultiplier ?? row.DimQtyMultiplier
+    if (!set(qty) || !set(mult)) continue
+    const etRef = row.ElementTypeRef || row.elementTypeRef || '(unnamed)'
+    issues.push({
+      severity: 'error',
+      rule: 'QTY_AND_DIM_MULT',
+      message: `"${etRef}" has both Quantity (${qty}) and Dim_QuantityMultiplier (${mult}). Keep one.`,
+      ref: row.PositionTypeRef || row.positionTypeRef || null,
+      rowId: row._id ?? null,
+    })
+  }
   return issues
 }
 

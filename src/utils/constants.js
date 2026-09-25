@@ -1,6 +1,6 @@
 export const FLAG_COLUMNS = ['IsDesign', 'IsContractItem', 'IsTBC', 'IsPropertiesTBC']
 
-export const DIM_QTY_COMPONENTS = ['TAPE', 'PROFILE', 'DIFF', 'MOUNT', 'FLEX']
+export const DIM_QTY_COMPONENTS = ['TAPE', 'PROF', 'DIFF', 'MOUNT', 'FLEX']
 
 export const AUTO_CONTRACT_ITEMS = ['CAP', 'CLIP', 'DRIVER', 'CCL', 'CCR', 'GLAND', 'SLEEVE']
 
