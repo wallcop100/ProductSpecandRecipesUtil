@@ -75,3 +75,50 @@ describe('style-library proposals', () => {
     expect(screen.getByText(/check ref/).textContent).toContain('or ET-CCR-D-350-1CH')
   })
 })
+
+describe('moving codes between families', () => {
+  test('a firm rule shows a tick, not a sentence repeated on every row', () => {
+    renderIt([P('A1', 'ET-PS-02', 'ET-PS', { why: 'canon', canon: 'Point page' }), P('A2', 'ET-PS-03', 'ET-PS', { why: 'canon', canon: 'Point page' })], [])
+    expect(screen.getAllByTestId('verified')).toHaveLength(2)
+    expect(screen.queryByText(/company family — Point page/)).toBeNull()
+    expect(screen.getAllByTestId('verified')[0].getAttribute('title')).toBe('company family — Point page')
+  })
+
+  test('one code moves from its own menu, and its ref renumbers in the new family', () => {
+    renderIt([P('A1', 'ET-PS-02', 'ET-PS'), P('A2', 'ET-PS-03', 'ET-PS')], [])
+    fireEvent.click(screen.getAllByTitle(/Move A2 to another family/)[0])
+    fireEvent.click(screen.getByText('ET-DRIVER', { selector: '.dropdown-item' }))
+    expect(screen.getByLabelText('Ref for A2').value).toBe('ET-DRIVER-01')
+    expect(screen.getByLabelText('Ref for A1').value).toBe('ET-PS-02')
+  })
+
+  test('moving to a company family the project lacks proposes it, with its parent', () => {
+    const onApply = vi.fn()
+    renderIt([P('T1', 'ET-PS-02', 'ET-PS')], [], onApply)
+    fireEvent.click(screen.getAllByTitle(/Move T1 to another family/)[0])
+    fireEvent.click(screen.getByText('ET-LIN-TAPE', { selector: '.dropdown-item' }))
+    expect(screen.getByLabelText('Family description ET-LIN-TAPE').value).toBe('Linear LED Tape Family')
+    fireEvent.click(screen.getByRole('button', { name: 'Apply 1' }))
+    expect(onApply.mock.calls[0][0].families.map(f => f.ref)).toEqual(['ET-LIN-TAPE'])
+  })
+
+  test('a new family of your own: empty drop target, then a code moved into it from its menu', () => {
+    renderIt([P('A1', 'ET-PS-02', 'ET-PS')], [])
+    fireEvent.click(screen.getByRole('button', { name: /New family/ }))
+    fireEvent.change(screen.getByLabelText('New family ref'), { target: { value: 'et-ps-pendant' } })
+    fireEvent.change(screen.getByLabelText('New family description'), { target: { value: 'Pendant family' } })
+    fireEvent.change(screen.getByLabelText('New family parent'), { target: { value: 'ET-PS' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
+    expect(screen.getByTestId('group-ET-PS-PENDANT').textContent).toMatch(/Drop codes here/)
+    fireEvent.click(screen.getAllByTitle(/Move A1 to another family/)[0])
+    fireEvent.click(screen.getByText('ET-PS-PENDANT', { selector: '.dropdown-item' }))
+    expect(screen.getByLabelText('Ref for A1').value).toBe('ET-PS-PENDANT-01')
+    expect(screen.getByText('under ET-PS')).toBeTruthy()
+  })
+
+  test('every code that can move has a grip', () => {
+    renderIt([P('A1', 'ET-PS-02', 'ET-PS'), P('R1', '', '', { action: 'reuse', reuseRef: 'ET-PS-01' })], [])
+    expect(screen.getByRole('button', { name: 'Drag A1 to another family' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Drag R1 to another family' })).toBeNull()
+  })
+})
