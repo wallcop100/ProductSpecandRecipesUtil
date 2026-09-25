@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react'
+import { isPlaceholder } from '../utils/accessories'
 import { Button, Form } from 'react-bootstrap'
 import MaterialIcon from './MaterialIcon'
 
@@ -31,8 +32,8 @@ const FIELDS = [
   },
   {
     key: 'acc', icon: 'extension',
-    label: 'Accessories',
-    hint: 'More product codes for the same position (snoots, louvres, profiles). Read after the product code, as extras; "-" is ignored.',
+    label: 'Accessories', optional: true,
+    hint: 'Only if your Form has one: more product codes for the same position (snoots, louvres, profiles). Read after the product code, as extras; "-" is ignored.',
   },
   {
     key: 'exclude', icon: 'filter_alt',
@@ -111,6 +112,12 @@ export default function MapColumnsStep({
                 <div className="d-flex align-items-center gap-2">
                   <span style={{ fontSize: 12, fontWeight: 600 }}>{f.label}</span>
                   {f.required && <span className="text-danger" style={{ fontSize: 11 }}>required</span>}
+                  {f.optional && <span className="text-muted" style={{ fontSize: 10 }}>optional</span>}
+                  {f.key === 'acc' && value && (
+                    <span className="text-muted" style={{ fontSize: 10 }} data-testid="acc-count">
+                      · {rawRows.filter(r => !isPlaceholder(r[value])).length} of {rawRows.length} rows have some
+                    </span>
+                  )}
                   {isAuto && (
                     <span className="rounded px-1" style={{ fontSize: 9, background: '#cfe2ff', color: '#084298' }}>
                       auto

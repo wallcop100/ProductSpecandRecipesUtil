@@ -37,7 +37,7 @@ import { matchShape } from '../utils/codeShapes'
 import shippedShapes from '../data/codeShapes.json'
 import { resolveFormRefs, buildRefMap, targetFor } from '../utils/ptResolve'
 import { applyKnownCodes, knownTokenIndices } from '../utils/knownCodes'
-import { joinAccessories } from '../utils/accessories'
+import { joinAccessories, isPlaceholder } from '../utils/accessories'
 import { diffCaptures, wrapperDivergence } from '../utils/formSpec'
 
 /** Fuzzy header match: exact normalised hit first, else shortest header containing it. */
@@ -180,7 +180,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       code: detect(data.headers, 'productcode'),
       mfr: detect(data.headers, 'manufacturer'),
       exclude: detect(data.headers, 'exclude'),
-      acc: detect(data.headers, 'accessor'),
+      // Optional, and often present but unused: only map it when some row fills it in.
+      acc: (h => (h && data.rows.some(r => !isPlaceholder(r[h])) ? h : ''))(detect(data.headers, 'accessor')),
     }
     setAutoMap(guessed)
     setMap({ ...guessed, context: CONTEXT_WANTS.map(w => detect(data.headers, w)).filter(Boolean) })
