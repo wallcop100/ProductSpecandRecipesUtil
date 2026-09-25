@@ -62,7 +62,7 @@ export async function fileMeta(fileToken) {
 
 // --- the three former routes -------------------------------------------------
 
-/** Classify every xlsx in the project folder. → { db, ps, rs, all_xlsx } */
+/** Classify every xlsx in the project folder. → { db, dbs, ps, rs, all_xlsx } */
 export async function detectFiles(folderKey) {
   const dir = folderKey ? await setActiveDirectory(folderKey) : requireDir()
   if (!dir) throw new Error('That project folder is no longer available.')
@@ -77,6 +77,11 @@ export async function detectFiles(folderKey) {
 /**
  * Parse the project workbooks. `paths` are filenames.
  *
+ * `db` is one DesignDB filename or an array of them. Several DBs (one project split
+ * across buildings) are merged into one view — see mergeDbs — and all of them are
+ * required: a config that silently opened with one house missing would call that
+ * house's positions dead.
+ *
  * Only the DesignDB is required: it is the sole source of PositionTypes and of the
  * ExtRef convention (C01 → C01r), so nothing can be resolved without it. A new
  * project legitimately has no Product Spec and no Recipes Spec yet — those start
@@ -86,17 +91,23 @@ export async function detectFiles(folderKey) {
  */
 export async function importFiles({ db, ps, rs }) {
   const dir = requireDir()
-  const { parseDb, parsePs, parseRs } = await xlsxModule()
+  const { parseDb, parsePs, parseRs, mergeDbs } = await xlsxModule()
+
+  const dbNames = (Array.isArray(db) ? db : [db]).filter(Boolean)
+  if (dbNames.length === 0) throw new Error("db: 'DesignDB' not found in the project folder")
 
   const [dbBytes, psBytes, rsBytes] = await Promise.all([
-    fsx.readFileNamed(dir, db), fsx.readFileNamed(dir, ps), fsx.readFileNamed(dir, rs),
+    Promise.all(dbNames.map(n => fsx.readFileNamed(dir, n))),
+    fsx.readFileNamed(dir, ps), fsx.readFileNamed(dir, rs),
   ])
-  if (!dbBytes) throw new Error(`db: '${db || 'DesignDB'}' not found in the project folder`)
+  const absent = dbNames.filter((_, i) => !dbBytes[i])
+  if (absent.length) throw new Error(`db: '${absent.join("', '")}' not found in the project folder`)
 
   const missing = [['ps', psBytes], ['rs', rsBytes]].filter(([, bytes]) => !bytes).map(([l]) => l)
 
+  const parsed = dbNames.map((name, i) => ({ name, data: parseDb(dbBytes[i]) }))
   return {
-    db: parseDb(dbBytes),
+    db: mergeDbs(parsed),
     ps: psBytes ? parsePs(psBytes) : [],
     rs: rsBytes ? parseRs(rsBytes) : [],
     missing,

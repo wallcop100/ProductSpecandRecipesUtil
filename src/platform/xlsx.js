@@ -76,6 +76,15 @@ const RS_COLUMN_MAP = {
   IsInteger: 'IsInteger',
 }
 
+// Identifier and free-text fields are always strings. Excel stores an all-digit value
+// (a ProductCode like 39012025, a Ref like 101) as a NUMBER, and every consumer
+// downstream calls .trim()/.toLowerCase() on these — one numeric cell crashed the load.
+const ET_TEXT_COLS = new Set(['ElementTypeRef', 'Name', 'Description', 'Family'])
+const PT_TEXT_COLS = new Set(['PositionTypeRef', 'Name', 'Description', 'ParentRef', 'DriverLocation', 'SecondaryPowerType', 'ControlTypeRef', 'ExtRef'])
+const POS_TEXT_COLS = new Set(['Ref', 'TypeRef'])
+const PS_TEXT_COLS = new Set(['ElementTypeRef', 'Manufacturer', 'ProductCode', 'ComponentDescription', 'InternalNotesText'])
+const RS_TEXT_COLS = new Set(['ContextType', 'ContextRef', 'ElementTypeRef'])
+
 const ET_FLAG_COLS = new Set(['IsCollection', 'IsDeleted'])
 const PT_FLAG_COLS = new Set(['IsCollection', 'IsDeleted'])
 const PS_FLAG_COLS = new Set(['IsTBC', 'IsDeleted', 'IsPropertiesTBC'])
@@ -83,10 +92,17 @@ const RS_FLAG_COLS = new Set(['IsDesign', 'IsContractItem', 'IsTRItem', 'IsInteg
 
 // --- Internal helpers -------------------------------------------------------
 
-/** Read a workbook from bytes (ArrayBuffer / Uint8Array / Node Buffer). */
-export function readWorkbook(data) {
+/**
+ * Read a workbook from bytes (ArrayBuffer / Uint8Array / Node Buffer).
+ *
+ * `opts.sheets` parses only the named sheets (SheetNames still lists them all), and
+ * `opts.sheetRows` caps the rows read. Real workbooks carry scratch tabs — one Recipes
+ * Spec had a 1,047,717-row `Sheet2` — and parsing those cost ~10x the time and memory
+ * of the sheet we actually wanted.
+ */
+export function readWorkbook(data, opts = {}) {
   const bytes = data instanceof ArrayBuffer ? new Uint8Array(data) : data
-  return XLSX.read(bytes, { type: 'array', cellDates: true })
+  return XLSX.read(bytes, { type: 'array', cellDates: true, ...opts })
 }
 
 /**
@@ -134,10 +150,11 @@ const headerRowOf = grid => (grid[0] || []).map(h => (h === null || h === undefi
  * flagCols   : output field names that must normalise to 'Y' or null
  * includeAll : also expose every raw column under its own header name (used for
  *              PositionTypes, so tag rules can key off any DB schema column)
+ * textCols   : output (or pass-through) names whose non-null values become strings
  *
  * Fully-blank rows are skipped.
  */
-function parseSheetByHeaders(ws, columnMap, flagCols = new Set(), includeAll = false) {
+function parseSheetByHeaders(ws, columnMap, flagCols = new Set(), includeAll = false, textCols = new Set()) {
   const grid = matrix(ws)
   const headers = headerRowOf(grid)
 
@@ -169,6 +186,7 @@ function parseSheetByHeaders(ws, columnMap, flagCols = new Set(), includeAll = f
       else if (flagCols.has(outputName)) {
         value = (typeof raw === 'string' && raw.trim().toUpperCase() === 'Y') ? 'Y' : null
       } else if (typeof raw === 'string') value = raw.trim() || null
+      else if (textCols.has(outputName)) value = String(raw)
       else value = raw
 
       rowDict[outputName] = value
@@ -178,6 +196,7 @@ function parseSheetByHeaders(ws, columnMap, flagCols = new Set(), includeAll = f
     for (const [header, idx] of extraIndex) {
       let raw = idx < values.length ? values[idx] : null
       if (typeof raw === 'string') raw = raw.trim() || null
+      else if (raw !== null && textCols.has(header)) raw = String(raw)
       rowDict[header] = raw
       if (raw !== null) allNone = false
     }
@@ -214,11 +233,11 @@ function collectionRefs(rawRows, parentField) {
  * would be reported missing from the very sheet that defines it.
  */
 export function parseDb(data) {
-  const wb = readWorkbook(data)
+  const wb = readWorkbook(data, { sheets: ['ElementTypes', 'PositionTypes', 'Positions'] })
   if (!wb.SheetNames.includes('ElementTypes')) throw new Error("Sheet 'ElementTypes' not found")
   if (!wb.SheetNames.includes('PositionTypes')) throw new Error("Sheet 'PositionTypes' not found")
 
-  const rawEts = parseSheetByHeaders(wb.Sheets.ElementTypes, ET_COLUMN_MAP, ET_FLAG_COLS)
+  const rawEts = parseSheetByHeaders(wb.Sheets.ElementTypes, ET_COLUMN_MAP, ET_FLAG_COLS, false, ET_TEXT_COLS)
   const etCollections = collectionRefs(rawEts, 'Family')
   const element_types = []
   for (const r of rawEts) {
@@ -229,7 +248,7 @@ export function parseDb(data) {
     element_types.push(r)
   }
 
-  const rawPts = parseSheetByHeaders(wb.Sheets.PositionTypes, PT_COLUMN_MAP, PT_FLAG_COLS, true)
+  const rawPts = parseSheetByHeaders(wb.Sheets.PositionTypes, PT_COLUMN_MAP, PT_FLAG_COLS, true, PT_TEXT_COLS)
   const ptCollections = collectionRefs(rawPts, 'ParentRef')
   const position_types = []
   for (const r of rawPts) {
@@ -246,7 +265,7 @@ export function parseDb(data) {
   // case the "zero placed" signal simply never fires. Live rows only.
   const positions = []
   if (wb.SheetNames.includes('Positions')) {
-    for (const r of parseSheetByHeaders(wb.Sheets.Positions, POS_COLUMN_MAP, POS_FLAG_COLS)) {
+    for (const r of parseSheetByHeaders(wb.Sheets.Positions, POS_COLUMN_MAP, POS_FLAG_COLS, false, POS_TEXT_COLS)) {
       if (r.IsDeleted === 'Y' || !r.TypeRef) continue
       positions.push({ Ref: r.Ref, TypeRef: r.TypeRef })
     }
@@ -257,9 +276,9 @@ export function parseDb(data) {
 
 /** Parse a Product Spec workbook → rows that have an ElementTypeRef. */
 export function parsePs(data) {
-  const wb = readWorkbook(data)
+  const wb = readWorkbook(data, { sheets: ['Form'] })
   if (!wb.SheetNames.includes('Form')) throw new Error("Sheet 'Form' not found")
-  return parseSheetByHeaders(wb.Sheets.Form, PS_COLUMN_MAP, PS_FLAG_COLS)
+  return parseSheetByHeaders(wb.Sheets.Form, PS_COLUMN_MAP, PS_FLAG_COLS, false, PS_TEXT_COLS)
     .filter(r => r.ElementTypeRef)
 }
 
@@ -272,9 +291,9 @@ export function parsePs(data) {
  * Orphan ElementType rows (no position claims them) are dropped.
  */
 export function parseRs(data) {
-  const wb = readWorkbook(data)
+  const wb = readWorkbook(data, { sheets: ['Form'] })
   if (!wb.SheetNames.includes('Form')) throw new Error("Sheet 'Form' not found")
-  const rawRows = parseSheetByHeaders(wb.Sheets.Form, RS_COLUMN_MAP, RS_FLAG_COLS)
+  const rawRows = parseSheetByHeaders(wb.Sheets.Form, RS_COLUMN_MAP, RS_FLAG_COLS, false, RS_TEXT_COLS)
 
   // Pass 1: {ET ref -> [position refs]} from IsDesign='Y' PositionType rows
   const etToPositions = new Map()
@@ -306,7 +325,7 @@ export function parseRs(data) {
  * → { sheets, sheet, headers, rows }
  */
 export function readSheet(data, sheet = null) {
-  const wb = readWorkbook(data)
+  const wb = readWorkbook(data, { sheets: sheet ? [sheet] : 0 })   // only the sheet being read
   const names = wb.SheetNames.slice()
   if (names.length === 0) throw new Error('No worksheets in workbook')
 
@@ -339,7 +358,8 @@ export function readSheet(data, sheet = null) {
 export function detectFileType(data) {
   let wb
   try {
-    wb = readWorkbook(data)
+    // Classification needs only the sheet names and the Form's header row.
+    wb = readWorkbook(data, { sheets: ['Form'], sheetRows: 1 })
   } catch {
     return null
   }
@@ -356,7 +376,7 @@ export function detectFileType(data) {
 /**
  * Classify a folder's xlsx files.
  * files: [{ name, data }] — the caller (platform/fs) supplies the bytes.
- * → { db, ps, rs, all_xlsx }   (first match of each type wins)
+ * → { db, dbs, ps, rs, all_xlsx }   (first match of each type wins; `dbs` lists every DesignDB)
  *
  * Files are visited in sorted order, so detection is deterministic (Python's
  * os.listdir order was arbitrary).
@@ -366,10 +386,66 @@ export function detectFiles(files) {
     .filter(f => f.name.toLowerCase().endsWith('.xlsx'))
     .sort((a, b) => a.name.localeCompare(b.name))
 
-  const result = { db: null, ps: null, rs: null, all_xlsx: xlsx.map(f => f.name) }
+  const result = { db: null, dbs: [], ps: null, rs: null, all_xlsx: xlsx.map(f => f.name) }
   for (const f of xlsx) {
     const type = detectFileType(f.data)
+    if (type === 'db') result.dbs.push(f.name)
     if (type && result[type] === null) result[type] = f.name
   }
   return result
+}
+
+/**
+ * Merge several parsed DesignDBs into one, for a project split across workbooks (one per
+ * building, say) that shares a single Product Spec and Recipes Spec.
+ *
+ * `parsed` is [{ name, data }] where `data` is a parseDb result. ElementTypes and
+ * PositionTypes are unioned by ref (case-insensitive; the first DB listed wins, and a ref
+ * whose Name differs between DBs is reported in `conflicts`). Positions are concatenated —
+ * that is the point: a PositionType placed in ANY of the DBs is live, so "no positions
+ * placed" must be judged across all of them, never one at a time.
+ *
+ * A single DB passes through unchanged apart from `sources`.
+ */
+export function mergeDbs(parsed = []) {
+  const lc = v => String(v ?? '').trim().toLowerCase()
+  const union = (field, refKey) => {
+    const seen = new Map()
+    const conflicts = []
+    for (const { name, data } of parsed) {
+      for (const row of data[field] || []) {
+        const k = lc(row[refKey])
+        if (!k) continue
+        const first = seen.get(k)
+        if (!first) { seen.set(k, { row, from: name }); continue }
+        if (lc(first.row.Name) !== lc(row.Name)) {
+          conflicts.push({ kind: field, ref: row[refKey], kept: first.from, ignored: name })
+        }
+      }
+    }
+    return { rows: [...seen.values()].map(v => v.row), conflicts }
+  }
+
+  const ets = union('element_types', 'ElementTypeRef')
+  const pts = union('position_types', 'PositionTypeRef')
+  const collections = new Set()
+  const positions = []
+  for (const { data } of parsed) {
+    for (const c of data.collection_refs || []) collections.add(c)
+    positions.push(...(data.positions || []))
+  }
+
+  return {
+    element_types: ets.rows,
+    position_types: pts.rows,
+    positions,
+    collection_refs: [...collections],
+    sources: parsed.map(({ name, data }) => ({
+      name,
+      element_types: data.element_types?.length || 0,
+      position_types: data.position_types?.length || 0,
+      positions: data.positions?.length || 0,
+    })),
+    conflicts: [...ets.conflicts, ...pts.conflicts],
+  }
 }

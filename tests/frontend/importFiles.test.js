@@ -13,7 +13,8 @@ vi.mock('../../src/platform/fs.js', () => ({
   readFileHandle: vi.fn(),
   listXlsx: vi.fn(async () => []),
 }))
-vi.mock('../../src/platform/xlsx.js', () => ({
+vi.mock('../../src/platform/xlsx.js', async () => ({
+  mergeDbs: (await vi.importActual('../../src/platform/xlsx.js')).mergeDbs,
   parseDb: () => ({ element_types: [{ ElementTypeRef: 'ET-1' }], position_types: [{ PositionTypeRef: 'C01r' }] }),
   parsePs: () => [{ ElementTypeRef: 'ET-1' }],
   parseRs: () => [{ PositionTypeRef: 'C01r' }],
@@ -63,5 +64,20 @@ describe('importFiles requires only the DesignDB', () => {
 
   test('the error names the DesignDB even when no filename was chosen', async () => {
     await expect(backend.importFiles({ db: '', ps: '', rs: '' })).rejects.toThrow(/DesignDB/)
+  })
+})
+
+describe('importFiles with several DesignDBs', () => {
+  test('every listed DB is read and merged into one', async () => {
+    Object.assign(files, { 'main.xlsx': new Uint8Array([1]), 'guest.xlsx': new Uint8Array([1]) })
+    const r = await backend.importFiles({ db: ['main.xlsx', 'guest.xlsx'], ps: '', rs: '' })
+    expect(r.db.sources.map(s => s.name)).toEqual(['main.xlsx', 'guest.xlsx'])
+    expect(r.db.position_types).toHaveLength(1)   // same ref in both → one
+  })
+
+  test('a missing DB is an error that names it — never a silent partial open', async () => {
+    files['main.xlsx'] = new Uint8Array([1])
+    await expect(backend.importFiles({ db: ['main.xlsx', 'guest.xlsx'], ps: '', rs: '' }))
+      .rejects.toThrow(/'guest.xlsx' not found/)
   })
 })

@@ -313,3 +313,80 @@ describe('getProjectSummaries — "am I in the right project?"', () => {
     expect(byId[emptyId].taggedPositions).toBe(0)
   })
 })
+
+describe('a config can span several DesignDBs', () => {
+  test('the list is stored, and db_filename keeps the first for older readers', () => {
+    const p = schema.upsertProject('/proj/a', 'Base', '5452', null, ['main.xlsx', 'guest.xlsx'], 'ps.xlsx', 'rs.xlsx')
+    expect(JSON.parse(p.db_filenames)).toEqual(['main.xlsx', 'guest.xlsx'])
+    expect(p.db_filename).toBe('main.xlsx')
+    const one = schema.upsertProject('/proj/b', 'Base', null, null, 'db.xlsx')
+    expect(JSON.parse(one.db_filenames)).toEqual(['db.xlsx'])
+  })
+
+  test('an older database gains the column, back-filled from db_filename', () => {
+    const old = wrapSqlJs(new SQL.Database())
+    old.exec(`CREATE TABLE projects (id INTEGER PRIMARY KEY AUTOINCREMENT, folder_path TEXT NOT NULL,
+      config_name TEXT NOT NULL DEFAULT 'Base', project_number TEXT, project_label TEXT, db_filename TEXT,
+      ps_filename TEXT, rs_filename TEXT, last_opened TEXT, UNIQUE(folder_path, config_name));
+      INSERT INTO projects (folder_path, db_filename) VALUES ('/old', 'legacy.xlsx');`)
+    schema.initDb(old)
+    const row = old.prepare("SELECT * FROM projects WHERE folder_path = '/old'").get()
+    expect(JSON.parse(row.db_filenames)).toEqual(['legacy.xlsx'])
+    schema.initDb(conn)   // put the module back on this test file's connection
+  })
+})
+
+describe('config YAML — enough to recover a config', () => {
+  function seeded() {
+    const p = schema.upsertProject('/proj/a', 'Houses', '5452', 'Lighting', ['main.xlsx', 'guest.xlsx'], 'ps.xlsx', 'rs.xlsx')
+    schema.upsertPositionUI(p.id, 'C01', { tags: ['downlight'], tagAdd: [], tagRemove: [], userNotes: 'n', ignored: false })
+    schema.setPref(p.id, 'form_captures', '{"version":1,"byPosition":{}}')
+    schema.setPref(p.id, 'pending_db_changes', JSON.stringify([{ elementTypeRef: 'ET-NEW' }]))
+    schema.upsertLocalElementType(p.id, { ref: 'ET-NEW', name: 'New', family: 'FAM', isCollection: false })
+    schema.setPendingChanges(p.id, [{ elementTypeRef: 'ET-1' }], [{ row: { ContextRef: 'C01' } }])
+    return p
+  }
+
+  test('version 2 carries the file pairing, local ETs and unexported changes', () => {
+    const p = seeded()
+    const data = schema.collectConfigData(p.id)
+    expect(data.version).toBe(2)
+    expect(data.exported_at).toBeTruthy()
+    expect(data.project).toEqual({ project_number: '5452', project_label: 'Lighting', config_name: 'Houses' })
+    expect(data.files).toEqual({ design_dbs: ['main.xlsx', 'guest.xlsx'], product_spec: 'ps.xlsx', recipes_spec: 'rs.xlsx' })
+    expect(data.local_element_types).toEqual([{ ref: 'ET-NEW', name: 'New', description: null, family: 'FAM', is_collection: false }])
+    expect(data.pending_changes.ps).toHaveLength(1)
+    expect(data.pending_changes.rs).toHaveLength(1)
+  })
+
+  test('restoring into a fresh config brings everything back', () => {
+    const data = schema.collectConfigData(seeded().id)
+    const fresh = schema.upsertProject('/elsewhere', 'Houses')
+    const report = schema.applyConfigData(fresh.id, data)
+
+    expect(report).toEqual({ pendingRestored: 3, pendingSkipped: 0, localEts: 1 })
+    expect(schema.getProject('/elsewhere', 'Houses').project_number).toBe('5452')
+    expect(schema.getAllPositionUI(fresh.id)[0]).toMatchObject({ position_type_ref: 'C01', tags: ['downlight'] })
+    expect(schema.getPref(fresh.id, 'form_captures')).toBe('{"version":1,"byPosition":{}}')
+    expect(JSON.parse(schema.getPref(fresh.id, 'pending_db_changes'))).toHaveLength(1)
+    expect(schema.getLocalElementTypes(fresh.id).map(e => e.ElementTypeRef)).toEqual(['ET-NEW'])
+    expect(schema.getPendingChanges(fresh.id).rs).toHaveLength(1)
+  })
+
+  test('unexported changes never merge into a config that has its own', () => {
+    const data = schema.collectConfigData(seeded().id)
+    const busy = schema.upsertProject('/elsewhere', 'Base')
+    schema.setPendingChanges(busy.id, [{ elementTypeRef: 'MINE' }], [])
+    const report = schema.applyConfigData(busy.id, data)
+    expect(report.pendingSkipped).toBe(3)
+    expect(schema.getPendingChanges(busy.id).ps).toEqual([{ elementTypeRef: 'MINE' }])
+    expect(schema.getPref(busy.id, 'pending_db_changes')).toBeFalsy()
+  })
+
+  test('a version 1 file still imports; an unknown version is refused', () => {
+    const p = schema.upsertProject('/proj/v1', 'Base')
+    expect(() => schema.applyConfigData(p.id, { version: 1, prefs: { a: '1' } })).not.toThrow()
+    expect(schema.getPref(p.id, 'a')).toBe('1')
+    expect(() => schema.applyConfigData(p.id, { version: 9 })).toThrow(/Unsupported config file version: 9/)
+  })
+})

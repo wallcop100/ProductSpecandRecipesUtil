@@ -126,6 +126,7 @@ export const dbApi = {
   // config + library payloads (YAML is handled by the caller)
   collectConfigData: reader(schema.collectConfigData),
   applyConfigData: writer(schema.applyConfigData),
+  checkConfigVersion: reader(schema.checkConfigVersion),
   collectLibraryData: reader(schema.collectLibraryData),
   applyLibraryData: writer(schema.applyLibraryData),
 
