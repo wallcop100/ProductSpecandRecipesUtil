@@ -1,4 +1,5 @@
 import DesignPickerModal from './components/DesignPickerModal'
+import { SaveShortcut } from './components/SaveStatus'
 import React, { useState, useEffect } from 'react'
 import useStore from './store/useStore'
 import FolderSetupScreen from './screens/FolderSetupScreen'
@@ -78,6 +79,7 @@ export default function App() {
     <div className={debugIds ? 'debug-ids' : ''} style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <FileWatchBanner />
       <DesignPickerModal />
+      <SaveShortcut />
 
       {/* Keyed by screen: navigating away clears a caught error rather than
           stranding you on the fallback. */}

@@ -216,6 +216,8 @@ export default function FormSpecPane({ posRef, embedded = false }) {
 
   const undo = useStore(s => s.undo)
   const addWrapper = useStore(s => s.addWrapper)
+  const goBackPosition = useStore(s => s.goBackPosition)
+  const backRef = useStore(s => s.positionHistory[s.positionHistory.length - 1] || null)
   // The last one-click add, for its "Added … · Undo" line. Cleared when the position changes.
   const [lastAdded, setLastAdded] = useState(null)   // { posRef, refs: [ref], where }
   const [forking, setForking] = useState(false)
@@ -774,13 +776,22 @@ export default function FormSpecPane({ posRef, embedded = false }) {
         </div>
       )}
 
-      {nextUnreconciled && !allPresent && (
-        <div className="mt-3 pt-2 border-top">
-          <Button size="sm" variant="outline-primary" className="w-100" style={{ fontSize: 10 }}
-            onClick={() => setActivePosition(nextUnreconciled)}
-            title="Jump to the next position the Form is not yet satisfied on">
-            Next unreconciled: <span style={{ fontFamily: 'monospace' }}>{nextUnreconciled}</span> →
-          </Button>
+      {/* Next and its way back. */}
+      {!embedded && ((nextUnreconciled && !allPresent) || backRef) && (
+        <div className="mt-3 pt-2 border-top d-flex gap-1">
+          {backRef && (
+            <Button size="sm" variant="outline-secondary" style={{ fontSize: 10, whiteSpace: 'nowrap' }}
+              onClick={goBackPosition} title="Back to the position you were on before">
+              ‹ Back to <span style={{ fontFamily: 'monospace' }}>{backRef}</span>
+            </Button>
+          )}
+          {nextUnreconciled && !allPresent && (
+            <Button size="sm" variant="outline-primary" className="flex-grow-1" style={{ fontSize: 10 }}
+              onClick={() => setActivePosition(nextUnreconciled)}
+              title="Jump to the next position the Form is not yet satisfied on">
+              Next unreconciled: <span style={{ fontFamily: 'monospace' }}>{nextUnreconciled}</span> →
+            </Button>
+          )}
         </div>
       )}
 

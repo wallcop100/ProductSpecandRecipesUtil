@@ -31,6 +31,7 @@ import PasteMergeModal from '../components/PasteMergeModal'
 import FavoritesPanel from '../components/FavoritesPanel'
 import ReviewModal from '../components/ReviewModal'
 import ValidationFixModal from '../components/ValidationFixModal'
+import { SaveIndicator } from '../components/SaveStatus'
 import LinWrapperWizardModal from '../components/LinWrapperWizardModal'
 import AddAnywhereModal from '../components/AddAnywhereModal'
 import NewETWizardModal from '../components/NewETWizardModal'
@@ -85,6 +86,7 @@ export default function BuilderScreen({
 
   const [showDupModal, setShowDupModal] = useState(false)
   const [showLinWizard, setShowLinWizard] = useState(false)
+  const [confirmClose, setConfirmClose] = useState(false)
   const [showReview, setShowReview] = useState(false)
   const [reviewInitialRefs, setReviewInitialRefs] = useState(null)
 
@@ -426,11 +428,13 @@ export default function BuilderScreen({
         style={{ flexShrink: 0 }}
         data-debug-id="BuilderScreen/Toolbar"
       >
-        <IconButton variant="outline-secondary" bsSize="sm" icon={ACTION_ICONS.back}
-          title="Back to project setup" onClick={onBackToSetup} />
+        {/* Not a "back": it closes the project. Says so, and asks first. */}
+        <IconButton variant="outline-secondary" bsSize="sm" icon="logout"
+          title="Close project — back to choosing a project" onClick={() => setConfirmClose(true)} />
         {projectNumber && (
           <ProjectIdPill number={projectNumber} configName={configName} size="sm" className="me-1" />
         )}
+        <SaveIndicator />
         {/* Silent unless a Form template is attached. "Reconcile →" steps through
             every position that still misses a Form product. */}
         <FormProgressChip onReconcile={startReconcile} />
@@ -792,6 +796,24 @@ export default function BuilderScreen({
             />
           )}
         </Modal.Body>
+      </Modal>
+
+      <Modal show={confirmClose} onHide={() => setConfirmClose(false)} centered size="sm">
+        <Modal.Header closeButton><Modal.Title style={{ fontSize: 15 }}>Close this project?</Modal.Title></Modal.Header>
+        <Modal.Body style={{ fontSize: 12 }}>
+          You go back to choosing a project.
+          {hasDirtyChanges
+            ? <> Your {psChanges.length + rsChanges.length} unexported change{psChanges.length + rsChanges.length === 1 ? ' is' : 's are'} kept
+                in this browser and offered back when you reopen it — but they are not in the workbooks until you export.</>
+            : <> Nothing is waiting to export.</>}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="link" size="sm" className="text-muted" onClick={() => setConfirmClose(false)}>Stay</Button>
+          {hasDirtyChanges && (
+            <Button variant="outline-primary" size="sm" onClick={() => { setConfirmClose(false); requestExport() }}>Export first</Button>
+          )}
+          <Button variant="danger" size="sm" onClick={() => { setConfirmClose(false); onBackToSetup() }}>Close project</Button>
+        </Modal.Footer>
       </Modal>
 
       <ValidationFixModal

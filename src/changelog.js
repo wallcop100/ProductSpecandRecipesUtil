@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-09-25', note: 'Save indicator (cloud) beside the project; Ctrl+S saves now and says what is still to export. Close project asks first; Back undoes Next' },
   { date: '2026-09-25', note: 'Every recipe gets one IsDesign item as you leave it: a lone row is marked for you, otherwise you pick one before moving on' },
   { date: '2026-09-25', note: 'A row has Quantity OR Dim_QuantityMultiplier, never both; profiles default to a multiplier of 1. Tutorials no longer stack over other windows' },
   { date: '2026-09-25', note: 'Side-by-Side: a position with no wrapper offers + LIN wrapper / + DL wrapper (next free ET-LIN-NN / ET-DL-NN, Ideaworks N/A), so Form products can go inside it' },

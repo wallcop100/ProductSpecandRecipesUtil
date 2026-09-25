@@ -13,7 +13,7 @@
  */
 
 import { load as yamlLoad, dump as yamlDump } from 'js-yaml'
-import { openDatabase, dbApi } from './db'
+import { openDatabase, dbApi, flush } from './db'
 import * as fsx from './fs'
 import * as backend from '../utils/backend'
 import defaultTagsYaml from './default-tags.yaml?raw'
@@ -114,6 +114,8 @@ function dbBridge() {
     getPendingChanges: call(projectId => dbApi.getPendingChanges(projectId)),
     setPendingChanges: call((projectId, ps, rs) => dbApi.setPendingChanges(projectId, ps, rs)),
     clearPendingChanges: call(projectId => dbApi.clearPendingChanges(projectId)),
+    // Write the in-memory database to browser storage now (Ctrl+S; the save indicator).
+    flush: call(() => flush()),
 
     upsertLocalET: call((projectId, et) => dbApi.upsertLocalElementType(projectId, et)),
     getLocalETs: call(projectId => dbApi.getLocalElementTypes(projectId)),
