@@ -128,6 +128,11 @@ export const dbApi = {
   applyConfigData: writer(schema.applyConfigData),
   checkConfigVersion: reader(schema.checkConfigVersion),
   collectLibraryData: reader(schema.collectLibraryData),
+
+  // style library (tool-wide)
+  recordStyleExemplars: writer(schema.recordStyleExemplars),
+  getStyleExemplars: reader(schema.getStyleExemplars),
+  getStyleSummary: reader(schema.getStyleSummary),
   applyLibraryData: writer(schema.applyLibraryData),
 
   // pending changes (crash-safe dirty registry)

@@ -31,7 +31,9 @@ import {
   discardsFromNoteEdit, pickExamples, learnCodeTokens, clearOverridesFor,
 } from '../utils/codeLearning'
 import { inferConvention, reuseCandidates, suggestRef } from '../utils/etRefSuggest'
-import { proposeElementTypes } from '../utils/etSeed'
+import { proposeElementTypes, familyDescription } from '../utils/etSeed'
+import { matchShape } from '../utils/codeShapes'
+import shippedShapes from '../data/codeShapes.json'
 import { resolveFormRefs, buildRefMap, targetFor } from '../utils/ptResolve'
 import { applyKnownCodes, knownTokenIndices } from '../utils/knownCodes'
 import { diffCaptures, wrapperDivergence } from '../utils/formSpec'
@@ -109,6 +111,15 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   const [keptSeparate, setKeptSeparate] = useState(new Set())   // dismissed similar-groups
   const [mergingGroup, setMergingGroup] = useState(null)        // codes awaiting one new ET
   const [bulkProposals, setBulkProposals] = useState(null)      // the bulk "create them all" review
+  // The tool-wide style library: how products became ElementTypes on every project opened.
+  const [styleLibrary, setStyleLibrary] = useState([])
+  useEffect(() => {
+    let live = true
+    Promise.resolve(window.electronAPI?.db?.getStyleExemplars?.())
+      .then(rows => { if (live && Array.isArray(rows)) setStyleLibrary(rows) })
+      .catch(() => { /* no library yet */ })
+    return () => { live = false }
+  }, [])
   // Identity of the picked workbook. `filepath` is an in-memory token that cannot
   // survive a reload, so the draft (and the captures) carry this instead.
   const [source, setSource] = useState(null)
@@ -611,8 +622,11 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
    * An ElementType proposal for EVERY code still without one (etSeed.js): family-based
    * ref, "Maker - Code" name, description seeded from the Form's product name column.
    * The bulk review starts from these, and a single "Create" uses the same ref.
+   *
+   * A code is the LEAD of its cell (the luminaire) when it is the first capture of any
+   * Form row that yields it; any other code is an extra, filed as an accessory.
    */
-  const proposals = useMemo(() => {
+  const { proposals, newFamilies } = useMemo(() => {
     const byId = new Map(confirmed.map(r => [r.id, r]))
     const pick = c => {
       const keys = Object.keys(c || {})
@@ -626,16 +640,49 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       }
       return ''
     }
+    // The Form's PageType (Point / Linear) — which company family a code can belong to.
+    const pageTypeFor = e => {
+      for (const id of e.rowRefs) {
+        const c = byId.get(id)?.context || {}
+        const k = Object.keys(c).find(h => /page\s*type/i.test(h))
+        if (k && String(c[k] ?? '').trim()) return String(c[k]).trim()
+      }
+      return ''
+    }
+    const leads = new Set()
+    for (const r of confirmed) {
+      const first = deriveCaptures(r, captureOpts).captures[0]
+      if (first) leads.add(norm(first.code))
+    }
     return proposeElementTypes(unassigned, {
-      elementTypes, psRows, recipes, collectionRefs: dbCollectionRefs,
+      elementTypes, psRows, recipes, positionTypes, collectionRefs: dbCollectionRefs,
       ptTarget: map.pt ? ptTarget : r => r, contextFor,
+      roleOf: e => (leads.has(norm(e.text)) ? 'lead' : 'extra'),
+      pageTypeFor,
+      library: styleLibrary,
     })
-  }, [unassigned, confirmed, elementTypes, psRows, recipes, dbCollectionRefs, map.pt, ptTarget])
+  }, [unassigned, confirmed, captureOpts, elementTypes, psRows, recipes, positionTypes, dbCollectionRefs, map.pt, ptTarget, styleLibrary])
+
+  /** Every family the project already has: collection rows, and the ParentRefs in use. */
+  const knownFamilies = useMemo(() => [...new Set([
+    ...dbCollectionRefs, ...elementTypes.map(e => e.Family || e.family).filter(Boolean),
+  ])], [dbCollectionRefs, elementTypes])
+
+  /** Create a family's collection row (under its own parent) if the project does not have it yet. */
+  function ensureFamily(ref, description, parent = null) {
+    if (!ref) return
+    const have = useStore.getState().elementTypes.some(e => (e.ElementTypeRef || '').toLowerCase() === ref.toLowerCase())
+    if (have || knownFamilies.some(f => f.toLowerCase() === ref.toLowerCase())) return
+    createElementType({ ref, description: description || null, family: parent || null, isCollection: true })
+  }
 
   // What a single "Create" offers: reuse/variant from suggestRef, else the family ref.
   const panelEntries = useMemo(() => {
     const seed = new Map(proposals.map(p => [norm(p.code), p]))
     return entries.map(e => {
+      // A supplier's old numbering, from the shipped shape table — worth a look even once assigned.
+      const old = matchShape(e.text, e.manufacturers[0] || '', shippedShapes.shapes).superseded
+      e = old ? { ...e, superseded: { example: old.example } } : e
       if (e.etRef || !e.suggested) return e
       const p = seed.get(norm(e.text))
       const ref = e.suggested.reason === 'new' && p?.ref ? p.ref : e.suggested.ref
@@ -644,12 +691,15 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   }, [entries, proposals])
 
   function openBulkCreate() {
-    setBulkProposals(proposals)
+    setBulkProposals({ proposals, newFamilies })
   }
 
-  /** Apply the reviewed proposals: reuse or create, give each a spec row, assign. */
-  function applyBulk(list) {
-    for (const p of list) {
+  /** Apply the reviewed proposals: new families first, then reuse or create each code. */
+  function applyBulk({ families, items }) {
+    // Parents before children, so a ParentRef never points at a row not yet made.
+    const depth = f => (f.parent && families.some(x => x.ref === f.parent) ? 1 + depth(families.find(x => x.ref === f.parent)) : 0)
+    for (const f of [...families].sort((a, b) => depth(a) - depth(b))) ensureFamily(f.ref.trim(), f.description.trim(), f.parent)
+    for (const p of items) {
       if (p.action === 'reuse' && p.reuseRef) { assignET(p.code, p.reuseRef); continue }
       const ref = p.ref.trim()
       createElementType({
@@ -1248,8 +1298,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       <BulkCreateETModal
         show={!!bulkProposals}
         onHide={() => setBulkProposals(null)}
-        proposals={bulkProposals}
-        families={dbCollectionRefs}
+        proposals={bulkProposals?.proposals}
+        newFamilies={bulkProposals?.newFamilies}
+        families={knownFamilies}
         elementTypes={elementTypes}
         onApply={applyBulk}
       />
@@ -1279,6 +1330,15 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
           description: creatingFor.description,
         } : {}}
         onCreated={etRef => {
+          // Its family may be one the seed proposed and nobody has created yet.
+          const et = useStore.getState().elementTypes.find(e => (e.ElementTypeRef || '').toLowerCase() === etRef.toLowerCase())
+          const fam = et?.Family || ''
+          const proposed = newFamilies.find(f => f.ref.toLowerCase() === fam.toLowerCase())
+          if (proposed?.parent) {
+            const up = newFamilies.find(f => f.ref.toLowerCase() === proposed.parent.toLowerCase())
+            ensureFamily(proposed.parent, up?.description, up?.parent)
+          }
+          if (fam) ensureFamily(fam, proposed?.description || familyDescription(fam.replace(/^ET-/i, '')), proposed?.parent)
           // A merge puts every code in the group on the one new ElementType.
           for (const code of mergingGroup || [creatingFor.text]) assignET(code, etRef)
           setCreatingFor(null)

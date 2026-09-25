@@ -1,62 +1,73 @@
 /**
  * etSeed.js — proposals for the ElementTypes a Form import still needs.
  *
- * Creating them one at a time was the slow part of an import, and the suggested ref
- * was wrong in kind: `ET-<MANUFACTURER>-01`. A real DesignDB names an ElementType by
- * its FAMILY — `ET-PS-45` (point source), `ET-LIN-…`, `ET-DL-01` — and the family is
- * the ElementType's ParentRef. The Name carries the product: "EldoLED - SL0240A3".
+ * Creating them one at a time was the slow part of an import. Every unassigned code now
+ * gets a proposal — family, ref, name, description — and the user weeds out the wrong
+ * ones. Nothing here writes anything.
  *
- * So every unassigned code gets a proposal: include it, in this family, with this ref,
- * name and description. The user weeds out the bad ones rather than building the good
- * ones by hand. Nothing here writes anything.
+ * THE FAMILY is one of the company's (src/data/etCanon.js — Kaizen page 1217215): ET-PS,
+ * ET-DL, ET-LIN-TAPE/FLEX/FIXED/PROF/CLIP/MOUNT, ET-DRIVER, ET-CONNECTION… The rule, first
+ * match wins, each reported in `why`:
  *
- * The family is a vote between three signals, each reported in `why` so a wrong guess
- * is easy to see and to correct for a whole group at once:
+ *   stem      — an existing product from the same maker whose code shares a real stem
+ *               (FPSN0809BG3000 beside FPSN0809BG2000). Specific enough to trust.
+ *   style     — the tool-wide style library (styleLibrary.js): how this maker's product line
+ *               was named on any project opened before. Copies that ref's shape.
+ *   shape     — the shipped code-shape table (codeShapes.js): LEDFlex FPS…BG… is a profile,
+ *               FPS…PCOPD… a diffuser, EldoLED SL…-…mA a driver.
+ *   design    — the family of the design (IsDesign) ElementType already in the recipe of
+ *               the positions asking for this code. Only fires once recipes exist.
+ *   canon     — the Form: a Point page's lead code is ET-PS, its other codes accessories
+ *               unless their words say what they are; a Linear page's code is filed by the
+ *               keyword in its text (TAPE, NEON, PROFILE, DIFFUSER…), else ET-LIN-INGREDIENTS
+ *               and flagged.
+ *   parent    — the position's parent PositionType (DOWNLIGHT → ET-DOWNLIGHT). A last
+ *               resort, always flagged: it is not a company family.
  *
- *   code     — families of products whose codes share a real stem with this one, from
- *              the same maker (FPSN0809BG2000 sits with FPSN0809ECG). Strongest.
- *   maker    — the families this manufacturer's products already sit in (EldoLED →
- *              drivers). A maker's catalogue is narrow.
- *   words    — words in the Form (product name, description, the code's note) that
- *              appear in a family's own members' names ("downlight", "linear").
- *   position — the family of the design (IsDesign) ElementType of the positions that
- *              ask for this code. Weakest: a position also asks for its driver.
+ * Nothing is guessed from a maker alone: on an early project (5452) that filed every Phos
+ * downlight as a remote driver, because Phos also makes a driver.
  *
- * Pure and dependency-free apart from the shared ref helpers.
+ * Linear ingredient refs carry their keyword (Kaizen page 140959): a diffuser files under
+ * ET-LIN-PROF but its ref is ET-LIN-DIFF-NN — `head` is that ref prefix.
+ *
+ * Families that do not exist yet are returned as `newFamilies`, with the canon's description
+ * and ParentRef, and their missing parents too.
  */
 
 import { sharedStem } from './etRefSuggest'
+import { hasProductIdentity } from './productCodes'
+import { styleFor } from './styleLibrary'
+import { matchShape } from './codeShapes'
+import { CANON_FAMILIES, classifyText } from '../data/etCanon'
+import shippedShapes from '../data/codeShapes.json'
 
 const lc = s => String(s ?? '').trim().toLowerCase()
 const refOf = e => e.ElementTypeRef || e.elementTypeRef || ''
 const famOf = e => e.Family || e.family || ''
+const ptRefOf = p => p.PositionTypeRef || p.positionTypeRef || ''
 const COUNTER_RE = /^(.*)-(\d+)$/
 
-/** Words worth matching: alphabetic, 4+ letters, not filler. */
-const STOP = new Set(['with', 'from', 'type', 'family', 'white', 'black', 'custom', 'standard', 'mounted', 'light', 'lighting', 'fitting', 'luminaire'])
-const words = s => String(s ?? '').toLowerCase().match(/[a-z]{4,}/g)?.filter(w => !STOP.has(w)) ?? []
+export const ACCESSORIES = 'ET-PS-ACCESSORIES'
+const POINT = 'ET-PS'
+const LINEAR_FALLBACK = 'ET-LIN-INGREDIENTS'
+
+/** A PositionType parent as a family ref: "SURFACE MOUNTED POINT SOURCE" → ET-SURFACE-MOUNTED-POINT-SOURCE. */
+export function familyRefFor(parent) {
+  const body = String(parent ?? '').toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+  return body ? `ET-${body}` : ''
+}
 
 /**
- * The project's families and what they are made of.
- * → Map<family ref, { members: Set<lc ref>, vocab: Map<word, count> }>
+ * A family's description from its PositionType parent: DOWNLIGHT → "Downlight family",
+ * LINEAR-JOINERY → "Linear joinery family". A short all-caps parent (FF&E) is an acronym
+ * and stays as written.
  */
-export function familyIndex(elementTypes = [], collectionRefs = []) {
-  const idx = new Map()
-  const get = f => {
-    if (!idx.has(f)) idx.set(f, { members: new Set(), vocab: new Map() })
-    return idx.get(f)
-  }
-  for (const f of collectionRefs) if (f) get(f)
-  for (const et of elementTypes) {
-    const f = famOf(et)
-    if (!f) continue
-    const fam = get(f)
-    fam.members.add(lc(refOf(et)))
-    for (const w of words(`${et.Name || ''} ${et.Description || ''}`)) {
-      fam.vocab.set(w, (fam.vocab.get(w) || 0) + 1)
-    }
-  }
-  return idx
+export function familyDescription(parent) {
+  const raw = String(parent ?? '').trim()
+  if (!raw) return ''
+  if (raw.length <= 4) return `${raw} family`
+  const words = raw.replace(/[-_]+/g, ' ').toLowerCase()
+  return `${words[0].toUpperCase()}${words.slice(1)} family`
 }
 
 /** The next free `<family>-NN`, counting refs already taken AND refs handed out in this batch. */
@@ -74,96 +85,101 @@ export function nextRef(family, taken, width = 2) {
 export const seedName = (manufacturer, code) =>
   [String(manufacturer || '').trim(), String(code || '').trim()].filter(Boolean).join(' - ')
 
+/** Most common value, first-seen wins a tie. → { value, count, distinct } */
+function mostCommon(values) {
+  const n = new Map()
+  for (const v of values) if (v) n.set(v, (n.get(v) || 0) + 1)
+  let value = '', count = 0
+  for (const [v, c] of n) if (c > count) { value = v; count = c }
+  return { value, count, distinct: n.size }
+}
+
 /**
- * Score every family for one code. → [{ family, score, why: ['maker', …] }] best first.
+ * The family for one code. → { family, head, why, flag, parent?, spread, style?, shape? }
  *
- * `signals` = { code, manufacturer, text, designFamilies: [family] }
- * `ctx`     = { families (familyIndex), makerFamilies: Map<lc maker, Map<family, n>>,
- *               products: [{ code, maker (lc), family }] }
+ * `signals` = { code, manufacturer, text, role: 'lead'|'extra', pageType: 'point'|'linear'|'',
+ *               designFamilies: [f], parents: [ptParent] }
+ * `ctx`     = { products: [{ code, maker (lc), family }], library: [exemplar], shapes: [shape] }
+ *
+ * `flag` means "a guess worth checking" — the review marks the ref.
  */
-export function rankFamilies(signals, ctx) {
-  const scores = new Map()
-  const add = (family, pts, why) => {
-    if (!family || !ctx.families.has(family)) return
-    const s = scores.get(family) || { family, score: 0, why: new Set() }
-    s.score += pts
-    s.why.add(why)
-    scores.set(family, s)
-  }
+export function pickFamily(signals, ctx) {
+  const done = (family, why, extra = {}) => ({ family, head: family, why, flag: false, spread: 1, ...extra })
 
-  // code: a shared leading stem with an existing product of the same maker
+  // stem: the same maker's product line, already filed somewhere in this project
+  let best = null
   for (const { code, maker, family } of ctx.products || []) {
-    if (maker !== lc(signals.manufacturer)) continue
+    if (!family || maker !== lc(signals.manufacturer)) continue
     const stem = sharedStem(signals.code, code)
-    if (stem >= 4) add(family, 4 * Math.min(1, stem / Math.max(4, String(signals.code).length)), 'code')
+    if (stem >= 4 && (!best || stem > best.stem)) best = { family, stem }
   }
+  if (best) return done(best.family, 'stem')
 
-  // maker: share of this maker's existing products in each family
-  const byMaker = ctx.makerFamilies.get(lc(signals.manufacturer))
-  if (byMaker) {
-    const total = [...byMaker.values()].reduce((a, b) => a + b, 0)
-    for (const [f, n] of byMaker) add(f, 3 * (n / total), 'maker')
+  const style = styleFor(signals.code, signals.manufacturer, ctx.library || [], signals.text || '')
+  if (style) return done(style.family, 'style', { style, flag: !!style.partial })
+
+  const shape = matchShape(signals.code, signals.manufacturer, ctx.shapes || []).current
+  if (shape?.family) return done(shape.family, 'shape', { head: shape.head || shape.family, shape })
+
+  const design = mostCommon(signals.designFamilies || [])
+  if (design.value) return done(design.value, 'design', { spread: design.distinct })
+
+  const words = classifyText(signals.text)
+  if (signals.pageType === 'point') {
+    if (signals.role !== 'extra') return done(POINT, 'canon', { canon: 'Point page' })
+    if (words) return done(words.family, 'canon', { head: words.head, canon: words.keyword })
+    return done(ACCESSORIES, 'canon', { canon: 'extra code on a Point page' })
   }
-
-  // words: rarer words count for more (a word in every family says nothing)
-  const ws = new Set(words(signals.text))
-  if (ws.size) {
-    const spread = new Map()
-    for (const [, fam] of ctx.families) for (const w of fam.vocab.keys()) spread.set(w, (spread.get(w) || 0) + 1)
-    for (const [f, fam] of ctx.families) {
-      let hit = 0
-      for (const w of ws) if (fam.vocab.has(w)) hit += 1 / spread.get(w)
-      if (hit > 0) add(f, 2 * Math.min(1, hit), 'words')
-    }
+  if (signals.pageType === 'linear') {
+    if (words) return done(words.family, 'canon', { head: words.head, canon: words.keyword })
+    return done(LINEAR_FALLBACK, 'canon', { canon: 'Linear page, no keyword', flag: true })
   }
+  if (words) return done(words.family, 'canon', { head: words.head, canon: words.keyword })
 
-  // position: the family of what these positions are designed around
-  const design = signals.designFamilies || []
-  for (const f of design) add(f, 1 / design.length, 'position')
-
-  return [...scores.values()]
-    .map(s => ({ ...s, why: [...s.why] }))
-    .sort((a, b) => b.score - a.score || a.family.localeCompare(b.family))
+  const parent = mostCommon(signals.parents || [])
+  if (parent.value) {
+    return done(familyRefFor(parent.value), 'parent', { parent: parent.value, spread: parent.distinct, flag: true })
+  }
+  return { family: '', head: '', why: null, flag: false, spread: 0 }
 }
 
 /**
  * Proposals for every code that still has no ElementType.
  *
  * entries  — distinct codes: { text, manufacturers, positionTypes, variants, reuse, blocked }
- * project  — { elementTypes, psRows, recipes, collectionRefs, ptTarget(formRef), contextFor(entry) }
+ * project  — { elementTypes, psRows, recipes, positionTypes, collectionRefs,
+ *              ptTarget(formRef), contextFor(entry), roleOf(entry), pageTypeFor(entry),
+ *              library: [exemplar], shapes (default: shipped table), families (default: canon) }
  *
- * → [{ code, manufacturer, include, action: 'create'|'reuse', reuseRef, family, ref,
- *      name, description, why, alternatives }]
+ * → { proposals: [{ code, manufacturer, include, action: 'create'|'reuse'|'skip', reuseRef, family,
+ *                   ref, name, description, why, parent, spread, styledOn, shapedOn, canon,
+ *                   checkRef, alternatives, superseded }],
+ *     newFamilies: [{ ref, description, parent, include, from }] }
  *
- * An entry that already has a same-product match in the project is proposed as a REUSE
- * of it, not a new ElementType — the dedup win stays the default.
+ * A code that already matches an existing product is proposed as a REUSE of it.
  */
 export function proposeElementTypes(entries = [], project = {}) {
   const {
-    elementTypes = [], psRows = [], recipes = [], collectionRefs = [],
-    ptTarget = r => r, contextFor = () => '',
+    elementTypes = [], psRows = [], recipes = [], positionTypes = [], collectionRefs = [],
+    ptTarget = r => r, contextFor = () => '', roleOf = () => 'lead', pageTypeFor = () => '', library = [],
+    shapes = shippedShapes.shapes || [], families = CANON_FAMILIES,
   } = project
+  const canonByRef = new Map(families.map(f => [lc(f.ref), f]))
 
-  const families = familyIndex(elementTypes, collectionRefs)
   const etFamily = new Map(elementTypes.map(e => [lc(refOf(e)), famOf(e)]))
+  const existingFamilies = new Set([...collectionRefs, ...elementTypes.map(famOf)].filter(Boolean).map(lc))
+  const parentOf = new Map(positionTypes.map(p => [lc(ptRefOf(p)), p.ParentRef || p.parentRef || '']))
 
-  const makerFamilies = new Map()
   const products = []
   for (const r of psRows) {
-    const maker = lc(r.Manufacturer || r.manufacturer)
     const f = etFamily.get(lc(r.ElementTypeRef || r.elementTypeRef))
-    if (!maker || !f) continue
     const code = String(r.ProductCode || r.productCode || '').trim()
-    if (code && code.toUpperCase() !== 'N/A') products.push({ code, maker, family: f })
-    if (!makerFamilies.has(maker)) makerFamilies.set(maker, new Map())
-    const m = makerFamilies.get(maker)
-    m.set(f, (m.get(f) || 0) + 1)
+    if (f && code && code.toUpperCase() !== 'N/A') products.push({ code, maker: lc(r.Manufacturer || r.manufacturer), family: f })
   }
 
   const designFamilyOf = new Map()   // lc PositionTypeRef -> [family]
   for (const r of recipes) {
-    if ((r.IsDeleted || r.isDeleted) === 'Y') continue
-    if ((r.IsDesign || r.isDesign) !== 'Y') continue
+    if ((r.IsDeleted || r.isDeleted) === 'Y' || (r.IsDesign || r.isDesign) !== 'Y') continue
     const f = etFamily.get(lc(r.ElementTypeRef || r.elementTypeRef))
     const pt = lc(r.PositionTypeRef || r.positionTypeRef)
     if (!f || !pt) continue
@@ -171,40 +187,77 @@ export function proposeElementTypes(entries = [], project = {}) {
     designFamilyOf.get(pt).push(f)
   }
 
-  const ctx = { families, makerFamilies, products }
   const taken = new Set(elementTypes.map(refOf))
-  const out = []
+  const newFamilies = new Map()   // lc ref -> { ref, description, include, from }
+  const proposals = []
 
   for (const e of entries) {
     const manufacturer = e.manufacturers?.[0] || ''
     const note = e.variants?.[0]?.note || ''
     const same = (e.reuse || []).find(c => c.kind === 'same')
+    const targets = (e.positionTypes || []).map(pt => lc(ptTarget(pt) || pt))
 
-    const designFamilies = (e.positionTypes || [])
-      .flatMap(pt => designFamilyOf.get(lc(ptTarget(pt) || pt)) || [])
+    // "N/A", "TBC": not a product, so not an ElementType either.
+    if (!hasProductIdentity(e.text)) {
+      proposals.push({
+        code: e.text, manufacturer, include: false, action: 'skip', reuseRef: null, family: '', ref: '',
+        name: '', description: '', why: 'placeholder', parent: null, spread: 0,
+      })
+      continue
+    }
+
     const context = contextFor(e) || ''
-    const ranked = rankFamilies({ code: e.text, manufacturer, text: `${context} ${note}`, designFamilies }, ctx)
-    const best = ranked[0] || null
+    const pick = pickFamily({
+      code: e.text,
+      manufacturer,
+      text: `${context} ${note}`,
+      role: roleOf(e),
+      pageType: lc(pageTypeFor(e)).startsWith('point') ? 'point' : lc(pageTypeFor(e)).startsWith('linear') ? 'linear' : '',
+      designFamilies: targets.flatMap(t => designFamilyOf.get(t) || []),
+      parents: targets.map(t => parentOf.get(t)).filter(Boolean),
+    }, { products, library, shapes })
 
-    const family = best?.family || ''
-    const ref = family ? nextRef(family, taken) : ''
+    const family = pick.family
+    // Propose the family, and any parent of it the project lacks, from the canon.
+    const propose = (ref, from) => {
+      if (!ref || existingFamilies.has(lc(ref)) || newFamilies.has(lc(ref))) return
+      const canon = canonByRef.get(lc(ref))
+      newFamilies.set(lc(ref), {
+        ref,
+        description: canon?.description || familyDescription(from || ref.replace(/^ET-/i, '')),
+        parent: canon?.parent || null,
+        include: true,
+        from: from || null,
+      })
+      if (canon?.parent) propose(canon.parent)
+    }
+    if (family && !same) propose(family, pick.parent)
+    const ref = family && !same ? nextRef(pick.style?.refBase || pick.head || family, taken) : ''
     if (ref) taken.add(ref)
+    const old = matchShape(e.text, manufacturer, shapes).superseded
 
-    out.push({
+    proposals.push({
       code: e.text,
       manufacturer,
       include: !e.blocked,
       action: same ? 'reuse' : 'create',
       reuseRef: same?.ref || null,
-      family,
+      family: same ? '' : family,
       ref,
       name: seedName(manufacturer, e.text),
       description: [context, note].map(s => String(s).trim()).filter(Boolean).join(' — '),
-      why: best?.why || [],
-      alternatives: ranked.slice(1, 4).map(r => r.family),
+      why: pick.why,
+      parent: pick.parent || null,
+      spread: pick.spread,
+      styledOn: pick.style ? { ref: pick.style.exemplar.ref, code: pick.style.exemplar.code, source: pick.style.exemplar.source } : null,
+      shapedOn: pick.shape ? { shape: pick.shape.shape, example: pick.shape.example, n: pick.shape.n } : null,
+      canon: pick.canon || null,
+      checkRef: !!pick.flag,
+      alternatives: pick.style?.alternatives || [],
+      superseded: old ? { shape: old.shape, example: old.example } : null,
     })
   }
-  return out
+  return { proposals, newFamilies: [...newFamilies.values()] }
 }
 
 /**
@@ -219,6 +272,6 @@ export function refamily(proposals, indices, family, elementTypes = []) {
     if (!pick.has(i)) return p
     const ref = family ? nextRef(family, taken) : ''
     if (ref) taken.add(ref)
-    return { ...p, family, ref, why: family === p.family ? p.why : ['you'] }
+    return { ...p, family, ref, why: family === p.family ? p.why : 'you' }
   })
 }

@@ -215,6 +215,20 @@ function createTables() {
       updated_at  TEXT
     );
 
+    -- Style library: how products became ElementTypes on every project opened.
+    -- Tool-wide (no project_id). Seeds new ElementTypes by analogy (utils/styleLibrary.js).
+    CREATE TABLE IF NOT EXISTS style_exemplars (
+      maker        TEXT NOT NULL,
+      code         TEXT NOT NULL,
+      ref          TEXT NOT NULL,
+      family       TEXT NOT NULL,
+      name         TEXT,
+      description  TEXT,
+      source       TEXT,
+      seen_at      TEXT,
+      UNIQUE(maker, code, ref)
+    );
+
     -- Locally-created ElementTypes (EXPORT_PLAN §4). Survive restarts even when
     -- DB writes are off; the promotion queue for the writable catalogue.
     CREATE TABLE IF NOT EXISTS local_element_types (
@@ -760,12 +774,65 @@ function deleteLocalElementType(projectId, ref) {
 // Personal library — favorites + global templates (EXPORT_PLAN §5)
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Style library — tool-wide exemplars of how products became ElementTypes
+// ---------------------------------------------------------------------------
+
+/**
+ * Record exemplars harvested from a project (utils/styleLibrary.harvestExemplars).
+ * Keyed by (maker, code, ref): re-opening a project refreshes its rows, never duplicates.
+ * → how many were new.
+ */
+function recordStyleExemplars(exemplars = []) {
+  let added = 0
+  getDb().transaction(() => { added = writeStyleExemplars(exemplars) })()
+  return added
+}
+
+/** The writes themselves, for callers already inside a transaction (the shim can't nest). */
+function writeStyleExemplars(exemplars = []) {
+  const database = getDb()
+  const ts = now()
+  const exists = database.prepare('SELECT 1 FROM style_exemplars WHERE maker = ? AND code = ? AND ref = ?')
+  const upsert = database.prepare(`
+    INSERT INTO style_exemplars (maker, code, ref, family, name, description, source, seen_at)
+    VALUES (@maker, @code, @ref, @family, @name, @description, @source, @ts)
+    ON CONFLICT(maker, code, ref) DO UPDATE SET
+      family = excluded.family, name = excluded.name, description = excluded.description,
+      source = excluded.source, seen_at = excluded.seen_at
+  `)
+  let added = 0
+  for (const e of exemplars) {
+    if (!e?.maker || !e?.code || !e?.ref || !e?.family) continue
+    if (!exists.get(e.maker, e.code, e.ref)) added++
+    upsert.run({
+      maker: e.maker, code: e.code, ref: e.ref, family: e.family,
+      name: e.name ?? null, description: e.description ?? null, source: e.source ?? null, ts,
+    })
+  }
+  return added
+}
+
+function getStyleExemplars() {
+  return getDb()
+    .prepare('SELECT maker, code, ref, family, name, description, source FROM style_exemplars ORDER BY seen_at DESC')
+    .all()
+}
+
+/** → { count, sources: [name] } for the library line on the start page. */
+function getStyleSummary() {
+  const database = getDb()
+  const count = database.prepare('SELECT COUNT(*) AS n FROM style_exemplars').get()?.n ?? 0
+  const sources = database.prepare('SELECT DISTINCT source FROM style_exemplars WHERE source IS NOT NULL').all().map(r => r.source)
+  return { count, sources }
+}
+
 function collectLibraryData() {
   const templates = getDb()
     .prepare("SELECT * FROM templates WHERE scope = 'global'")
     .all()
     .map(parseTemplate)
-  return { version: 1, favorites: getFavorites(), templates }
+  return { version: 1, favorites: getFavorites(), templates, styles: getStyleExemplars() }
 }
 
 /**
@@ -777,7 +844,7 @@ function applyLibraryData(data = {}) {
     throw new Error(`Unsupported library file version: ${data.version ?? 'none'}`)
   }
   const database = getDb()
-  let favAdded = 0, favSkipped = 0, tplUpserted = 0
+  let favAdded = 0, favSkipped = 0, tplUpserted = 0, stylesAdded = 0
   const apply = database.transaction(() => {
     const existingFavs = new Set(
       getFavorites().map(f => `${f.kind}::${(f.ref || '').toLowerCase()}`)
@@ -793,9 +860,10 @@ function applyLibraryData(data = {}) {
       upsertTemplate({ ...t, scope: 'global', project_id: null })
       tplUpserted++
     }
+    stylesAdded = writeStyleExemplars(data.styles || [])
   })
   apply()
-  return { favAdded, favSkipped, tplUpserted }
+  return { favAdded, favSkipped, tplUpserted, stylesAdded }
 }
 
 /** All prefs for a project as a { key: value } map. */
@@ -1327,6 +1395,9 @@ export {
   setPendingChanges,
   clearPendingChanges,
   collectLibraryData,
+  recordStyleExemplars,
+  getStyleExemplars,
+  getStyleSummary,
   applyLibraryData,
   upsertLocalElementType,
   getLocalElementTypes,

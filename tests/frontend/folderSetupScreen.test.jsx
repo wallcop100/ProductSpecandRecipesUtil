@@ -308,3 +308,28 @@ describe('several DesignDBs in one folder', () => {
     expect(calls.indexOf('upsert')).toBeLessThan(calls.indexOf('apply'))
   })
 })
+
+describe('opening a project feeds the style library', () => {
+  test('its products and their ElementTypes are recorded, tool-wide', async () => {
+    importFiles.mockResolvedValue({
+      db: { element_types: [{ ElementTypeRef: 'ET-LIN-TAPE-NANO160-01', Family: 'ET-LIN-TAPE', Name: 'n' }], position_types: [] },
+      ps: [{ ElementTypeRef: 'ET-LIN-TAPE-NANO160-01', Manufacturer: 'LEDFlex', ProductCode: 'NFS160-27-2009' }],
+      rs: [], missing: [],
+    })
+    window.electronAPI.db.recordStyleExemplars = vi.fn().mockResolvedValue(1)
+    render(<FolderSetupScreen onProjectLoaded={() => {}} />)
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Open' }))[0])
+    await waitFor(() => expect(window.electronAPI.db.recordStyleExemplars).toHaveBeenCalled())
+    expect(window.electronAPI.db.recordStyleExemplars.mock.calls[0][0]).toEqual([expect.objectContaining({
+      maker: 'LEDFlex', code: 'NFS160-27-2009', ref: 'ET-LIN-TAPE-NANO160-01', family: 'ET-LIN-TAPE',
+    })])
+  })
+
+  test('a library failure never stops the project opening', async () => {
+    window.electronAPI.db.recordStyleExemplars = vi.fn().mockRejectedValue(new Error('boom'))
+    const onLoaded = vi.fn()
+    render(<FolderSetupScreen onProjectLoaded={onLoaded} />)
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Open' }))[0])
+    await waitFor(() => expect(onLoaded).toHaveBeenCalled())
+  })
+})
