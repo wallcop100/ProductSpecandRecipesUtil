@@ -32,6 +32,8 @@ import {
 } from '../utils/codeLearning'
 import { inferConvention, reuseCandidates, suggestRef } from '../utils/etRefSuggest'
 import { proposeElementTypes, familyDescription } from '../utils/etSeed'
+import { matchShape } from '../utils/codeShapes'
+import shippedShapes from '../data/codeShapes.json'
 import { resolveFormRefs, buildRefMap, targetFor } from '../utils/ptResolve'
 import { applyKnownCodes, knownTokenIndices } from '../utils/knownCodes'
 import { diffCaptures, wrapperDivergence } from '../utils/formSpec'
@@ -638,6 +640,15 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       }
       return ''
     }
+    // The Form's PageType (Point / Linear) — which company family a code can belong to.
+    const pageTypeFor = e => {
+      for (const id of e.rowRefs) {
+        const c = byId.get(id)?.context || {}
+        const k = Object.keys(c).find(h => /page\s*type/i.test(h))
+        if (k && String(c[k] ?? '').trim()) return String(c[k]).trim()
+      }
+      return ''
+    }
     const leads = new Set()
     for (const r of confirmed) {
       const first = deriveCaptures(r, captureOpts).captures[0]
@@ -647,6 +658,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       elementTypes, psRows, recipes, positionTypes, collectionRefs: dbCollectionRefs,
       ptTarget: map.pt ? ptTarget : r => r, contextFor,
       roleOf: e => (leads.has(norm(e.text)) ? 'lead' : 'extra'),
+      pageTypeFor,
       library: styleLibrary,
     })
   }, [unassigned, confirmed, captureOpts, elementTypes, psRows, recipes, positionTypes, dbCollectionRefs, map.pt, ptTarget, styleLibrary])
@@ -656,18 +668,21 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     ...dbCollectionRefs, ...elementTypes.map(e => e.Family || e.family).filter(Boolean),
   ])], [dbCollectionRefs, elementTypes])
 
-  /** Create a family's collection row if the project does not have it yet. */
-  function ensureFamily(ref, description) {
+  /** Create a family's collection row (under its own parent) if the project does not have it yet. */
+  function ensureFamily(ref, description, parent = null) {
     if (!ref) return
     const have = useStore.getState().elementTypes.some(e => (e.ElementTypeRef || '').toLowerCase() === ref.toLowerCase())
     if (have || knownFamilies.some(f => f.toLowerCase() === ref.toLowerCase())) return
-    createElementType({ ref, description: description || null, isCollection: true })
+    createElementType({ ref, description: description || null, family: parent || null, isCollection: true })
   }
 
   // What a single "Create" offers: reuse/variant from suggestRef, else the family ref.
   const panelEntries = useMemo(() => {
     const seed = new Map(proposals.map(p => [norm(p.code), p]))
     return entries.map(e => {
+      // A supplier's old numbering, from the shipped shape table — worth a look even once assigned.
+      const old = matchShape(e.text, e.manufacturers[0] || '', shippedShapes.shapes).superseded
+      e = old ? { ...e, superseded: { example: old.example } } : e
       if (e.etRef || !e.suggested) return e
       const p = seed.get(norm(e.text))
       const ref = e.suggested.reason === 'new' && p?.ref ? p.ref : e.suggested.ref
@@ -681,7 +696,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
 
   /** Apply the reviewed proposals: new families first, then reuse or create each code. */
   function applyBulk({ families, items }) {
-    for (const f of families) ensureFamily(f.ref.trim(), f.description.trim())
+    // Parents before children, so a ParentRef never points at a row not yet made.
+    const depth = f => (f.parent && families.some(x => x.ref === f.parent) ? 1 + depth(families.find(x => x.ref === f.parent)) : 0)
+    for (const f of [...families].sort((a, b) => depth(a) - depth(b))) ensureFamily(f.ref.trim(), f.description.trim(), f.parent)
     for (const p of items) {
       if (p.action === 'reuse' && p.reuseRef) { assignET(p.code, p.reuseRef); continue }
       const ref = p.ref.trim()
@@ -1317,7 +1334,11 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
           const et = useStore.getState().elementTypes.find(e => (e.ElementTypeRef || '').toLowerCase() === etRef.toLowerCase())
           const fam = et?.Family || ''
           const proposed = newFamilies.find(f => f.ref.toLowerCase() === fam.toLowerCase())
-          if (fam) ensureFamily(fam, proposed?.description || familyDescription(fam.replace(/^ET-/i, '')))
+          if (proposed?.parent) {
+            const up = newFamilies.find(f => f.ref.toLowerCase() === proposed.parent.toLowerCase())
+            ensureFamily(proposed.parent, up?.description, up?.parent)
+          }
+          if (fam) ensureFamily(fam, proposed?.description || familyDescription(fam.replace(/^ET-/i, '')), proposed?.parent)
           // A merge puts every code in the group on the one new ElementType.
           for (const code of mergingGroup || [creatingFor.text]) assignET(code, etRef)
           setCreatingFor(null)

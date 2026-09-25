@@ -25,13 +25,15 @@ import { refamily, ACCESSORIES } from '../utils/etSeed'
 
 const WHY = {
   stem: 'same product line',
+  shape: r => `code shaped like ${r.shapedOn?.example} (${r.shapedOn?.n} known)`,
+  canon: r => `company family — ${r.canon}`,
   style: r => `styled like ${r.styledOn?.ref}${r.styledOn?.source ? ` (${r.styledOn.source})` : ''}`,
   design: "position's design element",
-  parent: p => `position parent ${p}`,
+  parent: p => `position parent ${p} (not a company family)`,
   extra: 'extra code in its cell',
   you: 'you chose it',
 }
-const whyText = r => (r.why === 'parent' ? WHY.parent(r.parent) : r.why === 'style' ? WHY.style(r) : WHY[r.why] || '')
+const whyText = r => (typeof WHY[r.why] === 'function' ? WHY[r.why](r.why === 'parent' ? r.parent : r) : WHY[r.why] || '')
 const NONE = '__none'
 const REUSE = '__reuse'
 const SKIP = '__skip'
@@ -198,9 +200,15 @@ export default function BulkCreateETModal({
                                 style={{ fontFamily: 'monospace', fontSize: 11 }}
                                 onChange={e => patch(i, { ref: e.target.value })} />
                               {bad && r.include && <div className="text-danger" style={{ fontSize: 10 }}>{bad}</div>}
+                              {r.superseded && (
+                                <div style={{ fontSize: 10, color: '#842029' }}
+                                  title={`Codes shaped like ${r.superseded.example} are ${r.manufacturer}'s old numbering`}>
+                                  <MaterialIcon name="history" size={10} /> old {r.manufacturer} numbering — check the current code
+                                </div>
+                              )}
                               {!bad && r.checkRef && (
                                 <div style={{ fontSize: 10, color: '#856404' }}
-                                  title="Part of the example's ref could not be confirmed from this code or the Form, or equally close examples disagree">
+                                  title="A guess worth checking: part of an example's ref could not be confirmed, examples disagree, or no rule placed it firmly">
                                   <MaterialIcon name="warning" size={10} /> check ref
                                   {r.alternatives?.length > 0 && <> — or {r.alternatives.join(', ')}</>}
                                 </div>

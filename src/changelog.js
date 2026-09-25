@@ -8,7 +8,7 @@
  */
 export const CHANGELOG = [
   { date: '2026-09-25', note: 'Style library: every project you open teaches the tool how its products were named; new ElementTypes copy that style, flagged "check ref" when unsure' },
-  { date: '2026-09-25', note: 'New ElementTypes review: families come from the PositionType tree (A1b → ET-DOWNLIGHT), are created with their members, extra codes go to ET-ACCESSORIES' },
+  { date: '2026-09-25', note: 'New ElementTypes use the company families (ET-PS, ET-LIN-TAPE/PROF/DIFF…), from the Form page type, product words and a table of known code shapes; old LEDFlex numbering is flagged' },
   { date: '2026-09-25', note: 'Import product codes: review every new ElementType at once, named by family (ET-PS-08) as "Maker - Code"; near-miss codes show a diff, not a %' },
   { date: '2026-09-25', note: 'Import product codes: line breaks split codes, lone + - / are discarded, no more phantom "**" codes; copy buttons and Form columns at the top' },
   { date: '2026-09-25', note: 'A config can read several DesignDBs (tick each one); config YAML now saves the file pairing and unexported changes, and can restore a config' },

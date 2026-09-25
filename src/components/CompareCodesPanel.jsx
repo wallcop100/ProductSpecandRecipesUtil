@@ -117,6 +117,13 @@ export default function CompareCodesPanel({ entries, knownPTs, ptTarget, onCreat
               </div>
             )}
 
+            {e.superseded && (
+              <div style={{ fontSize: 10, color: '#842029' }} data-testid="superseded"
+                title={`Codes shaped like ${e.superseded.example} are ${e.manufacturers[0] || 'the maker'}'s old numbering`}>
+                <MaterialIcon name="history" size={10} /> old {e.manufacturers[0] || ''} numbering — check the current code
+              </div>
+            )}
+
             <PositionTypes pts={e.positionTypes} knownPTs={knownPTs} ptTarget={ptTarget} />
 
             {/* Reuse: existing ETs this code might already be. One click assigns

@@ -18,6 +18,8 @@
  * So nothing here is ever applied automatically. A guess is a proposal.
  */
 
+import { CANON_FAMILIES } from '../data/etCanon.js'
+
 const lc = s => String(s ?? '').trim().toLowerCase()
 const segs = ref => String(ref ?? '').toUpperCase().split('-').filter(Boolean)
 
@@ -94,31 +96,12 @@ export function guessCollections(refs = [], elementTypes = [], collectionRefs = 
 // and the point sources have nowhere to go. Seeding the missing ones is offered, never
 // automatic: it writes rows into the master.
 //
-// (The guide as supplied lists ET-LIN twice, as "Assembled Linear LED Family" and as
-// "Linear Family". The first wins here; a ref can only mean one thing.)
+// The list itself lives in src/data/etCanon.js (one copy, shared with the import's
+// ElementType seeding).
 // ---------------------------------------------------------------------------
-export const STYLE_GUIDE = [
-  { ref: 'ET-DRIVER', name: 'Driver, Power Supply and Emergency Pack Family' },
-  { ref: 'ET-CABLE', name: 'Cable Family' },
-  { ref: 'ET-CONNECTION', name: 'Connection Family' },
-  { ref: 'ET-LIN', name: 'Assembled Linear LED Family' },
-  { ref: 'ET-PS', name: 'Point Source Family' },
-  { ref: 'ET-PS-ACCESSORIES', name: 'Point Source Accessory Family' },
-  { ref: 'ET-PS-MOUNTING', name: 'Point Source Mounting Family' },
-  { ref: 'ET-PS-MOUNTING-FRAME', name: 'Point Source Frame Family', parent: 'ET-PS-MOUNTING' },
-  { ref: 'ET-PS-MOUNTING-SLEEVE', name: 'Point Source Sleeve Family', parent: 'ET-PS-MOUNTING' },
-  { ref: 'ET-FF&E', name: 'FF&E Family' },
-  { ref: 'ET-DL', name: 'Assembled Down Light Family' },
-  { ref: 'ET-LIN-TP', name: 'Assembled Tape and Profile family', parent: 'ET-LIN' },
-  { ref: 'ET-LIN-ENCAPSULATED', name: 'Assembled Encapsulated family', parent: 'ET-LIN' },
-  { ref: 'ET-LIN-INGREDIENTS', name: 'Linear Ingredients' },
-  { ref: 'ET-LIN-PROF', name: 'Linear profile, diffuser and end cap Family', parent: 'ET-LIN-INGREDIENTS' },
-  { ref: 'ET-LIN-CLIP', name: 'Metal clips for profile mounting', parent: 'ET-LIN-INGREDIENTS' },
-  { ref: 'ET-LIN-MOUNT', name: 'Mounting profile for Encapsulated Linear', parent: 'ET-LIN-INGREDIENTS' },
-  { ref: 'ET-LIN-TAPE', name: 'Linear LED Tape Family', parent: 'ET-LIN-INGREDIENTS' },
-  { ref: 'ET-LIN-FLEX', name: 'Encapsulated Linear Family', parent: 'ET-LIN-INGREDIENTS' },
-  { ref: 'ET-LIGHTINGCONTROL', name: 'Lighting Contol Family' },
-]
+export const STYLE_GUIDE = CANON_FAMILIES.map(f => ({
+  ref: f.ref, name: f.description, ...(f.parent ? { parent: f.parent } : {}),
+}))
 
 /**
  * missingFamilies(refs, elementTypes, collectionRefs)

@@ -23,17 +23,50 @@ const COLL = ['ET-CABLES', 'ET-DRIVERS', 'ET-REMOTE-DRIVERS']
 const entry = (text, maker, pts = [], extra = {}) => ({ text, manufacturers: [maker], positionTypes: pts, variants: [{ note: '' }], rowRefs: [], ...extra })
 const base = { elementTypes: ETS, psRows: PS, positionTypes: PTS, collectionRefs: COLL }
 
-describe('an early project: families come from the PositionType tree', () => {
-  test('a Phos downlight is a DOWNLIGHT, not a remote driver because Phos makes a driver', () => {
-    const { proposals, newFamilies } = proposeElementTypes([entry('EYP-TA-R-CR-WT', 'Phos', ['A1b'])], base)
-    expect(proposals[0]).toMatchObject({ family: 'ET-DOWNLIGHT', ref: 'ET-DOWNLIGHT-01', why: 'parent', parent: 'DOWNLIGHT', name: 'Phos - EYP-TA-R-CR-WT' })
-    expect(newFamilies).toEqual([{ ref: 'ET-DOWNLIGHT', description: 'Downlight family', include: true, from: 'DOWNLIGHT' }])
+describe('an early project: company families, from the Form and the shape table', () => {
+  const point = { ...base, pageTypeFor: () => 'Point' }
+  const linear = { ...base, pageTypeFor: () => 'Linear' }
+
+  test('a Phos downlight on a Point page is ET-PS, not a remote driver because Phos makes a driver', () => {
+    const { proposals, newFamilies } = proposeElementTypes([entry('EYP-TA-R-CR-WT', 'Phos', ['A1b'])], point)
+    expect(proposals[0]).toMatchObject({ family: 'ET-PS', ref: 'ET-PS-01', why: 'canon', checkRef: false, name: 'Phos - EYP-TA-R-CR-WT' })
+    expect(newFamilies).toEqual([{ ref: 'ET-PS', description: 'Point Source Family', parent: null, include: true, from: null }])
   })
 
-  test('the other codes in a cell are accessories', () => {
-    const { proposals, newFamilies } = proposeElementTypes([entry('A00665.40', 'DGA', ['W1'])], { ...base, roleOf: () => 'extra' })
-    expect(proposals[0]).toMatchObject({ family: ACCESSORIES, ref: 'ET-ACCESSORIES-01', why: 'extra' })
-    expect(newFamilies[0]).toMatchObject({ ref: ACCESSORIES, description: 'Accessories family' })
+  test('the other codes in a Point cell are point-source accessories, unless their words say more', () => {
+    const acc = proposeElementTypes([entry('A00665.40', 'DGA', ['W1'])], { ...point, roleOf: () => 'extra' })
+    expect(acc.proposals[0]).toMatchObject({ family: ACCESSORIES, ref: 'ET-PS-ACCESSORIES-01', why: 'canon' })
+    const frame = proposeElementTypes([entry('FR-1', 'DGA', ['W1'])], { ...point, roleOf: () => 'extra', contextFor: () => 'Plaster-in frame' })
+    expect(frame.proposals[0]).toMatchObject({ family: 'ET-PS-MOUNTING-FRAME', why: 'canon' })
+    // …and a missing parent family is proposed with it
+    expect(frame.newFamilies.map(f => f.ref)).toEqual(['ET-PS-MOUNTING-FRAME', 'ET-PS-MOUNTING'])
+  })
+
+  test('a Linear page files by keyword; the ref carries the keyword even under a shared family', () => {
+    const { proposals, newFamilies } = proposeElementTypes([entry('X-DIFF', 'Acme', ['W1'])], { ...linear, contextFor: () => 'Opal diffuser 2m' })
+    expect(proposals[0]).toMatchObject({ family: 'ET-LIN-PROF', ref: 'ET-LIN-DIFF-01', why: 'canon' })
+    expect(newFamilies.map(f => f.ref)).toEqual(['ET-LIN-PROF', 'ET-LIN-INGREDIENTS'])
+  })
+
+  test('a Linear page with no keyword falls to ET-LIN-INGREDIENTS and is flagged', () => {
+    const { proposals } = proposeElementTypes([entry('X-1', 'Acme', ['W1'])], linear)
+    expect(proposals[0]).toMatchObject({ family: 'ET-LIN-INGREDIENTS', checkRef: true })
+  })
+
+  test('the shipped shape table knows a maker\'s code shapes', () => {
+    const { proposals } = proposeElementTypes([entry('FPS2020PCOPD2000', 'LEDFlex', ['W1'])], base)
+    expect(proposals[0]).toMatchObject({ family: 'ET-LIN-PROF', ref: 'ET-LIN-DIFF-01', why: 'shape' })
+  })
+
+  test('old supplier numbering is flagged', () => {
+    const { proposals } = proposeElementTypes([entry('021-1102', 'LEDFlex', ['W1'])], linear)
+    expect(proposals[0].superseded).toMatchObject({ shape: '021-9' })
+  })
+
+  test('with no Form page type, the position parent is a flagged last resort', () => {
+    const { proposals, newFamilies } = proposeElementTypes([entry('EYP-TA-R-CR-WT', 'Phos', ['A1b'])], base)
+    expect(proposals[0]).toMatchObject({ family: 'ET-DOWNLIGHT', why: 'parent', checkRef: true })
+    expect(newFamilies[0]).toMatchObject({ ref: 'ET-DOWNLIGHT', description: 'Downlight family' })
   })
 
   test('the same product line wins: a stem-sharing code joins its sibling\'s family', () => {
@@ -93,7 +126,7 @@ describe('helpers', () => {
 
   test('pickFamily with nothing to go on', () => {
     expect(pickFamily({ code: 'X', manufacturer: '', role: 'lead', designFamilies: [], parents: [] }, { products: [] }))
-      .toEqual({ family: '', why: null, spread: 0 })
+      .toEqual({ family: '', head: '', why: null, flag: false, spread: 0 })
   })
 
   test('nextRef, seedName, refamily', () => {
@@ -109,13 +142,13 @@ describe('helpers', () => {
 describe('the tool-wide style library', () => {
   const library = [{ maker: 'LEDFlex', code: 'NFS160-27-2009', ref: 'ET-LIN-TAPE-NANO160-01', family: 'ET-LIN-TAPE', name: '', description: '', source: 'P2' }]
 
-  test('a product line seen on another project is named the same way, before the PositionType parent', () => {
+  test('a product line seen on another project is named the same way, before the Form rules', () => {
     const { proposals, newFamilies } = proposeElementTypes([entry('NFS160-27-5404', 'LEDFlex', ['A1b'])], { ...base, library })
     expect(proposals[0]).toMatchObject({
       family: 'ET-LIN-TAPE', ref: 'ET-LIN-TAPE-NANO160-01', why: 'style', checkRef: false,
       styledOn: { ref: 'ET-LIN-TAPE-NANO160-01', code: 'NFS160-27-2009', source: 'P2' },
     })
-    expect(newFamilies.map(f => f.ref)).toEqual(['ET-LIN-TAPE'])
+    expect(newFamilies.map(f => f.ref)).toEqual(['ET-LIN-TAPE', 'ET-LIN-INGREDIENTS'])   // with its canon parent
   })
 
   test('this project\'s own product line still wins over the library', () => {

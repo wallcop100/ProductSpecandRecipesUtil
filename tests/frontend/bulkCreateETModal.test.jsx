@@ -53,7 +53,7 @@ describe('BulkCreateETModal — weed out, don\'t build', () => {
 
   test('the reason is shown per code', () => {
     renderIt([P('A1', 'ET-DOWNLIGHT-01', 'ET-DOWNLIGHT', { spread: 2 })])
-    expect(screen.getByText('position parent DOWNLIGHT · used under 2 families')).toBeTruthy()
+    expect(screen.getByText('position parent DOWNLIGHT (not a company family) · used under 2 families')).toBeTruthy()
   })
 
   test('placeholder codes are listed as skipped, never applied', () => {
