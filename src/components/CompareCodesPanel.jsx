@@ -3,6 +3,8 @@ import { Button } from 'react-bootstrap'
 import MaterialIcon from './MaterialIcon'
 import { hasNoteCollision } from '../utils/productCodes'
 import UsagePopover from './UsagePopover'
+import CopyButton from './CopyButton'
+import { codeDiff } from '../utils/etRefSuggest'
 
 /**
  * CompareCodesPanel — the distinct codes, and where each one is going.
@@ -22,6 +24,29 @@ import UsagePopover from './UsagePopover'
  *   onReuse(entry, ref) — assign an existing ElementType instead of creating one
  *   onJump(entry)       — click the code to jump back to the row that produced it
  */
+
+/**
+ * How a candidate differs from this code: the two codes, one above the other, with
+ * the characters that differ marked. A percentage ("variant · 63%") said something was
+ * similar without saying what; the diff lets you decide at a glance whether the
+ * difference is an attribute (a colour temp, a finish) or a different product.
+ */
+function CodeDiff({ code, other }) {
+  const parts = codeDiff(code, other)
+  const line = (keep, mark, bg) => parts
+    .filter(p => p.op === 'same' || p.op === keep)
+    .map((p, i) => p.op === 'same'
+      ? <span key={i}>{p.text}</span>
+      : <mark key={i} style={{ background: bg, color: mark, padding: '0 1px', fontWeight: 700, borderRadius: 2 }}>{p.text}</mark>)
+  const label = { display: 'inline-block', width: 44, fontFamily: 'system-ui, sans-serif', fontSize: 9 }
+  return (
+    <div className="ms-3 mt-1 px-1 rounded" data-testid="code-diff"
+      style={{ fontFamily: 'monospace', fontSize: 11, lineHeight: 1.45, background: '#f8f9fa' }}>
+      <div><span className="text-muted" style={label}>this</span>{line('del', '#842029', '#f5c2c7')}</div>
+      <div><span className="text-muted" style={label}>existing</span>{line('add', '#0f5132', '#a3cfbb')}</div>
+    </div>
+  )
+}
 
 const BG = { green: '#d1e7dd', amber: '#fff3cd', blue: '#cfe2ff', grey: '#f1f3f5' }
 const FG = { green: '#0f5132', amber: '#856404', blue: '#084298', grey: '#495057' }
@@ -70,6 +95,7 @@ export default function CompareCodesPanel({ entries, knownPTs, ptTarget, onCreat
                 onMouseLeave={ev => { ev.currentTarget.style.textDecoration = 'none' }}>
                 {e.text}
               </span>
+              <CopyButton text={e.text} what={`code ${e.text}`} size={11} />
               <span className="rounded px-1" style={{ background: BG[e.status], color: FG[e.status], fontSize: 10 }}>
                 {e.status}
               </span>
@@ -98,12 +124,15 @@ export default function CompareCodesPanel({ entries, knownPTs, ptTarget, onCreat
             {!e.etRef && !blocked && (e.reuse?.length > 0) && (
               <div className="mt-1">
                 {e.reuse.map(c => (
-                  <div key={c.ref} className="d-flex align-items-center gap-1 py-1" style={{ fontSize: 10 }}>
+                  <div key={c.ref} className="py-1" style={{ fontSize: 10 }}>
+                  <div className="d-flex align-items-center gap-1">
                     <MaterialIcon name={c.kind === 'same' ? 'link' : 'call_split'} size={12}
                       style={{ color: c.kind === 'same' ? '#198754' : '#b45309' }} />
                     <span style={{ fontFamily: 'monospace' }}>{c.ref}</span>
                     <span className="text-muted">
-                      {c.kind === 'same' ? 'looks the same' : 'variant'} · {Math.round(c.score * 100)}%
+                      {c.kind === 'same'
+                        ? (c.matchedCode ? 'same code' : 'code appears in its name')
+                        : c.matchedCode ? 'similar code' : 'similar name'}
                     </span>
                     <Button size="sm" variant="outline-success" className="ms-auto"
                       style={{ fontSize: 9, padding: '0 5px' }}
@@ -111,6 +140,10 @@ export default function CompareCodesPanel({ entries, knownPTs, ptTarget, onCreat
                       onClick={() => onReuse(e, c.ref)}>
                       Use
                     </Button>
+                  </div>
+                  {c.kind !== 'same' && (c.matchedCode
+                    ? <CodeDiff code={e.text} other={c.matchedCode} />
+                    : c.description && <div className="text-muted text-truncate" title={c.description}>{c.description}</div>)}
                   </div>
                 ))}
               </div>

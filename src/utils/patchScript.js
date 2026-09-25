@@ -260,6 +260,20 @@ export function buildDbScript(dbChanges, filename = 'ElementTypes (DB)') {
   return buildUniqueKeyScript(dbChanges, DB_FIELD_TO_EXCEL, 'ElementTypes', 'Ref', filename, { withEntityType: false })
 }
 
+/**
+ * Add PositionTypes the Form names but the DesignDB lacks — the BARE MINIMUM: a row with
+ * its Ref and nothing else. Name, ParentRef, driver, control and power columns are the
+ * designer's to fill in the DesignDB; the tool does not guess them from a sibling.
+ *
+ * Idempotent like every script here. A ref already in the sheet — including one marked
+ * IsDeleted — is left exactly as it is and logged, never changed.
+ */
+export function buildPtAddScript(refs = [], filename = 'PositionTypes (DB)') {
+  const entries = [...new Set(refs.map(r => String(r || '').trim()).filter(Boolean))]
+    .map(ref => ({ elementTypeRef: ref, updates: { ElementTypeRef: ref }, _isNew: true }))
+  return buildUniqueKeyScript(entries, { ElementTypeRef: 'Ref' }, 'PositionTypes', 'Ref', filename, { withEntityType: false })
+}
+
 // --- RS (composite-key) ---------------------------------------------------
 function rsNaturalKey(entry) {
   const row = entry.row || {}

@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest'
-import { buildPsScript, buildRsScript, buildDbScript } from '../../src/utils/patchScript.js'
+import { buildPsScript, buildRsScript, buildDbScript, buildPtAddScript } from '../../src/utils/patchScript.js'
 
 /**
  * The scripts must never read the whole sheet. These templates pad the used range with
@@ -188,5 +188,19 @@ describe('a new ElementType records its product identity in Details', () => {
   test('Details maps to the Details column', () => {
     const s = buildDbScript([{ elementTypeRef: 'ET-A', updates: { ElementTypeRef: 'ET-A', Details: 'XAL 011-8000018M' }, _isNew: true }])
     expect(s).toContain('writeCell(S, apR, col["Details"], "XAL 011-8000018M")')
+  })
+})
+
+describe('buildPtAddScript — Form PositionTypes missing from the DesignDB', () => {
+  test('adds a bare Ref-only row per ref, on the PositionTypes sheet, idempotently', () => {
+    const s = buildPtAddScript(['XB1b', 'XB1c', 'XB1b', ''])
+    expect(s).toContain('"PositionTypes"')
+    expect((s.match(/\/\/ add /g) || []).length).toBe(2)
+    expect(s).toContain('already present - updated in place')
+    expect(s).not.toMatch(/"Name"|"ParentRef"|"DriverLocation"/)
+  })
+
+  test('nothing to add → no script', () => {
+    expect(buildPtAddScript([])).toBe('')
   })
 })

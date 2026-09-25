@@ -1,7 +1,7 @@
 import { describe, test, expect } from 'vitest'
 import {
   inferConvention, reuseCandidates, suggestRef,
-  similarity, sharedStem, tokenOverlap,
+  similarity, sharedStem, tokenOverlap, codeDiff,
 } from '../../src/utils/etRefSuggest.js'
 
 // A slice of the real LIGHTING.DesignDB ElementTypes — attribute-encoded refs,
@@ -160,5 +160,23 @@ describe('reuseCandidates respects product identity', () => {
     expect(r.reason).toBe('new')
     expect(r.ref).toMatch(/^ET-/)
     expect(r.ref).not.toMatch(/CCL|CVR/)
+  })
+})
+
+describe('codeDiff — how a near-miss differs, not how much', () => {
+  test('marks only the characters that differ', () => {
+    expect(codeDiff('FPS2020BG2000', 'FPS2020BG3000')).toEqual([
+      { op: 'same', text: 'FPS2020BG' }, { op: 'del', text: '2' }, { op: 'add', text: '3' }, { op: 'same', text: '000' },
+    ])
+  })
+
+  test('case is ignored but the original characters are kept', () => {
+    expect(codeDiff('abc-1', 'ABC-12')).toEqual([{ op: 'same', text: 'abc-1' }, { op: 'add', text: '2' }])
+  })
+
+  test('identical codes are one "same" segment; empty sides are all add/del', () => {
+    expect(codeDiff('X1', 'X1')).toEqual([{ op: 'same', text: 'X1' }])
+    expect(codeDiff('', 'AB')).toEqual([{ op: 'add', text: 'AB' }])
+    expect(codeDiff('AB', '')).toEqual([{ op: 'del', text: 'AB' }])
   })
 })

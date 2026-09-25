@@ -52,6 +52,40 @@ export function similarity(a, b) {
   return 1 - prev[n] / Math.max(m, n)
 }
 
+/**
+ * Character diff of two codes, for showing HOW a near-miss differs rather than a
+ * percentage nobody can act on. Longest-common-subsequence, case-insensitive,
+ * original characters kept.
+ *
+ * → [{ op: 'same' | 'del' | 'add', text }]   'del' = only in `a`, 'add' = only in `b`
+ */
+export function codeDiff(a, b) {
+  const x = String(a ?? ''), y = String(b ?? '')
+  const X = x.toUpperCase(), Y = y.toUpperCase()
+  const m = x.length, n = y.length
+  const L = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0))
+  for (let i = m - 1; i >= 0; i--) {
+    for (let j = n - 1; j >= 0; j--) {
+      L[i][j] = X[i] === Y[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1])
+    }
+  }
+  const out = []
+  const push = (op, ch) => {
+    const last = out[out.length - 1]
+    if (last && last.op === op) last.text += ch
+    else out.push({ op, text: ch })
+  }
+  let i = 0, j = 0
+  while (i < m && j < n) {
+    if (X[i] === Y[j]) { push('same', x[i]); i++; j++ }
+    else if (L[i + 1][j] >= L[i][j + 1]) push('del', x[i++])
+    else push('add', y[j++])
+  }
+  while (i < m) push('del', x[i++])
+  while (j < n) push('add', y[j++])
+  return out
+}
+
 /** Fraction of `needle` tokens present in the `haystack` string. */
 export function tokenOverlap(needleTokens, haystack) {
   if (!needleTokens.length) return 0

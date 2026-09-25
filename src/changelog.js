@@ -7,6 +7,8 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-09-25', note: 'Import product codes: review every new ElementType at once, named by family (ET-PS-08) as "Maker - Code"; near-miss codes show a diff, not a %' },
+  { date: '2026-09-25', note: 'Import product codes: line breaks split codes, lone + - / are discarded, no more phantom "**" codes; copy buttons and Form columns at the top' },
   { date: '2026-09-25', note: 'A config can read several DesignDBs (tick each one); config YAML now saves the file pairing and unexported changes, and can restore a config' },
   { date: '2026-09-25', note: 'Fixed: a Product Spec with an all-digit ProductCode no longer fails to open; big workbooks with scratch sheets open much faster' },
   { date: '2026-07-13', note: 'Fork a position: copy its recipe into new position type(s), each with its own wrapper, untick the rows to drop — in one step' },

@@ -69,7 +69,7 @@ export function clearOverridesFor(rows = [], texts = []) {
 /**
  * Resolve a row's roles. Precedence: per-row override > batch rule > default.
  *
- * The default is 'note' — the safe sink — EXCEPT when the whole field is a single
+ * The default is 'note' — the safe sink — EXCEPT for bare punctuation (see defaultTokenRole) and when the whole field is a single
  * token. This is a ProductCode column: a field holding one token ("SP6971",
  * "P304.43") is that code, and making the user mark it by hand is ceremony. The
  * moment a field has more than one token its meaning is genuinely ambiguous, so
@@ -80,8 +80,21 @@ export function resolveRoles(row, rules = {}) {
   return row.tokens.map((t, i) => {
     const o = row.overrides && row.overrides[i]
     if (o) return o
-    return rules[lower(t.text)] || (lone ? 'code' : 'note')
+    return rules[lower(t.text)] || defaultTokenRole(t.text, lone)
   })
+}
+
+/**
+ * The role a token starts with, before any rule or paint.
+ *
+ * Punctuation on its own ("+", "-", "/", "(") carries no product and no note, so it
+ * starts as discard — shown, greyed, one click from being a note again. "*" is the
+ * exception: in a code like "BE/ZEP/IB/**" it stands for an option not yet chosen,
+ * which is worth keeping in the note.
+ */
+export function defaultTokenRole(text, lone) {
+  if (isPunctuation(text)) return text === '*' ? 'note' : 'discard'
+  return lone ? 'code' : 'note'
 }
 
 /** Apply the rules across the batch, returning rows with fresh `roles`. */
@@ -246,12 +259,6 @@ export function roleTally(rows) {
 }
 
 /**
- * The role a token would carry if the user had never said anything: 'note', except
- * in a lone-token field, which is a code by default (see resolveRoles).
- */
-const defaultRole = row => (row.tokens.length === 1 ? 'code' : 'note')
-
-/**
  * A row teaches only where the user has actually decided something about it.
  *
  * Evidence is any role that DIFFERS from the default — which is precisely what a
@@ -267,8 +274,8 @@ export function isTaught(row) {
   if (row.confirmed) return true
   if (row.overrides && Object.keys(row.overrides).length > 0) return true
   if (row.noteOverride && Object.keys(row.noteOverride).length > 0) return true
-  const dflt = defaultRole(row)
-  return (row.roles || []).some(r => r && r !== dflt)
+  const lone = row.tokens.length === 1
+  return (row.roles || []).some((r, i) => r && r !== defaultTokenRole(row.tokens[i]?.text, lone))
 }
 
 /** The rows carrying evidence. Everything learned is learned from these. */

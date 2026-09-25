@@ -1,10 +1,11 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import { Button, Form } from 'react-bootstrap'
 import MaterialIcon from './MaterialIcon'
 import { ConceptHint, CONCEPTS } from './ConceptCard'
 import useStore from '../store/useStore'
 import { VIA } from '../utils/ptResolve'
 import { unmatchedFormPositions } from '../utils/usage'
+import { buildPtAddScript } from '../utils/patchScript'
 
 /**
  * ResolveRefsStep — where a Form ref becomes a project PositionType.
@@ -49,6 +50,21 @@ export default function ResolveRefsStep({ resolutions, overrides, onOverride, po
   const unmatched = useMemo(() => unmatchedFormPositions(resolutions, recipes), [resolutions, recipes])
   const notInDb = unmatched.filter(u => u.reason === 'notInDb')
   const noRecipe = unmatched.filter(u => u.reason === 'noRecipe')
+  // Only the ones still unmapped: a ref pointed at an existing PositionType needs no row.
+  const toAdd = notInDb.filter(u => {
+    const r = resolutions.find(x => x.formRef === u.formRef)
+    return !r || !effective(r)
+  }).map(u => u.formRef)
+  const [copied, setCopied] = useState(null)
+
+  async function copyPtPatch() {
+    try {
+      await navigator.clipboard.writeText(buildPtAddScript(toAdd))
+      setCopied('ok')
+    } catch {
+      setCopied('fail')
+    }
+  }
 
   return (
     <div style={{ maxWidth: 720, display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 }}>
@@ -85,6 +101,21 @@ export default function ResolveRefsStep({ resolutions, overrides, onOverride, po
               {notInDb.length === 1 ? '' : 's'} in the Form are not in the DesignDB.</strong>{' '}
               They must be added to the DB before their products can be recipe'd:{' '}
               <span style={{ fontFamily: 'monospace' }}>{notInDb.map(u => u.formRef).join(', ')}</span>
+              {toAdd.length > 0 && (
+                <div className="mt-1 d-flex align-items-start gap-2">
+                  <Button size="sm" variant="outline-danger" style={{ fontSize: 10, padding: '0 6px', flexShrink: 0 }}
+                    onClick={copyPtPatch} data-testid="copy-pt-patch">
+                    <MaterialIcon name="content_copy" size={11} /> Copy DesignDB patch ({toAdd.length})
+                  </Button>
+                  <span style={{ fontSize: 10 }}>
+                    {copied === 'ok' ? 'Copied — paste it into the DesignDB as an Office Script. '
+                      : copied === 'fail' ? 'Could not reach the clipboard. ' : ''}
+                    Adds a row with the <strong>Ref only</strong>. Name, parent, driver and control
+                    still need adding in the DesignDB before these can carry a recipe. A ref that is
+                    already there (even marked deleted) is left alone and reported.
+                  </span>
+                </div>
+              )}
             </div>
           )}
           {noRecipe.length > 0 && (
