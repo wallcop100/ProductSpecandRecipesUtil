@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import CompareCodesPanel from '../../src/components/CompareCodesPanel.jsx'
+import CompareCodesPanel, { StatusLegend } from '../../src/components/CompareCodesPanel.jsx'
 
 const entry = extra => ({
   text: '021-1102', status: 'amber', rowRefs: [1], manufacturers: ['LEDFlex'], positionTypes: [],
@@ -18,5 +18,20 @@ describe('CompareCodesPanel', () => {
       onReuse={() => {}} onCreateET={() => {}} />)
     expect(screen.getByTestId('code-diff')).toBeTruthy()
     expect(screen.queryByText(/63%/)).toBeNull()
+  })
+
+  test('pills say what they mean, not their colour', () => {
+    render(<CompareCodesPanel entries={[
+      entry({ text: 'A1', status: 'green', etRef: 'ET-A-01' }), entry({ text: 'B1', status: 'amber' }),
+      entry({ text: 'C1', status: 'blue' }), entry({ text: 'D1', status: 'grey' }),
+    ]} onReuse={() => {}} onCreateET={() => {}} />)
+    for (const w of ['in spec', 'variant', 'repeated', 'new']) expect(screen.getByText(w)).toBeInTheDocument()
+    for (const c of ['green', 'amber', 'blue', 'grey']) expect(screen.queryByText(c)).toBeNull()
+    expect(screen.getByText('in spec').title).toMatch(/ET-A-01/)
+  })
+
+  test('the legend explains every pill', () => {
+    render(<StatusLegend />)
+    expect(screen.getByTestId('status-legend').textContent).toMatch(/in spec.*variant.*repeated.*new/)
   })
 })

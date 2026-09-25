@@ -319,7 +319,7 @@ export default function AddAnywhereModal({ show, onHide, etRef, sectionKey, excl
 
   function handleAdd() {
     if (!ref || !etRef) return
-    if (isPos) addRecipeRow(ref, sectionKey, { elementTypeRef: etRef, ElementTypeRef: etRef })
+    if (isPos) addRecipeRow(ref, sectionKey, { elementTypeRef: etRef, ElementTypeRef: etRef }, { asPosition: true })
     else addToElementTypeRecipe(ref, etRef, { elementTypeRef: etRef, ElementTypeRef: etRef })
     setSessionAdded(prev => new Set([...prev, ref]))
     advance()

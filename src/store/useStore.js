@@ -638,7 +638,14 @@ const useStore = create((set, get) => ({
    * setActivePosition(ref)
    */
   setActivePosition(ref) {
-    set({ activePositionRef: ref })
+    // Going to another position leaves any ElementType editor. Left open, it kept
+    // addRecipeRow in "ET mode", so a Form product added on A7a was written into the open
+    // wrapper's recipe on the positions using it (A5c) — and A7a still showed it missing.
+    if (ref !== get().activePositionRef) {
+      set({ activePositionRef: ref, activeContextType: 'PositionType', activeETRef: null })
+    } else {
+      set({ activePositionRef: ref })
+    }
   },
 
   /**
@@ -1127,15 +1134,20 @@ const useStore = create((set, get) => ({
    * addRecipeRow(posRef, section, ingredientData)
    * Adds a new recipe row from a palette drop.
    */
-  addRecipeRow(posRef, section, ingredientData, { recordHistory = true } = {}) {
-    const { recipes, rsChanges, activeContextType, activeETRef, containerETRefs } = get()
+  addRecipeRow(posRef, section, ingredientData, { recordHistory = true, asPosition = false } = {}) {
+    const { recipes, rsChanges, containerETRefs } = get()
+    // "ET mode" (below) edits the OPEN ElementType's internal recipe on every position using it.
+    // A caller acting on a named position — the Form pane, connector suggestions, Add Anywhere —
+    // passes asPosition so a stale open editor can never redirect its row elsewhere.
+    const etMode = !asPosition && get().activeContextType === 'ElementType' && !!get().activeETRef
+    const activeETRef = etMode ? get().activeETRef : null
 
     // An internal row that cannot name its container must not be written: the patch
     // script skips blank cells, so it would land in the sheet with an empty
     // ContextRef. If the container is unknowable the recipe is wrong, not the row.
     if (
       (section === 'dl_internal' || section === 'lin_internal')
-      && !(activeContextType === 'ElementType' && activeETRef)
+      && !etMode
       && !containerForPosition(recipes, posRef, containerETRefs)
     ) {
       set({ recipeError: `Cannot put ${ingredientData?.elementTypeRef || 'this element'} inside a wrapper: ${posRef} has no design element to hold it.` })
@@ -1145,7 +1157,7 @@ const useStore = create((set, get) => ({
     if (recordHistory) get()._pushHistory()
 
     // === ET MODE: add rows for all positions that use this ET ===
-    if (activeContextType === 'ElementType' && activeETRef) {
+    if (etMode) {
       const etRef = ingredientData.elementTypeRef || ingredientData.ElementTypeRef || null
       const etToken = etRef ? etRef.toUpperCase() : ''
       const isDimComponent = DIM_QTY_COMPONENTS.some(t => etToken.includes(t))

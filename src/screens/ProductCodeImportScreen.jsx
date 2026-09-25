@@ -6,7 +6,7 @@ import MaterialIcon from '../components/MaterialIcon'
 import IconButton from '../components/IconButton'
 import CodeChips from '../components/CodeChips'
 import PaintPalette from '../components/PaintPalette'
-import CompareCodesPanel from '../components/CompareCodesPanel'
+import CompareCodesPanel, { StatusLegend } from '../components/CompareCodesPanel'
 import NeedsResolving from '../components/NeedsResolving'
 import CaptureLines from '../components/CaptureLines'
 import PrimingModal from '../components/PrimingModal'
@@ -1126,6 +1126,34 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
 
           {/* Compare + stage */}
           <div style={{ width: 350, overflowY: 'auto', flexShrink: 0 }} className="border-start ps-3">
+            {/* Stage sits on top, sticky: when every code is done it is the next thing to do,
+                not something to scroll past the whole code list to find. */}
+            <div className="mb-3 pb-2" data-testid="stage-block"
+              style={{ position: 'sticky', top: 0, zIndex: 2, background: 'var(--bs-body-bg, #fff)' }}>
+              {leftBehind === 0 && entries.length > 0 ? (
+                <div className="px-2 py-2 rounded mb-1" style={{ background: '#d1e7dd', border: '1px solid #a3cfbb', color: '#0f5132', fontSize: 11 }}>
+                  <MaterialIcon name="check_circle" size={14} /> All {entries.length} code{entries.length === 1 ? ' has' : 's have'} an ElementType
+                </div>
+              ) : null}
+              <Button variant={leftBehind === 0 ? 'success' : 'outline-success'} size="sm" className="w-100"
+                disabled={!canStage} onClick={handleStage}>
+                Stage {stageable}{leftBehind > 0 && <> of {entries.length}</>} code{stageable === 1 && leftBehind === 0 ? '' : 's'}
+              </Button>
+              {leftBehind > 0 && (
+                <div className="text-muted mt-1" style={{ fontSize: 10 }}>
+                  {leftBehind} other code{leftBehind === 1 ? '' : 's'} {leftBehind === 1 ? 'is' : 'are'} not
+                  ready — {collisions.length > 0 && <>{collisions.length} with differing notes, </>}
+                  {unassigned.length > 0 && <>{unassigned.length} with no ElementType</>}. They stay put, and your
+                  draft is kept so you can finish them.
+                </div>
+              )}
+              {!canStage && entries.length > 0 && (
+                <div className="text-muted mt-1" style={{ fontSize: 10 }}>
+                  Assign an ElementType to at least one code before staging.
+                </div>
+              )}
+            </div>
+
             <NeedsResolving
               collisions={collisions}
               similar={similar}
@@ -1140,6 +1168,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
             <div className="fw-semibold text-muted mb-2" style={{ fontSize: 10, textTransform: 'uppercase' }}>
               Distinct codes ({entries.length})
             </div>
+            {entries.length > 0 && <StatusLegend />}
             {unassigned.length > 0 && (
               <Button size="sm" variant="primary" className="w-100 mb-2" onClick={openBulkCreate}
                 title="Propose an ElementType for every code that has none — untick the wrong ones">
@@ -1166,27 +1195,10 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
               })}
             />
 
-            <div className="mt-3">
-              <Button variant="success" size="sm" className="w-100" disabled={!canStage} onClick={handleStage}>
-                Stage {stageable} code{stageable === 1 ? '' : 's'}
-              </Button>
-              {leftBehind > 0 && (
-                <div className="text-muted mt-1" style={{ fontSize: 10 }}>
-                  {leftBehind} other code{leftBehind === 1 ? '' : 's'} {leftBehind === 1 ? 'is' : 'are'} not
-                  ready — {collisions.length > 0 && <>{collisions.length} with differing notes, </>}
-                  {unassigned.length > 0 && <>{unassigned.length} with no ElementType</>}. They stay put, and your
-                  draft is kept so you can finish them.
-                </div>
-              )}
-              {!canStage && entries.length > 0 && (
-                <div className="text-muted mt-1" style={{ fontSize: 10 }}>
-                  Assign an ElementType to at least one code before staging.
-                </div>
-              )}
-              <div className="text-muted mt-1" style={{ fontSize: 10 }}>
-                <MaterialIcon name="info" size={10} /> Notes become the ElementType Description in the DesignDB,
-                and reach it through the ElementTypes patch script at export.
-              </div>
+
+            <div className="text-muted mt-3" style={{ fontSize: 10 }}>
+              <MaterialIcon name="info" size={10} /> Notes become the ElementType Description in the DesignDB,
+              and reach it through the ElementTypes patch script at export.
             </div>
           </div>
         </div>

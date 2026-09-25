@@ -48,7 +48,7 @@ export default function ConnectorSuggestions({ posRef }) {
     if (g.blocked) return
     if (g.status === 'misplaced') moveRecipeRowToSection(posRef, g.rows[0]._id, g.section)
     else if (g.status === 'short') updateRecipeRow(posRef, g.rows[0]._id, { quantity: g.need, Quantity: g.need })
-    else addRecipeRow(posRef, g.section, { elementTypeRef: g.ref, quantity: g.need })
+    else addRecipeRow(posRef, g.section, { elementTypeRef: g.ref, quantity: g.need }, { asPosition: true })
   }
 
   return (

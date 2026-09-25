@@ -12,6 +12,7 @@ import EntityPill from './EntityPill'
 import { familyOf } from '../utils/etRef'
 import { positionFamilyOf } from '../utils/positionFamily'
 import { ACTION_ICONS } from '../utils/entityStyle'
+import { formWorklist } from '../utils/formSpec'
 
 const EMPTY_FILTERS = { family: '', manufacturer: '', tag: '', containsET: '' }
 
@@ -32,6 +33,8 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
   const tagPalette    = useStore(s => s.tagPalette)
   const reorderIngredients = useStore(s => s.reorderIngredients)
   const moveIngredientAcrossSections = useStore(s => s.moveIngredientAcrossSections)
+  const formCaptures  = useStore(s => s.formCaptures)
+  const containerETRefs = useStore(s => s.containerETRefs)
 
   const [unit, setUnit]       = useState('position')  // 'position' | 'element'
   const [filters, setFilters] = useState(EMPTY_FILTERS)
@@ -176,6 +179,32 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
   }, [unit, filters, positionTypes, positionUI, rowsForPos, allETRefs, etObjByRef, tagsByET, liveRows, psByRef, initialRefs, useInitialRefs])
 
   const current = matches[index] || null
+  const canPrev = phase === 'cycle' && index > 0
+  const canNext = phase === 'cycle' && index < matches.length - 1
+  const goPrev = () => setIndex(i => Math.max(0, i - 1))
+  const goNext = () => setIndex(i => Math.min(matches.length - 1, i + 1))
+
+  // The next position after this one that the Form is still not satisfied on.
+  const nextUnreconciled = useMemo(() => {
+    if (phase !== 'cycle' || !formCaptures || current?.kind !== 'position') return -1
+    const open = new Set(formWorklist(recipes, formCaptures, containerETRefs || new Set()).map(w => w.posRef))
+    for (let i = index + 1; i < matches.length; i++) if (open.has(matches[i].ref)) return i
+    return -1
+  }, [phase, formCaptures, current, recipes, containerETRefs, index, matches])
+
+  // ← / → step through, except while typing.
+  useEffect(() => {
+    if (!show || phase !== 'cycle') return
+    const onKey = ev => {
+      const t = ev.target
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return
+      if (ev.altKey || ev.ctrlKey || ev.metaKey) return
+      if (ev.key === 'ArrowRight') { ev.preventDefault(); goNext() }
+      else if (ev.key === 'ArrowLeft') { ev.preventDefault(); goPrev() }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [show, phase, matches.length])
 
   // Recipe rows for the current match
   const grouped = useMemo(() => {
@@ -318,9 +347,9 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
               <div className="ms-auto d-flex align-items-center gap-2">
                 <span className="text-muted small">{index + 1} of {matches.length}</span>
                 <IconButton variant="outline-secondary" bsSize="sm" icon="chevron_left" title="Previous"
-                  disabled={index <= 0} onClick={() => setIndex(i => Math.max(0, i - 1))} />
+                  disabled={!canPrev} onClick={goPrev} />
                 <IconButton variant="outline-secondary" bsSize="sm" icon="chevron_right" title="Next"
-                  disabled={index >= matches.length - 1} onClick={() => setIndex(i => Math.min(matches.length - 1, i + 1))} />
+                  disabled={!canNext} onClick={goNext} />
               </div>
             </div>
 
@@ -379,8 +408,25 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
         )}
       </Modal.Body>
 
-      <Modal.Footer>
-        <Button variant="secondary" size="sm" onClick={onHide}>Close</Button>
+      {/* Close is a quiet link on the left; the right-hand corner, where the eye and the
+          mouse go for "next", is Next. */}
+      <Modal.Footer className="d-flex align-items-center">
+        <Button variant="link" size="sm" className="text-muted me-auto p-0" onClick={onHide}>Close</Button>
+        {phase === 'cycle' && matches.length > 0 && (
+          <>
+            <Button variant="outline-secondary" size="sm" disabled={!canPrev} onClick={goPrev}
+              title="Previous (←)">‹ Previous</Button>
+            <span className="text-muted small" data-testid="review-counter">{index + 1} of {matches.length}</span>
+            <Button variant={nextUnreconciled >= 0 ? 'outline-primary' : 'primary'} size="sm"
+              disabled={!canNext} onClick={goNext} title="Next (→)">Next ›</Button>
+            {nextUnreconciled >= 0 && (
+              <Button variant="primary" size="sm" onClick={() => setIndex(nextUnreconciled)}
+                title="Skip positions the Form is already satisfied on">
+                Next unreconciled: <span style={{ fontFamily: 'monospace' }}>{matches[nextUnreconciled].ref}</span> →
+              </Button>
+            )}
+          </>
+        )}
       </Modal.Footer>
     </Modal>
   )

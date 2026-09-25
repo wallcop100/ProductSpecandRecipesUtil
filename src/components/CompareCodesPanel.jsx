@@ -50,6 +50,27 @@ function CodeDiff({ code, other }) {
 
 const BG = { green: '#d1e7dd', amber: '#fff3cd', blue: '#cfe2ff', grey: '#f1f3f5' }
 const FG = { green: '#0f5132', amber: '#856404', blue: '#084298', grey: '#495057' }
+/** What each colour means (see classify in utils/productCodes). A colour name says nothing. */
+export const STATUS_LABEL = { green: 'in spec', amber: 'variant', blue: 'repeated', grey: 'new' }
+const statusTip = e => ({
+  green: `Already in the Product Spec${e.etRef ? ` as ${e.etRef}` : ''} for this maker`,
+  amber: `Not in the Product Spec, but close to ${e.base || 'a code that is'} — a variant of it?`,
+  blue: 'Not in the Product Spec, and appears more than once in the Form',
+  grey: 'Not in the Product Spec — a new product',
+}[e.status] || '')
+
+/** One line under the heading, so the pills can be read without hovering. */
+export function StatusLegend() {
+  return (
+    <div className="d-flex flex-wrap gap-1 mb-2" style={{ fontSize: 9 }} data-testid="status-legend">
+      {Object.entries(STATUS_LABEL).map(([k, label]) => (
+        <span key={k} className="rounded px-1" style={{ background: BG[k], color: FG[k] }}>
+          {label}: {{ green: 'already in spec', amber: 'close to a spec code', blue: 'new, used more than once', grey: 'new' }[k]}
+        </span>
+      ))}
+    </div>
+  )
+}
 
 function PositionTypes({ pts, knownPTs, ptTarget }) {
   if (!pts.length) return null
@@ -96,8 +117,9 @@ export default function CompareCodesPanel({ entries, knownPTs, ptTarget, onCreat
                 {e.text}
               </span>
               <CopyButton text={e.text} what={`code ${e.text}`} size={11} />
-              <span className="rounded px-1" style={{ background: BG[e.status], color: FG[e.status], fontSize: 10 }}>
-                {e.status}
+              <span className="rounded px-1" style={{ background: BG[e.status], color: FG[e.status], fontSize: 10 }}
+                title={statusTip(e)}>
+                {STATUS_LABEL[e.status] || e.status}
               </span>
               <span className="text-muted ms-auto">{e.rowRefs.length} row{e.rowRefs.length === 1 ? '' : 's'}</span>
             </div>

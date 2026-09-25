@@ -2010,3 +2010,45 @@ describe('forkPosition — an independent copy of a recipe', () => {
     expect(forked).toHaveLength(4)
   })
 })
+
+describe('Form adds land on the position you are on, even with a wrapper editor left open', () => {
+  const W = 'ET-DL-01'
+  function seed() {
+    resetStore({
+      recipes: [
+        // A5c uses wrapper ET-DL-01, with one internal row.
+        { _id: 'd1', PositionTypeRef: 'A5c', positionTypeRef: 'A5c', ContextType: 'PositionType', ContextRef: 'A5c', ElementTypeRef: W, elementTypeRef: W, IsDesign: 'Y', RecipeIndex: 1 },
+        { _id: 'i1', PositionTypeRef: 'A5c', positionTypeRef: 'A5c', ContextType: 'ElementType', ContextRef: W, contextType: 'ElementType', contextRef: W, ElementTypeRef: 'ET-DRV-01', elementTypeRef: 'ET-DRV-01', RecipeIndex: 1 },
+      ],
+    })
+  }
+  const rowsFor = (pos, ref) => useStore.getState().recipes.filter(r => (r.PositionTypeRef || r.positionTypeRef) === pos && (r.ElementTypeRef || r.elementTypeRef) === ref)
+
+  test('asPosition: an open ElementType editor cannot redirect the row', () => {
+    seed()
+    useStore.getState().openETRecipe(W)
+    useStore.getState().addRecipeRow('A7a', 'position', { elementTypeRef: 'ET-PS-09' }, { asPosition: true })
+    expect(rowsFor('A7a', 'ET-PS-09')).toHaveLength(1)
+    expect(rowsFor('A5c', 'ET-PS-09')).toHaveLength(0)
+  })
+
+  test('moving to another position leaves the ElementType editor', () => {
+    seed()
+    useStore.getState().setActivePosition('A5c')
+    useStore.getState().openETRecipe(W)
+    useStore.getState().setActivePosition('A7a')
+    expect(useStore.getState().activeContextType).toBe('PositionType')
+    expect(useStore.getState().activeETRef).toBeNull()
+    useStore.getState().addRecipeRow('A7a', 'position', { elementTypeRef: 'ET-PS-09' })
+    expect(rowsFor('A5c', 'ET-PS-09')).toHaveLength(0)
+    expect(rowsFor('A7a', 'ET-PS-09')).toHaveLength(1)
+  })
+
+  test('re-selecting the same position keeps an open ElementType editor', () => {
+    seed()
+    useStore.getState().setActivePosition('A5c')
+    useStore.getState().openETRecipe(W)
+    useStore.getState().setActivePosition('A5c')
+    expect(useStore.getState().activeETRef).toBe(W)
+  })
+})
