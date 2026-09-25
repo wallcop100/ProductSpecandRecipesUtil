@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest'
-import { shapeOf, buildShapes, matchShape } from '../../src/utils/codeShapes.js'
+import { shapeOf, buildShapes, matchShape, maskCode } from '../../src/utils/codeShapes.js'
 import shipped from '../../src/data/codeShapes.json'
 import { CANON_FAMILIES, classifyText } from '../../src/data/etCanon.js'
 
@@ -12,6 +12,20 @@ describe('shapeOf', () => {
     expect(shapeOf('770-252')).toBe('770-9')
     expect(shapeOf('V8356 000')).toBe('V9')
     expect(shapeOf('')).toBe('')
+  })
+})
+
+describe('maskCode', () => {
+  test('digits go, the product line stays, later letters are x — and it is idempotent', () => {
+    expect(maskCode('SL0240A3-260mA')).toBe('SL####A#-###xx')
+    expect(maskCode('FPS2020BG2000')).toBe('FPS####BG####')
+    expect(maskCode(maskCode('SL0240A3-260mA'))).toBe('SL####A#-###xx')
+  })
+
+  test('a masked example has the same shape as the code it hides', () => {
+    for (const c of ['FPS2020BG2000', 'UN16TVC2715', '770-252']) {
+      expect(shapeOf(maskCode(c).replace(/#/g, '0').replace(/x/g, 'Q'), 'fine')).toBe(shapeOf(c, 'fine'))
+    }
   })
 })
 
@@ -43,6 +57,10 @@ describe('buildShapes', () => {
 
 describe('the shipped table', () => {
   const shapes = shipped.shapes
+
+  test('it publishes no real code: every example is masked', () => {
+    for (const s of shapes) expect(s.example).not.toMatch(/[0-9]/)
+  })
 
   test('every family in it is a company family, and it holds no project data', () => {
     const canon = new Set(CANON_FAMILIES.map(f => f.ref))

@@ -4,8 +4,9 @@
  * A maker's catalogue is written in a handful of code shapes, and each shape is one kind of
  * product: LEDFlex `FPS2020BG2000` (profile base), `FPS2020PCOPD2000` (diffuser), `UN16TVC2715`
  * (neon flex); EldoLED `SL0240A3-260mA` (driver). The shape table (src/data/codeShapes.json)
- * maps (maker, shape) → canon family and ref head. It holds shapes and a single example code
- * each — no project data — and is rebuilt from catalogues and past projects by
+ * maps (maker, shape) → canon family and ref head. It holds shapes and one MASKED example each
+ * (maskCode: SL####A#-###xx) — no real product code, no project data — and is rebuilt from
+ * catalogues and past projects by
  * scripts/build-code-shapes.mjs.
  *
  * A shape keeps the code's letter runs that name WHAT it is, and reduces the rest to their
@@ -41,6 +42,25 @@ export function shapeOf(code, level = 'coarse') {
     if (/^[0-9]+$/.test(r)) return '9'
     return r
   }).join('')
+}
+
+/**
+ * An example code with its specifics masked, so the shipped table names no real product:
+ * digits become `#`; letters are kept only where the fine shape keeps them (the first two
+ * letter runs — the product line), later ones become `x`. Spaces and punctuation stay.
+ *
+ *   SL0240A3-260mA → SL####A#-###xx      FPS2020BG2000 → FPS####BG####
+ *
+ * Idempotent: masking a masked example changes nothing.
+ */
+export function maskCode(code) {
+  let lettersSeen = 0
+  return String(code ?? '').replace(/[A-Za-z]+|[0-9]/g, run => {
+    if (/[0-9]/.test(run)) return '#'
+    if (/^x+$/.test(run) && lettersSeen >= 2) return run
+    lettersSeen++
+    return lettersSeen <= 2 && run.length <= 6 ? run : 'x'.repeat(run.length)
+  })
 }
 
 /**
