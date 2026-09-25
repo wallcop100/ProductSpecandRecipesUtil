@@ -213,9 +213,35 @@ describe('FormSpecPane renders the Form beside the recipe', () => {
     expect(added[0].ContextType).toBe('PositionType')
   })
 
-  test('a position with no wrapper says so up front, not in a greyed-out radio', () => {
+  test('a position whose design element is not a wrapper is not offered one', () => {
     setup({ recipes: [pos('C01r', 'ET-LAMP', { IsDesign: 'Y' })], containerETRefs: new Set() })
-    expect(screen.getByText(/has no wrapper, so everything lands at/)).toBeInTheDocument()
+    expect(screen.getByTestId('no-wrapper')).toHaveTextContent(/land at position level/)
+    expect(screen.queryByText(/wrapper$/, { selector: 'button' })).toBeNull()
+  })
+
+  test('a blank position offers a wrapper; the kind that fits the Form is filled', () => {
+    setup({ recipes: [], containerETRefs: new Set(), elementTypes: [{ ElementTypeRef: 'ET-LIN-04' }] })
+    const lin = screen.getByText('+ LIN wrapper')
+    expect(lin.className).toMatch(/btn-primary/)          // tape + profile → linear
+    fireEvent.click(lin)
+    const st = useStore.getState()
+    const row = st.recipes.find(r => r.PositionTypeRef === 'C01r')
+    expect(row.ElementTypeRef).toBe('ET-LIN-05')
+    expect(row.IsDesign).toBe('Y')
+    expect(st.containerETRefs.has('et-lin-05')).toBe(true)
+    expect(st.elementTypes.find(e => e.ElementTypeRef === 'ET-LIN-05').Family).toBe('ET-LIN')
+    expect(st.psRows.find(r => r.ElementTypeRef === 'ET-LIN-05')).toMatchObject({ Manufacturer: 'Ideaworks', ProductCode: 'N/A' })
+    // ...and the Form products can now go inside it.
+    expect(screen.getByLabelText('Add ET-TAPE-01 inside ET-LIN-05')).toBeInTheDocument()
+  })
+
+  test('adding a wrapper is one undo step', () => {
+    setup({ recipes: [], containerETRefs: new Set() })
+    fireEvent.click(screen.getByText('+ DL wrapper'))
+    expect(useStore.getState().recipes).toHaveLength(1)
+    useStore.getState().undo()
+    expect(useStore.getState().recipes).toHaveLength(0)
+    expect(useStore.getState().psRows.some(r => r.ElementTypeRef === 'ET-DL-01')).toBe(false)
   })
 
   test('a code that left the Form is flagged, never deleted for you', () => {

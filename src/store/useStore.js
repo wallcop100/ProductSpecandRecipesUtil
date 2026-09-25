@@ -3139,6 +3139,26 @@ const useStore = create((set, get) => ({
    * to the local_element_types staging table (survives restart regardless of
    * the DB-write setting), and — when DB writes are on — queues a catalogue row.
    */
+  /**
+   * addWrapper(posRef, kind) — give a bare position a new wrapper: the next free
+   * ET-LIN-NN / ET-DL-NN, created as a collection in the ET-LIN / ET-DL family, placed as
+   * the position's design element, and specced Ideaworks / N/A like any wrapper.
+   * One undo step. → the new ref, or null when the position already has a design element.
+   */
+  addWrapper(posRef, kind = 'LIN', { name = null } = {}) {
+    const k = String(kind).toUpperCase() === 'DL' ? 'DL' : 'LIN'
+    const live = r => (r.IsDeleted || r.isDeleted) !== 'Y'
+    const hasDesign = get().recipes.some(r => live(r) && (r.PositionTypeRef || r.positionTypeRef) === posRef
+      && (r.ContextType || r.contextType) === 'PositionType' && (r.IsDesign || r.isDesign) === 'Y')
+    if (!posRef || hasDesign) return null
+    const ref = getNextAvailableRef(`ET-${k}-01`, get().elementTypes)
+    get()._pushHistory()
+    get().createElementType({ ref, name, family: `ET-${k}`, isCollection: true })
+    set(s => ({ containerETRefs: new Set([...s.containerETRefs, ref.toLowerCase()]) }))
+    get().addRecipeRow(posRef, 'position', { elementTypeRef: ref, isDesign: 'Y' }, { recordHistory: false, asPosition: true })
+    return ref
+  },
+
   createElementType({ ref, name = null, description = null, family = null, isCollection = false } = {}) {
     const trimmed = (ref || '').trim()
     if (!trimmed) return null
