@@ -208,7 +208,7 @@ export default function TemplateEditorScreen({ onBack }) {
               ))}
             </div>
             <div className="text-muted" style={{ fontSize: 11, marginTop: 2 }}>
-              {ings.length} slot{ings.length !== 1 ? 's' : ''}
+              {ings.length} row{ings.length !== 1 ? 's' : ''}{ings.some(i => i.newWrapper) ? ` · new ${ings.find(i => i.newWrapper).newWrapper} wrapper` : ''}
             </div>
           </div>
           {isGlobal && (
@@ -243,7 +243,7 @@ export default function TemplateEditorScreen({ onBack }) {
       >
         <div className="p-3 border-bottom d-flex align-items-center justify-content-between">
           <IconButton variant="link" bsSize="sm" className="p-0" icon={ACTION_ICONS.back} title="Back to builder" onClick={onBack} />
-          <span className="fw-semibold small d-inline-flex align-items-center gap-1">Templates <TutorialHint id="templates" /></span>
+          <span className="fw-semibold small d-inline-flex align-items-center gap-1">Manage templates <TutorialHint id="templates" /></span>
         </div>
 
         {/* Global templates */}
@@ -290,7 +290,8 @@ export default function TemplateEditorScreen({ onBack }) {
       <div style={{ flex: 1, overflowY: 'auto', padding: '1.25rem 1.5rem' }}>
         {!editState ? (
           <div className="text-center text-muted mt-5">
-            Select a template to edit, or create a new one.
+            Select a template to rename, retag or trim it. To make a new one, build a position's
+            recipe and click <MaterialIcon name="bookmark_add" size={13} /> in its header — templates start from a real recipe.
           </div>
         ) : (
           <>
@@ -331,7 +332,7 @@ export default function TemplateEditorScreen({ onBack }) {
 
             {/* Ingredients table */}
             <div className="mb-3 d-flex align-items-center gap-2">
-              <span className="fw-semibold small">Ingredient Slots ({totalSlots})</span>
+              <span className="fw-semibold small">What it adds ({totalSlots})</span>
               {!isGlobalSelected && (
                 <Button variant="outline-secondary" size="sm" style={{ fontSize: 11, padding: '1px 8px' }} onClick={addIngredient}>
                   + Add slot
@@ -348,8 +349,8 @@ export default function TemplateEditorScreen({ onBack }) {
               <Table bordered hover size="sm" className="small">
                 <thead className="table-light">
                   <tr>
-                    <th>Slot Key</th>
-                    <th>Slot Label</th>
+                    <th>Slot</th>
+                    <th>ElementType</th>
                     <th>Section</th>
                     <th>Design</th>
                     <th>Contract</th>
@@ -444,7 +445,9 @@ function IngredientRow({ ing, readOnly, onChange, onRemove }) {
   return (
     <tr>
       {cell('slotKey')}
-      {cell('slotLabel')}
+      {ing.newWrapper
+        ? <td className="text-muted fst-italic">a new {ing.newWrapper} wrapper each time</td>
+        : cell('slotLabel')}
       {cell('section', 'select', SECTION_OPTIONS)}
       {cell('isDesign', 'flag')}
       {cell('isContractItem', 'flag')}

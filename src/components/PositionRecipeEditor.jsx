@@ -1,3 +1,4 @@
+import SaveTemplateModal from './SaveTemplateModal'
 import React, { useState, useEffect } from 'react'
 import { Button } from 'react-bootstrap'
 import useStore, { getRecipeForPosition } from '../store/useStore'
@@ -58,6 +59,7 @@ export default function PositionRecipeEditor({
   const rowClipboard = useStore(s => s.rowClipboard)
   const [pasteMsg, setPasteMsg] = useState(null)
   const [forking, setForking] = useState(false)
+  const [savingTemplate, setSavingTemplate] = useState(false)
 
   const ref = posRef
   const grouped = getRecipeForPosition(recipes, ref)
@@ -140,6 +142,13 @@ export default function PositionRecipeEditor({
           disabled={count === 0}
           title="Fork this position into new one(s) — an independent copy you can trim"
         />
+        <IconButton
+          variant="outline-secondary" bsSize="sm" style={{ fontSize: 11 }}
+          icon="bookmark_add"
+          onClick={() => setSavingTemplate(true)}
+          disabled={count === 0}
+          title="Save this recipe as a template, to apply to other positions"
+        />
         {onOpenConnectors && (
           <Button
             variant="link" size="sm" className="d-inline-flex align-items-center gap-1" style={{ fontSize: 11, textDecoration: 'none' }}
@@ -219,6 +228,8 @@ export default function PositionRecipeEditor({
       </div>
 
       <ForkPositionModal show={forking} sourceRef={ref} onHide={() => setForking(false)} />
+      <SaveTemplateModal show={savingTemplate} posRef={ref} name={name}
+        onHide={saved => { setSavingTemplate(false); if (saved) flashPaste('Saved as a template — find it under Templates') }} />
     </div>
   )
 }

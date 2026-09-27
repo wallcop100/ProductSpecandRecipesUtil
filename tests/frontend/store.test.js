@@ -353,7 +353,7 @@ describe('saveAsTemplate', () => {
   })
 
   test('saveAsTemplate converts active recipe to template definition', async () => {
-    await useStore.getState().saveAsTemplate(POS_REF, 'My Custom DL', 'project')
+    await useStore.getState().saveAsTemplate(POS_REF, { name: 'My Custom DL', scope: 'project' })
 
     const { templates } = useStore.getState()
     const saved = templates.find(t => t.name === 'My Custom DL')
@@ -364,49 +364,49 @@ describe('saveAsTemplate', () => {
   })
 
   test('saveAsTemplate adds projectId when scope is project', async () => {
-    await useStore.getState().saveAsTemplate(POS_REF, 'Project Tpl', 'project')
+    await useStore.getState().saveAsTemplate(POS_REF, { name: 'Project Tpl', scope: 'project' })
 
     const { templates } = useStore.getState()
     const saved = templates.find(t => t.name === 'Project Tpl')
 
-    expect(saved.projectId).toBe(PROJECT_ID)
+    expect(saved.project_id).toBe(PROJECT_ID)
   })
 
   test('saveAsTemplate persists via electronAPI.db.upsertTemplate', async () => {
-    await useStore.getState().saveAsTemplate(POS_REF, 'Persist Test', 'project')
+    await useStore.getState().saveAsTemplate(POS_REF, { name: 'Persist Test', scope: 'project' })
 
     expect(window.electronAPI.db.upsertTemplate).toHaveBeenCalledOnce()
   })
 
   test('saveAsTemplate global scope does not set projectId', async () => {
-    await useStore.getState().saveAsTemplate(POS_REF, 'Global Tpl', 'global')
+    await useStore.getState().saveAsTemplate(POS_REF, { name: 'Global Tpl', scope: 'global' })
 
     const { templates } = useStore.getState()
     const saved = templates.find(t => t.name === 'Global Tpl')
 
-    expect(saved.projectId).toBeUndefined()
+    expect(saved.project_id).toBeUndefined()
   })
 
   test('saveAsTemplate populates applicable_tags from positionUI tags', async () => {
     // positionUI[POS_REF].tags = ['DL', 'Local', '5Pin-DALI'] from resetStore
-    await useStore.getState().saveAsTemplate(POS_REF, 'Tagged Template', 'project')
+    await useStore.getState().saveAsTemplate(POS_REF, { name: 'Tagged Template', scope: 'project' })
 
     const { templates } = useStore.getState()
     const saved = templates.find(t => t.name === 'Tagged Template')
 
-    const parsedTags = JSON.parse(saved.applicable_tags)
+    const parsedTags = saved.applicable_tags
     expect(parsedTags).toContain('DL')
     expect(parsedTags).toContain('Local')
     expect(parsedTags).toContain('5Pin-DALI')
   })
 
   test('saveAsTemplate applicable_tags allow template to auto-match via findBestTemplate', async () => {
-    await useStore.getState().saveAsTemplate(POS_REF, 'Auto-Match Tpl', 'project')
+    await useStore.getState().saveAsTemplate(POS_REF, { name: 'Auto-Match Tpl', scope: 'project' })
 
     const { templates } = useStore.getState()
     // The saved template should auto-match a position with the same tags
     const saved = templates.find(t => t.name === 'Auto-Match Tpl')
-    const parsedTags = JSON.parse(saved.applicable_tags)
+    const parsedTags = saved.applicable_tags
 
     // All three position tags should be in applicable_tags
     expect(parsedTags.length).toBeGreaterThan(0)
@@ -2120,5 +2120,67 @@ describe('every recipe has one IsDesign item, settled as you leave it', () => {
     add('B2', 'ET-DRIVER-01')
     useStore.getState().setActivePosition('B3')
     expect(useStore.getState().activePositionRef).toBe('B3')
+  })
+})
+
+describe('recipe templates: save a finished recipe, apply it elsewhere', () => {
+  const row = (pos, ref, extra = {}) => ({
+    _id: `${pos}-${ref}`, PositionTypeRef: pos, ContextType: 'PositionType', ContextRef: pos,
+    ElementTypeRef: ref, RecipeIndex: 1, Quantity: 1, ...extra,
+  })
+  const inside = (pos, wrapper, ref, extra = {}) => ({
+    _id: `${pos}-${wrapper}-${ref}`, PositionTypeRef: pos, ContextType: 'ElementType', ContextRef: wrapper,
+    ElementTypeRef: ref, RecipeIndex: 1, ...extra,
+  })
+  beforeEach(() => resetStore({
+    templates: [], past: [], future: [], rsChanges: [],
+    containerETRefs: new Set(['et-lin-05']),
+    elementTypes: [{ ElementTypeRef: 'ET-LIN-05' }, { ElementTypeRef: 'ET-LIN-TAPE-01' }, { ElementTypeRef: 'ET-DRIVER-01' }],
+    recipes: [
+      row('C1', 'ET-LIN-05', { IsDesign: 'Y', Quantity: 1 }),
+      inside('C1', 'ET-LIN-05', 'ET-LIN-TAPE-01', { Dim_QuantityMultiplier: 1, Quantity: null }),
+      row('C1', 'ET-DRIVER-01', { IsContractItem: 'Y', Quantity: 2 }),
+    ],
+  }))
+
+  test('saving keeps real ElementTypes, and the wrapper as "a new one of this kind"', async () => {
+    const t = await useStore.getState().saveAsTemplate('C1', { name: 'Tape in profile' })
+    expect(t.ingredients.find(i => i.newWrapper)).toMatchObject({ newWrapper: 'LIN', slotKey: 'DESIGN_ELEMENT' })
+    expect(t.ingredients.find(i => i.slotLabel === 'ET-LIN-TAPE-01')).toMatchObject({ exact: true, slotKey: 'TAPE', section: 'dl_internal' })
+    expect(Array.isArray(t.ingredients)).toBe(true)
+    expect(useStore.getState().templates).toHaveLength(1)
+  })
+
+  test('unticked rows are left out', async () => {
+    const t = await useStore.getState().saveAsTemplate('C1', { name: 'No driver', excludeIds: ['C1-ET-DRIVER-01'] })
+    expect(t.ingredients.some(i => i.slotLabel === 'ET-DRIVER-01')).toBe(false)
+  })
+
+  test('applying to a blank position rebuilds the recipe with its own new wrapper', async () => {
+    const t = await useStore.getState().saveAsTemplate('C1', { name: 'Tape in profile' })
+    useStore.getState().applyTemplate('C9', t.id)
+    const rows = useStore.getState().recipes.filter(r => r.PositionTypeRef === 'C9')
+    const wrapper = rows.find(r => r.IsDesign === 'Y')
+    expect(wrapper.ElementTypeRef).toBe('ET-LIN-06')
+    expect(rows.find(r => r.ElementTypeRef === 'ET-LIN-TAPE-01')).toMatchObject({ ContextType: 'ElementType', ContextRef: 'ET-LIN-06', Dim_QuantityMultiplier: 1, Quantity: null })
+    expect(rows.find(r => r.ElementTypeRef === 'ET-DRIVER-01')).toMatchObject({ Quantity: 2, IsContractItem: 'Y' })
+  })
+
+  test('apply to many positions is one undo step', async () => {
+    const t = await useStore.getState().saveAsTemplate('C1', { name: 'Tape in profile' })
+    const before = useStore.getState().recipes.length
+    expect(useStore.getState().applyTemplateMany(['C8', 'C9'], t.id)).toBe(2)
+    expect(useStore.getState().recipes.length).toBe(before + 6)
+    useStore.getState().undo()
+    expect(useStore.getState().recipes.length).toBe(before)
+  })
+
+  test('applying over an existing recipe deletes its rows the exported way', async () => {
+    const t = await useStore.getState().saveAsTemplate('C1', { name: 'Tape in profile' })
+    useStore.setState(s => ({ recipes: [...s.recipes, { ...row('C7', 'ET-OLD'), _row_num: 12 }] }))
+    useStore.getState().applyTemplate('C7', t.id)
+    const old = useStore.getState().recipes.find(r => r._id === 'C7-ET-OLD')
+    expect(old?.IsDeleted ?? 'gone').not.toBe(undefined)
+    expect(useStore.getState().recipes.filter(r => r.PositionTypeRef === 'C7' && r.IsDeleted !== 'Y')).toHaveLength(3)
   })
 })

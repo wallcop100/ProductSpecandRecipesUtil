@@ -36,7 +36,7 @@ import LinWrapperWizardModal from '../components/LinWrapperWizardModal'
 import AddAnywhereModal from '../components/AddAnywhereModal'
 import NewETWizardModal from '../components/NewETWizardModal'
 import ChangeSummaryModal from '../components/ChangeSummaryModal'
-import TransformToTemplateModal from '../components/TransformToTemplateModal'
+import SaveTemplateModal from '../components/SaveTemplateModal'
 import IconButton from '../components/IconButton'
 import MaterialIcon from '../components/MaterialIcon'
 import { ACTION_ICONS, ICONS } from '../utils/entityStyle'
@@ -527,7 +527,7 @@ export default function BuilderScreen({
             </Dropdown.Item>
             <Dropdown.Divider />
             <Dropdown.Item onClick={onOpenTemplateEditor}>
-              <MaterialIcon name="dashboard_customize" size={14} /> Template editor
+              <MaterialIcon name="dashboard_customize" size={14} /> Manage templates
             </Dropdown.Item>
             <Dropdown.Item onClick={() => setShowTags(true)}>
               <MaterialIcon name={ACTION_ICONS.tags} size={14} /> Tags
@@ -857,8 +857,9 @@ export default function BuilderScreen({
         onDone={handleNewETDone}
       />
 
-      {/* Transform Active Position into a Template (T-F4) */}
-      <TransformToTemplateModal
+      {/* Save the active position's recipe as a template — the same window as the
+          recipe header's bookmark button. */}
+      <SaveTemplateModal
         show={showSaveTemplate}
         onHide={() => setShowSaveTemplate(false)}
         posRef={activePositionRef}

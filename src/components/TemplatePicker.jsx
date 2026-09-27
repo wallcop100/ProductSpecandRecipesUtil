@@ -23,6 +23,13 @@ import { ACTION_ICONS } from '../utils/entityStyle'
 export default function TemplatePicker({ posRef, activeTags, hasRows, onApply }) {
   const templates               = useStore(s => s.templates)
   const applyTemplate           = useStore(s => s.applyTemplate)
+  const applyTemplateMany       = useStore(s => s.applyTemplateMany)
+  const positionTypes           = useStore(s => s.positionTypes)
+  const positionUI              = useStore(s => s.positionUI)
+  const recipes                 = useStore(s => s.recipes)
+  const [applyingTo, setApplyingTo] = useState(null)   // template being applied to many
+  const [picked, setPicked]     = useState(() => new Set())
+  const [doneMsg, setDoneMsg]   = useState(null)
 
   const [search, setSearch]           = useState('')
   const [pendingApply, setPendingApply] = useState(null)
@@ -81,6 +88,54 @@ export default function TemplatePicker({ posRef, activeTags, hasRows, onApply })
         />
       </div>
 
+      {doneMsg && (
+        <Alert variant="success" className="mx-2 mt-2 mb-0 py-1 px-2" style={{ fontSize: 12 }} dismissible onClose={() => setDoneMsg(null)}>
+          {doneMsg}
+        </Alert>
+      )}
+
+      {applyingTo && (() => {
+        const tplTags = parseTags(applyingTo.applicable_tags)
+        const refs = positionTypes.map(p => p.PositionTypeRef || p.positionTypeRef).filter(Boolean)
+        const tagsOf = r => positionUI[r]?.tags || []
+        const matches = r => tplTags.length > 0 && tplTags.every(t => tagsOf(r).includes(t))
+        const hasRecipe = r => recipes.some(x => (x.PositionTypeRef || x.positionTypeRef) === r && (x.IsDeleted || x.isDeleted) !== 'Y')
+        const sorted = [...refs].sort((a, b) => (matches(b) - matches(a)) || a.localeCompare(b))
+        const replacing = [...picked].filter(hasRecipe).length
+        return (
+          <div className="mx-2 mt-2 p-2 rounded" style={{ background: '#e7f1ff', border: '1px solid #b6d4fe', fontSize: 12 }} data-testid="apply-to">
+            <div className="fw-semibold mb-1">Apply “{applyingTo.name}” to…</div>
+            {tplTags.length > 0 && (
+              <Button variant="link" size="sm" className="p-0 mb-1" style={{ fontSize: 11 }}
+                onClick={() => setPicked(new Set(refs.filter(matches)))}>
+                Tick every position tagged {tplTags.join(' + ')}
+              </Button>
+            )}
+            <div style={{ maxHeight: 220, overflowY: 'auto', background: '#fff' }} className="rounded px-2 py-1 mb-1">
+              {sorted.map(r => (
+                <Form.Check key={r} type="checkbox" id={`apply-${r}`} checked={picked.has(r)}
+                  onChange={() => setPicked(p => { const n = new Set(p); n.has(r) ? n.delete(r) : n.add(r); return n })}
+                  label={<span style={{ fontSize: 11 }}><span style={{ fontFamily: 'monospace' }}>{r}</span>
+                    {hasRecipe(r) && <span className="text-muted"> · has a recipe</span>}
+                    {matches(r) && <span className="text-success"> · tags match</span>}</span>} />
+              ))}
+            </div>
+            {replacing > 0 && <div className="text-danger mb-1" style={{ fontSize: 11 }}>{replacing} already have a recipe — it will be replaced.</div>}
+            <div className="d-flex gap-2">
+              <Button size="sm" variant="primary" disabled={picked.size === 0}
+                onClick={() => {
+                  const n = applyTemplateMany([...picked], applyingTo.id)
+                  setDoneMsg(`Applied “${applyingTo.name}” to ${n} position${n === 1 ? '' : 's'} — one Undo takes it back.`)
+                  setApplyingTo(null); setPicked(new Set())
+                }}>
+                Apply to {picked.size}
+              </Button>
+              <Button size="sm" variant="link" className="text-muted" onClick={() => { setApplyingTo(null); setPicked(new Set()) }}>Cancel</Button>
+            </div>
+          </div>
+        )
+      })()}
+
       {pendingApply && (
         <Alert variant="warning" className="mx-2 mt-2 mb-0 py-2 px-3" style={{ fontSize: 12 }}>
           <div className="mb-1 fw-semibold">Applying will replace the current recipe.</div>
@@ -102,35 +157,45 @@ export default function TemplatePicker({ posRef, activeTags, hasRows, onApply })
             Remote-CC / Remote-CV built from abstract refs no project ever mapped. The
             Connectors screen and its wizard do that against real ElementTypes. */}
         {posRef && projectTemplates.length > 0 && (
-          <TemplateGroup label="Project Templates" templates={projectTemplates} onApply={handleApply} />
+          <TemplateGroup label="This project" templates={projectTemplates} onApply={handleApply} onApplyTo={t => { setApplyingTo(t); setPicked(new Set()) }} />
         )}
 
         {posRef && globalTemplates.length > 0 && (
-          <TemplateGroup label="Global Templates" templates={globalTemplates} onApply={handleApply} />
+          <TemplateGroup label="Every project" templates={globalTemplates} onApply={handleApply} onApplyTo={t => { setApplyingTo(t); setPicked(new Set()) }} />
         )}
 
         {enriched.length === 0 && (
-          <div className="text-muted small text-center py-3">No templates found.</div>
+          <div className="text-muted small text-center py-3">
+            No templates yet. Build one position's recipe, then click
+            <MaterialIcon name="bookmark_add" size={13} /> in its header to save it as a template.
+          </div>
         )}
       </div>
     </div>
   )
 }
 
-function TemplateGroup({ label, templates, onApply }) {
+function TemplateGroup({ label, templates, onApply, onApplyTo }) {
   return (
     <div className="mb-3">
       <div className="text-uppercase text-muted fw-bold mb-1" style={{ fontSize: 10, letterSpacing: 0.5 }}>
         {label}
       </div>
       {templates.map(tpl => (
-        <TemplateCard key={tpl.id} tpl={tpl} onApply={onApply} />
+        <TemplateCard key={tpl.id} tpl={tpl} onApply={onApply} onApplyTo={onApplyTo} />
       ))}
     </div>
   )
 }
 
-function TemplateCard({ tpl, onApply }) {
+/** What the template adds, in one line: "4 rows · new LIN wrapper". */
+function summary(tpl) {
+  const ings = Array.isArray(tpl.ingredients) ? tpl.ingredients : (() => { try { return JSON.parse(tpl.ingredients || '[]') } catch { return [] } })()
+  const w = ings.find(i => i.newWrapper)
+  return `${ings.length} row${ings.length === 1 ? '' : 's'}${w ? ` · new ${w.newWrapper} wrapper` : ''}`
+}
+
+function TemplateCard({ tpl, onApply, onApplyTo }) {
   return (
     <div
       style={{
@@ -155,7 +220,11 @@ function TemplateCard({ tpl, onApply }) {
           ))}
         </div>
       )}
-      <div className="d-flex justify-content-end">
+      <div className="d-flex justify-content-end align-items-center gap-2">
+        <span className="text-muted me-auto" style={{ fontSize: 10 }}>{summary(tpl)}</span>
+        <Button variant="link" size="sm" className="p-0" style={{ fontSize: 11 }} onClick={() => onApplyTo(tpl)}>
+          Apply to…
+        </Button>
         <Button
           variant={tpl._isMatch ? 'primary' : 'outline-secondary'}
           size="sm"

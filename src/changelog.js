@@ -7,6 +7,8 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-09-27', note: 'Templates start from a real recipe: the bookmark button saves a position as a template (untick rows, choose tags); Apply to… fills many positions at once, each with its own new wrapper' },
+  { date: '2026-09-27', note: 'The save indicator is now a laptop: work is kept on this computer until you export' },
   { date: '2026-09-27', note: 'Fixed: templates save again — project templates were stored under no project, fields were encoded twice, and "Save as new" never appeared' },
   { date: '2026-09-25', note: 'Import product codes: a Form\'s Accessories column is read too (found automatically), its codes becoming extras on the same position; "-" is ignored' },
   { date: '2026-09-25', note: 'Review all existing ElementTypes: every ET by family, unfiled first, with product and usage; edit Name, Description and Family, saved in one go' },

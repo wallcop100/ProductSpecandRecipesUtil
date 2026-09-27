@@ -7,7 +7,7 @@ const unexported = s => s.psChanges.length + s.rsChanges.length + (s.dbChanges?.
 const time = t => (t ? new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '')
 
 /**
- * Work is saved as you go — to this browser, not to the workbooks. The cloud says which,
+ * Work is saved as you go — to this browser, not to the workbooks. The laptop says which,
  * so nobody has to wonder; the workbooks only change on Export.
  */
 export function SaveIndicator() {
@@ -15,9 +15,9 @@ export function SaveIndicator() {
   const savedAt = useStore(s => s.savedAt)
   const n = useStore(unexported)
   const { icon, color, label } = {
-    saving: { icon: 'cloud_sync', color: '#6c757d', label: 'Saving…' },
-    error: { icon: 'cloud_off', color: '#dc3545', label: 'Not saved' },
-  }[status] || { icon: 'cloud_done', color: '#198754', label: 'Saved' }
+    saving: { icon: 'laptop', color: '#6c757d', label: 'Saving…' },
+    error: { icon: 'warning', color: '#dc3545', label: 'Not saved' },
+  }[status] || { icon: 'laptop', color: '#198754', label: 'Saved' }
   const tip = status === 'error'
     ? 'Could not save to this browser. Export now so the work is not lost.'
     : `${label}${savedAt && status === 'saved' ? ` at ${time(savedAt)}` : ''} in this browser — safe to close.`
@@ -52,7 +52,7 @@ export function SaveShortcut() {
     <ToastContainer position="bottom-end" className="p-3" style={{ zIndex: 2000, position: 'fixed' }}>
       <Toast show={!!toast} onClose={() => setToast(null)} delay={3500} autohide bg={toast?.ok === false ? 'danger' : 'light'}>
         <Toast.Body className="d-flex align-items-center gap-2" style={{ fontSize: 12 }} data-testid="save-toast">
-          <MaterialIcon name={toast?.ok === false ? 'cloud_off' : 'cloud_done'} size={16} /> {toast?.text}
+          <MaterialIcon name={toast?.ok === false ? 'warning' : 'laptop'} size={16} /> {toast?.text}
         </Toast.Body>
       </Toast>
     </ToastContainer>
