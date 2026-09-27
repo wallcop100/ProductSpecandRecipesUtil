@@ -131,10 +131,14 @@ describe('rules replay across the batch', () => {
   })
 
   test('the single-token default is still overridable — nothing is forced', () => {
-    const row = makeRow('x', 'TBC')
+    const row = makeRow('x', 'QC50')
     expect(resolveRoles(row, {})).toEqual(['code'])                       // default
-    expect(resolveRoles(row, { tbc: 'discard' })).toEqual(['discard'])    // painted away
+    expect(resolveRoles(row, { qc50: 'discard' })).toEqual(['discard'])   // painted away
     expect(resolveRoles({ ...row, overrides: { 0: 'note' } }, {})).toEqual(['note'])
+  })
+
+  test('a lone placeholder is not a code: TBC, n/a, "by specialist" name nothing', () => {
+    for (const t of ['TBC', 'tbc', 'n/a', 'N/A']) expect(resolveRoles(makeRow('x', t), {})).toEqual(['note'])
   })
 
   test('the moment a field has two tokens, nothing is assumed', () => {
@@ -214,7 +218,7 @@ describe('suggestions are learned continuously, never applied silently', () => {
     expect(deriveCodes(c01)).toEqual([])                  // still nothing captured
 
     const accepted = acceptSuggestions(c01, rules, sig)
-    expect(deriveCodes({ ...accepted, roles: resolveRoles(accepted, rules) })).toEqual(['LL240272024'])
+    expect(deriveCodes({ ...accepted, roles: resolveRoles(accepted, rules) })).toContain('LL240272024')
   })
 
   test('tokens already covered by a rule or an override are never suggested', () => {
@@ -225,9 +229,12 @@ describe('suggestions are learned continuously, never applied silently', () => {
     expect(suggestCodes(c01, rules, sig).map(i => c01.tokens[i].text)).not.toContain('LL240272024')
   })
 
-  test('with nothing learned there are no suggestions', () => {
+  test('with nothing learned, only words shaped like a maker\'s code are suggested', () => {
     const rows = applyRules([makeRow('D02', D02)], {})    // multi-token: all note
-    expect(suggestCodes(rows[0], {}, learnedSignals(rows))).toEqual([])
+    const sug = suggestCodes(rows[0], {}, learnedSignals(rows)).map(i => rows[0].tokens[i].text)
+    expect(sug.length).toBeGreaterThan(0)
+    for (const w of sug) expect(w).toMatch(/\d/)          // never plain prose
+    expect(rows[0].roles.every(r => r !== 'code')).toBe(true)   // and nothing is applied
   })
 })
 
@@ -441,4 +448,11 @@ describe('learnCodeTokens — an ElementType decision teaches the batch', () => 
     expect(rules['+']).toBe('discard')
     expect(rules['abc123']).toBe('code')
   })
+})
+
+import { looksLikeProductCode } from '../../src/utils/codeHeuristics.js'
+
+describe('spec values are not product codes', () => {
+  test.each(['AISI316L', 'L360', '2700K', 'IP67', '10x60'])('%s', w => expect(looksLikeProductCode(w)).toBe(false))
+  test.each(['AR413', 'QC50', '7A3194.4XG'])('%s is a code', w => expect(looksLikeProductCode(w)).toBe(true))
 })

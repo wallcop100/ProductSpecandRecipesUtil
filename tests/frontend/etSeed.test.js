@@ -170,3 +170,22 @@ describe('the code beats the description', () => {
     expect(r.flag).toBe(true)
   })
 })
+
+describe('families from words and old shapes', () => {
+  test('a rail is a mount; a casing is point mounting; a louvre is an accessory', () => {
+    expect(pickFamily({ code: 'A4431', text: 'aluminium rail', pageType: 'linear' }, {}).family).toBe('ET-LIN-MOUNT')
+    expect(pickFamily({ code: 'WC4020', text: 'Outer casing', pageType: 'point', role: 'extra' }, {}).family).toBe('ET-PS-MOUNTING')
+    expect(pickFamily({ code: 'AR413', text: 'Hex Louvre', pageType: 'point', role: 'extra' }, {}).family).toBe('ET-PS-ACCESSORIES')
+  })
+  test('a superseded shape still names the kind of product', () => {
+    const shapes = [{ maker: 'LEDFlex', shape: 'UN9FGSLW9', level: 'fine', family: 'ET-LIN-MOUNT', head: 'ET-LIN-MOUNT', status: 'superseded' }]
+    expect(pickFamily({ code: 'UN22FGSLW1000', manufacturer: 'LEDFlex', text: 'ULTIMO NEON 22', pageType: 'linear' }, { shapes }).family).toBe('ET-LIN-MOUNT')
+  })
+})
+
+test('a researched product line files its main code; its extras keep their own words', () => {
+  expect(pickFamily({ code: 'A4331.7.927.IP67.DALI', manufacturer: 'Atea', text: 'Neo Top Mini', pageType: 'linear' }, {}).family).toBe('ET-LIN-FLEX')
+  expect(pickFamily({ code: 'G4961000-9527RD0010', manufacturer: 'Forma Lighting', text: 'Microline 7x5 Dotless', pageType: 'linear' }, {}).family).toBe('ET-LIN-FIXED')
+  expect(pickFamily({ code: 'A4331.FS', manufacturer: 'Atea', text: 'Neo 3D Wall Washer Fixing set Wall Brackets', pageType: 'linear', role: 'extra' }, {}).family).toBe('ET-LIN-MOUNT')
+  expect(pickFamily({ code: 'X1234', manufacturer: 'Atea', text: 'something else', pageType: 'linear' }, {}).family).toBe('ET-LIN-INGREDIENTS')
+})

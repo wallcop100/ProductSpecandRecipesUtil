@@ -144,6 +144,18 @@ export function segmentsOf(row, delimiters = new Set()) {
   })
 }
 
+/** ';' or ',' when splitting the cell there leaves each part with at most one code (of `pool`). */
+function ownDelimiters(row, runs, pool) {
+  for (const d of [[';'], [','], [';', ',']]) {
+    const set = new Set(d)
+    const segs = segmentsOf(row, set)
+    const per = new Map()
+    for (const ri of pool) per.set(segs[runs[ri][0]], (per.get(segs[runs[ri][0]]) || 0) + 1)
+    if (per.size > 1 && [...per.values()].every(n => n === 1)) return set
+  }
+  return new Set()
+}
+
 /** Reading-order pick: the code this note reads with, in the given direction. */
 function directionalPick(runs, candidates, tokenIdx, direction) {
   if (candidates.length === 0) return -1
@@ -176,12 +188,22 @@ export function noteOwnerOf(row, tokenIdx, runs = codeRuns(row), opts = {}) {
   if (runs.length === 0) return -1
   const { delimiters = new Set(), direction = 'forward' } = opts
 
-  if (delimiters.size > 0) {
-    const segs = segmentsOf(row, delimiters)
-    const sameSeg = runs.map((_, ri) => ri).filter(ri => segs[runs[ri][0]] === segs[tokenIdx])
+  // Accessories-column words never describe the main product, and vice versa.
+  let pool = runs.map((_, ri) => ri)
+  if (row.accFrom != null) {
+    const side = i => (row.tokens[i]?.start ?? 0) >= row.accFrom
+    pool = pool.filter(ri => side(runs[ri][0]) === side(tokenIdx))
+    if (pool.length === 0) return -1
+  }
+
+  // Nothing taught yet: a cell that lists one code per ';' or ',' part says so itself.
+  const delims = delimiters.size > 0 ? delimiters : ownDelimiters(row, runs, pool)
+  if (delims.size > 0) {
+    const segs = segmentsOf(row, delims)
+    const sameSeg = pool.filter(ri => segs[runs[ri][0]] === segs[tokenIdx])
     if (sameSeg.length > 0) return directionalPick(runs, sameSeg, tokenIdx, direction)
   }
-  return directionalPick(runs, runs.map((_, ri) => ri), tokenIdx, direction)
+  return directionalPick(runs, pool, tokenIdx, direction)
 }
 
 /**
@@ -427,7 +449,18 @@ export function buildDistinct(rows, opts = {}) {
     if (!v.rowRefs.includes(cap.rowId)) v.rowRefs.push(cap.rowId)
     if (cap.positionType && !v.positionTypes.includes(cap.positionType)) v.positionTypes.push(cap.positionType)
   }
+  // The richest note leads: it is what a spec row and a proposal read from.
+  for (const e of map.values()) e.variants.sort((a, b) => noteGist(b.note).size - noteGist(a.note).size)
   return [...map.values()]
+}
+
+const NOTE_FILLER = new Set(['with', 'and', 'the', 'a', 'an', 'of', 'for', 'to', 'in', 'on', 'inc', 'incl', 'including', 'plus', '+', '&'])
+
+/** A note's meaningful words: lower case, no filler, plurals folded ("with clips" → {clip}). */
+export function noteGist(note) {
+  return new Set(String(note ?? '').toLowerCase().split(/[^a-z0-9+&]+/)
+    .filter(w => w && !NOTE_FILLER.has(w))
+    .map(w => (w.length > 3 && w.endsWith('s') && !w.endsWith('ss') ? w.slice(0, -1) : w)))
 }
 
 /**
@@ -435,8 +468,20 @@ export function buildDistinct(rows, opts = {}) {
  * little note may distinguish it in a way that demands its own ref.
  */
 export function hasNoteCollision(entry) {
-  return entry.variants.length > 1
+  // Extra wording is the same product said twice ("clip" / "with clips",
+  // "" / "Flex Profile Nano") unless it names a finish, colour or light (BLACK,
+  // opal, 3000K). Two notes that each say something the other doesn't clash.
+  const gists = entry.variants.map(v => noteGist(v.note))
+  const extra = (a, b) => [...a].filter(w => !b.has(w))
+  return gists.some((a, i) => gists.some((b, j) => {
+    if (j <= i) return false
+    const ab = extra(a, b), ba = extra(b, a)
+    if (ab.length && ba.length) return true
+    return [...ab, ...ba].some(w => DISTINGUISHING.test(w))
+  }))
 }
+
+const DISTINGUISHING = /^(black|white|silver|gold|brass|bronze|copper|chrome|nickel|grey|gray|anthracite|graphite|matt|matte|gloss|satin|polished|brushed|opal|clear|frosted|prismatic|warm|cool|daylight|tunable|left|right|\d{4}k|\d+(deg|°)|ip\d{2}|ral\d+)$/
 
 /** Normalised codes appearing in more than one row of the batch. */
 export function duplicateSet(rows) {

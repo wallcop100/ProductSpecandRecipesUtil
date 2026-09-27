@@ -56,3 +56,31 @@ describe('the main product of a cell', () => {
     expect(leadOf(row, deriveCaptures(row).captures).code).toBe('B2')
   })
 })
+
+describe('notes stay on their side of the Accessories boundary', () => {
+  const paint = (row, words) => ({ ...row, roles: row.tokens.map(t => (words.includes(t.text) ? 'code' : 'note')) })
+
+  test('accessories prose never lands on the main code', () => {
+    const joined = joinAccessories('CTM209TW5091', 'Fixing clips')
+    const row = paint({ ...makeRow(0, joined), accFrom: accessoriesFrom('CTM209TW5091', joined) }, ['CTM209TW5091'])
+    const { captures, unattachedNote } = deriveCaptures(row)
+    expect(captures[0].note).toBe('')
+    expect(unattachedNote).toBe('Fixing clips')
+  })
+
+  test('accessories prose attaches to an accessory code', () => {
+    const joined = joinAccessories('QC50', 'glare shield GS70')
+    const row = paint({ ...makeRow(0, joined), accFrom: accessoriesFrom('QC50', joined) }, ['QC50', 'GS70'])
+    const caps = deriveCaptures(row).captures
+    expect(caps.find(c => c.code === 'GS70').note).toBe('glare shield')
+    expect(caps.find(c => c.code === 'QC50').note).toBe('')
+  })
+})
+
+test('a cell listing one code per ";" part keeps each note with its own code', () => {
+  const text = 'profile A1234; B5678 opal cover; C9012 end caps'
+  const row = { ...makeRow(0, text) }
+  row.roles = row.tokens.map(t => (/^[A-C]\d{4}$/.test(t.text) ? 'code' : /^[;,]$/.test(t.text) ? 'discard' : 'note'))
+  const caps = deriveCaptures(row).captures
+  expect(caps.map(c => c.note)).toEqual(['profile', 'opal cover', 'end caps'])
+})

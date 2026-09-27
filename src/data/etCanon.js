@@ -44,7 +44,7 @@ export const CANON_KEYWORDS = [
   { test: /\bEND\s*-?CAPS?\b|\bENDCAPS?\b/, family: 'ET-LIN-PROF', head: 'ET-LIN-CAP' },
   { test: /\bDIFFUSERS?\b|\bCOVERS?\b|\bLENS\b/, family: 'ET-LIN-PROF', head: 'ET-LIN-DIFF' },
   { test: /\bCLIPS?\b/, family: 'ET-LIN-CLIP', head: 'ET-LIN-CLIP' },
-  { test: /\bBRACKETS?\b|\bSUSPENSION\s+KIT\b|\bMOUNT(ING|ED)?\s+KIT\b/, family: 'ET-LIN-MOUNT', head: 'ET-LIN-MOUNT' },
+  { test: /\bBRACKETS?\b|\bRAILS?\b|\bSUSPENSION\s+KIT\b|\bMOUNT(ING|ED)?\s+KIT\b/, family: 'ET-LIN-MOUNT', head: 'ET-LIN-MOUNT' },
   { test: /\bMOUNTING\s+(PROFILE|CHANNEL|TRACK)\b|\bNEON\b.*\bPROFILE\b|\bPROFILE\b.*\bNEON\b/, family: 'ET-LIN-MOUNT', head: 'ET-LIN-MOUNT' },
   { test: /\bPROFILES?\b|\bEXTRUSION\b/, family: 'ET-LIN-PROF', head: 'ET-LIN-PROF' },
   { test: /\bNEON\b|\bENCAPSULATED\b/, family: 'ET-LIN-FLEX', head: 'ET-LIN-FLEX' },
@@ -53,6 +53,8 @@ export const CANON_KEYWORDS = [
   { test: /\bPLUGS?\b|\bSOCKETS?\b|\bCONNECTORS?\b/, family: 'ET-CONNECTION', head: 'ET-CONNECTION' },
   { test: /\bDRIVERS?\b|\bDRIVE\b|\bPOWER\s+SUPPLY\b|\bPSU\b|\bEMERGENCY\s+PACK\b/, family: 'ET-DRIVER', head: 'ET-DRIVER' },
   { test: /\bARTNET\b|\bSPI\b|\bDMX\s+UNIVERSE\b|\bCONTROLLER\b/, family: 'ET-LIGHTINGCONTROL', head: 'ET-LIGHTINGCONTROL' },
+  { test: /\bLOUVRES?\b|\bLOUVERS?\b|\bGLARE\s+SHIELDS?\b|\bSNOOTS?\b|\bHONEYCOMB\b/, family: 'ET-PS-ACCESSORIES', head: 'ET-PS-ACCESSORIES' },
+  { test: /\bBACK\s*-?BOX(ES)?\b|\bCASINGS?\b|\bHOUSINGS?\b/, family: 'ET-PS-MOUNTING', head: 'ET-PS-MOUNTING' },
   { test: /\bFRAMES?\b/, family: 'ET-PS-MOUNTING-FRAME', head: 'ET-PS-MOUNTING-FRAME' },
   { test: /\bSLEEVES?\b/, family: 'ET-PS-MOUNTING-SLEEVE', head: 'ET-PS-MOUNTING-SLEEVE' },
 ]

@@ -37,6 +37,7 @@ const WHY = {
   shape: r => `code shaped like ${r.shapedOn?.example} (${r.shapedOn?.n} known)`,
   canon: r => `company family — ${r.canon}`,
   style: r => `styled like ${r.styledOn?.ref}${r.styledOn?.source ? ` (${r.styledOn.source})` : ''}`,
+  line: 'known product line',
   design: "position's design element",
   parent: p => `position parent ${p} (not a company family)`,
   extra: 'extra code in its cell',

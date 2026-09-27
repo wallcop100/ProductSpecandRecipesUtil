@@ -272,7 +272,7 @@ describe('holistic view — distinct, collisions, clusters', () => {
     const entry = buildDistinct(collidingRows())[0]
     expect(entry.text).toBe('V8397 000')
     expect(entry.rowRefs).toEqual(['r1', 'r2'])
-    expect(entry.variants.map(v => v.note)).toEqual(['', 'BLACK'])
+    expect(entry.variants.map(v => v.note)).toEqual(['BLACK', ''])
     expect(hasNoteCollision(entry)).toBe(true)
   })
 
@@ -643,5 +643,22 @@ describe('line breaks, phantom codes and glued notes', () => {
   test('note tokens that touched in the cell stay touching', () => {
     const { captures } = deriveCaptures(painted('ABC123 (RAL9011)', ['ABC123']))
     expect(captures[0].note).toBe('RAL9011')
+  })
+})
+
+import { hasNoteCollision, noteGist } from '../../src/utils/productCodes.js'
+
+describe('note clashes only when the notes really differ', () => {
+  const entry = (...notes) => ({ variants: notes.map(note => ({ note })) })
+  test('a blank note or extra wording is the same product', () => {
+    expect(hasNoteCollision(entry('clip', 'with clips'))).toBe(false)
+    expect(hasNoteCollision(entry('diffuser', 'and diffuser'))).toBe(false)
+    expect(hasNoteCollision(entry('', 'Flex Profile Nano'))).toBe(false)
+  })
+  test('different words clash', () => {
+    expect(hasNoteCollision(entry('opal diffuser', 'clear diffuser'))).toBe(true)
+  })
+  test('gist folds plurals and drops filler', () => {
+    expect([...noteGist('with Clips & caps')].sort()).toEqual(['cap', 'clip'])
   })
 })
