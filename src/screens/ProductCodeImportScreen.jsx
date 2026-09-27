@@ -39,7 +39,7 @@ import { matchShape } from '../utils/codeShapes'
 import shippedShapes from '../data/codeShapes.json'
 import { resolveFormRefs, buildRefMap, targetFor } from '../utils/ptResolve'
 import { applyKnownCodes, knownTokenIndices } from '../utils/knownCodes'
-import { isObvious, isNothingRow } from '../utils/obviousRows'
+import { isObvious, isNothingRow, isTbcRow } from '../utils/obviousRows'
 import { joinAccessories, isPlaceholder, accessoriesFrom, leadOf } from '../utils/accessories'
 import { diffCaptures, wrapperDivergence } from '../utils/formSpec'
 
@@ -69,6 +69,11 @@ const isExcluded = v => {
  *
  * The chosen spreadsheet is only ever read.
  */
+/** A confirmed-or-not row that wants a product nobody has chosen (and has no painted code). */
+const isTbc = (row, captureOpts) => isTbcRow(row) && deriveCaptures(row, captureOpts).captures.length === 0
+/** The entry key of a TBC row: one per Form position. */
+const tbcKey = row => `TBC (${row.positionType || `row ${row.id + 1}`})`
+
 export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   const psRows = useStore(s => s.psRows)
   const positionTypes = useStore(s => s.positionTypes)
@@ -582,6 +587,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       for (const e of entries || []) {
         const ref = e.elementTypeRef
         if (!ref) continue
+        if (e.placeholderKey) { m.set(norm(e.placeholderKey), ref); continue }
         if (e.code) m.set(norm(e.code), ref)
         for (const mg of e.merged || []) if (mg.code) m.set(norm(mg.code), ref)
       }
@@ -603,16 +609,42 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     return { ...e, ...c, etRef, ...help }
   }), [confirmed, ctx, assignments, captureOpts, psRows, elementTypes, convention, priorEtByCode])
 
+  /**
+   * TBC rows ("TBC", "*custom*", "Awaiting custom code", "Light Sheet"): a product is wanted
+   * but not chosen. Each position gets one entry, keyed "TBC (J3a)", which becomes its own
+   * ElementType and a placeholder Product Spec row (ProductCode TBC, IsTBC Y).
+   */
+  const tbcEntries = useMemo(() => {
+    const byKey = new Map()
+    for (const r of confirmed) {
+      if (!isTbc(r, captureOpts)) continue
+      const text = tbcKey(r)
+      const note = r.rawText.replace(/\s*\n\s*/g, ' ').trim()
+      if (!byKey.has(text)) {
+        const etRef = assignments[norm(text)] || priorEtByCode.get(norm(text)) || null
+        byKey.set(text, {
+          text, placeholder: { formRef: r.positionType || text }, status: 'placeholder', etRef,
+          rowRefs: [], manufacturers: r.manufacturer ? [r.manufacturer] : [],
+          positionTypes: r.positionType ? [r.positionType] : [], variants: [{ note, rowRefs: [], positionTypes: [] }],
+        })
+      }
+      byKey.get(text).rowRefs.push(r.id)
+    }
+    return [...byKey.values()]
+  }, [confirmed, captureOpts, assignments, priorEtByCode])
+  const codeEntries = entries
+  const allEntries = useMemo(() => [...codeEntries, ...tbcEntries], [codeEntries, tbcEntries])
+
   const { collisions, similar } = useMemo(
-    () => pendingResolutions(entries, keptSeparate), [entries, keptSeparate]
+    () => pendingResolutions(codeEntries, keptSeparate), [codeEntries, keptSeparate]
   )
-  const unassigned = entries.filter(e => !e.etRef && !hasNoteCollision(e))
+  const unassigned = allEntries.filter(e => !e.etRef && !hasNoteCollision(e))
   // Staging is incremental. handleStage only ever writes entries that HAVE an
   // ElementType, so an unassigned or colliding code is simply left where it is —
   // no reason to hold the finished ones hostage to it. The draft survives so the
   // rest can be finished later.
-  const stageable = entries.filter(e => e.etRef).length
-  const leftBehind = entries.length - stageable
+  const stageable = allEntries.filter(e => e.etRef).length
+  const leftBehind = allEntries.length - stageable
   const canStage = stageable > 0
 
   /** Fold a variant's note into its code, on the rows behind it, so it earns its own ref. */
@@ -766,7 +798,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       createElementType({
         ref, name: p.name.trim() || null, description: p.description.trim() || null, family: p.family || null,
       })
-      const spec = { ProductCode: p.code, ...(p.manufacturer ? { Manufacturer: p.manufacturer } : {}) }
+      // A TBC placeholder's spec row says so: no code yet, flagged TBC.
+      const spec = { ProductCode: p.placeholder ? 'TBC' : p.code, ...(p.placeholder ? { IsTBC: 'Y' } : {}),
+        ...(p.manufacturer ? { Manufacturer: p.manufacturer } : {}) }
       if (psRows.some(r => (r.ElementTypeRef || '').toLowerCase() === ref.toLowerCase())) updatePSRow(ref, spec)
       else addPSRow(ref, spec)
       assignET(p.code, ref)
@@ -783,10 +817,20 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     // 1. Stage the Product Spec: product code + manufacturer per code, note → ET Description.
     let n = 0
     const codeToEt = new Map()
-    for (const e of entries) {
+    for (const e of allEntries) {
       if (!e.etRef) continue
       codeToEt.set(norm(e.text), e.etRef)
       const note = e.variants[0]?.note || ''
+      if (e.placeholder) {
+        // The placeholder Product Spec row: a product is wanted, not chosen yet.
+        ensurePSRow(e.etRef)
+        updatePSRow(e.etRef, {
+          ProductCode: 'TBC', IsTBC: 'Y',
+          ...(e.manufacturers.length === 1 ? { Manufacturer: e.manufacturers[0] } : {}),
+        })
+        n++
+        continue
+      }
       if (e.status !== 'green') {
         ensurePSRow(e.etRef)
         updatePSRow(e.etRef, {
@@ -828,6 +872,17 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
         contextByPosition[target] = row.context
       }
       const caps = deriveCaptures(row, captureOpts).captures
+      if (isTbc(row, captureOpts)) {
+        const key = tbcKey(row)
+        const et = codeToEt.get(norm(key))
+        const item = { code: 'TBC', placeholderKey: key, note: row.rawText.replace(/\s*\n\s*/g, ' ').trim(), role: 'lead',
+          manufacturer: row.manufacturer || '', formRef: row.positionType }
+        const bucket = et ? byPos : pendingByPos
+        if (!bucket.has(target)) bucket.set(target, [])
+        const list = bucket.get(target)
+        if (!list.some(x => x.placeholderKey === key)) list.push(et ? { elementTypeRef: et, ...item } : item)
+        continue
+      }
       const lead = leadOf(row, caps)
       for (const cap of caps) {
         const role = cap === lead ? 'lead' : 'extra'
@@ -933,12 +988,21 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
 
   const rowInfo = useCallback(row => {
     const caps = deriveCaptures(row, captureOpts).captures
+    if (isTbc(row, captureOpts)) {
+      const key = tbcKey(row)
+      return {
+        codes: [{ code: key, main: true, etRef: assignments[norm(key)] || priorEtByCode.get(norm(key)) || null }],
+        status: { tone: 'warn', icon: 'hourglass_empty', label: 'TBC', tip: 'No product chosen yet: it gets a placeholder Product Spec row (TBC) and its own ElementType.' },
+        suggested: [],
+        pt: map.pt ? (refState.get(norm(row.positionType)) || { state: 'ok' }) : { state: 'ok' },
+      }
+    }
     const lead = leadOf(row, caps)
     const codes = caps.map(c => ({ code: c.code, main: c === lead, etRef: etFor(c.code, row.manufacturer) }))
     const st = lead ? classify(lead.code, ctx, row.manufacturer).status : null
     const status = !lead
       ? (isNothingRow(row)
-          ? { tone: 'neutral', icon: 'block', label: 'nothing to add', tip: 'A placeholder (TBC, n/a, by specialist…): no product to add.' }
+          ? { tone: 'neutral', icon: 'block', label: 'nothing to add', tip: 'No product here (n/a, by others, by specialist…): nothing to add.' }
           : { tone: 'neutral', icon: 'remove', label: 'no code', tip: 'Nothing in this cell is marked as a code.' })
       : { tone: TONE[st], icon: ICON[st], label: STATUS_LABEL[st], tip: MEANS[st] }
     return {
@@ -946,25 +1010,26 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       suggested: row.confirmed ? [] : suggestCodes(row, rules, signals),
       pt: map.pt ? (refState.get(norm(row.positionType)) || { state: 'ok' }) : { state: 'ok' },
     }
-  }, [captureOpts, etFor, ctx, rules, signals, map.pt, refState])
+  }, [captureOpts, etFor, ctx, rules, signals, map.pt, refState, assignments, priorEtByCode])
 
   const refProblems = useMemo(
     () => [...refState.values()].filter(r => r.state === 'missing' || r.state === 'ambiguous').length, [refState])
 
-  const needsEtCount = useMemo(
-    () => formOrder.filter(r => deriveCaptures(r, captureOpts).captures.some(c => !etFor(c.code, r.manufacturer))).length,
-    [formOrder, captureOpts, etFor])
+  /** A row still waiting on an ElementType: one of its codes, or its TBC placeholder. */
+  const needsEt = useCallback(r => (isTbc(r, captureOpts) ? !etFor(tbcKey(r), r.manufacturer)
+    : deriveCaptures(r, captureOpts).captures.some(c => !etFor(c.code, r.manufacturer))), [captureOpts, etFor])
+  const needsEtCount = useMemo(() => formOrder.filter(needsEt).length, [formOrder, needsEt])
 
   const tableRows = useMemo(() => {
     const q = query.trim().toLowerCase()
     return formOrder.filter(r => {
       if (filter === 'unconfirmed' && r.confirmed) return false
-      if (filter === 'needsEt' && !deriveCaptures(r, captureOpts).captures.some(c => !etFor(c.code, r.manufacturer))) return false
+      if (filter === 'needsEt' && !needsEt(r)) return false
       if (!q) return true
       return [r.rawText, r.positionType, r.manufacturer, ...Object.values(r.context || {})]
         .some(v => String(v ?? '').toLowerCase().includes(q))
     })
-  }, [formOrder, filter, query, captureOpts, etFor])
+  }, [formOrder, filter, query, needsEt])
 
   /** The Form's own columns, in its order; ProductCode carries Accessories (they share a cell). */
   const tableColumns = useMemo(() => {
@@ -1001,7 +1066,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   const openETFor = useCallback(code => {
     for (const r of resolved) {
       if (r.confirmed) continue
-      if (deriveCaptures(r, captureOpts).captures.some(c => norm(c.code) === norm(code))) {
+      const mine = isTbc(r, captureOpts) ? norm(tbcKey(r)) === norm(code)
+        : deriveCaptures(r, captureOpts).captures.some(c => norm(c.code) === norm(code))
+      if (mine) {
         patchRow(r.id, x => ({ ...acceptSuggestions({ ...x, roles: r.roles }, rules, signals), confirmed: true }))
       }
     }

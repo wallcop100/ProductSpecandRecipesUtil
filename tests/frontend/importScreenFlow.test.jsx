@@ -197,3 +197,29 @@ describe('the Form, as a table', () => {
     expect(onReviewPositions).toHaveBeenCalledWith(['A1'])
   })
 })
+
+describe('TBC rows', () => {
+  test('a TBC row gets its own ElementType and a placeholder Product Spec row', async () => {
+    readSheet.mockResolvedValue({ sheets: ['S'], sheet: 'S', headers: [...HEAD, 'PageType'], rows: [
+      { PositionTypeRef: 'J3a', ManufacturerName: 'Flos', ProductCode: 'Awaiting custom code', ProductName: 'Custom pendant', PageType: 'Point' },
+      { PositionTypeRef: 'F1', ManufacturerName: '', ProductCode: 'n/a', ProductName: 'Feed', PageType: 'Point' },
+    ] })
+    useStore.setState({ projectId: 1, positionTypes: [{ PositionTypeRef: 'J3a' }, { PositionTypeRef: 'F1' }], psRows: [], elementTypes: [], recipes: [], importDraft: null })
+    render(<ProductCodeImportScreen onBack={vi.fn()} onReviewPositions={vi.fn()} />)
+    fireEvent.click(await screen.findByText('Choose spreadsheet…'))
+    const table = await screen.findByTestId('form-table')
+    expect(within(table).getByLabelText(/^TBC:/)).toBeInTheDocument()
+    expect(within(table).getByLabelText(/^nothing to add:/)).toBeInTheDocument()
+
+    fireEvent.click(within(table).getAllByText('needs ET')[0])
+    await screen.findByText(/^New \(/)
+    expect(screen.getAllByText(/TBC \(J3a\)/).length).toBeGreaterThan(0)
+    fireEvent.click(screen.getByRole('button', { name: /^Apply 1$/ }))
+    await tick()
+    const s = useStore.getState()
+    const et = s.elementTypes.find(e => /TBC/.test(e.ElementTypeRef || ''))
+    expect(et.ElementTypeRef).toMatch(/^ET-PS-TBC-01$/)
+    const ps = s.psRows.find(r => r.ElementTypeRef === et.ElementTypeRef)
+    expect(ps).toMatchObject({ ProductCode: 'TBC', IsTBC: 'Y', Manufacturer: 'Flos' })
+  })
+})

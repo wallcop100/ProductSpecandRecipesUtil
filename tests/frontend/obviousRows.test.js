@@ -35,14 +35,31 @@ describe('an obvious row', () => {
   test('a second code hiding as a note is not obvious', () => {
     expect(isObvious(painted('QC5010 A00665.40', ['QC5010']))).toBe(false)
   })
-  test('no code at all is not obvious; a confirmed row is not offered again', () => {
+  test('a lone word is not obvious; a confirmed row is not offered again', () => {
     expect(isObvious(painted('louvre', []))).toBe(false)          // a lone word is not a product
-    expect(isObvious(painted('Light Sheet', []))).toBe(false)     // a product, but no code: look at it
+    expect(isObvious(painted('Light Sheet', []))).toBe(true)      // no code: a TBC placeholder
     expect(isObvious(painted('QC5010', ['QC5010'], { confirmed: true }))).toBe(false)
   })
   test('a suggestion learned from your painting counts as the code', () => {
     const taught = { ...painted('QC5010 black', ['QC5010']), confirmed: true }
     const signals = learnedSignals([taught])
     expect(isObvious(painted('QC5011 louvre', []), {}, signals)).toBe(true)
+  })
+})
+
+import { isNothingRow, isTbcRow } from '../../src/utils/obviousRows.js'
+import { makeRow as mk } from '../../src/utils/productCodes.js'
+
+describe('placeholders: nothing to add, or TBC', () => {
+  test.each(['n/a', '-', 'by specialist', 'By others', ''])('%s has nothing to add', t => {
+    expect(isNothingRow(mk(0, t))).toBe(true)
+    expect(isTbcRow(mk(0, t))).toBe(false)
+  })
+  test.each(['TBC', '*custom*', 'Awaiting custom code', 'Light Sheet', 'BE/ZEP/IB/**/**'])('%s is TBC', t => {
+    expect(isTbcRow(mk(0, t))).toBe(true)
+    expect(isNothingRow(mk(0, t))).toBe(false)
+  })
+  test('a row with a code is neither', () => {
+    expect(isTbcRow(mk(0, 'QC50 TBC'))).toBe(false)
   })
 })
