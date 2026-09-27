@@ -127,6 +127,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   // Identity of the picked workbook. `filepath` is an in-memory token that cannot
   // survive a reload, so the draft (and the captures) carry this instead.
   const [source, setSource] = useState(null)
+  const [autoStart, setAutoStart] = useState(false)   // columns obvious → skip the map step
   const [autoMap, setAutoMap] = useState({})   // what the tool guessed, so it can say so
   const [resumeDismissed, setResumeDismissed] = useState(false)
   // Stage ①: what the Product Spec already knows. Exact hits are painted for you.
@@ -187,6 +188,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     setAutoMap(guessed)
     setMap({ ...guessed, context: CONTEXT_WANTS.map(w => detect(data.headers, w)).filter(Boolean) })
     setStep('map')
+    // The three columns that matter were all found: skip straight on (Back returns here).
+    setAutoStart(!!(guessed.code && guessed.pt && guessed.mfr))
   }
 
   async function pickSheet(name) {
@@ -254,6 +257,13 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     setRefOverrides({})
     setStep('resolve')
   }
+
+  // After applySheet's column guesses have landed in state (buildRows reads them).
+  useEffect(() => {
+    if (!autoStart || step !== 'map' || !map.code) return
+    setAutoStart(false)
+    startResolve()
+  }, [autoStart, step, map])   // eslint-disable-line react-hooks/exhaustive-deps
 
   function enterReview(built = rows) {
     setStep('review')

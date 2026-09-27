@@ -180,7 +180,7 @@ export default function ResolveRefsStep({ resolutions, overrides, onOverride, po
       </div>
 
       <div className="d-flex align-items-center gap-2 mt-2">
-        <Button size="sm" variant="outline-secondary" onClick={onBack}>← Back</Button>
+        <Button size="sm" variant="outline-secondary" onClick={onBack} title="Change which columns are read">← Columns</Button>
         <Button size="sm" variant="primary" onClick={onConfirm}>Start review →</Button>
         <span className="text-muted" style={{ fontSize: 11 }}>
           {counts.redirected} redirected · {counts.mapped} direct · {counts.skipped} skipped
