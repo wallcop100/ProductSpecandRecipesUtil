@@ -27,9 +27,9 @@ async function pick(headers) {
 }
 
 describe('the column step is skipped when the columns are obvious', () => {
-  test('code, PositionType and manufacturer all found → straight past it', async () => {
+  test('code, PositionType and manufacturer all found → straight to the table', async () => {
     await pick(['PositionTypeRef', 'ProductCode', 'ManufacturerName'])
-    expect(await screen.findByText(/Resolve the Form's PositionTypes/)).toBeInTheDocument()
+    expect(await screen.findByTestId('form-table')).toBeInTheDocument()
     expect(screen.queryByText('Which columns matter?')).toBeNull()
     fireEvent.click(screen.getByText('← Columns'))                 // and back is one click
     expect(await screen.findByText('Which columns matter?')).toBeInTheDocument()
@@ -51,7 +51,6 @@ async function toTable() {
   useStore.setState({ projectId: 1, positionTypes: [{ PositionTypeRef: 'A1' }], psRows: [], elementTypes: [], recipes: [], importDraft: null })
   render(<ProductCodeImportScreen onBack={vi.fn()} onReviewPositions={vi.fn()} />)
   fireEvent.click(await screen.findByText('Choose spreadsheet…'))
-  fireEvent.click(await screen.findByText('Start review →'))
   return screen.findByTestId('form-table')
 }
 const toolbarButton = re => within(screen.getByTestId('table-toolbar')).getByRole('button', { name: re })
@@ -107,7 +106,6 @@ describe('the Form, as a table', () => {
     useStore.setState({ projectId: 1, positionTypes: [{ PositionTypeRef: 'A1' }], psRows: [], elementTypes: [], recipes: [], importDraft: null })
     render(<ProductCodeImportScreen onBack={vi.fn()} onReviewPositions={vi.fn()} />)
     fireEvent.click(await screen.findByText('Choose spreadsheet…'))
-    fireEvent.click(await screen.findByText('Start review →'))
     const table = await screen.findByTestId('form-table')
     // make both words codes: note → discard → code
     for (const w of ['UN22SVDW', 'UN223DFP']) {
@@ -117,5 +115,19 @@ describe('the Form, as a table', () => {
     fireEvent.click(within(table).getByLabelText('UN223DFP extra — make main'))
     expect(within(table).getByLabelText('UN223DFP main')).toBeInTheDocument()
     expect(within(table).getByLabelText('UN22SVDW extra — make main')).toBeInTheDocument()
+  })
+
+  test('clean refs match silently; one that does not is flagged on its row and fixed in a window', async () => {
+    readSheet.mockResolvedValue({ sheets: ['S'], sheet: 'S', headers: HEAD, rows: [
+      { PositionTypeRef: 'A1', ManufacturerName: 'M', ProductCode: 'X1' },
+      { PositionTypeRef: 'Z9', ManufacturerName: 'M', ProductCode: 'X2' },
+    ] })
+    useStore.setState({ projectId: 1, positionTypes: [{ PositionTypeRef: 'A1' }, { PositionTypeRef: 'Z9r' }], psRows: [], elementTypes: [], recipes: [], importDraft: null })
+    render(<ProductCodeImportScreen onBack={vi.fn()} onReviewPositions={vi.fn()} />)
+    fireEvent.click(await screen.findByText('Choose spreadsheet…'))
+    const table = await screen.findByTestId('form-table')
+    expect(screen.getByLabelText('Form refs')).toHaveTextContent('1 ref needs a PositionType')
+    fireEvent.click(within(table).getByText('no match'))
+    expect(await screen.findByText(/Resolve the Form's PositionTypes/)).toBeInTheDocument()
   })
 })

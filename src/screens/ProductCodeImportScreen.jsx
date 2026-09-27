@@ -16,6 +16,7 @@ import NewETModal from '../components/NewETModal'
 import ElementTypesWindow from '../components/ElementTypesWindow'
 import ResolveRefsStep from '../components/ResolveRefsStep'
 import StageBar from '../components/StageBar'
+import StatusChip from '../components/StatusChip'
 import TutorialHint from '../tutorial/TutorialHint'
 import MapColumnsStep from '../components/MapColumnsStep'
 import FormTable from '../components/import/FormTable'
@@ -108,6 +109,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   const [filter, setFilter] = useState('all')      // all | unconfirmed | needsEt
   const [query, setQuery] = useState('')
   const [etFocusCode, setEtFocusCode] = useState(null)
+  const [refsOpen, setRefsOpen] = useState(false)
   const [reviewingExisting, setReviewingExisting] = useState(false)
   const [creatingFor, setCreatingFor] = useState(null)
   const [staged, setStaged] = useState(null)
@@ -263,9 +265,10 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     session.load({ rows: applyRules(built, {}) })
     setExpandedId(null); setFocusId(null); setStaged(null); setUndoSnap(null)
 
-    if (!map.pt) { setResolutions([]); enterReview(built); return }
-    setResolutions(resolveFormRefs(built.map(r => r.positionType), positionTypes))
-    setStep('resolve')
+    // Form refs are matched to DesignDB PositionTypes silently; only the ones that do not
+    // match cleanly are raised, on their rows and in the toolbar (no separate step).
+    setResolutions(map.pt ? resolveFormRefs(built.map(r => r.positionType), positionTypes) : [])
+    enterReview(built)
   }
 
   // After applySheet's column guesses have landed in state (buildRows reads them).
@@ -340,7 +343,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     setSource(d.source || null)
     setSheet(d.source?.sheet || '')
     setStaged(null); setUndoSnap(null)
-    setStep(d.step === 'resolve' ? 'resolve' : 'review')   // never back to pick/map: no workbook
+    setStep('review')   // never back to pick/map: no workbook (a draft saved at the old resolve step lands here too)
   }
 
   /** Un-paint everything the spec matched, in one step. */
@@ -942,6 +945,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     }
   }, [captureOpts, etFor, ctx, rules, signals, map.pt, refState])
 
+  const refProblems = useMemo(
+    () => [...refState.values()].filter(r => r.state === 'missing' || r.state === 'ambiguous').length, [refState])
+
   const needsEtCount = useMemo(
     () => formOrder.filter(r => deriveCaptures(r, captureOpts).captures.some(c => !etFor(c.code, r.manufacturer))).length,
     [formOrder, captureOpts, etFor])
@@ -1087,16 +1093,6 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
         />
       )}
 
-      {step === 'resolve' && (
-        <ResolveRefsStep
-          resolutions={resolutions}
-          overrides={refOverrides}
-          onOverride={(formRef, target) => setRefOverrides(o => ({ ...o, [formRef]: target }))}
-          positionTypes={positionTypes}
-          onBack={() => setStep('map')}
-          onConfirm={() => enterReview()}
-        />
-      )}
 
       {step === 'review' && (
         <div className="d-flex gap-3" style={{ flex: 1, minHeight: 0 }}>
@@ -1161,6 +1157,11 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
             <div className="d-flex align-items-center gap-2 mb-2 flex-wrap" data-testid="table-toolbar">
               <Form.Control size="sm" value={query} onChange={e => setQuery(e.target.value)}
                 placeholder="Search rows…" aria-label="Search rows" style={{ maxWidth: 200, fontSize: 12 }} />
+              <Button size="sm" variant="link" className="p-0" style={{ fontSize: 11 }} title="Change which columns are read"
+                onClick={() => {
+                  if (rows.some(r => r.confirmed) && !window.confirm('Changing columns re-reads the rows and loses the painting and confirms. Continue?')) return
+                  setStep('map')
+                }}>← Columns</Button>
               <ButtonGroup size="sm" aria-label="Show rows">
                 {[['all', `All ${rows.length}`], ['unconfirmed', `Unconfirmed ${remaining}`], ['needsEt', `Needs ET ${needsEtCount}`]].map(([k, label]) => (
                   <Button key={k} variant={filter === k ? 'primary' : 'outline-secondary'} style={{ fontSize: 11 }}
@@ -1171,6 +1172,12 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                 <Button size="sm" variant="outline-success" style={{ fontSize: 11 }} onClick={batchConfirmEasy}>
                   Confirm {easyLeft} easy {easyLeft === 1 ? 'row' : 'rows'} <kbd>B</kbd>
                 </Button>
+              )}
+              {map.pt && resolutions.length > 0 && (
+                <StatusChip tone={refProblems ? 'warn' : 'ok'} icon={refProblems ? 'link_off' : 'link'}
+                  label={refProblems ? `${refProblems} ${refProblems === 1 ? 'ref needs' : 'refs need'} a PositionType` : `${resolutions.length} ref${resolutions.length === 1 ? '' : 's'} matched`}
+                  tip="Each Form ref is matched to a DesignDB PositionType (directly, or through its ExtRef). Click to review."
+                  role="button" aria-label="Form refs" onClick={() => setRefsOpen(true)} style={{ cursor: 'pointer' }} />
               )}
               <ContextColumnChips context={anyContext} available={capturable} shown={map.context}
                 onChange={next => setMap(m => ({ ...m, context: next }))} />
@@ -1221,7 +1228,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                 onSetRole={setTokenRole}
                 onToggleConfirm={toggleConfirm}
                 onNeedsET={openETFor}
-                onFixRef={() => setStep('resolve')}
+                onFixRef={() => setRefsOpen(true)}
                 onMakeMain={(rowId, code) => patchRow(rowId, r => ({ ...r, leadCode: code }))}
                 expandedId={expandedId}
                 onExpand={id => { setExpandedId(id); if (id != null) setFocusId(id); setUndoSnap(null) }}
@@ -1366,6 +1373,20 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
           </div>
         </div>
       )}
+
+      {/* Form refs that did not match cleanly — opened from their rows or the toolbar chip. */}
+      <Modal show={refsOpen} onHide={() => setRefsOpen(false)} size="lg" scrollable>
+        <Modal.Body>
+          <ResolveRefsStep
+            resolutions={resolutions}
+            overrides={refOverrides}
+            onOverride={(formRef, target) => setRefOverrides(o => ({ ...o, [formRef]: target }))}
+            positionTypes={positionTypes}
+            onConfirm={() => setRefsOpen(false)}
+            confirmLabel="Done"
+          />
+        </Modal.Body>
+      </Modal>
 
       {/* Staging result — a popup, so it is unmissable rather than below the fold. */}
       <Modal show={stagedOpen && !!staged} onHide={() => setStagedOpen(false)} centered>
