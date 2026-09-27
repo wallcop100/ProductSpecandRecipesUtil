@@ -13,7 +13,7 @@ const NO_FAMILY = ''
  * and tidy: Name, Description and Family are editable; the ref stays as it is (a rename
  * is a separate, cascading act). Nothing is written until Save.
  */
-export default function ExistingETReviewModal({ show, onHide }) {
+export default function ExistingETReviewModal({ show, onHide, tabs = null, animation = true }) {
   const elementTypes = useStore(s => s.elementTypes)
   const psRows = useStore(s => s.psRows)
   const recipes = useStore(s => s.recipes)
@@ -82,9 +82,10 @@ export default function ExistingETReviewModal({ show, onHide }) {
   }
 
   return (
-    <Modal show={show} onHide={onHide} size="xl" scrollable>
+    <Modal animation={animation} show={show} onHide={onHide} size="xl" scrollable>
       <Modal.Header closeButton>
         <Modal.Title style={{ fontSize: 16 }}>Existing ElementTypes ({elementTypes.length})</Modal.Title>
+        {tabs}
       </Modal.Header>
       <Modal.Body style={{ fontSize: 12 }}>
         <div className="d-flex align-items-center gap-2 mb-2">

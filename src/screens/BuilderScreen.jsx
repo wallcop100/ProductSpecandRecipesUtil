@@ -16,7 +16,7 @@ import ProjectTreeView from '../components/ProjectTreeView'
 import ElementTypeTreeView from '../components/ElementTypeTreeView'
 import RecipeSection from '../components/RecipeSection'
 import DuplicateETModal from '../components/DuplicateETModal'
-import RetireUnusedModal from '../components/RetireUnusedModal'
+import ElementTypesWindow from '../components/ElementTypesWindow'
 import Breadcrumbs from '../components/Breadcrumbs'
 import ProjectIdPill from '../components/ProjectIdPill'
 import FormProgressChip from '../components/FormProgressChip'
@@ -552,7 +552,10 @@ export default function BuilderScreen({
               <MaterialIcon name={ACTION_ICONS.tags} size={14} /> Tags
             </Dropdown.Item>
             <Dropdown.Divider />
-            <Dropdown.Item onClick={() => setShowRetire(true)}>
+            <Dropdown.Item onClick={() => setShowRetire('existing')}>
+              <MaterialIcon name="category" size={14} /> ElementTypes…
+            </Dropdown.Item>
+            <Dropdown.Item onClick={() => setShowRetire('unused')}>
               <MaterialIcon name="cleaning_services" size={14} /> Clean up unused ElementTypes…
             </Dropdown.Item>
           </Dropdown.Menu>
@@ -772,7 +775,7 @@ export default function BuilderScreen({
 
       <PasteMergeModal />
 
-      <RetireUnusedModal show={showRetire} onHide={() => setShowRetire(false)} />
+      <ElementTypesWindow show={!!showRetire} view={showRetire === 'unused' ? 'unused' : 'existing'} onHide={() => setShowRetire(false)} />
 
       <ReviewModal
         show={showReview}

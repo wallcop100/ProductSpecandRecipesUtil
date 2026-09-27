@@ -12,8 +12,7 @@ import NeedsResolving from '../components/NeedsResolving'
 import CaptureLines from '../components/CaptureLines'
 import PrimingModal from '../components/PrimingModal'
 import NewETModal from '../components/NewETModal'
-import BulkCreateETModal from '../components/BulkCreateETModal'
-import ExistingETReviewModal from '../components/ExistingETReviewModal'
+import ElementTypesWindow from '../components/ElementTypesWindow'
 import ResolveRefsStep from '../components/ResolveRefsStep'
 import StageBar from '../components/StageBar'
 import TutorialHint from '../tutorial/TutorialHint'
@@ -1335,17 +1334,18 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
         onDone={finishPriming}
       />
 
-      <BulkCreateETModal
-        show={!!bulkProposals}
-        onHide={() => setBulkProposals(null)}
-        proposals={bulkProposals?.proposals}
-        newFamilies={bulkProposals?.newFamilies}
-        families={knownFamilies}
-        elementTypes={elementTypes}
-        onApply={applyBulk}
-        onReviewExisting={() => setReviewingExisting(true)}
+      <ElementTypesWindow
+        show={!!bulkProposals || reviewingExisting}
+        view={bulkProposals ? 'new' : 'existing'}
+        onHide={() => { setBulkProposals(null); setReviewingExisting(false) }}
+        bulk={bulkProposals ? {
+          proposals: bulkProposals.proposals,
+          newFamilies: bulkProposals.newFamilies,
+          families: knownFamilies,
+          elementTypes,
+          onApply: applyBulk,
+        } : null}
       />
-      <ExistingETReviewModal show={reviewingExisting} onHide={() => setReviewingExisting(false)} />
 
       <NewETModal
         show={!!creatingFor}
