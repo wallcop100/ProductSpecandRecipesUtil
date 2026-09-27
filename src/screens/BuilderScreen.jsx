@@ -30,6 +30,7 @@ import TemplatePicker from '../components/TemplatePicker'
 import PasteMergeModal from '../components/PasteMergeModal'
 import FavoritesPanel from '../components/FavoritesPanel'
 import ReviewModal from '../components/ReviewModal'
+import BuildFromFormModal from '../components/BuildFromFormModal'
 import ValidationFixModal from '../components/ValidationFixModal'
 import { SaveIndicator } from '../components/SaveStatus'
 import LinWrapperWizardModal from '../components/LinWrapperWizardModal'
@@ -107,15 +108,21 @@ export default function BuilderScreen({
     setShowReview(true)
   }
 
-  // Arriving with positions to review (e.g. from the product-code import) opens
-  // ReviewModal straight into them; consume once so it doesn't reopen on its own.
+  // Arriving with positions to review (e.g. from the product-code import): first offer to
+  // build them all from the Form, then ReviewModal walks through them. Consume once so it
+  // doesn't reopen on its own.
+  const formCaptures = useStore(s => s.formCaptures)
+  const [formBuild, setFormBuild] = useState(null)   // { refs, thenReview }
   useEffect(() => {
     if (pendingReviewRefs && pendingReviewRefs.length > 0) {
       setReviewInitialRefs(pendingReviewRefs)
-      setShowReview(true)
+      const fromForm = pendingReviewRefs.filter(r => formCaptures?.byPosition?.[r]?.length)
+      if (fromForm.length > 0) setFormBuild({ refs: fromForm, thenReview: true })
+      else setShowReview(true)
       onConsumePendingReview?.()
     }
-  }, [pendingReviewRefs, onConsumePendingReview])
+  }, [pendingReviewRefs, onConsumePendingReview])   // eslint-disable-line react-hooks/exhaustive-deps
+  const closeFormBuild = () => { const then = formBuild?.thenReview; setFormBuild(null); if (then) setShowReview(true) }
   const [addRowTarget, setAddRowTarget] = useState(null)      // { posRef, sectionKey }
   const [addAnywhereState, setAddAnywhereState] = useState(null) // { etRef, sectionKey, excludePosRef, startPosRef }
   const [newETTarget, setNewETTarget] = useState(null)        // { posRef, sectionKey }
@@ -539,6 +546,9 @@ export default function BuilderScreen({
             <Dropdown.Item onClick={() => setShowReview(true)}>
               <MaterialIcon name="fact_check" size={14} /> Review recipes…
             </Dropdown.Item>
+            <Dropdown.Item onClick={() => setFormBuild({ refs: [], thenReview: false })} disabled={!Object.keys(formCaptures?.byPosition || {}).length}>
+              <MaterialIcon name="auto_awesome" size={14} /> Build recipes from the Form…
+            </Dropdown.Item>
             <Dropdown.Item onClick={() => setShowSaveTemplate(true)} disabled={!hasRecipeRows}>
               <MaterialIcon name={ACTION_ICONS.saveTemplate} size={14} /> Save this position as a template
             </Dropdown.Item>
@@ -783,6 +793,8 @@ export default function BuilderScreen({
 
       <ElementTypesWindow show={!!showRetire} view={showRetire === 'unused' ? 'unused' : 'existing'} onHide={() => setShowRetire(false)} />
 
+      <BuildFromFormModal show={formBuild != null} posRefs={formBuild?.refs || []}
+        onHide={closeFormBuild} onBuilt={closeFormBuild} />
       <ReviewModal
         show={showReview}
         onHide={() => { setShowReview(false); setReviewInitialRefs(null) }}
