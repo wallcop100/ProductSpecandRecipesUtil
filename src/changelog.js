@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-09-27', note: 'Recipes from the Form: one group per kind (wrapper · driver · interior/exterior), not per mix of ingredients; the richest position is set up first. 5452: 5 groups instead of 13' },
   { date: '2026-09-27', note: 'Fixed: clips, tape, profiles and caps (ET-LIN-CLIP-01…) were taken for wrappers and specced Ideaworks N/A — only a numbered ET-DL-NN / ET-LIN-NN is a wrapper; "Fix them" puts affected parts back. Recipes add only what you tick: parts borrowed from elsewhere start unticked' },
   { date: '2026-09-27', note: 'Recipes from the Form: the wrapper is your call per group (DL / LIN / none — precedent is only the default), and each part can ship inside it or separately; "Use it again" re-teaches a group' },
   { date: '2026-09-27', note: 'Setting up a group no longer strands you in the builder: a bar says which group, what is still empty on its first position, and brings you back — "Use it for the other N" goes straight to the rest, ticked' },

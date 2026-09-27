@@ -142,3 +142,31 @@ describe('no phantom wrappers', () => {
     expect(useStore.getState().elementTypes.find(e => e.ElementTypeRef === 'ET-LIN-CLIP-01').IsCollection).not.toBe('Y')
   })
 })
+
+describe('one group per kind of LIN, whatever its mix of ingredients', () => {
+  test('a full tape-in-profile and a diffuser-only position share a group; each gets only its own parts', async () => {
+    const { formGroups, proposalContext } = await import('../../src/utils/recipeProposal.js')
+    useStore.setState({
+      recipes: [], psRows: [], templates: [], containerETRefs: new Set(), recipeChoices: {}, library: { patterns: [], exemplars: [] },
+      positionTypes: [
+        { PositionTypeRef: 'L1', ParentRef: 'LINEAR', DriverLocation: 'Remote' },
+        { PositionTypeRef: 'L2', ParentRef: 'LINEAR', DriverLocation: 'Remote' },
+      ],
+      elementTypes: [et('ET-LIN-DIFF-01', 'ET-LIN-PROF'), et('ET-LIN-TAPE-01', 'ET-LIN-TAPE'), et('ET-LIN-PROF-01', 'ET-LIN-PROF'), et('ET-LIN-DIFF-02', 'ET-LIN-PROF')],
+      formCaptures: { byPosition: {
+        L2: [{ elementTypeRef: 'ET-LIN-DIFF-02', code: 'D2', role: 'lead' }],
+        L1: [{ elementTypeRef: 'ET-LIN-TAPE-01', code: 'T1', role: 'lead' }, { elementTypeRef: 'ET-LIN-PROF-01', code: 'P1', role: 'extra' }, { elementTypeRef: 'ET-LIN-DIFF-01', code: 'D1', role: 'extra' }],
+      } },
+    })
+    const { groups } = formGroups(['L2', 'L1'], proposalContext(useStore.getState()))
+    expect(groups).toHaveLength(1)
+    expect(groups[0].first).toBe('L1')                                          // the richest is taught
+    useStore.getState().buildProposedRecipe('L1')
+    const t = await useStore.getState().saveAsTemplate('L1', { name: 'LIN' })
+    useStore.getState().applyTaughtTemplate(t.id, ['L2'])
+    const l2 = useStore.getState().recipes.filter(r => (r.PositionTypeRef || r.positionTypeRef) === 'L2' && (r.IsDeleted || r.isDeleted) !== 'Y')
+      .map(r => r.ElementTypeRef || r.elementTypeRef)
+    expect(l2).toContain('ET-LIN-DIFF-02')
+    expect(l2.some(r => /TAPE|PROF-01|DIFF-01/.test(r))).toBe(false)             // nothing of L1's
+  })
+})
