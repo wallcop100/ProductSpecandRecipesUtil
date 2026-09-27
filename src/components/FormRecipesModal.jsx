@@ -3,7 +3,7 @@ import { Modal, Button, Form, Table, Badge } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import InfoTip from './InfoTip'
-import { formGroups, proposalContext, proposalFromTemplate } from '../utils/recipeProposal'
+import { formGroups, proposalContext, proposalFromTemplate, KIND_LABEL } from '../utils/recipeProposal'
 
 /**
  * FormRecipesModal — recipes for the imported positions, the way process.md builds them:
@@ -24,17 +24,34 @@ const groupTag = key => `form-group:${key}`
 const tagsOf = t => { const a = t.applicable_tags; if (Array.isArray(a)) return a; try { return JSON.parse(a || '[]') } catch { return [] } }
 const hasRecipe = (recipes, pos) => recipes.some(r => (r.PositionTypeRef || r.positionTypeRef) === pos && (r.IsDeleted || r.isDeleted) !== 'Y')
 
-function ProposalTable({ proposal }) {
+/**
+ * The proposed rows. With a wrapper, each part says whether it ships INSIDE it (with the
+ * assembly) or SEPARATELY (position level, e.g. a first-fix socket); `onPlace` lets you flip it.
+ */
+function ProposalTable({ proposal, onPlace }) {
   if (!proposal || proposal.skip) return <div className="text-muted fst-italic">{proposal?.skip}</div>
-  const lvl = r => (r.section === 'position' ? 'position' : proposal.wrapper ? 'inside' : 'position')
+  const lead = proposal.products?.find(x => x.lead)?.ref
+  const where = r => {
+    if (!proposal.wrapper) return <span className="text-muted">position</span>
+    if (r.role === 'WRAPPER') return <span className="text-muted">position</span>
+    const inside = r.section === 'internal'
+    if (!onPlace || r.ref === lead) return <span className="text-muted">{inside ? 'inside wrapper' : 'separately'}</span>
+    return (
+      <Button size="sm" variant={inside ? 'outline-primary' : 'outline-secondary'} className="py-0 px-1" style={{ fontSize: 10 }}
+        title={inside ? 'Ships inside the wrapper, with the assembly. Click to send it separately.' : 'Goes to site separately (position level). Click to put it inside the wrapper.'}
+        onClick={() => onPlace(r.role, inside ? 'position' : 'internal')}>
+        {inside ? 'inside wrapper' : 'separately'}
+      </Button>
+    )
+  }
   return (
     <>
       <Table size="sm" className="mb-1" style={{ fontSize: 11 }}>
-        <thead><tr><th>Where</th><th>What</th><th>ElementType</th><th>Flags</th><th>From</th></tr></thead>
+        <thead><tr><th>Ships</th><th>What</th><th>ElementType</th><th>Flags</th><th>From</th></tr></thead>
         <tbody>
           {proposal.rows.map((r, i) => (
             <tr key={i} style={r.missing ? { background: '#fff5f5' } : undefined}>
-              <td className="text-muted">{lvl(r)}</td>
+              <td>{where(r)}</td>
               <td>{r.role.toLowerCase()}</td>
               <td style={{ fontFamily: 'monospace' }}>
                 {r.role === 'WRAPPER' && !r.ref ? <span className="text-success">new {proposal.wrapper?.family === 'ET-LIN' ? 'ET-LIN-NN' : 'ET-DL-NN'}</span>
@@ -57,18 +74,21 @@ function ProposalTable({ proposal }) {
   )
 }
 
-export default function FormRecipesModal({ show, onHide, posRefs, onOpenPosition }) {
+export default function FormRecipesModal({ show, onHide, posRefs, onOpenPosition, focusGroup = null }) {
   const state = useStore(s => s)
   const { recipes, templates, formCaptures, library } = state
   const loadLibrary = useStore(s => s.loadLibrary)
   const buildProposedRecipe = useStore(s => s.buildProposedRecipe)
-  const saveAsTemplate = useStore(s => s.saveAsTemplate)
+  const teachGroup = useStore(s => s.teachGroup)
+  const startTeaching = useStore(s => s.startTeaching)
+  const setRecipeChoice = useStore(s => s.setRecipeChoice)
+  const recipeChoices = useStore(s => s.recipeChoices)
   const applyTaughtTemplate = useStore(s => s.applyTaughtTemplate)
   const [open, setOpen] = useState(null)           // group key being looked at
   const [picked, setPicked] = useState(() => new Set())
   const [msg, setMsg] = useState(null)
 
-  useEffect(() => { if (show) { loadLibrary(); setMsg(null) } }, [show])   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (show) { loadLibrary(); setMsg(null); setOpen(focusGroup) } }, [show])   // eslint-disable-line react-hooks/exhaustive-deps
 
   const ctx = useMemo(() => proposalContext(state, library), [state, library])
   const refs = posRefs?.length ? posRefs : Object.keys(formCaptures?.byPosition || {})
@@ -78,17 +98,32 @@ export default function FormRecipesModal({ show, onHide, posRefs, onOpenPosition
 
   const toggle = p => setPicked(s => { const n = new Set(s); n.has(p) ? n.delete(p) : n.add(p); return n })
 
+  // Checking the first one happens in the builder; a bar there says what is still empty and
+  // brings you back here (see TeachBar).
+  function goCheck(g, missing) {
+    startTeaching({ groupKey: g.key, label: g.label, posRef: g.first, others: g.positions.filter(p => p !== g.first), refs, missing })
+    onOpenPosition?.(g.first)
+  }
   function buildFirst(g) {
     const res = buildProposedRecipe(g.first)
     if (!res) return
-    onOpenPosition?.(g.first)
+    goCheck(g, res.skipped.filter(r => !r.ref && r.role !== 'WRAPPER').map(r => r.role))
+  }
+  function openFirst(g) {
+    const missing = useStore.getState().proposeRecipeFor(g.first).rows?.filter(r => r.missing).map(r => r.role) || []
+    goCheck(g, missing)
   }
   async function teach(g) {
-    const t = await saveAsTemplate(g.first, { name: `${g.label} (from ${g.first})`, scope: 'project', tags: [groupTag(g.key)] })
+    await teachGroup({ groupKey: g.key, label: g.label, posRef: g.first })
     setPicked(new Set(g.positions.filter(p => p !== g.first && !hasRecipe(useStore.getState().recipes, p))))
     setMsg(`${g.first} is now the recipe for this group. Tick the rest and build.`)
-    return t
   }
+  // Back from the builder having used the first one: the rest ready to tick.
+  useEffect(() => {
+    if (!show || !focusGroup) return
+    const g = groups.find(x => x.key === focusGroup)
+    if (g && taughtFor(g.key)) setPicked(new Set(g.positions.filter(p => p !== g.first && !hasRecipe(recipes, p))))
+  }, [show, focusGroup])   // eslint-disable-line react-hooks/exhaustive-deps
   function buildRest(g) {
     const t = taughtFor(g.key)
     if (!t) return
@@ -131,21 +166,58 @@ export default function FormRecipesModal({ show, onHide, posRefs, onOpenPosition
                 <div className="p-2">
                   {!firstBuilt && (
                     <>
-                      <div className="mb-1">First: <span style={{ fontFamily: 'monospace' }}>{g.first}</span> — proposed, nothing written yet:</div>
-                      <ProposalTable proposal={useStore.getState().proposeRecipeFor(g.first)} />
-                      <Button size="sm" onClick={() => buildFirst(g)}>Build {g.first} and open it</Button>
+                      <div className="mb-1">
+                        <strong>Step 1 of 2.</strong> <span style={{ fontFamily: 'monospace' }}>{g.first}</span> is built first, as proposed below
+                        (nothing is written yet). You check it in the builder and fill anything empty; a bar at the top of the
+                        builder brings you back here{rest.length ? ` to copy it to the other ${rest.length}` : ''}.
+                      </div>
+                      {(() => {
+                        const prop = useStore.getState().proposeRecipeFor(g.first)
+                        const choice = recipeChoices[g.key] || {}
+                        const current = prop.wrapper ? prop.kind.wk : 'none'
+                        const precedentText = prop.kind?.precedentSource && prop.kind.precedentSource !== 'rule'
+                          ? `${KIND_LABEL[prop.kind.precedentWk] || prop.kind.precedentWk}${prop.kind.precedentShare ? `, ${prop.kind.precedentShare}` : ''} on ${prop.kind.precedentSource}`
+                          : 'process.md §7'
+                        return (
+                          <>
+                            <div className="d-flex align-items-center gap-2 mb-1">
+                              <span>Wrapper:</span>
+                              <Form.Select size="sm" style={{ width: 'auto', fontSize: 11 }} aria-label="Wrapper" value={current}
+                                onChange={e => setRecipeChoice(g.key, { wrap: e.target.value })}>
+                                <option value="DL">DL wrapper (point sources)</option>
+                                <option value="LIN">LIN wrapper (linear)</option>
+                                <option value="none">No wrapper</option>
+                              </Form.Select>
+                              <InfoTip size={11}>
+                                A wrapper is what ships to site as one: parts inside it arrive together as an assembly;
+                                parts outside it go separately (first-fix sockets, frames). Choose per group; flip each part below.
+                              </InfoTip>
+                              <span className="text-muted" style={{ fontSize: 11 }}>
+                                Precedent: {precedentText}{choice.wrap ? ' — you changed it' : ''}
+                              </span>
+                            </div>
+                            <ProposalTable proposal={prop}
+                              onPlace={(role, place) => setRecipeChoice(g.key, { place: { ...(choice.place || {}), [role]: place } })} />
+                          </>
+                        )
+                      })()}
+                      <Button size="sm" onClick={() => buildFirst(g)}>Build {g.first} and check it in the builder</Button>
                     </>
                   )}
                   {firstBuilt && !taught && (
                     <div className="d-flex align-items-center gap-2">
-                      <span>Check <span style={{ fontFamily: 'monospace' }}>{g.first}</span> in the builder (fill anything empty), then:</span>
-                      <Button size="sm" variant="outline-secondary" onClick={() => onOpenPosition?.(g.first)}>Open {g.first}</Button>
+                      <span><strong>Step 2 of 2.</strong> <span style={{ fontFamily: 'monospace' }}>{g.first}</span> is built. If it&apos;s right, copy it to the rest of the group; if not, fix it first.</span>
+                      <Button size="sm" variant="outline-secondary" onClick={() => openFirst(g)}>Check {g.first} in the builder</Button>
                       <Button size="sm" disabled={rest.length === 0} onClick={() => teach(g)}>Use it for the other {rest.length}</Button>
                     </div>
                   )}
                   {taught && rest.length > 0 && (
                     <>
-                      <div className="mb-1 text-muted">From <span style={{ fontFamily: 'monospace' }}>{g.first}</span>, each with its own Form products:</div>
+                      <div className="mb-1 text-muted">
+                        From <span style={{ fontFamily: 'monospace' }}>{g.first}</span>, each with its own Form products.{' '}
+                        Changed {g.first} in the builder?{' '}
+                        <Button size="sm" variant="link" className="p-0 align-baseline" style={{ fontSize: 12 }} onClick={() => teach(g)}>Use it again</Button>
+                      </div>
                       {rest.map(p => {
                         const built = hasRecipe(recipes, p)
                         const prop = built ? null : proposalFromTemplate(taught, p, ctx)

@@ -31,6 +31,7 @@ import PasteMergeModal from '../components/PasteMergeModal'
 import FavoritesPanel from '../components/FavoritesPanel'
 import ReviewModal from '../components/ReviewModal'
 import FormRecipesModal from '../components/FormRecipesModal'
+import TeachBar from '../components/TeachBar'
 import ValidationFixModal from '../components/ValidationFixModal'
 import { SaveIndicator } from '../components/SaveStatus'
 import LinWrapperWizardModal from '../components/LinWrapperWizardModal'
@@ -650,6 +651,7 @@ export default function BuilderScreen({
 
         {/* Centre: project tree outliner (or ET internal editor) */}
         <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }} data-debug-id="BuilderScreen/Centre (main surface)">
+          <TeachBar onReturn={({ refs, focus }) => setFormBuild({ refs, focus, thenReview: false })} />
           {inETMode ? (
             <div style={{ flex: 1, overflowY: 'auto', padding: '1rem 1.25rem' }}>
               {/* ET mode header */}
@@ -826,7 +828,7 @@ export default function BuilderScreen({
 
       <ElementTypesWindow show={!!showRetire} view={showRetire === 'unused' ? 'unused' : 'existing'} onHide={() => setShowRetire(false)} />
 
-      <FormRecipesModal show={formBuild != null} posRefs={formBuild?.refs || []} onHide={closeFormBuild}
+      <FormRecipesModal show={formBuild != null} posRefs={formBuild?.refs || []} focusGroup={formBuild?.focus || null} onHide={closeFormBuild}
         onOpenPosition={p => { setFormBuild(null); useStore.getState().setActivePosition(p) }} />
       <ReviewModal
         show={showReview}

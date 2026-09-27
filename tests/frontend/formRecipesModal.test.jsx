@@ -40,7 +40,7 @@ describe('recipes from the Form: build one, check it, the rest copy it', () => {
     fireEvent.click(within(groups[0]).getByText(/Point source in a DL wrapper/))
     expect(within(groups[0]).getAllByText('empty — add it in the builder').length).toBeGreaterThan(0)
     expect(rowsOf('B1')).toEqual([])
-    fireEvent.click(within(groups[0]).getByRole('button', { name: 'Build B1 and open it' }))
+    fireEvent.click(within(groups[0]).getByRole('button', { name: 'Build B1 and check it in the builder' }))
     expect(onOpen).toHaveBeenCalledWith('B1')
     expect(rowsOf('B1').length).toBeGreaterThan(0)
   })
@@ -56,5 +56,22 @@ describe('recipes from the Form: build one, check it, the rest copy it', () => {
     expect(refs).toContain('ET-PS-02')
     expect(refs).not.toContain('ET-PS-01')
     expect(screen.getByText(/Built 1 from B1/)).toBeInTheDocument()
+  })
+})
+
+describe('choosing what ships together', () => {
+  test('pick a wrapper for the group, send a part separately, and the first one is built that way', async () => {
+    useStore.setState({ recipeChoices: {} })
+    render(<FormRecipesModal show posRefs={[]} onHide={vi.fn()} onOpenPosition={vi.fn()} />)
+    const g = (await screen.findAllByTestId('form-group'))[1]            // the linear group
+    fireEvent.click(within(g).getByText(/Linear in a LIN wrapper/))
+    expect(within(g).getByLabelText('Wrapper').value).toBe('LIN')
+    fireEvent.change(within(g).getByLabelText('Wrapper'), { target: { value: 'none' } })
+    expect(within(g).queryAllByText('inside wrapper')).toHaveLength(0)
+    fireEvent.change(within(g).getByLabelText('Wrapper'), { target: { value: 'LIN' } })
+    fireEvent.click(within(g).getByRole('button', { name: 'Build L1 and check it in the builder' }))
+    const rows = rowsOf('L1')
+    expect(rows.some(r => /^ET-LIN-\d/.test(r.ElementTypeRef || r.elementTypeRef))).toBe(true)
+    expect(rows.find(r => (r.ElementTypeRef || r.elementTypeRef) === 'ET-LIN-TAPE-01')).toMatchObject({ ContextType: 'ElementType' })
   })
 })

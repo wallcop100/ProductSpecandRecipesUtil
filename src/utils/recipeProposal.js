@@ -32,7 +32,7 @@ const DIM_ROLES = new Set(['TAPE', 'FLEX', 'PROFILE', 'DIFF', 'MOUNT'])   // §5
 
 export const KIND_LABEL = {
   DL: 'Point source in a DL wrapper', LIN: 'Linear in a LIN wrapper', PS: 'Point source at position level',
-  TRACK: 'Track run', TRACKPS: 'Point source on track',
+  TRACK: 'Track run', TRACKPS: 'Point source on track', NONE: 'No wrapper',
 }
 export const DRIVER_LABEL = { LOCAL: 'local driver', REMOTE: 'remote driver', INTEGRAL: 'integral driver', NONE: 'no driver location' }
 
@@ -147,10 +147,23 @@ export function proposeRecipe(posRef, ctx) {
   const parentOf = r => { const p = ptByRef.get(up(r)); return p ? (p.ParentRef || p.parentRef || null) : null }
   const dl = driverOf(pt)
   const env = envOf(pt, parentOf)
-  const w = wrapperFor(product, dl, env, sources)
-  const pat = patternFor(w.wk, dl, env, sources)
+  // A group is its product, driver, environment and kinds of product — NOT its wrapper: the
+  // wrapper is a choice (what ships to site together), made per group, precedent first.
+  const signature = `${product}|${dl}|${env}|${[...new Set(products.map(p => p.role))].sort().join('+')}`
+  const precedent = wrapperFor(product, dl, env, sources)
+  const choice = ctx.choices?.[signature] || {}
+  const unwrapped = product === 'point' ? 'PS' : product === 'track' ? 'TRACK' : product === 'track-ps' ? 'TRACKPS' : 'NONE'
+  const chosen = choice.wrap === 'none' ? unwrapped : choice.wrap === 'DL' || choice.wrap === 'LIN' ? choice.wrap : null
+  const w = chosen ? { wk: chosen, source: 'you' } : precedent
+  let pat = patternFor(w.wk, dl, env, sources)
+  // No precedent for the wrapping you chose: the roles precedent gives this kind, re-placed.
+  if (pat.rows.length === 0 && w.wk !== precedent.wk) pat = patternFor(precedent.wk, dl, env, sources)
   const kindKey = `${w.wk}|${dl}|${env}`
-  const kind = { product, dl, env, wk: w.wk, wkSource: w.source, wkShare: w.n && w.of ? `${w.n} of ${w.of}` : null, patternSource: pat.source }
+  const kind = {
+    product, dl, env, wk: w.wk, wkSource: w.source, wkShare: w.n && w.of ? `${w.n} of ${w.of}` : null, patternSource: pat.source,
+    precedentWk: precedent.wk, precedentSource: precedent.source,
+    precedentShare: precedent.n && precedent.of ? `${precedent.n} of ${precedent.of}` : null,
+  }
 
   const rows = []
   const notes = []
@@ -201,20 +214,29 @@ export function proposeRecipe(posRef, ctx) {
     rows.push({ role: prod.role, ref: prod.ref, code: prod.code, ...slot, from: 'the Form', share: null })
   }
   // Unwrapped, the main product IS the design element, at position level. A track run is
-  // ordered by length (4343: Dim_QuantityMultiplier 1).
-  if (!inWrapper) {
-    const leadRow = rows.find(r => r.ref === lead.elementTypeRef)
-    if (leadRow) {
-      leadRow.section = 'position'; leadRow.isDesign = 'Y'; leadRow.isContractItem = null
-      if (w.wk === 'TRACK') { leadRow.dimQtyMultiplier = 1; leadRow.quantity = null }
+  // ordered by length (4343: Dim_QuantityMultiplier 1). Wrapped, it ships inside: in a DL
+  // as the design element inside it (4343), in a LIN as a contract item.
+  const leadRow = rows.find(r => r.ref === lead.elementTypeRef)
+  if (leadRow && !inWrapper) {
+    leadRow.section = 'position'; leadRow.isDesign = 'Y'; leadRow.isContractItem = null
+    if (w.wk === 'TRACK') { leadRow.dimQtyMultiplier = 1; leadRow.quantity = null }
+  } else if (leadRow) {
+    leadRow.section = 'internal'
+    if (w.wk === 'DL') { leadRow.isDesign = 'Y'; leadRow.isContractItem = null }
+    else { leadRow.isDesign = null; leadRow.isContractItem = 'Y' }
+  }
+  // Your call, per part: inside the wrapper (ships with it) or separately (position level).
+  if (inWrapper) {
+    for (const r of rows) {
+      if (r === leadRow || r.role === 'WRAPPER') continue
+      const place = choice.place?.[r.role]
+      if (place === 'position' || place === 'internal') { r.section = place; r.placedBy = 'you' }
     }
   }
 
   // 4. The wrapper: shared with an existing one holding exactly these internals, else new.
   const wrapper = inWrapper ? resolveWrapper(rows, w.wk, recipes, containerRefs) : null
 
-  // Positions with the same kind and the same kinds of product are one group.
-  const signature = `${kindKey}|${[...new Set(products.map(p => p.role))].sort().join('+')}`
   return { posRef, kind, signature, wrapper, rows, notes, products }
 }
 
@@ -323,6 +345,7 @@ export function proposalContext(state, library = {}) {
   }
   return {
     positionTypes, elementTypes, recipes, formCaptures,
+    choices: state.recipeChoices || {},
     exemplars: library.exemplars || [],
     containerRefs: containerETRefs,
     kindOfPos: p => kindOf.get(p) || null,
