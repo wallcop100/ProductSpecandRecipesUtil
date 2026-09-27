@@ -188,10 +188,10 @@ function preamble(sheet, indexLine) {
 /**
  * The DesignDB's ElementTypes sheet, kept in line after every patch: sorted by ParentRef
  * then Ref (Excel's order: blanks last), SortOrder rewritten 1..N down the sheet, and
- * every collection row (IsCollection = Y, or named as another row's ParentRef) purple
- * with white bold text. Done in the workbook, so it covers rows the tool never loaded.
+ * every FAMILY row (named as another row's ParentRef) purple with white bold text.
+ * Wrappers are IsCollection too but are not families, so they stay plain. Done in the workbook, so it covers rows the tool never loaded.
  */
-const DB_TIDY = `    // Keep the sheet in line: sort by ParentRef > Ref, SortOrder 1..N, collection rows purple.
+const DB_TIDY = `    // Keep the sheet in line: sort by ParentRef > Ref, SortOrder 1..N, family rows purple.
     {
       const n = apR;   // header + every row, including the ones just added
       const cRef = col["Ref"], cPar = col["ParentRef"], cSort = col["SortOrder"], cColl = col["IsCollection"];
@@ -211,12 +211,19 @@ const DB_TIDY = `    // Keep the sheet in line: sort by ParentRef > Ref, SortOrd
         for (let i = 0; i < refs.length; i++) {
           const ref = String(refs[i][0]).trim();
           if (ref === "") continue;
-          const isColl = parents[ref] || (colls !== null && String(colls[i][0]).trim().toUpperCase() === "Y");
-          if (!isColl) continue;
           const row = S.getRangeByIndexes(i + 1, 0, 1, nCols).getFormat();
-          row.getFill().setColor("#7030A0");
-          row.getFont().setColor("#FFFFFF");
-          row.getFont().setBold(true);
+          if (parents[ref]) {
+            // A family: another row names it as its ParentRef.
+            row.getFill().setColor("#7030A0");
+            row.getFont().setColor("#FFFFFF");
+            row.getFont().setBold(true);
+          } else if (colls !== null && String(colls[i][0]).trim().toUpperCase() === "Y") {
+            // A wrapper (ET-DL-NN, ET-LIN-NN) is IsCollection but not a family: never purple.
+            // Undo an earlier patch that painted it.
+            row.getFill().clear();
+            row.getFont().setColor("#000000");
+            row.getFont().setBold(false);
+          }
         }
       }
     }`

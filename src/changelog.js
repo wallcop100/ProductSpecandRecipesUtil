@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-09-27', note: 'DesignDB patch: only family rows (named as another row’s ParentRef) turn purple; wrappers (ET-DL-NN, ET-LIN-NN) stay plain, and ones painted by the last patch are cleared' },
   { date: '2026-09-27', note: 'An ALPHA badge on every page' },
   { date: '2026-09-27', note: 'DesignDB patch: ElementTypes sorted by ParentRef > Ref with SortOrder 1..N, collection rows purple / white bold. TBC placeholders get ordinary refs. Setting up a group asks you to confirm clip / tape / profile / mount / cap quantities (pulsing). Import resumes by itself; Re-import and Learned this project are in ⋯' },
   { date: '2026-09-27', note: 'Exterior only when the DesignDB family says EXTERIOR (in-ground / IP-rated are no longer taken as exterior); IP-rated connectors are never proposed — left for review' },
