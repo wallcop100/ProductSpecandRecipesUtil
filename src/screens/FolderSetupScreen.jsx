@@ -61,8 +61,11 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
   const [projectNumber, setProjectNumber] = useState('')
   const [configName, setConfigName] = useState('Base')
   const [existingConfigs, setExistingConfigs] = useState([])
+  const [addingSetup, setAddingSetup] = useState(false)
   // A config YAML being restored: { data, path }. Applied to the config as it opens.
   const [restore, setRestore] = useState(null)
+  // A backup read on the landing page, waiting for its folder to be opened.
+  const [pendingRestore, setPendingRestore] = useState(null)
   const [showChangelog, setShowChangelog] = useState(false)
   const [libraryMsg, setLibraryMsg] = useState(null)
   const [styleSummary, setStyleSummary] = useState(null)
@@ -167,10 +170,12 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
     setRecognised(null)
     setDbFilenames([]); setPsFilename(''); setRsFilename('')
     setRestore(null)
+    setAddingSetup(false)
 
     const data = await runDetect(key)
     if (!data) return
-    const configs = await prepareIdentity(key, data.db, undefined, data.dbs)
+    const configs = await prepareIdentity(key, data.db, pendingRestore?.data?.project?.config_name, data.dbs)
+    if (pendingRestore) { applyRestoreData(pendingRestore.data, pendingRestore.path, data); setPendingRestore(null) }
 
     // We have opened this exact folder before. Say so — opening it again is a RESUME.
     if (known && configs.length > 0) setRecognised(configs)
@@ -199,6 +204,11 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
   // Only the DesignDB is required. A missing Product Spec / Recipes Spec is a new project,
   // not a broken one: they are filled by patch scripts at export.
   const dbFound = dbFilenames.length > 0
+  // A new setup needs a name of its own; an empty or taken one would silently resume another.
+  const setupNameProblem = !addingSetup ? null
+    : !configName.trim() ? 'Name the new setup'
+    : existingConfigs.some(c => c.config_name.toLowerCase() === configName.trim().toLowerCase()) ? 'That setup already exists'
+    : null
 
   /** Prime the Project ID + config fields for a folder. Returns its existing configs. */
   async function prepareIdentity(folder, dbFn, preselect, detected = []) {
@@ -227,22 +237,17 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
   }
 
   /**
-   * Restore a config from its YAML. It names the config, the project number and which
-   * workbooks the config pairs — so this fills the form in; nothing is written until Open.
-   * `readConfigYAML` must be the first await (the file picker needs the click's gesture).
+   * Restore from a backup (config YAML). It names the setup, the project number and which
+   * workbooks it pairs — so it fills the form in; nothing is written until Open.
+   * `detected` is the folder's detection result (passed in: state may not have caught up).
    */
-  async function handleRestorePick() {
-    const r = await window.electronAPI.db.readConfigYAML?.()
-    if (!r?.ok) {
-      if (r?.error) setOpenError(`Could not read that config: ${r.error}`)
-      return
-    }
-    const { data } = r
+  function applyRestoreData(data, path, detected) {
     const files = data.files || {}
     const wantDbs = files.design_dbs || []
-    const { use, missing } = pickDbs(wantDbs, detectedDbs)
+    const { use, missing } = pickDbs(wantDbs, detected?.dbs || [])
     if (wantDbs.length) setDbFilenames(use)
-    const has = f => f && allXlsx.includes(f)
+    const xlsx = detected?.all_xlsx || []
+    const has = f => f && xlsx.includes(f)
     if (has(files.product_spec)) setPsFilename(files.product_spec)
     if (has(files.recipes_spec)) setRsFilename(files.recipes_spec)
     if (data.project?.project_number) setProjectNumber(String(data.project.project_number))
@@ -251,8 +256,32 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
       ...missing,
       ...[files.product_spec, files.recipes_spec].filter(f => f && !has(f)),
     ]
-    setRestore({ data, path: r.path, absent })
+    setRestore({ data, path, absent })
     setOpenError(null)
+  }
+
+  /** Restore, with a folder already open. `readConfigYAML` must be the first await. */
+  async function handleRestorePick() {
+    const r = await window.electronAPI.db.readConfigYAML?.()
+    if (!r?.ok) {
+      if (r?.error) setOpenError(`Could not read that backup: ${r.error}`)
+      return
+    }
+    applyRestoreData(r.data, r.path, detectedFiles)
+  }
+
+  /**
+   * Restore from the landing page, before any folder is open: read the backup first, then
+   * ask for its folder (a browser cannot find a folder by name), then fill everything in.
+   */
+  async function handleRestoreFirst() {
+    const r = await window.electronAPI.db.readConfigYAML?.()
+    if (!r?.ok) {
+      if (r?.error) setDetectError(`Could not read that backup: ${r.error}`)
+      return
+    }
+    setPendingRestore({ data: r.data, path: r.path })
+    setDetectError(null)
   }
 
   // --- managing (this page IS the manager now) --------------------------------
@@ -272,7 +301,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
     const r = await window.electronAPI.db.exportConfigYAML?.(
       p.id, `${p.project_number || 'project'}-${p.config_name}`
     )
-    if (r?.ok) setLibraryMsg(`Config exported to ${r.path}`)
+    if (r?.ok) setLibraryMsg(`Backup saved to ${r.path}`)
   }
 
   async function handleWipe(p) {
@@ -708,12 +737,36 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
                 <MaterialIcon name="folder_open" size={15} />{' '}
                 {hasProjects ? 'Open a folder…' : 'Open the folder with your DesignDB →'}
               </Button>
+              <Button variant="link" size="sm" className="px-1" style={{ fontSize: 12 }}
+                disabled={detecting || opening || !!unsupported} onClick={handleRestoreFirst}
+                title="A backup (.config.yaml) holds a project's file choice, tags, templates and unexported work — for another machine or cleared browser storage">
+                <MaterialIcon name="settings_backup_restore" size={14} /> Restore from backup…
+              </Button>
               {detecting && <Spinner size="sm" animation="border" />}
               <a className="ms-auto text-muted" style={{ fontSize: 11 }}
                 href={DOCS_URL} target="_blank" rel="noreferrer">
                 How this works ↗
               </a>
             </div>
+          )}
+
+          {pendingRestore && !picking && (
+            <Alert variant="info" className="py-2 px-2 mt-3" style={{ fontSize: 12 }} data-testid="pending-restore">
+              <div className="fw-semibold">
+                <MaterialIcon name="settings_backup_restore" size={14} /> Backup of {pendingRestore.data.project?.project_number || 'a project'}
+                {pendingRestore.data.project?.config_name ? ` · ${pendingRestore.data.project.config_name}` : ''} read.
+              </div>
+              <div className="text-muted mt-1" style={{ fontSize: 11 }}>
+                Now open its folder{pendingRestore.data.project?.project_label ? <> (<strong>{pendingRestore.data.project.project_label}</strong>)</> : ''} —
+                the files, Project ID and setup are filled in from the backup.
+              </div>
+              <div className="d-flex gap-2 mt-2">
+                <Button size="sm" variant="primary" onClick={handleSelectFolder}>
+                  <MaterialIcon name="folder_open" size={14} /> Open its folder…
+                </Button>
+                <Button size="sm" variant="link" className="text-muted" onClick={() => setPendingRestore(null)}>Cancel</Button>
+              </div>
+            </Alert>
           )}
 
           {detectError && !unsupported && <Alert variant="danger" className="py-2 mt-3">{detectError}</Alert>}
@@ -725,9 +778,8 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
                 <MaterialIcon name={ACTION_ICONS.complete} size={14} /> You have opened this folder before.
               </div>
               <div className="text-muted mt-1" style={{ fontSize: 11 }}>
-                Opening it again resumes {recognised.length === 1 ? 'it' : 'one of its configs'} —
-                your tags, templates and unexported changes are still there. Choose a different config
-                name below only if you want a second, separate overlay over the same workbooks.
+                Opening it again resumes {recognised.length === 1 ? 'it' : 'one of its setups'} —
+                your tags, templates and unexported changes are still there.
               </div>
             </Alert>
           )}
@@ -830,27 +882,44 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
                     </Form.Group>
                   </Col>
                   <Col xs={7}>
-                    <Form.Group>
-                      <Form.Label className="small fw-semibold mb-1">
-                        Configuration
-                        <span className="text-muted fw-normal ms-1" style={{ fontSize: 10 }}>
-                          — an overlay over the same workbooks
-                        </span>
-                      </Form.Label>
-                      {existingConfigs.length > 0 ? (
-                        <Form.Select size="sm" value={configName} onChange={e => chooseConfig(e.target.value)}>
-                          {!existingConfigs.some(c => c.config_name === configName) && (
-                            <option value={configName}>{configName} (new)</option>
-                          )}
-                          {existingConfigs.map(c => (
-                            <option key={c.id} value={c.config_name}>{c.config_name}</option>
-                          ))}
-                        </Form.Select>
-                      ) : (
-                        <Form.Control size="sm" value={configName} placeholder="Base"
-                          onChange={e => setConfigName(e.target.value)} />
-                      )}
-                    </Form.Group>
+                    {/* A SETUP is its own choice of workbooks, tags, templates and unexported
+                        work over this folder — e.g. Main House and Guest House sharing one
+                        Product Spec. Most folders have one, so it only shows when it matters. */}
+                    {addingSetup || existingConfigs.length > 1 ? (
+                      <Form.Group>
+                        <Form.Label className="small fw-semibold mb-1">
+                          Setup
+                          <span className="text-muted fw-normal ms-1" style={{ fontSize: 10 }}>
+                            — its own workbooks, tags and unexported work
+                          </span>
+                        </Form.Label>
+                        {addingSetup ? (
+                          <Form.Control size="sm" value={configName} placeholder="e.g. Guest House" autoFocus
+                            aria-label="New setup name" onChange={e => setConfigName(e.target.value)} />
+                        ) : (
+                          <Form.Select size="sm" value={configName} aria-label="Setup" onChange={e => chooseConfig(e.target.value)}>
+                            {existingConfigs.map(c => (
+                              <option key={c.id} value={c.config_name}>{c.config_name}</option>
+                            ))}
+                          </Form.Select>
+                        )}
+                      </Form.Group>
+                    ) : (
+                      <div className="small text-muted pb-1" data-testid="single-setup">
+                        {existingConfigs.length === 1 ? <>Resumes <strong>{configName}</strong>. </> : null}
+                        <Button variant="link" size="sm" className="p-0 align-baseline" style={{ fontSize: 11 }}
+                          title="A second setup over the same folder: its own DesignDB choice, tags, templates and unexported work"
+                          onClick={() => { setAddingSetup(true); setConfigName('') }}>
+                          + New setup of this folder
+                        </Button>
+                      </div>
+                    )}
+                    {addingSetup && (
+                      <Button variant="link" size="sm" className="p-0" style={{ fontSize: 11 }}
+                        onClick={() => { setAddingSetup(false); chooseConfig(existingConfigs[0]?.config_name || 'Base') }}>
+                        Cancel new setup
+                      </Button>
+                    )}
                   </Col>
                 </Row>
               </Card.Body>
@@ -864,8 +933,8 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
                   <MaterialIcon name="settings_backup_restore" size={14} /> Restoring from {restore.path}
                 </div>
                 <div className="text-muted mt-1" style={{ fontSize: 11 }}>
-                  Files, Project ID and config name are filled in from it. Its tags, templates and
-                  unexported changes are merged into this config when you open it.
+                  Files, Project ID and setup are filled in from it. Its tags, templates and
+                  unexported changes are merged into this setup when you open it.
                 </div>
                 {restore.absent.length > 0 && (
                   <div className="text-danger mt-1" style={{ fontSize: 11 }}>
@@ -880,9 +949,9 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
             ) : (
               <div className="mb-3">
                 <Button variant="link" size="sm" className="p-0" style={{ fontSize: 11 }}
-                  title="Recover a config you exported earlier (another machine, or cleared browser storage)"
+                  title="Recover a setup from a backup you saved earlier (another machine, or cleared browser storage)"
                   onClick={handleRestorePick}>
-                  <MaterialIcon name="settings_backup_restore" size={13} /> Restore a config from YAML…
+                  <MaterialIcon name="settings_backup_restore" size={13} /> Restore from backup…
                 </Button>
               </div>
             )
@@ -896,7 +965,8 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
                 onClick={() => { setDetectedFiles(null); setRecognised(null); setFolderName(''); setRestore(null) }}>
                 ← Back to projects
               </Button>
-              <Button variant="primary" disabled={!dbFound || opening || detecting}
+              <Button variant="primary" disabled={!dbFound || opening || detecting || setupNameProblem}
+                title={setupNameProblem || undefined}
                 onClick={() => doOpenProject({ projectNumber: projectNumber.trim(), configName: configName.trim() || 'Base' })}>
                 {opening ? <><Spinner size="sm" animation="border" className="me-2" />Opening…</> : 'Open Project'}
               </Button>
