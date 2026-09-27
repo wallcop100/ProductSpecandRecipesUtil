@@ -52,3 +52,14 @@ describe('codes known from earlier projects', () => {
     expect(proposals[0].family).toBe('ET-PS')
   })
 })
+
+test("this project's own ElementTypes win over an earlier project's", () => {
+  const library = [{ maker: 'Phos', code: 'EYP-TA-R-CR-20', ref: 'ET-DL-EYP-01', family: 'ET-DL', name: 'Other job', description: '', source: '5224' }]
+  const { proposals } = proposeElementTypes(
+    [{ text: 'EYP-TA-R-CR-20', manufacturers: ['Phos'], positionTypes: [], variants: [{ note: '' }] }],
+    { library, elementTypes: [{ ElementTypeRef: 'ET-PS-07', Family: 'ET-PS' }],
+      psRows: [{ ElementTypeRef: 'ET-PS-07', ProductCode: 'EYP-TA-R-CR-25', Manufacturer: 'Phos' }] })
+  expect(proposals[0].family).toBe('ET-PS')
+  expect(proposals[0].why).toBe('stem')
+  expect(proposals[0].name).not.toBe('Other job')
+})

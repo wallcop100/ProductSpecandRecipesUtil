@@ -231,7 +231,10 @@ export function proposeElementTypes(entries = [], project = {}) {
 
     // The very same product on an earlier project: its ElementType comes with it — family,
     // name, description, and its ref when this project has not used that ref yet.
-    const seen = !same && library.find(ex => norm(ex.code) === norm(e.text)
+    // ElementTypes belong to a project, so only when this project has nothing of its own
+    // to go on (a sibling product already filed here, or the positions' design element).
+    const ownKnowledge = pick.why === 'stem' || pick.why === 'design'
+    const seen = !same && !ownKnowledge && library.find(ex => norm(ex.code) === norm(e.text)
       && (!manufacturer || !ex.maker || makerKey(ex.maker) === makerKey(manufacturer)))
     if (seen) Object.assign(pick, { family: seen.family, head: seen.family, why: 'library', flag: false, seen })
 
