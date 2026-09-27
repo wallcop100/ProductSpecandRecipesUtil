@@ -1,3 +1,4 @@
+import useImportSession from './import/useImportSession'
 import InfoTip from '../components/InfoTip'
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import { Button, Form, Alert, Spinner, Modal } from 'react-bootstrap'
@@ -95,10 +96,13 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   const [rawRows, setRawRows] = useState([])
   const [map, setMap] = useState({ pt: '', code: '', mfr: '', exclude: '', acc: '', context: [] })
 
-  const [rows, setRows] = useState([])
-  const [rules, setRules] = useState({})
+  // What the import DECIDES lives in one session with full undo; see useImportSession.
+  const session = useImportSession()
+  const {
+    rows, setRows, rules, setRules, assignments, setAssignments,
+    refOverrides, setRefOverrides, keptSeparate, setKeptSeparate, dirStats, setDirStats,
+  } = session
   const [idx, setIdx] = useState(0)
-  const [assignments, setAssignments] = useState({})
   const [reviewingExisting, setReviewingExisting] = useState(false)
   const [creatingFor, setCreatingFor] = useState(null)
   const [staged, setStaged] = useState(null)
@@ -107,11 +111,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   const [undoSnap, setUndoSnap] = useState(null)   // one-level undo of the last paint
   const [brush, setBrush] = useState('code')       // the colour you're painting with
   const [scope, setScope] = useState('batch')      // 'batch' teaches every row; 'row' is local
-  const [dirStats, setDirStats] = useState({ forward: 0, backward: 0 })   // learned from note drags
   const [priming, setPriming] = useState(false)
   const [resolutions, setResolutions] = useState([])     // form ref -> PositionType
-  const [refOverrides, setRefOverrides] = useState({})
-  const [keptSeparate, setKeptSeparate] = useState(new Set())   // dismissed similar-groups
   const [mergingGroup, setMergingGroup] = useState(null)        // codes awaiting one new ET
   const [bulkProposals, setBulkProposals] = useState(null)      // the bulk "create them all" review
   // The tool-wide style library: how products became ElementTypes on every project opened.
@@ -247,13 +248,11 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     setKnownStats(stats.exactCount || stats.variantCount || stats.adjacentCount ? stats : null)
     setPreKnownRows(stats.exactCount ? raw : null)
 
-    setRows(sortByConfidence(applyRules(built, {}), { master, duplicates: new Set() }))
-    setRules({}); setIdx(0); setAssignments({}); setStaged(null); setUndoSnap(null)
-    setKeptSeparate(new Set())
+    session.load({ rows: sortByConfidence(applyRules(built, {}), { master, duplicates: new Set() }) })
+    setIdx(0); setStaged(null); setUndoSnap(null)
 
-    if (!map.pt) { setResolutions([]); setRefOverrides({}); enterReview(built); return }
+    if (!map.pt) { setResolutions([]); enterReview(built); return }
     setResolutions(resolveFormRefs(built.map(r => r.positionType), positionTypes))
-    setRefOverrides({})
     setStep('resolve')
   }
 
@@ -306,21 +305,22 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       noteOverride: r.noteOverride || {},
       confirmed: !!r.confirmed,
     }))
-    setRows(restored)
-
     // The auto-paint lives in `overrides` and came back with them; recompute the
     // MATCH so the amber variant marks and the banner survive a resume too. It is
     // idempotent, and there is nothing left to undo.
     const { rows: _ignored, ...stats } = applyKnownCodes(restored, master)
     setKnownStats(stats.exactCount || stats.variantCount || stats.adjacentCount ? stats : null)
     setPreKnownRows(null)
-    setRules(d.rules || {})
-    setAssignments(d.assignments || {})
+    session.load({
+      rows: restored,
+      rules: d.rules || {},
+      assignments: d.assignments || {},
+      refOverrides: d.refOverrides || {},
+      keptSeparate: new Set(d.keptSeparate || []),
+      dirStats: d.dirStats || { forward: 0, backward: 0 },
+    })
     setIdx(d.idx || 0)
     setResolutions(d.resolutions || [])
-    setRefOverrides(d.refOverrides || {})
-    setKeptSeparate(new Set(d.keptSeparate || []))
-    setDirStats(d.dirStats || { forward: 0, backward: 0 })
     setMap(d.map ? { acc: '', ...d.map } : { pt: '', code: '', mfr: '', exclude: '', acc: '', context: [] })
     setSource(d.source || null)
     setSheet(d.source?.sheet || '')
@@ -374,7 +374,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     if (!row || idxs.length === 0) return
     // Painting can teach the whole batch, so an accident propagates. Keep one step back.
     setUndoSnap({
-      rules, rows, role,
+      role,
       label: idxs.map(i => row.tokens[i].text).join(' '),
       scope: localOnly ? 'this row' : 'every row',
     })
@@ -391,7 +391,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       // ignore this one. "Every row" has to mean every row.
       setRows(rs => clearOverridesFor(rs, texts))
     }
-  }, [resolved, patchRow, rules, rows])
+  }, [resolved, patchRow])
 
   /** The active row's sweep, with the palette's brush and scope. */
   const paint = useCallback((idxs, role = brush, localOnly = scope === 'row') => {
@@ -400,11 +400,24 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   }, [current, paintRow, brush, scope])
 
   function undoLastPaint() {
-    if (!undoSnap) return
-    setRules(undoSnap.rules)
-    setRows(undoSnap.rows)
+    session.undo()
     setUndoSnap(null)
   }
+
+  // Ctrl+Z / Ctrl+Shift+Z undo and redo any decision in the import (not while typing).
+  useEffect(() => {
+    if (step !== 'review' && step !== 'resolve') return
+    function onKey(e) {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'z') return
+      const t = e.target
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return
+      e.preventDefault()
+      if (e.shiftKey) session.redo(); else session.undo()
+      setUndoSnap(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [step, session.undo, session.redo])   // eslint-disable-line react-hooks/exhaustive-deps
 
   const acceptRowSuggestions = useCallback(() => {
     if (!current) return

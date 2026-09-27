@@ -40,3 +40,17 @@ describe('the column step is skipped when the columns are obvious', () => {
     expect(await screen.findByText('Which columns matter?')).toBeInTheDocument()
   })
 })
+
+describe('every decision can be undone', () => {
+  test('confirm a row, then Ctrl+Z un-confirms it and Ctrl+Shift+Z brings it back', async () => {
+    await pick(['PositionTypeRef', 'ProductCode', 'ManufacturerName'])
+    fireEvent.click(await screen.findByText('Start review →'))
+    expect(await screen.findByText(/Queue \(1 left\)/)).toBeInTheDocument()
+    fireEvent.keyDown(window, { key: 'Enter' })
+    expect(await screen.findByText(/Queue \(0 left\)/)).toBeInTheDocument()
+    fireEvent.keyDown(window, { key: 'z', ctrlKey: true })
+    expect(await screen.findByText(/Queue \(1 left\)/)).toBeInTheDocument()
+    fireEvent.keyDown(window, { key: 'z', ctrlKey: true, shiftKey: true })
+    expect(await screen.findByText(/Queue \(0 left\)/)).toBeInTheDocument()
+  })
+})
