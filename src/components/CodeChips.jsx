@@ -30,7 +30,7 @@ export const BRUSH = {
 }
 
 /** Tint and weight, never borders — the sentence has to stay readable. */
-function roleStyle(role) {
+export function roleStyle(role) {
   if (role === 'code') return { background: BRUSH.code.bg, color: BRUSH.code.fg, fontWeight: 700, borderRadius: 2 }
   if (role === 'discard') return { color: BRUSH.discard.fg, textDecoration: 'line-through' }
   return { color: BRUSH.note.fg }

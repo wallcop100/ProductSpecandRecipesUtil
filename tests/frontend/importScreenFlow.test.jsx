@@ -1,5 +1,5 @@
 import { describe, test, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 
 const readSheet = vi.fn()
 vi.mock('../../src/utils/backend.js', () => ({
@@ -41,16 +41,63 @@ describe('the column step is skipped when the columns are obvious', () => {
   })
 })
 
-describe('every decision can be undone', () => {
-  test('confirm a row, then Ctrl+Z un-confirms it and Ctrl+Shift+Z brings it back', async () => {
-    await pick(['PositionTypeRef', 'ProductCode', 'ManufacturerName'])
-    fireEvent.click(await screen.findByText('Start review →'))
-    expect(await screen.findByText(/Queue \(1 left\)/)).toBeInTheDocument()
-    fireEvent.keyDown(window, { key: 'Enter' })
-    expect(await screen.findByText(/Queue \(0 left\)/)).toBeInTheDocument()
+const HEAD = ['PositionTypeRef', 'ManufacturerName', 'ProductCode', 'ProductName']
+const ROWS = [
+  { PositionTypeRef: 'A1', ManufacturerName: 'iGuzzini', ProductCode: 'QC50', ProductName: 'Spot' },
+  { PositionTypeRef: 'A1', ManufacturerName: 'iGuzzini', ProductCode: 'QC51 louvre', ProductName: 'Spot 2' },
+]
+async function toTable() {
+  readSheet.mockResolvedValue({ sheets: ['S'], sheet: 'S', headers: HEAD, rows: ROWS })
+  useStore.setState({ projectId: 1, positionTypes: [{ PositionTypeRef: 'A1' }], psRows: [], elementTypes: [], recipes: [], importDraft: null })
+  render(<ProductCodeImportScreen onBack={vi.fn()} onReviewPositions={vi.fn()} />)
+  fireEvent.click(await screen.findByText('Choose spreadsheet…'))
+  fireEvent.click(await screen.findByText('Start review →'))
+  return screen.findByTestId('form-table')
+}
+const toolbarButton = re => within(screen.getByTestId('table-toolbar')).getByRole('button', { name: re })
+
+describe('the Form, as a table', () => {
+  test("the Form's rows in its order, its columns in its order, then status / ET / confirm", async () => {
+    const table = await toTable()
+    const heads = within(table).getAllByRole('columnheader').map(h => h.textContent).filter(Boolean)
+    expect(heads.slice(0, 3)).toEqual(['PositionTypeRef', 'ManufacturerName', 'ProductCode'])
+    expect(heads).toContain('Status'); expect(heads).toContain('ElementType')
+    const cells = within(table).getAllByRole('row').slice(1).map(r => r.textContent)
+    expect(cells[0]).toMatch(/QC50/); expect(cells[1]).toMatch(/QC51/)
+  })
+
+  test('clicking a word cycles it code → note → discard, for that row', async () => {
+    const table = await toTable()
+    const word = within(table).getByTitle(/“louvre”/)
+    expect(word.dataset.role).toBe('note')
+    fireEvent.click(word)
+    expect(within(table).getByTitle(/“louvre”/).dataset.role).toBe('discard')
+  })
+
+  test('confirm by ticking; Ctrl+Z un-ticks, Ctrl+Shift+Z re-ticks; the filter follows', async () => {
+    await toTable()
+    expect(toolbarButton(/Unconfirmed 2/)).toBeInTheDocument()
+    fireEvent.click(screen.getAllByLabelText(/^Confirm row/)[0])
+    expect(toolbarButton(/Unconfirmed 1/)).toBeInTheDocument()
     fireEvent.keyDown(window, { key: 'z', ctrlKey: true })
-    expect(await screen.findByText(/Queue \(1 left\)/)).toBeInTheDocument()
+    expect(toolbarButton(/Unconfirmed 2/)).toBeInTheDocument()
     fireEvent.keyDown(window, { key: 'z', ctrlKey: true, shiftKey: true })
-    expect(await screen.findByText(/Queue \(0 left\)/)).toBeInTheDocument()
+    expect(toolbarButton(/Unconfirmed 1/)).toBeInTheDocument()
+    fireEvent.click(toolbarButton(/Unconfirmed 1/))
+    expect(within(screen.getByTestId('form-table')).getAllByRole('row')).toHaveLength(2)   // header + 1
+  })
+
+  test('▸ opens the full painter under the row', async () => {
+    const table = await toTable()
+    fireEvent.click(within(table).getAllByLabelText('Open painter')[1])
+    expect(await screen.findByText(/Confirm & next/)).toBeInTheDocument()
+  })
+
+  test('"needs ET" confirms the row and opens the ElementTypes window at the New tab', async () => {
+    const table = await toTable()
+    const word = within(table).getByTitle(/“QC50”/)
+    if (word.dataset.role !== 'code') fireEvent.click(within(table).getByTitle(/“QC50”/))
+    fireEvent.click(within(table).getAllByText('needs ET')[0])
+    expect(await screen.findByText(/^New \(/)).toBeInTheDocument()
   })
 })

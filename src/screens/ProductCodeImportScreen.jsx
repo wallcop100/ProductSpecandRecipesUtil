@@ -1,14 +1,14 @@
 import useImportSession from './import/useImportSession'
 import InfoTip from '../components/InfoTip'
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
-import { Button, Form, Alert, Spinner, Modal } from 'react-bootstrap'
+import { Button, ButtonGroup, Form, Alert, Spinner, Modal } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import { readSheet as readSheetFrom, fileMeta } from '../utils/backend'
 import MaterialIcon from '../components/MaterialIcon'
 import IconButton from '../components/IconButton'
 import CodeChips from '../components/CodeChips'
 import PaintPalette from '../components/PaintPalette'
-import CompareCodesPanel, { StatusLegend } from '../components/CompareCodesPanel'
+import CompareCodesPanel, { StatusLegend, TONE, ICON, MEANS, STATUS_LABEL } from '../components/CompareCodesPanel'
 import NeedsResolving from '../components/NeedsResolving'
 import CaptureLines from '../components/CaptureLines'
 import PrimingModal from '../components/PrimingModal'
@@ -18,7 +18,7 @@ import ResolveRefsStep from '../components/ResolveRefsStep'
 import StageBar from '../components/StageBar'
 import TutorialHint from '../tutorial/TutorialHint'
 import MapColumnsStep from '../components/MapColumnsStep'
-import FormContext from '../components/FormContext'
+import FormTable from '../components/import/FormTable'
 import CopyButton from '../components/CopyButton'
 import ContextColumnChips from '../components/ContextColumnChips'
 import { capturableColumns, captureContext } from '../utils/formColumns'
@@ -102,7 +102,12 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     rows, setRows, rules, setRules, assignments, setAssignments,
     refOverrides, setRefOverrides, keptSeparate, setKeptSeparate, dirStats, setDirStats,
   } = session
-  const [idx, setIdx] = useState(0)
+  // The table: which row is open in the painter, which has keyboard focus, and the view.
+  const [expandedId, setExpandedId] = useState(null)
+  const [focusId, setFocusId] = useState(null)
+  const [filter, setFilter] = useState('all')      // all | unconfirmed | needsEt
+  const [query, setQuery] = useState('')
+  const [etFocusCode, setEtFocusCode] = useState(null)
   const [reviewingExisting, setReviewingExisting] = useState(false)
   const [creatingFor, setCreatingFor] = useState(null)
   const [staged, setStaged] = useState(null)
@@ -115,6 +120,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   const [resolutions, setResolutions] = useState([])     // form ref -> PositionType
   const [mergingGroup, setMergingGroup] = useState(null)        // codes awaiting one new ET
   const [bulkProposals, setBulkProposals] = useState(null)      // the bulk "create them all" review
+  // Opening is a request; the proposals are snapshotted on the next render, once any rows
+  // the click just confirmed are counted (the window must not re-seed while you edit it).
+  const [bulkOpen, setBulkOpen] = useState(false)
   // The tool-wide style library: how products became ElementTypes on every project opened.
   const [styleLibrary, setStyleLibrary] = useState([])
   useEffect(() => {
@@ -248,8 +256,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     setKnownStats(stats.exactCount || stats.variantCount || stats.adjacentCount ? stats : null)
     setPreKnownRows(stats.exactCount ? raw : null)
 
-    session.load({ rows: sortByConfidence(applyRules(built, {}), { master, duplicates: new Set() }) })
-    setIdx(0); setStaged(null); setUndoSnap(null)
+    session.load({ rows: applyRules(built, {}) })
+    setExpandedId(null); setFocusId(null); setStaged(null); setUndoSnap(null)
 
     if (!map.pt) { setResolutions([]); enterReview(built); return }
     setResolutions(resolveFormRefs(built.map(r => r.positionType), positionTypes))
@@ -280,13 +288,13 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   const draftFromState = useCallback(() => ({
     version: 1,
     source: { ...(source || {}), sheet },
-    step, map, rules, assignments, idx, resolutions, refOverrides, dirStats,
+    step, map, rules, assignments, resolutions, refOverrides, dirStats,
     keptSeparate: [...keptSeparate],
     rows: rows.map(r => ({
       id: r.id, rawText: r.rawText, positionType: r.positionType, manufacturer: r.manufacturer,
       context: r.context, overrides: r.overrides, noteOverride: r.noteOverride, confirmed: r.confirmed,
     })),
-  }), [source, sheet, step, map, rules, assignments, idx, resolutions, refOverrides, dirStats, keptSeparate, rows])
+  }), [source, sheet, step, map, rules, assignments, resolutions, refOverrides, dirStats, keptSeparate, rows])
 
   // Debounced: painting a token must not write a pref on every keystroke.
   useEffect(() => {
@@ -319,7 +327,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       keptSeparate: new Set(d.keptSeparate || []),
       dirStats: d.dirStats || { forward: 0, backward: 0 },
     })
-    setIdx(d.idx || 0)
+    setExpandedId(null)
     setResolutions(d.resolutions || [])
     setMap(d.map ? { acc: '', ...d.map } : { pt: '', code: '', mfr: '', exclude: '', acc: '', context: [] })
     setSource(d.source || null)
@@ -331,7 +339,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   /** Un-paint everything the spec matched, in one step. */
   function undoKnownPaint() {
     if (!preKnownRows) return
-    setRows(sortByConfidence(applyRules(preKnownRows, rules), ctx))
+    setRows(applyRules(preKnownRows, rules))
     setPreKnownRows(null)
     setKnownStats(s => (s ? { ...s, exactCount: 0 } : null))
   }
@@ -342,7 +350,10 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   }
 
   // ---- review ---------------------------------------------------------------
-  const current = resolved[idx]
+  // The row open in the painter (the table's expanded row).
+  const current = expandedId != null ? resolved.find(r => r.id === expandedId) || null : null
+  // The table reads like the sheet: Form order, not confidence order.
+  const formOrder = useMemo(() => [...resolved].sort((a, b) => a.id - b.id), [resolved])
   // Learned continuously, and only from the rows the user has actually taught —
   // painted, edited, or confirmed. Reading every row would feed the tool's own
   // untouched defaults back in as evidence. Never stops: paints, note edits, note
@@ -495,15 +506,16 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     setRows(rs => rs.map(r => (done.has(r.id) ? { ...r, confirmed: true } : r)))
     setPriming(false)
     setUndoSnap(null)
-    const next = resolved.findIndex(r => !done.has(r.id))
-    if (next >= 0) setIdx(next)
+    setExpandedId(null)
   }
 
   /** Right-hand bar -> jump back to a row that produced this code, to adjust it. */
   function jumpToCode(entry) {
     const first = entry.rowRefs[0]
-    const at = resolved.findIndex(r => r.id === first)
-    if (at >= 0) { setIdx(at); setUndoSnap(null) }
+    if (first == null) return
+    setFilter('all'); setQuery('')
+    setExpandedId(first); setFocusId(first); setUndoSnap(null)
+    setTimeout(() => document.querySelector(`[data-row-id="${first}"]`)?.scrollIntoView?.({ block: 'center' }), 0)
   }
 
   /** Confirm takes the suggested codes with it — that's what they're for. */
@@ -513,9 +525,13 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       ...acceptSuggestions({ ...r, roles: current.roles }, rules, signals),
       confirmed: true,
     }))
-    setIdx(i => Math.min(i + 1, rows.length - 1))
+    // On to the next unconfirmed row in the sheet, open in the painter.
+    const at = formOrder.findIndex(r => r.id === current.id)
+    const next = formOrder.slice(at + 1).find(r => !r.confirmed)
+    setExpandedId(next ? next.id : null)
+    if (next) setFocusId(next.id)
     setUndoSnap(null)
-  }, [current, patchRow, rows.length, rules, signals])
+  }, [current, patchRow, rules, signals, formOrder])
 
   const batchConfirmEasy = useCallback(() => {
     const easy = new Set(resolved.filter(r => !r.confirmed && rowConfidence(r, ctx) === 'high').map(r => r.id))
@@ -721,8 +737,12 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   }, [entries, proposals])
 
   function openBulkCreate() {
-    setBulkProposals({ proposals, newFamilies })
+    setEtFocusCode(null)
+    setBulkOpen(true)
   }
+  useEffect(() => {
+    if (bulkOpen && !bulkProposals) setBulkProposals({ proposals, newFamilies })
+  }, [bulkOpen, bulkProposals, proposals, newFamilies])
 
   /** Apply the reviewed proposals: new families first, then reuse or create each code. */
   function applyBulk({ families, items }) {
@@ -740,7 +760,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       else addPSRow(ref, spec)
       assignET(p.code, ref)
     }
-    setBulkProposals(null)
+    setBulkProposals(null); setBulkOpen(false)
   }
 
   /** Assign an existing ElementType to a distinct code — the reuse/dedup win. */
@@ -877,6 +897,98 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
 
   const remaining = resolved.filter(r => !r.confirmed).length
   const easyLeft = resolved.filter(r => !r.confirmed && rowConfidence(r, ctx) === 'high').length
+
+  // ---- the table ------------------------------------------------------------
+  /** The ElementType a code already has: the spec first, then your choice, then last import's. */
+  const etFor = useCallback((code, manufacturer) =>
+    classify(code, ctx, manufacturer).elementTypeRef || assignments[norm(code)] || priorEtByCode.get(norm(code)) || null,
+  [ctx, assignments, priorEtByCode])
+
+  /** Where each Form ref goes, by ref: 'ok' | 'redirect' | 'missing' | 'ambiguous'. */
+  const refState = useMemo(() => {
+    const m = new Map()
+    for (const r of resolutions) {
+      const o = refOverrides[r.formRef]
+      const target = o === undefined ? r.target : (o || null)
+      const state = !target ? 'missing' : (o === undefined && r.ambiguous?.length) ? 'ambiguous'
+        : norm(target) !== norm(r.formRef) ? 'redirect' : 'ok'
+      m.set(norm(r.formRef), { target, state })
+    }
+    return m
+  }, [resolutions, refOverrides])
+
+  const rowInfo = useCallback(row => {
+    const caps = deriveCaptures(row, captureOpts).captures
+    const lead = caps[0]
+    const codes = caps.map(c => ({ code: c.code, main: c === lead, etRef: etFor(c.code, row.manufacturer) }))
+    const st = lead ? classify(lead.code, ctx, row.manufacturer).status : null
+    const status = !lead
+      ? { tone: 'neutral', icon: 'remove', label: 'no code', tip: 'Nothing in this cell is marked as a code.' }
+      : { tone: TONE[st], icon: ICON[st], label: STATUS_LABEL[st], tip: MEANS[st] }
+    return {
+      codes, status,
+      suggested: row.confirmed ? [] : suggestCodes(row, rules, signals),
+      pt: map.pt ? (refState.get(norm(row.positionType)) || { state: 'ok' }) : { state: 'ok' },
+    }
+  }, [captureOpts, etFor, ctx, rules, signals, map.pt, refState])
+
+  const needsEtCount = useMemo(
+    () => formOrder.filter(r => deriveCaptures(r, captureOpts).captures.some(c => !etFor(c.code, r.manufacturer))).length,
+    [formOrder, captureOpts, etFor])
+
+  const tableRows = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return formOrder.filter(r => {
+      if (filter === 'unconfirmed' && r.confirmed) return false
+      if (filter === 'needsEt' && !deriveCaptures(r, captureOpts).captures.some(c => !etFor(c.code, r.manufacturer))) return false
+      if (!q) return true
+      return [r.rawText, r.positionType, r.manufacturer, ...Object.values(r.context || {})]
+        .some(v => String(v ?? '').toLowerCase().includes(q))
+    })
+  }, [formOrder, filter, query, captureOpts, etFor])
+
+  /** The Form's own columns, in its order; ProductCode carries Accessories (they share a cell). */
+  const tableColumns = useMemo(() => {
+    const cols = []
+    if (map.pt) cols.push({ key: 'pt', label: map.pt })
+    if (map.mfr) cols.push({ key: 'mfr', label: map.mfr })
+    cols.push({ key: 'code', label: map.acc ? `${map.code} + ${map.acc}` : (map.code || 'ProductCode') })
+    const order = headers.length ? headers : map.context
+    for (const h of order) if (map.context.includes(h) && h !== map.acc) cols.push({ key: `ctx:${h}`, label: h })
+    return cols
+  }, [map, headers])
+
+  /** Every column any row carries, for the column chooser. */
+  const anyContext = useMemo(() => {
+    const out = {}
+    for (const r of rows) for (const [k, v] of Object.entries(r.context || {})) if (v != null && String(v).trim() !== '') out[k] = v
+    return out
+  }, [rows])
+
+  /** A click in a cell: this word, this row only. */
+  const setTokenRole = useCallback((rowId, i, role) => {
+    patchRow(rowId, r => ({ ...r, overrides: { ...r.overrides, [i]: role } }))
+  }, [patchRow])
+
+  /** Ticking a row takes its suggested codes with it, as Confirm always has. */
+  const toggleConfirm = useCallback(rowId => {
+    const row = resolved.find(r => r.id === rowId)
+    if (!row) return
+    if (row.confirmed) patchRow(rowId, r => ({ ...r, confirmed: false }))
+    else patchRow(rowId, r => ({ ...acceptSuggestions({ ...r, roles: row.roles }, rules, signals), confirmed: true }))
+  }, [resolved, patchRow, rules, signals])
+
+  /** "needs ET" on a code: its rows count as confirmed, then the ElementTypes window opens at it. */
+  const openETFor = useCallback(code => {
+    for (const r of resolved) {
+      if (r.confirmed) continue
+      if (deriveCaptures(r, captureOpts).captures.some(c => norm(c.code) === norm(code))) {
+        patchRow(r.id, x => ({ ...acceptSuggestions({ ...x, roles: r.roles }, rules, signals), confirmed: true }))
+      }
+    }
+    setEtFocusCode(code)
+    setBulkOpen(true)
+  }, [resolved, captureOpts, patchRow, rules, signals])
   // What the spec matched on the row being reviewed.
   const currentMatch = current && knownStats?.byRow?.get(current.id)
   const knownIdx = useMemo(() => knownTokenIndices(currentMatch), [currentMatch])
@@ -978,31 +1090,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
 
       {step === 'review' && (
         <div className="d-flex gap-3" style={{ flex: 1, minHeight: 0 }}>
-          {/* Queue + Learned panel */}
-          <div style={{ width: 210, overflowY: 'auto', flexShrink: 0 }}>
+          {/* What the tool has learned about this sheet's dialect. */}
+          <div style={{ width: 190, overflowY: 'auto', flexShrink: 0 }}>
             <div className="fw-semibold text-muted mb-1" style={{ fontSize: 10, textTransform: 'uppercase' }}>
-              Queue ({remaining} left)
-            </div>
-            {easyLeft > 0 && (
-              <Button size="sm" variant="outline-success" className="w-100 mb-2" style={{ fontSize: 11 }} onClick={batchConfirmEasy}>
-                Confirm {easyLeft} easy {easyLeft === 1 ? 'row' : 'rows'} <kbd>B</kbd>
-              </Button>
-            )}
-            {resolved.map((r, i) => (
-              <div key={r.id} onClick={() => { setIdx(i); setUndoSnap(null) }}
-                className="px-2 py-1 rounded d-flex align-items-center gap-1"
-                style={{
-                  cursor: 'pointer', fontSize: 11, fontFamily: 'monospace',
-                  background: i === idx ? '#cfe2ff' : 'transparent',
-                  color: r.confirmed ? '#adb5bd' : '#212529',
-                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                }}>
-                {r.confirmed && <MaterialIcon name="check" size={12} style={{ color: '#198754', flexShrink: 0 }} />}
-                <span style={{ color: '#6c757d' }}>{r.positionType}</span> {r.rawText.split('\n')[0]}
-              </div>
-            ))}
-
-            <div className="fw-semibold text-muted mt-3 mb-1" style={{ fontSize: 10, textTransform: 'uppercase' }}>
               Learned this project
             </div>
             {punctPending && (
@@ -1056,107 +1146,129 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
             ))}
           </div>
 
-          {/* Active field */}
-          <div style={{ flex: 1, minWidth: 0, overflowY: 'auto' }}>
-            {!current && <div className="text-muted fst-italic">No rows to review.</div>}
-            {current && (
-              <>
-                <div className="text-muted mb-1" style={{ fontSize: 11 }}>
-                  Row {idx + 1} of {rows.length}
-                  {current.positionType && <> · <strong>{current.positionType}</strong></>}
-                  {current.manufacturer && <> · {current.manufacturer}</>}
-                </div>
+          {/* The Form, as a table. Simple edits in the cells; ▸ opens the full painter. */}
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+            <div className="d-flex align-items-center gap-2 mb-2 flex-wrap" data-testid="table-toolbar">
+              <Form.Control size="sm" value={query} onChange={e => setQuery(e.target.value)}
+                placeholder="Search rows…" aria-label="Search rows" style={{ maxWidth: 200, fontSize: 12 }} />
+              <ButtonGroup size="sm" aria-label="Show rows">
+                {[['all', `All ${rows.length}`], ['unconfirmed', `Unconfirmed ${remaining}`], ['needsEt', `Needs ET ${needsEtCount}`]].map(([k, label]) => (
+                  <Button key={k} variant={filter === k ? 'primary' : 'outline-secondary'} style={{ fontSize: 11 }}
+                    onClick={() => setFilter(k)}>{label}</Button>
+                ))}
+              </ButtonGroup>
+              {easyLeft > 0 && (
+                <Button size="sm" variant="outline-success" style={{ fontSize: 11 }} onClick={batchConfirmEasy}>
+                  Confirm {easyLeft} easy {easyLeft === 1 ? 'row' : 'rows'} <kbd>B</kbd>
+                </Button>
+              )}
+              <ContextColumnChips context={anyContext} available={capturable} shown={map.context}
+                onChange={next => setMap(m => ({ ...m, context: next }))} />
+              <span className="ms-auto d-inline-flex gap-1">
+                <IconButton icon="undo" size={16} title="Undo (Ctrl+Z)" aria-label="Undo" disabled={!session.canUndo}
+                  onClick={() => { session.undo(); setUndoSnap(null) }} />
+                <IconButton icon="redo" size={16} title="Redo (Ctrl+Shift+Z)" aria-label="Redo" disabled={!session.canRedo}
+                  onClick={() => { session.redo(); setUndoSnap(null) }} />
+              </span>
+            </div>
 
-                {/* The Form's ProductCode cell as written, to copy while checking the spec. */}
-                <div className="d-flex align-items-start gap-2 mb-1 px-2" style={{ fontSize: 11 }}>
-                  <span className="fw-semibold flex-shrink-0" style={{ minWidth: 84 }}>
-                    {map.code || 'ProductCode'}{map.acc && <span className="text-muted fw-normal"> + {map.acc}</span>}
+            {/* Stage ① — what the Product Spec already knew. */}
+            {knownStats && (
+              <div className="mb-2 px-2 py-1 rounded d-flex align-items-center gap-2 flex-wrap"
+                style={{ background: '#d1e7dd', border: '1px solid #a3cfbb', fontSize: 11, color: '#0f5132' }}>
+                {knownStats.exactCount > 0 && (
+                  <span>
+                    <MaterialIcon name="check_circle" size={13} /> {knownStats.exactCount} code
+                    {knownStats.exactCount === 1 ? '' : 's'} already in your Product Spec — painted for you
                   </span>
-                  <span style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{current.rawText}</span>
-                  <CopyButton text={current.rawText} what="the Form's product code cell" />
-                </div>
+                )}
+                {knownStats.variantCount > 0 && (
+                  <span style={{ color: '#856404' }}>
+                    <MaterialIcon name="warning" size={12} /> {knownStats.variantCount} variant{knownStats.variantCount === 1 ? '' : 's'}{' '}
+                    <InfoTip size={11}>Known codes with something extra, marked amber. You decide.</InfoTip>
+                  </span>
+                )}
+                {knownStats.adjacentCount > 0 && (
+                  <span style={{ color: '#856404' }}>
+                    <MaterialIcon name="warning" size={12} /> {knownStats.adjacentCount} side by side{' '}
+                    <InfoTip size={11}>Known codes next to each other. Painting both would merge them, so neither was painted.</InfoTip>
+                  </span>
+                )}
+                {preKnownRows && (
+                  <Button size="sm" variant="link" className="p-0 ms-auto" style={{ fontSize: 10 }}
+                    onClick={undoKnownPaint} title="Un-paint everything matched from the spec">
+                    Undo all
+                  </Button>
+                )}
+              </div>
+            )}
 
-                {/* Every column is captured, but only the ones you picked are shown — the
-                    sheet has ~180 of them and most are junk. Add or drop one right here. */}
-                <FormContext context={current.context} columns={map.context} style={{ marginBottom: 4 }} />
-                <ContextColumnChips
-                  context={current.context}
-                  available={capturable}
-                  shown={map.context}
-                  onChange={next => setMap(m => ({ ...m, context: next }))}
-                />
+            <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+              <FormTable
+                rows={tableRows}
+                columns={tableColumns}
+                info={rowInfo}
+                onSetRole={setTokenRole}
+                onToggleConfirm={toggleConfirm}
+                onNeedsET={openETFor}
+                onFixRef={() => setStep('resolve')}
+                expandedId={expandedId}
+                onExpand={id => { setExpandedId(id); if (id != null) setFocusId(id); setUndoSnap(null) }}
+                focusId={focusId}
+                onFocus={setFocusId}
+                renderExpanded={() => current && (
+                  <div className="p-2">
+                {/* The Form's ProductCode cell as written, to copy while checking the spec. */}
+                    <div className="d-flex align-items-start gap-2 mb-1 px-2" style={{ fontSize: 11 }}>
+                      <span className="fw-semibold flex-shrink-0" style={{ minWidth: 84 }}>
+                        {map.code || 'ProductCode'}{map.acc && <span className="text-muted fw-normal"> + {map.acc}</span>}
+                      </span>
+                      <span style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{current.rawText}</span>
+                      <CopyButton text={current.rawText} what="the Form's product code cell" />
+                    </div>
 
-                {/* Stage ① — what the Product Spec already knew. */}
-                {knownStats && (
-                  <div className="mb-2 px-2 py-1 rounded d-flex align-items-center gap-2 flex-wrap"
-                    style={{ background: '#d1e7dd', border: '1px solid #a3cfbb', fontSize: 11, color: '#0f5132' }}>
-                    {knownStats.exactCount > 0 && (
-                      <span>
-                        <MaterialIcon name="check_circle" size={13} /> {knownStats.exactCount} code
-                        {knownStats.exactCount === 1 ? '' : 's'} already in your Product Spec — painted for you
-                      </span>
-                    )}
-                    {knownStats.variantCount > 0 && (
-                      <span style={{ color: '#856404' }}>
-                        <MaterialIcon name="warning" size={12} /> {knownStats.variantCount} variant{knownStats.variantCount === 1 ? '' : 's'}{' '}
-                        <InfoTip size={11}>Known codes with something extra, marked amber. You decide.</InfoTip>
-                      </span>
-                    )}
-                    {knownStats.adjacentCount > 0 && (
-                      <span style={{ color: '#856404' }}>
-                        <MaterialIcon name="warning" size={12} /> {knownStats.adjacentCount} side by side{' '}
-                        <InfoTip size={11}>Known codes next to each other. Painting both would merge them, so neither was painted.</InfoTip>
-                      </span>
-                    )}
-                    {preKnownRows && (
-                      <Button size="sm" variant="link" className="p-0 ms-auto" style={{ fontSize: 10 }}
-                        onClick={undoKnownPaint} title="Un-paint everything matched from the spec">
-                        Undo all
-                      </Button>
-                    )}
+                    <PaintPalette
+                      brush={brush} onBrush={setBrush}
+                      scope={scope} onScope={setScope}
+                      suggestedCount={suggested.length}
+                      onAcceptSuggestions={acceptRowSuggestions}
+                      showBoundaries={showBoundaries} onShowBoundaries={setShowBoundaries}
+                      undo={undoSnap} onUndo={undoLastPaint}
+                    />
+
+                    {/* The field and what it yields are ONE thing: paint above, codes
+                        promote onto their own line below. */}
+                    <div className="border rounded mb-3" style={{ background: '#fff' }}>
+                      <div className="p-3" style={{ minHeight: 110, display: 'flex', alignItems: 'center' }}>
+                        <CodeChips
+                          row={current}
+                          brush={brush}
+                          onSweep={paint}
+                          suggested={suggested}
+                          known={knownIdx}
+                          variants={variantIdx}
+                          showBoundaries={showBoundaries}
+                        />
+                      </div>
+                      <div className="px-3 pb-2 pt-1" style={{ background: '#fcfcfd', borderTop: '1px solid #e9ecef' }}>
+                        <CaptureLines
+                          captures={readout.captures}
+                          discarded={readout.discarded}
+                          onEditNote={(code, text) => editNote(current.id, code, text)}
+                          onMoveNote={handleMoveNote}
+                          onMoveNoteWord={handleMoveNoteWord}
+                        />
+                      </div>
+                    </div>
+
+                    <Button size="sm" variant="primary" onClick={confirmAndAdvance}>
+                      {current.confirmed ? 'Confirmed — next' : 'Confirm & next'}
+                      {suggested.length > 0 && <> (takes {suggested.length} suggested)</>} <kbd>Enter</kbd>
+                    </Button>
                   </div>
                 )}
-
-                <PaintPalette
-                  brush={brush} onBrush={setBrush}
-                  scope={scope} onScope={setScope}
-                  suggestedCount={suggested.length}
-                  onAcceptSuggestions={acceptRowSuggestions}
-                  showBoundaries={showBoundaries} onShowBoundaries={setShowBoundaries}
-                  undo={undoSnap} onUndo={undoLastPaint}
-                />
-
-                {/* The field and what it yields are ONE thing: paint above, codes
-                    promote onto their own line below. */}
-                <div className="border rounded mb-3" style={{ background: '#fff' }}>
-                  <div className="p-3" style={{ minHeight: 110, display: 'flex', alignItems: 'center' }}>
-                    <CodeChips
-                      row={current}
-                      brush={brush}
-                      onSweep={paint}
-                      suggested={suggested}
-                      known={knownIdx}
-                      variants={variantIdx}
-                      showBoundaries={showBoundaries}
-                    />
-                  </div>
-                  <div className="px-3 pb-2 pt-1" style={{ background: '#fcfcfd', borderTop: '1px solid #e9ecef' }}>
-                    <CaptureLines
-                      captures={readout.captures}
-                      discarded={readout.discarded}
-                      onEditNote={(code, text) => editNote(current.id, code, text)}
-                      onMoveNote={handleMoveNote}
-                      onMoveNoteWord={handleMoveNoteWord}
-                    />
-                  </div>
-                </div>
-
-                <Button size="sm" variant="primary" onClick={confirmAndAdvance}>
-                  {current.confirmed ? 'Confirmed — next' : 'Confirm'}
-                  {suggested.length > 0 && <> (takes {suggested.length} suggested)</>} <kbd>Enter</kbd>
-                </Button>
-              </>
-            )}
+              />
+            </div>
           </div>
 
           {/* Compare + stage */}
@@ -1350,7 +1462,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       <ElementTypesWindow
         show={!!bulkProposals || reviewingExisting}
         view={bulkProposals ? 'new' : 'existing'}
-        onHide={() => { setBulkProposals(null); setReviewingExisting(false) }}
+        onHide={() => { setBulkProposals(null); setBulkOpen(false); setReviewingExisting(false) }}
         bulk={bulkProposals ? {
           proposals: bulkProposals.proposals,
           newFamilies: bulkProposals.newFamilies,

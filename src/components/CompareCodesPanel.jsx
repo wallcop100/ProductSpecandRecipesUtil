@@ -50,9 +50,9 @@ function CodeDiff({ code, other }) {
 }
 
 /** The code's status in StatusChip terms: one tone and one icon per colour. */
-const TONE = { green: 'ok', amber: 'warn', blue: 'info', grey: 'neutral' }
-const ICON = { green: 'check_circle', amber: 'difference', blue: 'repeat', grey: 'fiber_new' }
-const MEANS = { green: 'Already in the Product Spec', amber: 'Close to a spec code', blue: 'New, used more than once', grey: 'New' }
+export const TONE = { green: 'ok', amber: 'warn', blue: 'info', grey: 'neutral' }
+export const ICON = { green: 'check_circle', amber: 'difference', blue: 'repeat', grey: 'fiber_new' }
+export const MEANS = { green: 'Already in the Product Spec', amber: 'Close to a spec code', blue: 'New, used more than once', grey: 'New' }
 /** What each colour means (see classify in utils/productCodes). A colour name says nothing. */
 export const STATUS_LABEL = { green: 'in spec', amber: 'variant', blue: 'repeated', grey: 'new' }
 const statusTip = e => ({

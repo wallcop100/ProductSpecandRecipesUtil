@@ -21,7 +21,7 @@ export default function StatusChip({ tone = 'neutral', icon, label, tip, childre
     <span className="d-inline-flex align-items-center gap-1 rounded"
       style={{ background: t.bg, color: t.fg, fontSize: size === 'xs' ? 10 : 11,
         padding: size === 'xs' ? '0 4px' : '1px 6px', flexShrink: 0, cursor: tip ? 'help' : 'default', ...style }}
-      tabIndex={tip ? 0 : undefined} aria-label={typeof tip === 'string' ? `${label}: ${tip}` : undefined} {...rest}>
+      tabIndex={tip ? 0 : undefined} aria-label={typeof tip === 'string' && typeof label === 'string' ? `${label}: ${tip}` : undefined} {...rest}>
       {icon && <MaterialIcon name={icon} size={size === 'xs' ? 11 : 13} />}
       {label}
       {children}
