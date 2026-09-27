@@ -186,34 +186,73 @@ function preamble(sheet, indexLine) {
 
 // --- PS / DB (unique-key) -------------------------------------------------
 /**
- * The DesignDB's ElementTypes sheet, kept in line after every patch: sorted by ParentRef
- * then Ref (Excel's order: blanks last), SortOrder rewritten 1..N down the sheet, and
- * every collection row (IsCollection = Y, or named as another row's ParentRef) purple
- * with white bold text. Done in the workbook, so it covers rows the tool never loaded.
+ * The DesignDB's ElementTypes sheet, kept in line after every patch: in TREE order — each
+ * family row, then its members (sub-families nested in place), families and members by
+ * Ref — written as SortOrder 1..N and the rows put in that order (ET-CABLES 1, ET-LC1 2 …).
+ * Whole rows are moved by the script itself, never by Excel's sort (which on a partial
+ * filter / Table range leaves the other columns behind),
+ * and every FAMILY row (named as another row's ParentRef) purple with white bold text.
+ * Wrappers are IsCollection too but are not families, so they stay plain. Done in the workbook, so it covers rows the tool never loaded.
  */
-const DB_TIDY = `    // Keep the sheet in line: sort by ParentRef > Ref, SortOrder 1..N, collection rows purple.
+const DB_TIDY = `    // Keep the sheet in line: a tree order — each family, then its members (sub-families
+    // nested inside), both by Ref — written as SortOrder 1..N, the sheet sorted by it, and
+    // family rows purple.
     {
       const n = apR;   // header + every row, including the ones just added
-      const cRef = col["Ref"], cPar = col["ParentRef"], cSort = col["SortOrder"], cColl = col["IsCollection"];
-      if (cRef >= 0 && cPar >= 0 && n > 2) {
-        const body = S.getRangeByIndexes(1, 0, n - 1, nCols);
-        body.getSort().apply([{ key: cPar, ascending: true }, { key: cRef, ascending: true }]);
-        if (cSort >= 0) {
-          const nums: number[][] = [];
-          for (let i = 1; i < n; i++) nums.push([i]);
-          S.getRangeByIndexes(1, cSort, n - 1, 1).setValues(nums);
-        }
+      const cRef = col["Ref"], cPar = col["ParentRef"], cSort = col["SortOrder"];
+      if (cRef >= 0 && cPar >= 0 && cSort >= 0 && n > 2) {
         const refs = S.getRangeByIndexes(1, cRef, n - 1, 1).getValues();
         const pars = S.getRangeByIndexes(1, cPar, n - 1, 1).getValues();
-        const colls = cColl >= 0 ? S.getRangeByIndexes(1, cColl, n - 1, 1).getValues() : null;
-        const parents: { [key: string]: boolean } = {};
-        for (const p of pars) { const k = String(p[0]).trim(); if (k !== "") parents[k] = true; }
+        const refOf = (i: number): string => String(refs[i][0]).trim();
+        const isRef: { [key: string]: boolean } = {};
+        for (let i = 0; i < refs.length; i++) if (refOf(i) !== "") isRef[refOf(i)] = true;
+        const kids: { [key: string]: number[] } = {};
+        const roots: number[] = [];
         for (let i = 0; i < refs.length; i++) {
-          const ref = String(refs[i][0]).trim();
+          const ref = refOf(i);
           if (ref === "") continue;
-          const isColl = parents[ref] || (colls !== null && String(colls[i][0]).trim().toUpperCase() === "Y");
-          if (!isColl) continue;
-          const row = S.getRangeByIndexes(i + 1, 0, 1, nCols).getFormat();
+          const par = String(pars[i][0]).trim();
+          if (par !== "" && par !== ref && isRef[par]) {
+            if (!kids[par]) kids[par] = [];
+            kids[par].push(i);
+          } else roots.push(i);
+        }
+        // Natural order, case-insensitive: LC2 before LC11.
+        const byRef = (a: number, b: number): number => refOf(a).localeCompare(refOf(b), undefined, { numeric: true, sensitivity: "base" });
+        const rank: number[] = [];
+        for (let i = 0; i < refs.length; i++) rank.push(0);
+        let next = 1;
+        const visit = (i: number, depth: number): void => {
+          if (rank[i] !== 0 || depth > 50) return;
+          rank[i] = next++;
+          const k = kids[refOf(i)];
+          if (k) { k.sort(byRef); for (const j of k) visit(j, depth + 1); }
+        };
+        roots.sort(byRef);
+        for (const i of roots) visit(i, 0);
+        for (let i = 0; i < refs.length; i++) if (rank[i] === 0) rank[i] = next++;   // blank refs, loops: last
+        // Reorder WHOLE rows ourselves — every column with values, formulas kept — and write
+        // them back. Excel's sort is not used: on a sheet whose filter / Table covers only some
+        // columns it sorts those and leaves the rest (InternalNotesText…) behind on other rows.
+        const block = S.getRangeByIndexes(1, 0, n - 1, nCols);
+        const cells = block.getFormulas();
+        const order: number[] = [];
+        for (let i = 0; i < cells.length; i++) order.push(i);
+        order.sort((a, b) => rank[a] - rank[b]);
+        const sorted = order.map(i => { const row = cells[i].slice(); row[cSort] = rank[i]; return row; });
+        block.setFormulas(sorted);
+
+        // Rows moved, so the old colours no longer belong to them: plain first, then families
+        // purple / white bold. Wrappers (IsCollection but no members) stay plain.
+        const fmt = block.getFormat();
+        fmt.getFill().clear();
+        fmt.getFont().setColor("#000000");
+        fmt.getFont().setBold(false);
+        const parents: { [key: string]: boolean } = {};
+        for (const key of Object.keys(kids)) parents[key] = true;
+        for (let r = 0; r < sorted.length; r++) {
+          if (!parents[String(sorted[r][cRef]).trim()]) continue;
+          const row = S.getRangeByIndexes(r + 1, 0, 1, nCols).getFormat();
           row.getFill().setColor("#7030A0");
           row.getFont().setColor("#FFFFFF");
           row.getFont().setBold(true);
@@ -295,7 +334,7 @@ export function buildPsScript(psChanges, filename = 'Product Spec') {
 
 export function buildDbScript(dbChanges, filename = 'ElementTypes (DB)') {
   return buildUniqueKeyScript(dbChanges, DB_FIELD_TO_EXCEL, 'ElementTypes', 'Ref', filename, {
-    withEntityType: false, tidy: DB_TIDY, tidyCols: ['ParentRef', 'SortOrder', 'IsCollection'],
+    withEntityType: false, tidy: DB_TIDY, tidyCols: ['ParentRef', 'SortOrder'],
   })
 }
 
