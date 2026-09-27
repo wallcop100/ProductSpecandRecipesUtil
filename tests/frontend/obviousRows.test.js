@@ -19,6 +19,9 @@ describe('an obvious row', () => {
   test('two code words side by side (one merged capture) are not obvious', () => {
     expect(isObvious(painted('QC5012 QC5013', ['QC5012', 'QC5013']))).toBe(false)
   })
+  test('a stray slash beside the code does not make it doubtful', () => {
+    expect(isObvious(painted('EYP-TA-R-CR-25-700 /', ['EYP-TA-R-CR-25-700', '/']))).toBe(true)
+  })
   test('a second code hiding as a note is not obvious', () => {
     expect(isObvious(painted('QC5010 A00665.40', ['QC5010']))).toBe(false)
   })

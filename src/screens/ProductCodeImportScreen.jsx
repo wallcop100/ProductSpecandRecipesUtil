@@ -1068,7 +1068,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
           progress={{
             1: rows.length ? `${rows.length - remaining}/${rows.length} rows` : undefined,
             2: entries.length ? `${entries.length - unassigned.length}/${entries.length} codes` : undefined,
-            3: staged ? 'nothing written yet — add them in the builder' : 'in the builder',
+            3: staged ? 'next: add them in the builder' : 'in the builder',
           }}
         />
       </div>
@@ -1330,8 +1330,22 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
               ) : null}
               <Button variant={leftBehind === 0 ? 'success' : 'outline-success'} size="sm" className="w-100"
                 disabled={!canStage} onClick={handleStage}>
-                Stage {stageable}{leftBehind > 0 && <> of {entries.length}</>} code{stageable === 1 && leftBehind === 0 ? '' : 's'}
+                <MaterialIcon name="playlist_add" size={14} /> Add {stageable}{leftBehind > 0 && <> of {entries.length}</>} to Product Spec
               </Button>
+              <div className="text-muted mt-1 d-flex align-items-center gap-1" style={{ fontSize: 10 }}>
+                Recipes are not touched{' '}
+                <InfoTip size={11}>
+                  Writes a Product Spec row (code and maker) for each code with an ElementType, and remembers
+                  what the Form asks for per position. You then add each product to its recipe in the builder,
+                  where the Side-by-Side pane lists them.
+                </InfoTip>
+                {refProblems > 0 && (
+                  <StatusChip size="xs" tone="warn" icon="link_off" role="button" aria-label="Refs needing a PositionType"
+                    label={`${refProblems} ref${refProblems === 1 ? '' : 's'} unmatched`}
+                    tip="Rows under these Form refs capture nothing until they are matched to a PositionType. Click to fix."
+                    onClick={() => setRefsOpen(true)} style={{ cursor: 'pointer', marginLeft: 'auto' }} />
+                )}
+              </div>
               {leftBehind > 0 && (
                 <div className="text-muted mt-1" style={{ fontSize: 10 }}>
                   {collisions.length > 0 && <>{collisions.length} differing notes · </>}
@@ -1377,8 +1391,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
 
 
             <div className="text-muted mt-3" style={{ fontSize: 10 }}>
-              <MaterialIcon name="info" size={10} /> Notes become the ElementType Description in the DesignDB,
-              and reach it through the ElementTypes patch script at export.
+              Notes → ElementType Description <InfoTip size={11}>A code's note becomes its ElementType's Description in the DesignDB, through the ElementTypes patch script at export.</InfoTip>
             </div>
           </div>
         </div>
@@ -1402,7 +1415,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       <Modal show={stagedOpen && !!staged} onHide={() => setStagedOpen(false)} centered>
         <Modal.Header closeButton>
           <Modal.Title style={{ fontSize: 16 }}>
-            <MaterialIcon name="check_circle" size={18} style={{ color: '#198754' }} /> Form template attached
+            <MaterialIcon name="check_circle" size={18} style={{ color: '#198754' }} /> Added to the Product Spec
           </Modal.Title>
         </Modal.Header>
         <Modal.Body style={{ fontSize: 13 }}>
@@ -1411,23 +1424,19 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
               <div>
                 <strong>{staged.products}</strong> product{staged.products === 1 ? '' : 's'} across{' '}
                 <strong>{staged.positions}</strong> PositionType{staged.positions === 1 ? '' : 's'}
-                {staged.codes > 0 && <> · {staged.codes} product spec row{staged.codes === 1 ? '' : 's'} staged</>}.
-              </div>
-              <div className="mt-2 text-muted">
-                No recipe was touched. Go to the builder and add each product where it belongs —
-                the Side-by-Side pane shows what the Form asks for, position by position.
+                {staged.codes > 0 && <> · {staged.codes} new Product Spec row{staged.codes === 1 ? '' : 's'}</>}{' '}
+                <InfoTip>No recipe was touched. In the builder, the Side-by-Side pane shows what the Form asks for, position by position, and adds each product in one click.</InfoTip>
               </div>
               {staged.unrouted > 0 && (
-                <div className="mt-2 text-muted">
-                  {staged.unrouted} row{staged.unrouted === 1 ? '' : 's'} captured nothing — their Form ref
-                  resolves to no PositionType, or you skipped it.
+                <div className="mt-2" style={{ color: '#856404' }}>
+                  <MaterialIcon name="link_off" size={13} /> {staged.unrouted} row{staged.unrouted === 1 ? '' : 's'} captured nothing{' '}
+                  <InfoTip>Their Form ref matches no PositionType, or you skipped it.</InfoTip>
                 </div>
               )}
               {staged.leftBehind > 0 && (
-                <div className="mt-2 text-muted">
-                  {staged.leftBehind} code{staged.leftBehind === 1 ? '' : 's'} still {staged.leftBehind === 1 ? 'has' : 'have'} no
-                  ElementType. Your draft is kept — come back and stage them whenever you like.
-                  {staged.pending > 0 && <> The Side-by-Side pane lists them where the Form asks for them.</>}
+                <div className="mt-2" style={{ color: '#856404' }}>
+                  <MaterialIcon name="help" size={13} /> {staged.leftBehind} code{staged.leftBehind === 1 ? '' : 's'} still without an ElementType{' '}
+                  <InfoTip>Your draft is kept: come back and add them whenever you like.{staged.pending > 0 && <> The Side-by-Side pane lists them where the Form asks for them.</>}</InfoTip>
                 </div>
               )}
 
@@ -1443,9 +1452,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                     {staged.diff.changed.length} changed · {staged.diff.moved.length} moved
                   </div>
                   {staged.diff.removed.length > 0 && (
-                    <div className="text-muted" style={{ fontSize: 11 }}>
-                      Removed codes are flagged where they appear, never deleted for you.
-                    </div>
+                    <InfoTip size={11}>Removed codes are flagged where they appear, never deleted for you.</InfoTip>
                   )}
                 </div>
               )}
@@ -1473,14 +1480,11 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
           )}
         </Modal.Body>
         <Modal.Footer className="d-flex align-items-center">
-          <span className="text-muted me-auto" style={{ fontSize: 11 }}>
-            Product Spec changes leave via <strong>Export changes</strong>.
-          </span>
-          <Button variant="outline-secondary" size="sm" onClick={() => setStagedOpen(false)}>Close</Button>
-          {onReviewPositions && staged && (
-            <Button size="sm" variant="success"
+          <Button variant="link" size="sm" className="text-muted me-auto" onClick={() => setStagedOpen(false)}>Stay here</Button>
+          {onReviewPositions && staged && staged.positions > 0 && (
+            <Button size="sm" variant="primary"
               onClick={() => { setStagedOpen(false); onReviewPositions(Object.keys(staged.byPosition || {})) }}>
-              <MaterialIcon name="playlist_add_check" size={14} /> Build recipes →
+              <MaterialIcon name="playlist_add_check" size={14} /> Build recipes for {staged.positions === 1 ? 'this position' : `these ${staged.positions} positions`} →
             </Button>
           )}
         </Modal.Footer>

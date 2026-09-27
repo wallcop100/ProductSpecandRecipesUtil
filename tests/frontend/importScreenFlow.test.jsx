@@ -177,4 +177,23 @@ describe('the Form, as a table', () => {
     // no per-code Create buttons left in the panel
     expect(screen.queryByText(/^Create /)).toBeNull()
   })
+
+  test('Add to Product Spec, then straight on to building those positions', async () => {
+    readSheet.mockResolvedValue({ sheets: ['S'], sheet: 'S', headers: HEAD, rows: [
+      { PositionTypeRef: 'A1', ManufacturerName: 'iGuzzini', ProductCode: 'QC5010' },
+    ] })
+    const onReviewPositions = vi.fn()
+    useStore.setState({
+      projectId: 1, positionTypes: [{ PositionTypeRef: 'A1' }], elementTypes: [{ ElementTypeRef: 'ET-PS-01' }], recipes: [], importDraft: null,
+      psRows: [{ ElementTypeRef: 'ET-PS-01', Manufacturer: 'iGuzzini', ProductCode: 'QC5010' }],
+    })
+    window.electronAPI.db.setFormCaptures = vi.fn().mockResolvedValue(undefined)
+    render(<ProductCodeImportScreen onBack={vi.fn()} onReviewPositions={onReviewPositions} />)
+    fireEvent.click(await screen.findByText('Choose spreadsheet…'))
+    await screen.findByTestId('form-table')
+    fireEvent.click(screen.getAllByLabelText(/^Confirm row/)[0])
+    fireEvent.click(await screen.findByRole('button', { name: /Add 1 to Product Spec/ }))
+    fireEvent.click(await screen.findByRole('button', { name: /Build recipes for this position/ }))
+    expect(onReviewPositions).toHaveBeenCalledWith(['A1'])
+  })
 })

@@ -18,7 +18,8 @@ export function isObvious(row, rules = {}, signals = {}, captureOpts = {}) {
   const caps = deriveCaptures(taken, captureOpts).captures
   if (caps.length !== 1 || !codeLike(caps[0].code)) return false   // a lone word ("TBC") is not a product
   // Code words side by side merge into one capture ("QC5012 QC5013"): two products or one?
-  if (/\s/.test(caps[0].code)) return false
+  // (A stray "/" or "+" beside the code doesn't count as a second word.)
+  if (caps[0].code.split(/\s+/).filter(w => /[A-Za-z0-9]/.test(w)).length !== 1) return false
   const [a, b] = caps[0].range
   return !taken.tokens.some((t, i) => (i < a || i > b) && taken.roles[i] !== 'discard' && codeLike(t.text))
 }
