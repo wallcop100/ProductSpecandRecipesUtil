@@ -48,6 +48,7 @@ export default function FormTable({
             <div className="d-flex flex-wrap gap-1 mt-1">
               {inf.codes.map(c => (
                 <StatusChip key={c.code} size="xs" tone={c.main ? 'info' : 'neutral'} icon={c.main ? 'star' : 'add_link'}
+                  aria-label={`${c.code} ${c.main ? 'main' : 'extra — make main'}`} role={c.main ? undefined : 'button'}
                   label={<><span style={{ fontFamily: 'monospace' }}>{c.code}</span> · {c.main ? 'main' : 'extra'}</>}
                   tip={c.main ? 'The main product of this cell' : 'An extra (accessory) of the main product. Click to make it main.'}
                   onClick={c.main ? undefined : e => { e.stopPropagation(); onMakeMain?.(row.id, c.code) }}

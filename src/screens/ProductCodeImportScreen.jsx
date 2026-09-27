@@ -38,7 +38,7 @@ import { matchShape } from '../utils/codeShapes'
 import shippedShapes from '../data/codeShapes.json'
 import { resolveFormRefs, buildRefMap, targetFor } from '../utils/ptResolve'
 import { applyKnownCodes, knownTokenIndices } from '../utils/knownCodes'
-import { joinAccessories, isPlaceholder } from '../utils/accessories'
+import { joinAccessories, isPlaceholder, accessoriesFrom, leadOf } from '../utils/accessories'
 import { diffCaptures, wrapperDivergence } from '../utils/formSpec'
 
 /** Fuzzy header match: exact normalised hit first, else shortest header containing it. */
@@ -235,10 +235,14 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     // The Accessories column (when mapped) is more codes for the same position.
     .map(r => ({ r, text: joinAccessories(r[map.code], map.acc ? r[map.acc] : null) }))
     .filter(({ text }) => text !== '')
-    .map(({ r, text }, i) => makeRow(i, text, {
-      positionType: String(r[map.pt] ?? '').trim(),
-      manufacturer: String(r[map.mfr] ?? '').trim(),
-      context: captureContext(r, capturable),
+    .map(({ r, text }, i) => ({
+      ...makeRow(i, text, {
+        positionType: String(r[map.pt] ?? '').trim(),
+        manufacturer: String(r[map.mfr] ?? '').trim(),
+        context: captureContext(r, capturable),
+      }),
+      // Where the Accessories text starts: codes after it are extras by default.
+      accFrom: accessoriesFrom(r[map.code], text),
     })), [rawRows, map, capturable])
 
   /**
@@ -293,6 +297,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     rows: rows.map(r => ({
       id: r.id, rawText: r.rawText, positionType: r.positionType, manufacturer: r.manufacturer,
       context: r.context, overrides: r.overrides, noteOverride: r.noteOverride, confirmed: r.confirmed,
+      accFrom: r.accFrom ?? null, leadCode: r.leadCode ?? null,
     })),
   }), [source, sheet, step, map, rules, assignments, resolutions, refOverrides, dirStats, keptSeparate, rows])
 
@@ -312,6 +317,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       overrides: r.overrides || {},
       noteOverride: r.noteOverride || {},
       confirmed: !!r.confirmed,
+      accFrom: r.accFrom ?? null,
+      leadCode: r.leadCode ?? null,
     }))
     // The auto-paint lives in `overrides` and came back with them; recompute the
     // MATCH so the amber variant marks and the banner survive a resume too. It is
@@ -697,8 +704,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     }
     const leads = new Set()
     for (const r of confirmed) {
-      const first = deriveCaptures(r, captureOpts).captures[0]
-      if (first) leads.add(norm(first.code))
+      const lead = leadOf(r, deriveCaptures(r, captureOpts).captures)
+      if (lead) leads.add(norm(lead.code))
     }
     return proposeElementTypes(unassigned, {
       elementTypes, psRows, recipes, positionTypes, collectionRefs: dbCollectionRefs,
@@ -816,7 +823,10 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       if (!contextByPosition[target] && Object.keys(row.context || {}).length) {
         contextByPosition[target] = row.context
       }
-      for (const cap of deriveCaptures(row, captureOpts).captures) {
+      const caps = deriveCaptures(row, captureOpts).captures
+      const lead = leadOf(row, caps)
+      for (const cap of caps) {
+        const role = cap === lead ? 'lead' : 'extra'
         const et = codeToEt.get(norm(cap.code))
         if (!et) {
           // The Form asked for this product. Nobody has said what it is yet.
@@ -824,7 +834,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
           const pend = pendingByPos.get(target)
           if (!pend.some(x => norm(x.code) === norm(cap.code))) {
             pend.push({
-              code: cap.code, note: cap.note,
+              code: cap.code, note: cap.note, role,
               manufacturer: row.manufacturer || '', formRef: row.positionType,
             })
           }
@@ -834,7 +844,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
         const list = byPos.get(target)
         if (!list.some(x => x.elementTypeRef === et)) {
           list.push({
-            elementTypeRef: et, code: cap.code, note: cap.note,
+            elementTypeRef: et, code: cap.code, note: cap.note, role,
             manufacturer: row.manufacturer || '', formRef: row.positionType,
           })
         }
@@ -919,7 +929,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
 
   const rowInfo = useCallback(row => {
     const caps = deriveCaptures(row, captureOpts).captures
-    const lead = caps[0]
+    const lead = leadOf(row, caps)
     const codes = caps.map(c => ({ code: c.code, main: c === lead, etRef: etFor(c.code, row.manufacturer) }))
     const st = lead ? classify(lead.code, ctx, row.manufacturer).status : null
     const status = !lead
@@ -1212,6 +1222,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                 onToggleConfirm={toggleConfirm}
                 onNeedsET={openETFor}
                 onFixRef={() => setStep('resolve')}
+                onMakeMain={(rowId, code) => patchRow(rowId, r => ({ ...r, leadCode: code }))}
                 expandedId={expandedId}
                 onExpand={id => { setExpandedId(id); if (id != null) setFocusId(id); setUndoSnap(null) }}
                 focusId={focusId}

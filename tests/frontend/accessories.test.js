@@ -31,3 +31,28 @@ describe('the Accessories column is more codes for the same position', () => {
     expect(words).toContain('UN22SVDW214012G2')
   })
 })
+
+import { accessoriesFrom, leadOf } from '../../src/utils/accessories.js'
+import { deriveCaptures } from '../../src/utils/productCodes.js'
+
+describe('the main product of a cell', () => {
+  const paint = (row, words) => ({ ...row, roles: row.tokens.map(t => (words.includes(t.text) ? 'code' : 'note')) })
+
+  test('accessories start after the product code', () => {
+    expect(accessoriesFrom('QC50', 'QC50\nUN22')).toBe(5)
+    expect(accessoriesFrom('QC50', 'QC50')).toBeNull()
+    expect(accessoriesFrom('', 'UN22')).toBe(0)
+  })
+
+  test('the ProductCode cell leads; accessories are extras even when painted first', () => {
+    const joined = joinAccessories('UN22SVDW214012G2', 'UN223DFP25241000')
+    const row = paint({ ...makeRow(0, joined), accFrom: accessoriesFrom('UN22SVDW214012G2', joined) }, ['UN22SVDW214012G2', 'UN223DFP25241000'])
+    expect(leadOf(row, deriveCaptures(row).captures).code).toBe('UN22SVDW214012G2')
+  })
+
+  test('a chosen main code wins', () => {
+    const joined = joinAccessories('A1', 'B2')
+    const row = { ...paint(makeRow(0, joined), ['A1', 'B2']), accFrom: 3, leadCode: 'B2' }
+    expect(leadOf(row, deriveCaptures(row).captures).code).toBe('B2')
+  })
+})

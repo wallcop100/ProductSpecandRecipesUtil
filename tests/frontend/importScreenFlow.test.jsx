@@ -100,4 +100,22 @@ describe('the Form, as a table', () => {
     fireEvent.click(within(table).getAllByText('needs ET')[0])
     expect(await screen.findByText(/^New \(/)).toBeInTheDocument()
   })
+
+  test('an Accessories code is an extra; clicking it makes it the main product', async () => {
+    readSheet.mockResolvedValue({ sheets: ['S'], sheet: 'S', headers: [...HEAD, 'Accessories'],
+      rows: [{ PositionTypeRef: 'A1', ManufacturerName: 'LEDFlex', ProductCode: 'UN22SVDW', Accessories: 'UN223DFP' }] })
+    useStore.setState({ projectId: 1, positionTypes: [{ PositionTypeRef: 'A1' }], psRows: [], elementTypes: [], recipes: [], importDraft: null })
+    render(<ProductCodeImportScreen onBack={vi.fn()} onReviewPositions={vi.fn()} />)
+    fireEvent.click(await screen.findByText('Choose spreadsheet…'))
+    fireEvent.click(await screen.findByText('Start review →'))
+    const table = await screen.findByTestId('form-table')
+    // make both words codes: note → discard → code
+    for (const w of ['UN22SVDW', 'UN223DFP']) {
+      while (within(table).getByTitle(new RegExp(`“${w}”`)).dataset.role !== 'code') fireEvent.click(within(table).getByTitle(new RegExp(`“${w}”`)))
+    }
+    expect(within(table).getByLabelText('UN22SVDW main')).toBeInTheDocument()
+    fireEvent.click(within(table).getByLabelText('UN223DFP extra — make main'))
+    expect(within(table).getByLabelText('UN223DFP main')).toBeInTheDocument()
+    expect(within(table).getByLabelText('UN22SVDW extra — make main')).toBeInTheDocument()
+  })
 })
