@@ -74,12 +74,15 @@ export function driverOf(pt) {
   return 'NONE'
 }
 
-/** EXT when the position (or its family) says exterior / inground. */
+/**
+ * EXT only when the position's own family chain SAYS exterior (EXTERIOR-DOWNLIGHT…). An IP
+ * rating or an in-ground fitting is not evidence of being outside.
+ */
 export function envOf(pt, parentOf = () => null) {
   const chain = [pt?.PositionTypeRef ?? pt?.positionTypeRef, pt?.ParentRef ?? pt?.parentRef]
   let p = pt?.ParentRef ?? pt?.parentRef
   for (let i = 0; i < 4 && p; i++) { p = parentOf(p); if (p) chain.push(p) }
-  return chain.some(x => /EXT|INGROUND/.test(up(x))) ? 'EXT' : 'INT'
+  return chain.some(x => /EXTERIOR/.test(up(x))) ? 'EXT' : 'INT'
 }
 
 /**

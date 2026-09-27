@@ -1,6 +1,6 @@
 {
  "version": 1,
- "note": "Recipe patterns from finished projects (Kaizen psr_sql). Roles, levels, flags and how many positions of each kind carry them. No product codes. Rebuild: see src/utils/recipePatterns.js.",
+ "note": "Recipe patterns from finished projects (Kaizen psr_sql). Roles, levels, flags and how many positions of each kind carry them. No product codes. Exterior = the position's family says EXTERIOR (not IP / inground).",
  "sources": [
   "4343"
  ],
@@ -10,22 +10,11 @@
    "dl": "LOCAL",
    "env": "INT",
    "lvl": "I",
-   "role": "DRIVER",
-   "n": 24,
-   "of": 24,
-   "isContractItem": "Y",
-   "source": "4343"
-  },
-  {
-   "wk": "DL",
-   "dl": "LOCAL",
-   "env": "INT",
-   "lvl": "I",
    "role": "2PIN-PLUG",
    "n": 23,
    "of": 24,
-   "isContractItem": "Y",
-   "source": "4343"
+   "source": "4343",
+   "isContractItem": "Y"
   },
   {
    "wk": "DL",
@@ -35,8 +24,8 @@
    "role": "2PIN-SOCKET",
    "n": 23,
    "of": 24,
-   "isContractItem": "Y",
-   "source": "4343"
+   "source": "4343",
+   "isContractItem": "Y"
   },
   {
    "wk": "DL",
@@ -46,8 +35,8 @@
    "role": "5PIN-PLUG",
    "n": 23,
    "of": 24,
-   "isContractItem": "Y",
-   "source": "4343"
+   "source": "4343",
+   "isContractItem": "Y"
   },
   {
    "wk": "DL",
@@ -57,8 +46,19 @@
    "role": "5PIN-SR",
    "n": 23,
    "of": 24,
-   "isContractItem": "Y",
-   "source": "4343"
+   "source": "4343",
+   "isContractItem": "Y"
+  },
+  {
+   "wk": "DL",
+   "dl": "LOCAL",
+   "env": "INT",
+   "lvl": "I",
+   "role": "DRIVER",
+   "n": 24,
+   "of": 24,
+   "source": "4343",
+   "isContractItem": "Y"
   },
   {
    "wk": "DL",
@@ -68,19 +68,8 @@
    "role": "PS",
    "n": 23,
    "of": 24,
-   "isDesign": "Y",
-   "source": "4343"
-  },
-  {
-   "wk": "DL",
-   "dl": "LOCAL",
-   "env": "INT",
-   "lvl": "P",
-   "role": "WRAPPER",
-   "n": 24,
-   "of": 24,
-   "isDesign": "Y",
-   "source": "4343"
+   "source": "4343",
+   "isDesign": "Y"
   },
   {
    "wk": "DL",
@@ -90,8 +79,8 @@
    "role": "5PIN-SOCKET",
    "n": 23,
    "of": 24,
-   "isContractItem": "Y",
-   "source": "4343"
+   "source": "4343",
+   "isContractItem": "Y"
   },
   {
    "wk": "DL",
@@ -101,19 +90,19 @@
    "role": "5PIN-SR",
    "n": 23,
    "of": 24,
-   "isContractItem": "Y",
-   "source": "4343"
+   "source": "4343",
+   "isContractItem": "Y"
   },
   {
    "wk": "DL",
-   "dl": "REMOTE",
+   "dl": "LOCAL",
    "env": "INT",
-   "lvl": "I",
-   "role": "PS",
-   "n": 10,
-   "of": 10,
-   "isDesign": "Y",
-   "source": "4343"
+   "lvl": "P",
+   "role": "WRAPPER",
+   "n": 24,
+   "of": 24,
+   "source": "4343",
+   "isDesign": "Y"
   },
   {
    "wk": "DL",
@@ -123,8 +112,8 @@
    "role": "2PIN-REMOTE-PLUG",
    "n": 9,
    "of": 10,
-   "isContractItem": "Y",
-   "source": "4343"
+   "source": "4343",
+   "isContractItem": "Y"
   },
   {
    "wk": "DL",
@@ -134,19 +123,19 @@
    "role": "2PIN-REMOTE-SOCKET",
    "n": 7,
    "of": 10,
-   "isContractItem": "Y",
-   "source": "4343"
+   "source": "4343",
+   "isContractItem": "Y"
   },
   {
    "wk": "DL",
    "dl": "REMOTE",
    "env": "INT",
-   "lvl": "P",
-   "role": "WRAPPER",
+   "lvl": "I",
+   "role": "PS",
    "n": 10,
    "of": 10,
-   "isDesign": "Y",
-   "source": "4343"
+   "source": "4343",
+   "isDesign": "Y"
   },
   {
    "wk": "DL",
@@ -156,20 +145,19 @@
    "role": "2PIN-REMOTE-SOCKET",
    "n": 2,
    "of": 10,
-   "isContractItem": "Y",
-   "source": "4343"
+   "source": "4343",
+   "isContractItem": "Y"
   },
   {
-   "wk": "LIN",
+   "wk": "DL",
    "dl": "REMOTE",
-   "env": "EXT",
-   "lvl": "I",
-   "role": "FLEX",
-   "n": 11,
-   "of": 11,
-   "isContractItem": "Y",
-   "dimQtyMultiplier": 1,
-   "source": "4343"
+   "env": "INT",
+   "lvl": "P",
+   "role": "WRAPPER",
+   "n": 10,
+   "of": 10,
+   "source": "4343",
+   "isDesign": "Y"
   },
   {
    "wk": "LIN",
@@ -179,19 +167,31 @@
    "role": "2PIN-IP-PLUG",
    "n": 3,
    "of": 11,
-   "isContractItem": "Y",
-   "source": "4343"
+   "source": "4343",
+   "isContractItem": "Y"
   },
   {
    "wk": "LIN",
    "dl": "REMOTE",
    "env": "EXT",
-   "lvl": "P",
-   "role": "WRAPPER",
+   "lvl": "I",
+   "role": "FLEX",
    "n": 11,
    "of": 11,
-   "isDesign": "Y",
-   "source": "4343"
+   "source": "4343",
+   "isContractItem": "Y",
+   "dimQtyMultiplier": 1
+  },
+  {
+   "wk": "LIN",
+   "dl": "REMOTE",
+   "env": "EXT",
+   "lvl": "I",
+   "role": "OTHER",
+   "n": 7,
+   "of": 11,
+   "source": "4343",
+   "isContractItem": "Y"
   },
   {
    "wk": "LIN",
@@ -201,9 +201,20 @@
    "role": "MOUNT",
    "n": 8,
    "of": 11,
+   "source": "4343",
    "isContractItem": "Y",
-   "dimQtyMultiplier": 1,
-   "source": "4343"
+   "dimQtyMultiplier": 1
+  },
+  {
+   "wk": "LIN",
+   "dl": "REMOTE",
+   "env": "EXT",
+   "lvl": "P",
+   "role": "WRAPPER",
+   "n": 11,
+   "of": 11,
+   "source": "4343",
+   "isDesign": "Y"
   },
   {
    "wk": "LIN",
@@ -213,20 +224,8 @@
    "role": "2PIN-LIN-PLUG",
    "n": 21,
    "of": 33,
-   "isContractItem": "Y",
-   "source": "4343"
-  },
-  {
-   "wk": "LIN",
-   "dl": "REMOTE",
-   "env": "INT",
-   "lvl": "I",
-   "role": "TAPE",
-   "n": 19,
-   "of": 33,
-   "isContractItem": "Y",
-   "dimQtyMultiplier": 1,
-   "source": "4343"
+   "source": "4343",
+   "isContractItem": "Y"
   },
   {
    "wk": "LIN",
@@ -236,9 +235,9 @@
    "role": "CAP",
    "n": 17,
    "of": 33,
+   "source": "4343",
    "isContractItem": "Y",
-   "quantity": 2,
-   "source": "4343"
+   "quantity": 2
   },
   {
    "wk": "LIN",
@@ -248,9 +247,9 @@
    "role": "DIFF",
    "n": 17,
    "of": 33,
+   "source": "4343",
    "isContractItem": "Y",
-   "dimQtyMultiplier": 1,
-   "source": "4343"
+   "dimQtyMultiplier": 1
   },
   {
    "wk": "LIN",
@@ -260,9 +259,9 @@
    "role": "FLEX",
    "n": 12,
    "of": 33,
+   "source": "4343",
    "isContractItem": "Y",
-   "dimQtyMultiplier": 1,
-   "source": "4343"
+   "dimQtyMultiplier": 1
   },
   {
    "wk": "LIN",
@@ -272,9 +271,9 @@
    "role": "MOUNT",
    "n": 9,
    "of": 33,
+   "source": "4343",
    "isContractItem": "Y",
-   "dimQtyMultiplier": 1,
-   "source": "4343"
+   "dimQtyMultiplier": 1
   },
   {
    "wk": "LIN",
@@ -284,20 +283,21 @@
    "role": "PROFILE",
    "n": 8,
    "of": 33,
+   "source": "4343",
    "isContractItem": "Y",
-   "dimQtyMultiplier": 1,
-   "source": "4343"
+   "dimQtyMultiplier": 1
   },
   {
    "wk": "LIN",
    "dl": "REMOTE",
    "env": "INT",
-   "lvl": "P",
-   "role": "WRAPPER",
-   "n": 32,
+   "lvl": "I",
+   "role": "TAPE",
+   "n": 19,
    "of": 33,
-   "isDesign": "Y",
-   "source": "4343"
+   "source": "4343",
+   "isContractItem": "Y",
+   "dimQtyMultiplier": 1
   },
   {
    "wk": "LIN",
@@ -307,8 +307,8 @@
    "role": "2PIN-LIN-SOCKET",
    "n": 19,
    "of": 33,
-   "isContractItem": "Y",
-   "source": "4343"
+   "source": "4343",
+   "isContractItem": "Y"
   },
   {
    "wk": "LIN",
@@ -318,10 +318,22 @@
    "role": "CLIP",
    "n": 8,
    "of": 33,
+   "source": "4343",
    "isContractItem": "Y",
    "dimQtyMultiplier": 5,
-   "isInteger": "Y",
-   "source": "4343"
+   "isInteger": "Y"
+  },
+  {
+   "wk": "LIN",
+   "dl": "REMOTE",
+   "env": "INT",
+   "lvl": "P",
+   "role": "MOUNT",
+   "n": 7,
+   "of": 33,
+   "source": "4343",
+   "isContractItem": "Y",
+   "dimQtyMultiplier": 1
   },
   {
    "wk": "LIN",
@@ -331,21 +343,31 @@
    "role": "PROFILE",
    "n": 8,
    "of": 33,
+   "source": "4343",
    "isContractItem": "Y",
-   "dimQtyMultiplier": 1,
-   "source": "4343"
+   "dimQtyMultiplier": 1
   },
   {
    "wk": "LIN",
    "dl": "REMOTE",
    "env": "INT",
    "lvl": "P",
-   "role": "MOUNT",
-   "n": 7,
+   "role": "WRAPPER",
+   "n": 32,
    "of": 33,
-   "isContractItem": "Y",
-   "dimQtyMultiplier": 1,
-   "source": "4343"
+   "source": "4343",
+   "isDesign": "Y"
+  },
+  {
+   "wk": "PS",
+   "dl": "INTEGRAL",
+   "env": "EXT",
+   "lvl": "I",
+   "role": "OTHER",
+   "n": 4,
+   "of": 7,
+   "source": "4343",
+   "isContractItem": "Y"
   },
   {
    "wk": "PS",
@@ -355,8 +377,8 @@
    "role": "PS",
    "n": 7,
    "of": 7,
-   "isDesign": "Y",
-   "source": "4343"
+   "source": "4343",
+   "isDesign": "Y"
   },
   {
    "wk": "PS",
@@ -366,8 +388,8 @@
    "role": "2PIN-IP-SOCKET",
    "n": 5,
    "of": 5,
-   "isContractItem": "Y",
-   "source": "4343"
+   "source": "4343",
+   "isContractItem": "Y"
   },
   {
    "wk": "PS",
@@ -377,19 +399,8 @@
    "role": "2PIN-IP-PLUG",
    "n": 5,
    "of": 5,
-   "isContractItem": "Y",
-   "source": "4343"
-  },
-  {
-   "wk": "PS",
-   "dl": "LOCAL",
-   "env": "EXT",
-   "lvl": "P",
-   "role": "PS",
-   "n": 5,
-   "of": 5,
-   "isDesign": "Y",
-   "source": "4343"
+   "source": "4343",
+   "isContractItem": "Y"
   },
   {
    "wk": "PS",
@@ -399,8 +410,42 @@
    "role": "MOUNT",
    "n": 3,
    "of": 5,
+   "source": "4343",
+   "isContractItem": "Y"
+  },
+  {
+   "wk": "PS",
+   "dl": "LOCAL",
+   "env": "EXT",
+   "lvl": "P",
+   "role": "PS",
+   "n": 5,
+   "of": 5,
+   "source": "4343",
+   "isDesign": "Y"
+  },
+  {
+   "wk": "PS",
+   "dl": "NONE",
+   "env": "INT",
+   "lvl": "I",
+   "role": "OTHER",
+   "n": 1,
+   "of": 4,
+   "source": "4343",
+   "isContractItem": "Y"
+  },
+  {
+   "wk": "PS",
+   "dl": "NONE",
+   "env": "INT",
+   "lvl": "I",
+   "role": "OTHER",
+   "n": 1,
+   "of": 4,
+   "source": "4343",
    "isContractItem": "Y",
-   "source": "4343"
+   "quantity": 36
   },
   {
    "wk": "PS",
@@ -410,8 +455,8 @@
    "role": "PS",
    "n": 4,
    "of": 4,
-   "isDesign": "Y",
-   "source": "4343"
+   "source": "4343",
+   "isDesign": "Y"
   },
   {
    "wk": "PS",
@@ -420,53 +465,9 @@
    "lvl": "I",
    "role": "2PIN-IP-SOCKET",
    "n": 7,
-   "of": 22,
-   "isContractItem": "Y",
-   "source": "4343"
-  },
-  {
-   "wk": "PS",
-   "dl": "REMOTE",
-   "env": "EXT",
-   "lvl": "P",
-   "role": "PS",
-   "n": 22,
-   "of": 22,
-   "isDesign": "Y",
-   "source": "4343"
-  },
-  {
-   "wk": "PS",
-   "dl": "REMOTE",
-   "env": "EXT",
-   "lvl": "P",
-   "role": "FRAME",
-   "n": 12,
-   "of": 22,
-   "isContractItem": "Y",
-   "source": "4343"
-  },
-  {
-   "wk": "PS",
-   "dl": "REMOTE",
-   "env": "EXT",
-   "lvl": "P",
-   "role": "2PIN-REMOTE-PLUG",
-   "n": 8,
-   "of": 22,
-   "isContractItem": "Y",
-   "source": "4343"
-  },
-  {
-   "wk": "PS",
-   "dl": "REMOTE",
-   "env": "EXT",
-   "lvl": "P",
-   "role": "2PIN-REMOTE-SOCKET",
-   "n": 8,
-   "of": 22,
-   "isContractItem": "Y",
-   "source": "4343"
+   "of": 14,
+   "source": "4343",
+   "isContractItem": "Y"
   },
   {
    "wk": "PS",
@@ -475,20 +476,31 @@
    "lvl": "P",
    "role": "2PIN-IP-PLUG",
    "n": 7,
-   "of": 22,
-   "isContractItem": "Y",
-   "source": "4343"
+   "of": 14,
+   "source": "4343",
+   "isContractItem": "Y"
   },
   {
    "wk": "PS",
    "dl": "REMOTE",
-   "env": "INT",
+   "env": "EXT",
+   "lvl": "P",
+   "role": "FRAME",
+   "n": 5,
+   "of": 14,
+   "source": "4343",
+   "isContractItem": "Y"
+  },
+  {
+   "wk": "PS",
+   "dl": "REMOTE",
+   "env": "EXT",
    "lvl": "P",
    "role": "PS",
-   "n": 4,
-   "of": 4,
-   "isDesign": "Y",
-   "source": "4343"
+   "n": 14,
+   "of": 14,
+   "source": "4343",
+   "isDesign": "Y"
   },
   {
    "wk": "PS",
@@ -496,10 +508,10 @@
    "env": "INT",
    "lvl": "P",
    "role": "2PIN-REMOTE-PLUG",
-   "n": 3,
-   "of": 4,
-   "isContractItem": "Y",
-   "source": "4343"
+   "n": 11,
+   "of": 12,
+   "source": "4343",
+   "isContractItem": "Y"
   },
   {
    "wk": "PS",
@@ -507,10 +519,10 @@
    "env": "INT",
    "lvl": "P",
    "role": "2PIN-REMOTE-SOCKET",
-   "n": 3,
-   "of": 4,
-   "isContractItem": "Y",
-   "source": "4343"
+   "n": 11,
+   "of": 12,
+   "source": "4343",
+   "isContractItem": "Y"
   },
   {
    "wk": "PS",
@@ -518,33 +530,76 @@
    "env": "INT",
    "lvl": "P",
    "role": "FRAME",
-   "n": 3,
-   "of": 4,
-   "isContractItem": "Y",
-   "source": "4343"
+   "n": 10,
+   "of": 12,
+   "source": "4343",
+   "isContractItem": "Y"
   },
   {
-   "wk": "TRACK",
+   "wk": "PS",
    "dl": "REMOTE",
    "env": "INT",
    "lvl": "P",
-   "role": "TRACK",
-   "isDesign": "Y",
-   "dimQtyMultiplier": 1,
-   "n": 1,
-   "of": 1,
-   "source": "4343 (K1)"
+   "role": "PS",
+   "n": 12,
+   "of": 12,
+   "source": "4343",
+   "isDesign": "Y"
   },
   {
    "wk": "TRACK",
-   "dl": "REMOTE",
+   "dl": "INTEGRAL",
+   "env": "INT",
+   "lvl": "I",
+   "role": "5PIN-PLUG",
+   "n": 2,
+   "of": 2,
+   "source": "4343",
+   "isContractItem": "Y"
+  },
+  {
+   "wk": "TRACK",
+   "dl": "INTEGRAL",
+   "env": "INT",
+   "lvl": "I",
+   "role": "5PIN-SR",
+   "n": 2,
+   "of": 2,
+   "source": "4343",
+   "isContractItem": "Y"
+  },
+  {
+   "wk": "TRACK",
+   "dl": "INTEGRAL",
    "env": "INT",
    "lvl": "P",
-   "role": "2PIN-LIN-SOCKET",
-   "isContractItem": "Y",
-   "n": 1,
-   "of": 1,
-   "source": "4343 (K1)"
+   "role": "5PIN-SOCKET",
+   "n": 2,
+   "of": 2,
+   "source": "4343",
+   "isContractItem": "Y"
+  },
+  {
+   "wk": "TRACK",
+   "dl": "INTEGRAL",
+   "env": "INT",
+   "lvl": "P",
+   "role": "5PIN-SR",
+   "n": 2,
+   "of": 2,
+   "source": "4343",
+   "isContractItem": "Y"
+  },
+  {
+   "wk": "TRACK",
+   "dl": "INTEGRAL",
+   "env": "INT",
+   "lvl": "P",
+   "role": "OTHER",
+   "n": 2,
+   "of": 2,
+   "source": "4343",
+   "isDesign": "Y"
   },
   {
    "wk": "TRACK",
@@ -552,21 +607,33 @@
    "env": "INT",
    "lvl": "P",
    "role": "2PIN-LIN-PLUG",
-   "isContractItem": "Y",
    "n": 1,
    "of": 1,
-   "source": "4343 (K1)"
+   "source": "4343",
+   "isContractItem": "Y"
   },
   {
-   "wk": "TRACKPS",
+   "wk": "TRACK",
    "dl": "REMOTE",
    "env": "INT",
    "lvl": "P",
-   "role": "TRACK-PS",
-   "isDesign": "Y",
+   "role": "2PIN-LIN-SOCKET",
    "n": 1,
    "of": 1,
-   "source": "4343 (S1)"
+   "source": "4343",
+   "isContractItem": "Y"
+  },
+  {
+   "wk": "TRACK",
+   "dl": "REMOTE",
+   "env": "INT",
+   "lvl": "P",
+   "role": "TRACK",
+   "n": 1,
+   "of": 1,
+   "source": "4343",
+   "isDesign": "Y",
+   "dimQtyMultiplier": 1
   }
  ]
 }

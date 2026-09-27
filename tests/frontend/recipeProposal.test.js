@@ -116,7 +116,7 @@ describe('track', () => {
 })
 
 describe('the wrapper is your call per group; precedent only sets the default', () => {
-  test('a remote exterior PS can go in a DL: the PS ships inside as design, the frame stays separate', () => {
+  test('a remote exterior PS can go in a DL: the PS ships inside as design; IP connectors are never proposed', () => {
     const base = proposeRecipe('X1', proposalContext(state()))
     expect(base.wrapper).toBeNull()
     const s = { ...state(), recipeChoices: { [base.signature]: { wrap: 'DL' } } }
@@ -124,14 +124,16 @@ describe('the wrapper is your call per group; precedent only sets the default', 
     expect(p.signature).toBe(base.signature)                         // same group
     expect(p.wrapper).toMatchObject({ family: 'ET-DL' })
     expect(p.rows.find(r => r.role === 'PS')).toMatchObject({ section: 'internal', isDesign: 'Y' })
-    expect(p.rows.find(r => r.role === 'FRAME')).toMatchObject({ section: 'position' })
+    expect(p.rows.some(r => /IP/.test(r.role))).toBe(false)
     expect(p.kind).toMatchObject({ wkSource: 'you', precedentWk: 'PS' })
   })
 
   test('each part can be flipped inside or separate', () => {
-    const base = proposeRecipe('X1', proposalContext(state()))
-    const s = { ...state(), recipeChoices: { [base.signature]: { wrap: 'DL', place: { FRAME: 'internal' } } } }
-    expect(proposeRecipe('X1', proposalContext(s)).rows.find(r => r.role === 'FRAME')).toMatchObject({ section: 'internal', placedBy: 'you' })
+    const s0 = state({ positionTypes: [...PTS, { PositionTypeRef: 'R1', ParentRef: 'DOWNLIGHT', DriverLocation: 'Remote' }],
+      formCaptures: { byPosition: { R1: [cap('ET-PS-01', 'lead')] } } })
+    const base = proposeRecipe('R1', proposalContext(s0))
+    const s1 = { ...s0, recipeChoices: { [base.signature]: { wrap: 'DL', place: { '2PIN-REMOTE-PLUG': 'internal' } } } }
+    expect(proposeRecipe('R1', proposalContext(s1)).rows.find(r => r.role === '2PIN-REMOTE-PLUG')).toMatchObject({ section: 'internal', placedBy: 'you' })
   })
 
   test('a local downlight can go unwrapped: the PS is the design element at position level', () => {
@@ -140,5 +142,15 @@ describe('the wrapper is your call per group; precedent only sets the default', 
     const p = proposeRecipe('A1', proposalContext(s))
     expect(p.wrapper).toBeNull()
     expect(p.rows.find(r => r.role === 'PS')).toMatchObject({ section: 'position', isDesign: 'Y' })
+  })
+})
+
+describe('exterior means the DesignDB says exterior', () => {
+  test('in-ground and IP-rated families are interior unless the family says EXTERIOR', async () => {
+    const { envOf } = await import('../../src/utils/recipePatterns.js')
+    expect(envOf({ PositionTypeRef: 'G1', ParentRef: 'INGROUND' })).toBe('INT')
+    expect(envOf({ PositionTypeRef: 'W1', ParentRef: 'IP65-WALL' })).toBe('INT')
+    expect(envOf({ PositionTypeRef: 'X1', ParentRef: 'EXTERIOR-DOWNLIGHT' })).toBe('EXT')
+    expect(envOf({ PositionTypeRef: 'Z1', ParentRef: 'TEXTURED-WALL' })).toBe('INT')
   })
 })

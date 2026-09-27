@@ -149,7 +149,9 @@ export function proposeRecipe(posRef, ctx) {
   const env = envOf(pt, parentOf)
   // A group is its product, driver, environment and kinds of product — NOT its wrapper: the
   // wrapper is a choice (what ships to site together), made per group, precedent first.
-  const signature = `${product}|${dl}|${env}|${[...new Set(products.map(p => p.role))].sort().join('+')}`
+  // Nor its mix of ingredients: a LIN with a diffuser and one without are built the same way,
+  // each with its own products (the taught recipe's slots take what each position has).
+  const signature = `${product}|${dl}|${env}`
   const precedent = wrapperFor(product, dl, env, sources)
   const choice = ctx.choices?.[signature] || {}
   const unwrapped = product === 'point' ? 'PS' : product === 'track' ? 'TRACK' : product === 'track-ps' ? 'TRACKPS' : 'NONE'
@@ -177,6 +179,8 @@ export function proposeRecipe(posRef, ctx) {
   const order = r => (r.lvl === 'P' ? 0 : 1) * 100 + (r.isDesign === 'Y' ? 0 : 1) * 10
   for (const p of [...pat.rows].sort((a, b) => order(a) - order(b))) {
     if (p.role === 'WRAPPER') continue
+    // IP-rated connectors are left to the person reviewing: never proposed.
+    if (/(^|-)IP(-|$)/.test(p.role)) continue
     const flags = {
       isDesign: p.isDesign || null, isContractItem: p.isContractItem || null, quantity: p.quantity ?? null,
       dimQtyMultiplier: p.dimQtyMultiplier ?? null, isInteger: p.isInteger || null,
@@ -323,16 +327,24 @@ export function formGroups(posRefs, ctx) {
     const p = proposeRecipe(ref, ctx)
     if (p.skip) { skipped.push({ posRef: ref, why: p.skip }); continue }
     if (!groups.has(p.signature)) {
-      const roles = [...new Set(p.products.map(x => x.role))].map(r => r.toLowerCase()).join(' + ')
       groups.set(p.signature, {
         key: p.signature, kind: p.kind,
-        label: `${KIND_LABEL[p.kind.wk]} · ${DRIVER_LABEL[p.kind.dl]} · ${p.kind.env === 'EXT' ? 'exterior' : 'interior'} · ${roles}`,
-        positions: [],
+        label: `${KIND_LABEL[p.kind.wk]} · ${DRIVER_LABEL[p.kind.dl]} · ${p.kind.env === 'EXT' ? 'exterior' : 'interior'}`,
+        positions: [], richness: new Map(),
       })
     }
-    groups.get(p.signature).positions.push(ref)
+    const g = groups.get(p.signature)
+    g.positions.push(ref)
+    g.richness.set(ref, new Set(p.products.map(x => x.role)).size)
   }
-  return { groups: [...groups.values()].map(g => ({ ...g, first: g.positions[0] })), skipped }
+  // The first to build and check is the one with the most kinds of product, so what is
+  // taught on it covers the most of the group.
+  return {
+    groups: [...groups.values()].map(({ richness, ...g }) => ({
+      ...g, first: [...g.positions].sort((a, b) => richness.get(b) - richness.get(a))[0],
+    })),
+    skipped,
+  }
 }
 
 /**
