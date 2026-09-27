@@ -23,13 +23,28 @@ export function looksLikeProductCode(text) {
 }
 
 /**
- * A cell that names no product: TBC, n/a, "by specialist", "Awaiting custom code",
- * "*custom*". Rows made only of these have nothing to add.
+ * A cell that names no product yet. Two kinds, because they are handled differently:
+ *
+ *   none — there is no product here at all: "n/a", "-", "by others", "by specialist",
+ *          "see …". Nothing to add.
+ *   tbc  — a product is wanted but not chosen yet: "TBC", "*custom*", "Awaiting custom
+ *          code". It still needs a placeholder Product Spec row and its own ElementType.
  */
-const PLACEHOLDER_WORD = /^(-+|–|—|n\/?a|n\.a\.?|none|nil|tbc|tba|tbd|0|custom)$/i
-const PLACEHOLDER_PHRASE = /^(by\s+(others|specialist|id|client|contractor)\b|awaiting\b|specification\s|spécification\s|see\s|as\s+per\b|feed\b)/i
+const NONE_WORD = /^(-+|–|—|n\/?a|n\.a\.?|none|nil|0)$/i
+const NONE_PHRASE = /^(by\s+(others|specialist|id|client|contractor)\b|see\s|as\s+per\b|feed\b)/i
+const TBC_WORD = /^(tbc|tba|tbd|custom)$/i
+const TBC_PHRASE = /^(awaiting\b|specification\s|spécification\s)/i
 
+const bare = text => String(text ?? '').replace(/\*/g, '').trim()
+
+/** No product at all ("n/a", "by specialist"): nothing to add. */
+export function isNoProductText(text) {
+  const t = bare(text)
+  return t === '' || NONE_WORD.test(t) || NONE_PHRASE.test(t)
+}
+
+/** Either kind of placeholder: not a product code. */
 export function isPlaceholderText(text) {
-  const t = String(text ?? '').replace(/\*/g, '').trim()
-  return t === '' || PLACEHOLDER_WORD.test(t) || PLACEHOLDER_PHRASE.test(t)
+  const t = bare(text)
+  return isNoProductText(t) || TBC_WORD.test(t) || TBC_PHRASE.test(t)
 }

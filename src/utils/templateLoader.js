@@ -220,9 +220,18 @@ export function isRecipeTemplate(template) {
  * A position's recipe → a template. `rows` are the rows to keep (the user may untick some).
  * The position's wrapper is stored as "a new wrapper of this kind" (`newWrapper: 'LIN'|'DL'`),
  * not as its ref: applying the template to another position must not silently share it.
- * Everything else keeps its actual ElementType (`exact`), quantities and flags.
+ * Everything else keeps its actual ElementType (`exact`), quantities and flags — except
+ * the position's own Form products (`formProducts`, its captures), marked `fromForm:
+ * 'lead'|'extra'`: applied to another position, they become THAT position's Form products.
  */
-export function recipeTemplateFromRows(rows, { name, scope = 'project', tags = [], containerETRefs = new Set() } = {}) {
+export function recipeTemplateFromRows(rows, { name, scope = 'project', tags = [], containerETRefs = new Set(), formProducts = [] } = {}) {
+  // The position's own Form products (its captures) become slots: applied elsewhere they
+  // are that position's Form products instead. Everything else stays exactly as it is.
+  const formRole = new Map()
+  for (const c of formProducts) {
+    const k = lcRef(c.elementTypeRef)
+    if (k && !formRole.has(k)) formRole.set(k, c.role === 'lead' ? 'lead' : 'extra')
+  }
   const live = rows.filter(r => f(r, 'IsDeleted', 'isDeleted') !== 'Y')
   const pos = live.filter(r => f(r, 'ContextType', 'contextType') === 'PositionType')
   const inside = live.filter(r => f(r, 'ContextType', 'contextType') === 'ElementType')
@@ -236,6 +245,7 @@ export function recipeTemplateFromRows(rows, { name, scope = 'project', tags = [
       slotLabel: ref,
       section,
       ...(wrapper ? { newWrapper: /LIN/i.test(ref) ? 'LIN' : 'DL' } : { exact: true }),
+      ...(!wrapper && formRole.has(lcRef(ref)) ? { fromForm: formRole.get(lcRef(ref)) } : {}),
       isDesign: f(r, 'IsDesign', 'isDesign'),
       isContractItem: f(r, 'IsContractItem', 'isContractItem'),
       isTRItem: f(r, 'IsTRItem', 'isTRItem'),
@@ -259,4 +269,10 @@ export function recipeTemplateFromRows(rows, { name, scope = 'project', tags = [
       ...inside.sort(byIndex).map(r => ingredient(r, 'dl_internal')),
     ],
   }
+}
+
+/** A template that fills in each position's own Form products. */
+export function isFormTemplate(template) {
+  const ings = Array.isArray(template?.ingredients) ? template.ingredients : []
+  return ings.some(i => i.fromForm === 'lead')
 }

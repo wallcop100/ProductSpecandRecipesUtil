@@ -209,8 +209,9 @@ export function proposeElementTypes(entries = [], project = {}) {
     const same = (e.reuse || []).find(c => c.kind === 'same')
     const targets = (e.positionTypes || []).map(pt => lc(ptTarget(pt) || pt))
 
-    // "N/A", "TBC": not a product, so not an ElementType either.
-    if (!hasProductIdentity(e.text)) {
+    // "N/A": not a product, so not an ElementType either. A TBC placeholder (`e.placeholder`)
+    // is the exception: a product is wanted there, so it gets an ElementType of its own.
+    if (!e.placeholder && !hasProductIdentity(e.text)) {
       proposals.push({
         code: e.text, manufacturer, include: false, action: 'skip', reuseRef: null, family: '', ref: '',
         name: '', description: '', why: 'placeholder', parent: null, spread: 0,
@@ -220,10 +221,10 @@ export function proposeElementTypes(entries = [], project = {}) {
 
     const context = contextFor(e) || ''
     const pick = pickFamily({
-      code: e.text,
+      code: e.placeholder ? '' : e.text,
       manufacturer,
       text: `${context} ${note}`,
-      role: roleOf(e),
+      role: e.placeholder ? 'lead' : roleOf(e),
       pageType: lc(pageTypeFor(e)).startsWith('point') ? 'point' : lc(pageTypeFor(e)).startsWith('linear') ? 'linear' : '',
       designFamilies: targets.flatMap(t => designFamilyOf.get(t) || []),
       parents: targets.map(t => parentOf.get(t)).filter(Boolean),
@@ -234,7 +235,7 @@ export function proposeElementTypes(entries = [], project = {}) {
     // ElementTypes belong to a project, so only when this project has nothing of its own
     // to go on (a sibling product already filed here, or the positions' design element).
     const ownKnowledge = pick.why === 'stem' || pick.why === 'design'
-    const seen = !same && !ownKnowledge && library.find(ex => norm(ex.code) === norm(e.text)
+    const seen = !same && !ownKnowledge && !e.placeholder && library.find(ex => norm(ex.code) === norm(e.text)
       && (!manufacturer || !ex.maker || makerKey(ex.maker) === makerKey(manufacturer)))
     if (seen) Object.assign(pick, { family: seen.family, head: seen.family, why: 'library', flag: false, seen })
 
@@ -255,9 +256,10 @@ export function proposeElementTypes(entries = [], project = {}) {
     if (family && !same) propose(family, pick.parent)
     const ref = !family || same ? ''
       : pick.seen && pick.seen.ref && !taken.has(pick.seen.ref) ? pick.seen.ref
-        : nextRef(pick.style?.refBase || pick.head || family, taken)
+        : e.placeholder ? nextRef(`${pick.head || family}-TBC`, taken)
+          : nextRef(pick.style?.refBase || pick.head || family, taken)
     if (ref) taken.add(ref)
-    const old = matchShape(e.text, manufacturer, shapes).superseded
+    const old = !e.placeholder && matchShape(e.text, manufacturer, shapes).superseded
 
     proposals.push({
       code: e.text,
@@ -267,7 +269,8 @@ export function proposeElementTypes(entries = [], project = {}) {
       reuseRef: same?.ref || null,
       family: same ? '' : family,
       ref,
-      name: pick.seen?.name || seedName(manufacturer, e.text),
+      name: pick.seen?.name || (e.placeholder ? `${e.placeholder.formRef} — TBC${manufacturer ? ` (${manufacturer})` : ''}` : seedName(manufacturer, e.text)),
+      placeholder: e.placeholder || null,
       description: pick.seen?.description || [context, note].map(s => String(s).trim()).filter(Boolean).join(' — '),
       why: pick.why,
       parent: pick.parent || null,

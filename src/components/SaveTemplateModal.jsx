@@ -15,6 +15,10 @@ export default function SaveTemplateModal({ show, onHide, posRef, name: posName 
   const positionUI = useStore(s => s.positionUI)
   const containerETRefs = useStore(s => s.containerETRefs)
   const saveAsTemplate = useStore(s => s.saveAsTemplate)
+  // This position's Form products: saved as slots, so elsewhere they are that position's own.
+  const formCaptures = useStore(s => s.formCaptures)
+  const formRole = useMemo(() => new Map((formCaptures?.byPosition?.[posRef] || [])
+    .map(c => [lc(c.elementTypeRef), c.role === 'lead' ? 'main product' : 'extra'])), [formCaptures, posRef])
 
   const rows = useMemo(() => recipes.filter(r => (r.PositionTypeRef || r.positionTypeRef) === posRef
     && (r.IsDeleted || r.isDeleted) !== 'Y'), [recipes, posRef])
@@ -65,6 +69,11 @@ export default function SaveTemplateModal({ show, onHide, posRef, name: posName 
             <span style={{ fontFamily: 'monospace' }}>{ref}</span>
             {wrapper && <span className="text-muted"> — saved as a new {/LIN/i.test(ref) ? 'LIN' : 'DL'} wrapper each time</span>}
             {(r.IsDesign || r.isDesign) === 'Y' && !wrapper && <span className="text-muted"> · design</span>}
+            {!wrapper && formRole.has(lc(ref)) && (
+              <span className="text-success" title="Applied to another position, this becomes that position's own Form product">
+                {' '}· each position&apos;s own Form {formRole.get(lc(ref))}
+              </span>
+            )}
             <span className="text-muted"> · {qty != null ? `×${qty} per length` : `qty ${r.Quantity ?? r.quantity ?? 1}`}</span>
           </span>
         } />

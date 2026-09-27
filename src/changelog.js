@@ -7,6 +7,9 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-09-27', note: 'A new project says where to start (Import the Form), then offers to build what it imported' },
+  { date: '2026-09-27', note: 'Build recipes from the Form: templates saved from a recipe now carry each position\'s own Form products; one window builds every imported position (template, products only, or skip), one Undo' },
+  { date: '2026-09-27', note: 'TBC, custom and "awaiting" rows get a placeholder Product Spec row (TBC) and an ElementType of their own; n/a and by-others stay nothing to add' },
   { date: '2026-09-27', note: 'Import opens pre-filled: codes from this spec and every project opened before are painted (with their ElementType), and code-shaped words are pre-selected (dashed). Your paint and taught rules always win; Undo all clears it' },
   { date: '2026-09-27', note: 'Known product lines file themselves: Atea NEO and Tryka Continuity are flexible linear, Forma Microline and Flos Glowing Track are fixed linear' },
   { date: '2026-09-27', note: 'Better ElementType families on import: old LEDFlex codes still file by kind, rails are mounts, casings and back boxes are point mounting, louvres and glare shields are accessories; notes stay with their own code in ";" and "," lists' },

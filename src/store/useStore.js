@@ -926,6 +926,38 @@ const useStore = create((set, get) => ({
   },
 
   /**
+   * Build many recipes from the Form at once (see utils/formBuild.planFormBuild), as one undo
+   * step. Each row's `choice`: a template id, 'products' (just its Form products) or 'skip'.
+   * → how many positions were built.
+   */
+  buildFromForm(rows) {
+    const todo = (rows || []).filter(r => r.posRef && r.choice && r.choice !== 'skip')
+    if (todo.length === 0) return 0
+    get()._pushHistory()
+    for (const r of todo) {
+      if (r.choice === 'products') get()._applyFormProducts(r.posRef)
+      else get().applyTemplate(r.posRef, r.choice, { recordHistory: false })
+    }
+    return todo.length
+  },
+
+  /** A position's recipe is just its Form products: the main one as the design element, extras beside it. */
+  _applyFormProducts(posRef) {
+    set({ activeContextType: 'PositionType', activeETRef: null })
+    const caps = (get().formCaptures?.byPosition?.[posRef] || []).filter(c => c.elementTypeRef)
+    const lead = caps.find(c => c.role === 'lead') || caps[0]
+    if (!lead) return
+    const own = get().recipes.filter(r => (r.PositionTypeRef || r.positionTypeRef) === posRef
+      && (r.IsDeleted || r.isDeleted) !== 'Y')
+    for (const r of own) get().removeRecipeRow(posRef, r._id, { recordHistory: false })
+    get().addRecipeRow(posRef, 'position', { elementTypeRef: lead.elementTypeRef, isDesign: 'Y' }, { recordHistory: false, asPosition: true })
+    for (const x of caps) {
+      if (x === lead) continue
+      get().addRecipeRow(posRef, 'position', { elementTypeRef: x.elementTypeRef }, { recordHistory: false, asPosition: true })
+    }
+  },
+
+  /**
    * A recipe template (saved from a recipe): replace the position's recipe with its rows,
    * each its real ElementType, through addRecipeRow — so quantities, contract defaults and
    * Product Spec rows follow the same rules as any add. A `newWrapper` ingredient becomes
@@ -946,7 +978,29 @@ const useStore = create((set, get) => ({
       dimQuantity: ing.dimQuantity ?? null, isInteger: ing.isInteger ?? null,
       packQuantity: ing.packQuantity ?? null, notes: ing.notes ?? null, slotKey: ing.slotKey,
     })
-    const ings = template.ingredients
+    // Form slots take THIS position's Form products: its main product for the 'lead' slot,
+    // every extra at the first 'extra' slot (or beside the main product when the template
+    // has none). A slot with no Form product here is left out, never filled with the
+    // template's own product.
+    const caps = get().formCaptures?.byPosition?.[posRef] || []
+    const lead = caps.find(c => c.role === 'lead') || caps[0] || null
+    const extras = caps.filter(c => c !== lead && c.elementTypeRef)
+    const formSlots = template.ingredients.some(i => i.fromForm === 'lead')
+    const hasExtraSlot = template.ingredients.some(i => i.fromForm === 'extra')
+    let extrasPlaced = false
+    const expand = ing => {
+      if (!ing.fromForm) return [ing]
+      if (ing.fromForm === 'lead') {
+        const own = lead?.elementTypeRef ? [{ ...ing, slotLabel: lead.elementTypeRef }] : []
+        const beside = !hasExtraSlot && !extrasPlaced ? (extrasPlaced = true, extras.map(x => (
+          { ...ing, slotLabel: x.elementTypeRef, isDesign: null, fromForm: 'extra' }))) : []
+        return [...own, ...beside]
+      }
+      if (extrasPlaced) return []
+      extrasPlaced = true
+      return extras.map(x => ({ ...ing, slotLabel: x.elementTypeRef, isDesign: null }))
+    }
+    const ings = formSlots ? template.ingredients.flatMap(expand) : template.ingredients
     for (const ing of ings.filter(i => i.section === 'position')) {
       if (ing.newWrapper) {
         const k = ing.newWrapper === 'LIN' ? 'LIN' : 'DL'
@@ -1142,12 +1196,13 @@ const useStore = create((set, get) => ({
    * `excludeIds` are rows the user unticked. Saved first, then listed. → the saved template.
    */
   async saveAsTemplate(posRef, { name, scope = 'project', tags, excludeIds = [] } = {}) {
-    const { recipes, projectId, positionUI, containerETRefs } = get()
+    const { recipes, projectId, positionUI, containerETRefs, formCaptures } = get()
     const skip = new Set(excludeIds)
     const rows = recipes.filter(r => (r.PositionTypeRef || r.positionTypeRef) === posRef && !skip.has(r._id))
     const template = recipeTemplateFromRows(rows, {
       name: (name || '').trim() || posRef, scope,
       tags: tags ?? (positionUI[posRef]?.tags || []), containerETRefs,
+      formProducts: formCaptures?.byPosition?.[posRef] || [],
     })
     if (scope === 'project') template.project_id = projectId
     return get().updateTemplate(template)

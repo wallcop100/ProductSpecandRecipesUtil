@@ -30,6 +30,7 @@ import TemplatePicker from '../components/TemplatePicker'
 import PasteMergeModal from '../components/PasteMergeModal'
 import FavoritesPanel from '../components/FavoritesPanel'
 import ReviewModal from '../components/ReviewModal'
+import BuildFromFormModal from '../components/BuildFromFormModal'
 import ValidationFixModal from '../components/ValidationFixModal'
 import { SaveIndicator } from '../components/SaveStatus'
 import LinWrapperWizardModal from '../components/LinWrapperWizardModal'
@@ -107,15 +108,41 @@ export default function BuilderScreen({
     setShowReview(true)
   }
 
-  // Arriving with positions to review (e.g. from the product-code import) opens
-  // ReviewModal straight into them; consume once so it doesn't reopen on its own.
+  // Arriving with positions to review (e.g. from the product-code import): first offer to
+  // build them all from the Form, then ReviewModal walks through them. Consume once so it
+  // doesn't reopen on its own.
+  const formCaptures = useStore(s => s.formCaptures)
+  const [formBuild, setFormBuild] = useState(null)   // { refs, thenReview }
   useEffect(() => {
     if (pendingReviewRefs && pendingReviewRefs.length > 0) {
       setReviewInitialRefs(pendingReviewRefs)
-      setShowReview(true)
+      const fromForm = pendingReviewRefs.filter(r => formCaptures?.byPosition?.[r]?.length)
+      if (fromForm.length > 0) setFormBuild({ refs: fromForm, thenReview: true })
+      else setShowReview(true)
       onConsumePendingReview?.()
     }
-  }, [pendingReviewRefs, onConsumePendingReview])
+  }, [pendingReviewRefs, onConsumePendingReview])   // eslint-disable-line react-hooks/exhaustive-deps
+  // What to do next on a new project: import the Form first, then build what it imported.
+  const [hideNextStep, setHideNextStep] = useState(false)
+  const nextStep = useMemo(() => {
+    if (hideNextStep) return null
+    const live = recipes.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
+    const imported = Object.keys(formCaptures?.byPosition || {}).filter(p => formCaptures.byPosition[p]?.length)
+    if (live.length === 0 && imported.length === 0 && onOpenCodeImport) {
+      return { icon: 'auto_fix_high', title: 'New project? Start with the Form.',
+        text: 'Import its product codes: they fill the Product Spec and ElementTypes, then the recipes build from them.',
+        action: 'Import the Form', go: onOpenCodeImport }
+    }
+    const withRecipe = new Set(live.map(r => r.PositionTypeRef || r.positionTypeRef))
+    const unbuilt = imported.filter(p => !withRecipe.has(p))
+    if (unbuilt.length > 0) {
+      return { icon: 'auto_awesome', title: `${unbuilt.length} position${unbuilt.length === 1 ? '' : 's'} from the Form ha${unbuilt.length === 1 ? 's' : 've'} no recipe yet.`,
+        text: 'Build them from their Form products, with a template where one fits.',
+        action: 'Build them', go: () => setFormBuild({ refs: unbuilt, thenReview: false }) }
+    }
+    return null
+  }, [hideNextStep, recipes, formCaptures, onOpenCodeImport])
+  const closeFormBuild = () => { const then = formBuild?.thenReview; setFormBuild(null); if (then) setShowReview(true) }
   const [addRowTarget, setAddRowTarget] = useState(null)      // { posRef, sectionKey }
   const [addAnywhereState, setAddAnywhereState] = useState(null) // { etRef, sectionKey, excludePosRef, startPosRef }
   const [newETTarget, setNewETTarget] = useState(null)        // { posRef, sectionKey }
@@ -539,6 +566,9 @@ export default function BuilderScreen({
             <Dropdown.Item onClick={() => setShowReview(true)}>
               <MaterialIcon name="fact_check" size={14} /> Review recipes…
             </Dropdown.Item>
+            <Dropdown.Item onClick={() => setFormBuild({ refs: [], thenReview: false })} disabled={!Object.keys(formCaptures?.byPosition || {}).length}>
+              <MaterialIcon name="auto_awesome" size={14} /> Build recipes from the Form…
+            </Dropdown.Item>
             <Dropdown.Item onClick={() => setShowSaveTemplate(true)} disabled={!hasRecipeRows}>
               <MaterialIcon name={ACTION_ICONS.saveTemplate} size={14} /> Save this position as a template
             </Dropdown.Item>
@@ -682,6 +712,18 @@ export default function BuilderScreen({
           ) : rootView === 'elements' ? (
             <ElementTypeTreeView />
           ) : (
+            <>
+            {nextStep && (
+              <div className="d-flex align-items-center gap-2 mx-3 mt-2 px-3 py-2 rounded" data-testid="next-step"
+                style={{ background: '#e7f1ff', border: '1px solid #b6d4fe', fontSize: 12, color: '#084298', flexShrink: 0 }}>
+                <MaterialIcon name={nextStep.icon} size={16} />
+                <span><strong>{nextStep.title}</strong> <span className="text-muted">{nextStep.text}</span></span>
+                <Button size="sm" variant="primary" className="ms-auto text-nowrap" style={{ fontSize: 11 }} onClick={nextStep.go}>
+                  {nextStep.action}
+                </Button>
+                <IconButton variant="link" bsSize="sm" icon="close" title="Hide" onClick={() => setHideNextStep(true)} />
+              </div>
+            )}
             <ProjectTreeView
               onOpenProductSpec={onOpenProductSpec}
               onOpenConnectors={onOpenConnectors}
@@ -690,6 +732,7 @@ export default function BuilderScreen({
               onNewET={handleNewET}
               onReplace={handleReplace}
             />
+            </>
           )}
         </div>
 
@@ -783,6 +826,8 @@ export default function BuilderScreen({
 
       <ElementTypesWindow show={!!showRetire} view={showRetire === 'unused' ? 'unused' : 'existing'} onHide={() => setShowRetire(false)} />
 
+      <BuildFromFormModal show={formBuild != null} posRefs={formBuild?.refs || []}
+        onHide={closeFormBuild} onBuilt={closeFormBuild} />
       <ReviewModal
         show={showReview}
         onHide={() => { setShowReview(false); setReviewInitialRefs(null) }}
