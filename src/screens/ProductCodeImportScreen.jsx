@@ -1,7 +1,8 @@
 import useImportSession from './import/useImportSession'
 import InfoTip from '../components/InfoTip'
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
-import { Button, ButtonGroup, Form, Alert, Spinner, Modal } from 'react-bootstrap'
+import { Button, ButtonGroup, Form, Alert, Spinner, Modal, Dropdown } from 'react-bootstrap'
+import { ACTION_ICONS } from '../utils/entityStyle'
 import useStore from '../store/useStore'
 import { readSheet as readSheetFrom, fileMeta } from '../utils/backend'
 import MaterialIcon from '../components/MaterialIcon'
@@ -146,6 +147,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   const [autoStart, setAutoStart] = useState(false)   // columns obvious → skip the map step
   const [autoMap, setAutoMap] = useState({})   // what the tool guessed, so it can say so
   const [resumeDismissed, setResumeDismissed] = useState(false)
+  const [showLearned, setShowLearned] = useState(false)   // the dialect panel, from the ⋯ menu
   // Stage ①: what the Product Spec already knows. Exact hits are painted for you.
   const [knownStats, setKnownStats] = useState(null)   // { exactCount, variantCount, adjacentCount, byRow }
   const [preKnownRows, setPreKnownRows] = useState(null)   // one-shot undo of the auto-paint
@@ -372,6 +374,21 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   async function discardDraft() {
     await clearImportDraft()
     setResumeDismissed(true)
+  }
+
+  // A saved import always carries on where it left off: no question to answer.
+  useEffect(() => {
+    if (step === 'pick' && importDraft && !resumeDismissed) { setResumeDismissed(true); resumeDraft(importDraft) }
+  }, [step, importDraft, resumeDismissed])   // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Start again from a (new) Form spreadsheet: the ⋯ menu's Re-import. */
+  async function reimport() {
+    if (rows.some(r => r.confirmed) && !window.confirm('Start again from a spreadsheet? The painting and confirms on this import are dropped (anything already added to the Product Spec stays).')) return
+    await discardDraft()
+    session.load({ rows: [] })
+    setStaged(null); setExpandedId(null); setKnownStats(null); setPreKnownRows(null)
+    setStep('pick')
+    handlePick()
   }
 
   // ---- review ---------------------------------------------------------------
@@ -1136,6 +1153,17 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
         </h5>
         <TutorialHint id="code-import" />
         {source?.name && <span className="text-muted ms-2 text-truncate" style={{ fontSize: 11, maxWidth: 260 }}>{source.name}</span>}
+        <Dropdown align="end" className="ms-auto">
+          <Dropdown.Toggle as={IconButton} bsSize="sm" variant="outline-secondary" icon={ACTION_ICONS.more} title="More" aria-label="More" />
+          <Dropdown.Menu style={{ fontSize: 12 }}>
+            <Dropdown.Item onClick={reimport}>
+              <MaterialIcon name="restart_alt" size={14} /> Re-import from a spreadsheet…
+            </Dropdown.Item>
+            <Dropdown.Item onClick={() => setShowLearned(v => !v)} disabled={step !== 'review'}>
+              <MaterialIcon name={showLearned ? 'check_box' : 'check_box_outline_blank'} size={14} /> Learned this project
+            </Dropdown.Item>
+          </Dropdown.Menu>
+        </Dropdown>
       </div>
 
       {/* The whole workflow, in three. The import owns ① and ②; the builder owns ③. */}
@@ -1152,29 +1180,6 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       </div>
 
       {error && <Alert variant="danger" style={{ fontSize: 12 }}>{error}</Alert>}
-
-      {step === 'pick' && importDraft && !resumeDismissed && (
-        <div className="mx-auto mb-4 px-3 py-2 rounded" style={{ maxWidth: 520, background: '#e7f1ff', border: '1px solid #b6d4fe' }}>
-          <div className="fw-semibold d-flex align-items-center gap-1" style={{ fontSize: 13 }}>
-            <MaterialIcon name="history" size={16} /> Resume your import?
-          </div>
-          <div className="text-muted my-1" style={{ fontSize: 12 }}>
-            {importDraft.source?.name && <span style={{ fontFamily: 'monospace' }}>{importDraft.source.name}</span>}
-            {importDraft.source?.name && ' — '}
-            {(importDraft.rows || []).filter(r => r.confirmed).length} of {(importDraft.rows || []).length} rows
-            confirmed{' '}
-            <InfoTip>The spreadsheet is not re-read; your painted codes and rules are restored.</InfoTip>
-          </div>
-          <div className="d-flex gap-2">
-            <Button size="sm" variant="primary" style={{ fontSize: 11 }} onClick={() => resumeDraft(importDraft)}>
-              Resume
-            </Button>
-            <Button size="sm" variant="outline-secondary" style={{ fontSize: 11 }} onClick={discardDraft}>
-              Start over
-            </Button>
-          </div>
-        </div>
-      )}
 
       {step === 'pick' && (
         <div className="text-center py-5">
@@ -1201,8 +1206,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
 
       {step === 'review' && (
         <div className="d-flex gap-3" style={{ flex: 1, minHeight: 0 }}>
-          {/* What the tool has learned about this sheet's dialect. */}
-          <div style={{ width: 190, overflowY: 'auto', flexShrink: 0 }}>
+          {/* What the tool has learned about this sheet's dialect (⋯ → Learned this project). */}
+          {showLearned && <div style={{ width: 190, overflowY: 'auto', flexShrink: 0 }} data-testid="learned-panel">
             <div className="fw-semibold text-muted mb-1" style={{ fontSize: 10, textTransform: 'uppercase' }}>
               Learned this project
             </div>
@@ -1255,7 +1260,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                   onClick={() => setRules(rl => revokeRule(rl, l.text))} />
               </div>
             ))}
-          </div>
+          </div>}
 
           {/* The Form, as a table. Simple edits in the cells; ▸ opens the full painter. */}
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>

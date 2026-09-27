@@ -197,3 +197,9 @@ export function patternFor(wk, dl, env, sources, min = 0.5) {
   }
   return { rows: [], source: null }
 }
+
+/**
+ * Roles whose quantity depends on the job — clips per metre, tape / profile / mount by
+ * length, caps per run: a taught recipe must have them confirmed, even when prefilled.
+ */
+export const QTY_CONFIRM_ROLES = new Set(['CLIP', 'TAPE', 'FLEX', 'PROFILE', 'MOUNT', 'CAP'])

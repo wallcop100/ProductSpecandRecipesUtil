@@ -951,7 +951,11 @@ const useStore = create((set, get) => ({
     set(s => ({ recipeChoices: { ...s.recipeChoices, [groupKey]: { ...(s.recipeChoices[groupKey] || {}), ...patch } } }))
   },
   teaching: null,
-  startTeaching(t) { set({ teaching: t }) },
+  startTeaching(t) { set({ teaching: { qtyConfirmed: [], ...t } }) },
+  /** A quantity on the position being taught has been looked at (clips, tape, profile…). */
+  confirmTeachQty(ref) {
+    set(s => (s.teaching ? { teaching: { ...s.teaching, qtyConfirmed: [...new Set([...(s.teaching.qtyConfirmed || []), String(ref).toLowerCase()])] } } : {}))
+  },
   stopTeaching() { set({ teaching: null }) },
 
   /**

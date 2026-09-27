@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-09-27', note: 'DesignDB patch: ElementTypes sorted by ParentRef > Ref with SortOrder 1..N, collection rows purple / white bold. TBC placeholders get ordinary refs. Setting up a group asks you to confirm clip / tape / profile / mount / cap quantities (pulsing). Import resumes by itself; Re-import and Learned this project are in ⋯' },
   { date: '2026-09-27', note: 'Exterior only when the DesignDB family says EXTERIOR (in-ground / IP-rated are no longer taken as exterior); IP-rated connectors are never proposed — left for review' },
   { date: '2026-09-27', note: 'Recipes from the Form: one group per kind (wrapper · driver · interior/exterior), not per mix of ingredients; the richest position is set up first. 5452: 5 groups instead of 13' },
   { date: '2026-09-27', note: 'Fixed: clips, tape, profiles and caps (ET-LIN-CLIP-01…) were taken for wrappers and specced Ideaworks N/A — only a numbered ET-DL-NN / ET-LIN-NN is a wrapper; "Fix them" puts affected parts back. Recipes add only what you tick: parts borrowed from elsewhere start unticked' },

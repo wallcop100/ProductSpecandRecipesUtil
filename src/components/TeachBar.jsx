@@ -3,7 +3,7 @@ import { Button } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { positionRecipeWithWrapperInternals } from '../utils/collectionStatus'
-import { roleOf } from '../utils/recipePatterns'
+import { roleOf, QTY_CONFIRM_ROLES } from '../utils/recipePatterns'
 
 const pretty = role => role.toLowerCase().replace(/-/g, ' ')
 
@@ -31,6 +31,16 @@ export default function TeachBar({ onReturn }) {
     return (teaching.missing || []).filter(role => !have.has(role))
   }, [teaching, recipes])
 
+  // Quantities that depend on the job and have not been confirmed yet (they pulse below).
+  const qtyPending = useMemo(() => {
+    if (!teaching) return []
+    const done = new Set(teaching.qtyConfirmed || [])
+    return [...new Set(positionRecipeWithWrapperInternals(recipes, teaching.posRef).combined
+      .filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
+      .map(r => r.ElementTypeRef || r.elementTypeRef)
+      .filter(ref => ref && QTY_CONFIRM_ROLES.has(roleOf(ref)) && !done.has(ref.toLowerCase())))]
+  }, [teaching, recipes])
+
   if (!teaching) return null
   const here = activePositionRef === teaching.posRef
   const n = teaching.others.length
@@ -56,6 +66,9 @@ export default function TeachBar({ onReturn }) {
               ? <>Still empty: {stillEmpty.map(pretty).join(', ')}. Add them below, or leave them out if this group doesn&apos;t need them.</>
               : <>Nothing left empty. Check it reads right, then use it for the other {n}.</>)
           : <>You&apos;re on another position.</>}
+        {here && qtyPending.length > 0 && (
+          <> <strong>Confirm quantities</strong> (they may need adjusting for this job): {qtyPending.join(', ')}.</>
+        )}
       </span>
       <div className="ms-auto d-flex gap-2">
         {!here && (
@@ -64,7 +77,8 @@ export default function TeachBar({ onReturn }) {
           </Button>
         )}
         {n > 0 && (
-          <Button size="sm" variant="primary" style={{ fontSize: 11 }} disabled={saving} onClick={useIt}>
+          <Button size="sm" variant="primary" style={{ fontSize: 11 }} disabled={saving || qtyPending.length > 0} onClick={useIt}
+            title={qtyPending.length ? `Confirm the quantities first: ${qtyPending.join(', ')}` : undefined}>
             Use {teaching.posRef} for the other {n}
           </Button>
         )}

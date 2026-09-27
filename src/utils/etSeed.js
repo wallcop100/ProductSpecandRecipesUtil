@@ -266,7 +266,8 @@ export function proposeElementTypes(entries = [], project = {}) {
     if (family && !same) propose(family, pick.parent)
     const ref = !family || same ? ''
       : pick.seen && pick.seen.ref && !taken.has(pick.seen.ref) ? pick.seen.ref
-        : e.placeholder ? nextRef(`${pick.head || family}-TBC`, taken)
+        // A TBC placeholder is an ordinary ref: TBC lives on its spec (IsTBC) and name, never in the ref.
+        : e.placeholder ? nextRef(pick.head || family, taken)
           : nextRef(pick.style?.refBase || pick.head || family, taken)
     if (ref) taken.add(ref)
     const old = !e.placeholder && matchShape(e.text, manufacturer, shapes).superseded
