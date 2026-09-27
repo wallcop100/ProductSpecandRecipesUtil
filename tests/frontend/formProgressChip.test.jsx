@@ -41,8 +41,8 @@ describe('the chip reports Form progress, and only that', () => {
       formCaptures: { version: 1, byPosition: { C01r: [ent('ET-PROF-01')], C03r: [ent('ET-PROF-01')] } },
     }, { onReconcile })
 
-    expect(screen.getByText('Form: 1/2')).toBeInTheDocument()   // C03r lacks the profile
-    expect(screen.getByText(/1 missing/)).toBeInTheDocument()
+    const chip = screen.getByLabelText(/^Form 1\/2:/)            // C03r lacks the profile
+    expect(chip.getAttribute('aria-label')).toMatch(/1 missing/)
   })
 
   test('Reconcile hands the incomplete positions to the step-through', () => {
@@ -59,7 +59,7 @@ describe('the chip reports Form progress, and only that', () => {
       formCaptures: { version: 1, byPosition: { C01r: [ent('ET-PROF-01')] } },
     }, { onReconcile })
 
-    expect(screen.getByText('Form: 1/1')).toBeInTheDocument()
+    expect(screen.getByLabelText(/^Form 1\/1:/)).toBeInTheDocument()
     expect(screen.queryByText(/Reconcile/)).toBeNull()
   })
 })

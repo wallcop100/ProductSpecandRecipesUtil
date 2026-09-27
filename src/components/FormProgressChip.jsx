@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react'
 import { Button } from 'react-bootstrap'
 import useStore from '../store/useStore'
-import MaterialIcon from './MaterialIcon'
+import StatusChip from './StatusChip'
 import { formProgress, formWorklist } from '../utils/formSpec'
 
 /**
@@ -37,23 +37,15 @@ export default function FormProgressChip({ onReconcile }) {
   if (!progress) return null
 
   const done = progress.complete === progress.total
-  const colour = done ? '#0f5132' : '#856404'
-  const bg = done ? '#d1e7dd' : '#fff3cd'
+  const detail = [
+    `${progress.complete} of ${progress.total} positions hold everything the Form specifies`,
+    progress.missing > 0 && `${progress.missing} missing`,
+    progress.orphans > 0 && `${progress.orphans} dropped from the Form`,
+  ].filter(Boolean).join(' · ')
 
   return (
-    <span className="d-inline-flex align-items-center gap-1 rounded px-2 py-1"
-      style={{ background: bg, color: colour, fontSize: 11, flexShrink: 0 }}
-      title={`${progress.complete} of ${progress.total} positions hold everything the Form specifies`}>
-      <MaterialIcon name="description" size={13} />
-      <span>Form: {progress.complete}/{progress.total}</span>
-      {progress.missing > 0 && (
-        <span className="text-muted" style={{ color: 'inherit', opacity: 0.85 }}>
-          · {progress.missing} missing
-        </span>
-      )}
-      {progress.orphans > 0 && (
-        <span style={{ opacity: 0.85 }}>· {progress.orphans} dropped</span>
-      )}
+    <StatusChip tone={done ? 'ok' : 'warn'} icon="description" tip={detail}
+      label={`Form ${progress.complete}/${progress.total}`}>
       {worklist.length > 0 && onReconcile && (
         <Button size="sm" variant="link" className="p-0 ms-1"
           style={{ fontSize: 10, color: 'inherit', textDecoration: 'underline' }}
@@ -62,6 +54,6 @@ export default function FormProgressChip({ onReconcile }) {
           Reconcile →
         </Button>
       )}
-    </span>
+    </StatusChip>
   )
 }

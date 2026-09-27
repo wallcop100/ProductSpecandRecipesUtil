@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Toast, ToastContainer } from 'react-bootstrap'
 import useStore, { savePendingNow } from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
+import StatusChip from './StatusChip'
 
 const unexported = s => s.psChanges.length + s.rsChanges.length + (s.dbChanges?.length || 0)
 const time = t => (t ? new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '')
@@ -14,20 +15,15 @@ export function SaveIndicator() {
   const status = useStore(s => s.saveStatus)
   const savedAt = useStore(s => s.savedAt)
   const n = useStore(unexported)
-  const { icon, color, label } = {
-    saving: { icon: 'laptop', color: '#6c757d', label: 'Saving…' },
-    error: { icon: 'warning', color: '#dc3545', label: 'Not saved' },
-  }[status] || { icon: 'laptop', color: '#198754', label: 'Saved' }
+  const { icon, tone, label } = {
+    saving: { icon: 'laptop', tone: 'neutral', label: 'Saving…' },
+    error: { icon: 'warning', tone: 'error', label: 'Not saved' },
+  }[status] || { icon: 'laptop', tone: 'ok', label: 'Saved' }
   const tip = status === 'error'
     ? 'Could not save to this browser. Export now so the work is not lost.'
     : `${label}${savedAt && status === 'saved' ? ` at ${time(savedAt)}` : ''} in this browser — safe to close.`
       + (n ? ` ${n} change${n === 1 ? '' : 's'} not yet exported to the workbooks.` : '')
-  return (
-    <span data-testid="save-indicator" title={tip} aria-label={tip}
-      className="d-inline-flex align-items-center gap-1" style={{ color, fontSize: 11 }}>
-      <MaterialIcon name={icon} size={16} /> {label}
-    </span>
-  )
+  return <StatusChip data-testid="save-indicator" title={tip} tone={tone} icon={icon} label={label} tip={tip} />
 }
 
 /** Ctrl/Cmd+S: save now, and say plainly what that did and did not do. */

@@ -25,9 +25,9 @@ describe('CompareCodesPanel', () => {
       entry({ text: 'A1', status: 'green', etRef: 'ET-A-01' }), entry({ text: 'B1', status: 'amber' }),
       entry({ text: 'C1', status: 'blue' }), entry({ text: 'D1', status: 'grey' }),
     ]} onReuse={() => {}} onCreateET={() => {}} />)
-    for (const w of ['in spec', 'variant', 'repeated', 'new']) expect(screen.getByText(w)).toBeInTheDocument()
+    for (const w of ['in spec', 'variant', 'repeated', 'new']) expect(screen.getByLabelText(new RegExp(`^${w}:`))).toBeInTheDocument()
     for (const c of ['green', 'amber', 'blue', 'grey']) expect(screen.queryByText(c)).toBeNull()
-    expect(screen.getByText('in spec').title).toMatch(/ET-A-01/)
+    expect(screen.getByLabelText(/^in spec:/).getAttribute('aria-label')).toMatch(/ET-A-01/)
   })
 
   test('the legend explains every pill', () => {

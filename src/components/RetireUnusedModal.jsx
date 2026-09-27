@@ -20,7 +20,7 @@ const Tag = ({ children }) => (
  * The plan comes from the store (retirablePlan); this component only shows it and calls
  * retireDeadElementTypes on confirm. Driven by `show` from the parent.
  */
-export default function RetireUnusedModal({ show, onHide }) {
+export default function RetireUnusedModal({ show, onHide, tabs = null, animation = true }) {
   const retirablePlan = useStore(s => s.retirablePlan)
   const retireDeadElementTypes = useStore(s => s.retireDeadElementTypes)
 
@@ -34,11 +34,12 @@ export default function RetireUnusedModal({ show, onHide }) {
   }
 
   return (
-    <Modal show={show} onHide={onHide} size="lg" centered scrollable>
+    <Modal animation={animation} show={show} onHide={onHide} size={tabs ? 'xl' : 'lg'} centered scrollable>
       <Modal.Header closeButton>
         <Modal.Title style={{ fontSize: 15 }} className="d-flex align-items-center gap-2">
           <MaterialIcon name="cleaning_services" size={18} /> Clean up unused ElementTypes
         </Modal.Title>
+        {tabs}
       </Modal.Header>
 
       <Modal.Body style={{ fontSize: 12 }}>

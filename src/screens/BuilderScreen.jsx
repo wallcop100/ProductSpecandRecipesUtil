@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import {
-  Button, ButtonGroup, Dropdown, Nav, Modal,
+  Button, ButtonGroup, Dropdown, Nav, Modal, Form,
 } from 'react-bootstrap'
 import {
   DndContext,
@@ -16,7 +16,7 @@ import ProjectTreeView from '../components/ProjectTreeView'
 import ElementTypeTreeView from '../components/ElementTypeTreeView'
 import RecipeSection from '../components/RecipeSection'
 import DuplicateETModal from '../components/DuplicateETModal'
-import RetireUnusedModal from '../components/RetireUnusedModal'
+import ElementTypesWindow from '../components/ElementTypesWindow'
 import Breadcrumbs from '../components/Breadcrumbs'
 import ProjectIdPill from '../components/ProjectIdPill'
 import FormProgressChip from '../components/FormProgressChip'
@@ -122,7 +122,8 @@ export default function BuilderScreen({
   const [justAdded, setJustAdded] = useState(null)           // { etRef, posRef, sectionKey }
   const [reviewAddCtx, setReviewAddCtx] = useState(null)     // { unit, filters } for review→add priming
   const [showFixer, setShowFixer] = useState(false)
-  const [rightTab, setRightTab] = useState('palette')
+  const [rightTab, setRightTab] = useState('all')
+  const [addQuery, setAddQuery] = useState('')
   const [showDeleted, setShowDeleted] = useState(false)
   const [rightOpen, setRightOpen] = useState(false)
   const [showStatus, setShowStatus] = useState(false)          // where the project stands
@@ -552,7 +553,10 @@ export default function BuilderScreen({
               <MaterialIcon name={ACTION_ICONS.tags} size={14} /> Tags
             </Dropdown.Item>
             <Dropdown.Divider />
-            <Dropdown.Item onClick={() => setShowRetire(true)}>
+            <Dropdown.Item onClick={() => setShowRetire('existing')}>
+              <MaterialIcon name="category" size={14} /> ElementTypes…
+            </Dropdown.Item>
+            <Dropdown.Item onClick={() => setShowRetire('unused')}>
               <MaterialIcon name="cleaning_services" size={14} /> Clean up unused ElementTypes…
             </Dropdown.Item>
           </Dropdown.Menu>
@@ -703,61 +707,66 @@ export default function BuilderScreen({
             transition: 'width 0.2s ease',
           }}
         >
-          <div style={{ flexShrink: 0, borderBottom: '1px solid #dee2e6', display: 'flex', alignItems: 'center' }}>
-            <Nav
-              variant="tabs"
-              activeKey={rightTab}
-              onSelect={k => setRightTab(k)}
-              className="px-2 pt-1 flex-grow-1"
-              style={{ borderBottom: 'none' }}
-            >
-              <Nav.Item>
-                <Nav.Link eventKey="palette" className="py-1 px-2 small">ElementTypes</Nav.Link>
-              </Nav.Item>
-              <Nav.Item>
-                <Nav.Link eventKey="templates" className="py-1 px-2 small">Templates</Nav.Link>
-              </Nav.Item>
-              <Nav.Item>
-                <Nav.Link eventKey="favorites" className="py-1 px-2 small" title="Favourites">
-                  <MaterialIcon name={ACTION_ICONS.favorite} size={14} />
-                </Nav.Link>
-              </Nav.Item>
-              {/* A comparable position is just another source you can pull rows from —
-                  the answer to "the Form says nothing about A02wE, is it a variant?". */}
-              <Nav.Item>
-                <Nav.Link eventKey="similar" className="py-1 px-2 small"
-                  title="Positions like this one">Like this</Nav.Link>
-              </Nav.Item>
-              {/* Validation and "Done?" used to be tabs here. They are project answers, not
-                  things you drag into a recipe — they live in the toolbar's Status button. */}
-            </Nav>
-            <span className="me-1 d-inline-flex align-items-center"><TutorialHint id="palette" active={rightOpen} /></span>
-            <button className="btn btn-link p-0 me-2" style={{ color: '#888', lineHeight: 1 }} onClick={() => setRightOpen(false)} title="Close palette" aria-label="Close palette"><MaterialIcon name="close" size={18} /></button>
+          {/* The Add panel: one search box over every source of rows — ElementTypes,
+              templates, favourites, positions like this one. "All" stacks them. */}
+          <div style={{ flexShrink: 0, borderBottom: '1px solid #dee2e6' }} className="px-2 pt-2 pb-1">
+            <div className="d-flex align-items-center gap-1 mb-1">
+              <Form.Control size="sm" value={addQuery} onChange={e => setAddQuery(e.target.value)}
+                placeholder="Search to add…" aria-label="Search to add" style={{ fontSize: 12 }} />
+              <TutorialHint id="palette" />
+              <button className="btn btn-link p-0" style={{ color: '#888', lineHeight: 1 }} onClick={() => setRightOpen(false)} title="Close palette" aria-label="Close palette"><MaterialIcon name="close" size={18} /></button>
+            </div>
+            <ButtonGroup size="sm" className="w-100" aria-label="Show">
+              {[
+                ['all', 'apps', 'All'],
+                ['palette', 'category', 'ElementTypes'],
+                ['templates', 'bookmark', 'Templates'],
+                ['favorites', ACTION_ICONS.favorite, 'Favourites'],
+                ['similar', 'compare_arrows', 'Positions like this one'],
+              ].map(([k, icon, label]) => (
+                <Button key={k} variant={rightTab === k ? 'primary' : 'outline-secondary'} title={label} aria-label={label}
+                  onClick={() => setRightTab(k)} style={{ padding: '1px 4px' }}>
+                  <MaterialIcon name={icon} size={15} />
+                </Button>
+              ))}
+            </ButtonGroup>
           </div>
           <div style={{ flex: 1, overflowY: 'auto' }}>
-            {rightTab === 'palette' && (
-              <ElementPalette
-                pickTarget={addRowTarget}
-                onPickET={handlePickET}
-                onPickETMulti={handlePickETMulti}
-                onCancelPick={handleCancelPick}
-                onNewET={handleNewET}
-                justAdded={justAdded}
-                onAddToMultiple={handleAddToMultiple}
-              />
+            {(rightTab === 'all' || rightTab === 'templates') && (
+              <AddSection show={rightTab === 'all'} icon="bookmark" label="Templates">
+                <TemplatePicker
+                  posRef={activePositionRef}
+                  activeTags={activeTags}
+                  hasRows={hasRecipeRows}
+                  query={addQuery}
+                  onApply={templateId =>
+                    setAppliedTemplateId(prev => ({ ...prev, [activePositionRef]: templateId }))
+                  }
+                />
+              </AddSection>
             )}
-            {rightTab === 'templates' && (
-              <TemplatePicker
-                posRef={activePositionRef}
-                activeTags={activeTags}
-                hasRows={hasRecipeRows}
-                onApply={templateId =>
-                  setAppliedTemplateId(prev => ({ ...prev, [activePositionRef]: templateId }))
-                }
-              />
+            {(rightTab === 'all' || rightTab === 'favorites') && (
+              <AddSection show={rightTab === 'all'} icon={ACTION_ICONS.favorite} label="Favourites"><FavoritesPanel /></AddSection>
             )}
-            {rightTab === 'favorites' && <FavoritesPanel />}
-            {rightTab === 'similar' && <SimilarPositionsPanel posRef={activePositionRef} />}
+            {(rightTab === 'all' || rightTab === 'palette') && (
+              <AddSection show={rightTab === 'all'} icon="category" label="ElementTypes">
+                <ElementPalette
+                  pickTarget={addRowTarget}
+                  onPickET={handlePickET}
+                  onPickETMulti={handlePickETMulti}
+                  onCancelPick={handleCancelPick}
+                  onNewET={handleNewET}
+                  justAdded={justAdded}
+                  onAddToMultiple={handleAddToMultiple}
+                  query={addQuery}
+                />
+              </AddSection>
+            )}
+            {(rightTab === 'all' || rightTab === 'similar') && (
+              <AddSection show={rightTab === 'all'} icon="compare_arrows" label="Positions like this one">
+                <SimilarPositionsPanel posRef={activePositionRef} query={addQuery} />
+              </AddSection>
+            )}
           </div>
         </div>
       </div>
@@ -772,7 +781,7 @@ export default function BuilderScreen({
 
       <PasteMergeModal />
 
-      <RetireUnusedModal show={showRetire} onHide={() => setShowRetire(false)} />
+      <ElementTypesWindow show={!!showRetire} view={showRetire === 'unused' ? 'unused' : 'existing'} onHide={() => setShowRetire(false)} />
 
       <ReviewModal
         show={showReview}
@@ -893,6 +902,20 @@ export default function BuilderScreen({
       />
 
       <TagRulesModal show={showTags} onHide={() => setShowTags(false)} />
+    </div>
+  )
+}
+
+/** A heading over one source in the Add panel's "All" view; nothing when a source is shown alone. */
+function AddSection({ show, icon, label, children }) {
+  if (!show) return children
+  return (
+    <div className="border-bottom">
+      <div className="px-2 pt-2 fw-semibold text-muted d-flex align-items-center gap-1"
+        style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '.04em' }}>
+        <MaterialIcon name={icon} size={12} /> {label}
+      </div>
+      {children}
     </div>
   )
 }

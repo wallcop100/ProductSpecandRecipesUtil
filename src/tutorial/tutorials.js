@@ -85,7 +85,7 @@ export const TUTORIALS = {
       { blurb: '\"Discard\" is for the scaffolding: paint the "+" separators. That teaches the tool what seperates your codes and learns to help you break down the Form Template!', scene: 'paint', beat: 5 },
       { blurb: 'You have now shown it two codes, so it knows their shape and the words that precede one. The last two arrive already suggested, dashed green. Press A to accept them - The tool has learned and can make a suggestions now!', scene: 'paint', beat: 6 },
       { blurb: 'Four codes, four notes. Done! Each one now needs the ElementType it belongs to — that is stage ②, and the codes you paint here apply to every row in the batch that contains them.', scene: 'paint', beat: 7 },
-      { blurb: 'Stage writes the Form template and the Product Spec rows — and deliberately not one recipe row. Stage ③ is yours, in the builder.', scene: 'paint', beat: 8 },
+      { blurb: 'Paint a few rows to teach it, then work down the table: Confirm obvious ticks the easy rows at once. Add to Product Spec writes the spec rows — not one recipe row — and Build recipes takes you to stage ③ in the builder.', scene: 'paint', beat: 8 },
     ],
   },
 

@@ -1,6 +1,6 @@
 import SaveTemplateModal from './SaveTemplateModal'
 import React, { useState, useEffect } from 'react'
-import { Button } from 'react-bootstrap'
+import { Button, Dropdown } from 'react-bootstrap'
 import useStore, { getRecipeForPosition } from '../store/useStore'
 import RecipeSection from './RecipeSection'
 import TagBadge from './TagBadge'
@@ -120,43 +120,36 @@ export default function PositionRecipeEditor({
         <PositionTagEditor posRef={ref} />
         <TutorialHint id="recipe-editor" />
         <div className="flex-grow-1" />
-        <IconButton
-          variant="outline-secondary" bsSize="sm" style={{ fontSize: 11 }}
-          icon={ACTION_ICONS.copy}
-          onClick={() => { const c = copyPositionRecipe(ref); if (c) flashPaste(`Copied ${c.count} row${c.count === 1 ? '' : 's'}`) }}
-          disabled={count === 0}
-          title="Copy this whole PositionType's recipe"
-        />
-        <IconButton
-          variant="outline-secondary" bsSize="sm" style={{ fontSize: 11 }}
-          icon={ACTION_ICONS.paste}
-          badge={rowClipboard ? rowClipboard.count : null}
-          onClick={doPaste}
-          disabled={!rowClipboard}
-          title={rowClipboard ? `Paste ${rowClipboard.label} (Ctrl+V)` : 'Clipboard empty'}
-        />
-        <IconButton
-          variant="outline-secondary" bsSize="sm" style={{ fontSize: 11 }}
-          icon={ACTION_ICONS.fork}
-          onClick={() => setForking(true)}
-          disabled={count === 0}
-          title="Fork this position into new one(s) — an independent copy you can trim"
-        />
-        <IconButton
-          variant="outline-secondary" bsSize="sm" style={{ fontSize: 11 }}
-          icon="bookmark_add"
-          onClick={() => setSavingTemplate(true)}
-          disabled={count === 0}
-          title="Save this recipe as a template, to apply to other positions"
-        />
+        {/* Paste is visible only when there is something to paste; the rare acts (copy the
+            whole recipe, fork, save as template) live in the ⋮ menu. */}
+        {rowClipboard && (
+          <IconButton
+            variant="outline-secondary" bsSize="sm" style={{ fontSize: 11 }}
+            icon={ACTION_ICONS.paste}
+            badge={rowClipboard.count}
+            onClick={doPaste}
+            title={`Paste ${rowClipboard.label} (Ctrl+V)`}
+          />
+        )}
+        <Dropdown align="end">
+          <Dropdown.Toggle as={IconButton} bsSize="sm" variant="outline-secondary"
+            icon={ACTION_ICONS.more} title="Recipe actions" aria-label="Recipe actions" />
+          <Dropdown.Menu style={{ fontSize: 12 }}>
+            <Dropdown.Item disabled={count === 0}
+              onClick={() => { const c = copyPositionRecipe(ref); if (c) flashPaste(`Copied ${c.count} row${c.count === 1 ? '' : 's'}`) }}>
+              <MaterialIcon name={ACTION_ICONS.copy} size={14} /> Copy whole recipe
+            </Dropdown.Item>
+            <Dropdown.Item disabled={count === 0} onClick={() => setForking(true)}>
+              <MaterialIcon name={ACTION_ICONS.fork} size={14} /> Fork into new position(s)…
+            </Dropdown.Item>
+            <Dropdown.Item disabled={count === 0} onClick={() => setSavingTemplate(true)}>
+              <MaterialIcon name="bookmark_add" size={14} /> Save as template…
+            </Dropdown.Item>
+          </Dropdown.Menu>
+        </Dropdown>
         {onOpenConnectors && (
-          <Button
-            variant="link" size="sm" className="d-inline-flex align-items-center gap-1" style={{ fontSize: 11, textDecoration: 'none' }}
-            onClick={() => onOpenConnectors(ref)}
-            title="Open the Connectors screen focused on this PositionType"
-          >
-            <MaterialIcon name="cable" size={14} /> Manage connectors
-          </Button>
+          <IconButton variant="outline-secondary" bsSize="sm" style={{ fontSize: 11 }} icon="cable"
+            onClick={() => onOpenConnectors(ref)} title="Connectors for this PositionType" />
         )}
         <PositionValidationBadge posRef={ref} size={16} showOk={count > 0} />
       </div>

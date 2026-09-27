@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import useStore from '../../src/store/useStore'
 import BuilderScreen from '../../src/screens/BuilderScreen'
 
@@ -26,5 +26,28 @@ describe('BuilderScreen renders after the drawer rework', () => {
     expect(screen.getByTitle('Validation and readiness — where the project stands')).toBeTruthy()
     // coverage moved into the tree header
     expect(screen.getByText(/reciped/)).toBeTruthy()
+  })
+})
+
+describe('the Add panel', () => {
+  const draw = () => render(<BuilderScreen
+    onBackToSetup={vi.fn()} onOpenProductSpec={vi.fn()} onOpenTemplateEditor={vi.fn()}
+    onOpenCodeImport={vi.fn()} onOpenConnectors={vi.fn()} />)
+
+  test('one search box over every source; All stacks them', () => {
+    draw()
+    expect(screen.getByLabelText('Search to add')).toBeInTheDocument()
+    for (const l of ['All', 'ElementTypes', 'Templates', 'Favourites', 'Positions like this one']) {
+      expect(within(screen.getByRole('group', { name: 'Show' })).getByRole('button', { name: l })).toBeInTheDocument()
+    }
+    // the sources no longer carry search boxes of their own
+    expect(screen.queryByPlaceholderText('Search templates…')).toBeNull()
+    expect(screen.queryByPlaceholderText('Search elements…')).toBeNull()
+  })
+
+  test('an icon shows one source alone', () => {
+    draw()
+    fireEvent.click(within(screen.getByRole('group', { name: 'Show' })).getByRole('button', { name: 'Templates' }))
+    expect(screen.getByText(/No templates yet/)).toBeInTheDocument()
   })
 })

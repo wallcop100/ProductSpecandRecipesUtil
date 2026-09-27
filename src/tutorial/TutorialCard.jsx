@@ -6,11 +6,6 @@ import { SCENES } from './scenes'
 import { markSeen, markAllSeen } from './seen'
 import './tutorial.css'
 
-/** Is some modal other than a tutorial card open? Tutorials never stack on one. */
-export function otherModalOpen() {
-  if (typeof document === 'undefined') return false
-  return !!document.querySelector('.modal:not(.tutorial-modal)')
-}
 
 /**
  * TutorialCard — the one shell every pane's tutorial plays in.

@@ -1,3 +1,4 @@
+import { TONES } from './StatusChip'
 import React, { useMemo } from 'react'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
@@ -26,7 +27,7 @@ export default function FormCoverageBadge({ posRef, size = 13 }) {
   if (!coverage) return null
 
   const complete = coverage.present === coverage.total
-  const colour = complete ? '#198754' : '#856404'
+  const colour = TONES[complete ? 'ok' : 'warn'].fg
 
   return (
     <span

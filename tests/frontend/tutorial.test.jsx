@@ -146,29 +146,26 @@ describe('the tutorial never touches the live store', () => {
   })
 })
 
-describe('TutorialHint — auto-open once, then a quiet ? for ever', () => {
-  test('an unseen card auto-opens on first mount', async () => {
+describe('TutorialHint — a quiet ? that never opens by itself', () => {
+  const openChip = () => fireEvent.click(screen.getByRole('button', { name: /How this pane works/ }))
+
+  test('an unseen card does not open on mount; the ? opens it', async () => {
     render(<TutorialHint id="builder-tree" />)
+    expect(screen.queryByText('The project tree')).toBeNull()
+    openChip()
     expect(await screen.findByText('The project tree')).toBeInTheDocument()
   })
 
-  test('dismissing marks it seen; a re-mount does NOT auto-open; the ? still does', async () => {
-    const first = render(<TutorialHint id="builder-tree" />)
-    fireEvent.click(await screen.findByLabelText('Close'))   // the modal X
-    expect(hasSeen('builder-tree')).toBe(true)
-    first.unmount()
-
+  test('closing it marks it seen', async () => {
     render(<TutorialHint id="builder-tree" />)
-    expect(screen.queryByText('The project tree')).toBeNull()
-
-    fireEvent.click(screen.getByRole('button', { name: /How this pane works/ }))
-    expect(await screen.findByText('The project tree')).toBeInTheDocument()
+    openChip()
+    fireEvent.click(await screen.findByLabelText('Close'))
+    expect(hasSeen('builder-tree')).toBe(true)
   })
 
   test('Next/Back step through; the last step offers Got it; reopen resets to step 0', async () => {
-    markSeen('builder-tree')   // suppress auto-open; drive via the chip
     render(<TutorialHint id="builder-tree" />)
-    fireEvent.click(screen.getByRole('button', { name: /How this pane works/ }))
+    openChip()
     await screen.findByText('The project tree')
 
     const nSteps = TUTORIALS['builder-tree'].steps.length
@@ -180,16 +177,15 @@ describe('TutorialHint — auto-open once, then a quiet ? for ever', () => {
 
     for (let i = 1; i < nSteps; i++) fireEvent.click(screen.getByRole('button', { name: 'Next →' }))
     fireEvent.click(screen.getByRole('button', { name: 'Got it' }))
-    // the modal fades out; gone means gone from the DOM, not mid-transition
     await waitFor(() => expect(screen.queryByText('The project tree')).toBeNull())
 
-    // reopen → back at step 1
-    fireEvent.click(screen.getByRole('button', { name: /How this pane works/ }))
+    openChip()
     expect(await screen.findByText(`step 1 of ${nSteps}`)).toBeInTheDocument()
   })
 
   test('Skip all tutorials marks every card seen', async () => {
     render(<TutorialHint id="builder-tree" />)
+    openChip()
     fireEvent.click(await screen.findByText('Skip all tutorials'))
     for (const id of ALL_TUTORIAL_IDS) expect(hasSeen(id)).toBe(true)
   })
@@ -199,63 +195,14 @@ describe('TutorialHint — auto-open once, then a quiet ? for ever', () => {
     expect(container.innerHTML).toBe('')
   })
 
-  /**
-   * Several panes mount together (tree + drawer at builder load). A fresh browser must see
-   * ONE card, not a stack of modals — the others wait for a later mount of their pane.
-   */
-  test('two unseen hints mounting together auto-open only one card', async () => {
-    render(<><TutorialHint id="builder-tree" /><TutorialHint id="recipe-editor" /></>)
-    expect(await screen.findByText('The project tree')).toBeInTheDocument()
-    expect(screen.queryByText('The recipe editor')).toBeNull()
-
-    // dismissing the first releases the lock; the second is still unseen for next time
-    fireEvent.click(screen.getByLabelText('Close'))
-    expect(hasSeen('builder-tree')).toBe(true)
-    expect(hasSeen('recipe-editor')).toBe(false)
-  })
-
-  test('an inactive hint (hidden pane) does not auto-open, and does when it becomes active', async () => {
-    markSeen('recipe-editor')     // the palette waits for it; see `after`
-    const { rerender } = render(<TutorialHint id="palette" active={false} />)
-    expect(screen.queryByText('The palette drawer')).toBeNull()
-
-    rerender(<TutorialHint id="palette" active />)
-    expect(await screen.findByText('The palette drawer')).toBeInTheDocument()
-  })
-
-  /**
-   * The mutex alone is a RACE, not an order: on the builder the drawer was mounting first and
-   * winning it, so you met the palette before the recipe it fills.
-   */
-  test('a card waits for the one it declares itself `after`', async () => {
-    render(<><TutorialHint id="recipe-editor" /><TutorialHint id="palette" /></>)
-
-    expect(await screen.findByText('The recipe editor')).toBeInTheDocument()
-    expect(screen.queryByText('The palette drawer')).toBeNull()
-  })
-
-  test('…and takes its turn the moment that card is dismissed — not on some later mount', async () => {
-    render(<><TutorialHint id="recipe-editor" /><TutorialHint id="palette" /></>)
-    await screen.findByText('The recipe editor')
-
-    fireEvent.click(screen.getByLabelText('Close'))
-
-    // Same screen, no remount: the palette must come up on its own.
-    expect(await screen.findByText('The palette drawer')).toBeInTheDocument()
-  })
-
-  test('a card never auto-opens over another modal; it waits for that one to close', async () => {
-    const { Modal } = await import('react-bootstrap')
-    const { rerender } = render(<><Modal show><Modal.Body>Other</Modal.Body></Modal><TutorialHint id="builder-tree" /></>)
-    await screen.findByText('Other')
-    expect(screen.queryByText('The project tree')).toBeNull()
-
-    rerender(<><Modal show={false}><Modal.Body>Other</Modal.Body></Modal><TutorialHint id="builder-tree" /></>)
-    expect(await screen.findByText('The project tree')).toBeInTheDocument()
+  test('several hints mounting together open nothing', () => {
+    render(<><TutorialHint id="builder-tree" /><TutorialHint id="recipe-editor" /><TutorialHint id="palette" /></>)
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 
   test('while a card is open, other modals are held back', async () => {
     render(<TutorialHint id="builder-tree" />)
+    openChip()
     await screen.findByText('The project tree')
     expect(document.body.classList.contains('tutorial-open')).toBe(true)
     fireEvent.click(screen.getByLabelText('Close'))

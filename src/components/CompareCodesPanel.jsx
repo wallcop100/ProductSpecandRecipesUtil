@@ -4,6 +4,7 @@ import MaterialIcon from './MaterialIcon'
 import { hasNoteCollision } from '../utils/productCodes'
 import UsagePopover from './UsagePopover'
 import CopyButton from './CopyButton'
+import StatusChip from './StatusChip'
 import { codeDiff } from '../utils/etRefSuggest'
 
 /**
@@ -48,8 +49,10 @@ function CodeDiff({ code, other }) {
   )
 }
 
-const BG = { green: '#d1e7dd', amber: '#fff3cd', blue: '#cfe2ff', grey: '#f1f3f5' }
-const FG = { green: '#0f5132', amber: '#856404', blue: '#084298', grey: '#495057' }
+/** The code's status in StatusChip terms: one tone and one icon per colour. */
+export const TONE = { green: 'ok', amber: 'warn', blue: 'info', grey: 'neutral' }
+export const ICON = { green: 'check_circle', amber: 'difference', blue: 'repeat', grey: 'fiber_new' }
+export const MEANS = { green: 'Already in the Product Spec', amber: 'Close to a spec code', blue: 'New, used more than once', grey: 'New' }
 /** What each colour means (see classify in utils/productCodes). A colour name says nothing. */
 export const STATUS_LABEL = { green: 'in spec', amber: 'variant', blue: 'repeated', grey: 'new' }
 const statusTip = e => ({
@@ -62,11 +65,9 @@ const statusTip = e => ({
 /** One line under the heading, so the pills can be read without hovering. */
 export function StatusLegend() {
   return (
-    <div className="d-flex flex-wrap gap-1 mb-2" style={{ fontSize: 9 }} data-testid="status-legend">
+    <div className="d-flex flex-wrap gap-1 mb-2" data-testid="status-legend">
       {Object.entries(STATUS_LABEL).map(([k, label]) => (
-        <span key={k} className="rounded px-1" style={{ background: BG[k], color: FG[k] }}>
-          {label}: {{ green: 'already in spec', amber: 'close to a spec code', blue: 'new, used more than once', grey: 'new' }[k]}
-        </span>
+        <StatusChip key={k} size="xs" tone={TONE[k]} icon={ICON[k]} label={label} tip={MEANS[k]} />
       ))}
     </div>
   )
@@ -96,7 +97,7 @@ function PositionTypes({ pts, knownPTs, ptTarget }) {
   )
 }
 
-export default function CompareCodesPanel({ entries, knownPTs, ptTarget, onCreateET, onReuse, onJump }) {
+export default function CompareCodesPanel({ entries, knownPTs, ptTarget, onCreateET, onReuse, onJump, onNeedsET }) {
   if (!entries.length) {
     return <div className="text-muted fst-italic" style={{ fontSize: 11 }}>Confirm a row to collect its codes.</div>
   }
@@ -117,10 +118,8 @@ export default function CompareCodesPanel({ entries, knownPTs, ptTarget, onCreat
                 {e.text}
               </span>
               <CopyButton text={e.text} what={`code ${e.text}`} size={11} />
-              <span className="rounded px-1" style={{ background: BG[e.status], color: FG[e.status], fontSize: 10 }}
-                title={statusTip(e)}>
-                {STATUS_LABEL[e.status] || e.status}
-              </span>
+              <StatusChip size="xs" tone={TONE[e.status]} icon={ICON[e.status]}
+                label={STATUS_LABEL[e.status] || e.status} tip={statusTip(e)} />
               <span className="text-muted ms-auto">{e.rowRefs.length} row{e.rowRefs.length === 1 ? '' : 's'}</span>
             </div>
 
@@ -150,7 +149,7 @@ export default function CompareCodesPanel({ entries, knownPTs, ptTarget, onCreat
 
             {/* Reuse: existing ETs this code might already be. One click assigns
                 the existing ref — the dedup win, no new ET minted. */}
-            {!e.etRef && !blocked && (e.reuse?.length > 0) && (
+            {onReuse && !e.etRef && !blocked && (e.reuse?.length > 0) && (
               <div className="mt-1">
                 {e.reuse.map(c => (
                   <div key={c.ref} className="py-1" style={{ fontSize: 10 }}>
@@ -185,7 +184,11 @@ export default function CompareCodesPanel({ entries, knownPTs, ptTarget, onCreat
                     <UsagePopover etRef={e.etRef} placement="left">{e.etRef}</UsagePopover>
                   </span>
                 : blocked
-                  ? <span className="text-muted fst-italic" style={{ fontSize: 10 }}>resolve above first</span>
+                  ? <span className="text-muted fst-italic" style={{ fontSize: 10 }}>{onCreateET ? 'resolve above first' : 'clash — see Review'}</span>
+                  : !onCreateET
+                    ? <StatusChip size="xs" tone="warn" icon="help" label="needs ET" role="button"
+                        aria-label={`${e.text} needs an ElementType`} tip="Choose or create one in the ElementTypes window."
+                        onClick={() => onNeedsET?.(e)} style={{ cursor: 'pointer' }} />
                   : <Button size="sm" variant="outline-primary" style={{ fontSize: 10, padding: '0 6px' }}
                       onClick={() => onCreateET(e)}
                       title={e.suggestedRef ? `Create ${e.suggestedRef}` : 'Create a new ElementType'}>

@@ -7,6 +7,8 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-09-27', note: 'Import product codes, reworked: paint a few rows, then work in the Form as a table (click words, tick rows, Confirm obvious, full undo); refs match silently; one ElementTypes window; Add to Product Spec → Build recipes' },
+  { date: '2026-09-27', note: 'Simpler UI: one Add panel with one search; one ElementTypes window (New / Existing / Unused); one status chip style; recipe header actions in a menu; obvious import columns skip their step; tutorials only open from ?' },
   { date: '2026-09-27', note: 'Less reading: explanations moved behind ⓘ icons (hover or tap) across the start page, import, Form pane and most windows' },
   { date: '2026-09-27', note: 'Projects: Restore from backup straight from the start page; "Configuration" is now a Setup, shown only when a folder has more than one; Save backup in the builder menu and on Close project' },
   { date: '2026-09-27', note: 'Templates start from a real recipe: the bookmark button saves a position as a template (untick rows, choose tags); Apply to… fills many positions at once, each with its own new wrapper' },
