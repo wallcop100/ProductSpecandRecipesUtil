@@ -167,6 +167,7 @@ export function dbOverwrites(dbChanges = []) {
   for (const c of dbChanges) {
     if (c._isNew) continue
     for (const [field, next] of Object.entries(c.updates || {})) {
+      if (field === 'SortOrder') continue   // the DB patch renumbers the whole sheet anyway
       const prev = c.before?.[field]
       if (prev == null || String(prev).trim() === '') continue
       if (String(prev) === String(next ?? '')) continue

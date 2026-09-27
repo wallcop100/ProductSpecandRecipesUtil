@@ -185,7 +185,43 @@ function preamble(sheet, indexLine) {
 }
 
 // --- PS / DB (unique-key) -------------------------------------------------
-function buildUniqueKeyScript(changes, map, sheet, keyHeader, filename, { withEntityType }) {
+/**
+ * The DesignDB's ElementTypes sheet, kept in line after every patch: sorted by ParentRef
+ * then Ref (Excel's order: blanks last), SortOrder rewritten 1..N down the sheet, and
+ * every collection row (IsCollection = Y, or named as another row's ParentRef) purple
+ * with white bold text. Done in the workbook, so it covers rows the tool never loaded.
+ */
+const DB_TIDY = `    // Keep the sheet in line: sort by ParentRef > Ref, SortOrder 1..N, collection rows purple.
+    {
+      const n = apR;   // header + every row, including the ones just added
+      const cRef = col["Ref"], cPar = col["ParentRef"], cSort = col["SortOrder"], cColl = col["IsCollection"];
+      if (cRef >= 0 && cPar >= 0 && n > 2) {
+        const body = S.getRangeByIndexes(1, 0, n - 1, nCols);
+        body.getSort().apply([{ key: cPar, ascending: true }, { key: cRef, ascending: true }]);
+        if (cSort >= 0) {
+          const nums: number[][] = [];
+          for (let i = 1; i < n; i++) nums.push([i]);
+          S.getRangeByIndexes(1, cSort, n - 1, 1).setValues(nums);
+        }
+        const refs = S.getRangeByIndexes(1, cRef, n - 1, 1).getValues();
+        const pars = S.getRangeByIndexes(1, cPar, n - 1, 1).getValues();
+        const colls = cColl >= 0 ? S.getRangeByIndexes(1, cColl, n - 1, 1).getValues() : null;
+        const parents: { [key: string]: boolean } = {};
+        for (const p of pars) { const k = String(p[0]).trim(); if (k !== "") parents[k] = true; }
+        for (let i = 0; i < refs.length; i++) {
+          const ref = String(refs[i][0]).trim();
+          if (ref === "") continue;
+          const isColl = parents[ref] || (colls !== null && String(colls[i][0]).trim().toUpperCase() === "Y");
+          if (!isColl) continue;
+          const row = S.getRangeByIndexes(i + 1, 0, 1, nCols).getFormat();
+          row.getFill().setColor("#7030A0");
+          row.getFont().setColor("#FFFFFF");
+          row.getFont().setBold(true);
+        }
+      }
+    }`
+
+function buildUniqueKeyScript(changes, map, sheet, keyHeader, filename, { withEntityType, tidy = null, tidyCols = [] }) {
   const byRef = new Map()
   for (const e of changes || []) byRef.set(e.elementTypeRef, e)   // coalesce, last wins
 
@@ -248,6 +284,7 @@ function buildUniqueKeyScript(changes, map, sheet, keyHeader, filename, { withEn
     }
   }
 
+  if (tidy && blocks.length > 0) { blocks.push(tidy); for (const c of tidyCols) used.add(c) }
   const pre = preamble(sheet, `    const rowOf = keyIndex(S, col[${q(keyHeader)}], nRows);`)
   return fillUsed(wrapScript(filename, pre, blocks), used)
 }
@@ -257,7 +294,9 @@ export function buildPsScript(psChanges, filename = 'Product Spec') {
 }
 
 export function buildDbScript(dbChanges, filename = 'ElementTypes (DB)') {
-  return buildUniqueKeyScript(dbChanges, DB_FIELD_TO_EXCEL, 'ElementTypes', 'Ref', filename, { withEntityType: false })
+  return buildUniqueKeyScript(dbChanges, DB_FIELD_TO_EXCEL, 'ElementTypes', 'Ref', filename, {
+    withEntityType: false, tidy: DB_TIDY, tidyCols: ['ParentRef', 'SortOrder', 'IsCollection'],
+  })
 }
 
 /**

@@ -108,3 +108,36 @@ describe('setting up a group: build one, check it in the builder, come back', ()
       && (r.ElementTypeRef || r.elementTypeRef) === 'ET-PS-02')).toBe(true)
   })
 })
+
+describe('setting up a group: job-dependent quantities are confirmed, even when prefilled', () => {
+  test('tape pulses with "Confirm qty"; the group cannot be copied until it is confirmed', async () => {
+    Element.prototype.scrollIntoView = Element.prototype.scrollIntoView || vi.fn()
+    useStore.setState({
+      projectId: 1, library: { patterns: [], exemplars: [] }, teaching: null, recipes: [], psRows: [], recipeChoices: {},
+      containerETRefs: new Set(), activePositionRef: null, rootView: 'positions',
+      positionTypes: [
+        { PositionTypeRef: 'L1', ParentRef: 'LINEAR', DriverLocation: 'Remote' },
+        { PositionTypeRef: 'L2', ParentRef: 'LINEAR', DriverLocation: 'Remote' },
+      ],
+      elementTypes: [{ ElementTypeRef: 'ET-LIN-TAPE-01', Family: 'ET-LIN-TAPE' }, { ElementTypeRef: 'ET-LIN-TAPE-02', Family: 'ET-LIN-TAPE' }],
+      formCaptures: { byPosition: {
+        L1: [{ elementTypeRef: 'ET-LIN-TAPE-01', code: 'T1', role: 'lead' }],
+        L2: [{ elementTypeRef: 'ET-LIN-TAPE-02', code: 'T2', role: 'lead' }],
+      } },
+    })
+    useStore.getState().buildProposedRecipe('L1')
+    useStore.getState().startTeaching({ groupKey: 'g', label: 'Linear', posRef: 'L1', others: ['L2'], refs: ['L1', 'L2'], missing: [] })
+    useStore.getState().setActivePosition('L1')
+    render(<BuilderScreen onBackToSetup={vi.fn()} onOpenProductSpec={vi.fn()} onOpenTemplateEditor={vi.fn()}
+      onOpenCodeImport={vi.fn()} onOpenConnectors={vi.fn()} />)
+    const bar = screen.getByTestId('teach-bar')
+    expect(bar.textContent).toMatch(/Confirm quantities.*ET-LIN-TAPE-01/)
+    expect(within(bar).getByRole('button', { name: 'Use L1 for the other 1' })).toBeDisabled()
+
+    fireEvent.click(await screen.findByTestId('qty-inside'))                    // the wrapper row: confirm inside
+    const pulse = await screen.findByTestId('qty-confirm')
+    fireEvent.click(within(pulse).getByRole('button', { name: /Confirm qty/ }))
+    expect(screen.queryByTestId('qty-confirm')).toBeNull()
+    expect(within(screen.getByTestId('teach-bar')).getByRole('button', { name: 'Use L1 for the other 1' })).not.toBeDisabled()
+  })
+})

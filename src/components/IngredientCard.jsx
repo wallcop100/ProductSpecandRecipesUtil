@@ -17,6 +17,7 @@ import SwapEverywhereModal from './SwapEverywhereModal'
 import { ConceptHint, CONCEPTS } from './ConceptCard'
 import { familyOf } from '../utils/etRef'
 import { ACTION_ICONS } from '../utils/entityStyle'
+import { roleOf, QTY_CONFIRM_ROLES } from '../utils/recipePatterns'
 
 /**
  * IngredientCard — a resolved recipe row with drag-to-reorder support.
@@ -160,7 +161,18 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
     !!(row.isTRItem || row.IsTRItem)
   )
   const [showExtra, setShowExtra] = useState(false)
-  const showExtraControls = showExtra || extraInUse
+  // Setting up a group on this position: clips, tape, profile, mount and caps must have
+  // their quantity confirmed — it pulses until you do, even if it came prefilled.
+  const teaching = useStore(s => s.teaching)
+  const confirmTeachQty = useStore(s => s.confirmTeachQty)
+  const qtyToConfirm = !!teaching && teaching.posRef === posRef && QTY_CONFIRM_ROLES.has(roleOf(etRef))
+    && !(teaching.qtyConfirmed || []).includes(String(etRef).toLowerCase())
+  const showExtraControls = showExtra || extraInUse || qtyToConfirm
+  // …and on a wrapper row, the ones waiting inside it (they are confirmed in Edit internals).
+  const insidePending = !!teaching && teaching.posRef === posRef && isContainer
+    ? internalItems.map(it => it.ref || it.elementTypeRef || it.ElementTypeRef)
+        .filter(ref => ref && QTY_CONFIRM_ROLES.has(roleOf(ref)) && !(teaching.qtyConfirmed || []).includes(String(ref).toLowerCase()))
+    : []
 
   function handleFieldChange(field, value) {
     updateRecipeRow(posRef, rowId, { [field]: value })
@@ -325,11 +337,17 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                     className="btn btn-link btn-sm p-0"
                     style={{ fontSize: 11, color: '#0d6efd', textDecoration: 'none' }}
                     onClick={() => openETRecipe(etRef)}
-                    title={sharedWith.length > 0
+                    data-testid={insidePending.length ? 'qty-inside' : undefined}
+                    title={insidePending.length ? `Quantities to confirm inside: ${insidePending.join(', ')}` : sharedWith.length > 0
                       ? `Edit this assembly's contents — it is shared, so this also changes ${sharedWith.join(', ')}`
                       : "Edit this element's internal recipe"}
                   >
-                    Edit internals →
+                    {insidePending.length > 0
+                      ? <span className="rounded px-1" style={{ animation: 'qtyPulse 1.4s ease-out infinite', background: '#fff3cd', color: '#664d03' }}>
+                          <style>{'@keyframes qtyPulse{0%{box-shadow:0 0 0 0 rgba(255,193,7,.9)}70%{box-shadow:0 0 0 6px rgba(255,193,7,0)}100%{box-shadow:0 0 0 0 rgba(255,193,7,0)}}'}</style>
+                          Edit internals → confirm {insidePending.length} quantit{insidePending.length === 1 ? 'y' : 'ies'}
+                        </span>
+                      : 'Edit internals →'}
                   </button>
                 )}
 
@@ -452,10 +470,21 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                 />
 
                 {/* Qty field with category icon */}
-                <QtyField
-                  value={row.quantity ?? row.Quantity ?? ''}
-                  onChange={val => handleFieldChange('quantity', val === '' ? null : Number(val))}
-                />
+                <span className="d-inline-flex align-items-center gap-1 rounded px-1" data-testid={qtyToConfirm ? 'qty-confirm' : undefined}
+                  style={qtyToConfirm ? { animation: 'qtyPulse 1.4s ease-out infinite', background: '#fff3cd' } : undefined}>
+                  {qtyToConfirm && <style>{'@keyframes qtyPulse{0%{box-shadow:0 0 0 0 rgba(255,193,7,.9)}70%{box-shadow:0 0 0 6px rgba(255,193,7,0)}100%{box-shadow:0 0 0 0 rgba(255,193,7,0)}}'}</style>}
+                  <QtyField
+                    value={row.quantity ?? row.Quantity ?? ''}
+                    onChange={val => handleFieldChange('quantity', val === '' ? null : Number(val))}
+                  />
+                  {qtyToConfirm && (
+                    <Button size="sm" variant="warning" className="py-0 px-1" style={{ fontSize: 10 }}
+                      title="Quantities for this part may need adjusting for this job (per metre, per run). Check Qty / DimMult / Integer, then confirm."
+                      onClick={() => confirmTeachQty(etRef)}>
+                      <MaterialIcon name="check" size={11} /> Confirm qty
+                    </Button>
+                  )}
+                </span>
 
                 {/* Rarely-used extras */}
                 {showExtraControls ? (

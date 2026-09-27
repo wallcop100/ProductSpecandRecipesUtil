@@ -204,3 +204,18 @@ describe('buildPtAddScript — Form PositionTypes missing from the DesignDB', ()
     expect(buildPtAddScript([])).toBe('')
   })
 })
+
+describe('the DesignDB patch keeps ElementTypes in line', () => {
+  test('sorts by ParentRef > Ref, rewrites SortOrder 1..N, and paints collection rows purple / white bold', () => {
+    const s = buildDbScript([{ elementTypeRef: 'ET-PS-01', updates: { ElementTypeRef: 'ET-PS-01', Family: 'ET-PS' }, _isNew: true }])
+    expect(s).toMatch(/getSort\(\)\.apply\(\[\{ key: cPar, ascending: true \}, \{ key: cRef, ascending: true \}\]\)/)
+    expect(s).toMatch(/for \(let i = 1; i < n; i\+\+\) nums\.push\(\[i\]\)/)
+    expect(s).toMatch(/setColor\("#7030A0"\)/)
+    expect(s).toMatch(/getFont\(\)\.setColor\("#FFFFFF"\)/)
+    expect(s).toMatch(/setBold\(true\)/)
+    expect(s).toMatch(/colMap\([^)]*\["Ref", "ParentRef", "SortOrder", "IsCollection"\]|"SortOrder"/)
+  })
+  test('nothing to patch, no script', () => {
+    expect(buildDbScript([])).toBe('')
+  })
+})

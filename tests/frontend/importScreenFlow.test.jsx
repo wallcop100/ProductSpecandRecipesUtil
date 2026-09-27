@@ -217,9 +217,31 @@ describe('TBC rows', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Apply 1$/ }))
     await tick()
     const s = useStore.getState()
-    const et = s.elementTypes.find(e => /TBC/.test(e.ElementTypeRef || ''))
-    expect(et.ElementTypeRef).toMatch(/^ET-PS-TBC-01$/)
+    const et = s.elementTypes.find(e => /TBC/.test(e.Name || ''))
+    expect(et.ElementTypeRef).toBe('ET-PS-01')                                  // TBC is never in the ref
     const ps = s.psRows.find(r => r.ElementTypeRef === et.ElementTypeRef)
     expect(ps).toMatchObject({ ProductCode: 'TBC', IsTBC: 'Y', Manufacturer: 'Flos' })
+  })
+})
+
+describe('a saved import just carries on', () => {
+  test('no resume question; Re-import and Learned this project live in the ⋯ menu', async () => {
+    useStore.setState({
+      projectId: 1, positionTypes: [{ PositionTypeRef: 'A1' }], psRows: [], elementTypes: [], recipes: [],
+      importDraft: {
+        version: 1, source: { name: 'form.xlsx', sheet: 'S' }, step: 'review',
+        map: { pt: 'PositionTypeRef', code: 'ProductCode', mfr: 'ManufacturerName', exclude: '', acc: '', context: [] },
+        rules: {}, assignments: {}, resolutions: [], refOverrides: {}, keptSeparate: [],
+        rows: [{ id: 0, rawText: 'QC50', positionType: 'A1', manufacturer: 'iGuzzini', context: {}, overrides: {}, confirmed: true }],
+      },
+    })
+    render(<ProductCodeImportScreen onBack={vi.fn()} onReviewPositions={vi.fn()} />)
+    expect(await screen.findByTestId('form-table')).toBeInTheDocument()
+    expect(screen.queryByText(/Resume your import/)).toBeNull()
+    expect(screen.queryByTestId('learned-panel')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'More' }))
+    expect(await screen.findByText(/Re-import from a spreadsheet/)).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Learned this project'))
+    expect(await screen.findByTestId('learned-panel')).toBeInTheDocument()
   })
 })
