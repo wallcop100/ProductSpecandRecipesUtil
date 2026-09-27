@@ -1346,51 +1346,33 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
               )}
             </div>
 
-            <NeedsResolving
-              collisions={collisions}
-              similar={similar}
-              resolvedCount={entries.length - collisions.length}
-              onPromote={handlePromote}
-              onUnify={handleUnify}
-              onMerge={handleMerge}
-              onKeepSeparate={handleKeepSeparate}
-              onJump={jumpToCode}
-            />
+            {/* One place to decide ElementTypes: the window's New tab (clashes on top). */}
+            {(unassigned.length > 0 || collisions.length > 0 || similar.length > 0) && (
+              <Button size="sm" variant="primary" className="w-100 mb-2" onClick={openBulkCreate} data-testid="review-ets">
+                <MaterialIcon name="category" size={14} />{' '}
+                {unassigned.length > 0 && <>{unassigned.length} code{unassigned.length === 1 ? '' : 's'} need an ElementType</>}
+                {unassigned.length > 0 && (collisions.length + similar.length) > 0 && ' · '}
+                {(collisions.length + similar.length) > 0 && <>{collisions.length + similar.length} clash{collisions.length + similar.length === 1 ? '' : 'es'}</>}
+                {' '}→ Review
+              </Button>
+            )}
 
-            <div className="fw-semibold text-muted mb-2" style={{ fontSize: 10, textTransform: 'uppercase' }}>
+            <div className="fw-semibold text-muted mb-2 d-flex align-items-center" style={{ fontSize: 10, textTransform: 'uppercase' }}>
               Distinct codes ({entries.length})
+              {elementTypes.length > 0 && (
+                <Button size="sm" variant="link" className="p-0 ms-auto text-muted" style={{ fontSize: 10, textTransform: 'none' }}
+                  onClick={() => setReviewingExisting(true)} title="Every ElementType in the project">
+                  <MaterialIcon name="category" size={12} /> ElementTypes…
+                </Button>
+              )}
             </div>
             {entries.length > 0 && <StatusLegend />}
-            {unassigned.length > 0 && (
-              <Button size="sm" variant="primary" className="w-100 mb-2" onClick={openBulkCreate}
-                title="Propose an ElementType for every code that has none — untick the wrong ones">
-                <MaterialIcon name="playlist_add" size={14} /> Review all {unassigned.length} new ElementType
-                {unassigned.length === 1 ? '' : 's'}…
-              </Button>
-            )}
-            {elementTypes.length > 0 && (
-              <Button size="sm" variant="outline-secondary" className="w-100 mb-2" onClick={() => setReviewingExisting(true)}
-                title="Every ElementType in the project, by family: check and edit names, descriptions and families">
-                <MaterialIcon name="fact_check" size={14} /> Review all {elementTypes.length} existing ElementTypes…
-              </Button>
-            )}
             <CompareCodesPanel
               entries={panelEntries}
               knownPTs={knownPTs}
               ptTarget={map.pt ? ptTarget : null}
               onJump={jumpToCode}
-              onReuse={handleReuse}
-              onCreateET={e => setCreatingFor({
-                text: e.text,
-                ref: e.suggestedRef || '',
-                manufacturer: e.manufacturers[0] || '',
-                description: e.seed?.description || e.variants[0]?.note || '',
-                name: e.seed?.name || '',
-                family: e.seed?.family || '',
-                note: e.variants[0]?.note || '',
-                positionTypes: e.positionTypes,
-                rowCount: e.rowRefs.length,
-              })}
+              onNeedsET={e => openETFor(e.text)}
             />
 
 
@@ -1529,6 +1511,21 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
           families: knownFamilies,
           elementTypes,
           onApply: applyBulk,
+          focusCode: etFocusCode,
+          header: (collisions.length > 0 || similar.length > 0) ? (
+            <div className="mb-3 pb-2 border-bottom" data-testid="clashes">
+              <NeedsResolving
+                collisions={collisions}
+                similar={similar}
+                resolvedCount={entries.length - collisions.length}
+                onPromote={handlePromote}
+                onUnify={handleUnify}
+                onMerge={handleMerge}
+                onKeepSeparate={handleKeepSeparate}
+                onJump={e => { setBulkProposals(null); setBulkOpen(false); jumpToCode(e) }}
+              />
+            </div>
+          ) : null,
         } : null}
       />
 

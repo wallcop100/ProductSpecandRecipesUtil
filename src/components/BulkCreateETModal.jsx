@@ -51,13 +51,22 @@ const REUSE = '__reuse'
 const SKIP = '__skip'
 
 export default function BulkCreateETModal({
-  show, onHide, proposals: initial, newFamilies: initialFamilies, families = [], elementTypes = [], onApply, tabs = null, animation = true,
+  show, onHide, proposals: initial, newFamilies: initialFamilies, families = [], elementTypes = [], onApply, tabs = null, animation = true, header = null, focusCode = null,
 }) {
   const [rows, setRows] = useState(initial || [])
   const [fams, setFams] = useState(initialFamilies || [])
   useEffect(() => {
     if (show) { setRows(initial || []); setFams(initialFamilies || []) }
   }, [show, initial, initialFamilies])
+  // Opened from one code ("needs ET"): bring it into view, highlighted.
+  useEffect(() => {
+    if (!show || !focusCode) return
+    const t = setTimeout(() => {
+      const el = [...document.querySelectorAll('[data-testid="bulk-et-row"]')].find(e => e.dataset.code === focusCode)
+      el?.scrollIntoView?.({ block: 'center' })
+    }, 50)
+    return () => clearTimeout(t)
+  }, [show, focusCode])
 
   const existing = useMemo(
     () => new Set(elementTypes.map(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase())),
@@ -170,6 +179,7 @@ export default function BulkCreateETModal({
 
       </Modal.Header>
       <Modal.Body style={{ fontSize: 12 }}>
+        {header}
         <div className="d-flex align-items-start gap-2 mb-2">
           <div className="text-muted d-flex align-items-center gap-2" style={{ fontSize: 11 }}>
             <span><MaterialIcon name="check_box" size={12} /> untick what is wrong</span>
@@ -272,7 +282,9 @@ export default function BulkCreateETModal({
                     const r = rows[i]
                     const bad = problems.get(i)
                     return (
-                      <tr key={i} style={{ opacity: r.include ? (dragging === i ? 0.35 : 1) : 0.45 }} data-testid="bulk-et-row">
+                      <tr key={i} data-testid="bulk-et-row" data-code={r.code}
+                        style={{ opacity: r.include ? (dragging === i ? 0.35 : 1) : 0.45,
+                          background: focusCode && r.code === focusCode ? '#fff3cd' : undefined }}>
                         <td style={{ width: 44, whiteSpace: 'nowrap' }}>
                           {r.action === 'create' ? <Grip index={i} code={r.code} /> : <span style={{ display: 'inline-block', width: 16 }} />}
                           {r.action !== 'skip' && (

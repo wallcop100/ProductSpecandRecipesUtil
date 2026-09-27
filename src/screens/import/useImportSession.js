@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useReducer } from 'react'
+import { useCallback, useMemo, useReducer, useRef } from 'react'
 
 /**
  * useImportSession — everything the import DECIDES, in one place, with undo.
@@ -9,7 +9,7 @@ import { useCallback, useMemo, useReducer } from 'react'
  * which row is open, which modal).
  *
  * The setters behave like React's: a value or an updater `prev => next`. Every change
- * records history, but changes made in the same instant (one click that sets rules AND
+ * records history, but changes made in the same event (one click that sets rules AND
  * rows) coalesce into ONE step, so one undo undoes one act.
  */
 
@@ -19,7 +19,6 @@ export const EMPTY = {
 }
 const KEYS = Object.keys(EMPTY)
 const LIMIT = 100
-const COALESCE_MS = 40
 
 export function sessionReducer(state, action) {
   switch (action.type) {
@@ -29,23 +28,24 @@ export function sessionReducer(state, action) {
       if (next === prev) return state
       const data = { ...state.data, [action.key]: next }
       if (action.record === false) return { ...state, data }
-      const coalesce = action.at - state.lastAt < COALESCE_MS && state.past.length > 0
+      // `batch` is the event that made the change: one act, one step.
+      const coalesce = action.batch != null && action.batch === state.lastBatch && state.past.length > 0
       return {
         data,
         past: coalesce ? state.past : [...state.past, state.data].slice(-LIMIT),
         future: [],
-        lastAt: action.at,
+        lastBatch: action.batch,
       }
     }
     case 'load':
-      return { data: { ...EMPTY, ...action.data }, past: [], future: [], lastAt: 0 }
+      return { data: { ...EMPTY, ...action.data }, past: [], future: [], lastBatch: null }
     case 'undo': {
       if (state.past.length === 0) return state
       return {
         data: state.past[state.past.length - 1],
         past: state.past.slice(0, -1),
         future: [state.data, ...state.future],
-        lastAt: 0,
+        lastBatch: null,
       }
     }
     case 'redo': {
@@ -54,7 +54,7 @@ export function sessionReducer(state, action) {
         data: state.future[0],
         past: [...state.past, state.data],
         future: state.future.slice(1),
-        lastAt: 0,
+        lastBatch: null,
       }
     }
     default:
@@ -64,12 +64,23 @@ export function sessionReducer(state, action) {
 
 export default function useImportSession(initial = {}) {
   const [state, dispatch] = useReducer(sessionReducer, null,
-    () => ({ data: { ...EMPTY, ...initial }, past: [], future: [], lastAt: 0 }))
+    () => ({ data: { ...EMPTY, ...initial }, past: [], future: [], lastBatch: null }))
+
+  // Changes made synchronously in one event share a batch number; the next task starts a new one.
+  const batch = useRef({ n: 0, open: false })
+  const currentBatch = () => {
+    const b = batch.current
+    if (!b.open) {
+      b.open = true
+      setTimeout(() => { b.open = false; b.n++ }, 0)
+    }
+    return b.n
+  }
 
   // One stable setter per field: setRows, setRules, setAssignments, …
   const setters = useMemo(() => Object.fromEntries(KEYS.map(key => [
     `set${key[0].toUpperCase()}${key.slice(1)}`,
-    (value, { record = true } = {}) => dispatch({ type: 'set', key, value, record, at: Date.now() }),
+    (value, { record = true } = {}) => dispatch({ type: 'set', key, value, record, batch: currentBatch() }),
   ])), [])
 
   const load = useCallback(data => dispatch({ type: 'load', data }), [])

@@ -1,5 +1,8 @@
 import { describe, test, expect, vi } from 'vitest'
-import { render, screen, fireEvent, within } from '@testing-library/react'
+import { render, screen, fireEvent, within, act } from '@testing-library/react'
+
+/** Separate user acts are separate events: let the event loop turn between them. */
+const tick = () => act(() => new Promise(r => setTimeout(r, 0)))
 
 const readSheet = vi.fn()
 vi.mock('../../src/utils/backend.js', () => ({
@@ -78,6 +81,7 @@ describe('the Form, as a table', () => {
     expect(toolbarButton(/Unconfirmed 2/)).toBeInTheDocument()
     fireEvent.click(screen.getAllByLabelText(/^Confirm row/)[0])
     expect(toolbarButton(/Unconfirmed 1/)).toBeInTheDocument()
+    await tick()
     fireEvent.keyDown(window, { key: 'z', ctrlKey: true })
     expect(toolbarButton(/Unconfirmed 2/)).toBeInTheDocument()
     fireEvent.keyDown(window, { key: 'z', ctrlKey: true, shiftKey: true })
@@ -144,8 +148,10 @@ describe('the Form, as a table', () => {
     const cycleTo = (w, role) => { while (within(table).getByTitle(new RegExp(`“${w}”`)).dataset.role !== role) fireEvent.click(within(table).getByTitle(new RegExp(`“${w}”`))) }
     cycleTo('QC5010', 'code')
     fireEvent.click(screen.getAllByLabelText(/^Confirm row/)[0])     // taught
+    await tick()
     fireEvent.click(toolbarButton(/Confirm 1 obvious row/))
     expect(toolbarButton(/Unconfirmed 1/)).toBeInTheDocument()       // only QC52 QC53 is left
+    await tick()
     fireEvent.keyDown(window, { key: 'z', ctrlKey: true })
     expect(toolbarButton(/Unconfirmed 2/)).toBeInTheDocument()       // one undo takes them all back
   })
@@ -159,5 +165,16 @@ describe('the Form, as a table', () => {
     expect(await screen.findByText(/Confirm & next|Confirmed — next/)).toBeInTheDocument()
     fireEvent.keyDown(window, { key: 'Escape' })
     expect(screen.queryByText(/Confirm & next|Confirmed — next/)).toBeNull()
+  })
+
+  test('one place for ElementTypes: the panel button opens the New tab, the code is highlighted', async () => {
+    const table = await toTable()
+    const cycleTo = (w, role) => { while (within(table).getByTitle(new RegExp(`“${w}”`)).dataset.role !== role) fireEvent.click(within(table).getByTitle(new RegExp(`“${w}”`))) }
+    cycleTo('QC50', 'code')
+    fireEvent.click(within(table).getAllByText('needs ET')[0])
+    const row = await screen.findByText((_, el) => el?.dataset?.code === 'QC50' && el.tagName === 'TR')
+    expect(row.style.background).not.toBe('')
+    // no per-code Create buttons left in the panel
+    expect(screen.queryByText(/^Create /)).toBeNull()
   })
 })

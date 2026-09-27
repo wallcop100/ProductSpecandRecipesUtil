@@ -97,7 +97,7 @@ function PositionTypes({ pts, knownPTs, ptTarget }) {
   )
 }
 
-export default function CompareCodesPanel({ entries, knownPTs, ptTarget, onCreateET, onReuse, onJump }) {
+export default function CompareCodesPanel({ entries, knownPTs, ptTarget, onCreateET, onReuse, onJump, onNeedsET }) {
   if (!entries.length) {
     return <div className="text-muted fst-italic" style={{ fontSize: 11 }}>Confirm a row to collect its codes.</div>
   }
@@ -149,7 +149,7 @@ export default function CompareCodesPanel({ entries, knownPTs, ptTarget, onCreat
 
             {/* Reuse: existing ETs this code might already be. One click assigns
                 the existing ref — the dedup win, no new ET minted. */}
-            {!e.etRef && !blocked && (e.reuse?.length > 0) && (
+            {onReuse && !e.etRef && !blocked && (e.reuse?.length > 0) && (
               <div className="mt-1">
                 {e.reuse.map(c => (
                   <div key={c.ref} className="py-1" style={{ fontSize: 10 }}>
@@ -184,7 +184,11 @@ export default function CompareCodesPanel({ entries, knownPTs, ptTarget, onCreat
                     <UsagePopover etRef={e.etRef} placement="left">{e.etRef}</UsagePopover>
                   </span>
                 : blocked
-                  ? <span className="text-muted fst-italic" style={{ fontSize: 10 }}>resolve above first</span>
+                  ? <span className="text-muted fst-italic" style={{ fontSize: 10 }}>{onCreateET ? 'resolve above first' : 'clash — see Review'}</span>
+                  : !onCreateET
+                    ? <StatusChip size="xs" tone="warn" icon="help" label="needs ET" role="button"
+                        aria-label={`${e.text} needs an ElementType`} tip="Choose or create one in the ElementTypes window."
+                        onClick={() => onNeedsET?.(e)} style={{ cursor: 'pointer' }} />
                   : <Button size="sm" variant="outline-primary" style={{ fontSize: 10, padding: '0 6px' }}
                       onClick={() => onCreateET(e)}
                       title={e.suggestedRef ? `Create ${e.suggestedRef}` : 'Create a new ElementType'}>

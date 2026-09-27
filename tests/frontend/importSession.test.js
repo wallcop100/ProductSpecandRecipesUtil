@@ -1,8 +1,8 @@
 import { describe, test, expect } from 'vitest'
 import { sessionReducer, EMPTY } from '../../src/screens/import/useImportSession.js'
 
-const start = () => ({ data: { ...EMPTY }, past: [], future: [], lastAt: 0 })
-const set = (key, value, at, extra = {}) => ({ type: 'set', key, value, at, ...extra })
+const start = () => ({ data: { ...EMPTY }, past: [], future: [], lastBatch: null })
+const set = (key, value, batch, extra = {}) => ({ type: 'set', key, value, batch, ...extra })
 
 describe('import session: one state, full undo', () => {
   test('a change records history; undo and redo walk it', () => {
@@ -17,9 +17,9 @@ describe('import session: one state, full undo', () => {
     expect(s.data.rules).toEqual({ a: 'code' })
   })
 
-  test('changes in the same instant are one step (one act, one undo)', () => {
-    let s = sessionReducer(start(), set('rules', { a: 'code' }, 1000))
-    s = sessionReducer(s, set('rows', [{ id: 1 }], 1010))
+  test('changes in the same event are one step (one act, one undo)', () => {
+    let s = sessionReducer(start(), set('rules', { a: 'code' }, 7))
+    s = sessionReducer(s, set('rows', [{ id: 1 }], 7))
     expect(s.past).toHaveLength(1)
     s = sessionReducer(s, { type: 'undo' })
     expect(s.data).toMatchObject({ rules: {}, rows: [] })
