@@ -20,7 +20,7 @@ import { ACTION_ICONS } from '../utils/entityStyle'
  *   hasRows     — whether the position already has recipe rows
  *   onApply(templateId) — called after a regular template is applied
  */
-export default function TemplatePicker({ posRef, activeTags, hasRows, onApply }) {
+export default function TemplatePicker({ posRef, activeTags, hasRows, onApply, query }) {
   const templates               = useStore(s => s.templates)
   const applyTemplate           = useStore(s => s.applyTemplate)
   const applyTemplateMany       = useStore(s => s.applyTemplateMany)
@@ -31,7 +31,8 @@ export default function TemplatePicker({ posRef, activeTags, hasRows, onApply })
   const [picked, setPicked]     = useState(() => new Set())
   const [doneMsg, setDoneMsg]   = useState(null)
 
-  const [search, setSearch]           = useState('')
+  const [ownSearch, setSearch]        = useState('')
+  const search = query ?? ownSearch
   const [pendingApply, setPendingApply] = useState(null)
 
   function parseTags(raw) {
@@ -78,15 +79,17 @@ export default function TemplatePicker({ posRef, activeTags, hasRows, onApply })
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div className="p-2 border-bottom">
-        <Form.Control
-          type="text"
-          size="sm"
-          placeholder="Search templates…"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
-      </div>
+      {query === undefined && (
+        <div className="p-2 border-bottom">
+          <Form.Control
+            type="text"
+            size="sm"
+            placeholder="Search templates…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+      )}
 
       {doneMsg && (
         <Alert variant="success" className="mx-2 mt-2 mb-0 py-1 px-2" style={{ fontSize: 12 }} dismissible onClose={() => setDoneMsg(null)}>

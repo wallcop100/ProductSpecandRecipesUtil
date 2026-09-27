@@ -15,13 +15,15 @@ const FLAGGED_FAMILY = '⚠ Recipe-only (not in DB or Spec)'
  *   "ET Ref"    — grouped by family, ET ref as primary identifier (original)
  *   "Mfr+Code"  — grouped by Manufacturer from PS rows, ProductCode as primary
  */
-export default function ElementPalette({ pickTarget, onPickET, onPickETMulti, onCancelPick, onNewET, justAdded, onAddToMultiple }) {
+export default function ElementPalette({ pickTarget, onPickET, onPickETMulti, onCancelPick, onNewET, justAdded, onAddToMultiple, query }) {
   const elementTypes = useStore(s => s.elementTypes)
   const psRows = useStore(s => s.psRows)
   const recipes = useStore(s => s.recipes)
 
   const [mode, setMode] = useState('et-ref')   // 'et-ref' | 'mfr-code'
-  const [search, setSearch] = useState('')
+  // `query` (from the Add panel's one search box) overrides this pane's own.
+  const [ownSearch, setSearch] = useState('')
+  const search = query ?? ownSearch
   const [familyFilter, setFamilyFilter] = useState('')
   const [expanded, setExpanded] = useState({})
   const [multiAdd, setMultiAdd] = useState(false)
@@ -217,7 +219,7 @@ export default function ElementPalette({ pickTarget, onPickET, onPickETMulti, on
 
         <FilterBar
           text={search}
-          onText={setSearch}
+          onText={query === undefined ? setSearch : null}
           placeholder={mode === 'mfr-code' ? 'Search code, maker, ref…' : 'Search elements…'}
           familyOptions={groupOptions}
           family={familyFilter}

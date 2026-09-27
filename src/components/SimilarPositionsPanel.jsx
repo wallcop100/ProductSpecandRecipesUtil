@@ -19,14 +19,15 @@ import { similarPositions, similarityReason } from '../utils/similarPositions'
  */
 const TOP_N = 8
 
-export default function SimilarPositionsPanel({ posRef }) {
+export default function SimilarPositionsPanel({ posRef, query }) {
   const positionTypes = useStore(s => s.positionTypes)
   const recipes = useStore(s => s.recipes)
   const positionUI = useStore(s => s.positionUI)
   const copyRecipeFrom = useStore(s => s.copyRecipeFrom)
   const setActivePosition = useStore(s => s.setActivePosition)
 
-  const [q, setQ] = useState('')
+  const [ownQ, setQ] = useState('')
+  const q = query ?? ownQ
   const [open, setOpen] = useState(null)   // which candidate is expanded
 
   const ranked = useMemo(
@@ -72,13 +73,15 @@ export default function SimilarPositionsPanel({ posRef }) {
         family the DB states, their tags and their recipes — never by how the ref is spelt.
       </div>
 
-      <Form.Control
-        size="sm"
-        value={q}
-        onChange={e => setQ(e.target.value)}
-        placeholder="Search any position…"
-        style={{ fontSize: 11, marginBottom: 8 }}
-      />
+      {query === undefined && (
+        <Form.Control
+          size="sm"
+          value={q}
+          onChange={e => setQ(e.target.value)}
+          placeholder="Search any position…"
+          style={{ fontSize: 11, marginBottom: 8 }}
+        />
+      )}
 
       {shown.length === 0 && (
         <div className="text-muted fst-italic" style={{ fontSize: 11 }}>

@@ -31,7 +31,7 @@ export default function FilterBar({
   return (
     <div className={compact ? 'px-2 py-2' : 'px-0'} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       <div className="d-flex align-items-center gap-2">
-        <div className="position-relative" style={{ flex: 1, minWidth: 0 }}>
+        {onText && <div className="position-relative" style={{ flex: 1, minWidth: 0 }}>
           <input
             className="form-control form-control-sm"
             style={{ fontSize: 12, paddingRight: 22 }}
@@ -51,12 +51,12 @@ export default function FilterBar({
               <MaterialIcon name="close" size={15} />
             </button>
           )}
-        </div>
+        </div>}
 
         {familyOptions && familyOptions.length > 0 && (
           <select
             className="form-select form-select-sm"
-            style={{ fontSize: 12, width: compact ? '100%' : 180 }}
+            style={{ fontSize: 12, width: compact || !onText ? '100%' : 180 }}
             value={family}
             onChange={e => onFamily(e.target.value)}
             title="Filter by family"
