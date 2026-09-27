@@ -179,6 +179,8 @@ export function proposeRecipe(posRef, ctx) {
   const order = r => (r.lvl === 'P' ? 0 : 1) * 100 + (r.isDesign === 'Y' ? 0 : 1) * 10
   for (const p of [...pat.rows].sort((a, b) => order(a) - order(b))) {
     if (p.role === 'WRAPPER') continue
+    // IP-rated connectors are left to the person reviewing: never proposed.
+    if (/(^|-)IP(-|$)/.test(p.role)) continue
     const flags = {
       isDesign: p.isDesign || null, isContractItem: p.isContractItem || null, quantity: p.quantity ?? null,
       dimQtyMultiplier: p.dimQtyMultiplier ?? null, isInteger: p.isInteger || null,
