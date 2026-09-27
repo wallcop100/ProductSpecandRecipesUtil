@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-09-27', note: 'Fixed: the DesignDB patch would not run in Office Scripts ("Only arrow functions may be used in array method callbacks")' },
   { date: '2026-09-27', note: 'Fixed: the DesignDB patch used Excel’s sort, which on a sheet whose filter / Table covers only some columns left the rest (InternalNotesText…) on other rows. Rows are now moved whole by the script. Restore a DesignDB patched with the previous version from its version history' },
   { date: '2026-09-27', note: 'DesignDB patch: ElementTypes in tree order (each family, then its members, by Ref — ET-CABLES 1, LC1 2 …), natural Ref order (LC2 before LC11)' },
   { date: '2026-09-27', note: 'DesignDB patch: only family rows (named as another row’s ParentRef) turn purple; wrappers (ET-DL-NN, ET-LIN-NN) stay plain, and ones painted by the last patch are cleared' },

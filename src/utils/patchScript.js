@@ -226,9 +226,9 @@ const DB_TIDY = `    // Keep the sheet in line: a tree order — each family, th
           if (rank[i] !== 0 || depth > 50) return;
           rank[i] = next++;
           const k = kids[refOf(i)];
-          if (k) { k.sort(byRef); for (const j of k) visit(j, depth + 1); }
+          if (k) { k.sort((a, b) => byRef(a, b)); for (const j of k) visit(j, depth + 1); }
         };
-        roots.sort(byRef);
+        roots.sort((a, b) => byRef(a, b));   // Office Scripts: array callbacks must be arrow functions
         for (const i of roots) visit(i, 0);
         for (let i = 0; i < refs.length; i++) if (rank[i] === 0) rank[i] = next++;   // blank refs, loops: last
         // Reorder WHOLE rows ourselves — every column with values, formulas kept — and write

@@ -291,3 +291,18 @@ describe('the ElementTypes tidy, run', () => {
     expect(sheet.fmt.get('LC1')).toMatchObject({ fill: null, bold: false })          // ordinary rows plain
   })
 })
+
+describe('Office Scripts rules', () => {
+  test('array methods only ever take an inline arrow function (never a named function)', () => {
+    const scripts = [
+      buildDbScript([{ elementTypeRef: 'ET-PS-01', updates: { ElementTypeRef: 'ET-PS-01', Family: 'ET-PS', Name: 'n' }, _isNew: true },
+        { elementTypeRef: 'ET-PS-02', updates: { Name: 'm' } }]),
+      buildPsScript([{ elementTypeRef: 'ET-PS-01', updates: { Manufacturer: 'M', ProductCode: 'C' }, _isNew: true }]),
+    ]
+    const bad = /\.(sort|map|forEach|filter|find|findIndex|some|every|reduce)\(\s*[A-Za-z_$][\w$.]*\s*\)/g
+    for (const s of scripts) {
+      expect(s.length).toBeGreaterThan(0)
+      expect(s.match(bad)).toBeNull()
+    }
+  })
+})
