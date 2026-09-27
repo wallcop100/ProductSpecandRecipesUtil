@@ -51,3 +51,24 @@ describe('the Add panel', () => {
     expect(screen.getByText(/No templates yet/)).toBeInTheDocument()
   })
 })
+
+describe('the next step on a new project', () => {
+  const draw = onOpenCodeImport => render(<BuilderScreen
+    onBackToSetup={vi.fn()} onOpenProductSpec={vi.fn()} onOpenTemplateEditor={vi.fn()}
+    onOpenCodeImport={onOpenCodeImport} onOpenConnectors={vi.fn()} />)
+
+  test('a blank project points to the Form import first', () => {
+    useStore.setState({ formCaptures: null })
+    const go = vi.fn()
+    draw(go)
+    fireEvent.click(within(screen.getByTestId('next-step')).getByRole('button', { name: 'Import the Form' }))
+    expect(go).toHaveBeenCalled()
+  })
+
+  test('after an import, positions with no recipe are offered a build', () => {
+    useStore.setState({ formCaptures: { byPosition: { C01r: [{ elementTypeRef: 'ET-PS-01', code: 'QC50', role: 'lead' }] } } })
+    draw(vi.fn())
+    fireEvent.click(within(screen.getByTestId('next-step')).getByRole('button', { name: 'Build them' }))
+    expect(screen.getByTestId('form-build')).toBeInTheDocument()
+  })
+})

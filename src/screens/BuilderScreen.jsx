@@ -122,6 +122,26 @@ export default function BuilderScreen({
       onConsumePendingReview?.()
     }
   }, [pendingReviewRefs, onConsumePendingReview])   // eslint-disable-line react-hooks/exhaustive-deps
+  // What to do next on a new project: import the Form first, then build what it imported.
+  const [hideNextStep, setHideNextStep] = useState(false)
+  const nextStep = useMemo(() => {
+    if (hideNextStep) return null
+    const live = recipes.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
+    const imported = Object.keys(formCaptures?.byPosition || {}).filter(p => formCaptures.byPosition[p]?.length)
+    if (live.length === 0 && imported.length === 0 && onOpenCodeImport) {
+      return { icon: 'auto_fix_high', title: 'New project? Start with the Form.',
+        text: 'Import its product codes: they fill the Product Spec and ElementTypes, then the recipes build from them.',
+        action: 'Import the Form', go: onOpenCodeImport }
+    }
+    const withRecipe = new Set(live.map(r => r.PositionTypeRef || r.positionTypeRef))
+    const unbuilt = imported.filter(p => !withRecipe.has(p))
+    if (unbuilt.length > 0) {
+      return { icon: 'auto_awesome', title: `${unbuilt.length} position${unbuilt.length === 1 ? '' : 's'} from the Form ha${unbuilt.length === 1 ? 's' : 've'} no recipe yet.`,
+        text: 'Build them from their Form products, with a template where one fits.',
+        action: 'Build them', go: () => setFormBuild({ refs: unbuilt, thenReview: false }) }
+    }
+    return null
+  }, [hideNextStep, recipes, formCaptures, onOpenCodeImport])
   const closeFormBuild = () => { const then = formBuild?.thenReview; setFormBuild(null); if (then) setShowReview(true) }
   const [addRowTarget, setAddRowTarget] = useState(null)      // { posRef, sectionKey }
   const [addAnywhereState, setAddAnywhereState] = useState(null) // { etRef, sectionKey, excludePosRef, startPosRef }
@@ -692,6 +712,18 @@ export default function BuilderScreen({
           ) : rootView === 'elements' ? (
             <ElementTypeTreeView />
           ) : (
+            <>
+            {nextStep && (
+              <div className="d-flex align-items-center gap-2 mx-3 mt-2 px-3 py-2 rounded" data-testid="next-step"
+                style={{ background: '#e7f1ff', border: '1px solid #b6d4fe', fontSize: 12, color: '#084298', flexShrink: 0 }}>
+                <MaterialIcon name={nextStep.icon} size={16} />
+                <span><strong>{nextStep.title}</strong> <span className="text-muted">{nextStep.text}</span></span>
+                <Button size="sm" variant="primary" className="ms-auto text-nowrap" style={{ fontSize: 11 }} onClick={nextStep.go}>
+                  {nextStep.action}
+                </Button>
+                <IconButton variant="link" bsSize="sm" icon="close" title="Hide" onClick={() => setHideNextStep(true)} />
+              </div>
+            )}
             <ProjectTreeView
               onOpenProductSpec={onOpenProductSpec}
               onOpenConnectors={onOpenConnectors}
@@ -700,6 +732,7 @@ export default function BuilderScreen({
               onNewET={handleNewET}
               onReplace={handleReplace}
             />
+            </>
           )}
         </div>
 
