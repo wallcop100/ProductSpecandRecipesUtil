@@ -87,9 +87,30 @@ describe('teach one, repeat for the group', () => {
     const rows = rowsOf('B1').map(brief)
     expect(rows).toContainEqual(['PositionType', '', 'ET-DL-01', 'Y'])
     expect(rows).toContainEqual(['ElementType', 'ET-DL-01', 'ET-PS-01', 'Y'])
-    expect(rows).toContainEqual(['PositionType', '', 'ET-5Pin-Socket', ''])      // this project's own part
+    expect(rows.some(r => r[2] === 'ET-5Pin-Socket')).toBe(false)               // only in the ET list: a suggestion, unticked
     expect(res.skipped.map(r => r.role)).toEqual(expect.arrayContaining(['5PIN-SR', '2PIN-PLUG', 'DRIVER']))  // nothing can vouch for them
     expect(useStore.getState().elementTypes.find(e => e.ElementTypeRef === 'ET-DL-01')).toMatchObject({ Family: 'ET-DL', IsCollection: 'Y' })
+  })
+
+  test('a suggestion is added only when ticked', () => {
+    const sig = useStore.getState().proposeRecipeFor('B1').signature
+    useStore.getState().setRecipeChoice(sig, { include: { '5PIN-SOCKET': true } })
+    useStore.getState().buildProposedRecipe('B1')
+    expect(rowsOf('B1').map(brief)).toContainEqual(['PositionType', '', 'ET-5Pin-Socket', ''])
+    useStore.setState({ recipeChoices: {} })
+  })
+
+  test('parts made into wrappers by the old name test are found and put back', () => {
+    useStore.setState({
+      elementTypes: [...useStore.getState().elementTypes, { ElementTypeRef: 'ET-LIN-CLIP-01', Family: null, IsCollection: 'Y' }],
+      psRows: [{ ElementTypeRef: 'ET-LIN-CLIP-01', Manufacturer: 'Ideaworks', ProductCode: 'N/A' }],
+      formCaptures: { byPosition: { B1: [{ elementTypeRef: 'ET-LIN-CLIP-01', code: 'FPSN1013MC', manufacturer: 'LEDFlex', role: 'extra' }] } },
+    })
+    expect(useStore.getState().phantomWrappers().map(p => p.ref)).toEqual(['ET-LIN-CLIP-01'])
+    expect(useStore.getState().repairPhantomWrappers()).toBe(1)
+    expect(useStore.getState().elementTypes.find(e => e.ElementTypeRef === 'ET-LIN-CLIP-01').IsCollection).toBeNull()
+    expect(useStore.getState().psRows.find(r => r.ElementTypeRef === 'ET-LIN-CLIP-01')).toMatchObject({ Manufacturer: 'LEDFlex', ProductCode: 'FPSN1013MC' })
+    expect(useStore.getState().phantomWrappers()).toEqual([])
   })
 
   test('taught on B1 (after the person adds the driver): B2 gets its own PS; B3, same product, shares B1’s wrapper', async () => {
@@ -106,8 +127,18 @@ describe('teach one, repeat for the group', () => {
     expect(b2.some(r => r[2] === 'ET-PS-01')).toBe(false)                       // never B1's product
 
     const b3 = rowsOf('B3').map(brief)
-    expect(b3).toEqual([['PositionType', '', 'ET-DL-01', 'Y'], ['PositionType', '', 'ET-5Pin-Socket', '']])  // shared: contents once
+    expect(b3).toEqual([['PositionType', '', 'ET-DL-01', 'Y']])                  // shared: contents once
     useStore.getState().undo()
     expect(rowsOf('B2')).toEqual([]); expect(rowsOf('B3')).toEqual([])
+  })
+})
+
+describe('no phantom wrappers', () => {
+  test('a linear clip added to a recipe gets an ordinary spec row, not Ideaworks N/A, and is not a collection', () => {
+    useStore.setState({ elementTypes: [et('ET-LIN-CLIP-01', 'ET-LIN-CLIP')], psRows: [], recipes: [], containerETRefs: new Set() })
+    useStore.getState().addRecipeRow('A1', 'position', { elementTypeRef: 'ET-LIN-CLIP-01', isContractItem: 'Y' }, { asPosition: true })
+    const ps = useStore.getState().psRows.find(r => r.ElementTypeRef === 'ET-LIN-CLIP-01')
+    expect(ps?.Manufacturer).not.toBe('Ideaworks')
+    expect(useStore.getState().elementTypes.find(e => e.ElementTypeRef === 'ET-LIN-CLIP-01').IsCollection).not.toBe('Y')
   })
 })

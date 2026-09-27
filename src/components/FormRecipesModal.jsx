@@ -28,7 +28,7 @@ const hasRecipe = (recipes, pos) => recipes.some(r => (r.PositionTypeRef || r.po
  * The proposed rows. With a wrapper, each part says whether it ships INSIDE it (with the
  * assembly) or SEPARATELY (position level, e.g. a first-fix socket); `onPlace` lets you flip it.
  */
-function ProposalTable({ proposal, onPlace }) {
+function ProposalTable({ proposal, onPlace, onInclude }) {
   if (!proposal || proposal.skip) return <div className="text-muted fst-italic">{proposal?.skip}</div>
   const lead = proposal.products?.find(x => x.lead)?.ref
   const where = r => {
@@ -47,10 +47,17 @@ function ProposalTable({ proposal, onPlace }) {
   return (
     <>
       <Table size="sm" className="mb-1" style={{ fontSize: 11 }}>
-        <thead><tr><th>Ships</th><th>What</th><th>ElementType</th><th>Flags</th><th>From</th></tr></thead>
+        <thead><tr><th title="Only ticked rows are added">Add</th><th>Ships</th><th>What</th><th>ElementType</th><th>Flags</th><th>From</th></tr></thead>
         <tbody>
           {proposal.rows.map((r, i) => (
-            <tr key={i} style={r.missing ? { background: '#fff5f5' } : undefined}>
+            <tr key={i} style={r.missing ? { background: '#fff5f5' } : r.include === false ? { opacity: 0.55 } : undefined}>
+              <td>
+                {r.include !== undefined && (
+                  <Form.Check type="checkbox" aria-label={`Add ${r.role.toLowerCase()}`} checked={r.include !== false}
+                    disabled={!onInclude} onChange={e => onInclude?.(r.role, e.target.checked)}
+                    title={r.suggested ? 'A suggestion from elsewhere: tick to add it' : 'Untick to leave it out'} />
+                )}
+              </td>
               <td>{where(r)}</td>
               <td>{r.role.toLowerCase()}</td>
               <td style={{ fontFamily: 'monospace' }}>
@@ -94,6 +101,7 @@ export default function FormRecipesModal({ show, onHide, posRefs, onOpenPosition
   const refs = posRefs?.length ? posRefs : Object.keys(formCaptures?.byPosition || {})
   const { groups, skipped } = useMemo(() => (show ? formGroups(refs, ctx) : { groups: [], skipped: [] }), [show, refs.join('|'), ctx])   // eslint-disable-line react-hooks/exhaustive-deps
   const sourceNames = ctx.sources.map(s => s.name)
+  const phantoms = useMemo(() => (show ? useStore.getState().phantomWrappers() : []), [show, state.elementTypes, state.psRows])   // eslint-disable-line react-hooks/exhaustive-deps
   const taughtFor = key => templates.find(t => tagsOf(t).includes(groupTag(key)))
 
   const toggle = p => setPicked(s => { const n = new Set(s); n.has(p) ? n.delete(p) : n.add(p); return n })
@@ -145,6 +153,17 @@ export default function FormRecipesModal({ show, onHide, posRefs, onOpenPosition
       </Modal.Header>
       <Modal.Body style={{ fontSize: 12 }}>
         {msg && <div className="mb-2 px-2 py-1 rounded" style={{ background: '#d1e7dd', color: '#0f5132' }}>{msg}</div>}
+        {phantoms.length > 0 && (
+          <div className="mb-2 px-2 py-1 rounded d-flex align-items-center gap-2" style={{ background: '#f8d7da', color: '#842029' }} data-testid="phantoms">
+            <MaterialIcon name="report" size={14} />
+            <span>{phantoms.length} part{phantoms.length === 1 ? ' was' : 's were'} wrongly made into wrappers (Ideaworks N/A):{' '}
+              <span style={{ fontFamily: 'monospace' }}>{phantoms.slice(0, 4).map(p => p.ref).join(', ')}{phantoms.length > 4 ? '…' : ''}</span></span>
+            <Button size="sm" variant="danger" className="ms-auto py-0" style={{ fontSize: 11 }}
+              onClick={() => { const n = useStore.getState().repairPhantomWrappers(); setMsg(`Fixed ${n}: no longer wrappers; their Form product is back on the spec where known.`) }}>
+              Fix them
+            </Button>
+          </div>
+        )}
         {groups.map(g => {
           const firstBuilt = hasRecipe(recipes, g.first)
           const taught = taughtFor(g.key)
@@ -197,7 +216,8 @@ export default function FormRecipesModal({ show, onHide, posRefs, onOpenPosition
                               </span>
                             </div>
                             <ProposalTable proposal={prop}
-                              onPlace={(role, place) => setRecipeChoice(g.key, { place: { ...(choice.place || {}), [role]: place } })} />
+                              onPlace={(role, place) => setRecipeChoice(g.key, { place: { ...(choice.place || {}), [role]: place } })}
+                              onInclude={(role, on) => setRecipeChoice(g.key, { include: { ...(choice.include || {}), [role]: on } })} />
                           </>
                         )
                       })()}

@@ -198,8 +198,11 @@ export function proposeRecipe(posRef, ctx) {
       if (fromForm.length > 0 || p.role !== 'FRAME') continue
     }
     const part = pickPart(p.role, kindKey, ctx, lead.elementTypeRef)
+    // Only what this project's own recipes already use goes in unasked. A part borrowed from
+    // another project, or merely found in the ElementType list, is a SUGGESTION: unticked.
+    const suggested = !!part && !/^this project( \(|$)/.test(part.from)
     rows.push({ section, role: p.role, ref: part?.ref || null, ...flags, from: part?.from || null, share,
-      missing: !part, exemplar: part?.exemplar || null,
+      missing: !part, exemplar: part?.exemplar || null, suggested,
       check: p.role === 'DRIVER' && !part ? 'depends on the fitting (current, channels): add it in the builder' : null })
   }
 
@@ -225,7 +228,12 @@ export function proposeRecipe(posRef, ctx) {
     if (w.wk === 'DL') { leadRow.isDesign = 'Y'; leadRow.isContractItem = null }
     else { leadRow.isDesign = null; leadRow.isContractItem = 'Y' }
   }
-  // Your call, per part: inside the wrapper (ships with it) or separately (position level).
+  // Your call, per part: added or not…
+  for (const r of rows) {
+    if (!r.ref || r.from === 'the Form' || r.role === 'WRAPPER') continue
+    r.include = choice.include?.[r.role] ?? !r.suggested
+  }
+  // …and inside the wrapper (ships with it) or separately (position level).
   if (inWrapper) {
     for (const r of rows) {
       if (r === leadRow || r.role === 'WRAPPER') continue

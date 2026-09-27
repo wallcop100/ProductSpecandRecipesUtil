@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-09-27', note: 'Fixed: clips, tape, profiles and caps (ET-LIN-CLIP-01…) were taken for wrappers and specced Ideaworks N/A — only a numbered ET-DL-NN / ET-LIN-NN is a wrapper; "Fix them" puts affected parts back. Recipes add only what you tick: parts borrowed from elsewhere start unticked' },
   { date: '2026-09-27', note: 'Recipes from the Form: the wrapper is your call per group (DL / LIN / none — precedent is only the default), and each part can ship inside it or separately; "Use it again" re-teaches a group' },
   { date: '2026-09-27', note: 'Setting up a group no longer strands you in the builder: a bar says which group, what is still empty on its first position, and brings you back — "Use it for the other N" goes straight to the rest, ticked' },
   { date: '2026-09-27', note: 'Recipes from the Form, redone: positions grouped by kind (from the DesignDB); the first of each group proposed per process.md and precedent (this project, projects opened before, 4343) with every row sourced and unknown parts left empty; you check it, then the rest copy it with their own products, sharing wrappers' },
