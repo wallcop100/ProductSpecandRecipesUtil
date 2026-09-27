@@ -12,7 +12,9 @@
  * Manual include/exclude always wins, to fix false positives/negatives.
  */
 
-const DEFAULT_NAMING_RE = /^ET-(DL|LIN)-/i
+// A wrapper is numbered: ET-DL-01, ET-LIN-04 (process.md §4.1). ET-LIN-TAPE-01, ET-LIN-CLIP-01,
+// ET-DL-… with a word after it are the PARTS that go inside one, never wrappers themselves.
+const DEFAULT_NAMING_RE = /^ET-(DL|LIN)-\d+[A-Z]?$/i
 
 // Soft-hint weights; a score at/above THRESHOLD marks a wrapper. Strong hints
 // (naming, Ideaworks/N/A) qualify alone; weak hints need corroboration — which

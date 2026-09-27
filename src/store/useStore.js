@@ -968,6 +968,40 @@ const useStore = create((set, get) => ({
     return t
   },
 
+  /**
+   * Parts wrongly made into wrappers by the old name test (ET-LIN-CLIP-01 looked like a
+   * wrapper): numbered parts that are collections, specced Ideaworks / N/A, with nothing
+   * inside them. → [{ ref, product: { maker, code } | null }]
+   */
+  phantomWrappers() {
+    const { elementTypes, psRows, recipes, formCaptures } = get()
+    const lc = x => String(x || '').toLowerCase()
+    const inside = new Set(recipes.filter(r => (r.ContextType || r.contextType) === 'ElementType').map(r => lc(r.ContextRef || r.contextRef)))
+    const fromForm = new Map()
+    for (const caps of Object.values(formCaptures?.byPosition || {})) {
+      for (const c of caps || []) if (c.elementTypeRef && c.code) fromForm.set(lc(c.elementTypeRef), { maker: c.manufacturer || '', code: c.code })
+    }
+    return elementTypes
+      .filter(e => (e.IsCollection || e.isCollection) === 'Y')
+      .map(e => e.ElementTypeRef || e.elementTypeRef)
+      .filter(ref => /-\d+$/.test(ref) && !looksLikeContainer(ref) && !inside.has(lc(ref)))
+      .filter(ref => psRows.some(r => lc(r.ElementTypeRef || r.elementTypeRef) === lc(ref)
+        && lc(r.Manufacturer || r.manufacturer) === 'ideaworks' && lc(r.ProductCode || r.productCode) === 'n/a'))
+      .map(ref => ({ ref, product: fromForm.get(lc(ref)) || null }))
+  },
+
+  /** Undo them: not a collection, and the Form's product back on the spec (else left blank). */
+  repairPhantomWrappers() {
+    const found = get().phantomWrappers()
+    for (const { ref, product } of found) {
+      get().updateElementType(ref, { IsCollection: null })
+      get().updatePSRow(ref, { Manufacturer: product?.maker || '', ProductCode: product?.code || '' }, { recordHistory: false })
+    }
+    const gone = new Set(found.map(f => f.ref.toLowerCase()))
+    set(s => ({ containerETRefs: new Set([...s.containerETRefs].filter(r => !gone.has(r))) }))
+    return found.length
+  },
+
   /** A first recipe for a position, from its Form products and precedent (utils/recipeProposal). */
   proposeRecipeFor(posRef) {
     return proposeRecipe(posRef, proposalContext(get(), get().library))
@@ -987,6 +1021,8 @@ const useStore = create((set, get) => ({
     const hasRecipe = get().recipes.some(r => (r.PositionTypeRef || r.positionTypeRef) === posRef && (r.IsDeleted || r.isDeleted) !== 'Y')
     if (hasRecipe) return null
     set({ activeContextType: 'PositionType', activeETRef: null })
+    // Only what was asked for: a suggestion left unticked is not written, nor created.
+    p = { ...p, rows: p.rows.filter(r => r.include !== false) }
     for (const r of p.rows) {
       if (!r.ref || !r.exemplar) continue
       if (get().elementTypes.some(e => lc(e.ElementTypeRef || e.elementTypeRef) === lc(r.ref))) continue
