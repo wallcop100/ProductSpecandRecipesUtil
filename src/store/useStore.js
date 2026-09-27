@@ -8,7 +8,9 @@
 import { create } from 'zustand'
 import { importFiles } from '../utils/backend'
 import { v4 as uuidv4 } from 'uuid'
-import { findBestTemplate, recipeTemplateFromRows, isRecipeTemplate } from '../utils/templateLoader.js'
+import { findBestTemplate, recipeTemplateFromRows, isRecipeTemplate, isFormTemplate } from '../utils/templateLoader.js'
+import { proposeRecipe, proposalFromTemplate, proposalContext } from '../utils/recipeProposal.js'
+import { roleOf } from '../utils/recipePatterns.js'
 import { resolveTemplate, applyResolvedTemplate } from '../utils/slotResolver.js'
 import { evaluateTags, effectiveTags, snapshotForPosition, migrateRules } from '../utils/tagRules.js'
 import { runValidation } from '../utils/validationRules.js'
@@ -925,36 +927,101 @@ const useStore = create((set, get) => ({
     return refs.length
   },
 
-  /**
-   * Build many recipes from the Form at once (see utils/formBuild.planFormBuild), as one undo
-   * step. Each row's `choice`: a template id, 'products' (just its Form products) or 'skip'.
-   * → how many positions were built.
-   */
-  buildFromForm(rows) {
-    const todo = (rows || []).filter(r => r.posRef && r.choice && r.choice !== 'skip')
-    if (todo.length === 0) return 0
-    get()._pushHistory()
-    for (const r of todo) {
-      if (r.choice === 'products') get()._applyFormProducts(r.posRef)
-      else get().applyTemplate(r.posRef, r.choice, { recordHistory: false })
-    }
-    return todo.length
+  // The tool-wide library: recipe patterns and products of every project opened before.
+  library: { patterns: [], exemplars: [] },
+  async loadLibrary() {
+    try {
+      const [patterns, exemplars] = await Promise.all([
+        window.electronAPI?.db?.getRecipePatterns?.() ?? [],
+        window.electronAPI?.db?.getStyleExemplars?.() ?? [],
+      ])
+      set({ library: { patterns: patterns || [], exemplars: exemplars || [] } })
+    } catch { /* the library only ever helps */ }
   },
 
-  /** A position's recipe is just its Form products: the main one as the design element, extras beside it. */
-  _applyFormProducts(posRef) {
+  /** A first recipe for a position, from its Form products and precedent (utils/recipeProposal). */
+  proposeRecipeFor(posRef) {
+    return proposeRecipe(posRef, proposalContext(get(), get().library))
+  },
+
+  /**
+   * Write a proposal as the position's recipe. Parts from the library become this project's
+   * ElementTypes (with their product spec) first; a new wrapper is created like addWrapper; a
+   * shared wrapper is only referenced (its contents are already there). Rows with no part are
+   * not written — they are returned, for the person to fill in the builder.
+   * The position must have no recipe yet. → { wrapperRef, skipped: [row] } | null
+   */
+  _writeProposal(p) {
+    if (!p || p.skip) return null
+    const posRef = p.posRef
+    const lc = x => String(x || '').toLowerCase()
+    const hasRecipe = get().recipes.some(r => (r.PositionTypeRef || r.positionTypeRef) === posRef && (r.IsDeleted || r.isDeleted) !== 'Y')
+    if (hasRecipe) return null
     set({ activeContextType: 'PositionType', activeETRef: null })
-    const caps = (get().formCaptures?.byPosition?.[posRef] || []).filter(c => c.elementTypeRef)
-    const lead = caps.find(c => c.role === 'lead') || caps[0]
-    if (!lead) return
-    const own = get().recipes.filter(r => (r.PositionTypeRef || r.positionTypeRef) === posRef
-      && (r.IsDeleted || r.isDeleted) !== 'Y')
-    for (const r of own) get().removeRecipeRow(posRef, r._id, { recordHistory: false })
-    get().addRecipeRow(posRef, 'position', { elementTypeRef: lead.elementTypeRef, isDesign: 'Y' }, { recordHistory: false, asPosition: true })
-    for (const x of caps) {
-      if (x === lead) continue
-      get().addRecipeRow(posRef, 'position', { elementTypeRef: x.elementTypeRef }, { recordHistory: false, asPosition: true })
+    for (const r of p.rows) {
+      if (!r.ref || !r.exemplar) continue
+      if (get().elementTypes.some(e => lc(e.ElementTypeRef || e.elementTypeRef) === lc(r.ref))) continue
+      get().createElementType({ ref: r.ref, name: r.exemplar.name || null, description: r.exemplar.description || null, family: r.exemplar.family || null })
+      get().addPSRow(r.ref, { Manufacturer: r.exemplar.maker, ProductCode: r.exemplar.code }, { recordHistory: false })
     }
+    let wrapperRef = p.wrapper?.ref || null
+    if (p.wrapper?.isNew) {
+      const k = p.wrapper.family === 'ET-LIN' ? 'LIN' : 'DL'
+      wrapperRef = getNextAvailableRef(`ET-${k}-01`, get().elementTypes)
+      get().createElementType({ ref: wrapperRef, family: `ET-${k}`, isCollection: true })
+      set(s => ({ containerETRefs: new Set([...s.containerETRefs, wrapperRef.toLowerCase()]) }))
+    }
+    const data = r => ({
+      elementTypeRef: r.role === 'WRAPPER' ? wrapperRef : r.ref,
+      isDesign: r.isDesign ?? null, isContractItem: r.isContractItem ?? null, quantity: r.quantity ?? null,
+      dimQtyMultiplier: r.dimQtyMultiplier ?? null, isInteger: r.isInteger ?? null,
+    })
+    const skipped = []
+    for (const r of p.rows.filter(r => r.section === 'position')) {
+      if (!data(r).elementTypeRef) { skipped.push(r); continue }
+      get().addRecipeRow(posRef, 'position', data(r), { recordHistory: false, asPosition: true })
+    }
+    // A shared wrapper's contents are already written, once, under the position that made it.
+    if (!p.wrapper || p.wrapper.isNew) {
+      const section = p.wrapper?.family === 'ET-LIN' ? 'lin_internal' : 'dl_internal'
+      for (const r of p.rows.filter(r => r.section === 'internal')) {
+        if (!r.ref) { skipped.push(r); continue }
+        get().addRecipeRow(posRef, section, data(r), { recordHistory: false, asPosition: true })
+      }
+    }
+    if (wrapperRef && !get().psRows.some(r => lc(r.ElementTypeRef || r.elementTypeRef) === lc(wrapperRef))) {
+      get().addPSRow(wrapperRef, { Manufacturer: 'Ideaworks', ProductCode: 'N/A' }, { recordHistory: false })
+    }
+    return { wrapperRef, skipped }
+  },
+
+  /** Build one position's first recipe from its proposal. One undo step. */
+  buildProposedRecipe(posRef) {
+    const p = get().proposeRecipeFor(posRef)
+    if (!p || p.skip) return null
+    get()._pushHistory()
+    return get()._writeProposal(p)
+  },
+
+  /**
+   * The rest of a group from its taught template (a recipe a person built and checked),
+   * each position with its own Form products, sharing wrappers where the contents match —
+   * including wrappers made earlier in this same run. Positions that already have a recipe
+   * are left alone. One undo step. → { built: [posRef], skipped: [{ posRef, why }] }
+   */
+  applyTaughtTemplate(templateId, posRefs) {
+    const template = get().templates.find(t => t.id === templateId)
+    if (!template) return { built: [], skipped: [] }
+    get()._pushHistory()
+    const built = [], skipped = []
+    for (const posRef of posRefs || []) {
+      const p = proposalFromTemplate(template, posRef, proposalContext(get(), get().library))
+      if (p.skip) { skipped.push({ posRef, why: p.skip }); continue }
+      const res = get()._writeProposal(p)
+      if (res) built.push(posRef)
+      else skipped.push({ posRef, why: 'already has a recipe' })
+    }
+    return { built, skipped }
   },
 
   /**
@@ -1027,6 +1094,15 @@ const useStore = create((set, get) => ({
     if (!template) return
 
     if (recordHistory) get()._pushHistory()
+    if (isFormTemplate(template)) {
+      const p = proposalFromTemplate(template, posRef, proposalContext(get(), get().library))
+      if (!p.skip) {
+        const own = get().recipes.filter(r => (r.PositionTypeRef || r.positionTypeRef) === posRef && (r.IsDeleted || r.isDeleted) !== 'Y')
+        for (const r of own) get().removeRecipeRow(posRef, r._id, { recordHistory: false })
+        get()._writeProposal(proposalFromTemplate(template, posRef, proposalContext(get(), get().library)))
+        return
+      }
+    }
     if (isRecipeTemplate(template)) return get()._applyRecipeTemplate(posRef, template)
 
     const mappings = slotMappings[templateId] || {}
@@ -1202,7 +1278,10 @@ const useStore = create((set, get) => ({
     const template = recipeTemplateFromRows(rows, {
       name: (name || '').trim() || posRef, scope,
       tags: tags ?? (positionUI[posRef]?.tags || []), containerETRefs,
-      formProducts: formCaptures?.byPosition?.[posRef] || [],
+      formProducts: (formCaptures?.byPosition?.[posRef] || []).map(c => {
+        const et = get().elementTypes.find(e => (e.ElementTypeRef || '').toLowerCase() === String(c.elementTypeRef || '').toLowerCase())
+        return { ...c, productRole: roleOf(c.elementTypeRef, et?.Family || et?.family) }
+      }),
     })
     if (scope === 'project') template.project_id = projectId
     return get().updateTemplate(template)

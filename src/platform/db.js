@@ -132,6 +132,8 @@ export const dbApi = {
   // style library (tool-wide)
   recordStyleExemplars: writer(schema.recordStyleExemplars),
   getStyleExemplars: reader(schema.getStyleExemplars),
+  recordRecipePatterns: writer(schema.recordRecipePatterns),
+  getRecipePatterns: reader(schema.getRecipePatterns),
   getStyleSummary: reader(schema.getStyleSummary),
   applyLibraryData: writer(schema.applyLibraryData),
 

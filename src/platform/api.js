@@ -109,6 +109,8 @@ function dbBridge() {
     // Style library: tool-wide exemplars of how products became ElementTypes.
     recordStyleExemplars: call(exemplars => dbApi.recordStyleExemplars(exemplars)),
     getStyleExemplars: call(() => dbApi.getStyleExemplars()),
+    recordRecipePatterns: call((source, patterns) => dbApi.recordRecipePatterns(source, patterns)),
+    getRecipePatterns: call(() => dbApi.getRecipePatterns()),
     getStyleSummary: call(() => dbApi.getStyleSummary()),
 
     getPendingChanges: call(projectId => dbApi.getPendingChanges(projectId)),

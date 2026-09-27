@@ -440,3 +440,15 @@ describe('templates save and load back', () => {
     expect(got.ingredients).toEqual([{ slotKey: 'Y' }])
   })
 })
+
+describe('recipe patterns — tool-wide, one set per project opened', () => {
+  test('re-opening a project replaces its patterns; every project is kept', () => {
+    const p = (role, n) => ({ wk: 'DL', dl: 'LOCAL', env: 'INT', lvl: 'P', role, n, of: 3 })
+    schema.recordRecipePatterns('P1', [p('5PIN-SOCKET', 3)])
+    schema.recordRecipePatterns('P2', [p('5PIN-SR', 2)])
+    schema.recordRecipePatterns('P1', [p('5PIN-SOCKET', 2)])
+    const all = schema.getRecipePatterns()
+    expect(all).toHaveLength(2)
+    expect(all.find(x => x.source === 'P1')).toMatchObject({ role: '5PIN-SOCKET', n: 2 })
+  })
+})

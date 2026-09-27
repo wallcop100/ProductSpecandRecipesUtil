@@ -69,6 +69,6 @@ describe('the next step on a new project', () => {
     useStore.setState({ formCaptures: { byPosition: { C01r: [{ elementTypeRef: 'ET-PS-01', code: 'QC50', role: 'lead' }] } } })
     draw(vi.fn())
     fireEvent.click(within(screen.getByTestId('next-step')).getByRole('button', { name: 'Build them' }))
-    expect(screen.getByTestId('form-build')).toBeInTheDocument()
+    expect(screen.getByText('Recipes from the Form')).toBeInTheDocument()
   })
 })

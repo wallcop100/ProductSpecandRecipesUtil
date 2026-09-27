@@ -11,6 +11,8 @@
  *
  *   library   — the very same product (maker + code) on a project opened before: its
  *               family, name, description and — if free here — its ref come with it.
+ *   track     — the position sits under a TRACK family in the DesignDB: ET-TRACK when the text
+ *               says track (the track itself), else ET-TRACK-PS (a fitting on it).
  *   stem      — an existing product from the same maker whose code shares a real stem
  *               (FPSN0809BG3000 beside FPSN0809BG2000). Specific enough to trust.
  *   style     — the tool-wide style library (styleLibrary.js): how this maker's product line
@@ -119,6 +121,14 @@ export function pickFamily(signals, ctx) {
     if (stem >= 4 && (!best || stem > best.stem)) best = { family, stem }
   }
   if (best) return done(best.family, 'stem')
+
+  // On a track position (the DesignDB files it under a TRACK family): the track itself, or a
+  // fitting that sits on it. Before shapes and style: a Flos spot on track is not an ET-PS.
+  if ((signals.parents || []).some(p => /TRACK/i.test(p))) {
+    const trackText = /TRACK/i.test(signals.text || '')
+    if (trackText) return done('ET-TRACK', 'track', { canon: 'track position, says track' })
+    if (signals.role !== 'extra') return done('ET-TRACK-PS', 'track', { canon: 'fitting on a track position' })
+  }
 
   const style = styleFor(signals.code, signals.manufacturer, ctx.library || [], signals.text || '')
   if (style) return done(style.family, 'style', { style, flag: !!style.partial })

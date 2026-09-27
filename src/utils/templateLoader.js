@@ -230,7 +230,8 @@ export function recipeTemplateFromRows(rows, { name, scope = 'project', tags = [
   const formRole = new Map()
   for (const c of formProducts) {
     const k = lcRef(c.elementTypeRef)
-    if (k && !formRole.has(k)) formRole.set(k, c.role === 'lead' ? 'lead' : 'extra')
+    // 'lead', or the product's role (TAPE, CAP…) so each keeps its own flags; 'extra' if unknown.
+    if (k && !formRole.has(k)) formRole.set(k, c.role === 'lead' ? 'lead' : (c.productRole || 'extra'))
   }
   const live = rows.filter(r => f(r, 'IsDeleted', 'isDeleted') !== 'Y')
   const pos = live.filter(r => f(r, 'ContextType', 'contextType') === 'PositionType')

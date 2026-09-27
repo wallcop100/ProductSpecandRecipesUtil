@@ -8,6 +8,7 @@ import { evaluateTags, effectiveTags, computeTagDrift } from '../utils/tagRules'
 import { extractProjectId } from '../utils/projectId'
 import { detectFiles as detectProjectFiles, importFiles } from '../utils/backend'
 import { harvestExemplars } from '../utils/styleLibrary'
+import { harvestPatterns } from '../utils/recipePatterns'
 import { groupProjects, adoptPlan, pickCanonical, UNASSIGNED, dbFilesOf, pickDbs } from '../utils/projectIdentity'
 import ProjectCard from '../components/ProjectCard'
 import ProjectIdPill from '../components/ProjectIdPill'
@@ -414,6 +415,12 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
           elementTypes, psRows: ps_rows, source: [projectNumber, label].filter(Boolean).join(' ') || folder,
         }))
       } catch { /* the library is a convenience, never a reason not to open */ }
+      // …and how it built its recipes, by kind: precedent for the next project's first recipes.
+      try {
+        const source = [projectNumber, label].filter(Boolean).join(' ') || folder
+        await window.electronAPI.db.recordRecipePatterns?.(source,
+          harvestPatterns({ recipes: rs_rows ?? [], positionTypes, elementTypes }))
+      } catch { /* same: never a reason not to open */ }
 
       // Read any crash-surviving pending changes BEFORE loadProject resets the
       // queues (the persistence subscription would otherwise overwrite them).

@@ -31,6 +31,8 @@ export const CANON_FAMILIES = [
   { ref: 'ET-LIN-FLEX', parent: 'ET-LIN-INGREDIENTS', description: 'Encapsulated Linear Family' },
   { ref: 'ET-LIN-FIXED', parent: 'ET-LIN-INGREDIENTS', description: 'Fixed Linear Family' },
   { ref: 'ET-LIGHTINGCONTROL', parent: null, description: 'Lighting Control Family' },
+  { ref: 'ET-TRACK', parent: null, description: 'Track Family' },
+  { ref: 'ET-TRACK-PS', parent: 'ET-TRACK', description: 'Track mounted Point Source Family' },
 ]
 
 /**
@@ -46,6 +48,7 @@ export const CANON_KEYWORDS = [
   { test: /\bCLIPS?\b/, family: 'ET-LIN-CLIP', head: 'ET-LIN-CLIP' },
   { test: /\bBRACKETS?\b|\bRAILS?\b|\bSUSPENSION\s+KIT\b|\bMOUNT(ING|ED)?\s+KIT\b/, family: 'ET-LIN-MOUNT', head: 'ET-LIN-MOUNT' },
   { test: /\bMOUNTING\s+(PROFILE|CHANNEL|TRACK)\b|\bNEON\b.*\bPROFILE\b|\bPROFILE\b.*\bNEON\b/, family: 'ET-LIN-MOUNT', head: 'ET-LIN-MOUNT' },
+  { test: /\bTRACK\b|TRACK\b/, family: 'ET-TRACK', head: 'ET-TRACK' },
   { test: /\bPROFILES?\b|\bEXTRUSION\b/, family: 'ET-LIN-PROF', head: 'ET-LIN-PROF' },
   { test: /\bNEON\b|\bENCAPSULATED\b/, family: 'ET-LIN-FLEX', head: 'ET-LIN-FLEX' },
   { test: /\bTAPES?\b|\bSTRIPS?\b/, family: 'ET-LIN-TAPE', head: 'ET-LIN-TAPE' },
