@@ -118,7 +118,9 @@ export function pickFamily(signals, ctx) {
   const style = styleFor(signals.code, signals.manufacturer, ctx.library || [], signals.text || '')
   if (style) return done(style.family, 'style', { style, flag: !!style.partial })
 
-  const shape = matchShape(signals.code, signals.manufacturer, ctx.shapes || []).current
+  // An old code still says what KIND of product it is: a superseded grip profile is a mount.
+  const shapes = matchShape(signals.code, signals.manufacturer, ctx.shapes || [])
+  const shape = shapes.current?.family ? shapes.current : shapes.superseded?.family ? shapes.superseded : null
   if (shape?.family) return done(shape.family, 'shape', { head: shape.head || shape.family, shape })
 
   const design = mostCommon(signals.designFamilies || [])

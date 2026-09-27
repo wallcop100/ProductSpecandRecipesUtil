@@ -170,3 +170,15 @@ describe('the code beats the description', () => {
     expect(r.flag).toBe(true)
   })
 })
+
+describe('families from words and old shapes', () => {
+  test('a rail is a mount; a casing is point mounting; a louvre is an accessory', () => {
+    expect(pickFamily({ code: 'A4431', text: 'aluminium rail', pageType: 'linear' }, {}).family).toBe('ET-LIN-MOUNT')
+    expect(pickFamily({ code: 'WC4020', text: 'Outer casing', pageType: 'point', role: 'extra' }, {}).family).toBe('ET-PS-MOUNTING')
+    expect(pickFamily({ code: 'AR413', text: 'Hex Louvre', pageType: 'point', role: 'extra' }, {}).family).toBe('ET-PS-ACCESSORIES')
+  })
+  test('a superseded shape still names the kind of product', () => {
+    const shapes = [{ maker: 'LEDFlex', shape: 'UN9FGSLW9', level: 'fine', family: 'ET-LIN-MOUNT', head: 'ET-LIN-MOUNT', status: 'superseded' }]
+    expect(pickFamily({ code: 'UN22FGSLW1000', manufacturer: 'LEDFlex', text: 'ULTIMO NEON 22', pageType: 'linear' }, { shapes }).family).toBe('ET-LIN-MOUNT')
+  })
+})

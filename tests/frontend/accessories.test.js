@@ -76,3 +76,11 @@ describe('notes stay on their side of the Accessories boundary', () => {
     expect(caps.find(c => c.code === 'QC50').note).toBe('')
   })
 })
+
+test('a cell listing one code per ";" part keeps each note with its own code', () => {
+  const text = 'profile A1234; B5678 opal cover; C9012 end caps'
+  const row = { ...makeRow(0, text) }
+  row.roles = row.tokens.map(t => (/^[A-C]\d{4}$/.test(t.text) ? 'code' : /^[;,]$/.test(t.text) ? 'discard' : 'note'))
+  const caps = deriveCaptures(row).captures
+  expect(caps.map(c => c.note)).toEqual(['profile', 'opal cover', 'end caps'])
+})

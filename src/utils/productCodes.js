@@ -144,6 +144,18 @@ export function segmentsOf(row, delimiters = new Set()) {
   })
 }
 
+/** ';' or ',' when splitting the cell there leaves each part with at most one code (of `pool`). */
+function ownDelimiters(row, runs, pool) {
+  for (const d of [[';'], [','], [';', ',']]) {
+    const set = new Set(d)
+    const segs = segmentsOf(row, set)
+    const per = new Map()
+    for (const ri of pool) per.set(segs[runs[ri][0]], (per.get(segs[runs[ri][0]]) || 0) + 1)
+    if (per.size > 1 && [...per.values()].every(n => n === 1)) return set
+  }
+  return new Set()
+}
+
 /** Reading-order pick: the code this note reads with, in the given direction. */
 function directionalPick(runs, candidates, tokenIdx, direction) {
   if (candidates.length === 0) return -1
@@ -184,8 +196,10 @@ export function noteOwnerOf(row, tokenIdx, runs = codeRuns(row), opts = {}) {
     if (pool.length === 0) return -1
   }
 
-  if (delimiters.size > 0) {
-    const segs = segmentsOf(row, delimiters)
+  // Nothing taught yet: a cell that lists one code per ';' or ',' part says so itself.
+  const delims = delimiters.size > 0 ? delimiters : ownDelimiters(row, runs, pool)
+  if (delims.size > 0) {
+    const segs = segmentsOf(row, delims)
     const sameSeg = pool.filter(ri => segs[runs[ri][0]] === segs[tokenIdx])
     if (sameSeg.length > 0) return directionalPick(runs, sameSeg, tokenIdx, direction)
   }
