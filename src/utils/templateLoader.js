@@ -191,3 +191,72 @@ export function recipeToTemplate(recipe, templateName, scope = 'project', sugges
     ingredients: JSON.stringify(ingredients),
   }
 }
+
+// ---------------------------------------------------------------------------
+// Recipe templates — a finished recipe, saved to be applied elsewhere.
+// ---------------------------------------------------------------------------
+
+const lcRef = s => String(s ?? '').trim().toLowerCase()
+const f = (r, a, b) => r[a] ?? r[b] ?? null
+
+/** A readable slot key from a ref's words: ET-LIN-PROF-01 → PROF, ET-DRIVER-CCL-02 → DRIVER-CCL. */
+export function slotKeyFor(ref, used = new Set()) {
+  const words = String(ref || '').toUpperCase().split(/[-_\s]+/)
+    .filter(w => w && w !== 'ET' && !/^\d+$/.test(w))
+  const base = (words.length > 1 && ['LIN', 'PS', 'DL'].includes(words[0]) ? words.slice(1) : words).join('-') || 'SLOT'
+  let key = base, n = 2
+  while (used.has(key)) key = `${base}-${n++}`
+  used.add(key)
+  return key
+}
+
+/** Saved from a recipe: every ingredient names its real ElementType (no slot mapping). */
+export function isRecipeTemplate(template) {
+  const ings = Array.isArray(template?.ingredients) ? template.ingredients : []
+  return ings.length > 0 && ings.every(i => i.exact || i.newWrapper)
+}
+
+/**
+ * A position's recipe → a template. `rows` are the rows to keep (the user may untick some).
+ * The position's wrapper is stored as "a new wrapper of this kind" (`newWrapper: 'LIN'|'DL'`),
+ * not as its ref: applying the template to another position must not silently share it.
+ * Everything else keeps its actual ElementType (`exact`), quantities and flags.
+ */
+export function recipeTemplateFromRows(rows, { name, scope = 'project', tags = [], containerETRefs = new Set() } = {}) {
+  const live = rows.filter(r => f(r, 'IsDeleted', 'isDeleted') !== 'Y')
+  const pos = live.filter(r => f(r, 'ContextType', 'contextType') === 'PositionType')
+  const inside = live.filter(r => f(r, 'ContextType', 'contextType') === 'ElementType')
+  const byIndex = (a, b) => (f(a, 'RecipeIndex', 'recipeIndex') ?? 0) - (f(b, 'RecipeIndex', 'recipeIndex') ?? 0)
+  const used = new Set()
+  const ingredient = (r, section) => {
+    const ref = f(r, 'ElementTypeRef', 'elementTypeRef')
+    const wrapper = section === 'position' && containerETRefs.has(lcRef(ref))
+    return {
+      slotKey: wrapper ? 'DESIGN_ELEMENT' : slotKeyFor(ref, used),
+      slotLabel: ref,
+      section,
+      ...(wrapper ? { newWrapper: /LIN/i.test(ref) ? 'LIN' : 'DL' } : { exact: true }),
+      isDesign: f(r, 'IsDesign', 'isDesign'),
+      isContractItem: f(r, 'IsContractItem', 'isContractItem'),
+      isTRItem: f(r, 'IsTRItem', 'isTRItem'),
+      isTBC: f(r, 'IsTBC', 'isTBC'),
+      isPropertiesTBC: f(r, 'IsPropertiesTBC', 'isPropertiesTBC'),
+      quantity: f(r, 'Quantity', 'quantity'),
+      dimQtyMultiplier: f(r, 'Dim_QuantityMultiplier', 'dimQtyMultiplier'),
+      dimQuantity: f(r, 'Dim_Quantity', 'dimQuantity'),
+      isInteger: f(r, 'IsInteger', 'isInteger'),
+      packQuantity: f(r, 'PackQuantity', 'packQuantity'),
+      notes: f(r, 'Notes', 'notes'),
+    }
+  }
+  return {
+    id: uuidv4(),
+    name,
+    scope,
+    applicable_tags: Array.isArray(tags) ? tags : [],
+    ingredients: [
+      ...pos.sort(byIndex).map(r => ingredient(r, 'position')),
+      ...inside.sort(byIndex).map(r => ingredient(r, 'dl_internal')),
+    ],
+  }
+}

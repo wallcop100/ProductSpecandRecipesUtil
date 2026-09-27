@@ -36,7 +36,7 @@ import LinWrapperWizardModal from '../components/LinWrapperWizardModal'
 import AddAnywhereModal from '../components/AddAnywhereModal'
 import NewETWizardModal from '../components/NewETWizardModal'
 import ChangeSummaryModal from '../components/ChangeSummaryModal'
-import TransformToTemplateModal from '../components/TransformToTemplateModal'
+import SaveTemplateModal from '../components/SaveTemplateModal'
 import IconButton from '../components/IconButton'
 import MaterialIcon from '../components/MaterialIcon'
 import { ACTION_ICONS, ICONS } from '../utils/entityStyle'
@@ -57,6 +57,7 @@ export default function BuilderScreen({
   const rootView = useStore(s => s.rootView)
   const projectNumber = useStore(s => s.projectNumber)
   const configName = useStore(s => s.configName)
+  const projectId = useStore(s => s.projectId)
   const activePositionRef = useStore(s => s.activePositionRef)
   const activeContextType = useStore(s => s.activeContextType)
   const activeETRef = useStore(s => s.activeETRef)
@@ -87,6 +88,15 @@ export default function BuilderScreen({
   const [showDupModal, setShowDupModal] = useState(false)
   const [showLinWizard, setShowLinWizard] = useState(false)
   const [confirmClose, setConfirmClose] = useState(false)
+  const [backupMsg, setBackupMsg] = useState(null)
+
+  /** A backup file of this setup: files, tags, templates and unexported work. */
+  async function saveBackup() {
+    const r = await window.electronAPI?.db?.exportConfigYAML?.(projectId, `${projectNumber || 'project'}-${configName || 'Base'}`)
+    if (r?.ok) setBackupMsg(`Backup saved to ${r.path}`)
+    else if (r?.error) setBackupMsg(`Could not save the backup: ${r.error}`)
+    return !!r?.ok
+  }
   const [showReview, setShowReview] = useState(false)
   const [reviewInitialRefs, setReviewInitialRefs] = useState(null)
 
@@ -435,6 +445,12 @@ export default function BuilderScreen({
           <ProjectIdPill number={projectNumber} configName={configName} size="sm" className="me-1" />
         )}
         <SaveIndicator />
+        {backupMsg && (
+          <span className="text-muted d-inline-flex align-items-center gap-1" style={{ fontSize: 11 }}>
+            {backupMsg}
+            <Button variant="link" size="sm" className="p-0" style={{ fontSize: 11 }} onClick={() => setBackupMsg(null)}>×</Button>
+          </span>
+        )}
         {/* Silent unless a Form template is attached. "Reconcile →" steps through
             every position that still misses a Form product. */}
         <FormProgressChip onReconcile={startReconcile} />
@@ -526,8 +542,11 @@ export default function BuilderScreen({
               <MaterialIcon name={ACTION_ICONS.saveTemplate} size={14} /> Save this position as a template
             </Dropdown.Item>
             <Dropdown.Divider />
+            <Dropdown.Item onClick={saveBackup}>
+              <MaterialIcon name="save_alt" size={14} /> Save backup…
+            </Dropdown.Item>
             <Dropdown.Item onClick={onOpenTemplateEditor}>
-              <MaterialIcon name="dashboard_customize" size={14} /> Template editor
+              <MaterialIcon name="dashboard_customize" size={14} /> Manage templates
             </Dropdown.Item>
             <Dropdown.Item onClick={() => setShowTags(true)}>
               <MaterialIcon name={ACTION_ICONS.tags} size={14} /> Tags
@@ -812,6 +831,8 @@ export default function BuilderScreen({
           {hasDirtyChanges && (
             <Button variant="outline-primary" size="sm" onClick={() => { setConfirmClose(false); requestExport() }}>Export first</Button>
           )}
+          <Button variant="outline-secondary" size="sm" onClick={saveBackup}
+            title="A file you can restore this setup from on another machine">Save backup</Button>
           <Button variant="danger" size="sm" onClick={() => { setConfirmClose(false); onBackToSetup() }}>Close project</Button>
         </Modal.Footer>
       </Modal>
@@ -857,8 +878,9 @@ export default function BuilderScreen({
         onDone={handleNewETDone}
       />
 
-      {/* Transform Active Position into a Template (T-F4) */}
-      <TransformToTemplateModal
+      {/* Save the active position's recipe as a template — the same window as the
+          recipe header's bookmark button. */}
+      <SaveTemplateModal
         show={showSaveTemplate}
         onHide={() => setShowSaveTemplate(false)}
         posRef={activePositionRef}

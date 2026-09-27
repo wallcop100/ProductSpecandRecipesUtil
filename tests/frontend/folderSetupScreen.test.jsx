@@ -295,7 +295,7 @@ describe('several DesignDBs in one folder', () => {
     window.electronAPI.db.applyConfigData = vi.fn(async () => { calls.push('apply'); return { pendingRestored: 0, pendingSkipped: 0, localEts: 0 } })
     await pickFolder()
 
-    fireEvent.click(screen.getByRole('button', { name: /Restore a config from YAML/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Restore from backup/ }))
     expect(await screen.findByText(/Restoring from houses.config.yaml/)).toBeTruthy()
     expect(screen.getByLabelText('main.xlsx').checked).toBe(true)
     expect(screen.getByLabelText('guest.xlsx').checked).toBe(false)
@@ -306,6 +306,51 @@ describe('several DesignDBs in one folder', () => {
       configName: 'Houses', projectNumber: '5452', dbFilename: ['main.xlsx'],
     })
     expect(calls.indexOf('upsert')).toBeLessThan(calls.indexOf('apply'))
+  })
+
+  test('one setup: no config field, it just resumes; a new setup needs its own name', async () => {
+    detectFiles.mockResolvedValue(twoDbs)
+    window.electronAPI.db.getConfigsForFolder = vi.fn().mockResolvedValue([{ id: 1, config_name: 'Base', project_number: '5452', db_filenames: '["main.xlsx"]' }])
+    await pickFolder()
+    expect((await screen.findByTestId('single-setup')).textContent).toMatch(/Resumes Base/)
+    expect(screen.queryByLabelText('Setup')).toBeNull()
+    fireEvent.click(screen.getByText('+ New setup of this folder'))
+    const open = screen.getByRole('button', { name: 'Open Project' })
+    expect(open).toBeDisabled()                                     // unnamed
+    fireEvent.change(screen.getByLabelText('New setup name'), { target: { value: 'base' } })
+    expect(open).toBeDisabled()                                     // taken
+    fireEvent.change(screen.getByLabelText('New setup name'), { target: { value: 'Guest House' } })
+    expect(open).not.toBeDisabled()
+  })
+
+  test('several setups: a Setup chooser', async () => {
+    detectFiles.mockResolvedValue(twoDbs)
+    window.electronAPI.db.getConfigsForFolder = vi.fn().mockResolvedValue([
+      { id: 1, config_name: 'Main House', project_number: '5452', db_filenames: '["main.xlsx"]' },
+      { id: 2, config_name: 'Guest House', project_number: '5452', db_filenames: '["guest.xlsx"]' },
+    ])
+    await pickFolder()
+    expect(await screen.findByLabelText('Setup')).toHaveValue('Main House')
+  })
+
+  test('a backup can be restored from the landing page, before any folder is open', async () => {
+    detectFiles.mockResolvedValue(twoDbs)
+    const yaml = {
+      version: 2,
+      project: { project_number: '5452', config_name: 'Houses', project_label: 'Guest House' },
+      files: { design_dbs: ['guest.xlsx'], product_spec: 'ps.xlsx', recipes_spec: 'rs.xlsx' },
+      prefs: {},
+    }
+    window.electronAPI.db.readConfigYAML = vi.fn().mockResolvedValue({ ok: true, data: yaml, path: 'houses.config.yaml' })
+    render(<FolderSetupScreen onProjectLoaded={vi.fn()} />)
+    fireEvent.click(await screen.findByRole('button', { name: /Restore from backup/ }))
+    const banner = await screen.findByTestId('pending-restore')
+    expect(banner.textContent).toMatch(/Backup of 5452 · Houses read/)
+    expect(banner.textContent).toMatch(/Guest House/)
+    fireEvent.click(screen.getByRole('button', { name: /Open its folder/ }))
+    expect(await screen.findByText(/Restoring from houses.config.yaml/)).toBeTruthy()
+    expect(screen.getByLabelText('guest.xlsx').checked).toBe(true)
+    expect(screen.getByLabelText('main.xlsx').checked).toBe(false)
   })
 })
 

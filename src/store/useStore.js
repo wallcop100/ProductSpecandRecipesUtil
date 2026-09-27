@@ -8,7 +8,7 @@
 import { create } from 'zustand'
 import { importFiles } from '../utils/backend'
 import { v4 as uuidv4 } from 'uuid'
-import { findBestTemplate, recipeToTemplate } from '../utils/templateLoader.js'
+import { findBestTemplate, recipeTemplateFromRows, isRecipeTemplate } from '../utils/templateLoader.js'
 import { resolveTemplate, applyResolvedTemplate } from '../utils/slotResolver.js'
 import { evaluateTags, effectiveTags, snapshotForPosition, migrateRules } from '../utils/tagRules.js'
 import { runValidation } from '../utils/validationRules.js'
@@ -916,13 +916,64 @@ const useStore = create((set, get) => ({
    * Resolves the template against current slot mappings and replaces all
    * recipe rows for this position with the newly produced rows.
    */
-  applyTemplate(posRef, templateId) {
+  /** Apply one template to several positions, as one undo step. → how many were applied. */
+  applyTemplateMany(posRefs, templateId) {
+    const refs = [...new Set(posRefs || [])].filter(Boolean)
+    if (refs.length === 0 || !get().templates.some(t => t.id === templateId)) return 0
+    get()._pushHistory()
+    for (const ref of refs) get().applyTemplate(ref, templateId, { recordHistory: false })
+    return refs.length
+  },
+
+  /**
+   * A recipe template (saved from a recipe): replace the position's recipe with its rows,
+   * each its real ElementType, through addRecipeRow — so quantities, contract defaults and
+   * Product Spec rows follow the same rules as any add. A `newWrapper` ingredient becomes
+   * a fresh ET-LIN-NN / ET-DL-NN of this position's own. Existing rows are removed the
+   * way a delete is (on-disk rows soft-delete, so the export deletes them too).
+   */
+  _applyRecipeTemplate(posRef, template) {
+    set({ activeContextType: 'PositionType', activeETRef: null })
+    const own = get().recipes.filter(r => (r.PositionTypeRef || r.positionTypeRef) === posRef
+      && (r.IsDeleted || r.isDeleted) !== 'Y')
+    for (const r of own) get().removeRecipeRow(posRef, r._id, { recordHistory: false })
+
+    const data = ing => ({
+      elementTypeRef: ing.slotLabel,
+      isDesign: ing.isDesign ?? null, isContractItem: ing.isContractItem ?? null,
+      isTRItem: ing.isTRItem ?? null, isTBC: ing.isTBC ?? null, isPropertiesTBC: ing.isPropertiesTBC ?? null,
+      quantity: ing.quantity ?? null, dimQtyMultiplier: ing.dimQtyMultiplier ?? null,
+      dimQuantity: ing.dimQuantity ?? null, isInteger: ing.isInteger ?? null,
+      packQuantity: ing.packQuantity ?? null, notes: ing.notes ?? null, slotKey: ing.slotKey,
+    })
+    const ings = template.ingredients
+    for (const ing of ings.filter(i => i.section === 'position')) {
+      if (ing.newWrapper) {
+        const k = ing.newWrapper === 'LIN' ? 'LIN' : 'DL'
+        const ref = getNextAvailableRef(`ET-${k}-01`, get().elementTypes)
+        get().createElementType({ ref, family: `ET-${k}`, isCollection: true })
+        set(s => ({ containerETRefs: new Set([...s.containerETRefs, ref.toLowerCase()]) }))
+        get().addRecipeRow(posRef, 'position', { ...data(ing), elementTypeRef: ref, isDesign: 'Y' },
+          { recordHistory: false, asPosition: true })
+      } else {
+        get().addRecipeRow(posRef, 'position', data(ing), { recordHistory: false, asPosition: true })
+      }
+    }
+    const hasWrapper = !!containerForPosition(get().recipes, posRef, get().containerETRefs)
+    for (const ing of ings.filter(i => i.section !== 'position')) {
+      // No wrapper to put it in (the template's was unticked): position level, never lost.
+      get().addRecipeRow(posRef, hasWrapper ? 'dl_internal' : 'position', data(ing), { recordHistory: false, asPosition: true })
+    }
+  },
+
+  applyTemplate(posRef, templateId, { recordHistory = true } = {}) {
     const { templates, slotMappings, elementTypes, recipes, rsChanges } = get()
 
     const template = templates.find(t => t.id === templateId)
     if (!template) return
 
-    get()._pushHistory()
+    if (recordHistory) get()._pushHistory()
+    if (isRecipeTemplate(template)) return get()._applyRecipeTemplate(posRef, template)
 
     const mappings = slotMappings[templateId] || {}
     const elementTypeRefs = elementTypes.map(et => et.ElementTypeRef)
@@ -1085,25 +1136,21 @@ const useStore = create((set, get) => ({
   },
 
   /**
-   * saveAsTemplate(posRef, name, scope)
-   * Converts the current recipe for posRef into a template definition and persists it.
+   * saveAsTemplate(posRef, { name, scope, tags, excludeIds })
+   * The position's recipe, as it stands, becomes a template (see recipeTemplateFromRows):
+   * real ElementTypes, quantities and flags; its wrapper as "a new wrapper of this kind".
+   * `excludeIds` are rows the user unticked. Saved first, then listed. → the saved template.
    */
-  async saveAsTemplate(posRef, name, scope) {
-    const { recipes, templates, projectId, positionUI } = get()
-
-    const grouped = getRecipeForPosition(recipes, posRef)
-    const suggestedTags = positionUI[posRef]?.tags || []
-    const template = recipeToTemplate(grouped, name, scope, suggestedTags)
-
-    if (scope === 'project') {
-      template.projectId = projectId
-    }
-
-    await window.electronAPI.db.upsertTemplate(template)
-
-    set({ templates: [...templates, template] })
-
-    return template
+  async saveAsTemplate(posRef, { name, scope = 'project', tags, excludeIds = [] } = {}) {
+    const { recipes, projectId, positionUI, containerETRefs } = get()
+    const skip = new Set(excludeIds)
+    const rows = recipes.filter(r => (r.PositionTypeRef || r.positionTypeRef) === posRef && !skip.has(r._id))
+    const template = recipeTemplateFromRows(rows, {
+      name: (name || '').trim() || posRef, scope,
+      tags: tags ?? (positionUI[posRef]?.tags || []), containerETRefs,
+    })
+    if (scope === 'project') template.project_id = projectId
+    return get().updateTemplate(template)
   },
 
   /**
@@ -1144,12 +1191,18 @@ const useStore = create((set, get) => ({
    * Updates a template in the store and persists to SQLite.
    */
   async updateTemplate(template) {
+    // Save first, then show what was saved: a new template ("Save as new", a project
+    // override) must join the list, and a failed save must not look like a saved one.
+    const res = await window.electronAPI.db.upsertTemplate(template)
+    const saved = res?.id ? res : template
     const { templates } = get()
-    const updatedTemplates = templates.map(t => t.id === template.id ? template : t)
-
-    set({ templates: updatedTemplates })
-
-    await window.electronAPI.db.upsertTemplate(template)
+    const exists = templates.some(t => t.id === saved.id)
+    set({
+      templates: exists
+        ? templates.map(t => (t.id === saved.id ? saved : t))
+        : [...templates, saved],
+    })
+    return saved
   },
 
   /**

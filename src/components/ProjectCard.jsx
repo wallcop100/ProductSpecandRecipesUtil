@@ -42,7 +42,7 @@ export default function ProjectCard({ project, onOpen, onRename, onRenameConfig,
     } else if (editing === 'config') {
       const res = await onRenameConfig(project, value)
       // config_name is half of UNIQUE(folder_path, config_name) — a clash is real
-      if (res && res.ok === false) { setErr(res.reason === 'taken' ? 'That config name is already used here.' : 'Could not rename.'); return }
+      if (res && res.ok === false) { setErr(res.reason === 'taken' ? 'That setup name is already used here.' : 'Could not rename.'); return }
     }
     setEditing(null)
   }
@@ -82,7 +82,7 @@ export default function ProjectCard({ project, onOpen, onRename, onRenameConfig,
           ) : (
             <Badge bg="light" text="dark" style={{ cursor: 'pointer', border: '1px solid #dee2e6' }}
               onClick={() => start('config', project.config_name)}
-              title="Rename this config — a config is an overlay over the same workbooks">
+              title="Rename this setup — its own workbooks, tags and unexported work over the same folder">
               {project.config_name}
             </Badge>
           )}
@@ -110,10 +110,12 @@ export default function ProjectCard({ project, onOpen, onRename, onRenameConfig,
         {err && <div className="text-danger mt-1" style={{ fontSize: 10 }}>{err}</div>}
       </div>
 
-      <IconButton icon="download" size={15} style={{ color: '#adb5bd', padding: 0 }}
-        title="Export this config as YAML" onClick={() => onExport(project)} />
+      <Button size="sm" variant="link" className="p-0 text-muted d-inline-flex align-items-center gap-1" style={{ fontSize: 11, flexShrink: 0 }}
+        title="Save a backup file of this setup: its files, tags, templates and unexported work" onClick={() => onExport(project)}>
+        <MaterialIcon name="save_alt" size={14} /> Backup
+      </Button>
       <IconButton icon={ACTION_ICONS.delete} size={15} style={{ color: '#adb5bd', padding: 0 }}
-        title="Wipe this config — the Excel files are never touched" onClick={() => onWipe(project)} />
+        title="Wipe this setup from this browser — the Excel files are never touched" onClick={() => onWipe(project)} />
 
       <Button size="sm" variant="primary" style={{ fontSize: 11, flexShrink: 0 }}
         disabled={busy} onClick={() => onOpen(project)}>

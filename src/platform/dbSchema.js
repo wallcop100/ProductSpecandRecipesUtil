@@ -258,10 +258,18 @@ function now() {
 
 function parseTemplate(row) {
   if (!row) return null
+  // Templates saved before the double-encoding fix hold a JSON string of a JSON string.
+  const parse = v => {
+    let out = v || '[]'
+    for (let i = 0; i < 2 && typeof out === 'string'; i++) {
+      try { out = JSON.parse(out) } catch { return [] }
+    }
+    return Array.isArray(out) ? out : []
+  }
   return {
     ...row,
-    applicable_tags: JSON.parse(row.applicable_tags || '[]'),
-    ingredients: JSON.parse(row.ingredients || '[]'),
+    applicable_tags: parse(row.applicable_tags),
+    ingredients: parse(row.ingredients),
   }
 }
 
@@ -515,13 +523,17 @@ function upsertTemplate(template) {
     id,
     name,
     scope,
-    project_id = null,
     base_template_id = null,
-    applicable_tags = [],
-    ingredients = [],
     sort_order = 0,
     created_at = ts,
   } = template
+  // Callers have said `projectId` as often as `project_id`; a project template saved
+  // with neither belongs to no project and never loads again.
+  const project_id = template.project_id ?? template.projectId ?? null
+  // Accept arrays or already-serialised JSON — never encode twice.
+  const asJson = (v, fallback) => (typeof v === 'string' ? v : JSON.stringify(v ?? fallback))
+  const applicable_tags = asJson(template.applicable_tags, [])
+  const ingredients = asJson(template.ingredients, [])
 
   database
     .prepare(`
@@ -543,8 +555,8 @@ function upsertTemplate(template) {
       scope,
       project_id,
       base_template_id,
-      applicable_tags: JSON.stringify(applicable_tags),
-      ingredients: JSON.stringify(ingredients),
+      applicable_tags,
+      ingredients,
       sort_order,
       created_at,
       updated_at: ts,
