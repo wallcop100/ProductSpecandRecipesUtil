@@ -944,6 +944,12 @@ const useStore = create((set, get) => ({
    * is being checked. { groupKey, label, posRef, others: [posRef], refs: [posRef], missing: [role] }
    * The builder shows a bar for it until the position is used for the group, or dropped.
    */
+  // Per group (proposal signature): { wrap: 'DL'|'LIN'|'none', place: { role: 'position'|'internal' } }
+  // — what ships to site together is the person's call; precedent only sets the default.
+  recipeChoices: {},
+  setRecipeChoice(groupKey, patch) {
+    set(s => ({ recipeChoices: { ...s.recipeChoices, [groupKey]: { ...(s.recipeChoices[groupKey] || {}), ...patch } } }))
+  },
   teaching: null,
   startTeaching(t) { set({ teaching: t }) },
   stopTeaching() { set({ teaching: null }) },
@@ -952,6 +958,11 @@ const useStore = create((set, get) => ({
    * The position being taught becomes its group's template (Form slots by role). → the template.
    */
   async teachGroup({ groupKey, label, posRef }) {
+    // Taught again (the first one was changed): the old template for the group goes.
+    for (const old of get().templates.filter(x => {
+      const a = x.applicable_tags; const tags = Array.isArray(a) ? a : (() => { try { return JSON.parse(a || '[]') } catch { return [] } })()
+      return tags.includes(`form-group:${groupKey}`)
+    })) await get().deleteTemplate(old.id)
     const t = await get().saveAsTemplate(posRef, { name: `${label} (from ${posRef})`, scope: 'project', tags: [`form-group:${groupKey}`] })
     set({ teaching: null })
     return t

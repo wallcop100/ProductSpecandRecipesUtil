@@ -58,3 +58,20 @@ describe('recipes from the Form: build one, check it, the rest copy it', () => {
     expect(screen.getByText(/Built 1 from B1/)).toBeInTheDocument()
   })
 })
+
+describe('choosing what ships together', () => {
+  test('pick a wrapper for the group, send a part separately, and the first one is built that way', async () => {
+    useStore.setState({ recipeChoices: {} })
+    render(<FormRecipesModal show posRefs={[]} onHide={vi.fn()} onOpenPosition={vi.fn()} />)
+    const g = (await screen.findAllByTestId('form-group'))[1]            // the linear group
+    fireEvent.click(within(g).getByText(/Linear in a LIN wrapper/))
+    expect(within(g).getByLabelText('Wrapper').value).toBe('LIN')
+    fireEvent.change(within(g).getByLabelText('Wrapper'), { target: { value: 'none' } })
+    expect(within(g).queryAllByText('inside wrapper')).toHaveLength(0)
+    fireEvent.change(within(g).getByLabelText('Wrapper'), { target: { value: 'LIN' } })
+    fireEvent.click(within(g).getByRole('button', { name: 'Build L1 and check it in the builder' }))
+    const rows = rowsOf('L1')
+    expect(rows.some(r => /^ET-LIN-\d/.test(r.ElementTypeRef || r.elementTypeRef))).toBe(true)
+    expect(rows.find(r => (r.ElementTypeRef || r.elementTypeRef) === 'ET-LIN-TAPE-01')).toMatchObject({ ContextType: 'ElementType' })
+  })
+})
