@@ -130,4 +130,34 @@ describe('the Form, as a table', () => {
     fireEvent.click(within(table).getByText('no match'))
     expect(await screen.findByText(/Resolve the Form's PositionTypes/)).toBeInTheDocument()
   })
+
+  test('paint one row, then Confirm obvious takes the one-code rows and leaves the two-code row', async () => {
+    readSheet.mockResolvedValue({ sheets: ['S'], sheet: 'S', headers: HEAD, rows: [
+      { PositionTypeRef: 'A1', ManufacturerName: 'M', ProductCode: 'QC5010 black' },
+      { PositionTypeRef: 'A1', ManufacturerName: 'M', ProductCode: 'QC5011 louvre' },
+      { PositionTypeRef: 'A1', ManufacturerName: 'M', ProductCode: 'QC5012 QC5013' },
+    ] })
+    useStore.setState({ projectId: 1, positionTypes: [{ PositionTypeRef: 'A1' }], psRows: [], elementTypes: [], recipes: [], importDraft: null })
+    render(<ProductCodeImportScreen onBack={vi.fn()} onReviewPositions={vi.fn()} />)
+    fireEvent.click(await screen.findByText('Choose spreadsheet…'))
+    const table = await screen.findByTestId('form-table')
+    const cycleTo = (w, role) => { while (within(table).getByTitle(new RegExp(`“${w}”`)).dataset.role !== role) fireEvent.click(within(table).getByTitle(new RegExp(`“${w}”`))) }
+    cycleTo('QC5010', 'code')
+    fireEvent.click(screen.getAllByLabelText(/^Confirm row/)[0])     // taught
+    fireEvent.click(toolbarButton(/Confirm 1 obvious row/))
+    expect(toolbarButton(/Unconfirmed 1/)).toBeInTheDocument()       // only QC52 QC53 is left
+    fireEvent.keyDown(window, { key: 'z', ctrlKey: true })
+    expect(toolbarButton(/Unconfirmed 2/)).toBeInTheDocument()       // one undo takes them all back
+  })
+
+  test('keyboard: ↓ moves, Space confirms, Enter opens the painter, Esc closes it', async () => {
+    await toTable()
+    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    fireEvent.keyDown(window, { key: ' ' })
+    expect(toolbarButton(/Unconfirmed 1/)).toBeInTheDocument()
+    fireEvent.keyDown(window, { key: 'Enter' })
+    expect(await screen.findByText(/Confirm & next|Confirmed — next/)).toBeInTheDocument()
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(screen.queryByText(/Confirm & next|Confirmed — next/)).toBeNull()
+  })
 })

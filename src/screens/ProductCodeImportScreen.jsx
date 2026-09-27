@@ -1,6 +1,6 @@
 import useImportSession from './import/useImportSession'
 import InfoTip from '../components/InfoTip'
-import React, { useState, useMemo, useEffect, useCallback } from 'react'
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { Button, ButtonGroup, Form, Alert, Spinner, Modal } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import { readSheet as readSheetFrom, fileMeta } from '../utils/backend'
@@ -39,6 +39,7 @@ import { matchShape } from '../utils/codeShapes'
 import shippedShapes from '../data/codeShapes.json'
 import { resolveFormRefs, buildRefMap, targetFor } from '../utils/ptResolve'
 import { applyKnownCodes, knownTokenIndices } from '../utils/knownCodes'
+import { isObvious } from '../utils/obviousRows'
 import { joinAccessories, isPlaceholder, accessoriesFrom, leadOf } from '../utils/accessories'
 import { diffCaptures, wrapperDivergence } from '../utils/formSpec'
 
@@ -543,25 +544,16 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     setUndoSnap(null)
   }, [current, patchRow, rules, signals, formOrder])
 
-  const batchConfirmEasy = useCallback(() => {
-    const easy = new Set(resolved.filter(r => !r.confirmed && rowConfidence(r, ctx) === 'high').map(r => r.id))
-    setRows(rs => rs.map(r => (easy.has(r.id) ? { ...r, confirmed: true } : r)))
-  }, [resolved, ctx])
+  /** Confirm every obvious row at once (one undo step); the doubtful ones stay for you. */
+  const confirmObvious = useCallback(() => {
+    const easy = new Map(resolved.filter(r => isObvious(r, rules, signals, captureOpts)).map(r => [r.id, r]))
+    if (easy.size === 0) return
+    setRows(rs => rs.map(r => {
+      const res = easy.get(r.id)
+      return res ? { ...acceptSuggestions({ ...r, roles: res.roles }, rules, signals), confirmed: true } : r
+    }))
+  }, [resolved, rules, signals, captureOpts])
 
-  useEffect(() => {
-    if (step !== 'review' || !current) return
-    function onKey(e) {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return
-      if (e.key === 'Enter') { e.preventDefault(); confirmAndAdvance() }
-      else if ('123'.includes(e.key)) {
-        e.preventDefault()
-        setBrush({ 1: 'code', 2: 'note', 3: 'discard' }[e.key])
-      } else if (e.key.toLowerCase() === 'a') { e.preventDefault(); acceptRowSuggestions() }
-      else if (e.key.toLowerCase() === 'b') { e.preventDefault(); batchConfirmEasy() }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [step, current, confirmAndAdvance, batchConfirmEasy, acceptRowSuggestions])
 
   // ---- distinct list (from CONFIRMED rows only) -------------------------------
   const confirmed = useMemo(() => resolved.filter(r => r.confirmed), [resolved])
@@ -909,7 +901,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   }
 
   const remaining = resolved.filter(r => !r.confirmed).length
-  const easyLeft = resolved.filter(r => !r.confirmed && rowConfidence(r, ctx) === 'high').length
+  const easyLeft = useMemo(() => resolved.filter(r => isObvious(r, rules, signals, captureOpts)).length, [resolved, rules, signals, captureOpts])
 
   // ---- the table ------------------------------------------------------------
   /** The ElementType a code already has: the spec first, then your choice, then last import's. */
@@ -1020,6 +1012,41 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   const readout = current ? deriveCaptures(current, captureOpts) : null
   const learned = useMemo(() => learnedRules(rows, rules), [rows, rules])
   const tally = useMemo(() => roleTally(resolved), [resolved])
+
+  // Keyboard, table-first: ↑/↓ move, Space confirms, Enter opens the painter (and, in it,
+  // confirms and moves on), Esc closes it; 1/2/3 pick the brush and A takes suggestions in
+  // the painter; B confirms every obvious row.
+  const keyRef = useRef(null)
+  keyRef.current = { tableRows, focusId, expandedId, current, confirmAndAdvance, confirmObvious, acceptRowSuggestions, toggleConfirm }
+  useEffect(() => {
+    if (step !== 'review') return
+    function onKey(e) {
+      const t = e.target
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return
+      if (e.ctrlKey || e.metaKey || e.altKey) return
+      const k = keyRef.current
+      const at = k.tableRows.findIndex(r => r.id === k.focusId)
+      const focusAt = i => {
+        const r = k.tableRows[Math.max(0, Math.min(k.tableRows.length - 1, i))]
+        if (!r) return
+        setFocusId(r.id)
+        document.querySelector(`[data-row-id="${r.id}"]`)?.scrollIntoView?.({ block: 'nearest' })
+      }
+      if (e.key === 'ArrowDown') { e.preventDefault(); focusAt(at + 1) }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); focusAt(at - 1) }
+      else if (e.key === ' ' && k.focusId != null) { e.preventDefault(); k.toggleConfirm(k.focusId) }
+      else if (e.key === 'Enter') {
+        e.preventDefault()
+        if (k.current && k.expandedId === k.current.id) k.confirmAndAdvance()
+        else if (k.focusId != null) setExpandedId(k.focusId)
+      } else if (e.key === 'Escape' && k.expandedId != null) setExpandedId(null)
+      else if (k.current && '123'.includes(e.key)) { e.preventDefault(); setBrush({ 1: 'code', 2: 'note', 3: 'discard' }[e.key]) }
+      else if (k.current && e.key.toLowerCase() === 'a') { e.preventDefault(); k.acceptRowSuggestions() }
+      else if (e.key.toLowerCase() === 'b') { e.preventDefault(); k.confirmObvious() }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [step])
 
   // ---------------------------------------------------------------------------
   return (
@@ -1169,8 +1196,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                 ))}
               </ButtonGroup>
               {easyLeft > 0 && (
-                <Button size="sm" variant="outline-success" style={{ fontSize: 11 }} onClick={batchConfirmEasy}>
-                  Confirm {easyLeft} easy {easyLeft === 1 ? 'row' : 'rows'} <kbd>B</kbd>
+                <Button size="sm" variant="success" style={{ fontSize: 11 }} onClick={confirmObvious}
+                  title="Rows with exactly one code and nothing else that looks like one. One undo takes them all back.">
+                  <MaterialIcon name="done_all" size={13} /> Confirm {easyLeft} obvious {easyLeft === 1 ? 'row' : 'rows'} <kbd>B</kbd>
                 </Button>
               )}
               {map.pt && resolutions.length > 0 && (
