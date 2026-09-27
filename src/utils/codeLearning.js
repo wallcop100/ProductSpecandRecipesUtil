@@ -20,6 +20,8 @@
 
 import { tokenize } from './productCodes'
 import { looksLikeProductCode, isPlaceholderText } from './codeHeuristics'
+import { matchShape } from './codeShapes'
+import shippedShapes from '../data/codeShapes.json'
 
 const lower = t => String(t || '').toLowerCase()
 
@@ -81,7 +83,8 @@ export function resolveRoles(row, rules = {}) {
   return row.tokens.map((t, i) => {
     const o = row.overrides && row.overrides[i]
     if (o) return o
-    return rules[lower(t.text)] || defaultTokenRole(t.text, lone)
+    // Your paint, then what you taught, then what the tool pre-selected (`pre`).
+    return rules[lower(t.text)] || (row.pre && row.pre[i]) || defaultTokenRole(t.text, lone)
   })
 }
 
@@ -323,7 +326,11 @@ export function suggestCodes(row, rules = {}, signals = {}) {
     // Before any teaching: a word shaped like a maker's code is offered as one.
     const byLook = looksLikeProductCode(t.text)
 
-    if (byShape || byContext || byLook) out.push(i)
+    // A code shaped like one this maker is known to make (the shipped shape table).
+    const byMaker = !!row.manufacturer && t.text.length >= MIN_SHAPE_LEN && (m => !!(m.current || m.superseded))(
+      matchShape(t.text, row.manufacturer, shippedShapes.shapes || []))
+
+    if (byShape || byContext || byLook || byMaker) out.push(i)
   })
   return out
 }
@@ -335,6 +342,19 @@ export function acceptSuggestions(row, rules = {}, signals) {
   const overrides = { ...row.overrides }
   for (const i of idxs) overrides[i] = 'code'
   return { ...row, overrides }
+}
+
+/**
+ * Pre-select a row's confident guesses before anyone paints: they land in `pre`, the
+ * lowest layer, so a painted token or a taught rule always wins over them. `row` needs
+ * its roles (applyRules). → the row with `pre` set, or unchanged.
+ */
+export function prePaint(row) {
+  const idxs = suggestCodes(row)
+  if (idxs.length === 0) return row
+  const pre = { ...row.pre }
+  for (const i of idxs) pre[i] = 'code'
+  return { ...row, pre }
 }
 
 // ---------------------------------------------------------------------------

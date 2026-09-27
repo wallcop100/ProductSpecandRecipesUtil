@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-09-27', note: 'Import opens pre-filled: codes from this spec and every project opened before are painted (with their ElementType), and code-shaped words are pre-selected (dashed). Your paint and taught rules always win; Undo all clears it' },
   { date: '2026-09-27', note: 'Known product lines file themselves: Atea NEO and Tryka Continuity are flexible linear, Forma Microline and Flos Glowing Track are fixed linear' },
   { date: '2026-09-27', note: 'Better ElementType families on import: old LEDFlex codes still file by kind, rails are mounts, casings and back boxes are point mounting, louvres and glare shields are accessories; notes stay with their own code in ";" and "," lists' },
   { date: '2026-09-27', note: 'Import needs less teaching: maker codes are spotted untaught, TBC / n/a / by-specialist rows say "nothing to add", Confirm obvious takes "+" extras, Accessories words stay off the main code, and wording-only note differences no longer block' },
