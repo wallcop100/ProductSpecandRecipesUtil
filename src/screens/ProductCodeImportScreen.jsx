@@ -39,7 +39,7 @@ import { matchShape } from '../utils/codeShapes'
 import shippedShapes from '../data/codeShapes.json'
 import { resolveFormRefs, buildRefMap, targetFor } from '../utils/ptResolve'
 import { applyKnownCodes, knownTokenIndices } from '../utils/knownCodes'
-import { isObvious } from '../utils/obviousRows'
+import { isObvious, isNothingRow } from '../utils/obviousRows'
 import { joinAccessories, isPlaceholder, accessoriesFrom, leadOf } from '../utils/accessories'
 import { diffCaptures, wrapperDivergence } from '../utils/formSpec'
 
@@ -281,8 +281,11 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
 
   function enterReview(built = rows) {
     setStep('review')
-    // Teach the dialect from a few covering examples before the queue starts.
-    if (built.length >= 3) setPriming(true)
+    // Teach the dialect from a few examples only when the sheet needs it: if most rows
+    // already read as obvious (one clean code, or nothing to add), go straight to the
+    // table — "Teach from examples" stays one click away.
+    const obvious = built.filter(r => isObvious(r)).length
+    if (built.length >= 3 && obvious < built.length * 0.6) setPriming(true)
   }
 
   // ---- draft ------------------------------------------------------------------
@@ -928,7 +931,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     const codes = caps.map(c => ({ code: c.code, main: c === lead, etRef: etFor(c.code, row.manufacturer) }))
     const st = lead ? classify(lead.code, ctx, row.manufacturer).status : null
     const status = !lead
-      ? { tone: 'neutral', icon: 'remove', label: 'no code', tip: 'Nothing in this cell is marked as a code.' }
+      ? (isNothingRow(row)
+          ? { tone: 'neutral', icon: 'block', label: 'nothing to add', tip: 'A placeholder (TBC, n/a, by specialist…): no product to add.' }
+          : { tone: 'neutral', icon: 'remove', label: 'no code', tip: 'Nothing in this cell is marked as a code.' })
       : { tone: TONE[st], icon: ICON[st], label: STATUS_LABEL[st], tip: MEANS[st] }
     return {
       codes, status,
@@ -1197,7 +1202,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
               </ButtonGroup>
               {easyLeft > 0 && (
                 <Button size="sm" variant="success" style={{ fontSize: 11 }} onClick={confirmObvious}
-                  title="Rows with exactly one code and nothing else that looks like one. One undo takes them all back.">
+                  title="Rows with one clean code (plus '+' extras and accessories), and placeholder rows with nothing to add. One undo takes them all back.">
                   <MaterialIcon name="done_all" size={13} /> Confirm {easyLeft} obvious {easyLeft === 1 ? 'row' : 'rows'} <kbd>B</kbd>
                 </Button>
               )}

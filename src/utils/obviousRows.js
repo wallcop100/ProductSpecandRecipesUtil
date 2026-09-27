@@ -1,25 +1,45 @@
 import { applyRules, acceptSuggestions } from './codeLearning'
 import { deriveCaptures } from './productCodes'
+import { looksLikeProductCode, isPlaceholderText } from './codeHeuristics'
 
-/** Looks like a product code: has a digit and at least 4 letters/digits. */
-const codeLike = t => /\d/.test(t) && t.replace(/[^A-Za-z0-9]/g, '').length >= 4
+/** One word, a code: no space inside it (a stray "/" or "+" beside it doesn't count). */
+const oneWord = code => code.split(/\s+/).filter(w => /[A-Za-z0-9]/.test(w)).length === 1
 
 /**
- * A row nobody needs to look at: after taking its suggestions it yields exactly ONE code,
- * and nothing else in the cell looks like a code (a second product hiding as a note).
- * Plain words around it ("louvre", "black") are its note and don't make it doubtful.
- *
- * Every code here came from evidence — your painting, a learned rule, the spec's own
- * codes, or a suggestion learned from your painting — so one clean code is safe to take.
+ * A row made only of placeholders ("TBC", "n/a", "by specialist", "Awaiting custom code")
+ * or nothing at all: there is no product to add, so there is nothing to decide.
+ */
+export function isNothingRow(row) {
+  if (row.tokens.some(t => looksLikeProductCode(t.text))) return false
+  const lines = String(row.rawText || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+  return lines.length === 0 || lines.every(isPlaceholderText)
+}
+
+/**
+ * A row nobody needs to look at. After taking its suggestions:
+ *   - it is a placeholder row (nothing to add); or
+ *   - its ProductCode cell yields one code, or several joined by "+" (the Form's own
+ *     "main + extras" convention), each a single code-like word; Accessories-column codes
+ *     are extras; and nothing else in the cell looks like a code.
+ * Codes on separate lines of the ProductCode cell, or side by side with no "+", are left
+ * for a person: two products, or one product written twice?
  */
 export function isObvious(row, rules = {}, signals = {}, captureOpts = {}) {
   if (row.confirmed) return false
+  if (isNothingRow(row)) return true
   const taken = applyRules([acceptSuggestions(row, rules, signals)], rules)[0]
   const caps = deriveCaptures(taken, captureOpts).captures
-  if (caps.length !== 1 || !codeLike(caps[0].code)) return false   // a lone word ("TBC") is not a product
-  // Code words side by side merge into one capture ("QC5012 QC5013"): two products or one?
-  // (A stray "/" or "+" beside the code doesn't count as a second word.)
-  if (caps[0].code.split(/\s+/).filter(w => /[A-Za-z0-9]/.test(w)).length !== 1) return false
-  const [a, b] = caps[0].range
-  return !taken.tokens.some((t, i) => (i < a || i > b) && taken.roles[i] !== 'discard' && codeLike(t.text))
+  if (caps.length === 0) return false
+  if (!caps.every(c => oneWord(c.code) && looksLikeProductCode(c.code))) return false
+
+  const startOf = c => taken.tokens[c.range[0]].start
+  const own = taken.accFrom == null ? caps : caps.filter(c => startOf(c) < taken.accFrom)
+  if (own.length === 0) return false
+  // Between two codes of the ProductCode cell: only a "+" (or "," / "&") and spaces.
+  for (let k = 1; k < own.length; k++) {
+    const gap = taken.rawText.slice(taken.tokens[own[k - 1].range[1]].end, startOf(own[k]))
+    if (!/^[\s]*[+,&][\s]*$/.test(gap)) return false
+  }
+  const inCode = new Set(caps.flatMap(c => Array.from({ length: c.range[1] - c.range[0] + 1 }, (_, j) => c.range[0] + j)))
+  return !taken.tokens.some((t, i) => !inCode.has(i) && taken.roles[i] !== 'discard' && looksLikeProductCode(t.text))
 }

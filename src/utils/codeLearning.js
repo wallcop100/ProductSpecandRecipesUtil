@@ -19,6 +19,7 @@
  */
 
 import { tokenize } from './productCodes'
+import { looksLikeProductCode, isPlaceholderText } from './codeHeuristics'
 
 const lower = t => String(t || '').toLowerCase()
 
@@ -94,7 +95,8 @@ export function resolveRoles(row, rules = {}) {
  */
 export function defaultTokenRole(text, lone) {
   if (isPunctuation(text)) return text === '*' ? 'note' : 'discard'
-  return lone ? 'code' : 'note'
+  // A lone word is the code, unless it is a placeholder ("TBC", "n/a") that names nothing.
+  return lone && !isPlaceholderText(text) ? 'code' : 'note'
 }
 
 /** Apply the rules across the batch, returning rows with fresh `roles`. */
@@ -293,7 +295,8 @@ export function learnedSignals(rows) {
 }
 
 /**
- * Indices of tokens that look like codes you've already painted, and that nothing
+ * Indices of tokens that look like codes — like ones you have painted, or shaped like a
+ * maker's code at all (codeHeuristics) — and that nothing
  * has classified yet. Purely advisory: the caller renders these green-dashed, and
  * only `acceptSuggestions` ever changes a role.
  */
@@ -301,7 +304,6 @@ export function suggestCodes(row, rules = {}, signals = {}) {
   const shapes = signals.shapes || new Set()
   const contexts = signals.contexts || new Set()
   const profile = signals.profile || { requireDigit: false, minLen: 0 }
-  if (shapes.size === 0 && contexts.size === 0) return []
 
   const out = []
   row.tokens.forEach((t, i) => {
@@ -318,7 +320,10 @@ export function suggestCodes(row, rules = {}, signals = {}) {
     const byContext = prev && !isPunctuation(prev) && contexts.has(lower(prev))
       && fitsProfile(t.text, profile)
 
-    if (byShape || byContext) out.push(i)
+    // Before any teaching: a word shaped like a maker's code is offered as one.
+    const byLook = looksLikeProductCode(t.text)
+
+    if (byShape || byContext || byLook) out.push(i)
   })
   return out
 }
