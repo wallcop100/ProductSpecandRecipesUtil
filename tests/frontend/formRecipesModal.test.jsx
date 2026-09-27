@@ -40,7 +40,7 @@ describe('recipes from the Form: build one, check it, the rest copy it', () => {
     fireEvent.click(within(groups[0]).getByText(/Point source in a DL wrapper/))
     expect(within(groups[0]).getAllByText('empty — add it in the builder').length).toBeGreaterThan(0)
     expect(rowsOf('B1')).toEqual([])
-    fireEvent.click(within(groups[0]).getByRole('button', { name: 'Build B1 and open it' }))
+    fireEvent.click(within(groups[0]).getByRole('button', { name: 'Build B1 and check it in the builder' }))
     expect(onOpen).toHaveBeenCalledWith('B1')
     expect(rowsOf('B1').length).toBeGreaterThan(0)
   })

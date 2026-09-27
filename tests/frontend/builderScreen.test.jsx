@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, within } from '@testing-library/react'
+import { render, screen, fireEvent, within, act } from '@testing-library/react'
 import useStore from '../../src/store/useStore'
 import BuilderScreen from '../../src/screens/BuilderScreen'
 
@@ -70,5 +70,41 @@ describe('the next step on a new project', () => {
     draw(vi.fn())
     fireEvent.click(within(screen.getByTestId('next-step')).getByRole('button', { name: 'Build them' }))
     expect(screen.getByText('Recipes from the Form')).toBeInTheDocument()
+  })
+})
+
+describe('setting up a group: build one, check it in the builder, come back', () => {
+  test('the bar says what is empty and brings you back to the rest of the group', async () => {
+    window.electronAPI = { ...(window.electronAPI || {}), db: { ...(window.electronAPI?.db || {}),
+      upsertTemplate: vi.fn().mockResolvedValue({}), getRecipePatterns: vi.fn().mockResolvedValue([]),
+      getStyleExemplars: vi.fn().mockResolvedValue([]), setPref: vi.fn().mockResolvedValue(undefined) } }
+    useStore.setState({
+      projectId: 1, library: { patterns: [], exemplars: [] }, teaching: null,
+      positionTypes: [
+        { PositionTypeRef: 'B1', ParentRef: 'DOWNLIGHT', DriverLocation: 'Local to fitting' },
+        { PositionTypeRef: 'B2', ParentRef: 'DOWNLIGHT', DriverLocation: 'Local to fitting' },
+      ],
+      elementTypes: [{ ElementTypeRef: 'ET-PS-01', Family: 'ET-PS' }, { ElementTypeRef: 'ET-PS-02', Family: 'ET-PS' }],
+      formCaptures: { byPosition: {
+        B1: [{ elementTypeRef: 'ET-PS-01', code: 'QC50', role: 'lead' }],
+        B2: [{ elementTypeRef: 'ET-PS-02', code: 'QC51', role: 'lead' }],
+      } },
+    })
+    render(<BuilderScreen onBackToSetup={vi.fn()} onOpenProductSpec={vi.fn()} onOpenTemplateEditor={vi.fn()}
+      onOpenCodeImport={vi.fn()} onOpenConnectors={vi.fn()} />)
+    fireEvent.click(within(screen.getByTestId('next-step')).getByRole('button', { name: 'Build them' }))
+    const g = (await screen.findAllByTestId('form-group'))[0]
+    fireEvent.click(within(g).getByText(/Point source in a DL wrapper/))
+    fireEvent.click(within(g).getByRole('button', { name: 'Build B1 and check it in the builder' }))
+
+    const bar = await screen.findByTestId('teach-bar')
+    expect(useStore.getState().activePositionRef).toBe('B1')
+    expect(bar.textContent).toMatch(/Still empty: .*driver/)
+    await act(async () => { fireEvent.click(within(bar).getByRole('button', { name: 'Use B1 for the other 1' })) })
+
+    expect(screen.queryByTestId('teach-bar')).toBeNull()
+    fireEvent.click(await screen.findByRole('button', { name: 'Build 1' }))
+    expect(useStore.getState().recipes.some(r => (r.PositionTypeRef || r.positionTypeRef) === 'B2'
+      && (r.ElementTypeRef || r.elementTypeRef) === 'ET-PS-02')).toBe(true)
   })
 })

@@ -939,6 +939,24 @@ const useStore = create((set, get) => ({
     } catch { /* the library only ever helps */ }
   },
 
+  /**
+   * The group being taught in the builder: its first position was built from a proposal and
+   * is being checked. { groupKey, label, posRef, others: [posRef], refs: [posRef], missing: [role] }
+   * The builder shows a bar for it until the position is used for the group, or dropped.
+   */
+  teaching: null,
+  startTeaching(t) { set({ teaching: t }) },
+  stopTeaching() { set({ teaching: null }) },
+
+  /**
+   * The position being taught becomes its group's template (Form slots by role). → the template.
+   */
+  async teachGroup({ groupKey, label, posRef }) {
+    const t = await get().saveAsTemplate(posRef, { name: `${label} (from ${posRef})`, scope: 'project', tags: [`form-group:${groupKey}`] })
+    set({ teaching: null })
+    return t
+  },
+
   /** A first recipe for a position, from its Form products and precedent (utils/recipeProposal). */
   proposeRecipeFor(posRef) {
     return proposeRecipe(posRef, proposalContext(get(), get().library))

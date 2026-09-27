@@ -57,18 +57,19 @@ function ProposalTable({ proposal }) {
   )
 }
 
-export default function FormRecipesModal({ show, onHide, posRefs, onOpenPosition }) {
+export default function FormRecipesModal({ show, onHide, posRefs, onOpenPosition, focusGroup = null }) {
   const state = useStore(s => s)
   const { recipes, templates, formCaptures, library } = state
   const loadLibrary = useStore(s => s.loadLibrary)
   const buildProposedRecipe = useStore(s => s.buildProposedRecipe)
-  const saveAsTemplate = useStore(s => s.saveAsTemplate)
+  const teachGroup = useStore(s => s.teachGroup)
+  const startTeaching = useStore(s => s.startTeaching)
   const applyTaughtTemplate = useStore(s => s.applyTaughtTemplate)
   const [open, setOpen] = useState(null)           // group key being looked at
   const [picked, setPicked] = useState(() => new Set())
   const [msg, setMsg] = useState(null)
 
-  useEffect(() => { if (show) { loadLibrary(); setMsg(null) } }, [show])   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (show) { loadLibrary(); setMsg(null); setOpen(focusGroup) } }, [show])   // eslint-disable-line react-hooks/exhaustive-deps
 
   const ctx = useMemo(() => proposalContext(state, library), [state, library])
   const refs = posRefs?.length ? posRefs : Object.keys(formCaptures?.byPosition || {})
@@ -78,17 +79,32 @@ export default function FormRecipesModal({ show, onHide, posRefs, onOpenPosition
 
   const toggle = p => setPicked(s => { const n = new Set(s); n.has(p) ? n.delete(p) : n.add(p); return n })
 
+  // Checking the first one happens in the builder; a bar there says what is still empty and
+  // brings you back here (see TeachBar).
+  function goCheck(g, missing) {
+    startTeaching({ groupKey: g.key, label: g.label, posRef: g.first, others: g.positions.filter(p => p !== g.first), refs, missing })
+    onOpenPosition?.(g.first)
+  }
   function buildFirst(g) {
     const res = buildProposedRecipe(g.first)
     if (!res) return
-    onOpenPosition?.(g.first)
+    goCheck(g, res.skipped.filter(r => !r.ref && r.role !== 'WRAPPER').map(r => r.role))
+  }
+  function openFirst(g) {
+    const missing = useStore.getState().proposeRecipeFor(g.first).rows?.filter(r => r.missing).map(r => r.role) || []
+    goCheck(g, missing)
   }
   async function teach(g) {
-    const t = await saveAsTemplate(g.first, { name: `${g.label} (from ${g.first})`, scope: 'project', tags: [groupTag(g.key)] })
+    await teachGroup({ groupKey: g.key, label: g.label, posRef: g.first })
     setPicked(new Set(g.positions.filter(p => p !== g.first && !hasRecipe(useStore.getState().recipes, p))))
     setMsg(`${g.first} is now the recipe for this group. Tick the rest and build.`)
-    return t
   }
+  // Back from the builder having used the first one: the rest ready to tick.
+  useEffect(() => {
+    if (!show || !focusGroup) return
+    const g = groups.find(x => x.key === focusGroup)
+    if (g && taughtFor(g.key)) setPicked(new Set(g.positions.filter(p => p !== g.first && !hasRecipe(recipes, p))))
+  }, [show, focusGroup])   // eslint-disable-line react-hooks/exhaustive-deps
   function buildRest(g) {
     const t = taughtFor(g.key)
     if (!t) return
@@ -131,15 +147,19 @@ export default function FormRecipesModal({ show, onHide, posRefs, onOpenPosition
                 <div className="p-2">
                   {!firstBuilt && (
                     <>
-                      <div className="mb-1">First: <span style={{ fontFamily: 'monospace' }}>{g.first}</span> — proposed, nothing written yet:</div>
+                      <div className="mb-1">
+                        <strong>Step 1 of 2.</strong> <span style={{ fontFamily: 'monospace' }}>{g.first}</span> is built first, as proposed below
+                        (nothing is written yet). You check it in the builder and fill anything empty; a bar at the top of the
+                        builder brings you back here{rest.length ? ` to copy it to the other ${rest.length}` : ''}.
+                      </div>
                       <ProposalTable proposal={useStore.getState().proposeRecipeFor(g.first)} />
-                      <Button size="sm" onClick={() => buildFirst(g)}>Build {g.first} and open it</Button>
+                      <Button size="sm" onClick={() => buildFirst(g)}>Build {g.first} and check it in the builder</Button>
                     </>
                   )}
                   {firstBuilt && !taught && (
                     <div className="d-flex align-items-center gap-2">
-                      <span>Check <span style={{ fontFamily: 'monospace' }}>{g.first}</span> in the builder (fill anything empty), then:</span>
-                      <Button size="sm" variant="outline-secondary" onClick={() => onOpenPosition?.(g.first)}>Open {g.first}</Button>
+                      <span><strong>Step 2 of 2.</strong> <span style={{ fontFamily: 'monospace' }}>{g.first}</span> is built. If it&apos;s right, copy it to the rest of the group; if not, fix it first.</span>
+                      <Button size="sm" variant="outline-secondary" onClick={() => openFirst(g)}>Check {g.first} in the builder</Button>
                       <Button size="sm" disabled={rest.length === 0} onClick={() => teach(g)}>Use it for the other {rest.length}</Button>
                     </div>
                   )}
