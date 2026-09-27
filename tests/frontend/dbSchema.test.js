@@ -410,3 +410,33 @@ describe('style library — tool-wide, travels with the personal library', () =>
     expect(schema.getStyleExemplars()[0]).toMatchObject({ code: 'A1', ref: 'ET-LIN-TAPE-A-01' })
   })
 })
+
+describe('templates save and load back', () => {
+  const tpl = extra => ({ id: 't-1', name: 'My DL', scope: 'project',
+    applicable_tags: ['Downlight'], ingredients: [{ slotKey: 'LAMP', section: 'position' }], ...extra })
+
+  test('a project template saved with projectId (the editor\'s spelling) loads for that project', () => {
+    const p = schema.upsertProject('/proj/a', 'Base', '1')
+    schema.upsertTemplate(tpl({ projectId: p.id }))
+    const got = schema.getAllTemplates(p.id).find(t => t.id === 't-1')
+    expect(got).toBeTruthy()
+    expect(got.ingredients).toEqual([{ slotKey: 'LAMP', section: 'position' }])
+    expect(got.applicable_tags).toEqual(['Downlight'])
+  })
+
+  test('already-serialised fields are not encoded twice', () => {
+    const p = schema.upsertProject('/proj/a', 'Base', '1')
+    schema.upsertTemplate(tpl({ project_id: p.id, ingredients: JSON.stringify([{ slotKey: 'X' }]), applicable_tags: '["A"]' }))
+    const got = schema.getAllTemplates(p.id).find(t => t.id === 't-1')
+    expect(got.ingredients).toEqual([{ slotKey: 'X' }])
+    expect(got.applicable_tags).toEqual(['A'])
+  })
+
+  test('a template double-encoded by the old editor still reads', () => {
+    const p = schema.upsertProject('/proj/a', 'Base', '1')
+    conn.prepare("INSERT INTO templates (id, name, scope, project_id, applicable_tags, ingredients) VALUES (?, ?, 'project', ?, ?, ?)")
+      .run('t-old', 'Old', p.id, JSON.stringify('["A"]'), JSON.stringify('[{"slotKey":"Y"}]'))
+    const got = schema.getAllTemplates(p.id).find(t => t.id === 't-old')
+    expect(got.ingredients).toEqual([{ slotKey: 'Y' }])
+  })
+})

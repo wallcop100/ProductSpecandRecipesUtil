@@ -1144,12 +1144,17 @@ const useStore = create((set, get) => ({
    * Updates a template in the store and persists to SQLite.
    */
   async updateTemplate(template) {
+    // Save first, then show what was saved: a new template ("Save as new", a project
+    // override) must join the list, and a failed save must not look like a saved one.
+    const saved = (await window.electronAPI.db.upsertTemplate(template)) || template
     const { templates } = get()
-    const updatedTemplates = templates.map(t => t.id === template.id ? template : t)
-
-    set({ templates: updatedTemplates })
-
-    await window.electronAPI.db.upsertTemplate(template)
+    const exists = templates.some(t => t.id === saved.id)
+    set({
+      templates: exists
+        ? templates.map(t => (t.id === saved.id ? saved : t))
+        : [...templates, saved],
+    })
+    return saved
   },
 
   /**

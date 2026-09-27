@@ -108,9 +108,9 @@ export default function TemplateEditorScreen({ onBack }) {
     try {
       const toSave = {
         ...editState,
-        applicable_tags: JSON.stringify(editState.applicable_tags),
-        ingredients: JSON.stringify(editState.ingredients.map(({ _key, ...rest }) => rest)),
-        projectId: editState.scope === 'project' ? projectId : null,
+        applicable_tags: editState.applicable_tags,
+        ingredients: editState.ingredients.map(({ _key, ...rest }) => rest),
+        project_id: editState.scope === 'project' ? projectId : null,
       }
       await updateTemplate(toSave)
       setSaveSuccess(true)
@@ -128,9 +128,9 @@ export default function TemplateEditorScreen({ onBack }) {
       id: newId,
       name: editState.name + ' (copy)',
       scope: 'project',
-      applicable_tags: JSON.stringify(editState.applicable_tags),
-      ingredients: JSON.stringify(editState.ingredients.map(({ _key, ...rest }) => rest)),
-      projectId,
+      applicable_tags: editState.applicable_tags,
+      ingredients: editState.ingredients.map(({ _key, ...rest }) => rest),
+      project_id: projectId,
     }
     try {
       await updateTemplate(toSave)
