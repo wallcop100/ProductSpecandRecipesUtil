@@ -30,7 +30,7 @@ import {
 } from '../utils/productCodes'
 import {
   setRule, revokeRule, applyRules, learnedRules, learnedSignals, suggestCodes,
-  acceptSuggestions, punctuationSuggestion, acceptPunctuationSuggestion, roleTally,
+  acceptSuggestions, prePaint, punctuationSuggestion, acceptPunctuationSuggestion, roleTally,
   discardsFromNoteEdit, pickExamples, learnCodeTokens, clearOverridesFor,
 } from '../utils/codeLearning'
 import { inferConvention, reuseCandidates, suggestRef } from '../utils/etRefSuggest'
@@ -259,11 +259,16 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     // Stage ① — most of a revised Form is unchanged. Every run of tokens that IS a
     // product code already in this project's spec is painted for you: a lookup, not
     // a guess. Variants ("that code plus a bit more") are flagged, never painted.
-    const { rows: built, ...stats } = applyKnownCodes(raw, master)
-    setKnownStats(stats.exactCount || stats.variantCount || stats.adjacentCount ? stats : null)
-    setPreKnownRows(stats.exactCount ? raw : null)
+    // Codes from this project's spec AND every project opened before are painted; then
+    // every confident guess (a maker's code shape, a word shaped like a code) is
+    // pre-selected underneath, so the table opens filled in and you only fix mistakes.
+    const { rows: known, ...stats } = applyKnownCodes(raw, master, styleLibrary)
+    const built = applyRules(applyRules(known, {}).map(prePaint), {})
+    stats.preCount = built.reduce((n, r) => n + Object.keys(r.pre || {}).length, 0)
+    setKnownStats(stats.exactCount || stats.preCount || stats.variantCount || stats.adjacentCount ? stats : null)
+    setPreKnownRows(stats.exactCount || stats.preCount ? raw : null)
 
-    session.load({ rows: applyRules(built, {}) })
+    session.load({ rows: built })
     setExpandedId(null); setFocusId(null); setStaged(null); setUndoSnap(null)
 
     // Form refs are matched to DesignDB PositionTypes silently; only the ones that do not
@@ -304,7 +309,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     rows: rows.map(r => ({
       id: r.id, rawText: r.rawText, positionType: r.positionType, manufacturer: r.manufacturer,
       context: r.context, overrides: r.overrides, noteOverride: r.noteOverride, confirmed: r.confirmed,
-      accFrom: r.accFrom ?? null, leadCode: r.leadCode ?? null,
+      accFrom: r.accFrom ?? null, leadCode: r.leadCode ?? null, pre: r.pre || null,
     })),
   }), [source, sheet, step, map, rules, assignments, resolutions, refOverrides, dirStats, keptSeparate, rows])
 
@@ -326,11 +331,12 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       confirmed: !!r.confirmed,
       accFrom: r.accFrom ?? null,
       leadCode: r.leadCode ?? null,
+      ...(r.pre ? { pre: r.pre } : {}),
     }))
     // The auto-paint lives in `overrides` and came back with them; recompute the
     // MATCH so the amber variant marks and the banner survive a resume too. It is
     // idempotent, and there is nothing left to undo.
-    const { rows: _ignored, ...stats } = applyKnownCodes(restored, master)
+    const { rows: _ignored, ...stats } = applyKnownCodes(restored, master, styleLibrary)
     setKnownStats(stats.exactCount || stats.variantCount || stats.adjacentCount ? stats : null)
     setPreKnownRows(null)
     session.load({
@@ -355,7 +361,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     if (!preKnownRows) return
     setRows(applyRules(preKnownRows, rules))
     setPreKnownRows(null)
-    setKnownStats(s => (s ? { ...s, exactCount: 0 } : null))
+    setKnownStats(s => (s ? { ...s, exactCount: 0, libraryCount: 0, preCount: 0 } : null))
   }
 
   async function discardDraft() {
@@ -1226,10 +1232,21 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
             {knownStats && (
               <div className="mb-2 px-2 py-1 rounded d-flex align-items-center gap-2 flex-wrap"
                 style={{ background: '#d1e7dd', border: '1px solid #a3cfbb', fontSize: 11, color: '#0f5132' }}>
-                {knownStats.exactCount > 0 && (
+                {knownStats.exactCount - (knownStats.libraryCount || 0) > 0 && (
                   <span>
-                    <MaterialIcon name="check_circle" size={13} /> {knownStats.exactCount} code
-                    {knownStats.exactCount === 1 ? '' : 's'} already in your Product Spec — painted for you
+                    <MaterialIcon name="check_circle" size={13} /> {knownStats.exactCount - (knownStats.libraryCount || 0)} in your Product Spec
+                  </span>
+                )}
+                {knownStats.libraryCount > 0 && (
+                  <span>
+                    <MaterialIcon name="history" size={13} /> {knownStats.libraryCount} from earlier projects{' '}
+                    <InfoTip size={11}>The same maker and code on a project opened before. Its ElementType comes with it.</InfoTip>
+                  </span>
+                )}
+                {knownStats.preCount > 0 && (
+                  <span>
+                    <MaterialIcon name="auto_fix_high" size={13} /> {knownStats.preCount} pre-selected{' '}
+                    <InfoTip size={11}>Words shaped like a maker's code. Click one to change it; your paint always wins.</InfoTip>
                   </span>
                 )}
                 {knownStats.variantCount > 0 && (
@@ -1246,7 +1263,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                 )}
                 {preKnownRows && (
                   <Button size="sm" variant="link" className="p-0 ms-auto" style={{ fontSize: 10 }}
-                    onClick={undoKnownPaint} title="Un-paint everything matched from the spec">
+                    onClick={undoKnownPaint} title="Un-paint everything painted or pre-selected for you">
                     Undo all
                   </Button>
                 )}

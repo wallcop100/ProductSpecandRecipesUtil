@@ -23,6 +23,7 @@
  */
 
 import { norm, hasProductIdentity } from './productCodes'
+import { makerKey } from './codeShapes'
 
 /** How many tokens a single product code may span. "MICRO FLIGHT CASE BY IW MLS" is 6. */
 const MAX_SPAN = 8
@@ -37,15 +38,26 @@ const isAlnum = t => /[A-Za-z0-9]/.test(t.text)
  * → Map<normCode, { code, ref, manufacturer }>   (first row wins; ties are the
  *   user's duplicate problem, not ours)
  */
-export function indexKnownCodes(master = []) {
+export function indexKnownCodes(master = [], library = []) {
   const byCode = new Map()
   for (const m of master) {
     if (!hasProductIdentity(m.code)) continue
     const key = norm(m.code)
-    if (!byCode.has(key)) byCode.set(key, { code: m.code, ref: m.ref, manufacturer: m.manufacturer })
+    if (!byCode.has(key)) byCode.set(key, { code: m.code, ref: m.ref, manufacturer: m.manufacturer, from: 'spec' })
+  }
+  // Every project opened before (the style library): the same product, known elsewhere.
+  // This project's spec wins; its ElementType is the one to reuse.
+  for (const ex of library) {
+    if (!hasProductIdentity(ex.code)) continue
+    const key = norm(ex.code)
+    if (!byCode.has(key)) byCode.set(key, { code: ex.code, ref: null, manufacturer: ex.maker, from: 'library', exemplar: ex })
   }
   return byCode
 }
+
+/** A library hit counts only for the same maker (when both name one). */
+const makerFits = (found, row) => found.from !== 'library' || !row.manufacturer || !found.manufacturer
+  || makerKey(found.manufacturer) === makerKey(row.manufacturer)
 
 /** The literal text a token span covers, exactly as the user typed it. */
 const spanText = (row, a, b) => row.rawText.slice(row.tokens[a].start, row.tokens[b].end).trim()
@@ -75,7 +87,7 @@ export function matchKnownCodes(row, index) {
       if (!isAlnum(row.tokens[j])) continue
       const text = spanText(row, i, j)
       const found = index.get(norm(text))
-      if (found) { hit = { range: [i, j], ...found }; break }
+      if (found && makerFits(found, row)) { hit = { range: [i, j], ...found }; break }
     }
     if (hit) { exact.push(hit); i = hit.range[1] + 1; continue }
 
@@ -99,7 +111,7 @@ function variantAt(row, i, index) {
 
   let best = null
   for (const [key, info] of index) {
-    if (key === nt || key.length < MIN_VARIANT_BASE) continue
+    if (key === nt || key.length < MIN_VARIANT_BASE || !makerFits(info, row)) continue
     const longerHasShorter = nt.startsWith(key)
     const shorterInLonger = key.startsWith(nt)
     if (!longerHasShorter && !shorterInLonger) continue
@@ -140,7 +152,10 @@ function splitAdjacent(exact) {
 }
 
 /**
- * applyKnownCodes(rows, master) → { rows, exactCount, variantCount, adjacentCount, byRow }
+ * applyKnownCodes(rows, master, library) → { rows, exactCount, libraryCount, variantCount, adjacentCount, byRow }
+ *
+ * `library` is the tool-wide style library (every project opened before); `libraryCount`
+ * says how many of the exact hits came from it rather than this project's spec.
  *
  * Paints every exact run as a code, as a per-row override (a decision about THIS
  * row, not a batch rule about a token's text). Variants are reported, never painted.
@@ -148,14 +163,15 @@ function splitAdjacent(exact) {
  *
  * Idempotent: re-running over already-painted rows changes nothing.
  */
-export function applyKnownCodes(rows = [], master = []) {
-  const index = indexKnownCodes(master)
+export function applyKnownCodes(rows = [], master = [], library = []) {
+  const index = indexKnownCodes(master, library)
   const byRow = new Map()
   let exactCount = 0
+  let libraryCount = 0
   let variantCount = 0
   let adjacentCount = 0
 
-  if (index.size === 0) return { rows, exactCount, variantCount, adjacentCount, byRow }
+  if (index.size === 0) return { rows, exactCount, libraryCount, variantCount, adjacentCount, byRow }
 
   const next = rows.map(row => {
     const { exact, variants } = matchKnownCodes(row, index)
@@ -170,12 +186,13 @@ export function applyKnownCodes(rows = [], master = []) {
     const overrides = { ...row.overrides }
     for (const e of paint) {
       exactCount++
+      if (e.from === 'library') libraryCount++
       for (let k = e.range[0]; k <= e.range[1]; k++) overrides[k] = 'code'
     }
     return { ...row, overrides }
   })
 
-  return { rows: next, exactCount, variantCount, adjacentCount, byRow }
+  return { rows: next, exactCount, libraryCount, variantCount, adjacentCount, byRow }
 }
 
 /** Token indices painted from the spec, for the paint surface to style differently. */

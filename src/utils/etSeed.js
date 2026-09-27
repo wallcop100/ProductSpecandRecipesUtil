@@ -9,6 +9,8 @@
  * ET-DL, ET-LIN-TAPE/FLEX/FIXED/PROF/CLIP/MOUNT, ET-DRIVER, ET-CONNECTION… The rule, first
  * match wins, each reported in `why`:
  *
+ *   library   — the very same product (maker + code) on a project opened before: its
+ *               family, name, description and — if free here — its ref come with it.
  *   stem      — an existing product from the same maker whose code shares a real stem
  *               (FPSN0809BG3000 beside FPSN0809BG2000). Specific enough to trust.
  *   style     — the tool-wide style library (styleLibrary.js): how this maker's product line
@@ -37,9 +39,9 @@
  */
 
 import { sharedStem } from './etRefSuggest'
-import { hasProductIdentity } from './productCodes'
+import { hasProductIdentity, norm } from './productCodes'
 import { styleFor } from './styleLibrary'
-import { matchShape } from './codeShapes'
+import { matchShape, makerKey } from './codeShapes'
 import { productLineFor } from '../data/productLines'
 import { CANON_FAMILIES, classifyText } from '../data/etCanon'
 import shippedShapes from '../data/codeShapes.json'
@@ -227,6 +229,15 @@ export function proposeElementTypes(entries = [], project = {}) {
       parents: targets.map(t => parentOf.get(t)).filter(Boolean),
     }, { products, library, shapes })
 
+    // The very same product on an earlier project: its ElementType comes with it — family,
+    // name, description, and its ref when this project has not used that ref yet.
+    // ElementTypes belong to a project, so only when this project has nothing of its own
+    // to go on (a sibling product already filed here, or the positions' design element).
+    const ownKnowledge = pick.why === 'stem' || pick.why === 'design'
+    const seen = !same && !ownKnowledge && library.find(ex => norm(ex.code) === norm(e.text)
+      && (!manufacturer || !ex.maker || makerKey(ex.maker) === makerKey(manufacturer)))
+    if (seen) Object.assign(pick, { family: seen.family, head: seen.family, why: 'library', flag: false, seen })
+
     const family = pick.family
     // Propose the family, and any parent of it the project lacks, from the canon.
     const propose = (ref, from) => {
@@ -242,7 +253,9 @@ export function proposeElementTypes(entries = [], project = {}) {
       if (canon?.parent) propose(canon.parent)
     }
     if (family && !same) propose(family, pick.parent)
-    const ref = family && !same ? nextRef(pick.style?.refBase || pick.head || family, taken) : ''
+    const ref = !family || same ? ''
+      : pick.seen && pick.seen.ref && !taken.has(pick.seen.ref) ? pick.seen.ref
+        : nextRef(pick.style?.refBase || pick.head || family, taken)
     if (ref) taken.add(ref)
     const old = matchShape(e.text, manufacturer, shapes).superseded
 
@@ -254,12 +267,13 @@ export function proposeElementTypes(entries = [], project = {}) {
       reuseRef: same?.ref || null,
       family: same ? '' : family,
       ref,
-      name: seedName(manufacturer, e.text),
-      description: [context, note].map(s => String(s).trim()).filter(Boolean).join(' — '),
+      name: pick.seen?.name || seedName(manufacturer, e.text),
+      description: pick.seen?.description || [context, note].map(s => String(s).trim()).filter(Boolean).join(' — '),
       why: pick.why,
       parent: pick.parent || null,
       spread: pick.spread,
-      styledOn: pick.style ? { ref: pick.style.exemplar.ref, code: pick.style.exemplar.code, source: pick.style.exemplar.source } : null,
+      styledOn: pick.seen ? { ref: pick.seen.ref, code: pick.seen.code, source: pick.seen.source }
+        : pick.style ? { ref: pick.style.exemplar.ref, code: pick.style.exemplar.code, source: pick.style.exemplar.source } : null,
       shapedOn: pick.shape ? { shape: pick.shape.shape, example: pick.shape.example, n: pick.shape.n } : null,
       canon: pick.canon || null,
       checkRef: !!pick.flag,
