@@ -1,3 +1,4 @@
+import InfoTip from '../components/InfoTip'
 import React, { useState, useEffect, useCallback } from 'react'
 import {
   Container, Card, Button, Alert, Spinner, Badge, Form, Row, Col,
@@ -637,12 +638,12 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
           {duplicates.length > 0 && !picking && duplicates.map((group, i) => (
             <Alert key={i} variant="warning" className="py-2 px-2" style={{ fontSize: 12 }}>
               <div className="fw-semibold">
-                <MaterialIcon name="warning" size={14} /> One folder, opened as {group.length} separate projects
-              </div>
-              <div className="text-muted mt-1" style={{ fontSize: 11 }}>
-                Picking a folder used to make a fresh copy of it instead of recognising it, so your
-                work was split. Merging keeps every copy that holds work — as its own config —
-                and discards the empty ones. The Excel files are never touched.
+                <MaterialIcon name="warning" size={14} /> One folder, opened as {group.length} separate projects{' '}
+                <InfoTip label="Why this happened">
+                  Picking a folder used to make a fresh copy of it instead of recognising it, so your
+                  work was split. Merging keeps every copy that holds work, as its own setup, and
+                  discards the empty ones. The Excel files are never touched.
+                </InfoTip>
               </div>
               <Button size="sm" variant="warning" className="mt-2" style={{ fontSize: 11 }}
                 onClick={() => handleMergeDuplicates(group)}>
@@ -681,7 +682,9 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
                 </div>
               ))}
               <div className="text-muted" style={{ fontSize: 10 }}>
-                Browsers don’t keep folder permission between visits, so reopening asks once.
+                <InfoTip size={11} label="Why it asks for access">
+                  Browsers don’t keep folder permission between visits, so reopening a project asks once.
+                </InfoTip>
               </div>
             </div>
           )}
@@ -692,17 +695,19 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
               <div className="px-3 py-3 rounded" style={{ background: '#f8f9fa', border: '1px dashed #ced4da' }}>
                 <div className="text-center">
                   <MaterialIcon name="menu_book" size={28} style={{ color: '#adb5bd' }} />
-                  <div className="fw-semibold mt-2" style={{ fontSize: 13 }}>You build the recipes. Excel keeps the files.</div>
+                  <div className="fw-semibold mt-2" style={{ fontSize: 13 }}>
+                    You build the recipes. Excel keeps the files.{' '}
+                    <InfoTip label="How it works">
+                      Three Excel workbooks describe a lighting project. This tool <strong>never writes
+                      to them</strong>: it reads them, you build the recipes here, and it hands you Office
+                      Script patches to paste into Excel yourself.
+                    </InfoTip>
+                  </div>
                 </div>
-                <div className="text-muted mt-2" style={{ fontSize: 11, lineHeight: 1.6 }}>
-                  Three Excel workbooks describe a lighting project. This tool <strong>never writes to
-                  them</strong> — it reads them, you build the recipes here, and it hands you Office
-                  Script patches to paste into Excel yourself.
-                </div>
-                <div className="mt-2" style={{ fontSize: 11 }}>
-                  <div><span className="fw-semibold">DesignDB</span> <span className="text-muted">— what exists. The only file you need to start.</span></div>
-                  <div><span className="fw-semibold">Product Spec</span> <span className="text-muted">— what to buy.</span></div>
-                  <div><span className="fw-semibold">Recipes Spec</span> <span className="text-muted">— what goes where.</span></div>
+                <div className="mt-2 d-flex justify-content-center gap-3" style={{ fontSize: 11 }}>
+                  <span title="What exists. The only file you need to start."><MaterialIcon name="storage" size={13} /> DesignDB</span>
+                  <span title="What to buy."><MaterialIcon name="shopping_cart" size={13} /> Product Spec</span>
+                  <span title="What goes where."><MaterialIcon name="account_tree" size={13} /> Recipes Spec</span>
                 </div>
               </div>
 

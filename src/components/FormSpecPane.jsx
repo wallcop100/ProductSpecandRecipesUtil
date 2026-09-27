@@ -1,3 +1,4 @@
+import InfoTip from './InfoTip'
 import React, { useMemo, useState } from 'react'
 import { Button, Dropdown, Form, Modal } from 'react-bootstrap'
 import useStore from '../store/useStore'
@@ -171,8 +172,8 @@ function ColumnPicker({ show, onHide, available, shown, onChange, onReset }) {
       </Modal.Header>
       <Modal.Body style={{ maxHeight: 380, overflowY: 'auto' }}>
         <div className="text-muted mb-2" style={{ fontSize: 11 }}>
-          Everything the Form carries for this position. Ticking one shows it here — no
-          re-import needed.
+          Every column the Form carries{' '}
+          <InfoTip>Ticking one shows it in the pane. No re-import needed.</InfoTip>
         </div>
         {available.map(c => (
           <Form.Check key={c} type="checkbox" id={`col-${c}`}
@@ -371,10 +372,9 @@ export default function FormSpecPane({ posRef, embedded = false }) {
         <div className="px-3 py-4 rounded text-center"
           style={{ background: '#f8f9fa', border: '1px dashed #ced4da' }}>
           <MaterialIcon name="auto_fix_high" size={28} style={{ color: '#adb5bd' }} />
-          <div className="fw-semibold mt-2" style={{ fontSize: 12 }}>No Form template yet</div>
-          <div className="text-muted mt-1 mb-3" style={{ fontSize: 11, lineHeight: 1.5 }}>
-            Import the Form and this panel shows, for every position, exactly which products it
-            asks for and which are already in the recipe.
+          <div className="fw-semibold mt-2 mb-3" style={{ fontSize: 12 }}>
+            No Form template yet{' '}
+            <InfoTip>Import the Form and this panel shows, for every position, which products it asks for and which are already in the recipe.</InfoTip>
           </div>
           <Button size="sm" variant="primary" style={{ fontSize: 11 }} onClick={handleReimport}>
             Import the Form template →
@@ -403,9 +403,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
         </div>
         {/* Silence is not an answer. It may well be a technical-only position — so offer
             the thing that settles it: what do comparable positions actually do? */}
-        <div className="text-muted mt-1" style={{ fontSize: 10, lineHeight: 1.5 }}>
-          It may be a technical-only position. Compare it with the ones the Form does describe.
-        </div>
+        <InfoTip size={11}>It may be a technical-only position. Compare it with the ones the Form does describe.</InfoTip>
         <Button size="sm" variant="outline-secondary" className="mt-2" style={{ fontSize: 10 }}
           onClick={() => requestPaletteTab('similar')}
           title={`Show positions like ${posRef} — same family, tags and recipe`}>
@@ -534,12 +532,10 @@ export default function FormSpecPane({ posRef, embedded = false }) {
         <div className="mb-2 px-2 py-2 rounded" style={{ background: '#fdecec', border: '1px solid #f5c2c7' }}>
           <div className="fw-semibold" style={{ fontSize: 10, color: '#842029' }}>
             <MaterialIcon name="help" size={11} /> {pending.length} product
-            {pending.length === 1 ? '' : 's'} with no ElementType
+            {pending.length === 1 ? '' : 's'} with no ElementType{' '}
+            <InfoTip size={11}>The Form asks for {pending.length === 1 ? 'it' : 'them'} here. Nothing can be added to the recipe until {pending.length === 1 ? 'it has' : 'they have'} one.</InfoTip>
           </div>
-          <div className="text-muted mt-1 mb-2" style={{ fontSize: 10, lineHeight: 1.5 }}>
-            The Form asks for {pending.length === 1 ? 'it' : 'them'} here. Nothing can be added to the
-            recipe until {pending.length === 1 ? 'it has' : 'they have'} one.
-          </div>
+          <div className="mb-2" />
           {pending.map(p => {
             const cands = candsByCode.get(p.code) ?? []
             const top = cands[0]

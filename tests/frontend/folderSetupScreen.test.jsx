@@ -209,8 +209,11 @@ describe('someone who has never used this', () => {
 
   test('is told what the tool is, and given exactly one thing to do', async () => {
     render(<FolderSetupScreen onProjectLoaded={() => {}} />)
-    expect(await screen.findByText(/never writes to/)).toBeTruthy()
-    expect(screen.getByText(/what exists/)).toBeTruthy()          // the DesignDB
+    expect(await screen.findByText(/You build the recipes. Excel keeps the files./)).toBeTruthy()
+    expect(screen.getByTitle(/What exists/)).toHaveTextContent('DesignDB')
+    // the longer "how" is one hover away, not on the page
+    fireEvent.mouseOver(screen.getByLabelText('How it works'))
+    expect(await screen.findByText(/never writes/)).toBeTruthy()
     expect(screen.getByText('Open the folder with your DesignDB →')).toBeTruthy()
     expect(screen.queryByText('Open a folder…')).toBeNull()       // no second, identical button
   })

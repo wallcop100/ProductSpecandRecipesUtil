@@ -1,3 +1,4 @@
+import InfoTip from './InfoTip'
 import React, { useState, useEffect, useMemo } from 'react'
 import { Modal, Button, Form, Alert } from 'react-bootstrap'
 import { v4 as uuidv4 } from 'uuid'
@@ -184,9 +185,7 @@ function RulesSection({ positionTypes }) {
   return (
     <>
       <div className="d-flex align-items-center mb-3">
-        <div className="text-muted" style={{ fontSize: 11, maxWidth: 380 }}>
-          Each rule tags every position matching its conditions. Two rules can add the same tag.
-        </div>
+        <InfoTip>Each rule tags every position matching its conditions. Two rules can add the same tag.</InfoTip>
         <div className="ms-auto d-flex gap-2">
           <Button size="sm" variant="outline-secondary" className="d-inline-flex align-items-center gap-1" onClick={addRule}>
             <MaterialIcon name="add" size={14} /> Add rule
@@ -211,7 +210,8 @@ function RulesSection({ positionTypes }) {
       ))}
       {dirty && (
         <div className="text-muted" style={{ fontSize: 11 }}>
-          Match counts reflect your edits. <strong>Apply rules</strong> to re-tag every position.
+          Unapplied edits{' '}
+          <InfoTip>Match counts reflect your edits. <strong>Apply rules</strong> to re-tag every position.</InfoTip>
         </div>
       )}
     </>
@@ -234,15 +234,13 @@ function TagsSection({ positionUI }) {
 
   return (
     <>
-      <div className="fw-semibold mb-1" style={{ fontSize: 12 }}>Palette</div>
-      <div className="text-muted mb-2" style={{ fontSize: 11 }}>
-        Suggestions offered when adding tags. Tags are free-form — any string works.
+      <div className="fw-semibold mb-2" style={{ fontSize: 12 }}>
+        Palette <InfoTip size={12}>Suggestions offered when adding tags. Tags are free-form: any string works.</InfoTip>
       </div>
       <TagInput value={tagPalette} onChange={setTagPalette} palette={[]} placeholder="Add a palette tag…" />
 
-      <div className="fw-semibold mt-3 mb-1" style={{ fontSize: 12 }}>Colours</div>
-      <div className="text-muted mb-2" style={{ fontSize: 11 }}>
-        Click a tag to colour it. The colour shows everywhere the tag appears.
+      <div className="fw-semibold mt-3 mb-2" style={{ fontSize: 12 }}>
+        Colours <InfoTip size={12}>Click a tag to colour it. The colour shows everywhere the tag appears.</InfoTip>
       </div>
       {allTags.length === 0
         ? <div className="text-muted fst-italic" style={{ fontSize: 11 }}>No tags yet.</div>

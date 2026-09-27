@@ -1,3 +1,4 @@
+import InfoTip from './InfoTip'
 import React, { useMemo, useState, useEffect } from 'react'
 import { Modal, Button } from 'react-bootstrap'
 import useStore from '../store/useStore'
@@ -332,10 +333,8 @@ function ResolveTab({ gaps, overwrites, onFillWrappers }) {
         <div className="mb-3 px-2 py-2 rounded" style={{ background: '#f8d7da', border: '1px solid #f1aeb5' }}>
           <div className="fw-semibold d-flex align-items-center gap-1" style={{ fontSize: 11, color: '#842029' }}>
             <MaterialIcon name="warning" size={13} />
-            {overwrites.length} DesignDB value{overwrites.length === 1 ? '' : 's'} will be overwritten
-          </div>
-          <div className="text-muted my-1" style={{ fontSize: 11 }}>
-            The master already holds a value here. Running the ElementTypes patch replaces it.
+            {overwrites.length} DesignDB value{overwrites.length === 1 ? '' : 's'} will be overwritten{' '}
+            <InfoTip>The master already holds a value here. Running the ElementTypes patch replaces it.</InfoTip>
           </div>
           <div style={{ fontSize: 10, maxHeight: 80, overflowY: 'auto' }}>
             {overwrites.map(o => (
@@ -356,11 +355,8 @@ function ResolveTab({ gaps, overwrites, onFillWrappers }) {
         <div className="mb-3 px-2 py-2 rounded" style={{ background: '#fff3cd', border: '1px solid #f0e0a8' }}>
           <div className="fw-semibold d-flex align-items-center gap-1" style={{ fontSize: 11, color: '#856404' }}>
             <MaterialIcon name="inventory_2" size={13} />
-            {gaps.specRows.wrappers.length} wrapper{gaps.specRows.wrappers.length === 1 ? '' : 's'} with no Product Spec row
-          </div>
-          <div className="text-muted my-1" style={{ fontSize: 11 }}>
-            A wrapper is a virtual assembly — its contents are what you buy. It takes{' '}
-            <span style={{ fontFamily: 'monospace' }}>Ideaworks / N/A</span>, so nothing here needs deciding.
+            {gaps.specRows.wrappers.length} wrapper{gaps.specRows.wrappers.length === 1 ? '' : 's'} with no Product Spec row{' '}
+            <InfoTip>A wrapper is a virtual assembly; its contents are what you buy. It takes <span style={{ fontFamily: 'monospace' }}>Ideaworks / N/A</span>, so nothing needs deciding.</InfoTip>
           </div>
           <div style={{ fontFamily: 'monospace', fontSize: 10, color: '#6c757d', maxHeight: 60, overflowY: 'auto' }}>
             {gaps.specRows.wrappers.map(w => w.ref).join(', ')}
@@ -378,11 +374,8 @@ function ResolveTab({ gaps, overwrites, onFillWrappers }) {
         <div className="mb-3 px-2 py-2 rounded" style={{ background: '#fdecec', border: '1px solid #f5c2c7' }}>
           <div className="fw-semibold d-flex align-items-center gap-1" style={{ fontSize: 11, color: '#842029' }}>
             <MaterialIcon name="error" size={13} />
-            {gaps.specRows.products.length} product{gaps.specRows.products.length === 1 ? '' : 's'} used in a recipe with no Product Spec row
-          </div>
-          <div className="text-muted my-1" style={{ fontSize: 11 }}>
-            Each needs a manufacturer and a product code, which only you know. Open it in the Product
-            Spec — appending a blank row would only trade one warning for another.
+            {gaps.specRows.products.length} product{gaps.specRows.products.length === 1 ? '' : 's'} used in a recipe with no Product Spec row{' '}
+            <InfoTip>Each needs a manufacturer and a product code, which only you know. Open it in the Product Spec; a blank row would only trade one warning for another.</InfoTip>
           </div>
           {gaps.specRows.products.map(p => (
             <div key={p.ref} className="d-flex align-items-baseline gap-2" style={{ fontSize: 10 }}>

@@ -1,3 +1,4 @@
+import InfoTip from './InfoTip'
 import React, { useMemo, useState } from 'react'
 import { Button, Form } from 'react-bootstrap'
 import MaterialIcon from './MaterialIcon'
@@ -74,10 +75,6 @@ export default function ResolveRefsStep({ resolutions, overrides, onOverride, po
           <ConceptHint concept={CONCEPTS.EXTREF} size={13}
             title="Why does the Form say C01 when the recipe lives on C01r?" />
         </div>
-        <div className="text-muted" style={{ fontSize: 11 }}>
-          Recipes hang off the DesignDB's PositionType, which is not always the one the Form names.
-          Where a PositionType declares this ref as its <code>ExtRef</code>, it is the real target.
-        </div>
       </div>
 
       {redirects.length > 0 && (
@@ -110,9 +107,11 @@ export default function ResolveRefsStep({ resolutions, overrides, onOverride, po
                   <span style={{ fontSize: 10 }}>
                     {copied === 'ok' ? 'Copied — paste it into the DesignDB as an Office Script. '
                       : copied === 'fail' ? 'Could not reach the clipboard. ' : ''}
-                    Adds a row with the <strong>Ref only</strong>. Name, parent, driver and control
-                    still need adding in the DesignDB before these can carry a recipe. A ref that is
-                    already there (even marked deleted) is left alone and reported.
+                    <InfoTip size={11}>
+                      Adds a row with the <strong>Ref only</strong>. Name, parent, driver and control
+                      still need adding in the DesignDB before these can carry a recipe. A ref that is
+                      already there (even marked deleted) is left alone and reported.
+                    </InfoTip>
                   </span>
                 </div>
               )}
@@ -126,7 +125,7 @@ export default function ResolveRefsStep({ resolutions, overrides, onOverride, po
             </div>
           )}
           <div className="mt-1" style={{ fontSize: 10, opacity: 0.85 }}>
-            Skipped refs capture nothing. The Form template records them so you can come back.
+            Skipped refs capture nothing <InfoTip size={11}>The Form template records them so you can come back.</InfoTip>
           </div>
         </div>
       )}
