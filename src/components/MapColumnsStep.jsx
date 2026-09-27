@@ -1,3 +1,4 @@
+import InfoTip from './InfoTip'
 import React, { useMemo } from 'react'
 import { isPlaceholder } from '../utils/accessories'
 import { Button, Form } from 'react-bootstrap'
@@ -75,9 +76,9 @@ export default function MapColumnsStep({
   return (
     <div style={{ maxWidth: 780, overflowY: 'auto' }}>
       <div className="mb-3">
-        <div className="fw-semibold" style={{ fontSize: 13 }}>Which columns matter?</div>
-        <div className="text-muted" style={{ fontSize: 11 }}>
-          Each choice shows a real value from the sheet, so you can see what you are picking.
+        <div className="fw-semibold" style={{ fontSize: 13 }}>
+          Which columns matter?{' '}
+          <InfoTip>Each choice shows a real value from the sheet, so you can see what you are picking.</InfoTip>
         </div>
       </div>
 
@@ -111,6 +112,7 @@ export default function MapColumnsStep({
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="d-flex align-items-center gap-2">
                   <span style={{ fontSize: 12, fontWeight: 600 }}>{f.label}</span>
+                  <InfoTip size={12} label={`About ${f.label}`}>{f.hint}</InfoTip>
                   {f.required && <span className="text-danger" style={{ fontSize: 11 }}>required</span>}
                   {f.optional && <span className="text-muted" style={{ fontSize: 10 }}>optional</span>}
                   {f.key === 'acc' && value && (
@@ -124,7 +126,7 @@ export default function MapColumnsStep({
                     </span>
                   )}
                 </div>
-                <div className="text-muted" style={{ fontSize: 10 }}>{f.hint}</div>
+
 
                 {/* A read-only glance at the column, not a field. No box, no white
                     background — anything input-shaped invites a click. */}
@@ -154,9 +156,7 @@ export default function MapColumnsStep({
 
       <div className="mb-1 d-flex align-items-center gap-1" style={{ fontSize: 11, fontWeight: 600 }}>
         <MaterialIcon name="notes" size={14} /> Context columns
-        <span className="text-muted fw-normal" style={{ fontSize: 10 }}>
-          — shown beside each field while you review, and again in the Side-by-Side pane
-        </span>
+        <InfoTip size={12}>Shown beside each field while you review, and again in the Side-by-Side pane.</InfoTip>
       </div>
       <div className="d-flex flex-wrap gap-1 mb-3">
         {usefulHeaders.map(h => {

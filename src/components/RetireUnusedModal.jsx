@@ -1,3 +1,4 @@
+import InfoTip from './InfoTip'
 import React, { useMemo } from 'react'
 import { Modal, Button } from 'react-bootstrap'
 import useStore from '../store/useStore'
@@ -44,17 +45,18 @@ export default function RetireUnusedModal({ show, onHide }) {
         {plan.length === 0 ? (
           <div className="px-2 py-2 rounded d-flex align-items-center gap-2"
             style={{ background: '#d1e7dd', color: '#0f5132' }}>
-            <MaterialIcon name="check_circle" size={16} /> Nothing to clean up — every ElementType
-            is used by a position that is still being built.
+            <MaterialIcon name="check_circle" size={16} /> Nothing to clean up
           </div>
         ) : (
           <>
-            <div className="text-muted mb-3" style={{ lineHeight: 1.5 }}>
-              No live recipe uses these ElementTypes — either the only position using one was
-              excluded or never placed, or its Product Spec row is an orphan nothing refers to.
-              Marking one deleted writes an <strong>IsDeleted</strong> patch to each workbook that
-              actually holds it (the tags on the right). Nothing here touches your files — it
-              becomes part of Export, and one undo puts the Recipe and Product Spec marks back.
+            <div className="text-muted mb-3">
+              Unused by any live recipe{' '}
+              <InfoTip>
+                Either the only position using one was excluded or never placed, or its Product Spec
+                row is an orphan. Marking one deleted writes an <strong>IsDeleted</strong> patch to each
+                workbook that holds it (the tags on the right). Nothing touches your files until Export,
+                and one undo puts the marks back.
+              </InfoTip>
             </div>
             {plan.map(p => (
               <div key={p.ref} className="d-flex align-items-baseline gap-2 py-1 border-bottom" style={{ minWidth: 0 }}>

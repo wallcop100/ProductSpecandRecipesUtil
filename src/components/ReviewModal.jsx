@@ -1,3 +1,4 @@
+import InfoTip from './InfoTip'
 import React, { useState, useMemo, useEffect } from 'react'
 import { Modal, Button, Form, ButtonGroup } from 'react-bootstrap'
 import {
@@ -285,9 +286,9 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
                 <MaterialIcon name="filter_alt" size={38} style={{ color: '#0d6efd' }} />
               </div>
               <h5 className="mb-1" style={{ fontSize: 16, fontWeight: 600 }}>What do you want to review?</h5>
-              <p className="text-muted mb-0" style={{ fontSize: 12, maxWidth: 440, margin: '0 auto' }}>
-                Pick PositionTypes or ElementTypes and narrow with the filters below —
-                or leave them blank to step through <strong>everything</strong>.
+              <p className="text-muted mb-0" style={{ fontSize: 12 }}>
+                Filters are optional{' '}
+                <InfoTip>Pick PositionTypes or ElementTypes and narrow with the filters below, or leave them blank to step through everything.</InfoTip>
               </p>
             </div>
 

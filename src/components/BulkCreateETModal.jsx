@@ -1,3 +1,4 @@
+import InfoTip from './InfoTip'
 import React, { useEffect, useMemo, useState } from 'react'
 import { Modal, Button, Form, Dropdown } from 'react-bootstrap'
 import {
@@ -173,10 +174,15 @@ export default function BulkCreateETModal({
       </Modal.Header>
       <Modal.Body style={{ fontSize: 12 }}>
         <div className="d-flex align-items-start gap-2 mb-2">
-          <div className="text-muted" style={{ fontSize: 11 }}>
-            Everything is ticked. Untick what is wrong. Drag a code by its <MaterialIcon name="drag_indicator" size={12} /> grip
-            onto another family, or move a whole group from its header; refs renumber as you go. Edit any ref, name or
-            description in place. <MaterialIcon name="verified" size={12} style={{ color: '#198754' }} /> means a firm rule placed it.
+          <div className="text-muted d-flex align-items-center gap-2" style={{ fontSize: 11 }}>
+            <span><MaterialIcon name="check_box" size={12} /> untick what is wrong</span>
+            <span><MaterialIcon name="drag_indicator" size={12} /> drag to another family</span>
+            <span><MaterialIcon name="verified" size={12} style={{ color: '#198754' }} /> firm rule</span>
+            <InfoTip>
+              Drag a code by its grip onto another family, or move a whole group from its header;
+              refs renumber as you go. Edit any ref, name or description in place. A green tick means
+              a firm rule placed it.
+            </InfoTip>
           </div>
           {!adding && (
             <Button size="sm" variant="outline-primary" className="ms-auto text-nowrap" style={{ fontSize: 11 }}

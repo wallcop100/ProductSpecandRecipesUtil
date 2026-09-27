@@ -1,3 +1,4 @@
+import InfoTip from '../components/InfoTip'
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import { Button, Form, Alert, Spinner, Modal } from 'react-bootstrap'
 import useStore from '../store/useStore'
@@ -906,7 +907,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
             {importDraft.source?.name && <span style={{ fontFamily: 'monospace' }}>{importDraft.source.name}</span>}
             {importDraft.source?.name && ' — '}
             {(importDraft.rows || []).filter(r => r.confirmed).length} of {(importDraft.rows || []).length} rows
-            confirmed. The spreadsheet is not re-read; your painted codes and rules are restored.
+            confirmed{' '}
+            <InfoTip>The spreadsheet is not re-read; your painted codes and rules are restored.</InfoTip>
           </div>
           <div className="d-flex gap-2">
             <Button size="sm" variant="primary" style={{ fontSize: 11 }} onClick={() => resumeDraft(importDraft)}>
@@ -922,7 +924,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       {step === 'pick' && (
         <div className="text-center py-5">
           <p className="text-muted" style={{ fontSize: 13 }}>
-            Choose the spreadsheet this project starts from. It is only ever read — never written.
+            The Form template spreadsheet{' '}
+            <InfoTip>Only ever read, never written.</InfoTip>
           </p>
           <Button variant="primary" onClick={handlePick} disabled={busy}>
             {busy ? <Spinner size="sm" animation="border" /> : <MaterialIcon name="folder_open" size={16} />}
@@ -1017,7 +1020,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
 
             {learned.length === 0 && (
               <div className="text-muted fst-italic" style={{ fontSize: 10 }}>
-                Nothing yet. Paint a token and it applies to every row containing it.
+                Nothing yet{' '}
+                <InfoTip size={11}>Paint a token and it applies to every row containing it.</InfoTip>
               </div>
             )}
             {learned.map(l => (
@@ -1072,14 +1076,14 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                     )}
                     {knownStats.variantCount > 0 && (
                       <span style={{ color: '#856404' }}>
-                        <MaterialIcon name="warning" size={12} /> {knownStats.variantCount} look like a known code
-                        with something extra — amber; you decide
+                        <MaterialIcon name="warning" size={12} /> {knownStats.variantCount} variant{knownStats.variantCount === 1 ? '' : 's'}{' '}
+                        <InfoTip size={11}>Known codes with something extra, marked amber. You decide.</InfoTip>
                       </span>
                     )}
                     {knownStats.adjacentCount > 0 && (
                       <span style={{ color: '#856404' }}>
-                        <MaterialIcon name="warning" size={12} /> {knownStats.adjacentCount} known codes sit side by
-                        side — painting both would merge them, so neither was
+                        <MaterialIcon name="warning" size={12} /> {knownStats.adjacentCount} side by side{' '}
+                        <InfoTip size={11}>Known codes next to each other. Painting both would merge them, so neither was painted.</InfoTip>
                       </span>
                     )}
                     {preKnownRows && (
@@ -1150,15 +1154,14 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
               </Button>
               {leftBehind > 0 && (
                 <div className="text-muted mt-1" style={{ fontSize: 10 }}>
-                  {leftBehind} other code{leftBehind === 1 ? '' : 's'} {leftBehind === 1 ? 'is' : 'are'} not
-                  ready — {collisions.length > 0 && <>{collisions.length} with differing notes, </>}
-                  {unassigned.length > 0 && <>{unassigned.length} with no ElementType</>}. They stay put, and your
-                  draft is kept so you can finish them.
+                  {collisions.length > 0 && <>{collisions.length} differing notes · </>}
+                  {unassigned.length > 0 && <>{unassigned.length} without ElementType </>}
+                  <InfoTip size={11}>Codes that are not ready stay put, and your draft is kept so you can finish them.</InfoTip>
                 </div>
               )}
               {!canStage && entries.length > 0 && (
                 <div className="text-muted mt-1" style={{ fontSize: 10 }}>
-                  Assign an ElementType to at least one code before staging.
+                  Needs at least one ElementType
                 </div>
               )}
             </div>

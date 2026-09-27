@@ -1,3 +1,4 @@
+import InfoTip from './InfoTip'
 import React, { useRef, useState, useMemo, useEffect, useId } from 'react'
 import { Modal, Button, Form } from 'react-bootstrap'
 import useStore from '../store/useStore'
@@ -313,12 +314,8 @@ export default function NewETModal({
         {/* The DesignDB is the master list, so this is not a choice. Say so once. */}
         <div className="rounded p-2 mb-3" style={{ background: '#f0f4ff', border: '1px solid #c7d7f5' }}>
           <div style={{ fontSize: 12, fontWeight: 600 }}>
-            <MaterialIcon name="hub" size={13} /> Added to the DesignDB ElementTypes table
-          </div>
-          <div className="text-muted mt-1" style={{ fontSize: 11 }}>
-            The DesignDB is the master list of ElementTypes: anything in the Product Spec or a recipe has
-            to exist there too. This lands in the ElementTypes patch script at export, alongside the
-            Product Spec and Recipe Spec ones.
+            <MaterialIcon name="hub" size={13} /> Added to the DesignDB ElementTypes table{' '}
+            <InfoTip>The DesignDB is the master list of ElementTypes: anything in the Product Spec or a recipe has to exist there too. This lands in the ElementTypes patch script at export.</InfoTip>
           </div>
         </div>
 
