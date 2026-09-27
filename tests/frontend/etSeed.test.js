@@ -182,3 +182,10 @@ describe('families from words and old shapes', () => {
     expect(pickFamily({ code: 'UN22FGSLW1000', manufacturer: 'LEDFlex', text: 'ULTIMO NEON 22', pageType: 'linear' }, { shapes }).family).toBe('ET-LIN-MOUNT')
   })
 })
+
+test('a researched product line files its main code; its extras keep their own words', () => {
+  expect(pickFamily({ code: 'A4331.7.927.IP67.DALI', manufacturer: 'Atea', text: 'Neo Top Mini', pageType: 'linear' }, {}).family).toBe('ET-LIN-FLEX')
+  expect(pickFamily({ code: 'G4961000-9527RD0010', manufacturer: 'Forma Lighting', text: 'Microline 7x5 Dotless', pageType: 'linear' }, {}).family).toBe('ET-LIN-FIXED')
+  expect(pickFamily({ code: 'A4331.FS', manufacturer: 'Atea', text: 'Neo 3D Wall Washer Fixing set Wall Brackets', pageType: 'linear', role: 'extra' }, {}).family).toBe('ET-LIN-MOUNT')
+  expect(pickFamily({ code: 'X1234', manufacturer: 'Atea', text: 'something else', pageType: 'linear' }, {}).family).toBe('ET-LIN-INGREDIENTS')
+})

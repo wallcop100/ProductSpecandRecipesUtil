@@ -15,6 +15,8 @@
  *               was named on any project opened before. Copies that ref's shape.
  *   shape     — the shipped code-shape table (codeShapes.js): LEDFlex FPS…BG… is a profile,
  *               FPS…PCOPD… a diffuser, EldoLED SL…-…mA a driver.
+ *   line      — a researched product line (src/data/productLines.js): the maker AND the
+ *               line's name in the text, main codes only. Atea NEO is flexible linear.
  *   design    — the family of the design (IsDesign) ElementType already in the recipe of
  *               the positions asking for this code. Only fires once recipes exist.
  *   canon     — the Form: a Point page's lead code is ET-PS, its other codes accessories
@@ -38,6 +40,7 @@ import { sharedStem } from './etRefSuggest'
 import { hasProductIdentity } from './productCodes'
 import { styleFor } from './styleLibrary'
 import { matchShape } from './codeShapes'
+import { productLineFor } from '../data/productLines'
 import { CANON_FAMILIES, classifyText } from '../data/etCanon'
 import shippedShapes from '../data/codeShapes.json'
 
@@ -122,6 +125,9 @@ export function pickFamily(signals, ctx) {
   const shapes = matchShape(signals.code, signals.manufacturer, ctx.shapes || [])
   const shape = shapes.current?.family ? shapes.current : shapes.superseded?.family ? shapes.superseded : null
   if (shape?.family) return done(shape.family, 'shape', { head: shape.head || shape.family, shape })
+
+  const line = signals.role !== 'extra' && productLineFor(signals.manufacturer, signals.text)
+  if (line) return done(line.family, 'line', { head: line.head })
 
   const design = mostCommon(signals.designFamilies || [])
   if (design.value) return done(design.value, 'design', { spread: design.distinct })
