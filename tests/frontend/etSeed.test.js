@@ -189,3 +189,15 @@ test('a researched product line files its main code; its extras keep their own w
   expect(pickFamily({ code: 'A4331.FS', manufacturer: 'Atea', text: 'Neo 3D Wall Washer Fixing set Wall Brackets', pageType: 'linear', role: 'extra' }, {}).family).toBe('ET-LIN-MOUNT')
   expect(pickFamily({ code: 'X1234', manufacturer: 'Atea', text: 'something else', pageType: 'linear' }, {}).family).toBe('ET-LIN-INGREDIENTS')
 })
+
+describe('track families', () => {
+  test('on a track position: the track itself is ET-TRACK, a fitting on it ET-TRACK-PS — before code shapes', () => {
+    const shapes = [{ maker: 'Flos', shape: '05.9.9ADA', level: 'fine', family: 'ET-PS', head: 'ET-PS', status: 'current' }]
+    expect(pickFamily({ code: '05.5171.14ADA', manufacturer: 'Flos', text: 'Light Shadow Spot', pageType: 'point', parents: ['TRACK'] }, { shapes }).family).toBe('ET-TRACK-PS')
+    expect(pickFamily({ code: 'TRA-9500', manufacturer: 'Phos', text: 'DecoTrack MS Evo Track', pageType: 'linear', parents: ['TRACK'] }, {}).family).toBe('ET-TRACK')
+  })
+  test('"track" in the text files as ET-TRACK anywhere; a mounting track stays a linear mount', () => {
+    expect(pickFamily({ code: 'X1', text: 'DecoTrack MS Evo Track', pageType: 'linear' }, {}).family).toBe('ET-TRACK')
+    expect(pickFamily({ code: 'X2', text: 'mounting track', pageType: 'linear', role: 'extra' }, {}).family).toBe('ET-LIN-MOUNT')
+  })
+})

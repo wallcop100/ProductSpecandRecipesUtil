@@ -30,7 +30,7 @@ import TemplatePicker from '../components/TemplatePicker'
 import PasteMergeModal from '../components/PasteMergeModal'
 import FavoritesPanel from '../components/FavoritesPanel'
 import ReviewModal from '../components/ReviewModal'
-import BuildFromFormModal from '../components/BuildFromFormModal'
+import FormRecipesModal from '../components/FormRecipesModal'
 import ValidationFixModal from '../components/ValidationFixModal'
 import { SaveIndicator } from '../components/SaveStatus'
 import LinWrapperWizardModal from '../components/LinWrapperWizardModal'
@@ -137,7 +137,7 @@ export default function BuilderScreen({
     const unbuilt = imported.filter(p => !withRecipe.has(p))
     if (unbuilt.length > 0) {
       return { icon: 'auto_awesome', title: `${unbuilt.length} position${unbuilt.length === 1 ? '' : 's'} from the Form ha${unbuilt.length === 1 ? 's' : 've'} no recipe yet.`,
-        text: 'Build them from their Form products, with a template where one fits.',
+        text: 'Build one of each kind, check it, and the rest copy it.',
         action: 'Build them', go: () => setFormBuild({ refs: unbuilt, thenReview: false }) }
     }
     return null
@@ -826,8 +826,8 @@ export default function BuilderScreen({
 
       <ElementTypesWindow show={!!showRetire} view={showRetire === 'unused' ? 'unused' : 'existing'} onHide={() => setShowRetire(false)} />
 
-      <BuildFromFormModal show={formBuild != null} posRefs={formBuild?.refs || []}
-        onHide={closeFormBuild} onBuilt={closeFormBuild} />
+      <FormRecipesModal show={formBuild != null} posRefs={formBuild?.refs || []} onHide={closeFormBuild}
+        onOpenPosition={p => { setFormBuild(null); useStore.getState().setActivePosition(p) }} />
       <ReviewModal
         show={showReview}
         onHide={() => { setShowReview(false); setReviewInitialRefs(null) }}

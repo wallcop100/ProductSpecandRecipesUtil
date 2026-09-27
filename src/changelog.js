@@ -7,6 +7,8 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-09-27', note: 'Recipes from the Form, redone: positions grouped by kind (from the DesignDB); the first of each group proposed per process.md and precedent (this project, projects opened before, 4343) with every row sourced and unknown parts left empty; you check it, then the rest copy it with their own products, sharing wrappers' },
+  { date: '2026-09-27', note: 'Track: ET-TRACK (the track) and ET-TRACK-PS (fittings on it), from the DesignDB’s TRACK positions; recipes as 4343 builds them' },
   { date: '2026-09-27', note: 'A new project says where to start (Import the Form), then offers to build what it imported' },
   { date: '2026-09-27', note: 'Build recipes from the Form: templates saved from a recipe now carry each position\'s own Form products; one window builds every imported position (template, products only, or skip), one Undo' },
   { date: '2026-09-27', note: 'TBC, custom and "awaiting" rows get a placeholder Product Spec row (TBC) and an ElementType of their own; n/a and by-others stay nothing to add' },

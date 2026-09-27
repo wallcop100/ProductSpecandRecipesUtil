@@ -229,6 +229,14 @@ function createTables() {
       UNIQUE(maker, code, ref)
     );
 
+    -- Recipe patterns: how each project opened built its positions, by kind (roles, levels,
+    -- flags — no products). Tool-wide; one row per project. See utils/recipePatterns.js.
+    CREATE TABLE IF NOT EXISTS recipe_patterns (
+      source    TEXT PRIMARY KEY,
+      patterns  TEXT NOT NULL,
+      seen_at   TEXT
+    );
+
     -- Locally-created ElementTypes (EXPORT_PLAN §4). Survive restarts even when
     -- DB writes are off; the promotion queue for the writable catalogue.
     CREATE TABLE IF NOT EXISTS local_element_types (
@@ -825,6 +833,25 @@ function writeStyleExemplars(exemplars = []) {
   return added
 }
 
+/** Replace one project's recipe patterns (utils/recipePatterns.harvestPatterns). */
+function recordRecipePatterns(source, patterns = []) {
+  if (!source || !Array.isArray(patterns) || patterns.length === 0) return 0
+  getDb().prepare(`
+    INSERT INTO recipe_patterns (source, patterns, seen_at) VALUES (?, ?, ?)
+    ON CONFLICT(source) DO UPDATE SET patterns = excluded.patterns, seen_at = excluded.seen_at
+  `).run(source, JSON.stringify(patterns), now())
+  return patterns.length
+}
+
+/** Every project's patterns, flattened, newest project first. */
+function getRecipePatterns() {
+  const out = []
+  for (const r of getDb().prepare('SELECT source, patterns FROM recipe_patterns ORDER BY seen_at DESC').all()) {
+    try { for (const p of JSON.parse(r.patterns)) out.push({ ...p, source: r.source }) } catch { /* skip a bad row */ }
+  }
+  return out
+}
+
 function getStyleExemplars() {
   return getDb()
     .prepare('SELECT maker, code, ref, family, name, description, source FROM style_exemplars ORDER BY seen_at DESC')
@@ -1409,6 +1436,8 @@ export {
   collectLibraryData,
   recordStyleExemplars,
   getStyleExemplars,
+  recordRecipePatterns,
+  getRecipePatterns,
   getStyleSummary,
   applyLibraryData,
   upsertLocalElementType,
