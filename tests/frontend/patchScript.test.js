@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, test, expect } from 'vitest'
 import { buildPsScript, buildRsScript, buildDbScript, buildPtAddScript } from '../../src/utils/patchScript.js'
 
@@ -206,10 +207,9 @@ describe('buildPtAddScript — Form PositionTypes missing from the DesignDB', ()
 })
 
 describe('the DesignDB patch keeps ElementTypes in line', () => {
-  test('sorts by ParentRef > Ref, rewrites SortOrder 1..N, paints only family rows purple, and un-paints wrappers', () => {
+  test('writes a tree-order SortOrder, sorts by it, paints only family rows purple, and un-paints wrappers', () => {
     const s = buildDbScript([{ elementTypeRef: 'ET-PS-01', updates: { ElementTypeRef: 'ET-PS-01', Family: 'ET-PS' }, _isNew: true }])
-    expect(s).toMatch(/getSort\(\)\.apply\(\[\{ key: cPar, ascending: true \}, \{ key: cRef, ascending: true \}\]\)/)
-    expect(s).toMatch(/for \(let i = 1; i < n; i\+\+\) nums\.push\(\[i\]\)/)
+    expect(s).toMatch(/getSort\(\)\.apply\(\[\{ key: cSort, ascending: true \}\]\)/)
     expect(s).toMatch(/setColor\("#7030A0"\)/)
     expect(s).toMatch(/getFont\(\)\.setColor\("#FFFFFF"\)/)
     expect(s).toMatch(/if \(parents\[ref\]\) \{/)                             // only rows named as a ParentRef
@@ -219,5 +219,67 @@ describe('the DesignDB patch keeps ElementTypes in line', () => {
   })
   test('nothing to patch, no script', () => {
     expect(buildDbScript([])).toBe('')
+  })
+})
+
+// Run the generated Office Script for real, against an in-memory sheet.
+import { transformSync } from 'esbuild'
+
+function fakeSheet(rows) {                          // rows[0] is the header
+  const grid = rows.map(r => [...r])
+  const fmt = new Map()                              // row -> { fill, color, bold }
+  const range = (r, c, h, w) => ({
+    getValues: () => grid.slice(r, r + h).map(row => row.slice(c, c + w).map(v => v ?? '')),
+    setValues: vals => vals.forEach((row, i) => row.forEach((v, j) => { grid[r + i][c + j] = v })),
+    getSort: () => ({ apply: fields => {
+      const body = grid.slice(r, r + h)
+      body.sort((a, b) => { for (const f of fields) { const x = a[c + f.key], y = b[c + f.key]; if (x < y) return f.ascending ? -1 : 1; if (x > y) return f.ascending ? 1 : -1 } return 0 })
+      body.forEach((row, i) => { grid[r + i] = row })
+    } }),
+    getFormat: () => {
+      const f = fmt.get(grid[r][0]) || {}; fmt.set(grid[r][0], f)
+      return { getFill: () => ({ setColor: v => { f.fill = v }, clear: () => { f.fill = null } }),
+        getFont: () => ({ setColor: v => { f.color = v }, setBold: v => { f.bold = v } }) }
+    },
+  })
+  const S = {
+    getUsedRange: () => ({ getRowCount: () => grid.length, getColumnCount: () => grid[0].length }),
+    getRangeByIndexes: range,
+    getCell: (r, c) => ({ setValue: v => { while (grid.length <= r) grid.push(grid[0].map(() => '')); grid[r][c] = v }, clear: () => { grid[r][c] = '' } }),
+  }
+  return { grid, fmt, workbook: { getWorksheet: () => S } }
+}
+function run(script, sheet) {
+  const js = transformSync(script, { loader: 'ts' }).code
+  const ExcelScript = { ClearApplyTo: { contents: 'contents' } }
+  new Function('workbook', 'ExcelScript', 'console', `${js}\nmain(workbook)`)(sheet.workbook, ExcelScript, { log: () => {} })
+}
+
+describe('the ElementTypes tidy, run', () => {
+  test('tree order: each family then its members, sub-families nested; SortOrder 1..N; families purple, wrappers plain', () => {
+    const sheet = fakeSheet([
+      ['Ref', 'ParentRef', 'IsCollection', 'SortOrder'],
+      ['ET-DL-01', 'ET-DL', 'Y', 9],
+      ['LC2', 'ET-CABLES', '', 5],
+      ['LC11', 'ET-CABLES', '', 12],
+      ['ET-LIN-TAPE', 'ET-LIN-INGREDIENTS', 'Y', 3],
+      ['ET-CABLES', '', 'Y', 40],
+      ['LC1', 'ET-CABLES', '', 7],
+      ['ET-LIN-INGREDIENTS', '', 'Y', 1],
+      ['ET-DL', '', 'Y', 2],
+      ['ET-LIN-TAPE-01', 'ET-LIN-TAPE', '', 8],
+      ['ET-LIN-CLIP-01', 'ET-LIN-CLIP', '', 6],
+      ['ET-LIN-CLIP', 'ET-LIN-INGREDIENTS', 'Y', 4],
+    ])
+    run(buildDbScript([{ elementTypeRef: 'ET-DL-02', updates: { ElementTypeRef: 'ET-DL-02', Family: 'ET-DL', IsCollection: 'Y' }, _isNew: true }]), sheet)
+    expect(sheet.grid.slice(1).map(r => [r[0], r[3]])).toEqual([
+      ['ET-CABLES', 1], ['LC1', 2], ['LC2', 3], ['LC11', 4],                           // natural order
+      ['ET-DL', 5], ['ET-DL-01', 6], ['ET-DL-02', 7],
+      ['ET-LIN-INGREDIENTS', 8], ['ET-LIN-CLIP', 9], ['ET-LIN-CLIP-01', 10], ['ET-LIN-TAPE', 11], ['ET-LIN-TAPE-01', 12],
+    ])
+    expect(sheet.fmt.get('ET-CABLES')).toMatchObject({ fill: '#7030A0', color: '#FFFFFF', bold: true })
+    expect(sheet.fmt.get('ET-LIN-TAPE')).toMatchObject({ fill: '#7030A0' })
+    expect(sheet.fmt.get('ET-DL-01')).toMatchObject({ fill: null, bold: false })     // a wrapper: never purple
+    expect(sheet.fmt.get('LC1')?.fill).toBeUndefined()                                 // ordinary rows untouched
   })
 })

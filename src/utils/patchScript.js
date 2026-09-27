@@ -186,40 +186,66 @@ function preamble(sheet, indexLine) {
 
 // --- PS / DB (unique-key) -------------------------------------------------
 /**
- * The DesignDB's ElementTypes sheet, kept in line after every patch: sorted by ParentRef
- * then Ref (Excel's order: blanks last), SortOrder rewritten 1..N down the sheet, and
- * every FAMILY row (named as another row's ParentRef) purple with white bold text.
+ * The DesignDB's ElementTypes sheet, kept in line after every patch: in TREE order — each
+ * family row, then its members (sub-families nested in place), families and members by
+ * Ref — written as SortOrder 1..N and the sheet sorted by it (ET-CABLES 1, ET-LC1 2 …),
+ * and every FAMILY row (named as another row's ParentRef) purple with white bold text.
  * Wrappers are IsCollection too but are not families, so they stay plain. Done in the workbook, so it covers rows the tool never loaded.
  */
-const DB_TIDY = `    // Keep the sheet in line: sort by ParentRef > Ref, SortOrder 1..N, family rows purple.
+const DB_TIDY = `    // Keep the sheet in line: a tree order — each family, then its members (sub-families
+    // nested inside), both by Ref — written as SortOrder 1..N, the sheet sorted by it, and
+    // family rows purple.
     {
       const n = apR;   // header + every row, including the ones just added
       const cRef = col["Ref"], cPar = col["ParentRef"], cSort = col["SortOrder"], cColl = col["IsCollection"];
-      if (cRef >= 0 && cPar >= 0 && n > 2) {
-        const body = S.getRangeByIndexes(1, 0, n - 1, nCols);
-        body.getSort().apply([{ key: cPar, ascending: true }, { key: cRef, ascending: true }]);
-        if (cSort >= 0) {
-          const nums: number[][] = [];
-          for (let i = 1; i < n; i++) nums.push([i]);
-          S.getRangeByIndexes(1, cSort, n - 1, 1).setValues(nums);
-        }
+      if (cRef >= 0 && cPar >= 0 && cSort >= 0 && n > 2) {
         const refs = S.getRangeByIndexes(1, cRef, n - 1, 1).getValues();
         const pars = S.getRangeByIndexes(1, cPar, n - 1, 1).getValues();
+        const refOf = (i: number): string => String(refs[i][0]).trim();
+        const isRef: { [key: string]: boolean } = {};
+        for (let i = 0; i < refs.length; i++) if (refOf(i) !== "") isRef[refOf(i)] = true;
+        const kids: { [key: string]: number[] } = {};
+        const roots: number[] = [];
+        for (let i = 0; i < refs.length; i++) {
+          const ref = refOf(i);
+          if (ref === "") continue;
+          const par = String(pars[i][0]).trim();
+          if (par !== "" && par !== ref && isRef[par]) {
+            if (!kids[par]) kids[par] = [];
+            kids[par].push(i);
+          } else roots.push(i);
+        }
+        // Natural order, case-insensitive: LC2 before LC11.
+        const byRef = (a: number, b: number): number => refOf(a).localeCompare(refOf(b), undefined, { numeric: true, sensitivity: "base" });
+        const rank: number[] = [];
+        for (let i = 0; i < refs.length; i++) rank.push(0);
+        let next = 1;
+        const visit = (i: number, depth: number): void => {
+          if (rank[i] !== 0 || depth > 50) return;
+          rank[i] = next++;
+          const k = kids[refOf(i)];
+          if (k) { k.sort(byRef); for (const j of k) visit(j, depth + 1); }
+        };
+        roots.sort(byRef);
+        for (const i of roots) visit(i, 0);
+        for (let i = 0; i < refs.length; i++) if (rank[i] === 0) rank[i] = next++;   // blank refs, loops: last
+        S.getRangeByIndexes(1, cSort, n - 1, 1).setValues(rank.map(r => [r]));
+        S.getRangeByIndexes(1, 0, n - 1, nCols).getSort().apply([{ key: cSort, ascending: true }]);
+
+        // Families purple / white bold; a wrapper painted by an earlier patch is cleared.
+        const refs2 = S.getRangeByIndexes(1, cRef, n - 1, 1).getValues();
         const colls = cColl >= 0 ? S.getRangeByIndexes(1, cColl, n - 1, 1).getValues() : null;
         const parents: { [key: string]: boolean } = {};
-        for (const p of pars) { const k = String(p[0]).trim(); if (k !== "") parents[k] = true; }
-        for (let i = 0; i < refs.length; i++) {
-          const ref = String(refs[i][0]).trim();
+        for (const key of Object.keys(kids)) parents[key] = true;
+        for (let i = 0; i < refs2.length; i++) {
+          const ref = String(refs2[i][0]).trim();
           if (ref === "") continue;
           const row = S.getRangeByIndexes(i + 1, 0, 1, nCols).getFormat();
           if (parents[ref]) {
-            // A family: another row names it as its ParentRef.
             row.getFill().setColor("#7030A0");
             row.getFont().setColor("#FFFFFF");
             row.getFont().setBold(true);
           } else if (colls !== null && String(colls[i][0]).trim().toUpperCase() === "Y") {
-            // A wrapper (ET-DL-NN, ET-LIN-NN) is IsCollection but not a family: never purple.
-            // Undo an earlier patch that painted it.
             row.getFill().clear();
             row.getFont().setColor("#000000");
             row.getFont().setBold(false);
