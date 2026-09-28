@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-09-28', note: 'Bug reports: the bug beside ALPHA turns them on; right-click anything to write a note, saved with where you were (screen, window, what you clicked, refs, last clicks). Copy or save them all as Markdown from the bug’s ▾ or the export window' },
   { date: '2026-09-28', note: 'Existing ElementTypes: tick some and “Move to family” — renumbered into it (ET-PS-03 → ET-PS-MOUNTING-FRAME-01) through the Product Spec and Recipes, the family created if missing' },
   { date: '2026-09-28', note: 'Import product codes: a “TBC” marked as a code is a TBC placeholder (no more stuck “1 code needs an ElementType”); Add to Product Spec waits until every row is confirmed and has an ElementType (adding part is in ⋯); products are never proposed into ET-DL / ET-LIN, extras (frames, louvres) no longer follow the luminaire into ET-PS' },
   { date: '2026-09-28', note: 'Review recipes: filter with rules on any field (all / any), “matches” takes wildcards (* ? , and ! for not); save filter sets per project; results table with your own columns, sortable, click a row to start there' },
