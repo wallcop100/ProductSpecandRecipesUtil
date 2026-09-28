@@ -62,7 +62,8 @@ describe('bug reports', () => {
 
     const md = reportsToMarkdown(useStore.getState().bugReports)
     expect(md).toMatch(/^# Bug reports \(1\)/)
-    expect(md).toContain('## 1. Swap does nothing')
+    expect(r.id).toMatch(/^[A-HJ-NP-Z2-9]{6}$/)
+    expect(md).toContain(`## ${r.id} · Swap does nothing`)
     expect(md).toContain('- **Position:** C01r')
     expect(md).toContain('- **Area:** `ing-row` › `PositionRecipeEditor`')
     expect(md).toContain('- **Row:** | ET-PS-03 | Swap |')
@@ -78,13 +79,13 @@ describe('bug reports', () => {
 
   test('the export window lists them and copies Markdown', async () => {
     setup()
-    useStore.setState({ bugReports: [{ id: 'a', at: '2026-09-28T10:00:00.000Z', note: 'Broken thing', version: '1', build: '2026-09-28' }] })
+    useStore.setState({ bugReports: [{ id: 'K3F9QZ', at: '2026-09-28T10:00:00.000Z', note: 'Broken thing', version: '1', build: '2026-09-28' }] })
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.assign(navigator, { clipboard: { writeText } })
     render(<ChangeSummaryModal show onHide={vi.fn()} />)
     fireEvent.click(screen.getByText('Bug reports'))
     expect(screen.getByTestId('bug-reports-tab')).toHaveTextContent('Broken thing')
     await act(async () => { fireEvent.click(screen.getByText('Copy all as Markdown')) })
-    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('## 1. Broken thing'))
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('## K3F9QZ · Broken thing'))
   })
 })

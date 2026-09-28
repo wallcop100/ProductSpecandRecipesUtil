@@ -107,3 +107,34 @@ describe('the Tags & colours tab', () => {
     expect(screen.getAllByText('Local').length).toBeGreaterThan(0)
   })
 })
+
+describe('Tags window: recipe columns, new rules on top, no silent loss', () => {
+  test('a rule on the recipe’s manufacturer tags the positions using that maker', async () => {
+    const { recipeTagIndex, withRecipeFields, evaluateTags } = await import('../../src/utils/tagRules.js')
+    const index = recipeTagIndex({
+      recipes: [{ PositionTypeRef: 'A1', ElementTypeRef: 'ET-PS-01' }, { PositionTypeRef: 'A2', ElementTypeRef: 'ET-PS-02' }],
+      psRows: [{ ElementTypeRef: 'ET-PS-01', Manufacturer: 'iGuzzini' }, { ElementTypeRef: 'ET-PS-02', Manufacturer: 'Flos' }],
+      elementTypes: [],
+    })
+    const rule = { id: 'r', tag: 'iGuzzini', match: 'all', conditions: [{ column: 'Recipe.Manufacturer', op: 'equals', value: 'iguzzini' }] }
+    expect(evaluateTags(withRecipeFields({ PositionTypeRef: 'A1' }, index), [rule])).toEqual(['iGuzzini'])
+    expect(evaluateTags(withRecipeFields({ PositionTypeRef: 'A2' }, index), [rule])).toEqual([])
+    const not = { ...rule, conditions: [{ column: 'Recipe.Manufacturer', op: 'notEquals', value: 'iGuzzini' }] }
+    expect(evaluateTags(withRecipeFields({ PositionTypeRef: 'A1' }, index), [not])).toEqual([])
+  })
+
+  test('Add rule puts the new rule first; closing with edits asks; Apply is in the footer', () => {
+    const onHide = vi.fn()
+    useStore.setState({ tagRules: [{ id: 'old', tag: 'Old', enabled: true, match: 'all', conditions: [{ column: 'Name', op: 'contains', value: 'x' }] }] })
+    render(<TagRulesModal show onHide={onHide} />)
+    fireEvent.click(screen.getByRole('button', { name: /Add rule/ }))
+    const names = screen.getAllByLabelText('Tag name')
+    expect(names[0]).toHaveValue('')
+    expect(document.activeElement).toBe(names[0])
+    fireEvent.click(screen.getAllByRole('button', { name: 'Close' })[0])   // the header ×: same guard
+    expect(onHide).not.toHaveBeenCalled()
+    expect(screen.getByTestId('unapplied-warning')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Discard' }))
+    expect(onHide).toHaveBeenCalled()
+  })
+})

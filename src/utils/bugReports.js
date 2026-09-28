@@ -12,6 +12,22 @@ const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '
 const clip = (s, n = 120) => { const t = String(s ?? '').replace(/\s+/g, ' ').trim(); return t.length > n ? `${t.slice(0, n - 1)}…` : t }
 const live = r => (r.IsDeleted || r.isDeleted) !== 'Y'
 
+const ID_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'   // no 0/O, 1/I: read aloud without mix-ups
+
+/** A 6-character random ID (e.g. K3F9QZ), so a report can be named on its own. */
+export function newReportId(taken = []) {
+  const used = new Set(taken)
+  for (;;) {
+    let id = ''
+    const bytes = typeof crypto !== 'undefined' && crypto.getRandomValues ? crypto.getRandomValues(new Uint8Array(6)) : null
+    for (let i = 0; i < 6; i++) id += ID_CHARS[(bytes ? bytes[i] : Math.floor(Math.random() * 256)) % ID_CHARS.length]
+    if (!used.has(id)) return id
+  }
+}
+
+/** The ID a report is shown by: its own, or one made from an older report's id. */
+export const reportId = r => (/^[A-Z2-9]{6}$/.test(r?.id || '') ? r.id : String(r?.id || '').slice(-6).toUpperCase())
+
 export function loadReports() {
   try { const v = JSON.parse(localStorage.getItem(KEY)); return Array.isArray(v) ? v : [] } catch { return [] }
 }
@@ -72,9 +88,9 @@ export function appContext(state, screen) {
   }
 }
 
-export function buildReport({ note, target, state, screen, trail = [], capture = true, now = new Date() }) {
+export function buildReport({ note, target, state, screen, trail = [], capture = true, now = new Date(), taken = [] }) {
   return {
-    id: `${now.getTime().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+    id: newReportId(taken),
     at: now.toISOString(),
     note: String(note || '').trim(),
     version: APP_VERSION,
@@ -93,8 +109,8 @@ const line = (k, v) => (v == null || v === '' || (Array.isArray(v) && v.length =
 /** All reports as one Markdown document, oldest first. */
 export function reportsToMarkdown(reports, { title = 'Bug reports' } = {}) {
   const out = [`# ${title} (${reports.length})`, '']
-  reports.forEach((r, i) => {
-    out.push(`## ${i + 1}. ${clip(r.note.split('\n')[0], 80) || '(no note)'}`, '')
+  reports.forEach(r => {
+    out.push(`## ${reportId(r)} · ${clip(r.note.split('\n')[0], 80) || '(no note)'}`, '')
     out.push(r.note || '_(no note)_', '')
     const a = r.app, d = r.dom
     const meta = [

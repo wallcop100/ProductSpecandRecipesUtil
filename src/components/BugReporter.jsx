@@ -61,7 +61,7 @@ export default function BugReporter({ screen }) {
     if (!draft?.note.trim()) return
     addBugReport(buildReport({
       note: draft.note, target: draft.target, state: useStore.getState(), screen: screenRef.current,
-      trail: trail.current, capture: draft.capture,
+      trail: trail.current, capture: draft.capture, taken: useStore.getState().bugReports.map(r => r.id),
     }))
     setDraft(null)
   }

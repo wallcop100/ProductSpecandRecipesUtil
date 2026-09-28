@@ -14,7 +14,7 @@ import { roleOf } from '../utils/recipePatterns.js'
 import { planFamilyMove } from '../utils/etSeed.js'
 import { loadReports, saveReports } from '../utils/bugReports.js'
 import { resolveTemplate, applyResolvedTemplate } from '../utils/slotResolver.js'
-import { evaluateTags, effectiveTags, snapshotForPosition, migrateRules } from '../utils/tagRules.js'
+import { evaluateTags, effectiveTags, snapshotForPosition, migrateRules, recipeTagIndex, withRecipeFields } from '../utils/tagRules.js'
 import { runValidation } from '../utils/validationRules.js'
 import { computeContainerInfo, looksLikeContainer, getNextAvailableRef } from '../utils/containerUtils.js'
 import { containerForPosition, rowSlot, normalizeSection } from '../utils/recipePresence.js'
@@ -779,6 +779,12 @@ const useStore = create((set, get) => ({
    * Merges updates into positionUI[positionTypeRef], recomputes effective tags
    * from rule tags + add/remove exceptions, and persists to SQLite.
    */
+  /** pt → pt with its recipe columns (tagRules RECIPE_TAG_COLUMNS), one index per call. */
+  _tagSubjects() {
+    const index = recipeTagIndex(get())
+    return pt => withRecipeFields(pt, index)
+  },
+
   async updatePositionUI(positionTypeRef, updates) {
     const { positionUI, positionTypes, tagRules, projectId } = get()
     const existing = positionUI[positionTypeRef] || {}
@@ -786,7 +792,7 @@ const useStore = create((set, get) => ({
 
     // Keep rule tags + effective tags consistent.
     const pt = positionTypes.find(p => p.PositionTypeRef === positionTypeRef)
-    const ruleTags = pt ? evaluateTags(pt, tagRules) : (merged.ruleTags || [])
+    const ruleTags = pt ? evaluateTags(get()._tagSubjects()(pt), tagRules) : (merged.ruleTags || [])
     merged.ruleTags = ruleTags
     merged.tagAdd = merged.tagAdd || []
     merged.tagRemove = merged.tagRemove || []
@@ -833,10 +839,11 @@ const useStore = create((set, get) => ({
   recomputeAllTags() {
     const { positionTypes, tagRules, positionUI } = get()
     const next = { ...positionUI }
+    const subject = get()._tagSubjects()
     for (const pt of positionTypes) {
       const ref = pt.PositionTypeRef
       const ui = next[ref] || {}
-      const ruleTags = evaluateTags(pt, tagRules)
+      const ruleTags = evaluateTags(subject(pt), tagRules)
       next[ref] = {
         ...ui,
         ruleTags,
@@ -860,8 +867,9 @@ const useStore = create((set, get) => ({
     get().recomputeAllTags()
 
     const tagSnapshots = {}
+    const subject = get()._tagSubjects()
     for (const pt of positionTypes) {
-      tagSnapshots[pt.PositionTypeRef] = snapshotForPosition(pt, rules)
+      tagSnapshots[pt.PositionTypeRef] = snapshotForPosition(subject(pt), rules)
     }
     set({ tagSnapshots, tagDrift: {} })
 
@@ -879,7 +887,7 @@ const useStore = create((set, get) => ({
     const { projectId, positionTypes, tagRules, tagSnapshots, tagDrift } = get()
     const pt = positionTypes.find(p => p.PositionTypeRef === ref)
     if (!pt) return
-    const nextSnapshots = { ...tagSnapshots, [ref]: snapshotForPosition(pt, tagRules) }
+    const nextSnapshots = { ...tagSnapshots, [ref]: snapshotForPosition(get()._tagSubjects()(pt), tagRules) }
     const nextDrift = { ...tagDrift }
     delete nextDrift[ref]
     set({ tagSnapshots: nextSnapshots, tagDrift: nextDrift })
@@ -894,9 +902,10 @@ const useStore = create((set, get) => ({
   async acceptAllTagDrift() {
     const { projectId, positionTypes, tagRules, tagSnapshots, tagDrift } = get()
     const nextSnapshots = { ...tagSnapshots }
+    const subject = get()._tagSubjects()
     for (const ref of Object.keys(tagDrift)) {
       const pt = positionTypes.find(p => p.PositionTypeRef === ref)
-      if (pt) nextSnapshots[ref] = snapshotForPosition(pt, tagRules)
+      if (pt) nextSnapshots[ref] = snapshotForPosition(subject(pt), tagRules)
     }
     set({ tagSnapshots: nextSnapshots, tagDrift: {} })
     if (projectId != null) {

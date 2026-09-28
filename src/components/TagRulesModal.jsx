@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { Modal, Button, Form, Alert } from 'react-bootstrap'
 import { v4 as uuidv4 } from 'uuid'
 import useStore from '../store/useStore'
-import { TAG_COLUMNS, TAG_OPS, ruleMatches, ruleConditions } from '../utils/tagRules'
+import { TAG_COLUMNS, TAG_OPS, RECIPE_TAG_COLUMNS, ruleMatches, ruleConditions, recipeTagIndex, withRecipeFields } from '../utils/tagRules'
 import TagInput from './TagInput'
 import TagBadge from './TagBadge'
 import TagColorControl from './TagColorControl'
@@ -35,8 +35,13 @@ function ConditionRow({ cond, onChange, onRemove, canRemove }) {
     <div className="tag-cond d-flex align-items-center gap-2 px-2 py-1 rounded"
       style={{ background: '#f8f9fb', border: '1px solid #edeff2' }}>
       <Form.Select size="sm" value={cond.column} style={{ flex: '1 1 150px', minWidth: 130, fontSize: 12 }}
-        onChange={e => onChange({ column: e.target.value })}>
-        {TAG_COLUMNS.map(c => <option key={c} value={c}>{c}</option>)}
+        onChange={e => onChange({ column: e.target.value })} aria-label="Column">
+        <optgroup label="PositionType (DesignDB)">
+          {TAG_COLUMNS.map(c => <option key={c} value={c}>{c}</option>)}
+        </optgroup>
+        <optgroup label="What its recipe holds (Product Spec)">
+          {RECIPE_TAG_COLUMNS.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
+        </optgroup>
       </Form.Select>
       <Form.Select size="sm" value={cond.op} style={{ flex: '0 0 140px', fontSize: 12 }}
         onChange={e => onChange({ op: e.target.value })}>
@@ -97,7 +102,9 @@ function Connector({ match, interactive, onToggle }) {
   )
 }
 
-function RuleCard({ rule, matchCount, onChange, onRemove }) {
+function RuleCard({ rule, matchCount, onChange, onRemove, isNew = false }) {
+  const tagRef = React.useRef(null)
+  useEffect(() => { if (isNew) { tagRef.current?.scrollIntoView?.({ block: 'nearest' }); tagRef.current?.focus() } }, [isNew])
   const conds = ruleConditions(rule)
   const accent = useStore(s => (rule.tag ? s.tagColors?.[rule.tag] : null)) || '#cbd5e1'
   const disabled = rule.enabled === false
@@ -120,7 +127,8 @@ function RuleCard({ rule, matchCount, onChange, onRemove }) {
         {rule.tag
           ? <TagBadge tag={rule.tag} />
           : <span className="rounded px-2" style={{ fontSize: 10, background: '#f1f3f5', color: '#9aa0a6', fontStyle: 'italic' }}>unnamed</span>}
-        <Form.Control size="sm" list="tagrules-palette" value={rule.tag ?? ''} placeholder="tag name…"
+        <Form.Control size="sm" ref={tagRef} list="tagrules-palette" value={rule.tag ?? ''} placeholder="tag name…"
+          aria-label="Tag name"
           style={{ maxWidth: 180, fontSize: 12, fontWeight: 600 }}
           onChange={e => onChange({ tag: e.target.value })} />
 
@@ -163,38 +171,36 @@ function RuleCard({ rule, matchCount, onChange, onRemove }) {
   )
 }
 
-function RulesSection({ positionTypes }) {
-  const tagRules = useStore(s => s.tagRules)
-  const setTagRules = useStore(s => s.setTagRules)
+/** The rules being edited. State lives in the modal: Apply is in its footer, and closing asks. */
+function RulesSection({ positionTypes, draft, setDraft, dirty }) {
+  const recipes = useStore(s => s.recipes)
+  const psRows = useStore(s => s.psRows)
+  const elementTypes = useStore(s => s.elementTypes)
+  const [newId, setNewId] = useState(null)
 
-  const [draft, setDraft] = useState(tagRules)
-  const [dirty, setDirty] = useState(false)
-  useEffect(() => { setDraft(tagRules); setDirty(false) }, [tagRules])
-
-  const update = (id, patch) => { setDraft(d => d.map(r => (r.id === id ? { ...r, ...patch } : r))); setDirty(true) }
+  const update = (id, patch) => setDraft(d => d.map(r => (r.id === id ? { ...r, ...patch } : r)))
+  // New rules go on top, where you are, with the cursor in their tag name.
   const addRule = () => {
-    setDraft(d => [...d, { id: uuidv4(), tag: '', enabled: true, match: 'all',
-      conditions: [{ column: 'PositionTypeRef', op: 'contains', value: '' }] }])
-    setDirty(true)
+    const id = uuidv4()
+    setDraft(d => [{ id, tag: '', enabled: true, match: 'all',
+      conditions: [{ column: 'PositionTypeRef', op: 'contains', value: '' }] }, ...d])
+    setNewId(id)
   }
-  const removeRule = id => { setDraft(d => d.filter(r => r.id !== id)); setDirty(true) }
-  const apply = () => { setTagRules(draft); setDirty(false) }
+  const removeRule = id => setDraft(d => d.filter(r => r.id !== id))
 
-  const countFor = rule => positionTypes.reduce((n, pt) => n + (ruleMatches(rule, pt) ? 1 : 0), 0)
+  const subjects = useMemo(() => {
+    const index = recipeTagIndex({ recipes, psRows, elementTypes })
+    return positionTypes.map(pt => withRecipeFields(pt, index))
+  }, [positionTypes, recipes, psRows, elementTypes])
+  const countFor = rule => subjects.reduce((n, pt) => n + (ruleMatches(rule, pt) ? 1 : 0), 0)
 
   return (
     <>
       <div className="d-flex align-items-center mb-3">
-        <InfoTip>Each rule tags every position matching its conditions. Two rules can add the same tag.</InfoTip>
-        <div className="ms-auto d-flex gap-2">
-          <Button size="sm" variant="outline-secondary" className="d-inline-flex align-items-center gap-1" onClick={addRule}>
-            <MaterialIcon name="add" size={14} /> Add rule
-          </Button>
-          <Button size="sm" variant={dirty ? 'primary' : 'outline-secondary'} onClick={apply} disabled={!dirty}
-            className="d-inline-flex align-items-center gap-1">
-            {dirty ? <><MaterialIcon name="check" size={14} /> Apply rules</> : 'Applied'}
-          </Button>
-        </div>
+        <InfoTip>Each rule tags every position matching its conditions. Two rules can add the same tag. Rules can also read what a position&apos;s recipe holds (maker, code, ElementType, family).</InfoTip>
+        <Button size="sm" variant="outline-secondary" className="ms-auto d-inline-flex align-items-center gap-1" onClick={addRule}>
+          <MaterialIcon name="add" size={14} /> Add rule
+        </Button>
       </div>
 
       {draft.length === 0 && (
@@ -205,13 +211,13 @@ function RulesSection({ positionTypes }) {
         </div>
       )}
       {draft.map(rule => (
-        <RuleCard key={rule.id} rule={rule} matchCount={countFor(rule)}
+        <RuleCard key={rule.id} rule={rule} matchCount={countFor(rule)} isNew={rule.id === newId}
           onChange={patch => update(rule.id, patch)} onRemove={() => removeRule(rule.id)} />
       ))}
       {dirty && (
         <div className="text-muted" style={{ fontSize: 11 }}>
           Unapplied edits{' '}
-          <InfoTip>Match counts reflect your edits. <strong>Apply rules</strong> to re-tag every position.</InfoTip>
+          <InfoTip>Match counts reflect your edits. <strong>Apply rules</strong> (bottom right) to re-tag every position.</InfoTip>
         </div>
       )}
     </>
@@ -255,13 +261,23 @@ export default function TagRulesModal({ show, onHide }) {
   const tagPalette = useStore(s => s.tagPalette)
   const tagDrift = useStore(s => s.tagDrift)
 
+  const tagRules = useStore(s => s.tagRules)
+  const setTagRules = useStore(s => s.setTagRules)
   const [tab, setTab] = useState('rules')
   const [showDrift, setShowDrift] = useState(false)
+  const [draft, setDraftRaw] = useState(tagRules)
+  const [dirty, setDirty] = useState(false)
+  const [confirmClose, setConfirmClose] = useState(false)
+  useEffect(() => { if (show) { setDraftRaw(tagRules); setDirty(false); setConfirmClose(false) } }, [show])   // eslint-disable-line react-hooks/exhaustive-deps
+  const setDraft = fn => { setDraftRaw(fn); setDirty(true); setConfirmClose(false) }
+  const apply = async () => { await setTagRules(draft); setDirty(false) }
+  // Closing with unapplied rule edits asks first: they are easy to lose by mistake.
+  const requestClose = () => { if (dirty) { setTab('rules'); setConfirmClose(true) } else onHide() }
   const driftCount = Object.keys(tagDrift || {}).length
 
   return (
     <>
-      <Modal show={show} onHide={onHide} centered scrollable size="lg">
+      <Modal show={show} onHide={requestClose} centered scrollable size="lg">
         <Modal.Header closeButton>
           <Modal.Title style={{ fontSize: 15 }} className="d-flex align-items-center gap-2">
             <MaterialIcon name="sell" size={18} /> Tags
@@ -292,12 +308,29 @@ export default function TagRulesModal({ show, onHide }) {
             </Alert>
           )}
           {tab === 'rules'
-            ? <RulesSection positionTypes={positionTypes} />
+            ? <RulesSection positionTypes={positionTypes} draft={draft} setDraft={setDraft} dirty={dirty} />
             : <TagsSection positionUI={positionUI} />}
         </Modal.Body>
 
-        <Modal.Footer>
-          <Button variant="secondary" size="sm" onClick={onHide}>Close</Button>
+        <Modal.Footer className="d-flex align-items-center">
+          {confirmClose ? (
+            <div className="d-flex align-items-center gap-2 w-100" data-testid="unapplied-warning">
+              <MaterialIcon name="warning" size={16} style={{ color: '#b45309' }} />
+              <span style={{ fontSize: 12 }}>Your rule changes are not applied yet.</span>
+              <Button size="sm" variant="link" className="ms-auto text-muted" onClick={() => setConfirmClose(false)}>Keep editing</Button>
+              <Button size="sm" variant="outline-danger" onClick={() => { setDirty(false); setConfirmClose(false); onHide() }}>Discard</Button>
+              <Button size="sm" variant="primary" onClick={async () => { await apply(); onHide() }}>Apply and close</Button>
+            </div>
+          ) : (
+            <>
+              {dirty && <span className="text-muted me-auto" style={{ fontSize: 11 }}>Unapplied rule changes</span>}
+              <Button variant="secondary" size="sm" onClick={requestClose}>Close</Button>
+              <Button size="sm" variant={dirty ? 'primary' : 'outline-secondary'} onClick={apply} disabled={!dirty}
+                className="d-inline-flex align-items-center gap-1">
+                {dirty ? <><MaterialIcon name="check" size={14} /> Apply rules</> : 'Applied'}
+              </Button>
+            </>
+          )}
         </Modal.Footer>
       </Modal>
 
