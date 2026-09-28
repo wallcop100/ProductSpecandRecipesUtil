@@ -27,7 +27,7 @@ import { capturableColumns, captureContext } from '../utils/formColumns'
 import {
   makeRow, deriveCaptures, buildDistinct, buildMaster, classify, duplicateSet,
   hasNoteCollision, rowConfidence, sortByConfidence, norm, setNoteOverride,
-  pendingResolutions, groupKey,
+  pendingResolutions, groupKey, hasProductIdentity,
 } from '../utils/productCodes'
 import {
   setRule, revokeRule, applyRules, learnedRules, learnedSignals, suggestCodes,
@@ -70,8 +70,17 @@ const isExcluded = v => {
  *
  * The chosen spreadsheet is only ever read.
  */
-/** A confirmed-or-not row that wants a product nobody has chosen (and has no painted code). */
-const isTbc = (row, captureOpts) => isTbcRow(row) && deriveCaptures(row, captureOpts).captures.length === 0
+/**
+ * A row that wants a product nobody has chosen: no real code in it (a "TBC" or "N/A" painted
+ * as a code is not one), and either TBC-ish words or a painted "TBC".
+ */
+const isTbc = (row, captureOpts) => {
+  const caps = deriveCaptures(row, captureOpts).captures
+  if (caps.some(c => hasProductIdentity(c.code))) return false
+  return isTbcRow(row) || caps.some(c => norm(c.code) === 'TBC')
+}
+/** A row's captures that are products: "TBC" / "N/A" painted as a code are not. */
+const productCaptures = (row, captureOpts) => deriveCaptures(row, captureOpts).captures.filter(c => hasProductIdentity(c.code))
 /** The entry key of a TBC row: one per Form position. */
 const tbcKey = row => `TBC (${row.positionType || `row ${row.id + 1}`})`
 
@@ -612,7 +621,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     return m
   }, [formCaptures])
 
-  const entries = useMemo(() => buildDistinct(confirmed, captureOpts).map(e => {
+  const entries = useMemo(() => buildDistinct(confirmed, captureOpts).filter(e => hasProductIdentity(e.text)).map(e => {
     // A product is (maker, code): the same code from another maker is another product.
     const c = classify(e.text, ctx, e.manufacturers[0] || '')
     // The spec wins; your past decision is only consulted where the spec is silent.
@@ -663,6 +672,11 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   const stageable = allEntries.filter(e => e.etRef).length
   const leftBehind = allEntries.length - stageable
   const canStage = stageable > 0
+  // The main button waits for the whole Form: every row confirmed, every code with an
+  // ElementType. Adding part of it is possible (⋯) but never the easy path — half an import
+  // is hard to retrace.
+  const unconfirmedCount = resolved.filter(r => !r.confirmed).length
+  const ready = unconfirmedCount === 0 && leftBehind === 0 && canStage
 
   /** Fold a variant's note into its code, on the rows behind it, so it earns its own ref. */
   function handlePromote(entry, variant) {
@@ -757,7 +771,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     }
     const leads = new Set()
     for (const r of confirmed) {
-      const lead = leadOf(r, deriveCaptures(r, captureOpts).captures)
+      const lead = leadOf(r, productCaptures(r, captureOpts))
       if (lead) leads.add(norm(lead.code))
     }
     return proposeElementTypes(unassigned, {
@@ -888,7 +902,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       if (!contextByPosition[target] && Object.keys(row.context || {}).length) {
         contextByPosition[target] = row.context
       }
-      const caps = deriveCaptures(row, captureOpts).captures
+      const caps = productCaptures(row, captureOpts)
       if (isTbc(row, captureOpts)) {
         const key = tbcKey(row)
         const et = codeToEt.get(norm(key))
@@ -1004,7 +1018,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   }, [resolutions, refOverrides])
 
   const rowInfo = useCallback(row => {
-    const caps = deriveCaptures(row, captureOpts).captures
+    const caps = productCaptures(row, captureOpts)
     if (isTbc(row, captureOpts)) {
       const key = tbcKey(row)
       return {
@@ -1034,7 +1048,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
 
   /** A row still waiting on an ElementType: one of its codes, or its TBC placeholder. */
   const needsEt = useCallback(r => (isTbc(r, captureOpts) ? !etFor(tbcKey(r), r.manufacturer)
-    : deriveCaptures(r, captureOpts).captures.some(c => !etFor(c.code, r.manufacturer))), [captureOpts, etFor])
+    : productCaptures(r, captureOpts).some(c => !etFor(c.code, r.manufacturer))), [captureOpts, etFor])
   const needsEtCount = useMemo(() => formOrder.filter(needsEt).length, [formOrder, needsEt])
 
   const tableRows = useMemo(() => {
@@ -1156,6 +1170,10 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
         <Dropdown align="end" className="ms-auto">
           <Dropdown.Toggle as={IconButton} bsSize="sm" variant="outline-secondary" icon={ACTION_ICONS.more} title="More" aria-label="More" />
           <Dropdown.Menu style={{ fontSize: 12 }}>
+            <Dropdown.Item onClick={handleStage} disabled={!canStage || ready}
+              title="Adds the codes that already have an ElementType; the rest wait in your draft">
+              <MaterialIcon name="playlist_add" size={14} /> Add only the {stageable} finished now
+            </Dropdown.Item>
             <Dropdown.Item onClick={reimport}>
               <MaterialIcon name="restart_alt" size={14} /> Re-import from a spreadsheet…
             </Dropdown.Item>
@@ -1422,10 +1440,19 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                   <MaterialIcon name="check_circle" size={14} /> All {entries.length} code{entries.length === 1 ? ' has' : 's have'} an ElementType
                 </div>
               ) : null}
-              <Button variant={leftBehind === 0 ? 'success' : 'outline-success'} size="sm" className="w-100"
-                disabled={!canStage} onClick={handleStage}>
-                <MaterialIcon name="playlist_add" size={14} /> Add {stageable}{leftBehind > 0 && <> of {entries.length}</>} to Product Spec
+              <Button variant="success" size="sm" className="w-100" disabled={!ready} onClick={handleStage}>
+                <MaterialIcon name="playlist_add" size={14} /> Add {stageable} to Product Spec
               </Button>
+              {!ready && (unconfirmedCount > 0 || unassigned.length > 0) && (
+                <div className="mt-1 px-2 py-1 rounded" data-testid="stage-todo"
+                  style={{ fontSize: 11, background: '#fff3cd', border: '1px solid #ffe69c', color: '#664d03' }}>
+                  First:{' '}
+                  {unconfirmedCount > 0 && <>confirm {unconfirmedCount} row{unconfirmedCount === 1 ? '' : 's'}</>}
+                  {unconfirmedCount > 0 && unassigned.length > 0 && ', then '}
+                  {unassigned.length > 0 && <>give {unassigned.length} code{unassigned.length === 1 ? '' : 's'} an ElementType</>}
+                  {collisions.length > 0 && <> · settle {collisions.length} differing note{collisions.length === 1 ? '' : 's'}</>}
+                </div>
+              )}
               <div className="text-muted mt-1 d-flex align-items-center gap-1" style={{ fontSize: 10 }}>
                 Recipes are not touched{' '}
                 <InfoTip size={11}>
@@ -1440,18 +1467,6 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                     onClick={() => setRefsOpen(true)} style={{ cursor: 'pointer', marginLeft: 'auto' }} />
                 )}
               </div>
-              {leftBehind > 0 && (
-                <div className="text-muted mt-1" style={{ fontSize: 10 }}>
-                  {collisions.length > 0 && <>{collisions.length} differing notes · </>}
-                  {unassigned.length > 0 && <>{unassigned.length} without ElementType </>}
-                  <InfoTip size={11}>Codes that are not ready stay put, and your draft is kept so you can finish them.</InfoTip>
-                </div>
-              )}
-              {!canStage && entries.length > 0 && (
-                <div className="text-muted mt-1" style={{ fontSize: 10 }}>
-                  Needs at least one ElementType
-                </div>
-              )}
             </div>
 
             {/* One place to decide ElementTypes: the window's New tab (clashes on top). */}
