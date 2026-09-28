@@ -1,3 +1,4 @@
+import NewETModal from '../components/NewETModal'
 import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { Button, Form, Popover, Overlay } from 'react-bootstrap'
 import useStore from '../store/useStore'
@@ -31,6 +32,8 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
   const redo = useStore(s => s.redo)
   const canUndo = useStore(s => s.past.length > 0)
   const canRedo = useStore(s => s.future.length > 0)
+  const [newEtOpen, setNewEtOpen] = useState(false)
+  const addPSRowForNew = useStore(s => s.addPSRow)
   const [selectedRef,  setSelectedRef]  = useState(scrollToRef || null)
   const [bulkSelected, setBulkSelected] = useState(new Set())
   const [leftWidth,    setLeftWidth]    = useState(320)   // resizable browser panel
@@ -242,6 +245,11 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
           title="Undo (Ctrl+Z)" disabled={!canUndo} onClick={undo} />
         <IconButton variant="outline-secondary" bsSize="sm" icon="redo"
           title="Redo (Ctrl+Shift+Z)" disabled={!canRedo} onClick={redo} />
+        <Button variant="outline-success" size="sm" className="d-inline-flex align-items-center gap-1 ms-2"
+          style={{ fontSize: 11 }} onClick={() => setNewEtOpen(true)} data-testid="spec-new-et"
+          title="Create a new ElementType and its Product Spec row">
+          <MaterialIcon name="add" size={14} /> New ElementType
+        </Button>
         {onOpenCodeImport && (
           <Button variant="outline-primary" size="sm" className="d-inline-flex align-items-center gap-1 ms-2"
             style={{ fontSize: 11 }} onClick={onOpenCodeImport}
@@ -411,6 +419,20 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
         </div>
       </div>
 
+      <NewETModal
+        show={newEtOpen}
+        onHide={() => setNewEtOpen(false)}
+        contextLabel="for the Product Spec"
+        draftKey="product-spec-new"
+        prefill={{ family: (useStore.getState().elementTypes.find(e => (e.ElementTypeRef || '').toLowerCase() === (selectedRef || '').toLowerCase())?.Family) || '' }}
+        onCreated={ref => {
+          setNewEtOpen(false)
+          // Always a spec row, so the new ElementType shows in this list straight away.
+          const has = useStore.getState().psRows.some(r => (r.ElementTypeRef || '').toLowerCase() === ref.toLowerCase())
+          if (!has) addPSRowForNew(ref)
+          setSelectedRef(ref)
+        }}
+      />
     </div>
   )
 }
