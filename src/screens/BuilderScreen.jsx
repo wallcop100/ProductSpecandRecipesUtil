@@ -187,28 +187,7 @@ export default function BuilderScreen({
   const issueCount = validationResults.length
   const blockerCount = validationResults.filter(i => i.severity === 'error').length
 
-  // Keyboard: Ctrl/Cmd+Z = undo, Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y = redo
-  useEffect(() => {
-    function onKey(e) {
-      const mod = e.ctrlKey || e.metaKey
-      if (!mod) return
-      const tag = (e.target?.tagName || '').toLowerCase()
-      const activeTag = (document.activeElement?.tagName || '').toLowerCase()
-      const editable = t => t === 'input' || t === 'textarea' || t === 'select'
-      if (editable(tag) || editable(activeTag) || e.target?.isContentEditable) return
-      const k = e.key.toLowerCase()
-      if (k === 'z') {
-        e.preventDefault()
-        if (e.shiftKey) redo()
-        else undo()
-      } else if (k === 'y' && !e.shiftKey) {
-        e.preventDefault()
-        redo()
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [undo, redo])
+  // Ctrl/Cmd+Z / Shift+Z / Y are app-wide: see UndoShortcut (App.jsx).
 
   function filterDeleted(rows) {
     if (showDeleted) return rows
