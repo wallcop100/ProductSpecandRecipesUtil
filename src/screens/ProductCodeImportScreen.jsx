@@ -819,7 +819,13 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   }, [bulkOpen, bulkProposals, proposals, newFamilies])
 
   /** Apply the reviewed proposals: new families first, then reuse or create each code. */
-  function applyBulk({ families, items }) {
+  function applyBulk({ families, items, notCodes = [] }) {
+    // "Not a code": its words are a note on every row, from now on (revocable like any rule).
+    const words = [...new Set(notCodes.flatMap(c => String(c).split(/\s+/).filter(Boolean)))]
+    if (words.length) {
+      setRules(rl => words.reduce((acc, w) => setRule(acc, w, 'note'), rl))
+      setRows(rs => clearOverridesFor(rs, words))
+    }
     // Parents before children, so a ParentRef never points at a row not yet made.
     const depth = f => (f.parent && families.some(x => x.ref === f.parent) ? 1 + depth(families.find(x => x.ref === f.parent)) : 0)
     for (const f of [...families].sort((a, b) => depth(a) - depth(b))) ensureFamily(f.ref.trim(), f.description.trim(), f.parent)
@@ -1447,10 +1453,24 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                 <div className="mt-1 px-2 py-1 rounded" data-testid="stage-todo"
                   style={{ fontSize: 11, background: '#fff3cd', border: '1px solid #ffe69c', color: '#664d03' }}>
                   First:{' '}
-                  {unconfirmedCount > 0 && <>confirm {unconfirmedCount} row{unconfirmedCount === 1 ? '' : 's'}</>}
+                  {unconfirmedCount > 0 && (
+                    <Button variant="link" size="sm" className="p-0 align-baseline" style={{ fontSize: 11 }} data-testid="todo-unconfirmed"
+                      onClick={() => { setQuery(''); setFilter('unconfirmed') }} title="Show only the rows still to confirm">
+                      confirm {unconfirmedCount} row{unconfirmedCount === 1 ? '' : 's'}
+                    </Button>
+                  )}
                   {unconfirmedCount > 0 && unassigned.length > 0 && ', then '}
-                  {unassigned.length > 0 && <>give {unassigned.length} code{unassigned.length === 1 ? '' : 's'} an ElementType</>}
-                  {collisions.length > 0 && <> · settle {collisions.length} differing note{collisions.length === 1 ? '' : 's'}</>}
+                  {unassigned.length > 0 && (
+                    <Button variant="link" size="sm" className="p-0 align-baseline" style={{ fontSize: 11 }} data-testid="todo-needs-et"
+                      onClick={openBulkCreate} title="Open the ElementTypes window at the codes still without one">
+                      give {unassigned.length} code{unassigned.length === 1 ? '' : 's'} an ElementType
+                    </Button>
+                  )}
+                  {collisions.length > 0 && (
+                    <> · <Button variant="link" size="sm" className="p-0 align-baseline" style={{ fontSize: 11 }} onClick={openBulkCreate}>
+                      settle {collisions.length} differing note{collisions.length === 1 ? '' : 's'}
+                    </Button></>
+                  )}
                 </div>
               )}
               <div className="text-muted mt-1 d-flex align-items-center gap-1" style={{ fontSize: 10 }}>
@@ -1625,6 +1645,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
           elementTypes,
           onApply: applyBulk,
           focusCode: etFocusCode,
+          onShowRows: code => { setBulkProposals(null); setBulkOpen(false); setFilter('all'); setQuery(code) },
           header: (collisions.length > 0 || similar.length > 0) ? (
             <div className="mb-3 pb-2 border-bottom" data-testid="clashes">
               <NeedsResolving
