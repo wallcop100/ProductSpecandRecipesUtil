@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-09-28', note: 'Product Spec: “New ElementType” in the header creates one (family prefilled from the one you are on) with its spec row, and selects it' },
   { date: '2026-09-28', note: 'Tags: rules can read what a position’s recipe holds (manufacturer, product code, ElementType, family); new rules appear on top with the cursor in their name; Apply is at the bottom and closing with unapplied edits asks. Bug reports get a 6-character ID (e.g. K3F9QZ)' },
   { date: '2026-09-28', note: 'Ctrl+Z / Ctrl+Y work on every screen (the Product Spec too), also with the cursor back in a field you just edited; Undo / Redo buttons on the Product Spec' },
   { date: '2026-09-28', note: 'Fixes from bug reports: point-source mounting/frames no longer costed by length; a family row (ET-DRIVERS) is never offered as a product, and Recipes from the Form says which Form code a row came from; connector templates offer the project’s own tags; Import resumes after adding to the Product Spec; Product Spec can change an ElementType’s family and ref' },

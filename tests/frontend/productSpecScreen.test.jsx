@@ -90,3 +90,16 @@ describe('the old wizard is gone', () => {
     expect(screen.queryByText('Fill Missing')).toBeNull()
   })
 })
+
+describe('New ElementType from the Product Spec', () => {
+  test('creates the ElementType with a spec row and selects it', () => {
+    const addPSRow = vi.fn()
+    useStore.setState({ addPSRow, createElementType: useStore.getState().createElementType, dbChanges: [], localElementTypes: [] })
+    render1()
+    fireEvent.click(screen.getByTestId('spec-new-et'))
+    fireEvent.change(screen.getByPlaceholderText('e.g. ET-TAPE-004'), { target: { value: 'ET-PS-09' } })
+    fireEvent.click(screen.getByRole('button', { name: /Create Element Type/ }))
+    expect(useStore.getState().elementTypes.some(e => e.ElementTypeRef === 'ET-PS-09')).toBe(true)
+    expect(addPSRow).toHaveBeenCalledWith('ET-PS-09')
+  })
+})
