@@ -281,5 +281,32 @@ describe('finish first, then add', () => {
     expect(screen.getByTestId('stage-todo')).toHaveTextContent('confirm 1 row')
     fireEvent.click(screen.getByLabelText('More'))
     expect(await screen.findByText(/Add only the 1 finished now/)).toBeInTheDocument()
+    // The blocker is one click away: it filters the table to the row still to confirm.
+    fireEvent.click(screen.getByTestId('todo-unconfirmed'))
+    const confirms = within(screen.getByTestId('form-table')).getAllByLabelText(/^Confirm row/)
+    expect(confirms).toHaveLength(1)
+    fireEvent.click(confirms[0])
+    await tick()
+    expect(screen.queryByTestId('todo-unconfirmed')).toBeNull()
+  })
+
+  test('unticked in the ElementTypes window: "Not a code" turns its words into a note', async () => {
+    useStore.setState({
+      projectId: 1, positionTypes: [{ PositionTypeRef: 'L1' }], recipes: [], ...known,
+      importDraft: draft([
+        { id: 0, rawText: 'QC50\n1000mm', positionType: 'L1', manufacturer: 'iGuzzini', context: {}, overrides: { 0: 'code', 1: 'code' }, confirmed: true },
+      ]),
+    })
+    render(<ProductCodeImportScreen onBack={vi.fn()} onReviewPositions={vi.fn()} />)
+    await screen.findByTestId('form-table')
+    fireEvent.click(screen.getByTestId('todo-needs-et'))
+    await screen.findByText(/^New \(/)
+    fireEvent.click(screen.getByLabelText('Include 1000mm'))
+    expect(screen.getByTestId('unticked-note')).toHaveTextContent('Left without an ElementType')
+    fireEvent.click(within(screen.getByTestId('unticked-note')).getByText('Not a code'))
+    fireEvent.click(screen.getByRole('button', { name: /^Apply 1$/ }))
+    await tick()
+    expect(screen.queryByTestId('stage-todo')).toBeNull()
+    expect(screen.getByRole('button', { name: /Add 1 to Product Spec/ })).not.toBeDisabled()
   })
 })

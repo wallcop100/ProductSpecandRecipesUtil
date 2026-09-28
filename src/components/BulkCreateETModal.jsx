@@ -55,6 +55,7 @@ const SKIP = '__skip'
 
 export default function BulkCreateETModal({
   show, onHide, proposals: initial, newFamilies: initialFamilies, families = [], elementTypes = [], onApply, tabs = null, animation = true, header = null, focusCode = null,
+  onShowRows = null,
 }) {
   const [rows, setRows] = useState(initial || [])
   const [fams, setFams] = useState(initialFamilies || [])
@@ -154,6 +155,7 @@ export default function BulkCreateETModal({
 
   const patch = (i, next) => setRows(rs => rs.map((r, k) => (k === i ? { ...r, ...next } : r)))
   const included = rows.filter(r => r.include && r.action !== 'skip')
+  const notCodes = rows.filter(r => !r.include && r.notCode).map(r => r.code)
   const nCreate = included.filter(r => r.action === 'create').length
   const usedFams = new Set(rows.filter(creating).map(r => r.family))
   const famsToCreate = fams.filter(f => f.include && usedFams.has(f.ref))
@@ -298,6 +300,28 @@ export default function BulkCreateETModal({
                         <td style={{ width: 200 }}>
                           <div style={{ fontFamily: 'monospace', fontWeight: 600, wordBreak: 'break-all' }}>{r.code}</div>
                           <div className="text-muted">{r.manufacturer || <em>no maker</em>}</div>
+                          {/* Unticked: say what that means, and offer the two ways out of it. */}
+                          {!r.include && r.action === 'create' && (
+                            <div className="mt-1" data-testid="unticked-note" style={{ fontSize: 10 }}>
+                              {r.notCode ? (
+                                <span style={{ color: '#b02a37' }}>
+                                  Not a code: its words become a note on every row.{' '}
+                                  <Button variant="link" size="sm" className="p-0" style={{ fontSize: 10 }}
+                                    onClick={() => patch(i, { notCode: false })}>undo</Button>
+                                </span>
+                              ) : (
+                                <span className="text-muted">
+                                  Left without an ElementType.{' '}
+                                  <Button variant="link" size="sm" className="p-0" style={{ fontSize: 10 }}
+                                    onClick={() => patch(i, { notCode: true })}>Not a code</Button>
+                                  {onShowRows && (
+                                    <>{' · '}<Button variant="link" size="sm" className="p-0" style={{ fontSize: 10 }}
+                                      onClick={() => onShowRows(r.code)}>Show its rows</Button></>
+                                  )}
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </td>
                         {r.action === 'skip' ? (
                           <td colSpan={3} className="text-muted">skipped</td>
@@ -393,12 +417,13 @@ export default function BulkCreateETModal({
         <span className="text-muted me-auto" style={{ fontSize: 12 }}>
           {famsToCreate.length > 0 && `${famsToCreate.length} new famil${famsToCreate.length === 1 ? 'y' : 'ies'}, `}
           {nCreate} to create{included.length > nCreate ? `, ${included.length - nCreate} to reuse` : ''}
+          {notCodes.length > 0 && `, ${notCodes.length} not a code`}
           {problems.size > 0 && <span className="text-danger"> · {problems.size} to fix</span>}
         </span>
         <Button variant="secondary" size="sm" onClick={onHide}>Cancel</Button>
-        <Button variant="primary" size="sm" disabled={included.length === 0 || problems.size > 0}
-          onClick={() => onApply({ families: famsToCreate, items: included })}>
-          Apply {included.length}
+        <Button variant="primary" size="sm" disabled={(included.length === 0 && notCodes.length === 0) || problems.size > 0}
+          onClick={() => onApply({ families: famsToCreate, items: included, notCodes })}>
+          Apply {included.length + notCodes.length}
         </Button>
       </Modal.Footer>
     </Modal>
