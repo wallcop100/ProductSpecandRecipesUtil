@@ -3,6 +3,7 @@ import { Modal, Button, Form } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { CANON_FAMILIES } from '../data/etCanon'
+import { planFamilyMove } from '../utils/etSeed'
 
 const lc = s => String(s ?? '').trim().toLowerCase()
 const refOf = e => e.ElementTypeRef || e.elementTypeRef || ''
@@ -12,16 +13,26 @@ const NO_FAMILY = ''
  * ExistingETReviewModal — every ElementType in the project, grouped by family, to check
  * and tidy: Name, Description and Family are editable; the ref stays as it is (a rename
  * is a separate, cascading act). Nothing is written until Save.
+ *
+ * "Move to family" is that cascading act: tick ElementTypes, pick a family, and they move
+ * now — renumbered into it (ET-PS-03 → ET-PS-MOUNTING-FRAME-01) through the Product Spec
+ * and Recipes, the family row created if the project lacks it. Reversed by moving back.
  */
 export default function ExistingETReviewModal({ show, onHide, tabs = null, animation = true }) {
   const elementTypes = useStore(s => s.elementTypes)
   const psRows = useStore(s => s.psRows)
   const recipes = useStore(s => s.recipes)
   const updateElementType = useStore(s => s.updateElementType)
+  const moveElementTypesToFamily = useStore(s => s.moveElementTypesToFamily)
 
   const [draft, setDraft] = useState({})     // lc ref -> { Name?, Description?, Family? }
   const [filter, setFilter] = useState('')
-  useEffect(() => { if (show) { setDraft({}); setFilter('') } }, [show])
+  const [picked, setPicked] = useState(() => new Set())   // lc refs ticked for a move
+  const [moveTo, setMoveTo] = useState('')
+  const [renumber, setRenumber] = useState(true)
+  const [moved, setMoved] = useState(null)                 // last move, for the confirmation line
+  useEffect(() => { if (show) { setDraft({}); setFilter(''); setPicked(new Set()); setMoveTo(''); setMoved(null) } }, [show])
+  const togglePick = k => setPicked(p => { const n = new Set(p); if (n.has(k)) n.delete(k); else n.add(k); return n })
 
   const product = useMemo(() => {
     const m = new Map()
@@ -76,6 +87,19 @@ export default function ExistingETReviewModal({ show, onHide, tabs = null, anima
     return Object.keys(changed).length ? [refOf(et), changed] : null
   }).filter(Boolean)
 
+  const pickedRefs = elementTypes.filter(e => picked.has(lc(refOf(e)))).map(refOf)
+  const plan = moveTo && pickedRefs.length ? planFamilyMove(pickedRefs, moveTo, elementTypes, { renumber }) : null
+  const inDb = elementTypes.filter(e => picked.has(lc(refOf(e))) && e._row_num != null).length
+
+  function move() {
+    // Pending edits are keyed by ref, which the move may change: save them first.
+    for (const [ref, changed] of changes) updateElementType(ref, changed)
+    setDraft({})
+    const done = moveElementTypesToFamily(pickedRefs, moveTo, { renumber })
+    setMoved({ family: moveTo, moves: done })
+    setPicked(new Set())
+  }
+
   function save() {
     for (const [ref, changed] of changes) updateElementType(ref, changed)
     onHide()
@@ -92,12 +116,50 @@ export default function ExistingETReviewModal({ show, onHide, tabs = null, anima
           <Form.Control size="sm" placeholder="Filter by ref, name, family, maker or code…" value={filter}
             onChange={e => setFilter(e.target.value)} style={{ maxWidth: 360, fontSize: 12 }} aria-label="Filter ElementTypes" />
           <span className="text-muted" style={{ fontSize: 11 }}>
-            Edit Name, Description or Family. Refs are not changed here.
+            Edit Name, Description or Family. To move ElementTypes and renumber their refs, tick them.
           </span>
         </div>
+        {picked.size > 0 && (
+          <div className="d-flex align-items-center gap-2 flex-wrap mb-2 px-2 py-2 rounded" data-testid="move-bar"
+            style={{ background: '#e7f1ff', border: '1px solid #b6d4fe', position: 'sticky', top: 0, zIndex: 2 }}>
+            <strong>Move {picked.size} to family</strong>
+            <Form.Select size="sm" aria-label="Move to family" value={moveTo} onChange={e => setMoveTo(e.target.value)}
+              style={{ fontSize: 11, width: 240 }}>
+              <option value="">pick a family…</option>
+              {families.map(x => <option key={x} value={x}>{x}</option>)}
+            </Form.Select>
+            <Form.Check type="checkbox" id="move-renumber" label="Renumber refs into it" checked={renumber}
+              onChange={() => setRenumber(v => !v)} style={{ fontSize: 11 }} />
+            <Button size="sm" variant="primary" disabled={!moveTo} onClick={move} style={{ fontSize: 11 }}>Move</Button>
+            <Button size="sm" variant="link" className="text-muted p-0" onClick={() => setPicked(new Set())} style={{ fontSize: 11 }}>Clear</Button>
+            {plan && (
+              <div className="w-100 text-muted" style={{ fontSize: 11 }}>
+                {plan.moves.filter(m => m.to !== m.from).map(m => (
+                  <span key={m.from} className="me-3" style={{ fontFamily: 'monospace' }}>{m.from} → {m.to}</span>
+                ))}
+                {plan.newFamilies.length > 0 && <div>Creates family {plan.newFamilies.map(f => f.ref).join(', ')}.</div>}
+                {renumber && inDb > 0 && (
+                  <div style={{ color: '#856404' }}>
+                    <MaterialIcon name="warning" size={12} /> {inDb} {inDb === 1 ? 'is' : 'are'} already in the DesignDB: the new ref is written to
+                    the ElementTypes, Product Spec and Recipes sheets, not to other sheets that may use the old one.
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+        {moved && picked.size === 0 && (
+          <div className="mb-2 px-2 py-1 rounded" data-testid="move-done" style={{ background: '#d1e7dd', color: '#0f5132', fontSize: 11 }}>
+            <MaterialIcon name="check_circle" size={12} /> Moved {moved.moves.length} to {moved.family}
+            {moved.moves.some(m => m.to !== m.from) && <>: {moved.moves.filter(m => m.to !== m.from).map(m => `${m.from} → ${m.to}`).join(', ')}</>}. To reverse it, move them back.
+          </div>
+        )}
         {order.map(f => (
           <div key={f || 'none'} className="mb-3" data-testid={`existing-family-${f || 'none'}`}>
-            <div className="fw-semibold mb-1" style={{ fontSize: 11, color: f ? '#495057' : '#b45309' }}>
+            <div className="fw-semibold mb-1 d-flex align-items-center gap-2" style={{ fontSize: 11, color: f ? '#495057' : '#b45309' }}>
+              <Form.Check type="checkbox" aria-label={`Select all in ${f || 'no family'}`}
+                checked={groups.get(f).every(et => picked.has(lc(refOf(et))))}
+                onChange={e => setPicked(p => { const n = new Set(p); for (const et of groups.get(f)) { if (e.target.checked) n.add(lc(refOf(et))); else n.delete(lc(refOf(et))) } return n })} />
               {f ? <span style={{ fontFamily: 'monospace' }}>{f}</span> : <><MaterialIcon name="warning" size={12} /> No family</>}
               <span className="text-muted fw-normal"> · {groups.get(f).length}</span>
             </div>
@@ -106,6 +168,8 @@ export default function ExistingETReviewModal({ show, onHide, tabs = null, anima
               const n = uses.get(k)?.size || 0
               return (
                 <div key={k} className="d-flex align-items-center gap-2 py-1 border-bottom">
+                  <Form.Check type="checkbox" checked={picked.has(k)} onChange={() => togglePick(k)}
+                    aria-label={`Select ${refOf(et)}`} />
                   <div style={{ width: 190, flexShrink: 0 }}>
                     <div style={{ fontFamily: 'monospace', fontWeight: 600 }}>{refOf(et)}</div>
                     <div className="text-muted text-truncate" style={{ fontSize: 10 }}>

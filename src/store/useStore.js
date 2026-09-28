@@ -11,6 +11,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { findBestTemplate, recipeTemplateFromRows, isRecipeTemplate, isFormTemplate } from '../utils/templateLoader.js'
 import { proposeRecipe, proposalFromTemplate, proposalContext } from '../utils/recipeProposal.js'
 import { roleOf } from '../utils/recipePatterns.js'
+import { planFamilyMove } from '../utils/etSeed.js'
 import { resolveTemplate, applyResolvedTemplate } from '../utils/slotResolver.js'
 import { evaluateTags, effectiveTags, snapshotForPosition, migrateRules } from '../utils/tagRules.js'
 import { runValidation } from '../utils/validationRules.js'
@@ -3666,6 +3667,30 @@ const useStore = create((set, get) => ({
     if (projectId != null && window.electronAPI?.db?.renameLocalET) {
       window.electronAPI.db.renameLocalET(projectId, from, to)?.catch?.(() => {})
     }
+  },
+
+  /**
+   * moveElementTypesToFamily(refs, family, { renumber })
+   * Creates the family (and its canon parent) if the project lacks it, sets each
+   * ElementType's Family, and with `renumber` gives it the family's next ref — cascading
+   * through the Product Spec and Recipes (renameElementType). Not on the Undo stack (see
+   * below). → the moves made.
+   */
+  moveElementTypesToFamily(refs, family, { renumber = true } = {}) {
+    const { moves, newFamilies } = planFamilyMove(refs, family, get().elementTypes, { renumber })
+    // Undo snapshots recipes and the spec, not ElementTypes: undoing half a move would leave
+    // recipes pointing at refs that no longer exist. A move is reversed by moving back.
+    const pastBefore = get().past
+    const depth = f => (f.parent && newFamilies.some(x => x.ref === f.parent) ? 1 + depth(newFamilies.find(x => x.ref === f.parent)) : 0)
+    for (const f of [...newFamilies].sort((a, b) => depth(a) - depth(b))) {
+      get().createElementType({ ref: f.ref, description: f.description, family: f.parent, isCollection: true })
+    }
+    for (const m of moves) {
+      get().updateElementType(m.from, { Family: m.family })
+      if (m.to !== m.from) get().renameElementType(m.from, m.to)
+    }
+    set({ past: pastBefore })
+    return moves
   },
 
   /**

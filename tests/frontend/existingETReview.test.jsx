@@ -49,3 +49,52 @@ describe('Review existing ElementTypes', () => {
     expect(screen.getByText('ET-TAPE-01')).toBeInTheDocument()
   })
 })
+
+describe('Move to family', () => {
+  function setupMove() {
+    useStore.setState({
+      projectId: 1, dbChanges: [], psChanges: [], rsChanges: [], past: [], future: [],
+      elementTypes: [
+        { ElementTypeRef: 'ET-PS', Family: null, IsCollection: 'Y' },
+        { ElementTypeRef: 'ET-PS-01', Name: 'DGA - DL-100', Family: 'ET-PS' },
+        { ElementTypeRef: 'ET-PS-02', Name: 'DGA - DL-100-FR', Family: 'ET-PS' },
+        { ElementTypeRef: 'ET-PS-03', Name: 'DGA - LV-1', Family: 'ET-PS' },
+      ],
+      psRows: [{ ElementTypeRef: 'ET-PS-02', Manufacturer: 'DGA', ProductCode: 'DL-100-FR' }],
+      recipes: [
+        { _id: 'r1', PositionTypeRef: 'A1', ContextType: 'PositionType', ContextRef: 'A1', ElementTypeRef: 'ET-PS-01', IsDesign: 'Y' },
+        { _id: 'r2', PositionTypeRef: 'A1', ContextType: 'PositionType', ContextRef: 'A1', ElementTypeRef: 'ET-PS-02' },
+      ],
+    })
+    return render(<ExistingETReviewModal show onHide={vi.fn()} />)
+  }
+
+  test('ticked ElementTypes move, renumbered, through spec and recipes; the family is created', () => {
+    setupMove()
+    fireEvent.click(screen.getByLabelText('Select ET-PS-02'))
+    fireEvent.change(screen.getByLabelText('Move to family'), { target: { value: 'ET-PS-MOUNTING-FRAME' } })
+    expect(screen.getByTestId('move-bar')).toHaveTextContent('ET-PS-02 → ET-PS-MOUNTING-FRAME-01')
+    expect(screen.getByTestId('move-bar')).toHaveTextContent('Creates family ET-PS-MOUNTING-FRAME, ET-PS-MOUNTING')
+    fireEvent.click(screen.getByRole('button', { name: 'Move' }))
+
+    const s = useStore.getState()
+    const refs = s.elementTypes.map(e => e.ElementTypeRef)
+    expect(refs).toContain('ET-PS-MOUNTING-FRAME-01')
+    expect(refs).not.toContain('ET-PS-02')
+    expect(s.elementTypes.find(e => e.ElementTypeRef === 'ET-PS-MOUNTING-FRAME')).toMatchObject({ IsCollection: 'Y', Family: 'ET-PS-MOUNTING' })
+    expect(s.elementTypes.find(e => e.ElementTypeRef === 'ET-PS-MOUNTING-FRAME-01').Family).toBe('ET-PS-MOUNTING-FRAME')
+    expect(s.psRows[0].ElementTypeRef).toBe('ET-PS-MOUNTING-FRAME-01')
+    expect(s.recipes.find(r => r._id === 'r2').ElementTypeRef).toBe('ET-PS-MOUNTING-FRAME-01')
+    expect(screen.getByTestId('move-done')).toHaveTextContent('ET-PS-02 → ET-PS-MOUNTING-FRAME-01')
+  })
+
+  test('without renumbering only the family changes', () => {
+    setupMove()
+    fireEvent.click(screen.getByLabelText('Select ET-PS-03'))
+    fireEvent.change(screen.getByLabelText('Move to family'), { target: { value: 'ET-PS-ACCESSORIES' } })
+    fireEvent.click(screen.getByLabelText('Renumber refs into it'))
+    fireEvent.click(screen.getByRole('button', { name: 'Move' }))
+    const et = useStore.getState().elementTypes.find(e => e.ElementTypeRef === 'ET-PS-03')
+    expect(et.Family).toBe('ET-PS-ACCESSORIES')
+  })
+})

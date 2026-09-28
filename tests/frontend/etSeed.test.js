@@ -247,3 +247,18 @@ describe('never a wrapper family, and extras are not the luminaire', () => {
     expect(proposals[0].family).not.toBe('ET-DL')
   })
 })
+
+describe('planFamilyMove', () => {
+  test('numbers after what the family already has; members and collection rows keep their refs', async () => {
+    const { planFamilyMove } = await import('../../src/utils/etSeed.js')
+    const ets = [
+      { ElementTypeRef: 'ET-PS-ACCESSORIES', IsCollection: 'Y' },
+      { ElementTypeRef: 'ET-PS-ACCESSORIES-04', Family: 'ET-PS-ACCESSORIES' },
+      { ElementTypeRef: 'ET-PS-05', Family: 'ET-PS' },
+      { ElementTypeRef: 'ET-PS-06', Family: 'ET-PS' },
+    ]
+    const { moves, newFamilies } = planFamilyMove(['ET-PS-05', 'ET-PS-06', 'ET-PS-ACCESSORIES-04'], 'ET-PS-ACCESSORIES', ets)
+    expect(moves.map(m => m.to)).toEqual(['ET-PS-ACCESSORIES-05', 'ET-PS-ACCESSORIES-06', 'ET-PS-ACCESSORIES-04'])
+    expect(newFamilies).toEqual([])
+  })
+})

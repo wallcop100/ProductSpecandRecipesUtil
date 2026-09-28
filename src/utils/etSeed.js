@@ -352,3 +352,40 @@ export function refamily(proposals, indices, family, elementTypes = []) {
     return { ...p, family, ref, why: family === p.family ? p.why : 'you' }
   })
 }
+
+/**
+ * Plan moving existing ElementTypes to another family.
+ * → { moves: [{ from, to, family }], newFamilies: [{ ref, description, parent }] }
+ *
+ * With `renumber`, each ref takes the next free `<family>-NN` unless it already reads as a
+ * member of that family (ET-PS-MOUNTING-FRAME-03 stays put). Collection rows (families
+ * themselves) keep their refs. The family, and any canon parent the project lacks, is
+ * proposed for creation.
+ */
+export function planFamilyMove(refs, family, elementTypes = [], { renumber = true, families = CANON_FAMILIES } = {}) {
+  const fam = String(family ?? '').trim()
+  const byRef = new Map(elementTypes.map(e => [lc(refOf(e)), e]))
+  const taken = new Set(elementTypes.map(refOf))
+  const known = new Set(elementTypes.flatMap(e => [lc(famOf(e)), (e.IsCollection || e.isCollection) === 'Y' ? lc(refOf(e)) : '']).filter(Boolean))
+  const canon = new Map(families.map(f => [lc(f.ref), f]))
+  const newFamilies = []
+  const propose = ref => {
+    if (!ref || known.has(lc(ref)) || newFamilies.some(f => lc(f.ref) === lc(ref))) return
+    const c = canon.get(lc(ref))
+    newFamilies.push({ ref, description: c?.description || familyDescription(ref.replace(/^ET-/i, '')), parent: c?.parent || null })
+    if (c?.parent) propose(c.parent)
+  }
+  if (fam) propose(fam)
+  const member = ref => { const m = String(ref).match(COUNTER_RE); return !!m && lc(m[1]) === lc(fam) }
+  const moves = []
+  for (const r of refs) {
+    const et = byRef.get(lc(r))
+    if (!et) continue
+    const from = refOf(et)
+    const collection = (et.IsCollection || et.isCollection) === 'Y'
+    let to = from
+    if (renumber && fam && !collection && !member(from)) { to = nextRef(fam, taken); taken.add(to) }
+    moves.push({ from, to, family: fam || null })
+  }
+  return { moves, newFamilies }
+}
