@@ -445,6 +445,10 @@ const useStore = create((set, get) => ({
   // UI state
   rootView: 'positions',               // 'positions' | 'elements' — top-level browse mode
   activePositionRef: null,
+  // How the PositionTypes list is filtered and sorted — one state for the overview and the
+  // sidebar, so moving between them keeps it (components/usePositionList).
+  positionList: { text: '', tags: [], formOnly: false, emptyOnly: false, showIgnored: false, showTags: false, sort: 'ref', collapsed: [] },
+  setPositionList(patch) { set(s => ({ positionList: { ...s.positionList, ...(typeof patch === 'function' ? patch(s.positionList) : patch) } })) },
   designPrompt: null,                 // { posRef, then } — see leavePosition
   positionHistory: [],                // positions left behind, newest last — goBackPosition
   activeContextType: 'PositionType',  // 'PositionType' | 'ElementType'

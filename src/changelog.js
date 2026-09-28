@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-09-28', note: 'Recipe view: the PositionTypes list stays open as a left sidebar (ref + status dot, ↑ / ↓ to move, collapsible, resizable); list options — filters, sort, ignored, tags, Review empty, Tag changes — are in its ⋯' },
   { date: '2026-09-28', note: 'One help button per header: the Form spec and export windows had two; the tutorial now opens with the key idea, and the Form pane’s ⋯ has "What is this?"' },
   { date: '2026-09-27', note: 'Fixed: the DesignDB patch would not run in Office Scripts ("Only arrow functions may be used in array method callbacks")' },
   { date: '2026-09-27', note: 'Fixed: the DesignDB patch used Excel’s sort, which on a sheet whose filter / Table covers only some columns left the rest (InternalNotesText…) on other rows. Rows are now moved whole by the script. Restore a DesignDB patched with the previous version from its version history' },

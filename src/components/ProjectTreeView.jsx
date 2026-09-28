@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react'
+import React, { useMemo, useState } from 'react'
 import { Button } from 'react-bootstrap'
 import useStore, { getRecipeForPosition } from '../store/useStore'
 import TagBadge from './TagBadge'
@@ -10,11 +10,13 @@ import IconButton from './IconButton'
 import ConnectorSuggestions from './ConnectorSuggestions'
 import CollectionBadge from './CollectionBadge'
 import FormCoverageBadge from './FormCoverageBadge'
-import { formWorklist } from '../utils/formSpec'
 import EmptyPositionWizard from './EmptyPositionWizard'
 import TagDriftWizard from './TagDriftWizard'
 import { colorsForType, ICONS, ACTION_ICONS } from '../utils/entityStyle'
 import { positionFamilyOf } from '../utils/positionFamily'
+import usePositionList, { NO_FAMILY } from './usePositionList'
+import PositionRail from './PositionRail'
+import PositionListMenu from './PositionListMenu'
 
 /**
  * ProjectTreeView — the PositionTypes surface.
@@ -39,46 +41,24 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
   const toggleIgnorePositionFamily = useStore(s => s.toggleIgnorePositionFamily)
   const tagDrift = useStore(s => s.tagDrift)
 
-  const [filter, setFilter] = useState('')
-  const [formOnly, setFormOnly] = useState(false)   // "Form incomplete" chip
-  const [activeTags, setActiveTags] = useState([])
+  const setPositionList = useStore(s => s.setPositionList)
+  const formCaptures = useStore(s => s.formCaptures)
   const [showEmptyWizard, setShowEmptyWizard] = useState(false)
   const [showDriftWizard, setShowDriftWizard] = useState(false)
-  const [showIgnored, setShowIgnored] = useState(false)
-  const [collapsedFamilies, setCollapsedFamilies] = useState(() => new Set())
-  const [showTags, setShowTags] = useState(false)      // overview per-row tags (default off)
   const driftCount = Object.keys(tagDrift || {}).length
 
-  const NO_FAMILY = '(no family)'
-  function groupByFamily(pts) {
-    const map = new Map()
-    for (const pt of pts) {
-      const fam = positionFamilyOf(pt) || NO_FAMILY
-      if (!map.has(fam)) map.set(fam, [])
-      map.get(fam).push(pt)
-    }
-    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b))
-  }
-  function toggleFamilyCollapse(fam) {
-    setCollapsedFamilies(prev => {
-      const next = new Set(prev)
-      if (next.has(fam)) next.delete(fam); else next.add(fam)
-      return next
-    })
-  }
-
-  // Tags actually present across positions (alphabetical)
-  const availableTags = useMemo(() => {
-    const present = new Set()
-    for (const ui of Object.values(positionUI)) {
-      for (const t of (ui.tags || [])) present.add(t)
-    }
-    return [...present].sort((a, b) => a.localeCompare(b))
-  }, [positionUI])
-
-  function toggleTag(tag) {
-    setActiveTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
-  }
+  // Filters, sort, collapsed families and the ignored toggle are shared with the sidebar.
+  const {
+    view, countByRef, incompleteRefs, availableTags, isIgnored: isIgnoredPt, ignoredFamilySet,
+    active: activeVisible, ignored: ignoredVisible, groups, ignoredGroups,
+  } = usePositionList()
+  const showTags = view.showTags
+  const showIgnored = view.showIgnored
+  const collapsedFamilies = new Set(view.collapsed)
+  const toggleFamilyCollapse = fam => setPositionList(v => ({
+    collapsed: v.collapsed.includes(fam) ? v.collapsed.filter(f => f !== fam) : [...v.collapsed, fam],
+  }))
+  const toggleTag = tag => setPositionList(v => ({ tags: v.tags.includes(tag) ? v.tags.filter(t => t !== tag) : [...v.tags, tag] }))
 
   // Index validation issues by positionTypeRef
   const issuesByRef = useMemo(() => {
@@ -89,48 +69,13 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
     return map
   }, [validationResults])
 
-  // Row counts per position (excludes soft-deleted)
-  const countByRef = useMemo(() => {
-    const map = {}
-    for (const r of recipes) {
-      if ((r.IsDeleted || r.isDeleted) === 'Y') continue
-      const pr = r.PositionTypeRef || r.positionTypeRef
-      if (pr) map[pr] = (map[pr] || 0) + 1
-    }
-    return map
-  }, [recipes])
-
-  const ignoredFamilySet = useMemo(() => new Set(ignoredPositionFamilies), [ignoredPositionFamilies])
-
-  // A position is "ignored" if individually flagged, or its family is ignored.
-  const isIgnoredPt = (pt) =>
-    !!positionUI[pt.PositionTypeRef]?.ignored ||
-    (ignoredFamilySet.size > 0 && ignoredFamilySet.has(positionFamilyOf(pt)))
-
   // Positions with no recipe rows and not ignored (individually or by family)
-  const emptyCount = useMemo(() => positionTypes.reduce((n, pt) => {
-    const ref = pt.PositionTypeRef
-    return (!countByRef[ref] && !isIgnoredPt(pt)) ? n + 1 : n
-  }, 0), [positionTypes, countByRef, positionUI, ignoredFamilySet])
+  const emptyCount = positionTypes.reduce((n, pt) => (!countByRef[pt.PositionTypeRef] && !isIgnoredPt(pt)) ? n + 1 : n, 0)
 
-  // Recipe coverage. The Navigator drawer held this and nothing else the tree lacked —
-  // it was a second index of this very list — so it lives here now and the drawer is gone.
-  const scopedTotal = useMemo(
-    () => positionTypes.filter(pt => !isIgnoredPt(pt)).length,
-    [positionTypes, positionUI, ignoredFamilySet]
-  )
+  // Recipe coverage (ignored positions don't count).
+  const scopedTotal = positionTypes.filter(pt => !isIgnoredPt(pt)).length
   const reciped = scopedTotal - emptyCount
   const pct = scopedTotal ? Math.round((reciped / scopedTotal) * 100) : 0
-
-  // Positions the Form is not yet satisfied on. Silent when no Form is attached.
-  // MUST live above the early returns below: hooks cannot be conditional, and the
-  // focused-editor return fires exactly when a position is selected.
-  const formCaptures = useStore(s => s.formCaptures)
-  const containerETRefs = useStore(s => s.containerETRefs)
-  const incompleteRefs = useMemo(
-    () => new Set(formWorklist(recipes, formCaptures, containerETRefs).map(w => w.posRef)),
-    [recipes, formCaptures, containerETRefs]
-  )
 
   const activePt = activePositionRef
     ? positionTypes.find(pt => pt.PositionTypeRef === activePositionRef)
@@ -151,9 +96,28 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
     )
   }
 
-  // ---- Focused editor: one position takes the whole surface ----
+  const wizards = (
+    <>
+      <EmptyPositionWizard
+        show={showEmptyWizard}
+        onHide={() => setShowEmptyWizard(false)}
+        onOpenPosition={(ref) => { setShowEmptyWizard(false); setActivePosition(ref) }}
+      />
+      <TagDriftWizard
+        show={showDriftWizard}
+        onHide={() => setShowDriftWizard(false)}
+        onOpenPosition={(ref) => { setShowDriftWizard(false); setActivePosition(ref) }}
+      />
+    </>
+  )
+
+  // ---- Focused editor: the list collapses to a sidebar beside it ----
   if (activePt) {
     return (
+      <div className="d-flex" style={{ height: '100%', minHeight: 0 }}>
+        {wizards}
+        <PositionRail onReviewEmpty={() => setShowEmptyWizard(true)} onReviewDrift={() => setShowDriftWizard(true)} />
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
       <FocusedPositionEditor
         pt={activePt}
         tags={positionUI[activePositionRef]?.tags || []}
@@ -167,29 +131,12 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
         onNewET={onNewET}
         onReplace={onReplace}
       />
+        </div>
+      </div>
     )
   }
 
   // ---- Overview list ----
-  const q = filter.trim().toLowerCase()
-  const visible = positionTypes.filter(pt => {
-    const ref = pt.PositionTypeRef || ''
-    const name = pt.Name || pt.name || ''
-    const tags = positionUI[ref]?.tags || []
-    if (activeTags.length > 0 && !activeTags.every(t => tags.includes(t))) return false
-    if (formOnly && !incompleteRefs.has(ref)) return false
-    if (!q) return true
-    return ref.toLowerCase().includes(q) ||
-      name.toLowerCase().includes(q) ||
-      tags.some(t => t.toLowerCase().includes(q))
-  })
-
-  // Ignored positions/families are out-of-scope: kept out of the main list and
-  // every total, but revealed in a collapsible "Ignored" section so they stay
-  // reachable to un-ignore or edit.
-  const activeVisible = visible.filter(pt => !isIgnoredPt(pt))
-  const ignoredVisible = visible.filter(pt => isIgnoredPt(pt))
-
   function renderPositionRow(pt) {
     const ref = pt.PositionTypeRef
     const name = pt.Name || pt.name || ''
@@ -306,43 +253,34 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
           </Button>
         )}
         <div className="ms-auto d-flex align-items-center gap-2">
-          {/* Per-row detail toggles — default off to keep the list scannable */}
-          <Button
-            variant={showTags ? 'secondary' : 'outline-secondary'} size="sm"
-            style={{ fontSize: 11 }} onClick={() => setShowTags(v => !v)}
-            title="Show tags on each row"
-          >Tags</Button>
           <div style={{ width: 300 }}>
             <FilterBar
-              text={filter}
-              onText={setFilter}
+              text={view.text}
+              onText={text => setPositionList({ text })}
               placeholder="Filter positions…"
               tagOptions={availableTags}
-              activeTags={activeTags}
+              activeTags={view.tags}
               onToggleTag={toggleTag}
               extraChips={formCaptures ? [{
                 key: 'form-incomplete',
                 label: `Form incomplete${incompleteRefs.size ? ` (${incompleteRefs.size})` : ''}`,
-                active: formOnly,
-                onToggle: () => setFormOnly(v => !v),
+                active: view.formOnly,
+                onToggle: () => setPositionList(v => ({ formOnly: !v.formOnly })),
                 title: 'Only positions missing a product the Form specifies, or holding one it has dropped',
               }] : []}
             />
           </div>
+          <PositionListMenu
+            families={[...groups, ...ignoredGroups].map(([f]) => f)}
+            emptyCount={emptyCount} driftCount={driftCount}
+            hasForm={!!formCaptures} incompleteCount={incompleteRefs.size}
+            onReviewEmpty={() => setShowEmptyWizard(true)} onReviewDrift={() => setShowDriftWizard(true)}
+            showTagsOption
+          />
         </div>
       </div>
 
-      <EmptyPositionWizard
-        show={showEmptyWizard}
-        onHide={() => setShowEmptyWizard(false)}
-        onOpenPosition={(ref) => { setShowEmptyWizard(false); setActivePosition(ref) }}
-      />
-
-      <TagDriftWizard
-        show={showDriftWizard}
-        onHide={() => setShowDriftWizard(false)}
-        onOpenPosition={(ref) => { setShowDriftWizard(false); setActivePosition(ref) }}
-      />
+      {wizards}
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem 0.75rem' }}>
         {activeVisible.length === 0 && ignoredVisible.length === 0 && (
@@ -353,7 +291,7 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
         )}
 
         {/* Active PositionTypes, grouped into collapsible family sections. */}
-        {groupByFamily(activeVisible).map(([fam, pts]) => {
+        {groups.map(([fam, pts]) => {
           const realFam = fam !== NO_FAMILY
           const collapsed = collapsedFamilies.has(fam)
           return (
@@ -392,13 +330,13 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
           <div className="mt-3">
             <button
               className="btn btn-link p-0 text-muted small text-decoration-none"
-              onClick={() => setShowIgnored(v => !v)}
+              onClick={() => setPositionList(v => ({ showIgnored: !v.showIgnored }))}
             >
               <MaterialIcon name={showIgnored ? ACTION_ICONS.expand : ACTION_ICONS.collapse} size={14} /> Ignored ({ignoredVisible.length})
             </button>
             {showIgnored && (
               <div className="mt-2">
-                {groupByFamily(ignoredVisible).map(([fam, pts]) => {
+                {ignoredGroups.map(([fam, pts]) => {
                   const familyIgnored = fam !== NO_FAMILY && ignoredFamilySet.has(fam)
                   return (
                     <div key={fam} className="mb-2">
