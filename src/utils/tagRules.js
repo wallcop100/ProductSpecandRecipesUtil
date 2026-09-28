@@ -58,6 +58,55 @@ export const TAG_COLUMNS = [
 ]
 
 /**
+ * What a position's RECIPE holds (from the Product Spec and ElementTypes), so a rule can
+ * say "tag positions using an iGuzzini product". Each is a list: a condition holds when
+ * any item does (a negative one — is not, doesn't contain, !pattern — when none does).
+ * Recomputed whenever tags are (Apply rules, opening the project).
+ */
+export const RECIPE_TAG_COLUMNS = [
+  { key: 'Recipe.Manufacturer', label: 'Manufacturer (in recipe)' },
+  { key: 'Recipe.ProductCode', label: 'Product code (in recipe)' },
+  { key: 'Recipe.ElementType', label: 'ElementType (in recipe)' },
+  { key: 'Recipe.Family', label: 'ElementType family (in recipe)' },
+  { key: 'Recipe.Description', label: 'Product description (in recipe)' },
+]
+
+/**
+ * recipeTagIndex({ recipes, psRows, elementTypes }) → Map(PositionTypeRef → the recipe
+ * columns above). Build once per batch and pass to withRecipeFields.
+ */
+export function recipeTagIndex({ recipes = [], psRows = [], elementTypes = [] } = {}) {
+  const lc = s => String(s ?? '').toLowerCase()
+  const ps = new Map()
+  for (const r of psRows) { const k = lc(r.ElementTypeRef || r.elementTypeRef); if (k && !ps.has(k)) ps.set(k, r) }
+  const fam = new Map(elementTypes.map(e => [lc(e.ElementTypeRef || e.elementTypeRef), e.Family || e.family || '']))
+  const out = new Map()
+  const add = (m, k, v) => { const t = String(v ?? '').trim(); if (t && !m[k].includes(t)) m[k].push(t) }
+  for (const r of recipes) {
+    if ((r.IsDeleted || r.isDeleted) === 'Y') continue
+    const pos = r.PositionTypeRef || r.positionTypeRef
+    const ref = r.ElementTypeRef || r.elementTypeRef
+    if (!pos || !ref) continue
+    if (!out.has(pos)) out.set(pos, Object.fromEntries(RECIPE_TAG_COLUMNS.map(c => [c.key, []])))
+    const m = out.get(pos)
+    const spec = ps.get(lc(ref))
+    add(m, 'Recipe.ElementType', ref)
+    add(m, 'Recipe.Family', fam.get(lc(ref)))
+    add(m, 'Recipe.Manufacturer', spec?.Manufacturer || spec?.manufacturer)
+    add(m, 'Recipe.ProductCode', spec?.ProductCode || spec?.productCode)
+    add(m, 'Recipe.Description', spec?.ComponentDescription || spec?.componentDescription)
+  }
+  return out
+}
+
+/** A PositionType with its recipe columns, ready for evaluateTags / ruleMatches. */
+export function withRecipeFields(pt, index) {
+  if (!pt || !index) return pt
+  const empty = Object.fromEntries(RECIPE_TAG_COLUMNS.map(c => [c.key, []]))
+  return { ...pt, ...empty, ...(index.get(pt.PositionTypeRef) || {}) }
+}
+
+/**
  * Operators a condition can use. `needsValue: false` ops (isEmpty/isNotEmpty) ignore
  * `value`; the numeric ops parse both sides as numbers. `label` drives the UI.
  */
@@ -102,8 +151,20 @@ const num = s => {
 }
 
 /** True if one condition holds for a PositionType. Unknown ops never match. */
+const NEGATIVE = { notEquals: 'equals', notContains: 'contains' }
+
 export function conditionMatches(cond, pt) {
   if (!cond || !cond.column) return false
+  // A list (the recipe columns): any item for a positive op, none for a negative one.
+  const listed = pt?.[cond.column]
+  if (Array.isArray(listed)) {
+    if (cond.op === 'isEmpty') return listed.length === 0
+    if (cond.op === 'isNotEmpty') return listed.length > 0
+    const one = (op, value) => listed.some(x => conditionMatches({ column: 'x', op, value }, { x }))
+    if (NEGATIVE[cond.op]) return !one(NEGATIVE[cond.op], cond.value)
+    if (cond.op === 'matches' && String(cond.value ?? '').trim().startsWith('!')) return !one('matches', String(cond.value).trim().slice(1))
+    return one(cond.op, cond.value)
+  }
   const raw = fieldValue(pt, cond.column)
   const fv = raw.toLowerCase()
   const target = String(cond.value ?? '').toLowerCase()
@@ -233,7 +294,7 @@ function sameTags(a = [], b = []) {
 export function snapshotForPosition(pt, rules) {
   const cols = columnsUsedByRules(rules)
   const fields = {}
-  for (const c of cols) fields[c] = pt?.[c] == null ? '' : String(pt[c])
+  for (const c of cols) fields[c] = pt?.[c] == null ? '' : Array.isArray(pt[c]) ? pt[c].join(', ') : String(pt[c])
   return { ruleTags: evaluateTags(pt, rules), fields }
 }
 

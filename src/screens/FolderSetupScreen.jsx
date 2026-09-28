@@ -4,7 +4,7 @@ import {
   Container, Card, Button, Alert, Spinner, Badge, Form, Row, Col,
 } from 'react-bootstrap'
 import useStore from '../store/useStore'
-import { evaluateTags, effectiveTags, computeTagDrift } from '../utils/tagRules'
+import { evaluateTags, effectiveTags, computeTagDrift, recipeTagIndex, withRecipeFields } from '../utils/tagRules'
 import { extractProjectId } from '../utils/projectId'
 import { detectFiles as detectProjectFiles, importFiles } from '../utils/backend'
 import { harvestExemplars } from '../utils/styleLibrary'
@@ -496,7 +496,10 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
 
       // 5/6. Compute effective tags: rule tags ∪ per-position add − remove
       const mergedPositionUI = {}
-      for (const pt of positionTypes) {
+      // Rules may read what a position's recipe holds (maker, code, ElementType, family).
+      const tagIndex = recipeTagIndex({ recipes: rs_rows ?? [], psRows: ps_rows ?? [], elementTypes })
+      const tagSubjects = positionTypes.map(pt => withRecipeFields(pt, tagIndex))
+      for (const pt of tagSubjects) {
         const ref = pt.PositionTypeRef
         const stored = positionUIMap[ref] || {}
         const ruleTags = evaluateTags(pt, tagRules)
@@ -517,7 +520,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
       // whose rule-relevant DB data changed since the last accepted state.
       let tagSnapshots = {}
       try { tagSnapshots = tagSnapshotsPref ? JSON.parse(tagSnapshotsPref) : {} } catch { tagSnapshots = {} }
-      const { drift: tagDrift, newBaselines } = computeTagDrift(positionTypes, tagRules, tagSnapshots)
+      const { drift: tagDrift, newBaselines } = computeTagDrift(tagSubjects, tagRules, tagSnapshots)
       if (Object.keys(newBaselines).length > 0) {
         tagSnapshots = { ...tagSnapshots, ...newBaselines }
         await window.electronAPI.db.setPref(projectId, 'tag_snapshots', JSON.stringify(tagSnapshots))
