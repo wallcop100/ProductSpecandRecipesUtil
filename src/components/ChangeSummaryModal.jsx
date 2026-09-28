@@ -7,6 +7,8 @@ import { buildPsScript, buildRsScript, buildDbScript } from '../utils/patchScrip
 import { CONCEPTS } from './ConceptCard'
 import MasterGapPanel from './MasterGapPanel'
 import TutorialHint from '../tutorial/TutorialHint'
+import { reportsToMarkdown } from '../utils/bugReports'
+import { download } from '../platform/fs'
 
 /**
  * ChangeSummaryModal — review every pending change, then copy the patch scripts.
@@ -393,12 +395,54 @@ function ResolveTab({ gaps, overwrites, onFillWrappers }) {
   )
 }
 
+/** The alpha's bug reports: read, tidy, then copy or save them all as Markdown. */
+function BugReportsTab({ reports, copied, onCopy }) {
+  const updateBugReport = useStore(s => s.updateBugReport)
+  const deleteBugReport = useStore(s => s.deleteBugReport)
+  const clearBugReports = useStore(s => s.clearBugReports)
+  return (
+    <div data-testid="bug-reports-tab">
+      <div className="d-flex align-items-center gap-2 mb-2">
+        <Button size="sm" variant="primary" className="d-inline-flex align-items-center gap-1" onClick={onCopy}>
+          <MaterialIcon name="content_copy" size={14} /> {copied ? 'Copied!' : 'Copy all as Markdown'}
+        </Button>
+        <Button size="sm" variant="outline-secondary" className="d-inline-flex align-items-center gap-1"
+          onClick={() => download(`bug-reports-${new Date().toISOString().slice(0, 10)}.md`, reportsToMarkdown(reports), 'text/markdown')}>
+          <MaterialIcon name="download" size={14} /> Save .md
+        </Button>
+        <Button size="sm" variant="link" className="text-danger ms-auto p-0" style={{ fontSize: 12 }}
+          onClick={() => { if (window.confirm(`Delete all ${reports.length} bug reports?`)) clearBugReports() }}>
+          Delete all
+        </Button>
+      </div>
+      {reports.map(r => (
+        <div key={r.id} className="border rounded p-2 mb-2" style={{ fontSize: 12 }}>
+          <div className="d-flex align-items-center gap-2 text-muted mb-1" style={{ fontSize: 11 }}>
+            <span>{r.at?.replace('T', ' ').slice(0, 16)}</span>
+            {r.app?.project && <span>· {r.app.project}</span>}
+            {r.app?.screen && <span>· {r.app.screen}</span>}
+            {r.dom?.dialogs?.length > 0 && <span>· {r.dom.dialogs.at(-1)}</span>}
+            {r.dom?.element && <span className="text-truncate">· {r.dom.element}</span>}
+            <button type="button" className="btn btn-link p-0 ms-auto text-muted" title="Delete this report"
+              aria-label="Delete this report" onClick={() => deleteBugReport(r.id)}>
+              <MaterialIcon name="delete" size={14} />
+            </button>
+          </div>
+          <textarea className="form-control form-control-sm" rows={2} style={{ fontSize: 12 }} value={r.note}
+            aria-label="Bug note" onChange={e => updateBugReport(r.id, { note: e.target.value })} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function ChangeSummaryModal({ show, onHide }) {
   const psChanges = useStore(s => s.psChanges)
   const rsChanges = useStore(s => s.rsChanges)
   const dbChanges = useStore(s => s.dbChanges)
   const alignmentGaps = useStore(s => s.alignmentGaps)
   const fillWrapperSpecRows = useStore(s => s.fillWrapperSpecRows)
+  const bugReports = useStore(s => s.bugReports)
 
   const [tab, setTab] = useState('changes')
   const [copiedKey, setCopiedKey] = useState(null)
@@ -452,10 +496,15 @@ export default function ChangeSummaryModal({ show, onHide }) {
         {resolveCount > 0 && (
           <TabBtn id="resolve" tab={tab} onClick={setTab} count={resolveCount} warn>Resolve first</TabBtn>
         )}
+        {bugReports.length > 0 && (
+          <TabBtn id="bugs" tab={tab} onClick={setTab} count={bugReports.length}>Bug reports</TabBtn>
+        )}
       </div>
 
       <Modal.Body style={{ minHeight: 260, maxHeight: '58vh' }}>
-        {nothing
+        {tab === 'bugs'
+          ? <BugReportsTab reports={bugReports} copied={copiedKey === 'bugs'} onCopy={() => copy(reportsToMarkdown(bugReports), 'bugs')} />
+          : nothing
           ? <div className="text-muted small fst-italic">No pending changes.</div>
           : tab === 'changes' ? <ChangesTab sections={sections} />
           : tab === 'patches' ? (

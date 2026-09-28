@@ -12,6 +12,7 @@ import { findBestTemplate, recipeTemplateFromRows, isRecipeTemplate, isFormTempl
 import { proposeRecipe, proposalFromTemplate, proposalContext } from '../utils/recipeProposal.js'
 import { roleOf } from '../utils/recipePatterns.js'
 import { planFamilyMove } from '../utils/etSeed.js'
+import { loadReports, saveReports } from '../utils/bugReports.js'
 import { resolveTemplate, applyResolvedTemplate } from '../utils/slotResolver.js'
 import { evaluateTags, effectiveTags, snapshotForPosition, migrateRules } from '../utils/tagRules.js'
 import { runValidation } from '../utils/validationRules.js'
@@ -448,6 +449,16 @@ const useStore = create((set, get) => ({
   activePositionRef: null,
   // How the PositionTypes list is filtered and sorted — one state for the overview and the
   // sidebar, so moving between them keeps it (components/usePositionList).
+  // Alpha bug reports (bugReports.js): kept on this computer, across projects.
+  bugMode: (() => { try { return localStorage.getItem('bugMode') === '1' } catch { return false } })(),
+  bugReports: loadReports(),
+  setBugMode(on) { try { localStorage.setItem('bugMode', on ? '1' : '0') } catch { /* session only */ } set({ bugMode: !!on }) },
+  addBugReport(report) { const next = [...get().bugReports, report]; saveReports(next); set({ bugReports: next }) },
+  updateBugReport(id, patch) {
+    const next = get().bugReports.map(r => (r.id === id ? { ...r, ...patch } : r)); saveReports(next); set({ bugReports: next })
+  },
+  deleteBugReport(id) { const next = get().bugReports.filter(r => r.id !== id); saveReports(next); set({ bugReports: next }) },
+  clearBugReports() { saveReports([]); set({ bugReports: [] }) },
   positionList: { text: '', tags: [], formOnly: false, emptyOnly: false, showIgnored: false, showTags: false, sort: 'ref', collapsed: [] },
   setPositionList(patch) { set(s => ({ positionList: { ...s.positionList, ...(typeof patch === 'function' ? patch(s.positionList) : patch) } })) },
   designPrompt: null,                 // { posRef, then } — see leavePosition

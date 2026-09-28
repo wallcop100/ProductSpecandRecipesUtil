@@ -1,3 +1,4 @@
+import BugReporter from './components/BugReporter'
 import DesignPickerModal from './components/DesignPickerModal'
 import { SaveShortcut } from './components/SaveStatus'
 import React, { useState, useEffect } from 'react'
@@ -77,13 +78,14 @@ export default function App() {
   }
 
   return (
-    <div className={debugIds ? 'debug-ids' : ''} style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div className={debugIds ? 'debug-ids' : ''} data-screen={activeScreen} style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* This is an alpha: said on every page, over the header, never in the way of a click. */}
       <Badge bg="info" data-testid="alpha-badge"
         style={{ position: 'fixed', top: 6, left: '50%', transform: 'translateX(-50%)', zIndex: 2000,
           pointerEvents: 'none', fontSize: 12, letterSpacing: 2, padding: '5px 12px', boxShadow: '0 1px 4px rgba(0,0,0,.25)' }}>
         ALPHA
       </Badge>
+      <BugReporter screen={activeScreen} />
       <FileWatchBanner />
       <DesignPickerModal />
       <SaveShortcut />
