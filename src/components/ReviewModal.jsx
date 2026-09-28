@@ -1,6 +1,6 @@
 import InfoTip from './InfoTip'
 import React, { useState, useMemo, useEffect } from 'react'
-import { Modal, Button, Form, ButtonGroup } from 'react-bootstrap'
+import { Modal, Button, Form, ButtonGroup, Dropdown } from 'react-bootstrap'
 import {
   DndContext, PointerSensor, useSensor, useSensors, closestCenter,
 } from '@dnd-kit/core'
@@ -14,8 +14,19 @@ import { familyOf } from '../utils/etRef'
 import { positionFamilyOf } from '../utils/positionFamily'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { formWorklist } from '../utils/formSpec'
+import { TAG_OPS } from '../utils/tagRules'
+import { fieldsFor, recordsFor, filterMatches, cellText, legacyFilters, DEFAULT_COLUMNS } from '../utils/reviewFields'
+import usePositionList, { byRef } from './usePositionList'
 
-const EMPTY_FILTERS = { family: '', manufacturer: '', tag: '', containsET: '' }
+const EMPTY_FILTER = { match: 'all', conditions: [] }
+const newCond = () => ({ field: 'Ref', op: 'matches', value: '' })
+const api = () => (typeof window !== 'undefined' && window.electronAPI?.db) || null
+async function readPref(projectId, key) {
+  try { const v = await api()?.getPref?.(projectId, key); return v ? JSON.parse(v) : null } catch { return null }
+}
+function writePref(projectId, key, value) {
+  try { api()?.setPref?.(projectId, key, JSON.stringify(value)) } catch { /* not persisted */ }
+}
 
 /**
  * ReviewModal — build a filtered set of recipes and cycle through them one at a
@@ -38,7 +49,13 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
   const containerETRefs = useStore(s => s.containerETRefs)
 
   const [unit, setUnit]       = useState('position')  // 'position' | 'element'
-  const [filters, setFilters] = useState(EMPTY_FILTERS)
+  const [filter, setFilter]   = useState(EMPTY_FILTER)
+  const [columns, setColumns] = useState(DEFAULT_COLUMNS)   // per unit
+  const [sortBy, setSortBy]   = useState({ key: 'Ref', dir: 1 })
+  const [sets, setSets]       = useState([])                // saved filter sets, this project
+  const [setName, setSetName] = useState('')                // the loaded / last saved set
+  const projectId = useStore(s => s.projectId)
+  const { statusOf } = usePositionList()
   const [phase, setPhase]     = useState('build')      // 'build' | 'cycle'
   const [index, setIndex]     = useState(0)
   // Once the user opens the filter builder, initialRefs stops driving matches —
@@ -51,19 +68,27 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
     if (initialRefs && initialRefs.length > 0) { setUnit('position'); setPhase('cycle'); setUseInitialRefs(true) }
     else { setPhase('build'); setUseInitialRefs(false) }
   }, [show, initialRefs])
-  // Changing the unit invalidates the criteria (families/manufacturers differ)
-  useEffect(() => { setFilters(EMPTY_FILTERS) }, [unit])
+  // Saved sets and the last-used filter are per project.
+  useEffect(() => {
+    if (!show || projectId == null) return
+    let live = true
+    Promise.all([readPref(projectId, 'review_filter_sets'), readPref(projectId, 'review_last')]).then(([saved, last]) => {
+      if (!live) return
+      setSets(Array.isArray(saved) ? saved : [])
+      if (last && !(initialRefs && initialRefs.length)) {
+        if (last.unit) setUnit(last.unit)
+        if (last.filter) setFilter(last.filter)
+        if (last.columns) setColumns(c => ({ ...c, ...last.columns }))
+        setSetName(last.setName || '')
+      }
+    })
+    return () => { live = false }
+  }, [show, projectId])
+  const remember = (patch = {}) => projectId != null && writePref(projectId, 'review_last', { unit, filter, columns, setName, ...patch })
+  const switchUnit = u => { if (u === unit) return; setUnit(u); setFilter(EMPTY_FILTER); setSetName(''); setSortBy({ key: 'Ref', dir: 1 }) }
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
-  const psByRef = useMemo(() => {
-    const m = new Map()
-    for (const r of psRows) {
-      const ref = (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase()
-      if (ref && !m.has(ref)) m.set(ref, r)
-    }
-    return m
-  }, [psRows])
 
   const liveRows = useMemo(
     () => recipes.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y'),
@@ -89,48 +114,6 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
     return m
   }, [elementTypes])
 
-  const mfrOf = ref => {
-    const ps = psByRef.get((ref || '').toLowerCase())
-    return (ps?.Manufacturer || ps?.manufacturer || '').trim()
-  }
-
-  // Tags per ET ref (via the positions that use it) — for the element unit
-  const tagsByET = useMemo(() => {
-    const m = new Map()
-    for (const r of liveRows) {
-      const k = (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase()
-      if (!k) continue
-      const posRef = r.PositionTypeRef || r.positionTypeRef
-      const tags = positionUI[posRef]?.tags || []
-      if (!m.has(k)) m.set(k, new Set())
-      for (const t of tags) m.get(k).add(t)
-    }
-    return m
-  }, [liveRows, positionUI])
-
-  // -------- option lists (depend on unit) --------
-  const familyOptions = useMemo(() => {
-    const s = new Set()
-    if (unit === 'position') {
-      for (const pt of positionTypes) { const f = positionFamilyOf(pt); if (f) s.add(f) }
-    } else {
-      for (const ref of allETRefs) { const f = familyOf(ref, etObjByRef.get(ref.toLowerCase())); if (f) s.add(f) }
-    }
-    return [...s].sort((a, b) => a.localeCompare(b))
-  }, [unit, positionTypes, allETRefs, etObjByRef])
-
-  const mfrOptions = useMemo(() => {
-    const s = new Set()
-    for (const r of psRows) { const mf = (r.Manufacturer || r.manufacturer || '').trim(); if (mf) s.add(mf) }
-    return [...s].sort((a, b) => a.localeCompare(b))
-  }, [psRows])
-
-  const tagOptions = useMemo(() => {
-    const s = new Set(tagPalette || [])
-    for (const ui of Object.values(positionUI)) for (const t of (ui?.tags || [])) s.add(t)
-    return [...s].sort((a, b) => a.localeCompare(b))
-  }, [tagPalette, positionUI])
-
   // -------- matching --------
   const rowsForPos = useMemo(() => {
     const m = new Map()
@@ -142,6 +125,11 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
     return m
   }, [liveRows])
 
+  const fields = useMemo(() => fieldsFor(unit, { positionTypes, elementTypes }), [unit, positionTypes, elementTypes])
+  const records = useMemo(
+    () => recordsFor(unit, { positionTypes, elementTypes, recipes: liveRows, psRows, positionUI, statusOf }),
+    [unit, positionTypes, elementTypes, liveRows, psRows, positionUI, statusOf])
+
   const matches = useMemo(() => {
     if (useInitialRefs && initialRefs && initialRefs.length > 0) {
       return initialRefs.map(ref => {
@@ -149,35 +137,14 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
         return { kind: 'position', ref, name: pt?.Name || pt?.PositionName || null }
       })
     }
-    const f = filters
-    if (unit === 'position') {
-      return positionTypes.filter(pt => {
-        const ref = pt.PositionTypeRef
-        if (f.family && positionFamilyOf(pt) !== f.family) return false
-        if (f.tag && !((positionUI[ref]?.tags) || []).includes(f.tag)) return false
-        const rows = rowsForPos.get(ref) || []
-        if (f.containsET && !rows.some(r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === f.containsET.toLowerCase())) return false
-        if (f.manufacturer && !rows.some(r => mfrOf(r.ElementTypeRef || r.elementTypeRef) === f.manufacturer)) return false
-        return true
-      }).map(pt => ({ kind: 'position', ref: pt.PositionTypeRef, name: pt.Name || pt.PositionName || null }))
-    }
-    // element unit
-    return allETRefs.filter(ref => {
-      const low = ref.toLowerCase()
-      if (f.family && familyOf(ref, etObjByRef.get(low)) !== f.family) return false
-      if (f.manufacturer && mfrOf(ref) !== f.manufacturer) return false
-      if (f.tag && !(tagsByET.get(low)?.has(f.tag))) return false
-      if (f.containsET) {
-        const internal = liveRows.some(r =>
-          (r.ContextType || r.contextType) === 'ElementType' &&
-          (r.ContextRef || r.contextRef) === ref &&
-          (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === f.containsET.toLowerCase()
-        )
-        if (!internal) return false
-      }
-      return true
-    }).map(ref => ({ kind: 'element', ref, name: psByRef.get(ref.toLowerCase())?.ComponentDescription || null }))
-  }, [unit, filters, positionTypes, positionUI, rowsForPos, allETRefs, etObjByRef, tagsByET, liveRows, psByRef, initialRefs, useInitialRefs])
+    const hit = records.filter(m => filterMatches(filter, m.rec))
+    const { key, dir } = sortBy
+    return hit.sort((a, b) => {
+      const x = a.rec[key], y = b.rec[key]
+      const c = typeof x === 'number' && typeof y === 'number' ? x - y : byRef(cellText(x), cellText(y))
+      return (c || byRef(a.ref, b.ref)) * dir
+    })
+  }, [records, filter, sortBy, positionTypes, initialRefs, useInitialRefs])
 
   const current = matches[index] || null
   const canPrev = phase === 'cycle' && index > 0
@@ -263,10 +230,37 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
     }
   }
 
-  const activeFilterChips = Object.entries(filters).filter(([, v]) => v)
-  const FILTER_LABEL = { family: 'Family', manufacturer: 'Mfr', tag: 'Tag', containsET: 'Contains' }
+  const conds = filter.conditions.filter(c => c.field && c.op)
+  const opLabel = op => TAG_OPS.find(o => o.op === op)?.label || op
+  const fieldLabel = key => fields.find(f => f.key === key)?.label || key
+  const condText = c => `${fieldLabel(c.field)} ${opLabel(c.op)}${TAG_OPS.find(o => o.op === c.op)?.needsValue === false ? '' : ` ${c.value}`}`
+  const setCond = (i, patch) => { setSetName(''); setFilter(f => ({ ...f, conditions: f.conditions.map((c, j) => (j === i ? { ...c, ...patch } : c)) })) }
+  const cols = columns[unit] || DEFAULT_COLUMNS[unit]
+  const toggleCol = key => {
+    const next = { ...columns, [unit]: cols.includes(key) ? cols.filter(k => k !== key) : [...cols, key] }
+    setColumns(next); remember({ columns: next })
+  }
+  const start = i => { remember(); setIndex(i); setPhase('cycle') }
 
-  function setFilter(key, val) { setFilters(prev => ({ ...prev, [key]: val })) }
+  function saveSet() {
+    const name = window.prompt('Name this filter set', setName || '')?.trim()
+    if (!name) return
+    const next = [...sets.filter(x => x.name !== name), { name, unit, filter, columns: cols }]
+    setSets(next); setSetName(name)
+    if (projectId != null) writePref(projectId, 'review_filter_sets', next)
+    remember({ setName: name })
+  }
+  function loadSet(name) {
+    const x = sets.find(y => y.name === name)
+    if (!x) return
+    setUnit(x.unit); setFilter(x.filter || EMPTY_FILTER); setSetName(name)
+    if (x.columns) setColumns(c => ({ ...c, [x.unit]: x.columns }))
+  }
+  function deleteSet() {
+    const next = sets.filter(x => x.name !== setName)
+    setSets(next); setSetName('')
+    if (projectId != null) writePref(projectId, 'review_filter_sets', next)
+  }
 
   return (
     <Modal show={show} onHide={close} size="xl" centered>
@@ -292,46 +286,107 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
               </p>
             </div>
 
-            <div className="d-flex justify-content-center align-items-center gap-2 mb-3">
+            <div className="d-flex justify-content-center align-items-center gap-2 mb-3 flex-wrap">
               <span className="text-muted small">Step through</span>
               <ButtonGroup size="sm">
                 <Button variant={unit === 'position' ? 'primary' : 'outline-secondary'} style={{ fontSize: 12 }}
-                  onClick={() => setUnit('position')}>PositionTypes</Button>
+                  onClick={() => switchUnit('position')}>PositionTypes</Button>
                 <Button variant={unit === 'element' ? 'primary' : 'outline-secondary'} style={{ fontSize: 12 }}
-                  onClick={() => setUnit('element')}>ElementTypes</Button>
+                  onClick={() => switchUnit('element')}>ElementTypes</Button>
               </ButtonGroup>
+              <Form.Select size="sm" aria-label="Saved filter sets" value={setName} onChange={e => loadSet(e.target.value)}
+                style={{ fontSize: 12, width: 'auto' }}>
+                <option value="">{sets.length ? 'Saved filters…' : 'No saved filters'}</option>
+                {sets.map(x => <option key={x.name} value={x.name}>{x.name}</option>)}
+              </Form.Select>
+              <Button size="sm" variant="outline-secondary" style={{ fontSize: 12 }} onClick={saveSet} disabled={conds.length === 0}>Save…</Button>
+              {setName && <IconButton icon="delete" size={16} title={`Delete “${setName}”`} onClick={deleteSet} />}
             </div>
 
-            <div className="row g-2">
-              <FilterSelect col label="Family" icon="account_tree" value={filters.family}
-                onChange={v => setFilter('family', v)} options={familyOptions} />
-              <FilterSelect col label="Manufacturer" icon="factory" value={filters.manufacturer}
-                onChange={v => setFilter('manufacturer', v)} options={mfrOptions} />
-              <FilterSelect col label="Tag" icon={ACTION_ICONS.tags} value={filters.tag}
-                onChange={v => setFilter('tag', v)} options={tagOptions} />
-              <div className="col-6">
-                <label className="text-muted d-flex align-items-center gap-1" style={{ fontSize: 11 }}>
-                  <MaterialIcon name="widgets" size={13} /> Contains element type
-                </label>
-                <Form.Control size="sm" list="review-et-list" value={filters.containsET}
-                  placeholder="ET ref…" onChange={e => setFilter('containsET', e.target.value)} style={{ fontSize: 12 }} />
-                <datalist id="review-et-list">
-                  {allETRefs.map(r => <option key={r} value={r} />)}
-                </datalist>
-              </div>
+            <div className="d-flex align-items-center gap-2 mb-2" style={{ fontSize: 12 }}>
+              <span className="text-muted">Match</span>
+              <Form.Select size="sm" aria-label="Match" value={filter.match} style={{ fontSize: 12, width: 'auto' }}
+                onChange={e => { setSetName(''); setFilter(f => ({ ...f, match: e.target.value })) }}>
+                <option value="all">all of</option>
+                <option value="any">any of</option>
+              </Form.Select>
+              <span className="text-muted">these</span>
+              <InfoTip>“matches” takes wildcards: <code>*</code> any run, <code>?</code> one character. A comma means any of (<code>ET-DL-*, ET-LIN-*</code>); a leading <code>!</code> means not (<code>!*TBC*</code>). On a list (Tags, Contains ET…) a row matches when any item does.</InfoTip>
             </div>
-
-            <div className="d-flex align-items-center gap-2 mt-4">
-              <Button variant="link" size="sm" style={{ fontSize: 12 }} onClick={() => setFilters(EMPTY_FILTERS)}>Clear</Button>
+            {filter.conditions.map((c, i) => {
+              const op = TAG_OPS.find(o => o.op === c.op)
+              return (
+                <div key={i} className="d-flex align-items-center gap-2 mb-1" data-testid="review-condition">
+                  <Form.Select size="sm" aria-label="Field" value={c.field} style={{ fontSize: 12, width: 180 }}
+                    onChange={e => setCond(i, { field: e.target.value })}>
+                    {fields.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
+                  </Form.Select>
+                  <Form.Select size="sm" aria-label="Operator" value={c.op} style={{ fontSize: 12, width: 150 }}
+                    onChange={e => setCond(i, { op: e.target.value })}>
+                    {TAG_OPS.map(o => <option key={o.op} value={o.op}>{o.label}</option>)}
+                  </Form.Select>
+                  {op?.needsValue !== false && (
+                    <Form.Control size="sm" aria-label="Value" value={c.value} style={{ fontSize: 12, fontFamily: 'monospace' }}
+                      placeholder={c.op === 'matches' ? 'e.g. C0?r, ET-DL-*' : op?.twoValues ? 'from,to' : ''}
+                      list={c.field === 'Contains' || (c.field === 'Ref' && unit === 'element') ? 'review-et-list' : undefined}
+                      onChange={e => setCond(i, { value: e.target.value })} />
+                  )}
+                  <IconButton icon="close" size={16} title="Remove condition"
+                    onClick={() => { setSetName(''); setFilter(f => ({ ...f, conditions: f.conditions.filter((_, j) => j !== i) })) }} />
+                </div>
+              )
+            })}
+            <datalist id="review-et-list">{allETRefs.map(r => <option key={r} value={r} />)}</datalist>
+            <div className="d-flex align-items-center gap-2 mt-1 mb-3">
+              <Button variant="link" size="sm" className="p-0" style={{ fontSize: 12 }}
+                onClick={() => setFilter(f => ({ ...f, conditions: [...f.conditions, newCond()] }))}>+ Add condition</Button>
+              {filter.conditions.length > 0 && (
+                <Button variant="link" size="sm" className="p-0 text-muted" style={{ fontSize: 12 }}
+                  onClick={() => { setFilter(EMPTY_FILTER); setSetName('') }}>Clear</Button>
+              )}
               <div className="ms-auto text-muted small">{matches.length} match{matches.length === 1 ? '' : 'es'}</div>
-              <Button variant="primary" size="sm" disabled={matches.length === 0}
-                onClick={() => { setIndex(0); setPhase('cycle') }}>
+              <Dropdown align="end" autoClose="outside">
+                <Dropdown.Toggle as={IconButton} bsSize="sm" variant="outline-secondary" icon="view_column" title="Columns" />
+                <Dropdown.Menu style={{ fontSize: 12, maxHeight: 320, overflowY: 'auto' }}>
+                  {fields.map(f => (
+                    <Dropdown.Item key={f.key} onClick={() => toggleCol(f.key)}>
+                      <MaterialIcon name={cols.includes(f.key) ? 'check_box' : 'check_box_outline_blank'} size={14} /> {f.label}
+                    </Dropdown.Item>
+                  ))}
+                </Dropdown.Menu>
+              </Dropdown>
+              <Button variant="primary" size="sm" disabled={matches.length === 0} onClick={() => start(0)}>
                 Start review →
               </Button>
             </div>
-            {activeFilterChips.length === 0 && (
-              <div className="text-muted small mt-3">No filters set — every {unit === 'position' ? 'PositionType' : 'ElementType'} matches.</div>
-            )}
+
+            <div style={{ maxHeight: 360, overflow: 'auto', border: '1px solid #e5e7eb', borderRadius: 4 }}>
+              <table className="table table-sm table-hover mb-0" style={{ fontSize: 12 }} data-testid="review-results">
+                <thead style={{ position: 'sticky', top: 0, background: '#f8f9fa', zIndex: 1 }}>
+                  <tr>
+                    {cols.map(k => (
+                      <th key={k} role="button" style={{ whiteSpace: 'nowrap', cursor: 'pointer' }}
+                        onClick={() => setSortBy(sb => ({ key: k, dir: sb.key === k ? -sb.dir : 1 }))}>
+                        {fieldLabel(k)}{sortBy.key === k ? (sortBy.dir > 0 ? ' ▲' : ' ▼') : ''}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {matches.slice(0, 500).map((m, i) => (
+                    <tr key={m.ref} style={{ cursor: 'pointer' }} onClick={() => start(i)} title="Start the review here">
+                      {cols.map(k => (
+                        <td key={k} className="text-truncate" style={{ maxWidth: 260, fontFamily: k === 'Ref' ? 'monospace' : undefined }}>
+                          {cellText(m.rec?.[k])}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {matches.length > 500 && <div className="text-muted small p-2">Showing the first 500 of {matches.length}.</div>}
+              {matches.length === 0 && <div className="text-muted small p-3 text-center">Nothing matches.</div>}
+            </div>
           </>
         ) : (
           <>
@@ -344,9 +399,12 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
                   Positions the Form named
                 </span>
               )}
-              {activeFilterChips.map(([k, v]) => (
-                <span key={k} className="badge bg-light text-dark border" style={{ fontSize: 11 }}>
-                  {FILTER_LABEL[k]}: {v}
+              {!useInitialRefs && setName && (
+                <span className="badge" style={{ fontSize: 11, background: '#e7f1ff', color: '#084298' }}>{setName}</span>
+              )}
+              {!useInitialRefs && conds.map((c, i) => (
+                <span key={i} className="badge bg-light text-dark border" style={{ fontSize: 11, fontWeight: 400 }}>
+                  {i > 0 && <span className="text-muted">{filter.match === 'any' ? 'or ' : 'and '}</span>}{condText(c)}
                 </span>
               ))}
               <div className="ms-auto d-flex align-items-center gap-2">
@@ -383,8 +441,8 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
                   tags={positionUI[current.ref]?.tags || []}
                   count={(rowsForPos.get(current.ref) || []).length}
                   onOpenProductSpec={onOpenProductSpec}
-                  onAddRow={() => onAddEntity && onAddEntity({ mode: 'existing', unit, filters })}
-                  onNewET={() => onAddEntity && onAddEntity({ mode: 'new', unit, filters })}
+                  onAddRow={() => onAddEntity && onAddEntity({ mode: 'existing', unit, filters: legacyFilters(filter) })}
+                  onNewET={() => onAddEntity && onAddEntity({ mode: 'new', unit, filters: legacyFilters(filter) })}
                   onReplace={(posRef, rowId, opts) => onReplaceInReview && onReplaceInReview(posRef, rowId, opts)}
                 />
               )}
@@ -448,18 +506,4 @@ function groupByContainer(rows) {
     map.get(ref).push(r)
   }
   return [...map.entries()].map(([contextRef, groupRows]) => ({ contextRef, rows: groupRows }))
-}
-
-function FilterSelect({ label, icon, value, onChange, options }) {
-  return (
-    <div className="col-6">
-      <label className="text-muted d-flex align-items-center gap-1" style={{ fontSize: 11 }}>
-        <MaterialIcon name={icon} size={13} /> {label}
-      </label>
-      <Form.Select size="sm" value={value} onChange={e => onChange(e.target.value)} style={{ fontSize: 12 }}>
-        <option value="">Any</option>
-        {options.map(o => <option key={o} value={o}>{o}</option>)}
-      </Form.Select>
-    </div>
-  )
 }
