@@ -35,6 +35,13 @@ describe('roles', () => {
     expect(roleOf('ET-DL-04')).toBe('WRAPPER')
     expect(roleOf('ET-LIN-CAP-1009-01')).toBe('CAP')
   })
+
+  test('point-source mounting is a frame, never a linear mount (no ×length)', () => {
+    expect(roleOf('ET-PS-MOUNTING-FRAME-01')).toBe('FRAME')
+    expect(roleOf('ET-PS-MOUNTING-01')).toBe('FRAME')
+    expect(roleOf('ET-X-01', 'ET-PS-MOUNTING-SLEEVE')).toBe('FRAME')
+    expect(roleOf('ET-LIN-MOUNT-01')).toBe('MOUNT')
+  })
 })
 
 describe('a first recipe from the Form and precedent (shipped: 4343)', () => {

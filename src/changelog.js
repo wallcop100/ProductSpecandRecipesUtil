@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-09-28', note: 'Fixes from bug reports: point-source mounting/frames no longer costed by length; a family row (ET-DRIVERS) is never offered as a product, and Recipes from the Form says which Form code a row came from; connector templates offer the project’s own tags; Import resumes after adding to the Product Spec; Product Spec can change an ElementType’s family and ref' },
   { date: '2026-09-28', note: 'Import: “First: confirm 1 row, then give N codes an ElementType” — each part is a link to what is blocking. In the ElementTypes window an unticked code says it is left without one, and offers “Not a code” (its words become a note) and “Show its rows”' },
   { date: '2026-09-28', note: 'Bug reports: the bug beside ALPHA turns them on; right-click anything to write a note, saved with where you were (screen, window, what you clicked, refs, last clicks). Copy or save them all as Markdown from the bug’s ▾ or the export window' },
   { date: '2026-09-28', note: 'Existing ElementTypes: tick some and “Move to family” — renumbered into it (ET-PS-03 → ET-PS-MOUNTING-FRAME-01) through the Product Spec and Recipes, the family created if missing' },

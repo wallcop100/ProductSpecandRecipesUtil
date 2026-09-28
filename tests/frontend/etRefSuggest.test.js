@@ -180,3 +180,14 @@ describe('codeDiff — how a near-miss differs, not how much', () => {
     expect(codeDiff('AB', '')).toEqual([{ op: 'del', text: 'AB' }])
   })
 })
+
+describe('reuseCandidates never offers a family row', () => {
+  test('ET-DRIVERS (a collection) is skipped even when its name matches', () => {
+    const elementTypes = [
+      { ElementTypeRef: 'ET-DRIVERS', Name: 'DALI driver', IsCollection: 'Y' },
+      { ElementTypeRef: 'ET-DRIVER-01', Name: 'DALI driver', Family: 'ET-DRIVERS' },
+    ]
+    const refs = reuseCandidates('DALI', '', { elementTypes, psRows: [] }).map(c => c.ref)
+    expect(refs).not.toContain('ET-DRIVERS')
+  })
+})

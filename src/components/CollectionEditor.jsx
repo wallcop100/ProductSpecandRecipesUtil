@@ -25,7 +25,7 @@ function parseTags(raw) {
   try { return JSON.parse(raw) } catch { return [] }
 }
 
-function TagRow({ tags, onRemove, input, onInputChange, onAdd, label, hint, badgeVariant = 'secondary' }) {
+function TagRow({ tags, onRemove, input, onInputChange, onAdd, label, hint, badgeVariant = 'secondary', options = COMMON_TAGS, listId }) {
   return (
     <Form.Group className="mb-3">
       <Form.Label className="fw-semibold">
@@ -47,10 +47,12 @@ function TagRow({ tags, onRemove, input, onInputChange, onAdd, label, hint, badg
           onChange={e => onInputChange(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); onAdd(input) } }}
           placeholder="Type tag and press Enter…"
+          list={listId}
           style={{ maxWidth: 220 }}
         />
+        <datalist id={listId}>{options.map(t => <option key={t} value={t} />)}</datalist>
         <div className="d-flex gap-1 flex-wrap">
-          {COMMON_TAGS.map(t => (
+          {options.slice(0, 14).map(t => (
             <Button key={t} size="sm" variant="outline-secondary" style={{ fontSize: 11 }}
               onClick={() => onAdd(t)} disabled={tags.includes(t)}>
               {t}
@@ -70,6 +72,15 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
   const createCollection = useStore(s => s.createCollection)
   const updateCollection = useStore(s => s.updateCollection)
   const elementTypes     = useStore(s => s.elementTypes)
+  const tagPalette       = useStore(s => s.tagPalette)
+  const positionUI       = useStore(s => s.positionUI)
+  // The project's own tags (the palette and every tag a position carries, rule-made or not),
+  // then the common ones: a template can only match tags that exist.
+  const tagOptions = React.useMemo(() => {
+    const inUse = new Set(tagPalette || [])
+    for (const ui of Object.values(positionUI || {})) for (const t of (ui?.tags || [])) inUse.add(t)
+    return [...new Set([...[...inUse].sort((a, b) => a.localeCompare(b)), ...COMMON_TAGS])]
+  }, [tagPalette, positionUI])
 
   const [name,         setName]         = useState('')
   const [tags,         setTags]         = useState([])
@@ -174,6 +185,7 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
           input={tagInput}
           onInputChange={setTagInput}
           onAdd={t => { addTag(t, setTags, tags); setTagInput('') }}
+          options={tagOptions} listId="conn-incl-tags"
           badgeVariant="secondary"
         />
 
@@ -185,6 +197,7 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
           input={exclInput}
           onInputChange={setExclInput}
           onAdd={t => { addTag(t, setExclTags, exclTags); setExclInput('') }}
+          options={tagOptions} listId="conn-excl-tags"
           badgeVariant="danger"
         />
 

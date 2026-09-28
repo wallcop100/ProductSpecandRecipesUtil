@@ -160,10 +160,13 @@ export function reuseCandidates(code, note, { psRows = [], elementTypes = [], ma
   /** A blank maker on either side cannot distinguish anything, so it matches. */
   const sameMaker = other => !norm(other) || !nm || norm(other) === nm
 
+  const familyRefs = new Set(elementTypes.map(e => norm(e.Family || e.family || '')).filter(Boolean))
   const out = []
   for (const et of elementTypes) {
     const ref = refOf(et)
     if (!ref || (et.IsDeleted || et.isDeleted) === 'Y') continue
+    // A family row (ET-DRIVERS) groups products; it is never one to reuse.
+    if ((et.IsCollection || et.isCollection) === 'Y' || familyRefs.has(norm(ref))) continue
     const spec = specByRef.get(norm(ref)) || { code: '', manufacturer: '' }
     // A wrapper's "N/A" is not a code; never let it match or fuzzy-match.
     const pc = hasProductIdentity(spec.code) ? spec.code : ''
