@@ -6,6 +6,7 @@
  * Nothing here reads file contents: only what the clicked element shows and a few counts.
  */
 import { CHANGELOG } from '../changelog'
+import { CHANNEL } from '../platform/channel'
 
 const KEY = 'bugReports'
 const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev'
@@ -95,6 +96,7 @@ export function buildReport({ note, target, state, screen, trail = [], capture =
     note: String(note || '').trim(),
     version: APP_VERSION,
     build: CHANGELOG[0]?.date || null,
+    channel: CHANNEL,
     ...(capture ? {
       app: appContext(state, screen),
       dom: domContext(target),
@@ -115,7 +117,7 @@ export function reportsToMarkdown(reports, { title = 'Bug reports' } = {}) {
     const a = r.app, d = r.dom
     const meta = [
       line('When', r.at?.replace('T', ' ').slice(0, 19)),
-      line('Version', [r.version, r.build && `build ${r.build}`].filter(Boolean).join(', ')),
+      line('Version', [r.version, r.build && `build ${r.build}`, r.channel === 'beta' && 'pre-release'].filter(Boolean).join(', ')),
       a && line('Project', a.project),
       a && line('Screen', a.screen),
       d && line('Window', d.dialogs),
