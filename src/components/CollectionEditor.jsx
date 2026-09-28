@@ -2,22 +2,10 @@ import React, { useState, useEffect } from 'react'
 import { Modal, Button, Form, Badge } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
+import ConnectorBoard from './ConnectorBoard'
+import { templateParts, partsToIngredients } from '../utils/connectorGroups'
 
-// Two-way section model (T-J1): "Free Issue" = position level; "Inside
-// Wrapper" is stored as dl_internal and auto-resolves to the DL or LIN wrapper
-// actually present on each position at apply time (see addConnection).
-const SECTION_OPTIONS = [
-  { value: 'position', label: 'Free Issue' },
-  { value: 'dl_internal', label: 'Inside Wrapper' },
-]
-const sectionValue = s => (s === 'dl_internal' || s === 'lin_internal') ? 'dl_internal' : 'position'
 const COMMON_TAGS = ['Local', 'Remote-CC', 'Remote-CV', 'LIN', 'IP']
-
-function parseIngredients(raw) {
-  if (!raw) return []
-  if (Array.isArray(raw)) return raw
-  try { return JSON.parse(raw) } catch { return [] }
-}
 
 function parseTags(raw) {
   if (!raw) return []
@@ -68,7 +56,7 @@ function TagRow({ tags, onRemove, input, onInputChange, onAdd, label, hint, badg
  * CollectionEditor — create or edit a Connector Template (virtual ElementTypeCollection).
  * Props: show, onHide, collection (null = create mode), initialTags (create-mode seed)
  */
-export default function CollectionEditor({ show, onHide, collection, initialTags = [] }) {
+export default function CollectionEditor({ show, onHide, collection, initialTags = [], initialParts = null, onSaved }) {
   const createCollection = useStore(s => s.createCollection)
   const updateCollection = useStore(s => s.updateCollection)
   const elementTypes     = useStore(s => s.elementTypes)
@@ -90,7 +78,6 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
   const [ingredients,  setIngredients]  = useState([])
   const [saving,       setSaving]       = useState(false)
 
-  const knownRefs = elementTypes.map(et => et.ElementTypeRef).filter(Boolean)
 
   useEffect(() => {
     if (show) {
@@ -98,12 +85,12 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
         setName(collection.Name || '')
         setTags(parseTags(collection.ApplicableTags))
         setExclTags(parseTags(collection.ExcludedTags))
-        setIngredients(parseIngredients(collection.Ingredients).map(i => ({ ...i })))
+        setIngredients(templateParts(collection))
       } else {
         setName('')
         setTags(initialTags ?? [])
         setExclTags([])
-        setIngredients([{ ElementTypeRef: '', section: 'position', quantity: 1 }])
+        setIngredients(initialParts ?? [])
       }
       setTagInput('')
       setExclInput('')
@@ -119,30 +106,9 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
     setter(prev => prev.filter(t => t !== tag))
   }
 
-  function addIngredient() {
-    setIngredients(prev => [...prev, { ElementTypeRef: '', section: 'position', quantity: 1 }])
-  }
-  function removeIngredient(idx) {
-    setIngredients(prev => prev.filter((_, i) => i !== idx))
-  }
-  function updateIngredient(idx, field, value) {
-    setIngredients(prev => prev.map((ing, i) => i === idx ? { ...ing, [field]: value } : ing))
-  }
-  function moveIngredient(idx, dir) {
-    setIngredients(prev => {
-      const next = [...prev]
-      const swap = idx + dir
-      if (swap < 0 || swap >= next.length) return next
-      ;[next[idx], next[swap]] = [next[swap], next[idx]]
-      return next
-    })
-  }
-
   async function handleSave() {
     if (!name.trim()) return
-    const cleanIngredients = ingredients
-      .filter(i => i.ElementTypeRef?.trim())
-      .map(i => ({ ElementTypeRef: i.ElementTypeRef.trim(), section: sectionValue(i.section), quantity: Number(i.quantity) || 1 }))
+    const cleanIngredients = partsToIngredients(ingredients.filter(p => p.ref?.trim()))
 
     setSaving(true)
     try {
@@ -156,6 +122,7 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
       } else {
         await createCollection(name.trim(), cleanIngredients, tags, exclTags)
       }
+      onSaved?.(collection?.CollectionId)
       onHide()
     } finally {
       setSaving(false)
@@ -163,7 +130,7 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
   }
 
   return (
-    <Modal show={show} onHide={onHide} size="lg">
+    <Modal show={show} onHide={onHide} size="xl">
       <Modal.Header closeButton>
         <Modal.Title>{collection ? 'Edit Connector Template' : 'New Connector Template'}</Modal.Title>
       </Modal.Header>
@@ -202,72 +169,13 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
         />
 
         <Form.Group className="mb-2">
-          <Form.Label className="fw-semibold">Ingredients</Form.Label>
+          <Form.Label className="fw-semibold">Parts</Form.Label>
           <div className="text-muted mb-2" style={{ fontSize: 12 }}>
-            <strong>Free Issue</strong> items are delivered to site on their own.{' '}
-            <strong>Inside Wrapper</strong> items are delivered as part of the
-            downlight/luminaire assembly — they land in the DL or LIN wrapper each
-            PositionType actually has.
+            Drag parts from the left into <strong>Site</strong> (first-fix, goes to site on its own) or{' '}
+            <strong>Inside wrapper</strong> (ships inside the DL or LIN assembly each position has).
           </div>
-          <table className="table table-sm mb-2" style={{ fontSize: 12 }}>
-            <thead className="table-light">
-              <tr>
-                <th style={{ width: 36 }}></th>
-                <th>ElementTypeRef</th>
-                <th style={{ width: 140 }}>Section</th>
-                <th style={{ width: 70 }}>Qty</th>
-                <th style={{ width: 36 }}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {ingredients.map((ing, idx) => (
-                <tr key={idx}>
-                  <td>
-                    <div className="d-flex flex-column gap-0" style={{ lineHeight: 1 }}>
-                      <Button variant="link" size="sm" className="p-0 text-muted" title="Move up"
-                        onClick={() => moveIngredient(idx, -1)} disabled={idx === 0}><MaterialIcon name="arrow_upward" size={14} /></Button>
-                      <Button variant="link" size="sm" className="p-0 text-muted" title="Move down"
-                        onClick={() => moveIngredient(idx, 1)} disabled={idx === ingredients.length - 1}><MaterialIcon name="arrow_downward" size={14} /></Button>
-                    </div>
-                  </td>
-                  <td>
-                    <Form.Control
-                      size="sm"
-                      list="known-et-refs"
-                      value={ing.ElementTypeRef}
-                      onChange={e => updateIngredient(idx, 'ElementTypeRef', e.target.value)}
-                      placeholder="ET-5Pin-Socket"
-                    />
-                  </td>
-                  <td>
-                    <Form.Select size="sm" value={sectionValue(ing.section)}
-                      onChange={e => updateIngredient(idx, 'section', e.target.value)}>
-                      {SECTION_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                    </Form.Select>
-                  </td>
-                  <td>
-                    <Form.Control
-                      size="sm"
-                      type="number"
-                      min={1}
-                      value={ing.quantity}
-                      onChange={e => updateIngredient(idx, 'quantity', e.target.value)}
-                    />
-                  </td>
-                  <td>
-                    <Button variant="link" size="sm" className="text-danger p-0" title="Remove ingredient"
-                      onClick={() => removeIngredient(idx)}><MaterialIcon name="close" size={14} /></Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <Button variant="outline-secondary" size="sm" onClick={addIngredient}>+ Add ingredient</Button>
+          <ConnectorBoard parts={ingredients} onChange={setIngredients} />
         </Form.Group>
-
-        <datalist id="known-et-refs">
-          {knownRefs.map(ref => <option key={ref} value={ref} />)}
-        </datalist>
       </Modal.Body>
       <Modal.Footer>
         <Button variant="secondary" onClick={onHide}>Cancel</Button>

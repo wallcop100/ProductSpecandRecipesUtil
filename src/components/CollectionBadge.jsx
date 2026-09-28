@@ -3,6 +3,7 @@ import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { collectionStatusForPosition, overallCollectionStatus, positionRecipeWithWrapperInternals } from '../utils/collectionStatus'
 import { ACTION_ICONS } from '../utils/entityStyle'
+import { membership } from '../utils/connectorGroups'
 
 const STATUS_STYLE = {
   complete: { bg: '#d1e7dd', color: '#0a3622', border: '#a3cfbb' },
@@ -18,13 +19,15 @@ export default function CollectionBadge({ posRef }) {
   const etCollections = useStore(s => s.etCollections)
   const positionUI    = useStore(s => s.positionUI)
   const recipes       = useStore(s => s.recipes)
+  const connectorPins = useStore(s => s.connectorPins)
 
   const { overall, label } = useMemo(() => {
     if (!etCollections.length) return { overall: null, label: '' }
 
     const tags = positionUI[posRef]?.tags ?? []
     const { combined: posRecipe, wrapperRefs } = positionRecipeWithWrapperInternals(recipes, posRef)
-    const statuses = collectionStatusForPosition(posRef, tags, posRecipe, etCollections, wrapperRefs)
+    const member = membership([posRef], etCollections, connectorPins, () => tags).get(posRef)
+    const statuses = collectionStatusForPosition(posRef, tags, posRecipe, etCollections, wrapperRefs, member)
     const overall = overallCollectionStatus(statuses)
 
     if (!overall) return { overall: null, label: '' }

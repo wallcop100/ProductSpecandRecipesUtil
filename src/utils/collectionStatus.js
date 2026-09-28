@@ -149,7 +149,7 @@ export function wrapperEditContext(recipes, wrapperRef, activePositionRef = null
  * required inside the wrapper is NOT satisfied by a copy at position level, which
  * is what made positions read 'complete' while the recipe was wrong.
  */
-export function collectionStatusForPosition(posRef, tags, recipe, collections, wrapperRefs = []) {
+export function collectionStatusForPosition(posRef, tags, recipe, collections, wrapperRefs = [], member = null) {
   const posTags = Array.isArray(tags) ? tags : []
   const presence = buildPresence(recipe, wrapperRefs)
 
@@ -158,12 +158,17 @@ export function collectionStatusForPosition(posRef, tags, recipe, collections, w
     const excludedTags = parseTags(collection.ExcludedTags)
     const na = { collection, status: 'na', missing: [], misplaced: [], short: [], items: [] }
 
-    // Excluded takes priority: if ANY position tag matches ExcludedTags, skip.
-    if (excludedTags.length > 0 && excludedTags.some(t => posTags.includes(t))) return na
-
-    // Included tag gate: if the collection declares included tags, at least one must match
-    const applicable = collTags.length === 0 || collTags.some(t => posTags.includes(t))
-    if (!applicable) return na
+    // With pins (connectorGroups.membership), the membership decides: pinned here, or
+    // matched by this filter while pinned nowhere.
+    if (member) {
+      if (!member.templates.includes(collection.CollectionId)) return na
+    } else {
+      // Excluded takes priority: if ANY position tag matches ExcludedTags, skip.
+      if (excludedTags.length > 0 && excludedTags.some(t => posTags.includes(t))) return na
+      // Included tag gate: if the collection declares included tags, at least one must match
+      const applicable = collTags.length === 0 || collTags.some(t => posTags.includes(t))
+      if (!applicable) return na
+    }
 
     const ingredients = parseIngredients(collection).filter(i => ingredientRef(i))
     if (ingredients.length === 0) return na

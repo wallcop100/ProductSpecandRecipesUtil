@@ -13,6 +13,7 @@ import { proposeRecipe, proposalFromTemplate, proposalContext } from '../utils/r
 import { roleOf } from '../utils/recipePatterns.js'
 import { planFamilyMove } from '../utils/etSeed.js'
 import { loadReports, saveReports } from '../utils/bugReports.js'
+import { connectorSignature, templateParts, partsToIngredients, diffParts } from '../utils/connectorGroups.js'
 import { resolveTemplate, applyResolvedTemplate } from '../utils/slotResolver.js'
 import { evaluateTags, effectiveTags, snapshotForPosition, migrateRules, recipeTagIndex, withRecipeFields } from '../utils/tagRules.js'
 import { runValidation } from '../utils/validationRules.js'
@@ -412,6 +413,7 @@ const useStore = create((set, get) => ({
 
   // Virtual ElementType Collections (from SQLite et_collections)
   etCollections: [],
+  connectorPins: {},        // { [CollectionId]: [PositionTypeRef] } — see connectorGroups.membership
 
   // PositionType families flagged as ignored (persisted as project pref).
   // Ignored families drop out of the connector matrix and high-level totals.
@@ -599,6 +601,8 @@ const useStore = create((set, get) => ({
       tagSnapshots: tagSnapshots ?? {},
       tagDrift: tagDrift ?? {},
       etCollections: etCollections ?? [],
+      connectorPins: data.connectorPins ?? {},
+      connectorFamilies: data.connectorFamilies ?? [],
       favorites: favorites ?? [],
       ignoredPositionFamilies: ignoredPositionFamilies ?? [],
       containerETManualRefs: manualRefs,
@@ -2323,9 +2327,127 @@ const useStore = create((set, get) => ({
     set(s => ({ etCollections: s.etCollections.map(c => c.CollectionId === collectionId ? saved : c) }))
   },
 
+  // ---------------------------------------------------------------------------
+  // Connector templates as groups (connectorGroups.js): pins, make, apply, fork, split
+  // ---------------------------------------------------------------------------
+
+  async setConnectorPins(pins) {
+    const clean = Object.fromEntries(Object.entries(pins || {}).filter(([, v]) => v && v.length))
+    set({ connectorPins: clean })
+    const { projectId } = get()
+    if (projectId != null) await window.electronAPI?.db?.setPref?.(projectId, 'connector_pins', JSON.stringify(clean))
+  },
+
+  /** Pin positions to a template (and so out of every other one). */
+  async pinPositions(collectionId, posRefs) {
+    const move = new Set(posRefs)
+    const next = {}
+    for (const [id, refs] of Object.entries(get().connectorPins)) next[id] = refs.filter(r => !move.has(r))
+    next[collectionId] = [...new Set([...(next[collectionId] || []), ...posRefs])]
+    await get().setConnectorPins(next)
+  },
+
+  async unpinPositions(collectionId, posRefs) {
+    const drop = new Set(posRefs)
+    const pins = get().connectorPins
+    await get().setConnectorPins({ ...pins, [collectionId]: (pins[collectionId] || []).filter(r => !drop.has(r)) })
+  },
+
+  /** A group found in the recipes becomes a template holding exactly those positions. */
+  async makeTemplateFromGroup(name, parts, positions) {
+    const saved = await get().createCollection(name, partsToIngredients(parts), [], [])
+    if (saved) await get().pinPositions(saved.CollectionId, positions)
+    return saved
+  },
+
+  /**
+   * Fork: a copy of a template. With `positions`, a SPLIT: the copy holds just those
+   * positions (pinned there, so out of the original). Without, the copy keeps the
+   * original's filter for you to change.
+   */
+  async forkTemplate(collectionId, { name, positions = null } = {}) {
+    const src = get().etCollections.find(c => c.CollectionId === collectionId)
+    if (!src) return null
+    const ingredients = Array.isArray(src.Ingredients) ? src.Ingredients : JSON.parse(src.Ingredients || '[]')
+    const incl = positions ? [] : (Array.isArray(src.ApplicableTags) ? src.ApplicableTags : [])
+    const excl = positions ? [] : (Array.isArray(src.ExcludedTags) ? src.ExcludedTags : [])
+    const saved = await get().createCollection(name || `${src.Name} (copy)`, ingredients.map(i => ({ ...i })), incl, excl)
+    if (saved && positions?.length) await get().pinPositions(saved.CollectionId, positions)
+    return saved
+  },
+
+  /**
+   * planTemplateApply(collectionId, posRefs) → [{ posRef, diff, shared }]
+   * What making each position's connectors match the template would change. `shared`
+   * lists wrapper parts that live under another position (a shared wrapper) — they are
+   * changed where they live, so they are reported, not touched.
+   */
+  planTemplateApply(collectionId, posRefs) {
+    const { etCollections, recipes } = get()
+    const c = etCollections.find(x => x.CollectionId === collectionId)
+    if (!c) return []
+    const want = templateParts(c)
+    const connectorOpts = get()._connectorOpts()
+    return posRefs.map(posRef => {
+      const have = connectorSignature(recipes, posRef, connectorOpts)
+      const diff = diffParts(have, want)
+      const ownRows = recipes.filter(r => (r.PositionTypeRef || r.positionTypeRef) === posRef && (r.IsDeleted || r.isDeleted) !== 'Y')
+      const own = p => ownRows.some(r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === p.ref.toLowerCase()
+        && normalizeSection(sectionOfRow(r)) === p.section)
+      const shared = [...diff.remove, ...diff.qty].filter(p => !own(p))
+      return { posRef, diff, shared }
+    }).filter(x => x.diff.add.length + x.diff.remove.length + x.diff.qty.length > 0)
+  },
+
+  /**
+   * applyTemplateToPositions(collectionId, posRefs) — make every listed position's
+   * connectors match the template: extra connector parts removed, missing ones added,
+   * quantities set. One Undo for the lot.
+   */
+  applyTemplateToPositions(collectionId, posRefs) {
+    const plan = get().planTemplateApply(collectionId, posRefs)
+    if (plan.length === 0) return plan
+    get()._pushHistory()
+    for (const { posRef, diff } of plan) {
+      const rowsFor = p => get().recipes.filter(r => (r.PositionTypeRef || r.positionTypeRef) === posRef
+        && (r.IsDeleted || r.isDeleted) !== 'Y'
+        && (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === p.ref.toLowerCase()
+        && normalizeSection(sectionOfRow(r)) === p.section)
+      for (const p of diff.remove) for (const r of rowsFor(p)) get().removeRecipeRow(posRef, r._id, { recordHistory: false })
+      for (const p of diff.qty) {
+        const [first, ...rest] = rowsFor(p)
+        if (!first) continue
+        for (const r of rest) get().removeRecipeRow(posRef, r._id, { recordHistory: false })
+        get().updateRecipeRow(posRef, first._id, { quantity: p.quantity, Quantity: p.quantity }, { recordHistory: false })
+      }
+      for (const p of diff.add) {
+        get().addRecipeRow(posRef, p.section === 'internal' ? 'dl_internal' : 'position',
+          { elementTypeRef: p.ref, quantity: p.quantity, isContractItem: 'Y' }, { recordHistory: false })
+      }
+    }
+    return plan
+  },
+
+  /** How connector parts are recognised: by name, or by the families chosen on the Connectors screen. */
+  connectorFamilies: [],
+  async setConnectorFamilies(families) {
+    set({ connectorFamilies: families })
+    const { projectId } = get()
+    if (projectId != null) await window.electronAPI?.db?.setPref?.(projectId, 'connector_families', JSON.stringify(families))
+  },
+  _connectorOpts() {
+    const { elementTypes, connectorFamilies } = get()
+    const fam = new Map(elementTypes.map(e => [(e.ElementTypeRef || '').toLowerCase(), e.Family || e.family || '']))
+    return { familyOf: ref => fam.get(String(ref).toLowerCase()) || '', families: new Set((connectorFamilies || []).map(f => f.toLowerCase())) }
+  },
+
   async deleteCollection(collectionId) {
     await window.electronAPI.db.deleteCollection(collectionId)
     set(s => ({ etCollections: s.etCollections.filter(c => c.CollectionId !== collectionId) }))
+    if (get().connectorPins[collectionId]) {
+      const { [collectionId]: _gone, ...rest } = get().connectorPins
+      await get().setConnectorPins(rest)
+    }
   },
 
   applyCollection(posRef, collectionId) {
