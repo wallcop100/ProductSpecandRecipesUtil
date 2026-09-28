@@ -4,7 +4,7 @@ import { Modal, Button } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { buildPsScript, buildRsScript, buildDbScript } from '../utils/patchScript'
-import { ConceptHint, CONCEPTS } from './ConceptCard'
+import { CONCEPTS } from './ConceptCard'
 import MasterGapPanel from './MasterGapPanel'
 import TutorialHint from '../tutorial/TutorialHint'
 
@@ -441,8 +441,7 @@ export default function ChangeSummaryModal({ show, onHide }) {
         <Modal.Title style={{ fontSize: 15 }} className="d-flex align-items-center gap-2">
           <MaterialIcon name="fact_check" size={18} />
           Review changes before export
-          <ConceptHint concept={CONCEPTS.READONLY} size={14} title="Why is there no Save button?" />
-          <TutorialHint id="export" />
+          <TutorialHint id="export" concept={CONCEPTS.READONLY} />
         </Modal.Title>
       </Modal.Header>
 

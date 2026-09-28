@@ -55,7 +55,12 @@ const ptRefOf = p => p.PositionTypeRef || p.positionTypeRef || ''
 const COUNTER_RE = /^(.*)-(\d+)$/
 
 export const ACCESSORIES = 'ET-PS-ACCESSORIES'
+/** Wrappers are assembled in the recipe, never a product: ET-DL-NN, ET-LIN-NN. */
+const isWrapperRef = ref => /^ET-(DL|LIN)-\d+[A-Z]?$/i.test(String(ref ?? '').trim())
+/** The families wrappers live in. A product code never goes here. */
+const isWrapperFamily = f => /^ET-(DL|LIN)$/i.test(String(f ?? '').trim())
 const POINT = 'ET-PS'
+const LUMINAIRE_WORDS = /\b(DOWN\s*LIGHTS?|SPOT\s*LIGHTS?|SPOTS?|PENDANTS?|LUMINAIRES?|UPLIGHTS?|WALL\s*LIGHTS?|WALL\s*WASHERS?|FLOODS?|FLOOD\s*LIGHTS?|BOLLARDS?|LAMPS?)\b/
 const LINEAR_FALLBACK = 'ET-LIN-INGREDIENTS'
 
 /** A PositionType parent as a family ref: "SURFACE MOUNTED POINT SOURCE" → ET-SURFACE-MOUNTED-POINT-SOURCE. */
@@ -114,9 +119,12 @@ export function pickFamily(signals, ctx) {
   const done = (family, why, extra = {}) => ({ family, head: family, why, flag: false, spread: 1, ...extra })
 
   // stem: the same maker's product line, already filed somewhere in this project
+  // An extra (frame, louvre…) often shares its luminaire's stem; the luminaire's family is
+  // then the wrong answer for it.
   let best = null
   for (const { code, maker, family } of ctx.products || []) {
     if (!family || maker !== lc(signals.manufacturer)) continue
+    if (signals.role === 'extra' && lc(family) === lc(POINT)) continue
     const stem = sharedStem(signals.code, code)
     if (stem >= 4 && (!best || stem > best.stem)) best = { family, stem }
   }
@@ -141,14 +149,25 @@ export function pickFamily(signals, ctx) {
   const line = signals.role !== 'extra' && productLineFor(signals.manufacturer, signals.text)
   if (line) return done(line.family, 'line', { head: line.head })
 
-  const design = mostCommon(signals.designFamilies || [])
-  if (design.value) return done(design.value, 'design', { spread: design.distinct })
+  // The design element's family says what the position's MAIN product is — not its extras.
+  const design = signals.role !== 'extra' && mostCommon(signals.designFamilies || [])
+  if (design?.value) return done(design.value, 'design', { spread: design.distinct })
 
   const words = classifyText(signals.text)
   // Text that names two kinds of product ("tape in profile") is a guess, not an answer.
   const mixed = words?.others?.length > 0
   if (signals.pageType === 'point') {
-    if (signals.role !== 'extra') return done(POINT, 'canon', { canon: 'Point page' })
+    if (signals.role !== 'extra') {
+      // A frame / sleeve / louvre on a row of its own is still not a luminaire: its own note,
+      // or the row's words when they name no luminaire, file it with the accessories.
+      const own = classifyText(signals.note)
+      const acc = w => w && /^ET-PS-/.test(w.family)
+      if (acc(own)) return done(own.family, 'canon', { head: own.head, canon: own.keyword })
+      if (acc(words) && !LUMINAIRE_WORDS.test(String(signals.text || '').toUpperCase())) {
+        return done(words.family, 'canon', { head: words.head, canon: words.keyword, flag: true })
+      }
+      return done(POINT, 'canon', { canon: 'Point page' })
+    }
     if (words) return done(words.family, 'canon', { head: words.head, canon: words.keyword, flag: mixed })
     return done(ACCESSORIES, 'canon', { canon: 'extra code on a Point page' })
   }
@@ -199,12 +218,22 @@ export function proposeElementTypes(entries = [], project = {}) {
     if (f && code && code.toUpperCase() !== 'N/A') products.push({ code, maker: lc(r.Manufacturer || r.manufacturer), family: f })
   }
 
+  // The design element's family per position. A wrapper (ET-DL-NN, ET-LIN-NN) is assembled
+  // here, never bought: look through it to the design element inside it.
+  const liveDesign = recipes.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y' && (r.IsDesign || r.isDesign) === 'Y')
+  const innerDesign = new Map()   // lc wrapper ref -> inner design ET ref
+  for (const r of liveDesign) {
+    if ((r.ContextType || r.contextType) !== 'ElementType') continue
+    innerDesign.set(lc(r.ContextRef || r.contextRef), r.ElementTypeRef || r.elementTypeRef)
+  }
   const designFamilyOf = new Map()   // lc PositionTypeRef -> [family]
-  for (const r of recipes) {
-    if ((r.IsDeleted || r.isDeleted) === 'Y' || (r.IsDesign || r.isDesign) !== 'Y') continue
-    const f = etFamily.get(lc(r.ElementTypeRef || r.elementTypeRef))
+  for (const r of liveDesign) {
+    if ((r.ContextType || r.contextType) === 'ElementType') continue
+    let ref = r.ElementTypeRef || r.elementTypeRef
+    if (isWrapperRef(ref)) ref = innerDesign.get(lc(ref))
+    const f = ref && etFamily.get(lc(ref))
     const pt = lc(r.PositionTypeRef || r.positionTypeRef)
-    if (!f || !pt) continue
+    if (!f || !pt || isWrapperFamily(f)) continue
     if (!designFamilyOf.has(pt)) designFamilyOf.set(pt, [])
     designFamilyOf.get(pt).push(f)
   }
@@ -234,6 +263,7 @@ export function proposeElementTypes(entries = [], project = {}) {
       code: e.placeholder ? '' : e.text,
       manufacturer,
       text: `${context} ${note}`,
+      note,
       role: e.placeholder ? 'lead' : roleOf(e),
       pageType: lc(pageTypeFor(e)).startsWith('point') ? 'point' : lc(pageTypeFor(e)).startsWith('linear') ? 'linear' : '',
       designFamilies: targets.flatMap(t => designFamilyOf.get(t) || []),
@@ -248,6 +278,15 @@ export function proposeElementTypes(entries = [], project = {}) {
     const seen = !same && !ownKnowledge && !e.placeholder && library.find(ex => norm(ex.code) === norm(e.text)
       && (!manufacturer || !ex.maker || makerKey(ex.maker) === makerKey(manufacturer)))
     if (seen) Object.assign(pick, { family: seen.family, head: seen.family, why: 'library', flag: false, seen })
+    // A TBC placeholder with nothing to go on is still a product wanted: a point source,
+    // flagged, rather than a row the review cannot apply.
+    if (e.placeholder && !pick.family) Object.assign(pick, { family: POINT, head: POINT, why: 'canon', canon: 'TBC, no other clue', flag: true })
+    // Whatever the evidence, a product is never filed with the wrappers (ET-DL, ET-LIN).
+    if (isWrapperFamily(pick.family)) {
+      const extra = !e.placeholder && roleOf(e) === 'extra'
+      Object.assign(pick, { family: extra ? ACCESSORIES : POINT, head: extra ? ACCESSORIES : POINT,
+        why: 'canon', canon: `not ${pick.family} (wrappers only)`, flag: true, seen: null, style: null })
+    }
 
     const family = pick.family
     // Propose the family, and any parent of it the project lacks, from the canon.
@@ -312,4 +351,41 @@ export function refamily(proposals, indices, family, elementTypes = []) {
     if (ref) taken.add(ref)
     return { ...p, family, ref, why: family === p.family ? p.why : 'you' }
   })
+}
+
+/**
+ * Plan moving existing ElementTypes to another family.
+ * → { moves: [{ from, to, family }], newFamilies: [{ ref, description, parent }] }
+ *
+ * With `renumber`, each ref takes the next free `<family>-NN` unless it already reads as a
+ * member of that family (ET-PS-MOUNTING-FRAME-03 stays put). Collection rows (families
+ * themselves) keep their refs. The family, and any canon parent the project lacks, is
+ * proposed for creation.
+ */
+export function planFamilyMove(refs, family, elementTypes = [], { renumber = true, families = CANON_FAMILIES } = {}) {
+  const fam = String(family ?? '').trim()
+  const byRef = new Map(elementTypes.map(e => [lc(refOf(e)), e]))
+  const taken = new Set(elementTypes.map(refOf))
+  const known = new Set(elementTypes.flatMap(e => [lc(famOf(e)), (e.IsCollection || e.isCollection) === 'Y' ? lc(refOf(e)) : '']).filter(Boolean))
+  const canon = new Map(families.map(f => [lc(f.ref), f]))
+  const newFamilies = []
+  const propose = ref => {
+    if (!ref || known.has(lc(ref)) || newFamilies.some(f => lc(f.ref) === lc(ref))) return
+    const c = canon.get(lc(ref))
+    newFamilies.push({ ref, description: c?.description || familyDescription(ref.replace(/^ET-/i, '')), parent: c?.parent || null })
+    if (c?.parent) propose(c.parent)
+  }
+  if (fam) propose(fam)
+  const member = ref => { const m = String(ref).match(COUNTER_RE); return !!m && lc(m[1]) === lc(fam) }
+  const moves = []
+  for (const r of refs) {
+    const et = byRef.get(lc(r))
+    if (!et) continue
+    const from = refOf(et)
+    const collection = (et.IsCollection || et.isCollection) === 'Y'
+    let to = from
+    if (renumber && fam && !collection && !member(from)) { to = nextRef(fam, taken); taken.add(to) }
+    moves.push({ from, to, family: fam || null })
+  }
+  return { moves, newFamilies }
 }

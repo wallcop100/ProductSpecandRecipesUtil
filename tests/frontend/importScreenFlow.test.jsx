@@ -245,3 +245,41 @@ describe('a saved import just carries on', () => {
     expect(await screen.findByTestId('learned-panel')).toBeInTheDocument()
   })
 })
+
+describe('finish first, then add', () => {
+  const draft = rows => ({
+    version: 1, source: { name: 'form.xlsx', sheet: 'S' }, step: 'review',
+    map: { pt: 'PositionTypeRef', code: 'ProductCode', mfr: 'ManufacturerName', exclude: '', acc: '', context: [] },
+    rules: {}, assignments: {}, resolutions: [], refOverrides: {}, keptSeparate: [], rows,
+  })
+  const known = { psRows: [{ ElementTypeRef: 'ET-PS-01', Manufacturer: 'iGuzzini', ProductCode: 'QC50' }], elementTypes: [{ ElementTypeRef: 'ET-PS-01', Family: 'ET-PS' }] }
+
+  test('a "TBC" painted as a code is a TBC placeholder, and can be given its ElementType', async () => {
+    useStore.setState({
+      projectId: 1, positionTypes: [{ PositionTypeRef: 'J3a' }], psRows: [], elementTypes: [], recipes: [],
+      importDraft: draft([{ id: 0, rawText: 'TBC', positionType: 'J3a', manufacturer: 'Flos', context: {}, overrides: { 0: 'code' }, confirmed: true }]),
+    })
+    render(<ProductCodeImportScreen onBack={vi.fn()} onReviewPositions={vi.fn()} />)
+    const table = await screen.findByTestId('form-table')
+    expect(within(table).getByLabelText(/^TBC:/)).toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('review-ets'))
+    await screen.findByText(/^New \(/)
+    expect(screen.getByRole('button', { name: /^Apply 1$/ })).not.toBeDisabled()
+  })
+
+  test('Add waits until every row is confirmed; adding part is only in ⋯', async () => {
+    useStore.setState({
+      projectId: 1, positionTypes: [{ PositionTypeRef: 'A1' }, { PositionTypeRef: 'A2' }], recipes: [], ...known,
+      importDraft: draft([
+        { id: 0, rawText: 'QC50', positionType: 'A1', manufacturer: 'iGuzzini', context: {}, overrides: {}, confirmed: true },
+        { id: 1, rawText: 'QC77', positionType: 'A2', manufacturer: 'iGuzzini', context: {}, overrides: {}, confirmed: false },
+      ]),
+    })
+    render(<ProductCodeImportScreen onBack={vi.fn()} onReviewPositions={vi.fn()} />)
+    await screen.findByTestId('form-table')
+    expect(screen.getByRole('button', { name: /Add 1 to Product Spec/ })).toBeDisabled()
+    expect(screen.getByTestId('stage-todo')).toHaveTextContent('confirm 1 row')
+    fireEvent.click(screen.getByLabelText('More'))
+    expect(await screen.findByText(/Add only the 1 finished now/)).toBeInTheDocument()
+  })
+})

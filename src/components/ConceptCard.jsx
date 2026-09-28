@@ -188,6 +188,22 @@ export default function ConceptCard({ concept, show, onHide }) {
 }
 
 /**
+ * ConceptBody — a concept's title and explanation, to sit inside another card (a pane's one
+ * help button opens its tutorial with the key idea on the first page).
+ */
+export function ConceptBody({ concept }) {
+  const example = useExample()
+  const card = CARDS[concept]
+  if (!card) return null
+  return (
+    <div className="mb-3 px-3 py-2 rounded" style={{ background: '#f8f9fa', border: '1px solid #e9ecef', fontSize: 12 }} data-testid="concept-body">
+      <div className="fw-semibold mb-1 d-flex align-items-center gap-1"><MaterialIcon name={card.icon} size={14} /> {card.title}</div>
+      {card.body(example)}
+    </div>
+  )
+}
+
+/**
  * ConceptHint — the `?` that opens a card. Put it beside the thing, not in a help menu.
  * A concept the user meets in passing is a concept they will meet again.
  */

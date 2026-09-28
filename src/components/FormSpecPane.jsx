@@ -12,7 +12,7 @@ import { compareFormToRecipe, associations, formWorklist, formPending, pendingCa
 import { divergingRefs } from '../utils/usage'
 import NewETModal from './NewETModal'
 import ETRefSelect from './ETRefSelect'
-import { ConceptHint, CONCEPTS } from './ConceptCard'
+import ConceptCard, { CONCEPTS } from './ConceptCard'
 import TutorialHint from '../tutorial/TutorialHint'
 import { findProductET, stampPlan } from '../utils/productCodes'
 import { ACTION_ICONS } from '../utils/entityStyle'
@@ -133,7 +133,10 @@ function RailToggle({ id, icon, count, open, onToggle, title, tone }) {
  * rendered in both branches.
  */
 function PaneMenu({ onColumns, onReimport, onDetach, columnsDisabled }) {
+  const [about, setAbout] = useState(false)
   return (
+    <>
+    <ConceptCard concept={CONCEPTS.INTENT} show={about} onHide={() => setAbout(false)} />
     <Dropdown align="end">
       <Dropdown.Toggle as={IconButton} icon={ACTION_ICONS.more} size={14}
         title="Form template options" className="p-0 text-muted" />
@@ -152,8 +155,13 @@ function PaneMenu({ onColumns, onReimport, onDetach, columnsDisabled }) {
         <Dropdown.Item onClick={onDetach} className="text-danger">
           <MaterialIcon name={ACTION_ICONS.delete} size={12} /> Detach
         </Dropdown.Item>
+        <Dropdown.Divider />
+        <Dropdown.Item onClick={() => setAbout(true)}>
+          <MaterialIcon name="help" size={12} /> What is this?
+        </Dropdown.Item>
       </Dropdown.Menu>
     </Dropdown>
+    </>
   )
 }
 
@@ -470,9 +478,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
       {/* Where this came from */}
       <div className="d-flex align-items-center gap-1 mb-1">
         <SectionLabel className="mb-0">Form spec</SectionLabel>
-        <ConceptHint concept={CONCEPTS.INTENT} size={11}
-          title="What the Form asks for vs what the recipe has" />
-        <TutorialHint id="form-pane" size={12} />
+        <TutorialHint id="form-pane" size={12} concept={CONCEPTS.INTENT} />
         <span className="ms-auto text-muted" style={{ fontSize: 10 }}
           title={pending.length > 0 ? `${pending.length} product${pending.length === 1 ? '' : 's'} still need an ElementType before they can be added` : ''}>
           {coverage.present}/{coverage.total + pending.length} present

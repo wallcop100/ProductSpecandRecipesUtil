@@ -4,6 +4,7 @@ import MaterialIcon from '../components/MaterialIcon'
 import { TUTORIALS, ALL_TUTORIAL_IDS } from './tutorials'
 import { SCENES } from './scenes'
 import { markSeen, markAllSeen } from './seen'
+import { ConceptBody } from '../components/ConceptCard'
 import './tutorial.css'
 
 
@@ -19,7 +20,7 @@ import './tutorial.css'
  * Closing it BY ANY MEANS marks the card seen — a tutorial that reopens itself after being
  * closed is a tutorial the user learns to hate. The ? chip brings it back forever.
  */
-export default function TutorialCard({ id, show, onHide }) {
+export default function TutorialCard({ id, show, onHide, concept = null }) {
   const card = TUTORIALS[id]
   const [step, setStep] = useState(0)
   useEffect(() => { if (show) setStep(0) }, [show])
@@ -62,6 +63,8 @@ export default function TutorialCard({ id, show, onHide }) {
         {step === 0 && (
           <div className="text-muted mb-2" style={{ fontSize: 12, lineHeight: 1.5 }}>{card.intro}</div>
         )}
+        {/* One help button per pane: the key idea it used to have a second "?" for comes first. */}
+        {step === 0 && concept && <ConceptBody concept={concept} />}
         <div className="mb-2" style={{ fontSize: 13, lineHeight: 1.5, minHeight: 40 }}>
           {current.blurb}
         </div>

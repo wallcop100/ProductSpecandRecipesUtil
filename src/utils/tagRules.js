@@ -67,6 +67,7 @@ export const TAG_OPS = [
   { op: 'contains', label: 'contains', needsValue: true },
   { op: 'notContains', label: "doesn't contain", needsValue: true },
   { op: 'startsWith', label: 'starts with', needsValue: true },
+  { op: 'matches', label: 'matches (* ?)', needsValue: true },
   { op: 'isEmpty', label: 'is empty', needsValue: false },
   { op: 'isNotEmpty', label: 'is not empty', needsValue: false },
   { op: 'gt', label: '>', needsValue: true, numeric: true },
@@ -78,6 +79,21 @@ const OP_SET = new Map(TAG_OPS.map(o => [o.op, o]))
 function fieldValue(pt, column) {
   const v = pt?.[column]
   return v == null ? '' : String(v)
+}
+
+/**
+ * Wildcard match, whole value, case-insensitive: `*` any run, `?` one character.
+ * A comma separates alternatives (any of); a leading `!` negates the whole pattern.
+ *   wildcardMatch('ET-DL-*', 'et-dl-04') → true · wildcardMatch('!*TBC*', 'X') → true
+ */
+export function wildcardMatch(pattern, value) {
+  let p = String(pattern ?? '').trim()
+  if (p.startsWith('!')) return !wildcardMatch(p.slice(1), value)
+  const v = String(value ?? '')
+  return p.split(',').map(x => x.trim()).filter(Boolean).some(alt => {
+    const re = alt.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.')
+    return new RegExp(`^${re}$`, 'i').test(v)
+  })
 }
 
 const num = s => {
@@ -98,6 +114,7 @@ export function conditionMatches(cond, pt) {
     case 'contains': return target !== '' && fv.includes(target)
     case 'notContains': return target === '' || !fv.includes(target)
     case 'startsWith': return target !== '' && fv.startsWith(target)
+    case 'matches': return target !== '' && wildcardMatch(cond.value, raw)
     case 'isEmpty': return raw.trim() === ''
     case 'isNotEmpty': return raw.trim() !== ''
     case 'gt': { const a = num(raw), b = num(cond.value); return a !== null && b !== null && a > b }

@@ -201,3 +201,64 @@ describe('track families', () => {
     expect(pickFamily({ code: 'X2', text: 'mounting track', pageType: 'linear', role: 'extra' }, {}).family).toBe('ET-LIN-MOUNT')
   })
 })
+
+describe('never a wrapper family, and extras are not the luminaire', () => {
+  const ETS2 = [
+    ...ETS,
+    { ElementTypeRef: 'ET-DL-01', Family: 'ET-DL' },
+    { ElementTypeRef: 'ET-PS-01', Family: 'ET-PS' },
+  ]
+  const PS2 = [...PS, { ElementTypeRef: 'ET-PS-01', Manufacturer: 'DGA', ProductCode: 'DL-100' }]
+  // A1b is built: ET-DL-01 at position level (design), ET-PS-01 inside it (design).
+  const RECIPES = [
+    { PositionTypeRef: 'A1b', ContextType: 'PositionType', ContextRef: 'A1b', ElementTypeRef: 'ET-DL-01', IsDesign: 'Y' },
+    { PositionTypeRef: 'A1b', ContextType: 'ElementType', ContextRef: 'ET-DL-01', ElementTypeRef: 'ET-PS-01', IsDesign: 'Y' },
+  ]
+  const proj = { ...base, elementTypes: ETS2, psRows: PS2, recipes: RECIPES, collectionRefs: [...COLL, 'ET-DL', 'ET-PS'] }
+
+  test('a new luminaire on a position built in a DL is filed by the PS inside, not ET-DL', () => {
+    const { proposals } = proposeElementTypes([entry('XYZ-9', 'Other', ['A1b'])], proj)
+    expect(proposals[0].family).toBe('ET-PS')
+  })
+
+  test('an extra on that position is not the luminaire', () => {
+    const { proposals } = proposeElementTypes([entry('LV-9', 'Other', ['A1b'])], { ...proj, pageTypeFor: () => 'Point', roleOf: () => 'extra' })
+    expect(proposals[0].family).toBe(ACCESSORIES)
+  })
+
+  test('an extra sharing the luminaire\'s stem is not filed with it', () => {
+    const { proposals } = proposeElementTypes([entry('DL-100-FR', 'DGA', ['W1'], { variants: [{ note: 'frame' }] })],
+      { ...proj, recipes: [], pageTypeFor: () => 'Point', roleOf: () => 'extra' })
+    expect(proposals[0].family).toBe('ET-PS-MOUNTING-FRAME')
+  })
+
+  test('a frame on a row of its own is still a frame', () => {
+    const { proposals } = proposeElementTypes([entry('FR-2', 'DGA', ['W1'])],
+      { ...base, pageTypeFor: () => 'Point', contextFor: () => 'Plaster-in frame' })
+    expect(proposals[0].family).toBe('ET-PS-MOUNTING-FRAME')
+    const lum = proposeElementTypes([entry('DL-2', 'DGA', ['W1'])],
+      { ...base, pageTypeFor: () => 'Point', contextFor: () => 'Downlight with plaster-in frame' })
+    expect(lum.proposals[0].family).toBe('ET-PS')
+  })
+
+  test('a library match in ET-DL is not taken', () => {
+    const library = [{ code: 'Q-1', maker: 'Other', family: 'ET-DL', ref: 'ET-DL-07', source: 'x' }]
+    const { proposals } = proposeElementTypes([entry('Q-1', 'Other', ['W1'])], { ...base, library })
+    expect(proposals[0].family).not.toBe('ET-DL')
+  })
+})
+
+describe('planFamilyMove', () => {
+  test('numbers after what the family already has; members and collection rows keep their refs', async () => {
+    const { planFamilyMove } = await import('../../src/utils/etSeed.js')
+    const ets = [
+      { ElementTypeRef: 'ET-PS-ACCESSORIES', IsCollection: 'Y' },
+      { ElementTypeRef: 'ET-PS-ACCESSORIES-04', Family: 'ET-PS-ACCESSORIES' },
+      { ElementTypeRef: 'ET-PS-05', Family: 'ET-PS' },
+      { ElementTypeRef: 'ET-PS-06', Family: 'ET-PS' },
+    ]
+    const { moves, newFamilies } = planFamilyMove(['ET-PS-05', 'ET-PS-06', 'ET-PS-ACCESSORIES-04'], 'ET-PS-ACCESSORIES', ets)
+    expect(moves.map(m => m.to)).toEqual(['ET-PS-ACCESSORIES-05', 'ET-PS-ACCESSORIES-06', 'ET-PS-ACCESSORIES-04'])
+    expect(newFamilies).toEqual([])
+  })
+})

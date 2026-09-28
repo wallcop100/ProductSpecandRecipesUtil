@@ -7,6 +7,11 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-09-28', note: 'Existing ElementTypes: tick some and “Move to family” — renumbered into it (ET-PS-03 → ET-PS-MOUNTING-FRAME-01) through the Product Spec and Recipes, the family created if missing' },
+  { date: '2026-09-28', note: 'Import product codes: a “TBC” marked as a code is a TBC placeholder (no more stuck “1 code needs an ElementType”); Add to Product Spec waits until every row is confirmed and has an ElementType (adding part is in ⋯); products are never proposed into ET-DL / ET-LIN, extras (frames, louvres) no longer follow the luminaire into ET-PS' },
+  { date: '2026-09-28', note: 'Review recipes: filter with rules on any field (all / any), “matches” takes wildcards (* ? , and ! for not); save filter sets per project; results table with your own columns, sortable, click a row to start there' },
+  { date: '2026-09-28', note: 'Recipe view: the PositionTypes list stays open as a left sidebar (ref + status dot, ↑ / ↓ to move, collapsible, resizable); list options — filters, sort, ignored, tags, Review empty, Tag changes — are in its ⋯' },
+  { date: '2026-09-28', note: 'One help button per header: the Form spec and export windows had two; the tutorial now opens with the key idea, and the Form pane’s ⋯ has "What is this?"' },
   { date: '2026-09-27', note: 'Fixed: the DesignDB patch would not run in Office Scripts ("Only arrow functions may be used in array method callbacks")' },
   { date: '2026-09-27', note: 'Fixed: the DesignDB patch used Excel’s sort, which on a sheet whose filter / Table covers only some columns left the rest (InternalNotesText…) on other rows. Rows are now moved whole by the script. Restore a DesignDB patched with the previous version from its version history' },
   { date: '2026-09-27', note: 'DesignDB patch: ElementTypes in tree order (each family, then its members, by Ref — ET-CABLES 1, LC1 2 …), natural Ref order (LC2 before LC11)' },
