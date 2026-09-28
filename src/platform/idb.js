@@ -5,7 +5,10 @@
  * directory handles. Deliberately tiny: a dependency would earn nothing here.
  */
 
-const DB_NAME = 'recipe-builder'
+import { IS_PRERELEASE } from './channel'
+
+// The pre-release site keeps a database of its own (same origin as the stable site).
+const DB_NAME = IS_PRERELEASE ? 'recipe-builder-beta' : 'recipe-builder'
 const STORE = 'kv'
 const VERSION = 1
 

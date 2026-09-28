@@ -6,6 +6,7 @@ import { collectionStatusForPosition, positionRecipeWithWrapperInternals } from 
 import { positionFamilyOf } from '../utils/positionFamily'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import BulkApplyModal from './BulkApplyModal'
+import { membership } from '../utils/connectorGroups'
 
 const STATUS_SYMBOL = {
   complete: { icon: ACTION_ICONS.complete,   color: '#198754', bg: '#d1e7dd', title: 'All template refs present' },
@@ -48,6 +49,7 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
   const etCollections  = useStore(s => s.etCollections)
   const positionUI     = useStore(s => s.positionUI)
   const recipes        = useStore(s => s.recipes)
+  const connectorPins  = useStore(s => s.connectorPins)
   const applyCollectionBulk = useStore(s => s.applyCollectionBulk)
   const planBulk = useStore(s => s.planBulk)
 
@@ -71,6 +73,11 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
   }), [positionTypes, positionUI, ignoredFamilySet])
 
   // Compute status for every (scoped position, collection) once.
+  // Pins first, then filters (connectorGroups.membership); two filters on one unpinned
+  // position is a clash, flagged on its row.
+  const members = useMemo(() => membership(scopedPositions.map(pt => pt.PositionTypeRef), collections, connectorPins,
+    r => positionUI[r]?.tags ?? []), [scopedPositions, collections, connectorPins, positionUI])
+
   const statusByPos = useMemo(() => {
     const map = {}
     for (const pt of scopedPositions) {
@@ -79,13 +86,13 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
       // Wrapper-aware: the DL/LIN wrapper's internals count toward coverage
       // even when they're stored under another position (shared assembly).
       const { combined: posRecipe, wrapperRefs } = positionRecipeWithWrapperInternals(recipes, posRef)
-      const results = collectionStatusForPosition(posRef, tags, posRecipe, collections, wrapperRefs)
+      const results = collectionStatusForPosition(posRef, tags, posRecipe, collections, wrapperRefs, members.get(posRef))
       const byColl = {}
       results.forEach(r => { byColl[r.collection.CollectionId] = r.status })
       map[posRef] = byColl
     }
     return map
-  }, [scopedPositions, positionUI, recipes, collections])
+  }, [scopedPositions, positionUI, recipes, collections, members])
 
   const positions = useMemo(() => {
     if (!incompleteOnly) return scopedPositions
@@ -199,6 +206,16 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
                   >
                     {posRef} <MaterialIcon name={ACTION_ICONS.external} size={13} />
                   </span>
+                  {members.get(posRef)?.clash && (
+                    <span className="ms-1" data-testid={`clash-${posRef}`} style={{ color: '#b45309' }}
+                      title={`Matched by ${members.get(posRef).templates.length} templates: ${members.get(posRef).templates.map(id => collections.find(c => c.CollectionId === id)?.Name).join(', ')}. Pin it to one (template panel → Keep it here).`}>
+                      <MaterialIcon name="warning" size={13} />
+                    </span>
+                  )}
+                  {members.get(posRef)?.pinnedTo && (
+                    <MaterialIcon name="push_pin" size={11} className="ms-1" style={{ color: '#adb5bd' }}
+                      title={`Pinned to ${collections.find(c => c.CollectionId === members.get(posRef).pinnedTo)?.Name}`} />
+                  )}
                 </td>
                 <td>
                   {tags.map(t => (

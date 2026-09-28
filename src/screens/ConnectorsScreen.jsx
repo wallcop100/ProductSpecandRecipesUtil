@@ -8,6 +8,11 @@ import IconButton from '../components/IconButton'
 import TutorialHint from '../tutorial/TutorialHint'
 import { collectionStatusForPosition, positionRecipeWithWrapperInternals } from '../utils/collectionStatus'
 import { ACTION_ICONS } from '../utils/entityStyle'
+import { Dropdown } from 'react-bootstrap'
+import TemplateGroupPanel from '../components/TemplateGroupPanel'
+import useConnectorGroups from '../components/useConnectorGroups'
+import MaterialIcon from '../components/MaterialIcon'
+import { describeParts, suggestName } from '../utils/connectorGroups'
 
 /**
  * ConnectorsScreen — dedicated screen for managing virtual ElementType Collections
@@ -22,6 +27,19 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
   const recipes         = useStore(s => s.recipes)
   const deleteCollection = useStore(s => s.deleteCollection)
   const swapCollection  = useStore(s => s.swapCollection)
+  const makeTemplateFromGroup = useStore(s => s.makeTemplateFromGroup)
+  const connectorFamilies = useStore(s => s.connectorFamilies)
+  const setConnectorFamilies = useStore(s => s.setConnectorFamilies)
+  const elementTypes = useStore(s => s.elementTypes)
+  const groups = useConnectorGroups()
+  const allFamilies = [...new Set(elementTypes.map(e => e.Family || e.family).filter(Boolean))].sort()
+
+  async function makeTemplate(g) {
+    const name = window.prompt(`Name a template for these ${g.positions.length} position${g.positions.length === 1 ? '' : 's'}`, suggestName(g.parts))?.trim()
+    if (!name) return
+    const saved = await makeTemplateFromGroup(name, g.parts, g.positions)
+    if (saved) { setSelectedCell(null); setSelectedCollectionId(saved.CollectionId) }
+  }
 
   const [selectedCollectionId, setSelectedCollectionId] = useState(null)
   const [selectedCell, setSelectedCell] = useState(null) // { posRef, collectionId }
@@ -34,7 +52,7 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
     if (!focusPosRef || etCollections.length === 0) return
     const tags = positionUI[focusPosRef]?.tags ?? []
     const { combined: posRecipe, wrapperRefs } = positionRecipeWithWrapperInternals(recipes, focusPosRef)
-    const statuses = collectionStatusForPosition(focusPosRef, tags, posRecipe, etCollections, wrapperRefs)
+    const statuses = collectionStatusForPosition(focusPosRef, tags, posRecipe, etCollections, wrapperRefs, groups.members.get(focusPosRef))
     // Prefer an applicable collection (tags match): complete/partial/missing over na.
     const applicable = statuses.find(s => s.status !== 'na')
     const chosen = applicable?.collection ?? etCollections[0]
@@ -110,6 +128,19 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
         <span className="fw-semibold ms-1">Connectors</span>
         <TutorialHint id="connectors" />
         <div className="flex-grow-1" />
+        <Dropdown align="end" autoClose="outside">
+          <Dropdown.Toggle size="sm" variant="outline-secondary" style={{ fontSize: 12 }}
+            title="Which families hold connector parts (sockets, plugs, strain reliefs and levers are recognised by name anyway)">
+            Connector families{connectorFamilies.length ? ` (${connectorFamilies.length})` : ''}
+          </Dropdown.Toggle>
+          <Dropdown.Menu style={{ fontSize: 12, maxHeight: 320, overflowY: 'auto' }}>
+            {allFamilies.map(f => (
+              <Dropdown.Item key={f} onClick={() => setConnectorFamilies(connectorFamilies.includes(f) ? connectorFamilies.filter(x => x !== f) : [...connectorFamilies, f])}>
+                <MaterialIcon name={connectorFamilies.includes(f) ? 'check_box' : 'check_box_outline_blank'} size={14} /> {f}
+              </Dropdown.Item>
+            ))}
+          </Dropdown.Menu>
+        </Dropdown>
         <Button variant="primary" size="sm" onClick={handleNew}>+ New Template</Button>
       </div>
 
@@ -149,7 +180,7 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
               >
                 <div className="fw-semibold" style={{ fontSize: 13 }}>{c.Name}</div>
                 <div style={{ fontSize: 11, color: '#6c757d' }}>
-                  {ings.length} ingredient{ings.length !== 1 ? 's' : ''}
+                  {groups.membersOf(c.CollectionId).length} position{groups.membersOf(c.CollectionId).length !== 1 ? 's' : ''} · {ings.length} part{ings.length !== 1 ? 's' : ''}
                   {tags.length > 0 && (
                     <span className="ms-1">
                       {tags.map(t => (
@@ -173,6 +204,20 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
               </div>
             )
           })}
+
+          <div className="small text-muted mt-3 mb-1 px-1" data-testid="groups-found">
+            Groups found in the recipes {groups.groups.length ? `(${groups.groups.length})` : ''}
+          </div>
+          {groups.groups.length === 0 && <p className="text-muted px-1" style={{ fontSize: 11 }}>Every connector set-up here is already a template.</p>}
+          {groups.groups.map(g => (
+            <div key={g.key} className="px-2 py-1 mb-1 rounded bg-white border" style={{ fontSize: 11 }} data-testid="found-group">
+              <div className="fw-semibold">{g.positions.length} position{g.positions.length === 1 ? '' : 's'}</div>
+              <div className="text-muted" style={{ wordBreak: 'break-word' }}>{describeParts(g.parts)}</div>
+              <div className="text-muted text-truncate" title={g.positions.join(', ')}>{g.positions.join(', ')}</div>
+              <Button size="sm" variant="outline-primary" className="mt-1" style={{ fontSize: 10, padding: '1px 6px' }}
+                onClick={() => makeTemplate(g)}>Make template</Button>
+            </div>
+          ))}
         </div>
 
         {/* Matrix panel (centre) */}
@@ -184,6 +229,14 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
             onOpenPosition={onOpenPosition}
           />
         </div>
+
+        {/* Template as a group (right) — when a template is selected and no cell */}
+        {!selectedCell && selectedCollectionId && (
+          <div style={{ width: 380, flexShrink: 0, borderLeft: '1px solid #dee2e6', background: '#fff', overflow: 'hidden' }}>
+            <TemplateGroupPanel key={selectedCollectionId} collectionId={selectedCollectionId} groups={groups}
+              onEdit={handleEdit} onSelect={id => setSelectedCollectionId(id)} onOpenPosition={onOpenPosition} />
+          </div>
+        )}
 
         {/* Cell detail panel (right) — appears when a cell is selected */}
         {selectedCell && (

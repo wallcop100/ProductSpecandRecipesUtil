@@ -7,6 +7,8 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-09-28', note: 'A pre-release site under /beta/ (every merge, PRE-RELEASE badge, its own browser storage); the main link becomes the stable site, updated only on release' },
+  { date: '2026-09-28', note: 'Connector templates as groups: the Connectors screen finds positions sharing the same connectors (“Make template”); templates are set up by dragging parts into Site / Inside wrapper; a template’s panel lists its positions and makes them all match in one Undo, forks it, splits some off, pulls in near misses and settles clashes' },
   { date: '2026-09-28', note: 'Product Spec: “New ElementType” in the header creates one (family prefilled from the one you are on) with its spec row, and selects it' },
   { date: '2026-09-28', note: 'Tags: rules can read what a position’s recipe holds (manufacturer, product code, ElementType, family); new rules appear on top with the cursor in their name; Apply is at the bottom and closing with unapplied edits asks. Bug reports get a 6-character ID (e.g. K3F9QZ)' },
   { date: '2026-09-28', note: 'Ctrl+Z / Ctrl+Y work on every screen (the Product Spec too), also with the cursor back in a field you just edited; Undo / Redo buttons on the Product Spec' },
