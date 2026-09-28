@@ -10,7 +10,7 @@ import { TUTORIALS } from './tutorials'
  * "why" of each control lives in an ⓘ (InfoTip) beside it, and a card that pops up
  * uninvited is one more thing to close. `active` is accepted for older call sites and ignored.
  */
-export default function TutorialHint({ id, size = 14 }) {
+export default function TutorialHint({ id, size = 14, concept = null }) {
   const [show, setShow] = useState(false)
   if (!TUTORIALS[id]) return null
   const title = `How this pane works — ${TUTORIALS[id].title}`
@@ -23,7 +23,7 @@ export default function TutorialHint({ id, size = 14 }) {
         style={{ cursor: 'help', color: '#adb5bd', lineHeight: 1, display: 'inline-flex' }}>
         <MaterialIcon name="help" size={size} />
       </span>
-      <TutorialCard id={id} show={show} onHide={() => setShow(false)} />
+      <TutorialCard id={id} concept={concept} show={show} onHide={() => setShow(false)} />
     </>
   )
 }
