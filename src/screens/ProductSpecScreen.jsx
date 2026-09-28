@@ -27,6 +27,10 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
   const elementTypes = useStore(s => s.elementTypes)
   const alignmentGaps = useStore(s => s.alignmentGaps)
 
+  const undo = useStore(s => s.undo)
+  const redo = useStore(s => s.redo)
+  const canUndo = useStore(s => s.past.length > 0)
+  const canRedo = useStore(s => s.future.length > 0)
   const [selectedRef,  setSelectedRef]  = useState(scrollToRef || null)
   const [bulkSelected, setBulkSelected] = useState(new Set())
   const [leftWidth,    setLeftWidth]    = useState(320)   // resizable browser panel
@@ -234,6 +238,10 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
           title="Back to builder" onClick={onBack} />
         <span className="fw-semibold ms-1">Product Spec</span>
         <TutorialHint id="product-spec" />
+        <IconButton variant="outline-secondary" bsSize="sm" icon="undo" className="ms-2"
+          title="Undo (Ctrl+Z)" disabled={!canUndo} onClick={undo} />
+        <IconButton variant="outline-secondary" bsSize="sm" icon="redo"
+          title="Redo (Ctrl+Shift+Z)" disabled={!canRedo} onClick={redo} />
         {onOpenCodeImport && (
           <Button variant="outline-primary" size="sm" className="d-inline-flex align-items-center gap-1 ms-2"
             style={{ fontSize: 11 }} onClick={onOpenCodeImport}

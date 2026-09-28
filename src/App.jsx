@@ -1,4 +1,5 @@
 import BugReporter from './components/BugReporter'
+import UndoShortcut from './components/UndoShortcut'
 import DesignPickerModal from './components/DesignPickerModal'
 import { SaveShortcut } from './components/SaveStatus'
 import React, { useState, useEffect } from 'react'
@@ -89,6 +90,7 @@ export default function App() {
       <FileWatchBanner />
       <DesignPickerModal />
       <SaveShortcut />
+      <UndoShortcut screen={activeScreen} />
 
       {/* Keyed by screen: navigating away clears a caught error rather than
           stranding you on the fallback. */}
