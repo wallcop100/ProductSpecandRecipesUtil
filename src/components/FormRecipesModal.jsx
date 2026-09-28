@@ -29,6 +29,11 @@ const hasRecipe = (recipes, pos) => recipes.some(r => (r.PositionTypeRef || r.po
  * assembly) or SEPARATELY (position level, e.g. a first-fix socket); `onPlace` lets you flip it.
  */
 function ProposalTable({ proposal, onPlace, onInclude }) {
+  const elementTypes = useStore(s => s.elementTypes)
+  const familyRefs = useMemo(() => new Set(elementTypes.flatMap(e => [
+    (e.IsCollection || e.isCollection) === 'Y' ? (e.ElementTypeRef || '').toLowerCase() : '',
+    (e.Family || e.family || '').toLowerCase(),
+  ]).filter(Boolean)), [elementTypes])
   if (!proposal || proposal.skip) return <div className="text-muted fst-italic">{proposal?.skip}</div>
   const lead = proposal.products?.find(x => x.lead)?.ref
   const where = r => {
@@ -69,7 +74,11 @@ function ProposalTable({ proposal, onPlace, onInclude }) {
                   r.dimQtyMultiplier != null && (r.isInteger === 'Y' ? `${r.dimQtyMultiplier}/m, whole` : `×length`)].filter(Boolean).join(' · ')}
               </td>
               <td className="text-muted">
-                {r.from || ''}{r.share ? <span> ({r.share})</span> : null}
+                {r.from || ''}{r.from === 'the Form' && r.code ? <span>: <span style={{ fontFamily: 'monospace' }}>{r.code}</span></span> : null}
+                {r.share ? <span> ({r.share})</span> : null}
+                {r.ref && familyRefs?.has(r.ref.toLowerCase()) && (
+                  <div className="text-danger"><MaterialIcon name="error" size={11} /> {r.ref} is a family, not a product: give {r.code || 'this code'} its own ElementType in Import product codes</div>
+                )}
                 {r.check && <div style={{ color: '#856404' }}><MaterialIcon name="warning" size={11} /> {r.check}</div>}
               </td>
             </tr>

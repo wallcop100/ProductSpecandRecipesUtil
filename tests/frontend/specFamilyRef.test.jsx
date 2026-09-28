@@ -1,0 +1,46 @@
+import { describe, test, expect, vi } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
+
+window.electronAPI = { db: { setPref: vi.fn().mockResolvedValue(undefined) } }
+vi.mock('../../src/utils/backend.js', () => ({
+  importFiles: vi.fn(), detectFiles: vi.fn(), readSheet: vi.fn(),
+  registerFile: vi.fn(), setActiveDirectory: vi.fn(), getActiveDirectory: vi.fn(), fileMeta: vi.fn(),
+}))
+const { default: useStore } = await import('../../src/store/useStore.js')
+const { default: ETSpecEditor } = await import('../../src/components/ETSpecEditor.jsx')
+const { default: CollectionEditor } = await import('../../src/components/CollectionEditor.jsx')
+
+describe('Product Spec: change family or ref', () => {
+  test('picking a family proposes its next ref; Apply moves and renames through spec and recipes', () => {
+    useStore.setState({
+      projectId: 1, dbChanges: [], psChanges: [], rsChanges: [], past: [], future: [],
+      elementTypes: [
+        { ElementTypeRef: 'ET-LIN-INGREDIENTS-05', Family: 'ET-LIN-INGREDIENTS' },
+        { ElementTypeRef: 'ET-PS-MOUNTING-FRAME-01', Family: 'ET-PS-MOUNTING-FRAME' },
+      ],
+      psRows: [{ ElementTypeRef: 'ET-LIN-INGREDIENTS-05', Manufacturer: 'Spanlite', ProductCode: 'TBC' }],
+      recipes: [{ _id: 'r1', PositionTypeRef: 'A1', ContextType: 'PositionType', ContextRef: 'A1', ElementTypeRef: 'ET-LIN-INGREDIENTS-05' }],
+    })
+    const onRenamed = vi.fn()
+    render(<ETSpecEditor selectedRef="ET-LIN-INGREDIENTS-05" onRenamed={onRenamed} />)
+    fireEvent.click(screen.getByTestId('family-ref-open'))
+    fireEvent.change(screen.getByLabelText('Family'), { target: { value: 'ET-PS-MOUNTING-FRAME' } })
+    expect(screen.getByLabelText('Ref')).toHaveValue('ET-PS-MOUNTING-FRAME-02')
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
+    const s = useStore.getState()
+    expect(s.elementTypes.find(e => e.ElementTypeRef === 'ET-PS-MOUNTING-FRAME-02').Family).toBe('ET-PS-MOUNTING-FRAME')
+    expect(s.psRows[0].ElementTypeRef).toBe('ET-PS-MOUNTING-FRAME-02')
+    expect(s.recipes[0].ElementTypeRef).toBe('ET-PS-MOUNTING-FRAME-02')
+    expect(onRenamed).toHaveBeenCalledWith('ET-PS-MOUNTING-FRAME-02')
+  })
+})
+
+describe('Connector template tags', () => {
+  test('the project\'s own tags are offered, not just the common five', () => {
+    useStore.setState({ tagPalette: ['Exterior'], positionUI: { A1: { tags: ['Wall-Washer'] } }, elementTypes: [] })
+    render(<CollectionEditor show onHide={vi.fn()} collection={null} />)
+    expect(screen.getAllByRole('button', { name: 'Wall-Washer' }).length).toBeGreaterThan(0)
+    fireEvent.click(screen.getAllByRole('button', { name: 'Wall-Washer' })[0])
+    expect(screen.getAllByText('Wall-Washer').some(el => el.closest('.badge'))).toBe(true)
+  })
+})

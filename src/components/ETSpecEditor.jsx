@@ -7,6 +7,8 @@ import MaterialIcon from './MaterialIcon'
 import IconButton from './IconButton'
 import { familyOf } from '../utils/etRef'
 import { ACTION_ICONS } from '../utils/entityStyle'
+import { CANON_FAMILIES } from '../data/etCanon'
+import { planFamilyMove } from '../utils/etSeed'
 
 /**
  * ETSpecEditor — right-panel form for editing a single ET's product spec.
@@ -17,7 +19,7 @@ import { ACTION_ICONS } from '../utils/entityStyle'
  *   missingETs: string[]
  *   onNavigate: ('prev'|'next') => void
  */
-export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = [], onNavigate, focusToken = 0 }) {
+export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = [], onNavigate, focusToken = 0, onRenamed }) {
   const psRows      = useStore(s => s.psRows)
   const updatePSRow = useStore(s => s.updatePSRow)
   const addPSRow    = useStore(s => s.addPSRow)
@@ -151,6 +153,10 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
             </Button>
           )}
         </div>
+
+        {etObj && (etObj.IsCollection || etObj.isCollection) !== 'Y' && (
+          <FamilyAndRef key={selectedRef} et={etObj} onRenamed={onRenamed} />
+        )}
 
         {isDeleted && (
           <div className="alert alert-secondary py-1 px-2 mb-3 d-flex align-items-center gap-2" style={{ fontSize: 11 }}>
@@ -287,6 +293,80 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
             )}
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Family & ref: move this ElementType to another family (renumbered into it, as in the
+ * ElementTypes window) or type a new ref. Either cascades through the Product Spec and
+ * Recipes; nothing happens until Apply.
+ */
+function FamilyAndRef({ et, onRenamed }) {
+  const elementTypes = useStore(s => s.elementTypes)
+  const moveElementTypesToFamily = useStore(s => s.moveElementTypesToFamily)
+  const renameElementType = useStore(s => s.renameElementType)
+  const ref = et.ElementTypeRef || et.elementTypeRef
+  const family = et.Family || et.family || ''
+  const [open, setOpen] = useState(false)
+  const [fam, setFam] = useState(family)
+  const [newRef, setNewRef] = useState(ref)
+  const families = useMemo(() => [...new Set([
+    ...elementTypes.map(e => e.Family || e.family).filter(Boolean),
+    ...elementTypes.filter(e => (e.IsCollection || e.isCollection) === 'Y').map(e => e.ElementTypeRef),
+    ...CANON_FAMILIES.map(f => f.ref),
+  ])].sort(), [elementTypes])
+  const taken = r => r.toLowerCase() !== ref.toLowerCase()
+    && elementTypes.some(e => (e.ElementTypeRef || '').toLowerCase() === r.toLowerCase())
+
+  // Picking a family proposes its next ref; the ref stays editable.
+  function pickFamily(f) {
+    setFam(f)
+    const plan = f ? planFamilyMove([ref], f, elementTypes).moves[0] : null
+    setNewRef(plan?.to || ref)
+  }
+  function apply() {
+    const target = newRef.trim()
+    if (fam !== family) moveElementTypesToFamily([ref], fam, { renumber: false })
+    if (target && target !== ref) renameElementType(ref, target)
+    setOpen(false)
+    if (target && target !== ref) onRenamed?.(target)
+  }
+
+  if (!open) {
+    return (
+      <div className="mb-3">
+        <Button variant="link" size="sm" className="p-0" style={{ fontSize: 11 }} onClick={() => setOpen(true)}
+          data-testid="family-ref-open">
+          <MaterialIcon name="drive_file_move" size={13} /> Change family or ref
+        </Button>
+      </div>
+    )
+  }
+  const bad = !newRef.trim() ? 'needs a ref' : taken(newRef.trim()) ? 'already used' : null
+  return (
+    <div className="mb-3 p-2 rounded" style={{ background: '#f8f9fa', border: '1px solid #dee2e6', fontSize: 12 }} data-testid="family-ref">
+      <div className="d-flex gap-2 align-items-end flex-wrap">
+        <Form.Group>
+          <Form.Label className="mb-0" style={{ fontSize: 11 }}>Family</Form.Label>
+          <Form.Select size="sm" aria-label="Family" value={fam} onChange={e => pickFamily(e.target.value)} style={{ fontSize: 12, width: 230 }}>
+            <option value="">(no family)</option>
+            {families.map(f => <option key={f} value={f}>{f}</option>)}
+          </Form.Select>
+        </Form.Group>
+        <Form.Group>
+          <Form.Label className="mb-0" style={{ fontSize: 11 }}>Ref</Form.Label>
+          <Form.Control size="sm" aria-label="Ref" value={newRef} isInvalid={!!bad} onChange={e => setNewRef(e.target.value)}
+            style={{ fontSize: 12, fontFamily: 'monospace', width: 230 }} />
+        </Form.Group>
+        <Button size="sm" variant="primary" disabled={!!bad || (fam === family && newRef.trim() === ref)} onClick={apply}>Apply</Button>
+        <Button size="sm" variant="link" className="text-muted p-0" onClick={() => setOpen(false)}>Cancel</Button>
+      </div>
+      <div className="text-muted mt-1" style={{ fontSize: 10 }}>
+        {bad ? <span className="text-danger">{bad}</span>
+          : newRef.trim() !== ref ? <>Renames {ref} → {newRef.trim()} in the Product Spec and Recipes. Not on Undo: change it back to reverse.</>
+            : 'Picking a family proposes its next ref.'}
       </div>
     </div>
   )

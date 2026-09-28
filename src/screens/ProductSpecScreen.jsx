@@ -398,6 +398,7 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
             missingETs={missingPsETs}
             onNavigate={handleNavigate}
             focusToken={fillFocus}
+            onRenamed={setSelectedRef}
           />
         </div>
       </div>

@@ -986,10 +986,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     nextCaptures.divergence = divergence
 
     await saveFormCaptures(nextCaptures)
-    // Staging is incremental: the assigned codes have landed, but painting that has
-    // not been assigned yet would be lost with the draft. Keep it until nothing is
-    // left behind.
-    if (leftBehind === 0) await clearImportDraft()
+    // The draft is kept after adding: coming back to Import picks up this Form where it
+    // was (to check it, or add what changed). Only Re-import (⋯) starts again.
     setStaged({
       codes: n,
       byPosition: Object.fromEntries(byPos),

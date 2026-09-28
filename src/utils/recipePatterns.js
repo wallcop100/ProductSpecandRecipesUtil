@@ -49,6 +49,9 @@ export function roleOf(ref, family = '') {
   if (u.includes('LEVER')) return 'LEVER'
   if (/SOCKET|PLUG|-SR\b|-SR-/.test(u)) return u.replace(/^ET-/, '').replace(/-\d+$/, '')
   if (/CCL|CCR|CVR|DRIVER/.test(u) || f === 'ET-DRIVER') return 'DRIVER'
+  // Point-source mounting (ET-PS-MOUNTING-FRAME-01, sleeves, back boxes) is a frame, not a
+  // linear mount: it must be caught before MOUNT, or it is costed by length.
+  if (/^ET-PS-MOUNTING/.test(u) || f.startsWith('ET-PS-MOUNTING')) return 'FRAME'
   if (u.includes('TAPE') || f === 'ET-LIN-TAPE') return 'TAPE'
   if (u.includes('FLEX') || f === 'ET-LIN-FLEX') return 'FLEX'
   if (u.includes('DIFF')) return 'DIFF'
