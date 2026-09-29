@@ -31,6 +31,7 @@ import PasteMergeModal from '../components/PasteMergeModal'
 import FavoritesPanel from '../components/FavoritesPanel'
 import ReviewModal from '../components/ReviewModal'
 import FormRecipesModal from '../components/FormRecipesModal'
+import RecipeStylesWindow from '../components/RecipeStylesWindow'
 import TeachBar from '../components/TeachBar'
 import ValidationFixModal from '../components/ValidationFixModal'
 import { SaveIndicator } from '../components/SaveStatus'
@@ -114,6 +115,7 @@ export default function BuilderScreen({
   // doesn't reopen on its own.
   const formCaptures = useStore(s => s.formCaptures)
   const [formBuild, setFormBuild] = useState(null)   // { refs, thenReview }
+  const [showStyles, setShowStyles] = useState(false)
   useEffect(() => {
     if (pendingReviewRefs && pendingReviewRefs.length > 0) {
       setReviewInitialRefs(pendingReviewRefs)
@@ -549,6 +551,9 @@ export default function BuilderScreen({
             <Dropdown.Item onClick={() => setFormBuild({ refs: [], thenReview: false })} disabled={!Object.keys(formCaptures?.byPosition || {}).length}>
               <MaterialIcon name="auto_awesome" size={14} /> Build recipes from the Form…
             </Dropdown.Item>
+            <Dropdown.Item onClick={() => setShowStyles(true)}>
+              <MaterialIcon name="style" size={14} /> Recipe styles…
+            </Dropdown.Item>
             <Dropdown.Item onClick={() => setShowSaveTemplate(true)} disabled={!hasRecipeRows}>
               <MaterialIcon name={ACTION_ICONS.saveTemplate} size={14} /> Save this position as a template
             </Dropdown.Item>
@@ -818,6 +823,7 @@ export default function BuilderScreen({
 
       <ElementTypesWindow show={!!showRetire} view={showRetire === 'unused' ? 'unused' : 'existing'} onHide={() => setShowRetire(false)} />
 
+      <RecipeStylesWindow show={showStyles} onHide={() => setShowStyles(false)} />
       <FormRecipesModal show={formBuild != null} posRefs={formBuild?.refs || []} focusGroup={formBuild?.focus || null} onHide={closeFormBuild}
         onOpenPosition={p => { setFormBuild(null); useStore.getState().setActivePosition(p) }} />
       <ReviewModal

@@ -990,6 +990,13 @@ const useStore = create((set, get) => ({
   // Per group (proposal signature): { wrap: 'DL'|'LIN'|'none', place: { role: 'position'|'internal' } }
   // — what ships to site together is the person's call; precedent only sets the default.
   recipeChoices: {},
+  // Build recipes from this project's styles, or the company style guide (recipeProposal).
+  recipeSource: null,
+  setRecipeSource(v) {
+    set({ recipeSource: v })
+    const { projectId } = get()
+    if (projectId != null) Promise.resolve(window.electronAPI?.db?.setPref?.(projectId, 'recipe_source', v)).catch(() => {})
+  },
   setRecipeChoice(groupKey, patch) {
     set(s => ({ recipeChoices: { ...s.recipeChoices, [groupKey]: { ...(s.recipeChoices[groupKey] || {}), ...patch } } }))
   },
@@ -1004,14 +1011,16 @@ const useStore = create((set, get) => ({
   /**
    * The position being taught becomes its group's template (Form slots by role). → the template.
    */
-  async teachGroup({ groupKey, label, posRef }) {
+  async teachGroup({ groupKey, label, posRef, rule = null }) {
     // Taught again (the first one was changed): the old template for the group goes.
     for (const old of get().templates.filter(x => {
       const a = x.applicable_tags; const tags = Array.isArray(a) ? a : (() => { try { return JSON.parse(a || '[]') } catch { return [] } })()
       return tags.includes(`form-group:${groupKey}`)
     })) await get().deleteTemplate(old.id)
-    const t = await get().saveAsTemplate(posRef, { name: `${label} (from ${posRef})`, scope: 'project', tags: [`form-group:${groupKey}`] })
-    set({ teaching: null })
+    // With a rule it is a recipe STYLE (recipeStyles.js): next time it picks its own positions.
+    const t = await get().saveAsTemplate(posRef, { name: `${label} (from ${posRef})`, scope: 'project', tags: [`form-group:${groupKey}`], rule })
+    // The group it was taught for becomes the style's group: Build recipes follows it there.
+    set({ teaching: null, lastTaught: { groupKey, id: t?.id || null } })
     return t
   },
 
@@ -1383,7 +1392,7 @@ const useStore = create((set, get) => ({
    * real ElementTypes, quantities and flags; its wrapper as "a new wrapper of this kind".
    * `excludeIds` are rows the user unticked. Saved first, then listed. → the saved template.
    */
-  async saveAsTemplate(posRef, { name, scope = 'project', tags, excludeIds = [] } = {}) {
+  async saveAsTemplate(posRef, { name, scope = 'project', tags, excludeIds = [], rule = null } = {}) {
     const { recipes, projectId, positionUI, containerETRefs, formCaptures } = get()
     const skip = new Set(excludeIds)
     const rows = recipes.filter(r => (r.PositionTypeRef || r.positionTypeRef) === posRef && !skip.has(r._id))
@@ -1396,7 +1405,15 @@ const useStore = create((set, get) => ({
       }),
     })
     if (scope === 'project') template.project_id = projectId
+    if (rule) template.rule = rule
     return get().updateTemplate(template)
+  },
+
+  /** Give a recipe style (a template) its rule. */
+  async setStyleRule(templateId, rule) {
+    const t = get().templates.find(x => x.id === templateId)
+    if (!t) return null
+    return get().updateTemplate({ ...t, rule })
   },
 
   /**

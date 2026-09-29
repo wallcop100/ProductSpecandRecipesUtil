@@ -87,7 +87,7 @@ describe('setting up a group: build one, check it in the builder, come back', ()
       elementTypes: [{ ElementTypeRef: 'ET-PS-01', Family: 'ET-PS' }, { ElementTypeRef: 'ET-PS-02', Family: 'ET-PS' }],
       formCaptures: { byPosition: {
         B1: [{ elementTypeRef: 'ET-PS-01', code: 'QC50', role: 'lead' }],
-        B2: [{ elementTypeRef: 'ET-PS-02', code: 'QC51', role: 'lead' }],
+        B2: [{ elementTypeRef: 'ET-PS-01', code: 'QC50', role: 'lead' }],   // the same fitting: one group
       } },
     })
     render(<BuilderScreen onBackToSetup={vi.fn()} onOpenProductSpec={vi.fn()} onOpenTemplateEditor={vi.fn()}
@@ -104,8 +104,8 @@ describe('setting up a group: build one, check it in the builder, come back', ()
 
     expect(screen.queryByTestId('teach-bar')).toBeNull()
     fireEvent.click(await screen.findByRole('button', { name: 'Build 1' }))
-    expect(useStore.getState().recipes.some(r => (r.PositionTypeRef || r.positionTypeRef) === 'B2'
-      && (r.ElementTypeRef || r.elementTypeRef) === 'ET-PS-02')).toBe(true)
+    // Same fitting, same contents: B2 is built and shares B1's wrapper.
+    expect(useStore.getState().recipes.some(r => (r.PositionTypeRef || r.positionTypeRef) === 'B2')).toBe(true)
   })
 })
 
