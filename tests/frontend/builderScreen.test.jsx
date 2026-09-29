@@ -141,3 +141,16 @@ describe('setting up a group: job-dependent quantities are confirmed, even when 
     expect(within(screen.getByTestId('teach-bar')).getByRole('button', { name: 'Use L1 for the other 1' })).not.toBeDisabled()
   })
 })
+
+describe('coming from a By-position import', () => {
+  test('a banner names the positions and leads on to the next one', () => {
+    const onNext = vi.fn()
+    render(<BuilderScreen
+      onBackToSetup={vi.fn()} onOpenProductSpec={vi.fn()} onOpenTemplateEditor={vi.fn()}
+      onOpenCodeImport={vi.fn()} onOpenConnectors={vi.fn()}
+      importLoop={{ refs: ['C01r'] }} onNextFromImport={onNext} onEndImportLoop={vi.fn()} />)
+    expect(screen.getByTestId('import-loop')).toHaveTextContent('C01r added to the Product Spec')
+    fireEvent.click(screen.getByRole('button', { name: /Next position/ }))
+    expect(onNext).toHaveBeenCalled()
+  })
+})

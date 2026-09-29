@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-09-29', note: 'Import product codes: “By position” (toggle in the header, remembered per project) takes one position, or a few, end to end: confirm its rows, give its codes ElementTypes, then “Add to Product Spec & build recipe” adds just those and opens them in the builder, which leads on to the next position. Other positions are left as they are. “Whole Form” works as before' },
   { date: '2026-09-29', note: 'Import product codes: compare two Forms. Re-importing compares the new Form with the one it replaces, or pick any older spreadsheet (“Compare with an older Form…”); each row shows same / changed / new (with the old text word by word and what the spec knew of it), removed rows are listed, and Changed / New / Removed / Unchanged filter the table' },
   { date: '2026-09-29', note: 'Connector templates can take connectors away: a part removed from a template shows as an extra (orange) on positions that still have it, a template with no parts means “no connectors here”, and “Remove extras from N” clears them after a preview' },
   { date: '2026-09-29', note: 'Connectors (4QS68H): Complete partial now adds a connector the template wants both on site and inside the wrapper (it used to move the one copy back and forth), and no longer lands in an ElementType left open in the builder; connectors a position has that its template doesn’t ask for are flagged (+N on the cell, listed with Remove in the cell panel, and “Remove them too” in the bulk preview)' },
