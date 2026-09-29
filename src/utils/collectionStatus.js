@@ -150,7 +150,7 @@ function ruleAppliesTo(collection, rec) {
  * required inside the wrapper is NOT satisfied by a copy at position level, which
  * is what made positions read 'complete' while the recipe was wrong.
  */
-export function collectionStatusForPosition(posRef, tags, recipe, collections, wrapperRefs = [], member = null) {
+export function collectionStatusForPosition(posRef, tags, recipe, collections, wrapperRefs = [], member = null, { isConnector = null } = {}) {
   const rec = asRecord(tags)
   const presence = buildPresence(recipe, wrapperRefs)
 
@@ -164,14 +164,17 @@ export function collectionStatusForPosition(posRef, tags, recipe, collections, w
     } else if (!ruleAppliesTo(collection, rec)) return na
 
     const ingredients = parseIngredients(collection).filter(i => ingredientRef(i))
-    if (ingredients.length === 0) return na
+    // Connectors here the template doesn't ask for. Knowing them needs isConnector; with
+    // it, a template of NO parts means "these positions have no connectors" and is checked.
+    const extras = isConnector ? extrasIn(recipe, wrapperRefs, ingredients, isConnector) : []
+    if (ingredients.length === 0 && !isConnector) return na
 
     const wanted = wantedSlots(ingredients)
     const items = ingredients.map(ing => ({ ingredient: ing, ...ingredientPresence(presence, ing, { wanted }) }))
     const satisfied = items.filter(i => isSatisfied(i.status))
 
     let status
-    if (satisfied.length === items.length) status = 'complete'
+    if (satisfied.length === items.length) status = extras.length ? 'extra' : 'complete'
     else if (satisfied.length === 0) status = 'missing'
     else status = 'partial'
 
@@ -179,6 +182,7 @@ export function collectionStatusForPosition(posRef, tags, recipe, collections, w
       collection,
       status,
       items,
+      extras,
       missing:   items.filter(i => i.status === 'missing').map(i => ingredientRef(i.ingredient)),
       misplaced: items.filter(i => i.status === 'misplaced'),
       short:     items.filter(i => i.status === 'short'),
@@ -370,8 +374,12 @@ export function planCollectionBulk(recipes, posRefs, collection, containerETRefs
  * when the template has no use for it there. Shown so they are never silently kept.
  */
 export function extraConnectorRows(recipes, posRef, collection, isConnector) {
-  const wanted = wantedSlots(parseIngredients(collection).filter(i => ingredientRef(i)))
   const { combined, wrapperRefs } = positionRecipeWithWrapperInternals(recipes, posRef)
+  return extrasIn(combined, wrapperRefs, parseIngredients(collection).filter(i => ingredientRef(i)), isConnector)
+}
+
+function extrasIn(combined, wrapperRefs, ingredients, isConnector) {
+  const wanted = wantedSlots(ingredients)
   const wrappers = new Set(wrapperRefs.map(r => String(r).toLowerCase()))
   const out = []
   for (const row of combined) {
@@ -398,6 +406,6 @@ export function overallCollectionStatus(statuses) {
   const relevant = (statuses || []).filter(s => s.status !== 'na')
   if (relevant.length === 0) return null
   if (relevant.some(s => s.status === 'missing')) return 'missing'
-  if (relevant.some(s => s.status === 'partial')) return 'partial'
+  if (relevant.some(s => s.status === 'partial' || s.status === 'extra')) return 'partial'
   return 'complete'
 }

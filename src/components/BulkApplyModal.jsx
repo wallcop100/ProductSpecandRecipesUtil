@@ -44,9 +44,9 @@ function describe(a) {
 const Ref = ({ r }) => <span style={{ fontFamily: 'monospace' }}>{r}</span>
 const Dim = ({ children }) => <span className="text-muted" style={{ fontSize: 10 }}>{children}</span>
 
-export default function BulkApplyModal({ show, onHide, plan, collectionName, onConfirm, title }) {
-  const [removeExtras, setRemoveExtras] = React.useState(false)
-  React.useEffect(() => { if (show) setRemoveExtras(false) }, [show])
+export default function BulkApplyModal({ show, onHide, plan, collectionName, onConfirm, title, defaultRemoveExtras = false }) {
+  const [removeExtras, setRemoveExtras] = React.useState(defaultRemoveExtras)
+  React.useEffect(() => { if (show) setRemoveExtras(defaultRemoveExtras) }, [show, defaultRemoveExtras])
   if (!plan) return null
 
   const counts = plan.counts || {}
@@ -64,7 +64,7 @@ export default function BulkApplyModal({ show, onHide, plan, collectionName, onC
       </Modal.Header>
 
       <Modal.Body style={{ fontSize: 12 }}>
-        {changing === 0 && (
+        {changing === 0 && !(nExtras > 0) && (
           <div className="px-2 py-1 rounded mb-2" style={{ background: '#d1e7dd', color: '#0f5132' }}>
             <MaterialIcon name="check_circle" size={13} /> Nothing to do — every position already satisfies this template.
           </div>

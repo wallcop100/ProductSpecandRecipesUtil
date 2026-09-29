@@ -12,7 +12,7 @@ import { Dropdown } from 'react-bootstrap'
 import TemplateGroupPanel from '../components/TemplateGroupPanel'
 import useConnectorGroups from '../components/useConnectorGroups'
 import MaterialIcon from '../components/MaterialIcon'
-import { describeParts, suggestName } from '../utils/connectorGroups'
+import { describeParts, suggestName, isConnectorPart } from '../utils/connectorGroups'
 import { ruleFor, templateRule, describeRule, ruleIsEmpty } from '../utils/templateRules'
 
 /**
@@ -57,7 +57,8 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
     if (!focusPosRef || etCollections.length === 0) return
     const tags = positionUI[focusPosRef]?.tags ?? []
     const { combined: posRecipe, wrapperRefs } = positionRecipeWithWrapperInternals(recipes, focusPosRef)
-    const statuses = collectionStatusForPosition(focusPosRef, tags, posRecipe, etCollections, wrapperRefs, groups.members.get(focusPosRef))
+    const opts = useStore.getState()._connectorOpts()
+    const statuses = collectionStatusForPosition(focusPosRef, tags, posRecipe, etCollections, wrapperRefs, groups.members.get(focusPosRef), { isConnector: ref => isConnectorPart(ref, opts) })
     // Prefer an applicable collection (tags match): complete/partial/missing over na.
     const applicable = statuses.find(s => s.status !== 'na')
     const chosen = applicable?.collection ?? etCollections[0]
