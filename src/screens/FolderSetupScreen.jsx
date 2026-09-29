@@ -17,6 +17,7 @@ import { ConceptHint, CONCEPTS } from '../components/ConceptCard'
 import MaterialIcon from '../components/MaterialIcon'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { CHANGELOG, LATEST } from '../changelog'
+import BackupPanel from '../components/BackupPanel'
 
 const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev'
 
@@ -645,6 +646,8 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
               ))}
             </div>
           )}
+
+          <BackupPanel />
 
           {unsupported && <Alert variant="danger" className="py-2"><strong>Unsupported browser:</strong> {unsupported}</Alert>}
 
