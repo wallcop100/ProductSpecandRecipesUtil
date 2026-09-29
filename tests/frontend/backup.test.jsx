@@ -61,6 +61,6 @@ describe('start page', () => {
   test('offers Back up and Restore', () => {
     render(<BackupPanel />)
     expect(screen.getByTestId('backup-btn')).toBeInTheDocument()
-    expect(screen.getByText('Restore from a file…')).toBeInTheDocument()
+    expect(screen.getByText('Restore all my work…')).toBeInTheDocument()
   })
 })

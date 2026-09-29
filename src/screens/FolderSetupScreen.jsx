@@ -763,8 +763,8 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
               </Button>
               <Button variant="link" size="sm" className="px-1" style={{ fontSize: 12 }}
                 disabled={detecting || opening || !!unsupported} onClick={handleRestoreFirst}
-                title="A backup (.config.yaml) holds a project's file choice, tags, templates and unexported work — for another machine or cleared browser storage">
-                <MaterialIcon name="settings_backup_restore" size={14} /> Restore from backup…
+                title="A .config.yaml saved from one project: its file choice, tags, templates and unexported work. To bring back everything, use Restore all my work">
+                <MaterialIcon name="settings_backup_restore" size={14} /> Restore one project’s settings (.config.yaml)…
               </Button>
               {detecting && <Spinner size="sm" animation="border" />}
               <span className="ms-auto text-muted d-inline-flex align-items-center gap-1" style={{ fontSize: 11 }}>
@@ -978,9 +978,9 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
             ) : (
               <div className="mb-3">
                 <Button variant="link" size="sm" className="p-0" style={{ fontSize: 11 }}
-                  title="Recover a setup from a backup you saved earlier (another machine, or cleared browser storage)"
+                  title="A .config.yaml saved from this project earlier (another machine, or cleared browser storage)"
                   onClick={handleRestorePick}>
-                  <MaterialIcon name="settings_backup_restore" size={13} /> Restore from backup…
+                  <MaterialIcon name="settings_backup_restore" size={13} /> Restore this project’s settings (.config.yaml)…
                 </Button>
               </div>
             )

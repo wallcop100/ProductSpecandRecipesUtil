@@ -554,7 +554,7 @@ export default function BuilderScreen({
             </Dropdown.Item>
             <Dropdown.Divider />
             <Dropdown.Item onClick={saveBackup}>
-              <MaterialIcon name="save_alt" size={14} /> Save backup…
+              <MaterialIcon name="save_alt" size={14} /> Save project settings (.config.yaml)…
             </Dropdown.Item>
             <Dropdown.Item onClick={onOpenTemplateEditor}>
               <MaterialIcon name="dashboard_customize" size={14} /> Manage templates
@@ -867,7 +867,7 @@ export default function BuilderScreen({
             <Button variant="outline-primary" size="sm" onClick={() => { setConfirmClose(false); requestExport() }}>Export first</Button>
           )}
           <Button variant="outline-secondary" size="sm" onClick={saveBackup}
-            title="A file you can restore this setup from on another machine">Save backup</Button>
+            title="A .config.yaml you can restore this project's settings from on another machine">Save project settings</Button>
           <Button variant="danger" size="sm" onClick={() => { setConfirmClose(false); onBackToSetup() }}>Close project</Button>
         </Modal.Footer>
       </Modal>
