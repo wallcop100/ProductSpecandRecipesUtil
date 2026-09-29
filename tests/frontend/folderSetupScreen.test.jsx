@@ -227,9 +227,10 @@ describe('someone who has never used this', () => {
 
   test('can read how it works, in the app (not a link away to GitHub)', async () => {
     render(<FolderSetupScreen onProjectLoaded={() => {}} />)
-    const label = await screen.findByText(/How this works/)
-    expect(label.closest('a')).toBeNull()
-    expect(screen.getByLabelText('How this works')).toBeInTheDocument()
+    const labels = await screen.findAllByText(/How this works/)
+    expect(labels.every(el => el.closest('a') === null)).toBe(true)
+    expect(screen.getAllByLabelText('How this works').length).toBeGreaterThan(0)
+    expect(document.querySelector('a[href*="github.com"]')).toBeNull()
   })
 })
 
