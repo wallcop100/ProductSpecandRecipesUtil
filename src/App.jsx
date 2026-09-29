@@ -1,5 +1,4 @@
 import BugReporter from './components/BugReporter'
-import { IS_PRERELEASE } from './platform/channel'
 import UndoShortcut from './components/UndoShortcut'
 import DesignPickerModal from './components/DesignPickerModal'
 import { SaveShortcut } from './components/SaveStatus'
@@ -79,16 +78,13 @@ export default function App() {
     navigateTo('product-code-import')
   }
 
-  useEffect(() => { if (IS_PRERELEASE && !document.title.includes('pre-release')) document.title = `${document.title} (pre-release)` }, [])
-
   return (
     <div className={debugIds ? 'debug-ids' : ''} data-screen={activeScreen} style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* This is an alpha: said on every page, over the header, never in the way of a click. */}
-      {/* The pre-release site (/beta/) says so instead: it is the next version, not yet released. */}
-      <Badge bg={IS_PRERELEASE ? 'warning' : 'info'} text={IS_PRERELEASE ? 'dark' : undefined} data-testid="alpha-badge"
+      <Badge bg="info" data-testid="alpha-badge"
         style={{ position: 'fixed', top: 6, left: '50%', transform: 'translateX(-50%)', zIndex: 2000,
           pointerEvents: 'none', fontSize: 12, letterSpacing: 2, padding: '5px 12px', boxShadow: '0 1px 4px rgba(0,0,0,.25)' }}>
-        {IS_PRERELEASE ? 'PRE-RELEASE' : 'ALPHA'}
+        ALPHA
       </Badge>
       <BugReporter screen={activeScreen} />
       <FileWatchBanner />

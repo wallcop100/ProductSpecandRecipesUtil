@@ -1,13 +1,8 @@
 name: Deploy to GitHub Pages
 
-# Two sites, one Pages deployment:
-#   /        STABLE       — built from the `release` branch (from master until `release` exists).
-#                           Changes only when you release: merge master into `release`.
-#   /beta/   PRE-RELEASE  — built from master on every merge (APP_CHANNEL=beta: its own
-#                           browser storage and a PRE-RELEASE badge; see src/platform/channel.js).
 on:
   push:
-    branches: [master, release]
+    branches: [master]
     # Don't spend a build + deploy on a push that cannot change the built site.
     # Everything NOT listed here still triggers — including tests/, which gate the deploy,
     # and src/changelog.js, which is site content. Deliberately conservative: the cost of
@@ -34,11 +29,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # Pre-release: master, whichever branch triggered the run.
       - uses: actions/checkout@v4
-        with:
-          ref: master
-          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -47,27 +38,11 @@ jobs:
 
       - run: npm ci
 
-      - name: Test (master)
+      - name: Test
         run: npx vitest run
 
-      - name: Build pre-release (/beta/)
-        run: APP_CHANNEL=beta npx vite build --outDir "$RUNNER_TEMP/beta"
-
-      # Stable: the `release` branch if there is one, else master. Built in its own worktree
-      # so the pre-release build above is untouched. It was tested when it was on master.
-      - name: Build stable (/)
-        run: |
-          if git ls-remote --exit-code --heads origin release >/dev/null; then
-            git worktree add "$RUNNER_TEMP/stable" origin/release
-          else
-            git worktree add "$RUNNER_TEMP/stable" HEAD
-          fi
-          cd "$RUNNER_TEMP/stable"
-          npm ci
-          APP_CHANNEL=stable npx vite build --outDir "$GITHUB_WORKSPACE/dist"
-
-      - name: Put the pre-release under /beta/
-        run: cp -r "$RUNNER_TEMP/beta" dist/beta
+      - name: Build
+        run: npm run build
 
       - uses: actions/configure-pages@v5
 

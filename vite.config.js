@@ -9,8 +9,6 @@ export default defineConfig({
   base: './',
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
-    // 'beta' for the pre-release site (/beta/, built from master), else 'stable'.
-    __APP_CHANNEL__: JSON.stringify(process.env.APP_CHANNEL || 'stable'),
   },
   server: {
     // Fail loudly if 5173 is taken rather than silently moving to 5174.
