@@ -9,7 +9,7 @@
  * On an array a positive condition holds when ANY element does; a negative one (is not,
  * doesn't contain, `!pattern`) when NO element holds its positive form. Pure.
  */
-import { conditionMatches } from './tagRules'
+import { conditionMatches, wildcardMatch } from './tagRules'
 import { familyOf } from './etRef'
 import { positionFamilyOf } from './positionFamily'
 
@@ -26,6 +26,7 @@ const BUILTIN = {
     { key: 'Tags', label: 'Tags', list: true },
     { key: 'Contains', label: 'Contains ET', list: true },
     { key: 'Manufacturer', label: 'Manufacturer', list: true },
+    { key: 'ProductCode', label: 'Product code', list: true },
     { key: 'Rows', label: 'Recipe rows', numeric: true },
     { key: 'Status', label: 'Status' },
   ],
@@ -33,12 +34,19 @@ const BUILTIN = {
     { key: 'Ref', label: 'Ref' },
     { key: 'Family', label: 'Family' },
     { key: 'Manufacturer', label: 'Manufacturer' },
+    { key: 'ProductCode', label: 'Product code' },
     { key: 'Description', label: 'Description' },
     { key: 'Tags', label: 'Tags', list: true },
     { key: 'UsedIn', label: 'Used in', list: true },
     { key: 'UsedInCount', label: 'Used in (count)', numeric: true },
     { key: 'Contains', label: 'Contains ET', list: true },
   ],
+}
+
+/** The filter boxes a unit starts with; any other field can be added. */
+export const DEFAULT_FILTER_FIELDS = {
+  position: ['Ref', 'Family', 'Tags', 'Manufacturer', 'Contains'],
+  element: ['Ref', 'Family', 'Manufacturer', 'UsedIn'],
 }
 
 export const DEFAULT_COLUMNS = {
@@ -86,6 +94,7 @@ export function recordsFor(unit, ctx) {
       Object.assign(rec, {
         Ref: ref, Name: pt.Name || pt.name || '', Family: positionFamilyOf(pt) || '',
         Tags: positionUI[ref]?.tags || [], Contains: ets, Manufacturer: uniq(ets.map(mfrOf)),
+        ProductCode: uniq(ets.map(r => String(psByRef.get(lc(r))?.ProductCode || psByRef.get(lc(r))?.productCode || '').trim())),
         Rows: rows.length, Status: statusOf ? statusOf(pt) : '',
       })
       return { kind: 'position', ref, name: rec.Name || null, rec }
@@ -119,6 +128,7 @@ export function recordsFor(unit, ctx) {
     Object.assign(rec, {
       Ref: ref, Family: familyOf(ref, e) || '', Manufacturer: mfrOf(ref),
       Description: ps?.ComponentDescription || ps?.componentDescription || '',
+      ProductCode: ps?.ProductCode || ps?.productCode || '',
       Tags: [...(tags.get(k) || [])], UsedIn: [...(usedIn.get(k) || [])], UsedInCount: usedIn.get(k)?.size || 0,
       Contains: [...(internals.get(k) || [])],
     })
@@ -129,9 +139,32 @@ export function recordsFor(unit, ctx) {
 const NEGATIVE = { notEquals: 'equals', notContains: 'contains' }
 
 /** One condition { field, op, value } against a record. */
+/**
+ * Free text, as typed in a filter box: part of the value (case-insensitive), or with `*` /
+ * `?` a wildcard over the whole value; commas mean any of; a leading `!` means not.
+ * "dl" finds ET-DL-04 · "ET-DL-*, ET-LIN-*" · "!*TBC*".
+ */
+export function textMatches(query, value) {
+  const q = String(query ?? '').trim()
+  if (!q) return true
+  if (q.startsWith('!')) return !textMatches(q.slice(1), value)
+  const v = String(value ?? '').toLowerCase()
+  return q.split(',').map(x => x.trim()).filter(Boolean).some(alt => (/[*?]/.test(alt)
+    ? wildcardMatch(alt, v)
+    : v.includes(alt.toLowerCase())))
+}
+
 export function recordMatches(cond, rec) {
   if (!cond?.field || !cond.op) return true   // a half-built row filters nothing
   const v = rec[cond.field]
+  if (cond.op === 'text') {
+    const q = String(cond.value ?? '').trim()
+    if (!q) return true
+    if (!Array.isArray(v)) return textMatches(q, cellText(v))
+    // A list: "not" means none of its items; otherwise any item.
+    if (q.startsWith('!')) return !v.some(x => textMatches(q.slice(1), x))
+    return v.some(x => textMatches(q, x))
+  }
   if (!Array.isArray(v)) return conditionMatches({ column: cond.field, op: cond.op, value: cond.value }, rec)
   if (cond.op === 'isEmpty') return v.length === 0
   if (cond.op === 'isNotEmpty') return v.length > 0

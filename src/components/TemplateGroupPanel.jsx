@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react'
 import { Button, Form, Modal } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
-import { templateParts, diffParts, diffSize, describeParts, nearMisses, suggestName } from '../utils/connectorGroups'
+import { templateParts, diffParts, diffSize, describeParts, nearMisses, suggestName, filterMatches } from '../utils/connectorGroups'
 
 const diffText = d => [
   ...d.add.map(p => `+ ${p.ref}${p.quantity > 1 ? ` ×${p.quantity}` : ''}${p.section === 'internal' ? ' (wrapper)' : ''}`),
@@ -23,6 +23,8 @@ export default function TemplateGroupPanel({ collectionId, groups, onEdit, onSel
   const removeFromTemplate = useStore(s => s.removeFromTemplate)
   const restoreToTemplate = useStore(s => s.restoreToTemplate)
   const excludes = useStore(s => s.connectorExcludes)
+  const positionUI = useStore(s => s.positionUI)
+  const allTemplates = useStore(s => s.etCollections)
   const forkTemplate = useStore(s => s.forkTemplate)
   const makeTemplateFromGroup = useStore(s => s.makeTemplateFromGroup)
   const planTemplateApply = useStore(s => s.planTemplateApply)
@@ -148,6 +150,29 @@ export default function TemplateGroupPanel({ collectionId, groups, onEdit, onSel
           </div>
         </div>
       )}
+
+      {(() => {
+        // Positions these tags match that another template holds (pinned there): why a
+        // tag-based template can look empty. One click brings them here.
+        const incl = Array.isArray(collection.ApplicableTags) ? collection.ApplicableTags : []
+        if (!incl.length) return null
+        const held = [...groups.members.entries()].filter(([r, m]) => m.pinnedTo && m.pinnedTo !== collectionId
+          && filterMatches(collection, positionUI[r]?.tags || []))
+        if (!held.length) return null
+        const byTpl = new Map()
+        for (const [r, m] of held) { if (!byTpl.has(m.pinnedTo)) byTpl.set(m.pinnedTo, []); byTpl.get(m.pinnedTo).push(r) }
+        return (
+          <div className="mb-3 p-2 rounded" style={{ background: '#e7f1ff' }} data-testid="held-elsewhere">
+            <strong><MaterialIcon name="info" size={12} /> Matched by these tags, but held by another template</strong>
+            {[...byTpl.entries()].map(([id, refs]) => (
+              <div key={id} className="d-flex align-items-center gap-2 mt-1">
+                <span className="text-truncate">{allTemplates.find(c => c.CollectionId === id)?.Name}: {refs.join(', ')}</span>
+                <Button size="sm" variant="link" className="p-0 ms-auto" style={{ fontSize: 11 }} onClick={() => pinPositions(collectionId, refs)}>Move here</Button>
+              </div>
+            ))}
+          </div>
+        )
+      })()}
 
       {clashes.length > 0 && (
         <div className="mb-3 p-2 rounded" style={{ background: '#fff3cd' }} data-testid="clashes">

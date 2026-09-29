@@ -203,3 +203,18 @@ describe('tags and removals on a pinned template (bug D4WRKC)', () => {
     expect(fork.ApplicableTags).toEqual(['Local'])
   })
 })
+
+describe('Make template uses tags when they pick out the group exactly (2RBL5F)', () => {
+  test('a tag every member has and no one else has', () => {
+    const tags = { A01: ['Orluna', 'Local'], A02: ['Orluna', 'Local'], B01: ['Phos', 'Local'] }
+    expect(G.tagFilterFor(['A01', 'A02'], ['A01', 'A02', 'B01'], r => tags[r])).toEqual({ include: ['Orluna'], exclude: [] })
+  })
+  test('a shared tag plus exclusions for the others', () => {
+    const tags = { A01: ['Local'], A02: ['Local'], B01: ['Local', 'Phos'] }
+    expect(G.tagFilterFor(['A01', 'A02'], ['A01', 'A02', 'B01'], r => tags[r])).toEqual({ include: ['Local'], exclude: ['Phos'] })
+  })
+  test('no exact tag filter: pins instead', () => {
+    const tags = { A01: ['Local'], A02: ['Local'], B01: ['Local'] }
+    expect(G.tagFilterFor(['A01', 'A02'], ['A01', 'A02', 'B01'], r => tags[r])).toBeNull()
+  })
+})

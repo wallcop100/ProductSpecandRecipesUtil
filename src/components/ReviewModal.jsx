@@ -15,11 +15,10 @@ import { positionFamilyOf } from '../utils/positionFamily'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { formWorklist } from '../utils/formSpec'
 import { TAG_OPS } from '../utils/tagRules'
-import { fieldsFor, recordsFor, filterMatches, cellText, legacyFilters, DEFAULT_COLUMNS } from '../utils/reviewFields'
+import { fieldsFor, recordsFor, filterMatches, cellText, legacyFilters, DEFAULT_COLUMNS, DEFAULT_FILTER_FIELDS } from '../utils/reviewFields'
 import usePositionList, { byRef } from './usePositionList'
 
 const EMPTY_FILTER = { match: 'all', conditions: [] }
-const newCond = () => ({ field: 'Ref', op: 'matches', value: '' })
 const api = () => (typeof window !== 'undefined' && window.electronAPI?.db) || null
 async function readPref(projectId, key) {
   try { const v = await api()?.getPref?.(projectId, key); return v ? JSON.parse(v) : null } catch { return null }
@@ -52,6 +51,7 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
   const [filter, setFilter]   = useState(EMPTY_FILTER)
   const [columns, setColumns] = useState(DEFAULT_COLUMNS)   // per unit
   const [sortBy, setSortBy]   = useState({ key: 'Ref', dir: 1 })
+  const [extraBoxes, setExtraBoxes] = useState([])     // columns added as filter boxes
   const [sets, setSets]       = useState([])                // saved filter sets, this project
   const [setName, setSetName] = useState('')                // the loaded / last saved set
   const projectId = useStore(s => s.projectId)
@@ -85,7 +85,7 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
     return () => { live = false }
   }, [show, projectId])
   const remember = (patch = {}) => projectId != null && writePref(projectId, 'review_last', { unit, filter, columns, setName, ...patch })
-  const switchUnit = u => { if (u === unit) return; setUnit(u); setFilter(EMPTY_FILTER); setSetName(''); setSortBy({ key: 'Ref', dir: 1 }) }
+  const switchUnit = u => { if (u === unit) return; setUnit(u); setFilter(EMPTY_FILTER); setExtraBoxes([]); setSetName(''); setSortBy({ key: 'Ref', dir: 1 }) }
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
@@ -233,8 +233,23 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
   const conds = filter.conditions.filter(c => c.field && c.op)
   const opLabel = op => TAG_OPS.find(o => o.op === op)?.label || op
   const fieldLabel = key => fields.find(f => f.key === key)?.label || key
-  const condText = c => `${fieldLabel(c.field)} ${opLabel(c.op)}${TAG_OPS.find(o => o.op === c.op)?.needsValue === false ? '' : ` ${c.value}`}`
-  const setCond = (i, patch) => { setSetName(''); setFilter(f => ({ ...f, conditions: f.conditions.map((c, j) => (j === i ? { ...c, ...patch } : c)) })) }
+  const condText = c => c.op === 'text' ? `${fieldLabel(c.field)}: ${c.value}` : `${fieldLabel(c.field)} ${opLabel(c.op)}${TAG_OPS.find(o => o.op === c.op)?.needsValue === false ? '' : ` ${c.value}`}`
+  // Filter boxes: the unit's defaults plus any column added; each box is one 'text' condition.
+  const boxFields = [...new Set([...DEFAULT_FILTER_FIELDS[unit], ...extraBoxes,
+    ...filter.conditions.filter(c => c.op === 'text').map(c => c.field)])]
+  const boxValue = key => filter.conditions.find(c => c.field === key && c.op === 'text')?.value || ''
+  const setBox = (key, value) => {
+    setSetName('')
+    setFilter(f => {
+      const rest = f.conditions.filter(c => !(c.field === key && c.op === 'text'))
+      return { ...f, match: 'all', conditions: value.trim() ? [...rest, { field: key, op: 'text', value }] : rest }
+    })
+  }
+  const valuesOf = key => {
+    const seen = new Set()
+    for (const m of records) for (const v of [].concat(m.rec?.[key] ?? [])) { const t = cellText(v); if (t) seen.add(t) }
+    return [...seen].sort().slice(0, 200)
+  }
   const cols = columns[unit] || DEFAULT_COLUMNS[unit]
   const toggleCol = key => {
     const next = { ...columns, [unit]: cols.includes(key) ? cols.filter(k => k !== key) : [...cols, key] }
@@ -303,43 +318,48 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
               {setName && <IconButton icon="delete" size={16} title={`Delete “${setName}”`} onClick={deleteSet} />}
             </div>
 
-            <div className="d-flex align-items-center gap-2 mb-2" style={{ fontSize: 12 }}>
-              <span className="text-muted">Match</span>
-              <Form.Select size="sm" aria-label="Match" value={filter.match} style={{ fontSize: 12, width: 'auto' }}
-                onChange={e => { setSetName(''); setFilter(f => ({ ...f, match: e.target.value })) }}>
-                <option value="all">all of</option>
-                <option value="any">any of</option>
-              </Form.Select>
-              <span className="text-muted">these</span>
-              <InfoTip>“matches” takes wildcards: <code>*</code> any run, <code>?</code> one character. A comma means any of (<code>ET-DL-*, ET-LIN-*</code>); a leading <code>!</code> means not (<code>!*TBC*</code>). On a list (Tags, Contains ET…) a row matches when any item does.</InfoTip>
-            </div>
-            {filter.conditions.map((c, i) => {
-              const op = TAG_OPS.find(o => o.op === c.op)
-              return (
-                <div key={i} className="d-flex align-items-center gap-2 mb-1" data-testid="review-condition">
-                  <Form.Select size="sm" aria-label="Field" value={c.field} style={{ fontSize: 12, width: 180 }}
-                    onChange={e => setCond(i, { field: e.target.value })}>
-                    {fields.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
-                  </Form.Select>
-                  <Form.Select size="sm" aria-label="Operator" value={c.op} style={{ fontSize: 12, width: 150 }}
-                    onChange={e => setCond(i, { op: e.target.value })}>
-                    {TAG_OPS.map(o => <option key={o.op} value={o.op}>{o.label}</option>)}
-                  </Form.Select>
-                  {op?.needsValue !== false && (
-                    <Form.Control size="sm" aria-label="Value" value={c.value} style={{ fontSize: 12, fontFamily: 'monospace' }}
-                      placeholder={c.op === 'matches' ? 'e.g. C0?r, ET-DL-*' : op?.twoValues ? 'from,to' : ''}
-                      list={c.field === 'Contains' || (c.field === 'Ref' && unit === 'element') ? 'review-et-list' : undefined}
-                      onChange={e => setCond(i, { value: e.target.value })} />
-                  )}
-                  <IconButton icon="close" size={16} title="Remove condition"
-                    onClick={() => { setSetName(''); setFilter(f => ({ ...f, conditions: f.conditions.filter((_, j) => j !== i) })) }} />
+            {/* Filter boxes: type part of a value; * and ? are wildcards, commas mean any of,
+                a leading ! means not. Every filled box must match. */}
+            <div className="row g-2 mb-2" data-testid="review-filter-boxes">
+              {boxFields.map(key => (
+                <div key={key} className="col-6 col-md-4">
+                  <label className="text-muted d-flex align-items-center gap-1" style={{ fontSize: 11 }}>
+                    {fieldLabel(key)}
+                    {!DEFAULT_FILTER_FIELDS[unit].includes(key) && (
+                      <button type="button" className="btn btn-link p-0 ms-auto text-muted" aria-label={`Remove the ${fieldLabel(key)} filter`}
+                        onClick={() => { setExtraBoxes(x => x.filter(k => k !== key)); setBox(key, '') }}>
+                        <MaterialIcon name="close" size={12} />
+                      </button>
+                    )}
+                  </label>
+                  <Form.Control size="sm" aria-label={`Filter ${fieldLabel(key)}`} value={boxValue(key)} style={{ fontSize: 12 }}
+                    placeholder={key === 'Ref' ? 'e.g. C0?r, A*' : 'any'} list={`review-vals-${key}`}
+                    onChange={e => setBox(key, e.target.value)} />
+                  <datalist id={`review-vals-${key}`}>{valuesOf(key).map(v => <option key={v} value={v} />)}</datalist>
                 </div>
-              )
-            })}
-            <datalist id="review-et-list">{allETRefs.map(r => <option key={r} value={r} />)}</datalist>
+              ))}
+            </div>
+            {conds.some(c => c.op !== 'text') && (
+              <div className="d-flex flex-wrap gap-1 mb-2" style={{ fontSize: 11 }}>
+                {conds.filter(c => c.op !== 'text').map((c, i) => (
+                  <span key={i} className="badge bg-light text-dark border" style={{ fontWeight: 400 }}>
+                    {condText(c)}{' '}
+                    <button type="button" className="btn btn-link p-0" style={{ fontSize: 11 }} aria-label="Remove this filter"
+                      onClick={() => { setSetName(''); setFilter(f => ({ ...f, conditions: f.conditions.filter(x => x !== c) })) }}>×</button>
+                  </span>
+                ))}
+              </div>
+            )}
             <div className="d-flex align-items-center gap-2 mt-1 mb-3">
-              <Button variant="link" size="sm" className="p-0" style={{ fontSize: 12 }}
-                onClick={() => setFilter(f => ({ ...f, conditions: [...f.conditions, newCond()] }))}>+ Add condition</Button>
+              <Dropdown>
+                <Dropdown.Toggle variant="link" size="sm" className="p-0" style={{ fontSize: 12 }}>+ Filter on another column</Dropdown.Toggle>
+                <Dropdown.Menu style={{ fontSize: 12, maxHeight: 300, overflowY: 'auto' }}>
+                  {fields.filter(f => !boxFields.includes(f.key)).map(f => (
+                    <Dropdown.Item key={f.key} onClick={() => setExtraBoxes(x => [...x, f.key])}>{f.label}</Dropdown.Item>
+                  ))}
+                </Dropdown.Menu>
+              </Dropdown>
+              <InfoTip>Type part of a value to find it. <code>*</code> and <code>?</code> are wildcards (<code>C0?r</code>, <code>ET-DL-*</code>), a comma means any of, and a leading <code>!</code> means not (<code>!*TBC*</code>). On a list (Tags, Contains ET…) a row matches when any item does.</InfoTip>
               {filter.conditions.length > 0 && (
                 <Button variant="link" size="sm" className="p-0 text-muted" style={{ fontSize: 12 }}
                   onClick={() => { setFilter(EMPTY_FILTER); setSetName('') }}>Clear</Button>

@@ -103,3 +103,19 @@ describe('New ElementType from the Product Spec', () => {
     expect(addPSRow).toHaveBeenCalledWith('ET-PS-09')
   })
 })
+
+describe('Checks skip cable families (K7N6MT)', () => {
+  test('ET-CABLES rows are not counted as partial, and can be turned back on from ⋯', () => {
+    useStore.setState({
+      psRows: [{ _id: 'c', ElementTypeRef: 'LC1', Manufacturer: '', ProductCode: '' }],
+      elementTypes: [{ ElementTypeRef: 'LC1', Family: 'ET-CABLES' }],
+      recipes: [], specCheckSkip: ['ET-CABLES', 'ET-CABLE'],
+      setSpecCheckSkip: fams => useStore.setState({ specCheckSkip: fams }),
+    })
+    render1()
+    expect(screen.queryByText(/Partial spec/)).toBeNull()
+    fireEvent.click(screen.getByLabelText('Product Spec options'))
+    fireEvent.click(screen.getByTestId('skip-ET-CABLES'))
+    expect(screen.getByText(/Partial spec/)).toBeInTheDocument()
+  })
+})

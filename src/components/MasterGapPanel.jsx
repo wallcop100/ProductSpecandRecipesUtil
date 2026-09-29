@@ -119,10 +119,6 @@ export default function MasterGapPanel({ gaps }) {
             {open.length} ElementType{open.length === 1 ? '' : 's'} missing from the DesignDB master
             {queuedN > 0 && <span className="fw-normal text-muted">· {queuedN} already queued</span>}
           </div>
-          <div className="text-muted my-1" style={{ fontSize: 11 }}>
-            The DesignDB is the master list: everything in the Product Spec or a recipe must exist in it.
-            These reach it through the ElementTypes patch, which is safe to run twice.
-          </div>
 
           {/* The house style would add the families this workbook never had. */}
           {families.length > 0 && (

@@ -21,8 +21,6 @@ import BackupPanel from '../components/BackupPanel'
 
 const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev'
 
-const DOCS_URL =
-  'https://github.com/wallcop100/ProductSpecandRecipesUtil/blob/master/docs/ARCHITECTURE.md'
 
 /**
  * FolderSetupScreen — the landing page, and the only way into the app.
@@ -443,7 +441,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
       try { localElementTypes = await window.electronAPI.db.getLocalETs(projectId) || [] } catch { /* none */ }
 
       // 3. Load SQLite data
-      const [positionUIArr, templates, slotMappings, containerETPref, containerExcludePref, etCollections, ignoredFamiliesPref, tagRulesPref, tagPalettePref, tagSnapshotsPref, favorites, tagColorsPref, formCapturesPref, importDraftPref, connectorPinsPref, connectorFamiliesPref, connectorExcludesPref] = await Promise.all([
+      const [positionUIArr, templates, slotMappings, containerETPref, containerExcludePref, etCollections, ignoredFamiliesPref, tagRulesPref, tagPalettePref, tagSnapshotsPref, favorites, tagColorsPref, formCapturesPref, importDraftPref, connectorPinsPref, connectorFamiliesPref, connectorExcludesPref, specCheckSkipPref] = await Promise.all([
         window.electronAPI.db.getAllPositionUI(projectId),
         window.electronAPI.db.getAllTemplates(projectId),
         window.electronAPI.db.getAllSlotMappings(projectId), // already { templateId: { slotKey: ref } }
@@ -461,6 +459,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
         window.electronAPI.db.getPref(projectId, 'connector_pins'),
         window.electronAPI.db.getPref(projectId, 'connector_families'),
         window.electronAPI.db.getPref(projectId, 'connector_excludes'),
+        window.electronAPI.db.getPref(projectId, 'spec_check_skip'),
       ])
 
       let tagColors = {}
@@ -561,6 +560,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
         connectorPins: (() => { try { return JSON.parse(connectorPinsPref || '{}') || {} } catch { return {} } })(),
         connectorFamilies: (() => { try { return JSON.parse(connectorFamiliesPref || '[]') || [] } catch { return [] } })(),
         connectorExcludes: (() => { try { return JSON.parse(connectorExcludesPref || '{}') || {} } catch { return {} } })(),
+        specCheckSkip: (() => { try { return specCheckSkipPref ? JSON.parse(specCheckSkipPref) : undefined } catch { return undefined } })(),
         etCollections: etCollections ?? [],
         favorites: favorites ?? [],
         ignoredPositionFamilies,
@@ -767,10 +767,15 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
                 <MaterialIcon name="settings_backup_restore" size={14} /> Restore from backup…
               </Button>
               {detecting && <Spinner size="sm" animation="border" />}
-              <a className="ms-auto text-muted" style={{ fontSize: 11 }}
-                href={DOCS_URL} target="_blank" rel="noreferrer">
-                How this works ↗
-              </a>
+              <span className="ms-auto text-muted d-inline-flex align-items-center gap-1" style={{ fontSize: 11 }}>
+                How this works
+                <InfoTip label="How this works">
+                  <strong>1.</strong> Open the folder holding the project&apos;s DesignDB, Product Spec and Recipes workbooks.{' '}
+                  <strong>2.</strong> Import the Form&apos;s product codes, then build recipes from it in the builder.{' '}
+                  <strong>3.</strong> Your work is kept in this browser until you <em>Export changes</em>: that gives
+                  patch scripts to run on the workbooks. Nothing here ever writes to them directly.
+                </InfoTip>
+              </span>
             </div>
           )}
 
@@ -1020,13 +1025,6 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
               Import library
             </Button>
           </div>
-          {styleSummary?.count > 0 && (
-            <div className="text-muted mt-1" style={{ fontSize: 10 }}
-              title={`Learned from: ${styleSummary.sources.join(', ')}`}>
-              Style library: {styleSummary.count} products from {styleSummary.sources.length} project
-              {styleSummary.sources.length === 1 ? '' : 's'} — used to name new ElementTypes
-            </div>
-          )}
           {libraryMsg && <div className="text-muted small mt-1">{libraryMsg}</div>}
         </Card.Body>
       </Card>

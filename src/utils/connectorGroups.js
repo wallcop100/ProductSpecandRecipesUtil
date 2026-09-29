@@ -208,3 +208,38 @@ export function suggestName(parts) {
   const inside = parts.filter(p => p.section === INTERNAL).map(p => short(p.ref))
   return (site.length ? site.join(' + ') : `in wrapper: ${inside.join(' + ')}`).slice(0, 60)
 }
+
+/**
+ * tagFilterFor(group, scope, tagsOf) → { include: [tag], exclude: [tag] } | null
+ *
+ * A tag filter that picks out EXACTLY the group's positions among `scope`, so a template
+ * made from a group can use tags (which keep working as tags change) instead of pinning.
+ * One included tag every group position carries; if other positions carry it too, excluded
+ * tags that each of those has and no group position has. null when there is none.
+ */
+export function tagFilterFor(group, scope, tagsOf) {
+  const inGroup = new Set(group)
+  if (!group.length) return null
+  const tagSets = new Map(scope.map(r => [r, new Set(tagsOf(r) || [])]))
+  const common = [...(tagSets.get(group[0]) || [])].filter(t => group.every(r => tagSets.get(r)?.has(t)))
+  const groupTags = new Set(group.flatMap(r => [...(tagSets.get(r) || [])]))
+  let best = null
+  for (const t of common) {
+    const others = scope.filter(r => !inGroup.has(r) && tagSets.get(r)?.has(t))
+    if (others.length === 0) return { include: [t], exclude: [] }
+    // Greedy cover of the others by tags no group position carries.
+    const pool = [...new Set(others.flatMap(r => [...tagSets.get(r)]))].filter(x => !groupTags.has(x))
+    const exclude = []
+    let left = others
+    while (left.length) {
+      const pick = pool.filter(x => !exclude.includes(x))
+        .map(x => [x, left.filter(r => tagSets.get(r).has(x)).length])
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]
+      if (!pick || pick[1] === 0) break
+      exclude.push(pick[0])
+      left = left.filter(r => !tagSets.get(r).has(pick[0]))
+    }
+    if (left.length === 0 && (!best || exclude.length < best.exclude.length)) best = { include: [t], exclude }
+  }
+  return best
+}

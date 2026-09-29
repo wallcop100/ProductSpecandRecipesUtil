@@ -12,7 +12,7 @@ import { Dropdown } from 'react-bootstrap'
 import TemplateGroupPanel from '../components/TemplateGroupPanel'
 import useConnectorGroups from '../components/useConnectorGroups'
 import MaterialIcon from '../components/MaterialIcon'
-import { describeParts, suggestName } from '../utils/connectorGroups'
+import { describeParts, suggestName, tagFilterFor } from '../utils/connectorGroups'
 
 /**
  * ConnectorsScreen — dedicated screen for managing virtual ElementType Collections
@@ -38,7 +38,8 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
   async function makeTemplate(g) {
     const name = window.prompt(`Name a template for these ${g.positions.length} position${g.positions.length === 1 ? '' : 's'}`, suggestName(g.parts))?.trim()
     if (!name) return
-    const saved = await makeTemplateFromGroup(name, g.parts, g.positions)
+    const filter = tagFilterFor(g.positions, groups.scoped.map(pt => pt.PositionTypeRef), r => positionUI[r]?.tags || [])
+    const saved = await makeTemplateFromGroup(name, g.parts, g.positions, { filter })
     if (saved) { setSelectedCell(null); setSelectedCollectionId(saved.CollectionId) }
   }
 

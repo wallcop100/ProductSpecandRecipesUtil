@@ -415,6 +415,13 @@ const useStore = create((set, get) => ({
   etCollections: [],
   connectorPins: {},        // { [CollectionId]: [PositionTypeRef] } — see connectorGroups.membership
   connectorExcludes: {},    // { [CollectionId]: [PositionTypeRef] } — removed from that template
+  // ElementType families the Product Spec checks skip (no maker/code expected: cables…).
+  specCheckSkip: ['ET-CABLES', 'ET-CABLE'],
+  async setSpecCheckSkip(families) {
+    set({ specCheckSkip: families })
+    const { projectId } = get()
+    if (projectId != null) await window.electronAPI?.db?.setPref?.(projectId, 'spec_check_skip', JSON.stringify(families))
+  },
 
   // PositionType families flagged as ignored (persisted as project pref).
   // Ignored families drop out of the connector matrix and high-level totals.
@@ -604,6 +611,7 @@ const useStore = create((set, get) => ({
       etCollections: etCollections ?? [],
       connectorPins: data.connectorPins ?? {},
       connectorExcludes: data.connectorExcludes ?? {},
+      specCheckSkip: data.specCheckSkip ?? ['ET-CABLES', 'ET-CABLE'],
       connectorFamilies: data.connectorFamilies ?? [],
       favorites: favorites ?? [],
       ignoredPositionFamilies: ignoredPositionFamilies ?? [],
@@ -2381,9 +2389,11 @@ const useStore = create((set, get) => ({
   },
 
   /** A group found in the recipes becomes a template holding exactly those positions. */
-  async makeTemplateFromGroup(name, parts, positions) {
-    const saved = await get().createCollection(name, partsToIngredients(parts), [], [])
-    if (saved) await get().pinPositions(saved.CollectionId, positions)
+  async makeTemplateFromGroup(name, parts, positions, { filter = null } = {}) {
+    // A tag filter that picks out exactly these positions keeps working as tags change:
+    // use it. Otherwise hold the positions by pinning them.
+    const saved = await get().createCollection(name, partsToIngredients(parts), filter?.include || [], filter?.exclude || [])
+    if (saved && !filter) await get().pinPositions(saved.CollectionId, positions)
     return saved
   },
 
