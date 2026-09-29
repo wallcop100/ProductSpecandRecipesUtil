@@ -13,7 +13,11 @@ import { proposeRecipe, proposalFromTemplate, proposalContext } from '../utils/r
 import { roleOf } from '../utils/recipePatterns.js'
 import { planFamilyMove } from '../utils/etSeed.js'
 import { loadReports, saveReports } from '../utils/bugReports.js'
-import { connectorSignature, templateParts, partsToIngredients, diffParts } from '../utils/connectorGroups.js'
+import { connectorSignature, templateParts, partsToIngredients, diffParts, isConnectorPart } from '../utils/connectorGroups.js'
+import { templateRecords, templateRule } from '../utils/templateRules.js'
+
+/** _templateRecOf's cache: not state (no re-render), keyed on the arrays it reads. */
+let templateRecCache = null
 import { resolveTemplate, applyResolvedTemplate } from '../utils/slotResolver.js'
 import { evaluateTags, effectiveTags, snapshotForPosition, migrateRules, recipeTagIndex, withRecipeFields } from '../utils/tagRules.js'
 import { runValidation } from '../utils/validationRules.js'
@@ -2312,7 +2316,7 @@ const useStore = create((set, get) => ({
   // ET Collection actions
   // ---------------------------------------------------------------------------
 
-  async createCollection(name, ingredients, applicableTags, excludedTags) {
+  async createCollection(name, ingredients, applicableTags, excludedTags, rule = null) {
     const { projectId } = get()
     if (!projectId) return null
     const CollectionId = uuidv4()
@@ -2322,6 +2326,7 @@ const useStore = create((set, get) => ({
       ApplicableTags: applicableTags ?? [],
       ExcludedTags:   excludedTags   ?? [],
       Ingredients: ingredients ?? [],
+      Rule: rule,
     }
     const saved = await window.electronAPI.db.upsertCollection(projectId, collection)
     set(s => ({ etCollections: [...s.etCollections, saved] }))
@@ -2389,11 +2394,11 @@ const useStore = create((set, get) => ({
   },
 
   /** A group found in the recipes becomes a template holding exactly those positions. */
-  async makeTemplateFromGroup(name, parts, positions, { filter = null } = {}) {
-    // A tag filter that picks out exactly these positions keeps working as tags change:
+  async makeTemplateFromGroup(name, parts, positions, { rule = null } = {}) {
+    // A rule that picks out exactly these positions keeps working as the data changes:
     // use it. Otherwise hold the positions by pinning them.
-    const saved = await get().createCollection(name, partsToIngredients(parts), filter?.include || [], filter?.exclude || [])
-    if (saved && !filter) await get().pinPositions(saved.CollectionId, positions)
+    const saved = await get().createCollection(name, partsToIngredients(parts), [], [], rule)
+    if (saved && !rule) await get().pinPositions(saved.CollectionId, positions)
     return saved
   },
 
@@ -2406,9 +2411,8 @@ const useStore = create((set, get) => ({
     const src = get().etCollections.find(c => c.CollectionId === collectionId)
     if (!src) return null
     const ingredients = Array.isArray(src.Ingredients) ? src.Ingredients : JSON.parse(src.Ingredients || '[]')
-    const incl = positions ? [] : (Array.isArray(src.ApplicableTags) ? src.ApplicableTags : [])
-    const excl = positions ? [] : (Array.isArray(src.ExcludedTags) ? src.ExcludedTags : [])
-    const saved = await get().createCollection(name || `${src.Name} (copy)`, ingredients.map(i => ({ ...i })), incl, excl)
+    const rule = positions ? null : templateRule(src)
+    const saved = await get().createCollection(name || `${src.Name} (copy)`, ingredients.map(i => ({ ...i })), [], [], rule)
     if (saved && positions?.length) await get().pinPositions(saved.CollectionId, positions)
     return saved
   },
@@ -2472,6 +2476,23 @@ const useStore = create((set, get) => ({
     const { projectId } = get()
     if (projectId != null) await window.electronAPI?.db?.setPref?.(projectId, 'connector_families', JSON.stringify(families))
   },
+  /**
+   * recOf(posRef) → the record template rules are matched against (templateRules.js),
+   * built once per change of the data it reads.
+   */
+  _templateRecOf() {
+    const { positionTypes, recipes, psRows, elementTypes, positionUI, connectorFamilies } = get()
+    const c = templateRecCache
+    if (!c || c.positionTypes !== positionTypes || c.recipes !== recipes || c.psRows !== psRows || c.elementTypes !== elementTypes
+      || c.positionUI !== positionUI || c.connectorFamilies !== connectorFamilies) {
+      const opts = get()._connectorOpts()
+      const map = templateRecords({ positionTypes, recipes, psRows, elementTypes, positionUI, isConnector: ref => isConnectorPart(ref, opts) })
+      templateRecCache = { positionTypes, recipes, psRows, elementTypes, positionUI, connectorFamilies, map }
+    }
+    const map = templateRecCache.map
+    return ref => map.get(ref) || { Tags: positionUI[ref]?.tags || [] }
+  },
+
   _connectorOpts() {
     const { elementTypes, connectorFamilies } = get()
     const fam = new Map(elementTypes.map(e => [(e.ElementTypeRef || '').toLowerCase(), e.Family || e.family || '']))
@@ -3301,6 +3322,7 @@ const useStore = create((set, get) => ({
     const dbData = { element_types: elementTypes, position_types: positionTypes }
     const ignoredPosRefs = ignoredPositionRefs({ positionTypes, positionUI, ignoredPositionFamilies })
     const results = runValidation(dbData, psRows, recipes, positionUI, {
+      recOf: get()._templateRecOf(),
       collections: etCollections, containerETRefs, collectionRefs: dbCollectionRefs, ignoredPosRefs,
     })
 

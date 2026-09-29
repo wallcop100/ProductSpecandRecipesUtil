@@ -36,12 +36,13 @@ describe('Product Spec: change family or ref', () => {
 })
 
 describe('Connector template tags', () => {
-  test('the project\'s own tags are offered, not just the common five', () => {
+  test('the project\'s own tags are offered as values for a Tags condition', () => {
     useStore.setState({ tagPalette: ['Exterior'], positionUI: { A1: { tags: ['Wall-Washer'] } }, elementTypes: [] })
     render(<CollectionEditor show onHide={vi.fn()} collection={null} />)
-    expect(screen.getAllByRole('button', { name: 'Wall-Washer' }).length).toBeGreaterThan(0)
-    fireEvent.click(screen.getAllByRole('button', { name: 'Wall-Washer' })[0])
-    expect(screen.getAllByText('Wall-Washer').some(el => el.closest('.badge'))).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: /Add condition/ }))
+    const value = within(screen.getByTestId('template-rule')).getByLabelText('Value')
+    const options = [...document.getElementById(value.getAttribute('list')).querySelectorAll('option')].map(o => o.value)
+    expect(options).toEqual(expect.arrayContaining(['Wall-Washer', 'Exterior']))
   })
 })
 
@@ -57,7 +58,7 @@ describe('Positions held by a template respect its tags', () => {
     const coll = { CollectionId: 5, Name: 'T', ApplicableTags: '', ExcludedTags: '["Exterior"]', Ingredients: '[]' }
     render(<CollectionEditor show onHide={vi.fn()} collection={coll} />)
     const held = screen.getByTestId('editor-positions')
-    expect(within(held).getByTestId('left-out-by-tags')).toHaveTextContent('A1')
+    expect(within(held).getByTestId('left-out-by-rule')).toHaveTextContent('A1')
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
     await waitFor(() => expect(unpinPositions).toHaveBeenCalledWith(5, ['A1']))
   })

@@ -12,16 +12,18 @@
  * family the user picks.
  *
  * Membership: a template covers a position when the position is PINNED to it (and matches
- * its tags, if it has any), or — when the position is pinned nowhere — when the template's
- * tag filter matches. A position pinned to one template is out of every other template's
- * filter; a position REMOVED from a template (excludes) is out of it whatever the filter. Two filters matching
- * one unpinned position is a CLASH, flagged for the user to settle by pinning.
+ * its rule, if it has one), or — when the position is pinned nowhere — when the template's
+ * rule (templateRules.js) matches and no more specific rule does. A position pinned to one
+ * template is out of every other; a position REMOVED from a template (excludes) is out of
+ * it whatever the rule. Two equally specific rules matching one unpinned position is a
+ * CLASH, flagged for the user to settle.
  * Pure.
  */
 import { positionRecipeWithWrapperInternals } from './collectionStatus'
 import { rowSlot, normalizeSection, POSITION, INTERNAL } from './recipePresence'
 import { roleOf } from './recipePatterns'
 import { connectorRole } from './connectors'
+import { templateRule, ruleIsEmpty, ruleMatchesRecord, ruleSpecificity, asRecord } from './templateRules'
 
 const lc = s => String(s ?? '').trim().toLowerCase()
 const live = r => (r.IsDeleted || r.isDeleted) !== 'Y'
@@ -142,45 +144,50 @@ export function describeParts(parts) {
 }
 
 /**
- * membership(positionRefs, collections, pins, tagsOf) →
- *   Map(posRef → { templates: [collectionId], pinnedTo: id|null, clash: bool })
- * pins: { [collectionId]: [posRef] }.
+ * membership(positionRefs, collections, pins, recOf, excludes) →
+ *   Map(posRef → { templates: [collectionId], pinnedTo: id|null, clash: bool, alsoMatched: [id] })
+ * pins: { [collectionId]: [posRef] }. recOf(pos) → the position's record
+ * (templateRules.templateRecords), or a bare tag list (read as { Tags }).
+ *
+ * A pin wins. Otherwise every template whose rule matches is a candidate and the MOST
+ * SPECIFIC rule wins (templateRules.ruleSpecificity); the ones it beats are `alsoMatched`.
+ * Two equally specific winners are a clash.
  */
-export function membership(positionRefs, collections, pins = {}, tagsOf = () => [], excludes = {}) {
+export function membership(positionRefs, collections, pins = {}, recOf = () => [], excludes = {}) {
   const pinnedTo = new Map()
   for (const [id, refs] of Object.entries(pins || {})) for (const r of refs || []) pinnedTo.set(r, id)
   const removed = (id, pos) => (excludes?.[id] || []).includes(pos)
   const out = new Map()
   for (const pos of positionRefs) {
-    const tags = tagsOf(pos) || []
+    const rec = asRecord(recOf(pos))
     const pin = pinnedTo.get(pos) || null
     const pinTpl = pin && (collections || []).find(c => c.CollectionId === pin)
     if (pinTpl) {
-      // Pinned: this template only — and still subject to its tags, when it has any.
-      const incl = parse(pinTpl.ApplicableTags), excl = parse(pinTpl.ExcludedTags)
-      const ok = !removed(pin, pos) && !(excl.length && excl.some(t => tags.includes(t)))
-        && (incl.length === 0 || incl.some(t => tags.includes(t)))
-      out.set(pos, { templates: ok ? [pin] : [], pinnedTo: pin, clash: false })
+      // Pinned: this template only — and still subject to its rule, when it has one.
+      const rule = templateRule(pinTpl)
+      const ok = !removed(pin, pos) && (ruleIsEmpty(rule) || ruleMatchesRecord(rule, rec))
+      out.set(pos, { templates: ok ? [pin] : [], pinnedTo: pin, clash: false, alsoMatched: [] })
       continue
     }
-    const matches = (collections || [])
-      .filter(c => !removed(c.CollectionId, pos) && filterMatches(c, tags, { hasPins: (pins?.[c.CollectionId] || []).length > 0 }))
-      .map(c => c.CollectionId)
-    out.set(pos, { templates: matches, pinnedTo: null, clash: matches.length > 1 })
+    const cands = (collections || [])
+      .filter(c => !removed(c.CollectionId, pos) && filterMatches(c, rec, { hasPins: (pins?.[c.CollectionId] || []).length > 0 }))
+      .map(c => ({ id: c.CollectionId, spec: ruleSpecificity(templateRule(c)) }))
+    const top = Math.max(-1, ...cands.map(c => c.spec))
+    const winners = cands.filter(c => c.spec === top).map(c => c.id)
+    out.set(pos, { templates: winners, pinnedTo: null, clash: winners.length > 1, alsoMatched: cands.filter(c => c.spec !== top).map(c => c.id) })
   }
   return out
 }
 
 /**
- * The tag filter alone. A template with no included tags and no pinned positions keeps
- * the old meaning (applies everywhere); once it has pins, an empty filter adds nobody.
+ * The rule alone. A template with no rule and no pinned positions keeps the old meaning
+ * (applies everywhere); once it has pins, an empty rule adds nobody.
+ * `rec` is a record or a bare tag list.
  */
-export function filterMatches(collection, tags, { hasPins = false } = {}) {
-  const incl = parse(collection.ApplicableTags)
-  const excl = parse(collection.ExcludedTags)
-  if (excl.length && excl.some(t => tags.includes(t))) return false
-  if (incl.length === 0) return !hasPins
-  return incl.some(t => tags.includes(t))
+export function filterMatches(collection, rec, { hasPins = false } = {}) {
+  const rule = templateRule(collection)
+  if (ruleIsEmpty(rule)) return !hasPins
+  return ruleMatchesRecord(rule, asRecord(rec))
 }
 
 /**
@@ -207,39 +214,4 @@ export function suggestName(parts) {
   const site = parts.filter(p => p.section === POSITION).map(p => short(p.ref))
   const inside = parts.filter(p => p.section === INTERNAL).map(p => short(p.ref))
   return (site.length ? site.join(' + ') : `in wrapper: ${inside.join(' + ')}`).slice(0, 60)
-}
-
-/**
- * tagFilterFor(group, scope, tagsOf) → { include: [tag], exclude: [tag] } | null
- *
- * A tag filter that picks out EXACTLY the group's positions among `scope`, so a template
- * made from a group can use tags (which keep working as tags change) instead of pinning.
- * One included tag every group position carries; if other positions carry it too, excluded
- * tags that each of those has and no group position has. null when there is none.
- */
-export function tagFilterFor(group, scope, tagsOf) {
-  const inGroup = new Set(group)
-  if (!group.length) return null
-  const tagSets = new Map(scope.map(r => [r, new Set(tagsOf(r) || [])]))
-  const common = [...(tagSets.get(group[0]) || [])].filter(t => group.every(r => tagSets.get(r)?.has(t)))
-  const groupTags = new Set(group.flatMap(r => [...(tagSets.get(r) || [])]))
-  let best = null
-  for (const t of common) {
-    const others = scope.filter(r => !inGroup.has(r) && tagSets.get(r)?.has(t))
-    if (others.length === 0) return { include: [t], exclude: [] }
-    // Greedy cover of the others by tags no group position carries.
-    const pool = [...new Set(others.flatMap(r => [...tagSets.get(r)]))].filter(x => !groupTags.has(x))
-    const exclude = []
-    let left = others
-    while (left.length) {
-      const pick = pool.filter(x => !exclude.includes(x))
-        .map(x => [x, left.filter(r => tagSets.get(r).has(x)).length])
-        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]
-      if (!pick || pick[1] === 0) break
-      exclude.push(pick[0])
-      left = left.filter(r => !tagSets.get(r).has(pick[0]))
-    }
-    if (left.length === 0 && (!best || exclude.length < best.exclude.length)) best = { include: [t], exclude }
-  }
-  return best
 }

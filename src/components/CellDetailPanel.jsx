@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react'
 import { Button, Badge, Form } from 'react-bootstrap'
 import useStore from '../store/useStore'
+import { filterMatches } from '../utils/connectorGroups'
 import MaterialIcon from './MaterialIcon'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { positionRecipeWithWrapperInternals, wrapperUsedBy } from '../utils/collectionStatus'
@@ -15,12 +16,6 @@ function parseIngredients(collection) {
   if (!collection) return []
   if (Array.isArray(collection.Ingredients)) return collection.Ingredients
   try { return JSON.parse(collection.Ingredients || '[]') } catch { return [] }
-}
-
-function parseTags(raw) {
-  if (!raw) return []
-  if (Array.isArray(raw)) return raw
-  try { return JSON.parse(raw) } catch { return [] }
 }
 
 /**
@@ -41,9 +36,7 @@ export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap,
 
   const collection = etCollections.find(c => c.CollectionId === collectionId)
 
-  const tags = positionUI[posRef]?.tags ?? []
-  const collTags = collection ? parseTags(collection.ApplicableTags) : []
-  const applicable = collTags.length === 0 || collTags.some(t => tags.includes(t))
+  const applicable = collection ? filterMatches(collection, useStore.getState()._templateRecOf()(posRef)) : false
 
   // Active (non-deleted) refs present on this position — wrapper-aware: the
   // wrapper's internals count even when stored under another position.
@@ -103,7 +96,7 @@ export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap,
           </div>
         ) : (
           <div className="alert alert-secondary py-1 px-2 mb-2" style={{ fontSize: 11 }}>
-            Tags don't match this position — you can still apply manually.
+            This template's rule doesn't match this position — you can still apply it by hand.
           </div>
         )}
       </div>

@@ -12,7 +12,8 @@ import { Dropdown } from 'react-bootstrap'
 import TemplateGroupPanel from '../components/TemplateGroupPanel'
 import useConnectorGroups from '../components/useConnectorGroups'
 import MaterialIcon from '../components/MaterialIcon'
-import { describeParts, suggestName, tagFilterFor } from '../utils/connectorGroups'
+import { describeParts, suggestName } from '../utils/connectorGroups'
+import { ruleFor, templateRule, describeRule, ruleIsEmpty } from '../utils/templateRules'
 
 /**
  * ConnectorsScreen — dedicated screen for managing virtual ElementType Collections
@@ -38,8 +39,9 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
   async function makeTemplate(g) {
     const name = window.prompt(`Name a template for these ${g.positions.length} position${g.positions.length === 1 ? '' : 's'}`, suggestName(g.parts))?.trim()
     if (!name) return
-    const filter = tagFilterFor(g.positions, groups.scoped.map(pt => pt.PositionTypeRef), r => positionUI[r]?.tags || [])
-    const saved = await makeTemplateFromGroup(name, g.parts, g.positions, { filter })
+    // A rule from the data that picks out exactly this group; otherwise pin the positions.
+    const found = ruleFor(g.positions, groups.scoped.map(pt => pt.PositionTypeRef), groups.recOf)
+    const saved = await makeTemplateFromGroup(name, g.parts, g.positions, { rule: found?.exact ? found.rule : null })
     if (saved) { setSelectedCell(null); setSelectedCollectionId(saved.CollectionId) }
   }
 
@@ -166,7 +168,7 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
           )}
           {etCollections.map(c => {
             const isSelected = c.CollectionId === selectedCollectionId
-            const tags = Array.isArray(c.ApplicableTags) ? c.ApplicableTags : []
+            const rule = templateRule(c)
             const ings = Array.isArray(c.Ingredients) ? c.Ingredients : []
             return (
               <div
@@ -183,12 +185,10 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
                 <div className="fw-semibold" style={{ fontSize: 13 }}>{c.Name}</div>
                 <div style={{ fontSize: 11, color: '#6c757d' }}>
                   {groups.membersOf(c.CollectionId).length} position{groups.membersOf(c.CollectionId).length !== 1 ? 's' : ''} · {ings.length} part{ings.length !== 1 ? 's' : ''}
-                  {tags.length > 0 && (
-                    <span className="ms-1">
-                      {tags.map(t => (
-                        <Badge key={t} bg="secondary" style={{ fontSize: 9, marginLeft: 2 }}>{t}</Badge>
-                      ))}
-                    </span>
+                  {!ruleIsEmpty(rule) && (
+                    <div className="text-truncate" title={describeRule(rule)} data-testid="template-rule-summary">
+                      <MaterialIcon name="filter_alt" size={11} /> {describeRule(rule)}
+                    </div>
                   )}
                 </div>
                 {isSelected && (
@@ -197,17 +197,16 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
                       onClick={e => { e.stopPropagation(); handleEdit(c) }}>
                       Edit
                     </Button>
-                    <Button size="sm" variant="outline-secondary" style={{ fontSize: 10, padding: '1px 6px' }}
-                      title="Copy this template: same parts and filter, to change on its own"
+                    <IconButton bsSize="sm" variant="outline-secondary" icon={ACTION_ICONS.fork} size={14} label="Fork"
+                      title="Fork: copy this template (same parts and rule) to change on its own"
+                      style={{ padding: '0 5px' }}
                       onClick={async e => {
                         e.stopPropagation()
                         const name = window.prompt('Name the copy', `${c.Name} (copy)`)?.trim()
                         if (!name) return
                         const saved = await forkTemplate(c.CollectionId, { name })
                         if (saved) { setSelectedCell(null); setSelectedCollectionId(saved.CollectionId); handleEdit(saved) }
-                      }}>
-                      Fork
-                    </Button>
+                      }} />
                     <Button size="sm" variant="outline-danger" style={{ fontSize: 10, padding: '1px 6px' }}
                       onClick={e => { e.stopPropagation(); handleDelete(c.CollectionId) }}>
                       Delete

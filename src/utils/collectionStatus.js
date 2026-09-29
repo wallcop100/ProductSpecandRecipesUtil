@@ -3,8 +3,8 @@
  *
  * Collections are never assigned directly; status is computed by comparing
  * the position's recipe contents against each collection's ingredient list.
- * Collections with applicable_tags are only evaluated when those tags intersect
- * the position's own tags. Collections with no applicable_tags apply everywhere.
+ * A template is only evaluated where its rule matches (templateRules.js); one with no
+ * rule applies everywhere.
  *
  * The comparison itself lives in recipePresence.js and is slot- and quantity-aware:
  * an ingredient the template puts inside the wrapper counts only when it is really
@@ -15,17 +15,12 @@ import {
   buildPresence, ingredientPresence, ingredientRef, isSatisfied,
   containerForPosition, normalizeSection, INTERNAL,
 } from './recipePresence'
+import { templateRule, ruleIsEmpty, ruleMatchesRecord, asRecord } from './templateRules'
 
 function parseIngredients(collection) {
   if (!collection) return []
   if (Array.isArray(collection.Ingredients)) return collection.Ingredients
   try { return JSON.parse(collection.Ingredients || '[]') } catch { return [] }
-}
-
-function parseTags(raw) {
-  if (!raw) return []
-  if (Array.isArray(raw)) return raw
-  try { return JSON.parse(raw) } catch { return [] }
 }
 
 const posOf = r => r.PositionTypeRef || r.positionTypeRef
@@ -127,11 +122,17 @@ export function wrapperEditContext(recipes, wrapperRef, activePositionRef = null
   return users[0] ?? activePositionRef ?? null
 }
 
+/** Without membership: a template applies when it has no rule, or its rule matches. */
+function ruleAppliesTo(collection, rec) {
+  const rule = templateRule(collection)
+  return ruleIsEmpty(rule) || ruleMatchesRecord(rule, rec)
+}
+
 /**
  * collectionStatusForPosition(posRef, tags, recipe, collections, wrapperRefs)
  *
  * @param {string}   posRef      — PositionTypeRef for this position
- * @param {string[]} tags        — tags for this position (e.g. ['Local', '5-pin'])
+ * @param {string[]|object} tags — the position's record (templateRules.templateRecords), or just its tags
  * @param {object[]} recipe      — this position's rows PLUS its wrappers' internals,
  *                                 i.e. positionRecipeWithWrapperInternals().combined
  * @param {object[]} collections — all virtual ET collections from store
@@ -150,25 +151,17 @@ export function wrapperEditContext(recipes, wrapperRef, activePositionRef = null
  * is what made positions read 'complete' while the recipe was wrong.
  */
 export function collectionStatusForPosition(posRef, tags, recipe, collections, wrapperRefs = [], member = null) {
-  const posTags = Array.isArray(tags) ? tags : []
+  const rec = asRecord(tags)
   const presence = buildPresence(recipe, wrapperRefs)
 
   return (collections || []).map(collection => {
-    const collTags     = parseTags(collection.ApplicableTags)
-    const excludedTags = parseTags(collection.ExcludedTags)
     const na = { collection, status: 'na', missing: [], misplaced: [], short: [], items: [] }
 
     // With pins (connectorGroups.membership), the membership decides: pinned here, or
     // matched by this filter while pinned nowhere.
     if (member) {
       if (!member.templates.includes(collection.CollectionId)) return na
-    } else {
-      // Excluded takes priority: if ANY position tag matches ExcludedTags, skip.
-      if (excludedTags.length > 0 && excludedTags.some(t => posTags.includes(t))) return na
-      // Included tag gate: if the collection declares included tags, at least one must match
-      const applicable = collTags.length === 0 || collTags.some(t => posTags.includes(t))
-      if (!applicable) return na
-    }
+    } else if (!ruleAppliesTo(collection, rec)) return na
 
     const ingredients = parseIngredients(collection).filter(i => ingredientRef(i))
     if (ingredients.length === 0) return na
@@ -216,7 +209,7 @@ const SECTION_PHRASE = {
  * template ingredient.
  */
 export function connectorGapsForPosition(recipes, posRef, tags, collections, containerETRefs = new Set()) {
-  const posTags = Array.isArray(tags) ? tags : []
+  const rec = asRecord(tags)
   const { combined, wrapperRefs } = positionRecipeWithWrapperInternals(recipes, posRef)
   const presence = buildPresence(combined, wrapperRefs)
   if (presence.byRef.size === 0) return []
@@ -229,11 +222,7 @@ export function connectorGapsForPosition(recipes, posRef, tags, collections, con
   const seen = new Set()
 
   for (const collection of collections || []) {
-    const excl = parseTags(collection.ExcludedTags)
-    if (excl.length > 0 && excl.some(t => posTags.includes(t))) continue
-    const collTags = parseTags(collection.ApplicableTags)
-    const applicable = collTags.length === 0 || collTags.some(t => posTags.includes(t))
-    if (!applicable) continue
+    if (!ruleAppliesTo(collection, rec)) continue
 
     const ings = parseIngredients(collection).filter(i => ingredientRef(i))
     if (ings.length === 0) continue

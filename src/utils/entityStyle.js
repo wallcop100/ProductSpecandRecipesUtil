@@ -40,6 +40,7 @@ export const ACTION_ICONS = {
   drawerClose: 'chevron_right',
   // editing
   copy:        'content_copy',
+  fork:        'call_split',
   paste:       'content_paste',
   add:         'add',
   addToSpec:   'playlist_add',

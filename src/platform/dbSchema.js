@@ -51,6 +51,10 @@ function migrate() {
   if (!hasColumn('et_collections', 'ExcludedTags')) {
     db.exec(`ALTER TABLE et_collections ADD COLUMN ExcludedTags TEXT DEFAULT '[]'`)
   }
+  // et_collections: the rule that picks its positions (templateRules.js); NULL = read the tags.
+  if (!hasColumn('et_collections', 'Rule')) {
+    db.exec(`ALTER TABLE et_collections ADD COLUMN Rule TEXT`)
+  }
 
   // projects: config-aware identity. Old schema keyed by UNIQUE(folder_path) with
   // no config columns. Rebuild preserving `id` so overlay FKs stay valid, and
@@ -1179,6 +1183,7 @@ function parseCollection(row) {
     ApplicableTags: JSON.parse(row.ApplicableTags || '[]'),
     ExcludedTags:   JSON.parse(row.ExcludedTags   || '[]'),
     Ingredients:    JSON.parse(row.Ingredients    || '[]'),
+    Rule:           row.Rule ? JSON.parse(row.Rule) : null,
   }
 }
 
@@ -1191,18 +1196,20 @@ function upsertCollection(projectId, collection) {
     ApplicableTags = [],
     ExcludedTags   = [],
     Ingredients    = [],
+    Rule           = null,
     CreatedAt      = ts,
   } = collection
 
   database
     .prepare(`
-      INSERT INTO et_collections (CollectionId, project_id, Name, ApplicableTags, ExcludedTags, Ingredients, CreatedAt, UpdatedAt)
-      VALUES (@CollectionId, @project_id, @Name, @ApplicableTags, @ExcludedTags, @Ingredients, @CreatedAt, @UpdatedAt)
+      INSERT INTO et_collections (CollectionId, project_id, Name, ApplicableTags, ExcludedTags, Ingredients, Rule, CreatedAt, UpdatedAt)
+      VALUES (@CollectionId, @project_id, @Name, @ApplicableTags, @ExcludedTags, @Ingredients, @Rule, @CreatedAt, @UpdatedAt)
       ON CONFLICT(CollectionId) DO UPDATE SET
         Name           = excluded.Name,
         ApplicableTags = excluded.ApplicableTags,
         ExcludedTags   = excluded.ExcludedTags,
         Ingredients    = excluded.Ingredients,
+        Rule           = excluded.Rule,
         UpdatedAt      = excluded.UpdatedAt
     `)
     .run({
@@ -1212,6 +1219,7 @@ function upsertCollection(projectId, collection) {
       ApplicableTags: JSON.stringify(ApplicableTags),
       ExcludedTags:   JSON.stringify(ExcludedTags),
       Ingredients:    JSON.stringify(Ingredients),
+      Rule:           Rule ? JSON.stringify(typeof Rule === 'string' ? JSON.parse(Rule) : Rule) : null,
       CreatedAt,
       UpdatedAt: ts,
     })

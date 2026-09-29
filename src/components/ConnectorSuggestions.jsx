@@ -36,10 +36,9 @@ export default function ConnectorSuggestions({ posRef }) {
   const moveRecipeRowToSection = useStore(s => s.moveRecipeRowToSection)
   const updateRecipeRow = useStore(s => s.updateRecipeRow)
 
-  const tags = positionUI?.[posRef]?.tags || []
   const gaps = useMemo(
-    () => connectorGapsForPosition(recipes, posRef, tags, etCollections, containerETRefs),
-    [recipes, posRef, tags, etCollections, containerETRefs]
+    () => connectorGapsForPosition(recipes, posRef, useStore.getState()._templateRecOf()(posRef), etCollections, containerETRefs),
+    [recipes, posRef, positionUI, etCollections, containerETRefs]
   )
 
   if (gaps.length === 0) return null

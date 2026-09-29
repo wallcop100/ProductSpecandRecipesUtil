@@ -2,7 +2,10 @@ import React, { useMemo, useState } from 'react'
 import { Button, Form, Modal } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
+import IconButton from './IconButton'
+import { ACTION_ICONS } from '../utils/entityStyle'
 import { templateParts, diffParts, diffSize, describeParts, nearMisses, suggestName, filterMatches } from '../utils/connectorGroups'
+import { templateRule, ruleIsEmpty } from '../utils/templateRules'
 
 const diffText = d => [
   ...d.add.map(p => `+ ${p.ref}${p.quantity > 1 ? ` ×${p.quantity}` : ''}${p.section === 'internal' ? ' (wrapper)' : ''}`),
@@ -79,7 +82,8 @@ export default function TemplateGroupPanel({ collectionId, groups, onEdit, onSel
       <div className="d-flex align-items-center gap-2 mb-1">
         <strong style={{ fontSize: 14 }}>{collection.Name}</strong>
         <Button size="sm" variant="outline-primary" className="ms-auto" style={{ fontSize: 11 }} onClick={() => onEdit?.(collection)}>Edit parts</Button>
-        <Button size="sm" variant="outline-secondary" style={{ fontSize: 11 }} onClick={fork} title="Copy this template to give it its own filter and parts">Fork</Button>
+        <IconButton bsSize="sm" variant="outline-secondary" icon={ACTION_ICONS.fork} size={14} label="Fork" onClick={fork}
+          title="Fork: copy this template to give it its own rule and parts" />
       </div>
       <div className="text-muted mb-2">{describeParts(parts)}</div>
 
@@ -154,16 +158,15 @@ export default function TemplateGroupPanel({ collectionId, groups, onEdit, onSel
       {(() => {
         // Positions these tags match that another template holds (pinned there): why a
         // tag-based template can look empty. One click brings them here.
-        const incl = Array.isArray(collection.ApplicableTags) ? collection.ApplicableTags : []
-        if (!incl.length) return null
+        if (ruleIsEmpty(templateRule(collection))) return null
         const held = [...groups.members.entries()].filter(([r, m]) => m.pinnedTo && m.pinnedTo !== collectionId
-          && filterMatches(collection, positionUI[r]?.tags || []))
+          && filterMatches(collection, groups.recOf(r)))
         if (!held.length) return null
         const byTpl = new Map()
         for (const [r, m] of held) { if (!byTpl.has(m.pinnedTo)) byTpl.set(m.pinnedTo, []); byTpl.get(m.pinnedTo).push(r) }
         return (
           <div className="mb-3 p-2 rounded" style={{ background: '#e7f1ff' }} data-testid="held-elsewhere">
-            <strong><MaterialIcon name="info" size={12} /> Matched by these tags, but held by another template</strong>
+            <strong><MaterialIcon name="info" size={12} /> Matched by this rule, but held by another template</strong>
             {[...byTpl.entries()].map(([id, refs]) => (
               <div key={id} className="d-flex align-items-center gap-2 mt-1">
                 <span className="text-truncate">{allTemplates.find(c => c.CollectionId === id)?.Name}: {refs.join(', ')}</span>

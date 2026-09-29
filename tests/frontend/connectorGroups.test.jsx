@@ -78,7 +78,7 @@ describe('connector groups (pure)', () => {
       { CollectionId: 'z', ApplicableTags: [], ExcludedTags: [] },
     ]
     const m = G.membership(['A01', 'A02'], cs, { z: ['B01'], x: ['A02'] }, () => ['Local'])
-    expect(m.get('A02')).toEqual({ templates: ['x'], pinnedTo: 'x', clash: false })
+    expect(m.get('A02')).toEqual({ templates: ['x'], pinnedTo: 'x', clash: false, alsoMatched: [] })
     // z has pins and no filter: it adds nobody by filter. x and y both match A01.
     expect(m.get('A01').templates).toEqual(['x', 'y'])
     expect(m.get('A01').clash).toBe(true)
@@ -200,21 +200,7 @@ describe('tags and removals on a pinned template (bug D4WRKC)', () => {
     const fork = cs.find(c => c.Name === 'Local 5-pin (Orluna)')
     expect(fork).toBeTruthy()
     expect(fork.CollectionId).not.toBe(saved.CollectionId)
-    expect(fork.ApplicableTags).toEqual(['Local'])
+    expect(fork.Rule).toEqual({ match: 'all', conditions: [{ column: 'Tags', op: 'equals', value: 'Local' }] })
   })
 })
 
-describe('Make template uses tags when they pick out the group exactly (2RBL5F)', () => {
-  test('a tag every member has and no one else has', () => {
-    const tags = { A01: ['Orluna', 'Local'], A02: ['Orluna', 'Local'], B01: ['Phos', 'Local'] }
-    expect(G.tagFilterFor(['A01', 'A02'], ['A01', 'A02', 'B01'], r => tags[r])).toEqual({ include: ['Orluna'], exclude: [] })
-  })
-  test('a shared tag plus exclusions for the others', () => {
-    const tags = { A01: ['Local'], A02: ['Local'], B01: ['Local', 'Phos'] }
-    expect(G.tagFilterFor(['A01', 'A02'], ['A01', 'A02', 'B01'], r => tags[r])).toEqual({ include: ['Local'], exclude: ['Phos'] })
-  })
-  test('no exact tag filter: pins instead', () => {
-    const tags = { A01: ['Local'], A02: ['Local'], B01: ['Local'] }
-    expect(G.tagFilterFor(['A01', 'A02'], ['A01', 'A02', 'B01'], r => tags[r])).toBeNull()
-  })
-})
