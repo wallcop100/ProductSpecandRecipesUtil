@@ -128,7 +128,7 @@ export default function StatusScene({ beat }) {
           <>
             {/* the headline box */}
             <div className="px-2 py-1 rounded mb-2" style={{ background: '#f8f9fa', border: '1px solid #e9ecef', fontSize: 9 }}>
-              <span style={{ color: '#dc3545' }}>1 item blocks a correct patch.</span>{' '}
+              <span style={{ color: '#dc3545' }}>1 problem would make the export patch write wrong data.</span>{' '}
               <span className="text-muted">Fix those first.</span>
             </div>
 
@@ -168,7 +168,7 @@ export default function StatusScene({ beat }) {
               </span>
             </div>
             <div className="text-muted mb-1" style={{ fontSize: 8 }}>
-              2 tasks · 3 items <span style={{ color: '#dc3545' }}>· 1 blocks a correct patch</span>
+              2 tasks · 3 items <span style={{ color: '#dc3545' }}>· 1 must be fixed before export</span>
             </div>
 
             {DEMO_STATUS.tasks.map((t, i) => {

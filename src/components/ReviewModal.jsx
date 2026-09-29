@@ -15,7 +15,7 @@ import { positionFamilyOf } from '../utils/positionFamily'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { formWorklist } from '../utils/formSpec'
 import { TAG_OPS } from '../utils/tagRules'
-import { fieldsFor, recordsFor, filterMatches, cellText, legacyFilters, DEFAULT_COLUMNS, DEFAULT_FILTER_FIELDS } from '../utils/reviewFields'
+import { fieldsFor, recordsFor, filterMatches, cellText, legacyFilters, DEFAULT_COLUMNS, DEFAULT_FILTER_FIELDS, FIELD_SOURCES } from '../utils/reviewFields'
 import usePositionList, { byRef } from './usePositionList'
 
 const EMPTY_FILTER = { match: 'all', conditions: [] }
@@ -233,6 +233,11 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
   const conds = filter.conditions.filter(c => c.field && c.op)
   const opLabel = op => TAG_OPS.find(o => o.op === op)?.label || op
   const fieldLabel = key => fields.find(f => f.key === key)?.label || key
+  // Menu items grouped by where the field comes from (DesignDB, Product Spec, Recipes, Tags).
+  const bySource = (list, item) => FIELD_SOURCES.map(src => {
+    const group = list.filter(f => (f.source || 'DesignDB') === src)
+    return group.length === 0 ? null : [<Dropdown.Header key={`h-${src}`}>{src}</Dropdown.Header>, ...group.map(item)]
+  })
   const condText = c => c.op === 'text' ? `${fieldLabel(c.field)}: ${c.value}` : `${fieldLabel(c.field)} ${opLabel(c.op)}${TAG_OPS.find(o => o.op === c.op)?.needsValue === false ? '' : ` ${c.value}`}`
   // Filter boxes: the unit's defaults plus any column added; each box is one 'text' condition.
   const boxFields = [...new Set([...DEFAULT_FILTER_FIELDS[unit], ...extraBoxes,
@@ -354,7 +359,7 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
               <Dropdown>
                 <Dropdown.Toggle variant="link" size="sm" className="p-0" style={{ fontSize: 12 }}>+ Filter on another column</Dropdown.Toggle>
                 <Dropdown.Menu style={{ fontSize: 12, maxHeight: 300, overflowY: 'auto' }}>
-                  {fields.filter(f => !boxFields.includes(f.key)).map(f => (
+                  {bySource(fields.filter(f => !boxFields.includes(f.key)), f => (
                     <Dropdown.Item key={f.key} onClick={() => setExtraBoxes(x => [...x, f.key])}>{f.label}</Dropdown.Item>
                   ))}
                 </Dropdown.Menu>
@@ -366,9 +371,9 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
               )}
               <div className="ms-auto text-muted small">{matches.length} match{matches.length === 1 ? '' : 'es'}</div>
               <Dropdown align="end" autoClose="outside">
-                <Dropdown.Toggle as={IconButton} bsSize="sm" variant="outline-secondary" icon="view_column" title="Columns" />
+                <Dropdown.Toggle as={IconButton} bsSize="sm" variant="outline-secondary" icon="view_column" title="Show on each row" />
                 <Dropdown.Menu style={{ fontSize: 12, maxHeight: 320, overflowY: 'auto' }}>
-                  {fields.map(f => (
+                  {bySource(fields.filter(f => f.key !== 'Ref'), f => (
                     <Dropdown.Item key={f.key} onClick={() => toggleCol(f.key)}>
                       <MaterialIcon name={cols.includes(f.key) ? 'check_box' : 'check_box_outline_blank'} size={14} /> {f.label}
                     </Dropdown.Item>
@@ -380,30 +385,35 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
               </Button>
             </div>
 
-            <div style={{ maxHeight: 360, overflow: 'auto', border: '1px solid #e5e7eb', borderRadius: 4 }}>
-              <table className="table table-sm table-hover mb-0" style={{ fontSize: 12 }} data-testid="review-results">
-                <thead style={{ position: 'sticky', top: 0, background: '#f8f9fa', zIndex: 1 }}>
-                  <tr>
-                    {cols.map(k => (
-                      <th key={k} role="button" style={{ whiteSpace: 'nowrap', cursor: 'pointer' }}
-                        onClick={() => setSortBy(sb => ({ key: k, dir: sb.key === k ? -sb.dir : 1 }))}>
-                        {fieldLabel(k)}{sortBy.key === k ? (sortBy.dir > 0 ? ' ▲' : ' ▼') : ''}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {matches.slice(0, 500).map((m, i) => (
-                    <tr key={m.ref} style={{ cursor: 'pointer' }} onClick={() => start(i)} title="Start the review here">
-                      {cols.map(k => (
-                        <td key={k} className="text-truncate" style={{ maxWidth: 260, fontFamily: k === 'Ref' ? 'monospace' : undefined }}>
-                          {cellText(m.rec?.[k])}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="d-flex align-items-center gap-2 mb-1" style={{ fontSize: 12 }}>
+              <span className="text-muted">Sort by</span>
+              <Form.Select size="sm" style={{ width: 'auto', fontSize: 12 }} aria-label="Sort by" value={sortBy.key}
+                onChange={e => setSortBy(sb => ({ ...sb, key: e.target.value }))}>
+                {[...new Set(['Ref', ...cols])].map(k => <option key={k} value={k}>{fieldLabel(k)}</option>)}
+              </Form.Select>
+              <Button variant="link" size="sm" className="p-0" style={{ fontSize: 12 }} aria-label="Reverse the order"
+                onClick={() => setSortBy(sb => ({ ...sb, dir: -sb.dir }))}>{sortBy.dir > 0 ? 'A → Z' : 'Z → A'}</Button>
+            </div>
+            <div style={{ maxHeight: 360, overflow: 'auto' }}>
+              <style>{'.review-result:hover{background:#f1f5f9}'}</style>
+              <ul className="list-unstyled mb-0" style={{ fontSize: 12 }} data-testid="review-results">
+                {matches.slice(0, 500).map((m, i) => {
+                  const parts = cols.filter(k => k !== 'Ref' && k !== 'Name')
+                    .map(k => [k, cellText(m.rec?.[k])]).filter(([, v]) => v !== '')
+                  return (
+                    <li key={m.ref} role="button" className="review-result px-2 py-1" title="Start the review here"
+                      style={{ cursor: 'pointer', borderBottom: '1px solid #f1f3f5' }} onClick={() => start(i)}>
+                      <span data-testid="result-ref" style={{ fontFamily: 'monospace', fontWeight: 600 }}>{m.ref}</span>
+                      {cols.includes('Name') && m.rec?.Name ? <span className="ms-2">{m.rec.Name}</span> : null}
+                      {parts.length > 0 && (
+                        <span className="text-muted ms-2">
+                          {parts.map(([k, v]) => `${fieldLabel(k)}: ${v}`).join(' · ')}
+                        </span>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
               {matches.length > 500 && <div className="text-muted small p-2">Showing the first 500 of {matches.length}.</div>}
               {matches.length === 0 && <div className="text-muted small p-3 text-center">Nothing matches.</div>}
             </div>

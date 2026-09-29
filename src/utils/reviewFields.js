@@ -17,29 +17,32 @@ const lc = s => String(s ?? '').toLowerCase()
 const refOf = r => r.ElementTypeRef || r.elementTypeRef || ''
 const uniq = a => [...new Set(a.filter(Boolean))]
 
+/** Where each field comes from, in the order they are offered. */
+export const FIELD_SOURCES = ['DesignDB', 'Product Spec', 'Recipes', 'Tags']
+
 /** Built-in fields per unit; raw DesignDB columns are appended by `fieldsFor`. */
 const BUILTIN = {
   position: [
-    { key: 'Ref', label: 'Ref' },
-    { key: 'Name', label: 'Name' },
-    { key: 'Family', label: 'Family' },
-    { key: 'Tags', label: 'Tags', list: true },
-    { key: 'Contains', label: 'Contains ET', list: true },
-    { key: 'Manufacturer', label: 'Manufacturer', list: true },
-    { key: 'ProductCode', label: 'Product code', list: true },
-    { key: 'Rows', label: 'Recipe rows', numeric: true },
-    { key: 'Status', label: 'Status' },
+    { key: 'Ref', label: 'Ref', source: 'DesignDB' },
+    { key: 'Name', label: 'Name', source: 'DesignDB' },
+    { key: 'Family', label: 'Family', source: 'DesignDB' },
+    { key: 'Tags', label: 'Tags', list: true, source: 'Tags' },
+    { key: 'Contains', label: 'Contains ET', list: true, source: 'Recipes' },
+    { key: 'Manufacturer', label: 'Manufacturer', list: true, source: 'Product Spec' },
+    { key: 'ProductCode', label: 'Product code', list: true, source: 'Product Spec' },
+    { key: 'Rows', label: 'Recipe rows', numeric: true, source: 'Recipes' },
+    { key: 'Status', label: 'Status', source: 'Recipes' },
   ],
   element: [
-    { key: 'Ref', label: 'Ref' },
-    { key: 'Family', label: 'Family' },
-    { key: 'Manufacturer', label: 'Manufacturer' },
-    { key: 'ProductCode', label: 'Product code' },
-    { key: 'Description', label: 'Description' },
-    { key: 'Tags', label: 'Tags', list: true },
-    { key: 'UsedIn', label: 'Used in', list: true },
-    { key: 'UsedInCount', label: 'Used in (count)', numeric: true },
-    { key: 'Contains', label: 'Contains ET', list: true },
+    { key: 'Ref', label: 'Ref', source: 'DesignDB' },
+    { key: 'Family', label: 'Family', source: 'DesignDB' },
+    { key: 'Manufacturer', label: 'Manufacturer', source: 'Product Spec' },
+    { key: 'ProductCode', label: 'Product code', source: 'Product Spec' },
+    { key: 'Description', label: 'Description', source: 'Product Spec' },
+    { key: 'Tags', label: 'Tags', list: true, source: 'Tags' },
+    { key: 'UsedIn', label: 'Used in', list: true, source: 'Recipes' },
+    { key: 'UsedInCount', label: 'Used in (count)', numeric: true, source: 'Recipes' },
+    { key: 'Contains', label: 'Contains ET', list: true, source: 'Recipes' },
   ],
 }
 
@@ -64,7 +67,7 @@ export function fieldsFor(unit, { positionTypes = [], elementTypes = [] } = {}) 
   for (const row of (unit === 'position' ? positionTypes : elementTypes)) {
     for (const [k, v] of Object.entries(row || {})) if (!SKIP_RAW.test(k) && !have.has(k) && (v == null || typeof v !== 'object')) raw.add(k)
   }
-  return [...base, ...[...raw].sort((a, b) => a.localeCompare(b)).map(k => ({ key: k, label: k, raw: true }))]
+  return [...base, ...[...raw].sort((a, b) => a.localeCompare(b)).map(k => ({ key: k, label: k, raw: true, source: 'DesignDB' }))]
 }
 
 /**

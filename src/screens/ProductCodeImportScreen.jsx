@@ -107,6 +107,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   const [error, setError] = useState(null)
 
   const [filepath, setFilepath] = useState('')
+  const projectId = useStore(s => s.projectId)
   const [sheets, setSheets] = useState([])
   const [sheet, setSheet] = useState('')
   const [headers, setHeaders] = useState([])
@@ -226,12 +227,26 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     finally { setBusy(false) }
   }
 
-  async function handlePick() {
-    const path = await window.electronAPI?.openXlsxDialog?.()
-    if (!path) return
+  async function openToken(path) {
     setFilepath(path)
     setSource(await fileMeta(path))
     loadWorkbook(path)
+  }
+
+  async function handlePick() {
+    const path = await window.electronAPI?.openXlsxDialog?.()
+    if (!path) return
+    // Remembered for this project, like its folder: next time Import reopens it.
+    try { await window.electronAPI?.rememberFormFile?.(projectId, path) } catch { /* not remembered */ }
+    setRemembered(null)
+    openToken(path)
+  }
+
+  /** Reopen the remembered Form (a click: the browser may ask for access again). */
+  async function reopenRemembered() {
+    const r = await window.electronAPI?.reopenFormFile?.(projectId, { ask: true })
+    if (r?.token) { setRemembered(null); openToken(r.token) }
+    else setError('Could not open it again. Choose the spreadsheet instead.')
   }
 
   const skipped = useMemo(
@@ -389,6 +404,20 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   useEffect(() => {
     if (step === 'pick' && importDraft && !resumeDismissed) { setResumeDismissed(true); resumeDraft(importDraft) }
   }, [step, importDraft, resumeDismissed])   // eslint-disable-line react-hooks/exhaustive-deps
+
+  // No saved import: reopen the Form last used for this project, as the folder is. Straight
+  // in when access is still granted; otherwise a one-click "Reopen …".
+  const [remembered, setRemembered] = useState(null)   // { name } awaiting a click
+  useEffect(() => {
+    if (step !== 'pick' || importDraft || filepath) return
+    let live = true
+    Promise.resolve(window.electronAPI?.reopenFormFile?.(projectId, { ask: false })).then(r => {
+      if (!live || !r) return
+      if (r.token) openToken(r.token)
+      else setRemembered({ name: r.name })
+    }).catch(() => {})
+    return () => { live = false }
+  }, [step, importDraft, projectId])   // eslint-disable-line react-hooks/exhaustive-deps
 
   /** Start again from a (new) Form spreadsheet: the ⋯ menu's Re-import. */
   async function reimport() {
@@ -1209,9 +1238,16 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
             The Form template spreadsheet{' '}
             <InfoTip>Only ever read, never written.</InfoTip>
           </p>
-          <Button variant="primary" onClick={handlePick} disabled={busy}>
+          {remembered && (
+            <div className="mb-2">
+              <Button variant="primary" onClick={reopenRemembered} disabled={busy} data-testid="reopen-form">
+                <MaterialIcon name="history" size={16} /> <span className="ms-1">Reopen {remembered.name}</span>
+              </Button>
+            </div>
+          )}
+          <Button variant={remembered ? 'outline-secondary' : 'primary'} onClick={handlePick} disabled={busy}>
             {busy ? <Spinner size="sm" animation="border" /> : <MaterialIcon name="folder_open" size={16} />}
-            <span className="ms-1">Choose spreadsheet…</span>
+            <span className="ms-1">{remembered ? 'Choose another spreadsheet…' : 'Choose spreadsheet…'}</span>
           </Button>
         </div>
       )}

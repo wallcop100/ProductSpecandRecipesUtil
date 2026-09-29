@@ -310,3 +310,26 @@ describe('finish first, then add', () => {
     expect(screen.getByRole('button', { name: /Add 1 to Product Spec/ })).not.toBeDisabled()
   })
 })
+
+describe('the Form is remembered per project', () => {
+  test('picking stores it; next time it reopens by itself when access is kept', async () => {
+    window.electronAPI.rememberFormFile = vi.fn().mockResolvedValue(undefined)
+    useStore.setState({ importDraft: null })
+    await pick(['PositionTypeRef', 'ProductCode', 'ManufacturerName'])
+    await screen.findByTestId('form-table')
+    expect(window.electronAPI.rememberFormFile).toHaveBeenCalledWith(1, 'tok-1')
+  })
+
+  test('without access, a Reopen button names the file', async () => {
+    window.electronAPI.reopenFormFile = vi.fn()
+      .mockResolvedValueOnce({ name: 'LUM Form.xlsx', needsPermission: true })
+      .mockResolvedValueOnce({ token: 'tok-2', name: 'LUM Form.xlsx' })
+    readSheet.mockResolvedValue(sheet(['PositionTypeRef', 'ProductCode', 'ManufacturerName']))
+    useStore.setState({ projectId: 1, positionTypes: [{ PositionTypeRef: 'A1' }], psRows: [], elementTypes: [], recipes: [], importDraft: null })
+    render(<ProductCodeImportScreen onBack={vi.fn()} onReviewPositions={vi.fn()} />)
+    fireEvent.click(await screen.findByText('Reopen LUM Form.xlsx'))
+    expect(await screen.findByTestId('form-table')).toBeInTheDocument()
+    expect(window.electronAPI.reopenFormFile).toHaveBeenLastCalledWith(1, { ask: true })
+    delete window.electronAPI.reopenFormFile
+  })
+})

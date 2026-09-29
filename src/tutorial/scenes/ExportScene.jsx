@@ -95,7 +95,7 @@ export default function ExportScene({ beat }) {
           'Changes shows every pending edit, field by field, before → after.',
           'Patches: one script per workbook. Copy the ones with changes.',
           'Paste into Excel’s Automate tab and Run. Running twice is harmless.',
-          'If Resolve first is lit, do it first — it is what stands between you and a correct patch.',
+          'If Resolve first is lit, do it first: until then the patch would write wrong data.',
         ][beat]}
       </Caption>
     </>

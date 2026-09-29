@@ -65,7 +65,7 @@ export default function ReadinessPanel({ onOpenValidation, onOpenExport, onOpenP
             </span>
           : <span className="text-muted">
               {state.blocking > 0
-                ? <><span style={{ color: '#dc3545' }}>{state.blocking} item{state.blocking === 1 ? '' : 's'} block a correct patch.</span> Fix those first.</>
+                ? <><span style={{ color: '#dc3545' }}>{state.blocking} problem{state.blocking === 1 ? '' : 's'} would make the export patch write wrong data.</span> Fix {state.blocking === 1 ? 'it' : 'them'} before exporting.</>
                 : 'Not yet. The unfinished clauses are below.'}
             </span>}
       </div>

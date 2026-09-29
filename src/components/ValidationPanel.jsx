@@ -89,7 +89,7 @@ export default function ValidationPanel({ onOpenProductSpec, onOpenFixer }) {
           {summary.open === 0
             ? <span className="text-success"><MaterialIcon name={ACTION_ICONS.complete} size={13} /> Nothing left to do — {summary.queued} task{summary.queued === 1 ? '' : 's'} waiting on Excel.</span>
             : <>{summary.open} task{summary.open === 1 ? '' : 's'} · {summary.issues} item{summary.issues === 1 ? '' : 's'}
-                {summary.blocking > 0 && <span style={{ color: '#dc3545' }}> · {summary.blocking} blocks a correct patch</span>}</>}
+                {summary.blocking > 0 && <span style={{ color: '#dc3545' }}> · {summary.blocking} must be fixed before export</span>}</>}
         </div>
       )}
 

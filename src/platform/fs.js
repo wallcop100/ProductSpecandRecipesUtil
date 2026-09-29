@@ -153,6 +153,29 @@ export async function ensurePermission(handle, mode = 'read') {
   return (await handle.requestPermission(opts)) === 'granted'
 }
 
+// --- the Form spreadsheet, remembered per project ---------------------------
+
+const FORM_KEY = 'form-files'   // { [projectKey]: { handle, name } }
+
+/** Remember the Form spreadsheet picked for a project, so Import can reopen it. */
+export async function rememberFormFile(projectKey, handle) {
+  if (projectKey == null || !handle) return
+  const all = (await idbGet(FORM_KEY)) || {}
+  all[projectKey] = { handle, name: handle.name }
+  await idbSet(FORM_KEY, all)
+}
+
+/** The remembered Form spreadsheet: { handle, name } or null. */
+export async function getFormFile(projectKey) {
+  const all = (await idbGet(FORM_KEY)) || {}
+  return all[projectKey] || null
+}
+
+/** Is read access already granted (no prompt needed)? */
+export async function hasPermission(handle, mode = 'read') {
+  try { return (await handle.queryPermission({ mode })) === 'granted' } catch { return false }
+}
+
 // --- reading ----------------------------------------------------------------
 
 /** Every .xlsx directly inside the folder: [{ name, handle }]. */

@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-09-29', note: 'From bug reports: Import reopens the project’s last Form spreadsheet like the DesignDB folder; a connector template no longer holds pinned positions its excluded tags rule out (unpinned on save); Review results are a plain list with a Sort by; “+ Filter on another column” is split by source (DesignDB, Product Spec, Recipes, Tags); “blocks a correct patch” now says the export patch would write wrong data' },
   { date: '2026-09-29', note: 'From bug reports: Review filters are simple boxes again (free text, * ? wildcards, add any column); Make template uses tags when they pick the group out exactly, and a template shows positions its tags match but another holds; clearer bulk buttons (Add to N empty / Complete N partial), key on top, maker + code on palette parts; cables skipped by Product Spec checks (⋯ to change); in-app “How this works”; Style library and the “master list” prose removed' },
   { date: '2026-09-29', note: 'Connector templates: tags now narrow a template made from a group (its pinned positions must match them too); remove a single fitting from a template (and restore it); Fork from the template list, and “Save as a copy” in the editor' },
   { date: '2026-09-29', note: 'Back up everything this browser holds for the app to a file, and restore it (start page): every project, its unexported changes, templates, tags, captures and settings. The pre-release site is withdrawn' },

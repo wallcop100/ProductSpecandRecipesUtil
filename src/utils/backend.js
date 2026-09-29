@@ -36,6 +36,9 @@ function requireDir() {
   return activeDir
 }
 
+/** The file handle behind a token (null when unknown). */
+export const handleOf = token => fileTokens.get(token) || null
+
 /** Register a picked file so it can be referenced by an opaque token. */
 export function registerFile(handle) {
   const token = `file_${crypto.randomUUID()}`
