@@ -42,6 +42,7 @@ import { resolveFormRefs, buildRefMap, targetFor } from '../utils/ptResolve'
 import { applyKnownCodes, knownTokenIndices } from '../utils/knownCodes'
 import { isObvious, isNothingRow, isTbcRow } from '../utils/obviousRows'
 import { joinAccessories, isPlaceholder, accessoriesFrom, leadOf } from '../utils/accessories'
+import { matchForms, diffRow } from '../utils/formDiff'
 import { diffCaptures, wrapperDivergence } from '../utils/formSpec'
 
 /** Fuzzy header match: exact normalised hit first, else shortest header containing it. */
@@ -123,7 +124,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   // The table: which row is open in the painter, which has keyboard focus, and the view.
   const [expandedId, setExpandedId] = useState(null)
   const [focusId, setFocusId] = useState(null)
-  const [filter, setFilter] = useState('all')      // all | unconfirmed | needsEt
+  const [filter, setFilter] = useState('all')      // all | unconfirmed | needsEt | unchanged | changed | new | removed
+  // The older Form this import is compared with (formDiff.js): { name, rows } or null.
+  const [compareBase, setCompareBase] = useState(null)
   const [query, setQuery] = useState('')
   const [etFocusCode, setEtFocusCode] = useState(null)
   const [refsOpen, setRefsOpen] = useState(false)
@@ -249,6 +252,46 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     else setError('Could not open it again. Choose the spreadsheet instead.')
   }
 
+  /**
+   * Compare this import with an older Form spreadsheet. Its columns are read by the same
+   * header names as this sheet's mapping (else guessed); it is only read, never imported.
+   */
+  async function compareWithFile() {
+    const path = await window.electronAPI?.openXlsxDialog?.()
+    if (!path) return
+    setBusy(true); setError(null)
+    try {
+      let data = await readSheet(path, null)
+      const col = (mapped, want, hs) => (mapped && hs.includes(mapped) ? mapped : detect(hs, want))
+      if (!col(map.code, 'productcode', data.headers)) {
+        for (const sname of data.sheets || []) {
+          if (sname === data.sheet) continue
+          const alt = await readSheet(path, sname)
+          if (col(map.code, 'productcode', alt.headers)) { data = alt; break }
+        }
+      }
+      const hs = data.headers || []
+      const c = {
+        pt: col(map.pt, 'positiontype', hs), code: col(map.code, 'productcode', hs),
+        mfr: col(map.mfr, 'manufacturer', hs), acc: col(map.acc, 'accessor', hs), exclude: col(map.exclude, 'exclude', hs),
+      }
+      if (!c.code || !c.pt) {
+        setError(`That spreadsheet has no ${!c.code ? 'product code' : 'PositionType'} column to compare with.`)
+        return
+      }
+      const base = (data.rows || [])
+        .filter(r => !(c.exclude && isExcluded(r[c.exclude])))
+        .map(r => ({ formRef: String(r[c.pt] ?? '').trim(), manufacturer: String(r[c.mfr] ?? '').trim(),
+          rawText: joinAccessories(r[c.code], c.acc ? r[c.acc] : null) }))
+        .filter(r => r.rawText !== '')
+      const meta = await fileMeta(path).catch(() => null)
+      setCompareBase({ name: meta?.name || 'the older Form', rows: base })
+      setFilter('all')
+    } catch (err) {
+      setError(err.response?.data?.error || err.message)
+    } finally { setBusy(false) }
+  }
+
   const skipped = useMemo(
     () => (map.exclude ? rawRows.filter(r => isExcluded(r[map.exclude])).length : 0),
     [rawRows, map.exclude]
@@ -335,14 +378,14 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   const draftFromState = useCallback(() => ({
     version: 1,
     source: { ...(source || {}), sheet },
-    step, map, rules, assignments, resolutions, refOverrides, dirStats,
+    step, map, rules, assignments, resolutions, refOverrides, dirStats, compareBase,
     keptSeparate: [...keptSeparate],
     rows: rows.map(r => ({
       id: r.id, rawText: r.rawText, positionType: r.positionType, manufacturer: r.manufacturer,
       context: r.context, overrides: r.overrides, noteOverride: r.noteOverride, confirmed: r.confirmed,
       accFrom: r.accFrom ?? null, leadCode: r.leadCode ?? null, pre: r.pre || null,
     })),
-  }), [source, sheet, step, map, rules, assignments, resolutions, refOverrides, dirStats, keptSeparate, rows])
+  }), [source, sheet, step, map, rules, assignments, resolutions, refOverrides, dirStats, keptSeparate, rows, compareBase])
 
   // Debounced: painting a token must not write a pref on every keystroke.
   useEffect(() => {
@@ -383,6 +426,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     setMap(d.map ? { acc: '', ...d.map } : { pt: '', code: '', mfr: '', exclude: '', acc: '', context: [] })
     setSource(d.source || null)
     setSheet(d.source?.sheet || '')
+    setCompareBase(d.compareBase || null)
     setStaged(null); setUndoSnap(null)
     setStep('review')   // never back to pick/map: no workbook (a draft saved at the old resolve step lands here too)
   }
@@ -422,7 +466,10 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   /** Start again from a (new) Form spreadsheet: the ⋯ menu's Re-import. */
   async function reimport() {
     if (rows.some(r => r.confirmed) && !window.confirm('Start again from a spreadsheet? The painting and confirms on this import are dropped (anything already added to the Product Spec stays).')) return
+    // The Form being replaced becomes what the new one is compared with.
+    const base = rows.length ? { name: source?.name || 'the last import', rows: rows.map(diffRow) } : compareBase
     await discardDraft()
+    setCompareBase(base)
     session.load({ rows: [] })
     setStaged(null); setExpandedId(null); setKnownStats(null); setPreKnownRows(null)
     setStep('pick')
@@ -1084,16 +1131,30 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     : productCaptures(r, captureOpts).some(c => !etFor(c.code, r.manufacturer))), [captureOpts, etFor])
   const needsEtCount = useMemo(() => formOrder.filter(needsEt).length, [formOrder, needsEt])
 
+  // What changed since the older Form (formDiff.js), per row id, and what it no longer has.
+  const formDiff = useMemo(() => {
+    if (!compareBase) return null
+    const res = matchForms(compareBase.rows || [], formOrder.map(diffRow))
+    const byId = new Map(formOrder.map((r, i) => [r.id, res.rows[i]]))
+    return { byId, removed: res.removed, counts: res.counts }
+  }, [compareBase, formOrder])
+  /** The codes in an old row the Product Spec knows: "QC7000 · ET-PS-04". */
+  const knownIn = useCallback(old => String(old?.rawText || '').split(/\s+/).filter(Boolean)
+    .map(w => ({ code: w, et: classify(w, ctx, old.manufacturer).elementTypeRef || null }))
+    .filter(x => x.et), [ctx])
+
   const tableRows = useMemo(() => {
     const q = query.trim().toLowerCase()
     return formOrder.filter(r => {
       if (filter === 'unconfirmed' && r.confirmed) return false
       if (filter === 'needsEt' && !needsEt(r)) return false
+      if (['unchanged', 'changed', 'new'].includes(filter) && formDiff?.byId.get(r.id)?.state !== filter) return false
+      if (filter === 'removed') return false
       if (!q) return true
       return [r.rawText, r.positionType, r.manufacturer, ...Object.values(r.context || {})]
         .some(v => String(v ?? '').toLowerCase().includes(q))
     })
-  }, [formOrder, filter, query, needsEt])
+  }, [formOrder, filter, query, needsEt, formDiff])
 
   /** The Form's own columns, in its order; ProductCode carries Accessories (they share a cell). */
   const tableColumns = useMemo(() => {
@@ -1336,6 +1397,18 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                     onClick={() => setFilter(k)}>{label}</Button>
                 ))}
               </ButtonGroup>
+              {formDiff && (
+                <ButtonGroup size="sm" aria-label="Show changes">
+                  {[['changed', 'Changed', '#b45309'], ['new', 'New', '#0d6efd'], ['removed', 'Removed', '#842029'], ['unchanged', 'Unchanged', '#6c757d']].map(([k, label]) => (
+                    <Button key={k} variant={filter === k ? 'primary' : 'outline-secondary'} style={{ fontSize: 11 }}
+                      onClick={() => setFilter(filter === k ? 'all' : k)}>{label} {formDiff.counts[k]}</Button>
+                  ))}
+                </ButtonGroup>
+              )}
+              <Button size="sm" variant="link" className="p-0" style={{ fontSize: 11 }} onClick={compareWithFile} disabled={busy}
+                title="Pick an older version of this Form: each row shows what changed since then">
+                <MaterialIcon name="difference" size={13} /> Compare with an older Form…
+              </Button>
               {easyLeft > 0 && (
                 <Button size="sm" variant="success" style={{ fontSize: 11 }} onClick={confirmObvious}
                   title="Rows with one clean code (plus '+' extras and accessories), and placeholder rows with nothing to add. One undo takes them all back.">
@@ -1357,6 +1430,18 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                   onClick={() => { session.redo(); setUndoSnap(null) }} />
               </span>
             </div>
+
+            {/* What changed since the older Form. */}
+            {formDiff && (
+              <div className="mb-2 px-2 py-1 rounded d-flex align-items-center gap-2 flex-wrap" data-testid="form-diff-banner"
+                style={{ background: '#fff8e1', border: '1px solid #ffe08a', fontSize: 11, color: '#5c4400' }}>
+                <MaterialIcon name="difference" size={13} />
+                <span>Compared with <strong>{compareBase.name}</strong>: {formDiff.counts.unchanged} unchanged · {formDiff.counts.changed} changed ·{' '}
+                  {formDiff.counts.new} new · {formDiff.counts.removed} removed</span>
+                <Button size="sm" variant="link" className="p-0 ms-auto" style={{ fontSize: 10 }}
+                  onClick={() => { setCompareBase(null); if (['unchanged', 'changed', 'new', 'removed'].includes(filter)) setFilter('all') }}>Clear comparison</Button>
+              </div>
+            )}
 
             {/* Stage ① — what the Product Spec already knew. */}
             {knownStats && (
@@ -1410,6 +1495,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                 onNeedsET={openETFor}
                 onFixRef={() => setRefsOpen(true)}
                 onMakeMain={(rowId, code) => patchRow(rowId, r => ({ ...r, leadCode: code }))}
+                change={formDiff ? r => formDiff.byId.get(r.id) : null}
+                removed={formDiff && (filter === 'all' || filter === 'removed') ? formDiff.removed : null}
+                knownIn={knownIn}
                 expandedId={expandedId}
                 onExpand={id => { setExpandedId(id); if (id != null) setFocusId(id); setUndoSnap(null) }}
                 focusId={focusId}

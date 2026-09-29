@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-09-29', note: 'Import product codes: compare two Forms. Re-importing compares the new Form with the one it replaces, or pick any older spreadsheet (“Compare with an older Form…”); each row shows same / changed / new (with the old text word by word and what the spec knew of it), removed rows are listed, and Changed / New / Removed / Unchanged filter the table' },
   { date: '2026-09-29', note: 'Connector templates can take connectors away: a part removed from a template shows as an extra (orange) on positions that still have it, a template with no parts means “no connectors here”, and “Remove extras from N” clears them after a preview' },
   { date: '2026-09-29', note: 'Connectors (4QS68H): Complete partial now adds a connector the template wants both on site and inside the wrapper (it used to move the one copy back and forth), and no longer lands in an ElementType left open in the builder; connectors a position has that its template doesn’t ask for are flagged (+N on the cell, listed with Remove in the cell panel, and “Remove them too” in the bulk preview)' },
   { date: '2026-09-29', note: 'Connector template rules (F59FQV): suggestions use position fields first, so positions whose recipe isn’t built yet match too, and no longer count connector-less positions against a rule; the editor shows which matching positions go to another template and why, and “Check a position” shows each condition against its values; stray spaces no longer break “equals”' },
