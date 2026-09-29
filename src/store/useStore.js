@@ -414,6 +414,7 @@ const useStore = create((set, get) => ({
   // Virtual ElementType Collections (from SQLite et_collections)
   etCollections: [],
   connectorPins: {},        // { [CollectionId]: [PositionTypeRef] } — see connectorGroups.membership
+  connectorExcludes: {},    // { [CollectionId]: [PositionTypeRef] } — removed from that template
 
   // PositionType families flagged as ignored (persisted as project pref).
   // Ignored families drop out of the connector matrix and high-level totals.
@@ -602,6 +603,7 @@ const useStore = create((set, get) => ({
       tagDrift: tagDrift ?? {},
       etCollections: etCollections ?? [],
       connectorPins: data.connectorPins ?? {},
+      connectorExcludes: data.connectorExcludes ?? {},
       connectorFamilies: data.connectorFamilies ?? [],
       favorites: favorites ?? [],
       ignoredPositionFamilies: ignoredPositionFamilies ?? [],
@@ -2345,12 +2347,37 @@ const useStore = create((set, get) => ({
     for (const [id, refs] of Object.entries(get().connectorPins)) next[id] = refs.filter(r => !move.has(r))
     next[collectionId] = [...new Set([...(next[collectionId] || []), ...posRefs])]
     await get().setConnectorPins(next)
+    const ex = get().connectorExcludes
+    if ((ex[collectionId] || []).some(r => move.has(r))) {
+      await get().setConnectorExcludes({ ...ex, [collectionId]: ex[collectionId].filter(r => !move.has(r)) })
+    }
   },
 
   async unpinPositions(collectionId, posRefs) {
     const drop = new Set(posRefs)
     const pins = get().connectorPins
     await get().setConnectorPins({ ...pins, [collectionId]: (pins[collectionId] || []).filter(r => !drop.has(r)) })
+  },
+
+  async setConnectorExcludes(excludes) {
+    const clean = Object.fromEntries(Object.entries(excludes || {}).filter(([, v]) => v && v.length))
+    set({ connectorExcludes: clean })
+    const { projectId } = get()
+    if (projectId != null) await window.electronAPI?.db?.setPref?.(projectId, 'connector_excludes', JSON.stringify(clean))
+  },
+
+  /** Take positions out of a template (unpinned, and kept out even if its tags match). */
+  async removeFromTemplate(collectionId, posRefs) {
+    await get().unpinPositions(collectionId, posRefs)
+    const ex = get().connectorExcludes
+    await get().setConnectorExcludes({ ...ex, [collectionId]: [...new Set([...(ex[collectionId] || []), ...posRefs])] })
+  },
+
+  /** Undo removeFromTemplate: the tag filter decides again. */
+  async restoreToTemplate(collectionId, posRefs) {
+    const drop = new Set(posRefs)
+    const ex = get().connectorExcludes
+    await get().setConnectorExcludes({ ...ex, [collectionId]: (ex[collectionId] || []).filter(r => !drop.has(r)) })
   },
 
   /** A group found in the recipes becomes a template holding exactly those positions. */
@@ -2447,6 +2474,10 @@ const useStore = create((set, get) => ({
     if (get().connectorPins[collectionId]) {
       const { [collectionId]: _gone, ...rest } = get().connectorPins
       await get().setConnectorPins(rest)
+    }
+    if (get().connectorExcludes[collectionId]) {
+      const { [collectionId]: _x, ...restEx } = get().connectorExcludes
+      await get().setConnectorExcludes(restEx)
     }
   },
 

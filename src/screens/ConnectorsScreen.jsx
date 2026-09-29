@@ -28,6 +28,7 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
   const deleteCollection = useStore(s => s.deleteCollection)
   const swapCollection  = useStore(s => s.swapCollection)
   const makeTemplateFromGroup = useStore(s => s.makeTemplateFromGroup)
+  const forkTemplate = useStore(s => s.forkTemplate)
   const connectorFamilies = useStore(s => s.connectorFamilies)
   const setConnectorFamilies = useStore(s => s.setConnectorFamilies)
   const elementTypes = useStore(s => s.elementTypes)
@@ -194,6 +195,17 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
                     <Button size="sm" variant="outline-primary" style={{ fontSize: 10, padding: '1px 6px' }}
                       onClick={e => { e.stopPropagation(); handleEdit(c) }}>
                       Edit
+                    </Button>
+                    <Button size="sm" variant="outline-secondary" style={{ fontSize: 10, padding: '1px 6px' }}
+                      title="Copy this template: same parts and filter, to change on its own"
+                      onClick={async e => {
+                        e.stopPropagation()
+                        const name = window.prompt('Name the copy', `${c.Name} (copy)`)?.trim()
+                        if (!name) return
+                        const saved = await forkTemplate(c.CollectionId, { name })
+                        if (saved) { setSelectedCell(null); setSelectedCollectionId(saved.CollectionId); handleEdit(saved) }
+                      }}>
+                      Fork
                     </Button>
                     <Button size="sm" variant="outline-danger" style={{ fontSize: 10, padding: '1px 6px' }}
                       onClick={e => { e.stopPropagation(); handleDelete(c.CollectionId) }}>

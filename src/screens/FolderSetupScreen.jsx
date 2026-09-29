@@ -443,7 +443,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
       try { localElementTypes = await window.electronAPI.db.getLocalETs(projectId) || [] } catch { /* none */ }
 
       // 3. Load SQLite data
-      const [positionUIArr, templates, slotMappings, containerETPref, containerExcludePref, etCollections, ignoredFamiliesPref, tagRulesPref, tagPalettePref, tagSnapshotsPref, favorites, tagColorsPref, formCapturesPref, importDraftPref, connectorPinsPref, connectorFamiliesPref] = await Promise.all([
+      const [positionUIArr, templates, slotMappings, containerETPref, containerExcludePref, etCollections, ignoredFamiliesPref, tagRulesPref, tagPalettePref, tagSnapshotsPref, favorites, tagColorsPref, formCapturesPref, importDraftPref, connectorPinsPref, connectorFamiliesPref, connectorExcludesPref] = await Promise.all([
         window.electronAPI.db.getAllPositionUI(projectId),
         window.electronAPI.db.getAllTemplates(projectId),
         window.electronAPI.db.getAllSlotMappings(projectId), // already { templateId: { slotKey: ref } }
@@ -460,6 +460,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
         window.electronAPI.db.getPref(projectId, 'form_import_draft'),
         window.electronAPI.db.getPref(projectId, 'connector_pins'),
         window.electronAPI.db.getPref(projectId, 'connector_families'),
+        window.electronAPI.db.getPref(projectId, 'connector_excludes'),
       ])
 
       let tagColors = {}
@@ -559,6 +560,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
         manualContainerExcludeETs,
         connectorPins: (() => { try { return JSON.parse(connectorPinsPref || '{}') || {} } catch { return {} } })(),
         connectorFamilies: (() => { try { return JSON.parse(connectorFamiliesPref || '[]') || [] } catch { return [] } })(),
+        connectorExcludes: (() => { try { return JSON.parse(connectorExcludesPref || '{}') || {} } catch { return {} } })(),
         etCollections: etCollections ?? [],
         favorites: favorites ?? [],
         ignoredPositionFamilies,

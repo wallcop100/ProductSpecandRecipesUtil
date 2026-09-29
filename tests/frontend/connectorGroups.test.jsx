@@ -38,7 +38,7 @@ function setup(over = {}) {
     projectId: 1, positionTypes: PTS, recipes: recipes(), positionUI: {}, ignoredPositionFamilies: [],
     elementTypes: ['ET-5PIN-SOCKET', 'ET-5PIN-SR', 'ET-5PIN-SR-IP', 'ET-5PIN-PLUG', 'ET-2PIN-REMOTE-SOCKET', 'ET-2PIN-REMOTE-PLUG', 'ET-PS-01']
       .map(r => ({ ElementTypeRef: r, Family: r.startsWith('ET-PS') ? 'ET-PS' : 'ET-CONNECTORS' })),
-    psRows: [], etCollections: [], connectorPins: {}, connectorFamilies: [],
+    psRows: [], etCollections: [], connectorPins: {}, connectorExcludes: {}, connectorFamilies: [],
     past: [], future: [], rsChanges: [], psChanges: [], dbChanges: [], containerETRefs: new Set(),
     activeContextType: 'PositionType', activeETRef: null,
     ...over,
@@ -162,5 +162,44 @@ describe('ConnectorBoard', () => {
     expect(within(screen.getByTestId('lane-internal')).getByText('ET-5PIN-PLUG')).toBeInTheDocument()
     fireEvent.click(screen.getByLabelText('Remove ET-5PIN-SOCKET'))
     expect(parts.map(p => p.ref)).toEqual(['ET-5PIN-PLUG'])
+  })
+})
+
+
+describe('tags and removals on a pinned template (bug D4WRKC)', () => {
+  beforeEach(() => setup())
+
+  test('tags narrow a pinned template; a removed position stays out', () => {
+    const c = [{ CollectionId: 'x', ApplicableTags: ['Orluna'], ExcludedTags: [] }]
+    const tags = { A01: ['Orluna'], A02: ['Phos'], A03: ['Orluna'] }
+    const m = G.membership(['A01', 'A02', 'A03'], c, { x: ['A01', 'A02', 'A03'] }, r => tags[r], { x: ['A03'] })
+    expect(m.get('A01').templates).toEqual(['x'])
+    expect(m.get('A02').templates).toEqual([])      // pinned, but not an Orluna fitting
+    expect(m.get('A03').templates).toEqual([])      // removed
+  })
+
+  test('Remove takes a fitting out of the template in the panel; Restore puts it back', async () => {
+    vi.spyOn(window, 'prompt').mockReturnValue('5-pin local')
+    render(<ConnectorsScreen onBack={() => {}} />)
+    await act(async () => { fireEvent.click(within(screen.getAllByTestId('found-group')[0]).getByText('Make template')) })
+    const panel = await screen.findByTestId('template-group-panel')
+    await act(async () => { fireEvent.click(within(panel).getByLabelText('Remove A02 from this template')) })
+    expect(within(panel).getByText('Positions (2)')).toBeInTheDocument()
+    expect(within(panel).getByTestId('removed-positions')).toHaveTextContent('A02')
+    await act(async () => { fireEvent.click(within(panel).getByTitle('Put A02 back (its tags decide again)')) })
+    expect(within(panel).queryByTestId('removed-positions')).toBeNull()
+  })
+
+  test('templates can be forked from the list', async () => {
+    const saved = await useStore.getState().createCollection('Local 5-pin', [{ ElementTypeRef: 'ET-5PIN-SOCKET', section: 'position', quantity: 1 }], ['Local'], [])
+    vi.spyOn(window, 'prompt').mockReturnValue('Local 5-pin (Orluna)')
+    render(<ConnectorsScreen onBack={() => {}} />)
+    fireEvent.click(screen.getAllByText('Local 5-pin')[0])
+    await act(async () => { fireEvent.click(screen.getAllByRole('button', { name: 'Fork' })[0]) })
+    const cs = useStore.getState().etCollections
+    const fork = cs.find(c => c.Name === 'Local 5-pin (Orluna)')
+    expect(fork).toBeTruthy()
+    expect(fork.CollectionId).not.toBe(saved.CollectionId)
+    expect(fork.ApplicableTags).toEqual(['Local'])
   })
 })
