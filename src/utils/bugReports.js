@@ -88,11 +88,12 @@ export function appContext(state, screen) {
   }
 }
 
-export function buildReport({ note, target, state, screen, trail = [], capture = true, now = new Date(), taken = [] }) {
+export function buildReport({ note, kind = 'bug', target, state, screen, trail = [], capture = true, now = new Date(), taken = [] }) {
   return {
     id: newReportId(taken),
     at: now.toISOString(),
     note: String(note || '').trim(),
+    ...(kind === 'feature' ? { kind: 'feature' } : {}),
     version: APP_VERSION,
     build: CHANGELOG[0]?.date || null,
     ...(capture ? {
@@ -110,7 +111,7 @@ const line = (k, v) => (v == null || v === '' || (Array.isArray(v) && v.length =
 export function reportsToMarkdown(reports, { title = 'Bug reports' } = {}) {
   const out = [`# ${title} (${reports.length})`, '']
   reports.forEach(r => {
-    out.push(`## ${reportId(r)} · ${clip(r.note.split('\n')[0], 80) || '(no note)'}`, '')
+    out.push(`## ${reportId(r)}${r.kind === 'feature' ? ' · Feature request' : ''} · ${clip(r.note.split('\n')[0], 80) || '(no note)'}`, '')
     out.push(r.note || '_(no note)_', '')
     const a = r.app, d = r.dom
     const meta = [

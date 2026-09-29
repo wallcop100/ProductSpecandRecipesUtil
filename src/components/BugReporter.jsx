@@ -57,10 +57,10 @@ export default function BugReporter({ screen }) {
 
   useEffect(() => { if (draft) setTimeout(() => noteRef.current?.focus(), 0) }, [!!draft])
 
-  function save() {
+  function save(kind = 'bug') {
     if (!draft?.note.trim()) return
     addBugReport(buildReport({
-      note: draft.note, target: draft.target, state: useStore.getState(), screen: screenRef.current,
+      note: draft.note, kind, target: draft.target, state: useStore.getState(), screen: screenRef.current,
       trail: trail.current, capture: draft.capture, taken: useStore.getState().bugReports.map(r => r.id),
     }))
     setDraft(null)
@@ -110,7 +110,6 @@ export default function BugReporter({ screen }) {
         <div data-bug-reporter data-testid="bug-note" role="dialog" aria-label="Bug report"
           onKeyDown={e => {
             if (e.key === 'Escape') { e.stopPropagation(); setDraft(null) }
-            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); save() }
           }}
           style={{ position: 'fixed', left, top, width: W, zIndex: 2100, background: '#fff', border: '1px solid #dc3545',
             borderRadius: 6, boxShadow: '0 4px 16px rgba(0,0,0,.25)', padding: 10, fontSize: 12 }}>
@@ -124,7 +123,9 @@ export default function BugReporter({ screen }) {
             label={<span className="text-muted" style={{ fontSize: 11 }}>Record where: {draft.preview || 'this screen'}</span>} />
           <div className="d-flex justify-content-end gap-2 mt-2">
             <Button size="sm" variant="link" className="text-muted p-0" onClick={() => setDraft(null)}>Cancel</Button>
-            <Button size="sm" variant="danger" disabled={!draft.note.trim()} onClick={save}>Save <kbd>Ctrl+Enter</kbd></Button>
+            <Button size="sm" disabled={!draft.note.trim()} onClick={() => save('feature')}
+              style={{ background: '#6f42c1', borderColor: '#6f42c1', color: '#fff' }}>Save as Feature Request</Button>
+            <Button size="sm" variant="danger" disabled={!draft.note.trim()} onClick={() => save()}>Save</Button>
           </div>
         </div>, draft.host?.isConnected ? draft.host : document.body
       )}

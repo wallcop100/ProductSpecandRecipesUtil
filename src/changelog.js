@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-09-29', note: 'Bug reports: “Save as Feature Request” (purple) beside Save marks a note as a feature request; Ctrl+Enter no longer saves' },
   { date: '2026-09-29', note: 'Start page: “Back up all my work” / “Restore all my work…” are buttons; the per-project file is now “Restore one project’s settings (.config.yaml)” and “Save project settings” in the builder, so the two aren’t confused' },
   { date: '2026-09-29', note: 'Start page: “Back up all my work” / “Restore all my work…” are buttons; the per-project file is now “Restore one project’s settings (.config.yaml)” and “Save project settings” in the builder, so the two aren’t confused' },
   { date: '2026-09-29', note: 'From bug reports: Import reopens the project’s last Form spreadsheet like the DesignDB folder; a connector template no longer holds pinned positions its excluded tags rule out (unpinned on save); Review results are a plain list with a Sort by; “+ Filter on another column” is split by source (DesignDB, Product Spec, Recipes, Tags); “blocks a correct patch” now says the export patch would write wrong data' },
