@@ -166,8 +166,9 @@ export function conditionMatches(cond, pt) {
     return one(cond.op, cond.value)
   }
   const raw = fieldValue(pt, cond.column)
-  const fv = raw.toLowerCase()
-  const target = String(cond.value ?? '').toLowerCase()
+  // Stray spaces in a cell or a typed value never decide a match.
+  const fv = raw.trim().toLowerCase()
+  const target = String(cond.value ?? '').trim().toLowerCase()
 
   switch (cond.op) {
     case 'equals': return fv === target
