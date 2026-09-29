@@ -27,7 +27,7 @@ export default function CollectionBadge({ posRef }) {
 
     const tags = positionUI[posRef]?.tags ?? []
     const { combined: posRecipe, wrapperRefs } = positionRecipeWithWrapperInternals(recipes, posRef)
-    const member = membership([posRef], etCollections, connectorPins, () => tags, connectorExcludes).get(posRef)
+    const member = membership([posRef], etCollections, connectorPins, useStore.getState()._templateRecOf(), connectorExcludes).get(posRef)
     const statuses = collectionStatusForPosition(posRef, tags, posRecipe, etCollections, wrapperRefs, member)
     const overall = overallCollectionStatus(statuses)
 

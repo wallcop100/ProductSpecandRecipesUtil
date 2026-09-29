@@ -7,6 +7,7 @@ import { positionFamilyOf } from '../utils/positionFamily'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import BulkApplyModal from './BulkApplyModal'
 import { membership } from '../utils/connectorGroups'
+import { templateRule, describeRule } from '../utils/templateRules'
 
 const STATUS_SYMBOL = {
   complete: { icon: ACTION_ICONS.complete,   color: '#198754', bg: '#d1e7dd', title: 'All template refs present' },
@@ -77,7 +78,7 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
   // Pins first, then filters (connectorGroups.membership); two filters on one unpinned
   // position is a clash, flagged on its row.
   const members = useMemo(() => membership(scopedPositions.map(pt => pt.PositionTypeRef), collections, connectorPins,
-    r => positionUI[r]?.tags ?? [], connectorExcludes), [scopedPositions, collections, connectorPins, positionUI, connectorExcludes])
+    useStore.getState()._templateRecOf(), connectorExcludes), [scopedPositions, collections, connectorPins, positionUI, connectorExcludes, recipes])
 
   const statusByPos = useMemo(() => {
     const map = {}
@@ -182,7 +183,7 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
                     textAlign: 'center', minWidth: 110,
                     background: selected ? '#e0f0ff' : undefined,
                   }}
-                  title={`Applicable tags: ${(c.ApplicableTags || []).join(', ') || 'all'}`}
+                  title={`Applies to: ${describeRule(templateRule(c))}`}
                 >
                   <div>{c.Name}</div>
                   <div className="d-flex gap-1 justify-content-center mt-1">

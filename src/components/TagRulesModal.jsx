@@ -3,12 +3,18 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { Modal, Button, Form, Alert } from 'react-bootstrap'
 import { v4 as uuidv4 } from 'uuid'
 import useStore from '../store/useStore'
-import { TAG_COLUMNS, TAG_OPS, RECIPE_TAG_COLUMNS, ruleMatches, ruleConditions, recipeTagIndex, withRecipeFields } from '../utils/tagRules'
+import { TAG_COLUMNS, RECIPE_TAG_COLUMNS, ruleMatches, ruleConditions, recipeTagIndex, withRecipeFields } from '../utils/tagRules'
 import TagInput from './TagInput'
 import TagBadge from './TagBadge'
 import TagColorControl from './TagColorControl'
 import TagDriftWizard from './TagDriftWizard'
 import MaterialIcon from './MaterialIcon'
+import RuleBuilder from './RuleBuilder'
+
+const TAG_RULE_COLUMNS = [
+  { label: 'PositionType (DesignDB)', options: TAG_COLUMNS.map(c => ({ key: c, label: c })) },
+  { label: 'What its recipe holds (Product Spec)', options: RECIPE_TAG_COLUMNS },
+]
 
 /**
  * TagRulesModal — the whole tag system in one modal, opened from the builder.
@@ -20,88 +26,6 @@ import MaterialIcon from './MaterialIcon'
  * A rule is conditional (see tagRules): a list of conditions combined with AND or OR,
  * so "X AND Y AND Z → tag" is one rule.
  */
-const OP = new Map(TAG_OPS.map(o => [o.op, o]))
-
-function ConditionRow({ cond, onChange, onRemove, canRemove }) {
-  const meta = OP.get(cond.op) || TAG_OPS[0]
-  const setBound = (i, v) => {
-    const parts = String(cond.value ?? '').split(',')
-    parts[i] = v
-    onChange({ value: parts.join(',') })
-  }
-  const [lo, hi] = String(cond.value ?? '').split(',')
-
-  return (
-    <div className="tag-cond d-flex align-items-center gap-2 px-2 py-1 rounded"
-      style={{ background: '#f8f9fb', border: '1px solid #edeff2' }}>
-      <Form.Select size="sm" value={cond.column} style={{ flex: '1 1 150px', minWidth: 130, fontSize: 12 }}
-        onChange={e => onChange({ column: e.target.value })} aria-label="Column">
-        <optgroup label="PositionType (DesignDB)">
-          {TAG_COLUMNS.map(c => <option key={c} value={c}>{c}</option>)}
-        </optgroup>
-        <optgroup label="What its recipe holds (Product Spec)">
-          {RECIPE_TAG_COLUMNS.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
-        </optgroup>
-      </Form.Select>
-      <Form.Select size="sm" value={cond.op} style={{ flex: '0 0 140px', fontSize: 12 }}
-        onChange={e => onChange({ op: e.target.value })}>
-        {TAG_OPS.map(o => <option key={o.op} value={o.op}>{o.label}</option>)}
-      </Form.Select>
-
-      {meta.twoValues ? (
-        <div className="d-flex align-items-center gap-1" style={{ flex: '1 1 auto' }}>
-          <Form.Control size="sm" type="number" value={lo ?? ''} placeholder="min" style={{ width: 76, fontSize: 12 }}
-            onChange={e => setBound(0, e.target.value)} />
-          <span className="text-muted" style={{ fontSize: 11 }}>and</span>
-          <Form.Control size="sm" type="number" value={hi ?? ''} placeholder="max" style={{ width: 76, fontSize: 12 }}
-            onChange={e => setBound(1, e.target.value)} />
-        </div>
-      ) : meta.needsValue ? (
-        <Form.Control size="sm" type={meta.numeric ? 'number' : 'text'} value={cond.value ?? ''}
-          placeholder="value" style={{ flex: '1 1 120px', minWidth: 90, fontSize: 12 }}
-          onChange={e => onChange({ value: e.target.value })} />
-      ) : (
-        <span className="text-muted fst-italic" style={{ flex: '1 1 auto', fontSize: 11 }}>(no value)</span>
-      )}
-
-      <button type="button" className="btn btn-sm text-danger p-0 border-0" title="Remove condition"
-        style={{ opacity: canRemove ? 0.6 : 0.2, lineHeight: 1 }}
-        disabled={!canRemove} onClick={onRemove}>
-        <MaterialIcon name="close" size={15} />
-      </button>
-    </div>
-  )
-}
-
-/**
- * The AND / OR between two conditions. The first one is interactive and flips the whole
- * rule's mode (a rule is all-or-any, not per-pair); the rest mirror it, so the column
- * reads as one boolean expression — the Notion-filter pattern.
- */
-function Connector({ match, interactive, onToggle }) {
-  const any = match === 'any'
-  const word = any ? 'OR' : 'AND'
-  const fg = any ? '#b45309' : '#0d6efd'
-  const bg = any ? '#fff4e5' : '#e7f1ff'
-  return (
-    <div className="d-flex align-items-center" style={{ paddingLeft: 6, height: 22 }}>
-      <div style={{ width: 2, background: '#e5e7eb', alignSelf: 'stretch', marginRight: 8 }} />
-      {interactive ? (
-        <button type="button" onClick={onToggle}
-          title={any ? 'OR — any condition matches. Click for AND.' : 'AND — every condition matches. Click for OR.'}
-          className="rounded-pill border-0 px-2"
-          style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, color: fg, background: bg, lineHeight: '18px', cursor: 'pointer' }}>
-          {word}
-        </button>
-      ) : (
-        <span className="rounded-pill px-2" style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, color: fg, background: bg, lineHeight: '18px' }}>
-          {word}
-        </span>
-      )}
-    </div>
-  )
-}
-
 function RuleCard({ rule, matchCount, onChange, onRemove, isNew = false }) {
   const tagRef = React.useRef(null)
   useEffect(() => { if (isNew) { tagRef.current?.scrollIntoView?.({ block: 'nearest' }); tagRef.current?.focus() } }, [isNew])
@@ -109,13 +33,6 @@ function RuleCard({ rule, matchCount, onChange, onRemove, isNew = false }) {
   const accent = useStore(s => (rule.tag ? s.tagColors?.[rule.tag] : null)) || '#cbd5e1'
   const disabled = rule.enabled === false
 
-  const patchCond = (i, patch) =>
-    onChange({ conditions: conds.map((c, j) => (j === i ? { ...c, ...patch } : c)) })
-  const addCond = () =>
-    onChange({ conditions: [...conds, { column: 'PositionTypeRef', op: 'contains', value: '' }] })
-  const removeCond = i =>
-    onChange({ conditions: conds.filter((_, j) => j !== i) })
-  const toggleMatch = () => onChange({ match: rule.match === 'any' ? 'all' : 'any' })
 
   return (
     <div className="mb-3" style={{
@@ -153,19 +70,8 @@ function RuleCard({ rule, matchCount, onChange, onRemove, isNew = false }) {
         {conds.length === 0 && (
           <div className="text-muted fst-italic mb-2" style={{ fontSize: 11 }}>No conditions — this rule tags nothing.</div>
         )}
-        {conds.map((c, i) => (
-          <React.Fragment key={i}>
-            {i > 0 && <Connector match={rule.match} interactive={i === 1} onToggle={toggleMatch} />}
-            <ConditionRow cond={c} canRemove={conds.length > 1}
-              onChange={patch => patchCond(i, patch)} onRemove={() => removeCond(i)} />
-          </React.Fragment>
-        ))}
-
-        <button type="button" onClick={addCond}
-          className="btn btn-sm w-100 mt-2 d-inline-flex align-items-center justify-content-center gap-1"
-          style={{ fontSize: 11, color: '#6c757d', border: '1px dashed #cbd5e1', borderRadius: 8, background: 'transparent' }}>
-          <MaterialIcon name="add" size={13} /> Add condition
-        </button>
+        <RuleBuilder rule={rule} columns={TAG_RULE_COLUMNS} onChange={onChange}
+          newCondition={{ column: 'PositionTypeRef', op: 'contains', value: '' }} />
       </div>
     </div>
   )

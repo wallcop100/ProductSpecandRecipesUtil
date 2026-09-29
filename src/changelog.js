@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-09-29', note: 'Connector templates apply by a rule, built like a tag rule: any field (tags, DesignDB columns, what the recipe holds) joined by AND / OR; the most specific rule wins. “Suggest from N positions with these connectors” finds a rule from the data and shows what it would change; Make template uses such a rule when it is exact. Fork is an icon' },
   { date: '2026-09-29', note: 'Bug reports: “Save as Feature Request” (purple) beside Save marks a note as a feature request; Ctrl+Enter no longer saves' },
   { date: '2026-09-29', note: 'Start page: “Back up all my work” / “Restore all my work…” are buttons; the per-project file is now “Restore one project’s settings (.config.yaml)” and “Save project settings” in the builder, so the two aren’t confused' },
   { date: '2026-09-29', note: 'Start page: “Back up all my work” / “Restore all my work…” are buttons; the per-project file is now “Restore one project’s settings (.config.yaml)” and “Save project settings” in the builder, so the two aren’t confused' },
