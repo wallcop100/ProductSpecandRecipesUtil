@@ -135,8 +135,13 @@ export function buildPresence(rows, wrapperRefs = []) {
  *   missing   — not there at all
  *
  * `foundAt` describes where a misplaced row actually sits, so the UI can say so.
+ *
+ * `wanted` (Set of `${section}|${ref}` for the whole template): a row in a slot the
+ * template ALSO asks for is not misplaced — it is that other ingredient. Without this, a
+ * template wanting one ref both on site and inside the wrapper moved the one copy back
+ * and forth and never added the second.
  */
-export function ingredientPresence(presence, ingredient) {
+export function ingredientPresence(presence, ingredient, { wanted = null } = {}) {
   const ref = lc(ingredient.ElementTypeRef || ingredient.elementTypeRef || ingredient.ref || ingredient.slotLabel)
   const section = normalizeSection(ingredient.section)
   const need = Number(ingredient.quantity) > 0 ? Number(ingredient.quantity) : 1
@@ -150,7 +155,7 @@ export function ingredientPresence(presence, ingredient) {
     }
   }
 
-  const elsewhere = presence.byRef.get(ref) || []
+  const elsewhere = (presence.byRef.get(ref) || []).filter(e => !wanted?.has(`${e.section}|${ref}`))
   if (elsewhere.length > 0) {
     const at = elsewhere[0]
     return {
@@ -164,6 +169,11 @@ export function ingredientPresence(presence, ingredient) {
     }
   }
   return { status: 'missing', have: 0, need, rows: [], foundAt: null }
+}
+
+/** The slots a template asks for, as ingredientPresence's `wanted`. */
+export function wantedSlots(ingredients) {
+  return new Set((ingredients || []).map(i => `${normalizeSection(i.section)}|${lc(i.ElementTypeRef || i.elementTypeRef || i.ref || i.slotLabel)}`))
 }
 
 /** Ingredient refs, normalised, skipping the blanks. */

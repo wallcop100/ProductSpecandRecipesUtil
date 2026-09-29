@@ -108,7 +108,8 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
 
   const scope = useMemo(() => groups.scoped.map(pt => pt.PositionTypeRef), [groups])
   const partsKey = signatureKey(ingredients.filter(p => p.ref?.trim()))
-  const hasParts = r => partsKey !== '' && signatureKey(groups.sigs.get(r) || []) === partsKey
+  // A template with no parts means "no connectors": a position has it when it has none.
+  const hasParts = r => (partsKey === '' ? !groups.sigs.has(r) : signatureKey(groups.sigs.get(r) || []) === partsKey)
   // Positions that already carry exactly these connectors, plus any pinned here: what a
   // suggested rule should pick out.
   const carriers = useMemo(() => [...new Set([
@@ -301,6 +302,12 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
             Drag parts from the left into <strong>Site</strong> (first-fix, goes to site on its own) or{' '}
             <strong>Inside wrapper</strong> (ships inside the DL or LIN assembly each position has).
           </div>
+          {ingredients.filter(p => p.ref?.trim()).length === 0 && (
+            <div className="mb-2 px-2 py-1 rounded" style={{ background: '#ffe5cc', color: '#7a3e00', fontSize: 12 }} data-testid="no-parts-note">
+              No parts: the positions this template applies to should have <strong>no connectors</strong>. Any they
+              have are flagged, and “Remove extras” takes them out.
+            </div>
+          )}
           <ConnectorBoard parts={ingredients} onChange={setIngredients} />
         </Form.Group>
       </Modal.Body>

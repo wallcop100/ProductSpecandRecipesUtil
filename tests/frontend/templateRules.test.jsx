@@ -174,3 +174,81 @@ describe('why a position does or does not match (F59FQV)', () => {
     expect(box).toHaveTextContent('→ this template applies to it')
   })
 })
+
+const { collectionStatusForPosition, positionRecipeWithWrapperInternals } = await import('../../src/utils/collectionStatus.js')
+describe('Complete partial with one ref in two places (4QS68H)', () => {
+  beforeEach(() => setup())
+  const statusOf = (posRef, coll) => {
+    const { combined, wrapperRefs } = positionRecipeWithWrapperInternals(useStore.getState().recipes, posRef)
+    return collectionStatusForPosition(posRef, [], combined, [coll], wrapperRefs)[0].status
+  }
+
+  test('the missing copy is added, not the present one moved back and forth', async () => {
+    setup({ elementTypes: [{ ElementTypeRef: 'ET-PHOS-2PIN', Family: 'ET-CONNECTORS' }, { ElementTypeRef: 'ET-5PIN-SR', Family: 'ET-CONNECTORS' }] })
+    // A01 has ET-PHOS-2PIN on site only; the template wants it on site AND inside the wrapper.
+    useStore.setState(s => ({ recipes: [...s.recipes, pos('A01', 'ET-PHOS-2PIN')], activeContextType: 'ElementType', activeETRef: 'ET-DL-B01' }))
+    const coll = await useStore.getState().createCollection('Phos', [
+      { ElementTypeRef: 'ET-PHOS-2PIN', section: 'position', quantity: 1 },
+      { ElementTypeRef: 'ET-PHOS-2PIN', section: 'dl_internal', quantity: 1 },
+    ], [], [])
+    expect(statusOf('A01', coll)).toBe('partial')
+    const plan = useStore.getState().planBulk(['A01'], coll.CollectionId)
+    expect(plan.actions.filter(a => a.action !== 'skip').map(a => [a.action, a.section])).toEqual([['add', 'internal']])
+    useStore.getState().applyCollectionBulk(['A01'], coll.CollectionId)
+    expect(statusOf('A01', coll)).toBe('complete')
+    // The open ElementType (ET-DL-B01) did not swallow the row.
+    expect(useStore.getState().recipes.some(r => r.ContextRef === 'ET-DL-B01' && r.ElementTypeRef === 'ET-PHOS-2PIN')).toBe(false)
+  })
+
+  test('connectors the template does not ask for are listed, and can be removed with it', async () => {
+    const coll = await useStore.getState().createCollection('Plug only', [{ ElementTypeRef: 'ET-5PIN-PLUG', section: 'dl_internal', quantity: 1 }], [], [])
+    const plan = useStore.getState().planBulk(['A01'], coll.CollectionId)
+    expect(plan.extras.get('A01').map(x => [x.ref, x.section])).toEqual([['ET-5PIN-SOCKET', 'position'], ['ET-5PIN-SR', 'position']])
+    useStore.getState().applyCollectionBulk(['A01'], coll.CollectionId, { removeExtras: true })
+    const live = useStore.getState().recipes.filter(r => r.PositionTypeRef === 'A01' && r.IsDeleted !== 'Y').map(r => r.ElementTypeRef)
+    expect(live).not.toContain('ET-5PIN-SOCKET')
+    expect(live).toContain('ET-5PIN-PLUG')
+  })
+})
+
+describe('Removing connectors: extras and empty templates are checked', () => {
+  beforeEach(() => setup())
+  const isConnector = ref => G.isConnectorPart(ref, useStore.getState()._connectorOpts())
+  const statusOf = (posRef, coll) => {
+    const { combined, wrapperRefs } = positionRecipeWithWrapperInternals(useStore.getState().recipes, posRef)
+    return collectionStatusForPosition(posRef, [], combined, [coll], wrapperRefs, null, { isConnector })[0]
+  }
+
+  test('a part taken out of the template shows as extra on positions that still have it', async () => {
+    const parts = G.connectorSignature(useStore.getState().recipes, 'A01').filter(p => p.ref !== 'ET-5PIN-SR')
+    const coll = await useStore.getState().createCollection('No SR', G.partsToIngredients(parts), [], [])
+    const r = statusOf('A01', coll)
+    expect(r.status).toBe('extra')
+    expect(r.extras.map(x => x.ref)).toEqual(['ET-5PIN-SR'])
+    expect(statusOf('A04', coll).status).toBe('complete')   // A04 never had the SR
+  })
+
+  test('a template with no parts means no connectors: positions with some are flagged, and can be cleared', async () => {
+    const coll = await useStore.getState().createCollection('None', [], [], [])
+    expect(statusOf('A01', coll).status).toBe('extra')
+    const plan = useStore.getState().planBulk(['A01', 'B01'], coll.CollectionId)
+    expect(plan.extras.get('A01').map(x => x.ref)).toEqual(['ET-5PIN-SOCKET', 'ET-5PIN-SR', 'ET-5PIN-PLUG'])
+    useStore.getState().applyCollectionBulk(['A01', 'B01'], coll.CollectionId, { removeExtras: true })
+    expect(statusOf('A01', coll).status).toBe('complete')
+    expect(statusOf('B01', coll).status).toBe('complete')
+    // The design element and the PS stay.
+    const live = useStore.getState().recipes.filter(r => r.PositionTypeRef === 'A01' && r.IsDeleted !== 'Y').map(r => r.ElementTypeRef)
+    expect(live).toEqual(['ET-DL-A01', 'ET-PS-01'])
+  })
+
+  test('the matrix offers Remove extras and previews it with removal ticked', async () => {
+    const parts = G.connectorSignature(useStore.getState().recipes, 'A01').filter(p => p.ref !== 'ET-5PIN-SR')
+    await useStore.getState().createCollection('No SR', G.partsToIngredients(parts), [], [], { match: 'all', conditions: [{ column: 'DriverLocation', op: 'equals', value: 'LOCAL' }] })
+    render(<ConnectorsScreen onBack={() => {}} />)
+    fireEvent.click(screen.getByTestId('remove-extras'))
+    expect(screen.getByTestId('bulk-extras')).toHaveTextContent('3 positions also have 3 connectors')
+    expect(screen.getByLabelText(/Remove them too/)).toBeChecked()
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Apply 3 changes/ })) })
+    expect(useStore.getState().recipes.filter(r => r.ElementTypeRef === 'ET-5PIN-SR' && r.IsDeleted !== 'Y')).toHaveLength(0)
+  })
+})

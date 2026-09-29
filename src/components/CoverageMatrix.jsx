@@ -2,26 +2,30 @@ import React, { useMemo, useState } from 'react'
 import { Badge, Button, Form } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
-import { collectionStatusForPosition, positionRecipeWithWrapperInternals } from '../utils/collectionStatus'
+import { collectionStatusForPosition, positionRecipeWithWrapperInternals, extraConnectorRows } from '../utils/collectionStatus'
 import { positionFamilyOf } from '../utils/positionFamily'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import BulkApplyModal from './BulkApplyModal'
-import { membership } from '../utils/connectorGroups'
+import { membership, isConnectorPart } from '../utils/connectorGroups'
 import { templateRule, describeRule } from '../utils/templateRules'
 
 const STATUS_SYMBOL = {
-  complete: { icon: ACTION_ICONS.complete,   color: '#198754', bg: '#d1e7dd', title: 'All template refs present' },
+  complete: { icon: ACTION_ICONS.complete,   color: '#198754', bg: '#d1e7dd', title: 'All template refs present, nothing else' },
+  extra:    { icon: 'remove_circle_outline', color: '#b35c00', bg: '#ffe5cc', title: 'Has connectors the template doesn’t ask for' },
   partial:  { icon: ACTION_ICONS.partial,    color: '#856404', bg: '#fff3cd', title: 'Some refs present, some missing' },
-  missing:  { icon: ACTION_ICONS.missing,    color: '#842029', bg: '#f8d7da', title: 'Tags match but no refs present' },
-  na:       { icon: ACTION_ICONS.na,         color: '#adb5bd', bg: '#f8f9fa', title: "Tags don't match (N/A)" },
+  missing:  { icon: ACTION_ICONS.missing,    color: '#842029', bg: '#f8d7da', title: 'Applies here, but none of its refs are present' },
+  na:       { icon: ACTION_ICONS.na,         color: '#adb5bd', bg: '#f8f9fa', title: "Doesn't apply here (N/A)" },
 }
 
-function StatusCell({ posRef, collection, status, isSelected, onClick }) {
+function StatusCell({ posRef, collection, status, extras = [], isSelected, onClick }) {
   const meta = STATUS_SYMBOL[status]
+  const extraNote = extras.length
+    ? `\nAlso has connectors this template doesn't ask for: ${extras.map(x => `${x.ref} (${x.section === 'position' ? 'position level' : `inside ${x.container}`})`).join(', ')}`
+    : ''
   return (
     <td
       onClick={() => onClick(posRef, collection.CollectionId)}
-      title={`${meta.title} — click to manage`}
+      title={`${meta.title} — click to manage${extraNote}`}
       style={{
         textAlign: 'center',
         background: isSelected ? '#cfe2ff' : meta.bg,
@@ -31,6 +35,10 @@ function StatusCell({ posRef, collection, status, isSelected, onClick }) {
       }}
     >
       <MaterialIcon name={meta.icon} size={16} style={{ color: meta.color }} />
+      {extras.length > 0 && (
+        <span className="ms-1 rounded-pill px-1" data-testid="cell-extras"
+          style={{ fontSize: 9, fontWeight: 700, background: '#ffc107', color: '#3d2c00' }}>+{extras.length}</span>
+      )}
     </td>
   )
 }
@@ -80,21 +88,29 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
   const members = useMemo(() => membership(scopedPositions.map(pt => pt.PositionTypeRef), collections, connectorPins,
     useStore.getState()._templateRecOf(), connectorExcludes), [scopedPositions, collections, connectorPins, positionUI, connectorExcludes, recipes])
 
-  const statusByPos = useMemo(() => {
-    const map = {}
+  // Status per (position, template), and the connectors each has that its template
+  // doesn't ask for (a template with no parts means: no connectors here).
+  const { statusByPos, extrasByPos } = useMemo(() => {
+    const opts = useStore.getState()._connectorOpts()
+    const isConnector = ref => isConnectorPart(ref, opts)
+    const map = {}, extras = {}
     for (const pt of scopedPositions) {
       const posRef = pt.PositionTypeRef
       const tags = positionUI[posRef]?.tags ?? []
       // Wrapper-aware: the DL/LIN wrapper's internals count toward coverage
       // even when they're stored under another position (shared assembly).
       const { combined: posRecipe, wrapperRefs } = positionRecipeWithWrapperInternals(recipes, posRef)
-      const results = collectionStatusForPosition(posRef, tags, posRecipe, collections, wrapperRefs, members.get(posRef))
+      const results = collectionStatusForPosition(posRef, tags, posRecipe, collections, wrapperRefs, members.get(posRef), { isConnector })
       const byColl = {}
-      results.forEach(r => { byColl[r.collection.CollectionId] = r.status })
+      results.forEach(r => {
+        byColl[r.collection.CollectionId] = r.status
+        if (r.extras?.length) (extras[posRef] ||= {})[r.collection.CollectionId] = r.extras
+      })
       map[posRef] = byColl
     }
-    return map
+    return { statusByPos: map, extrasByPos: extras }
   }, [scopedPositions, positionUI, recipes, collections, members])
+
 
   const positions = useMemo(() => {
     if (!incompleteOnly) return scopedPositions
@@ -112,6 +128,7 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
   function handleBulkApply(collectionId, targetStatus) {
     const targets = scopedPositions.filter(pt => {
       const status = (statusByPos[pt.PositionTypeRef] || {})[collectionId]
+      if (targetStatus === 'extra') return ((extrasByPos[pt.PositionTypeRef] || {})[collectionId] || []).length > 0
       return targetStatus === 'incomplete'
         ? (status === 'missing' || status === 'partial')
         : status === targetStatus
@@ -121,11 +138,11 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
     const plan = planBulk(targets, collectionId)
     if (!plan) return
     const name = collections.find(c => c.CollectionId === collectionId)?.Name || 'template'
-    setPendingBulk({ collectionId, name, targets, plan })
+    setPendingBulk({ collectionId, name, targets, plan, removeExtras: targetStatus === 'extra' })
   }
 
-  function confirmBulk() {
-    if (pendingBulk) applyCollectionBulk(pendingBulk.targets, pendingBulk.collectionId)
+  function confirmBulk({ removeExtras = false } = {}) {
+    if (pendingBulk) applyCollectionBulk(pendingBulk.targets, pendingBulk.collectionId, { removeExtras })
     setPendingBulk(null)
   }
 
@@ -177,6 +194,7 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
               const selected = selectedCell?.collectionId === c.CollectionId
               const nMissing = positions.filter(pt => (statusByPos[pt.PositionTypeRef] || {})[c.CollectionId] === 'missing').length
               const nPartial = positions.filter(pt => (statusByPos[pt.PositionTypeRef] || {})[c.CollectionId] === 'partial').length
+              const nExtra = positions.filter(pt => ((extrasByPos[pt.PositionTypeRef] || {})[c.CollectionId] || []).length > 0).length
               return (
                 <th key={c.CollectionId}
                   style={{
@@ -199,6 +217,13 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
                       title="Positions that have SOME of its parts: add only the parts they are missing">
                       <MaterialIcon name={ACTION_ICONS.partial} size={12} /> Complete {nPartial} partial
                     </Button>
+                    {nExtra > 0 && (
+                      <Button size="sm" variant="outline-secondary" className="d-inline-flex align-items-center gap-1" style={{ fontSize: 9, padding: '0px 5px', color: '#b35c00', borderColor: '#b35c00' }}
+                        onClick={() => handleBulkApply(c.CollectionId, 'extra')} data-testid="remove-extras"
+                        title="Positions with connectors this template doesn’t ask for: remove them (previewed first)">
+                        <MaterialIcon name="remove_circle_outline" size={12} /> Remove extras from {nExtra}
+                      </Button>
+                    )}
                   </div>
                 </th>
               )
@@ -242,6 +267,7 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
                     posRef={posRef}
                     collection={c}
                     status={(statusByPos[posRef] || {})[c.CollectionId] || 'na'}
+                    extras={(extrasByPos[posRef] || {})[c.CollectionId]}
                     isSelected={selectedCell?.posRef === posRef && selectedCell?.collectionId === c.CollectionId}
                     onClick={onCellClick}
                   />
@@ -259,6 +285,7 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
         collectionName={pendingBulk?.name}
         onHide={() => setPendingBulk(null)}
         onConfirm={confirmBulk}
+        defaultRemoveExtras={!!pendingBulk?.removeExtras}
       />
     </div>
   )

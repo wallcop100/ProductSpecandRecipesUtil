@@ -7,6 +7,8 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-09-29', note: 'Connector templates can take connectors away: a part removed from a template shows as an extra (orange) on positions that still have it, a template with no parts means “no connectors here”, and “Remove extras from N” clears them after a preview' },
+  { date: '2026-09-29', note: 'Connectors (4QS68H): Complete partial now adds a connector the template wants both on site and inside the wrapper (it used to move the one copy back and forth), and no longer lands in an ElementType left open in the builder; connectors a position has that its template doesn’t ask for are flagged (+N on the cell, listed with Remove in the cell panel, and “Remove them too” in the bulk preview)' },
   { date: '2026-09-29', note: 'Connector template rules (F59FQV): suggestions use position fields first, so positions whose recipe isn’t built yet match too, and no longer count connector-less positions against a rule; the editor shows which matching positions go to another template and why, and “Check a position” shows each condition against its values; stray spaces no longer break “equals”' },
   { date: '2026-09-29', note: 'Connector templates apply by a rule, built like a tag rule: any field (tags, DesignDB columns, what the recipe holds) joined by AND / OR; the most specific rule wins. “Suggest from N positions with these connectors” finds a rule from the data and shows what it would change; Make template uses such a rule when it is exact. Fork is an icon' },
   { date: '2026-09-29', note: 'Bug reports: “Save as Feature Request” (purple) beside Save marks a note as a feature request; Ctrl+Enter no longer saves' },
