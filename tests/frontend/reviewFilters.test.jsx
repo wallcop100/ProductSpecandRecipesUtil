@@ -57,18 +57,26 @@ describe('Review recipes filters', () => {
     return render(<ReviewModal show onHide={vi.fn()} />)
   }
 
-  test('a wildcard condition narrows the results table; a row starts the review there', async () => {
+  test('filter boxes: free text and wildcards narrow the table; a row starts the review there', async () => {
     setup()
     const table = () => screen.getByTestId('review-results')
     expect(within(table()).getAllByRole('row')).toHaveLength(4)   // header + 3
-    fireEvent.click(screen.getByText('+ Add condition'))
-    fireEvent.change(screen.getByLabelText('Field'), { target: { value: 'Contains' } })
-    fireEvent.change(screen.getByLabelText('Value'), { target: { value: 'ET-DL-*' } })
+    fireEvent.change(screen.getByLabelText('Filter Contains ET'), { target: { value: 'ET-DL-*' } })
     const rows = within(table()).getAllByRole('row').slice(1).map(r => r.cells[0].textContent)
     expect(rows).toEqual(['C01r', 'D10'])
+    fireEvent.change(screen.getByLabelText('Filter Ref'), { target: { value: 'd1' } })   // part of a value
+    expect(within(table()).getAllByRole('row').slice(1).map(r => r.cells[0].textContent)).toEqual(['D10'])
     fireEvent.click(within(table()).getByText('D10'))
-    expect(screen.getByTestId('review-counter')).toHaveTextContent('2 of 2')
-    expect(screen.getByText(/Contains ET matches \(\* \?\) ET-DL-\*/)).toBeInTheDocument()
+    expect(screen.getByTestId('review-counter')).toHaveTextContent('1 of 1')
+    expect(screen.getByText('Contains ET: ET-DL-*')).toBeInTheDocument()
+  })
+
+  test('another column can be added as a filter box', () => {
+    setup()
+    fireEvent.click(screen.getByText('+ Filter on another column'))
+    fireEvent.click(screen.getByText('Recipe rows', { selector: '.dropdown-item' }))
+    fireEvent.change(screen.getByLabelText('Filter Recipe rows'), { target: { value: '!0' } })
+    expect(within(screen.getByTestId('review-results')).getAllByRole('row')).toHaveLength(4)
   })
 
   test('a column can be added and the table sorts by it', () => {
@@ -84,8 +92,7 @@ describe('Review recipes filters', () => {
 
   test('filter sets save per project and load back', async () => {
     setup()
-    fireEvent.click(screen.getByText('+ Add condition'))
-    fireEvent.change(screen.getByLabelText('Value'), { target: { value: 'C0?r' } })
+    fireEvent.change(screen.getByLabelText('Filter Ref'), { target: { value: 'C0?r' } })
     vi.spyOn(window, 'prompt').mockReturnValue('C singles')
     fireEvent.click(screen.getByText('Save…'))
     expect(window.electronAPI.db.setPref).toHaveBeenCalledWith(7, 'review_filter_sets', expect.stringContaining('C singles'))
@@ -94,6 +101,7 @@ describe('Review recipes filters', () => {
     expect(within(screen.getByTestId('review-results')).getAllByRole('row')).toHaveLength(4)
     fireEvent.change(screen.getByLabelText('Saved filter sets'), { target: { value: 'C singles' } })
     expect(within(screen.getByTestId('review-results')).getAllByRole('row')).toHaveLength(3)
+    expect(screen.getByLabelText('Filter Ref')).toHaveValue('C0?r')
   })
 
   test('the last filter comes back next time', async () => {

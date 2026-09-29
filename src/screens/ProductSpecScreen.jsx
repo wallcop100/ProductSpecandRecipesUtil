@@ -1,8 +1,9 @@
 import NewETModal from '../components/NewETModal'
 import React, { useState, useMemo, useEffect, useRef } from 'react'
-import { Button, Form, Popover, Overlay } from 'react-bootstrap'
+import { Button, Form, Popover, Overlay, Dropdown } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import ETSpecBrowser from '../components/ETSpecBrowser'
+import { skippedRefs } from '../utils/specChecks'
 import ETSpecEditor  from '../components/ETSpecEditor'
 import ChangeSummaryModal from '../components/ChangeSummaryModal'
 import IconButton from '../components/IconButton'
@@ -86,9 +87,20 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
     () => alignmentGaps(),
     [psRows, recipes, elementTypes, alignmentGaps]
   )
+  // Families the checks skip (cables by default; ⋯ → Checks skip).
+  const specCheckSkip = useStore(s => s.specCheckSkip)
+  const setSpecCheckSkip = useStore(s => s.setSpecCheckSkip)
+  const specFamilies = useMemo(() => [...new Set([
+    ...elementTypes.map(e => e.Family || e.family).filter(Boolean), ...specCheckSkip,
+  ])].sort(), [elementTypes, specCheckSkip])
+  const skipped = useMemo(() => skippedRefs([
+    ...psRows.map(r => r.ElementTypeRef || r.elementTypeRef || ''),
+    ...[...gaps.specRows.wrappers, ...gaps.specRows.products].map(g => g.ref),
+  ], elementTypes, specCheckSkip), [psRows, gaps, elementTypes, specCheckSkip])
   const missingPsETs = useMemo(
-    () => [...gaps.specRows.wrappers, ...gaps.specRows.products].map(g => g.ref).sort(),
-    [gaps]
+    () => [...gaps.specRows.wrappers, ...gaps.specRows.products].map(g => g.ref)
+      .filter(r => !skipped.has(r.toLowerCase())).sort(),
+    [gaps, skipped]
   )
 
   // Completeness stats
@@ -99,6 +111,7 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
     const dupSet = duplicateProductKeys(psRows)
     for (const r of psRows) {
       if ((r.IsDeleted || r.isDeleted) === 'Y') { deleted++; continue }
+      if (skipped.has((r.ElementTypeRef || r.elementTypeRef || '').toLowerCase())) { complete++; continue }
       const tbc  = (r.IsTBC || r.isTBC) === 'Y'
       const code = (r.ProductCode || r.productCode || '').trim()
       const mfr  = (r.Manufacturer || r.manufacturer || '').trim()
@@ -106,7 +119,7 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
       else partial++
     }
     return { complete, partial, missing: missingPsETs.length, deleted, duplicates: dupSet.size }
-  }, [psRows, missingPsETs])
+  }, [psRows, missingPsETs, skipped])
 
   // Pending-change count for the header chip; the review surface itself is
   // the shared Change Summary modal (T-Q1 — supersedes the old drawer).
@@ -145,13 +158,14 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
     }
     const has = v => String(v ?? '').trim() !== ''
     return [...used]
+      .filter(ref => !skipped.has(ref.toLowerCase()))
       .filter(ref => {
         const ps = byRef.get(ref.toLowerCase())
         if (ps && ((ps.IsDeleted || ps.isDeleted) === 'Y' || (ps.IsTBC || ps.isTBC) === 'Y')) return false
         return !(ps && has(ps.Manufacturer || ps.manufacturer) && has(ps.ProductCode || ps.productCode))
       })
       .sort((a, b) => a.localeCompare(b))
-  }, [recipes, psRows])
+  }, [recipes, psRows, skipped])
 
   // Jump to the next incomplete ET after the current selection (wrapping), and tell the
   // editor to focus the first empty field. Replaces the separate step-through modal.
@@ -241,6 +255,22 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
           title="Back to builder" onClick={onBack} />
         <span className="fw-semibold ms-1">Product Spec</span>
         <TutorialHint id="product-spec" />
+        <Dropdown align="end" autoClose="outside">
+          <Dropdown.Toggle as={IconButton} bsSize="sm" variant="outline-secondary" icon={ACTION_ICONS.more}
+            title="Product Spec options" aria-label="Product Spec options" />
+          <Dropdown.Menu style={{ fontSize: 12, maxHeight: 360, overflowY: 'auto' }}>
+            <Dropdown.Header>Checks skip these families</Dropdown.Header>
+            {specFamilies.map(f => {
+              const on = specCheckSkip.some(x => x.toLowerCase() === f.toLowerCase())
+              return (
+                <Dropdown.Item key={f} data-testid={`skip-${f}`}
+                  onClick={() => setSpecCheckSkip(on ? specCheckSkip.filter(x => x.toLowerCase() !== f.toLowerCase()) : [...specCheckSkip, f])}>
+                  <MaterialIcon name={on ? 'check_box' : 'check_box_outline_blank'} size={14} /> {f}
+                </Dropdown.Item>
+              )
+            })}
+          </Dropdown.Menu>
+        </Dropdown>
         <IconButton variant="outline-secondary" bsSize="sm" icon="undo" className="ms-2"
           title="Undo (Ctrl+Z)" disabled={!canUndo} onClick={undo} />
         <IconButton variant="outline-secondary" bsSize="sm" icon="redo"

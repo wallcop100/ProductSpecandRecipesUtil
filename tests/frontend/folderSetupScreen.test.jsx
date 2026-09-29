@@ -225,9 +225,11 @@ describe('someone who has never used this', () => {
     expect(screen.getByText('Build recipes')).toBeTruthy()
   })
 
-  test('can reach the docs', async () => {
+  test('can read how it works, in the app (not a link away to GitHub)', async () => {
     render(<FolderSetupScreen onProjectLoaded={() => {}} />)
-    expect((await screen.findByText(/How this works/)).closest('a')).toHaveAttribute('href')
+    const label = await screen.findByText(/How this works/)
+    expect(label.closest('a')).toBeNull()
+    expect(screen.getByLabelText('How this works')).toBeInTheDocument()
   })
 })
 

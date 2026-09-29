@@ -159,6 +159,14 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
         </div>
       </div>
 
+      <div className="d-flex gap-3 mb-2" style={{ fontSize: 11 }}>
+        {Object.entries(STATUS_SYMBOL).map(([k, v]) => (
+          <span key={k} className="d-inline-flex align-items-center gap-1" style={{ color: v.color }}>
+            <MaterialIcon name={v.icon} size={13} /> {v.title}
+          </span>
+        ))}
+      </div>
+
       <table className="table table-sm table-bordered" style={{ fontSize: 12, minWidth: 500 }}>
         <thead className="table-light">
           <tr>
@@ -166,8 +174,8 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
             <th style={{ minWidth: 80 }}>Tags</th>
             {collections.map(c => {
               const selected = selectedCell?.collectionId === c.CollectionId
-              const anyMissing = positions.some(pt => (statusByPos[pt.PositionTypeRef] || {})[c.CollectionId] === 'missing')
-              const anyPartial = positions.some(pt => (statusByPos[pt.PositionTypeRef] || {})[c.CollectionId] === 'partial')
+              const nMissing = positions.filter(pt => (statusByPos[pt.PositionTypeRef] || {})[c.CollectionId] === 'missing').length
+              const nPartial = positions.filter(pt => (statusByPos[pt.PositionTypeRef] || {})[c.CollectionId] === 'partial').length
               return (
                 <th key={c.CollectionId}
                   style={{
@@ -179,13 +187,17 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
                   <div>{c.Name}</div>
                   <div className="d-flex gap-1 justify-content-center mt-1">
                     <Button size="sm" variant="outline-danger" className="d-inline-flex align-items-center gap-1" style={{ fontSize: 9, padding: '0px 5px' }}
-                      disabled={!anyMissing}
+                      disabled={!nMissing}
                       onClick={() => handleBulkApply(c.CollectionId, 'missing')}
-                      title="Apply to all positions with missing status">Apply all <MaterialIcon name={ACTION_ICONS.missing} size={12} /></Button>
+                      title="Positions this template covers that have NONE of its parts: add the whole template to them">
+                      <MaterialIcon name={ACTION_ICONS.missing} size={12} /> Add to {nMissing} empty
+                    </Button>
                     <Button size="sm" variant="outline-warning" className="d-inline-flex align-items-center gap-1" style={{ fontSize: 9, padding: '0px 5px' }}
-                      disabled={!anyPartial}
+                      disabled={!nPartial}
                       onClick={() => handleBulkApply(c.CollectionId, 'partial')}
-                      title="Fill missing refs on partial positions">Fill <MaterialIcon name={ACTION_ICONS.partial} size={12} /></Button>
+                      title="Positions that have SOME of its parts: add only the parts they are missing">
+                      <MaterialIcon name={ACTION_ICONS.partial} size={12} /> Complete {nPartial} partial
+                    </Button>
                   </div>
                 </th>
               )
@@ -239,13 +251,6 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
         </tbody>
       </table>
 
-      <div className="d-flex gap-3 mt-2" style={{ fontSize: 11 }}>
-        {Object.entries(STATUS_SYMBOL).map(([k, v]) => (
-          <span key={k} className="d-inline-flex align-items-center gap-1" style={{ color: v.color }}>
-            <MaterialIcon name={v.icon} size={13} /> {v.title}
-          </span>
-        ))}
-      </div>
 
       <BulkApplyModal
         show={!!pendingBulk}

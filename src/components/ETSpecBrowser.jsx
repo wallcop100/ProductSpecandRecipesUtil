@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { ButtonGroup, Button } from 'react-bootstrap'
 import useStore from '../store/useStore'
+import { skippedRefs as skippedRefsFor } from '../utils/specChecks'
 import MaterialIcon from './MaterialIcon'
 import { familyOf } from '../utils/etRef'
 import { ACTION_ICONS } from '../utils/entityStyle'
@@ -12,10 +13,13 @@ const STATUS_COLOR = {
   missing:   '#ef4444',
   deleted:   '#9ca3af',
   duplicate: '#dc3545',
+  skipped:   '#cbd5e1',
 }
 
-function completenessOf(ref, psRowMap, missingSet, duplicateKeys) {
+function completenessOf(ref, psRowMap, missingSet, duplicateKeys, skipped = null) {
   const key = ref.toLowerCase()
+  // A family the checks skip (cables…): never flagged, shown grey.
+  if (skipped && skipped.has(key)) return 'skipped'
   if (missingSet.has(key) && !psRowMap.has(key)) return 'missing'
   const row = psRowMap.get(key)
   if (!row) return 'missing'
@@ -99,6 +103,9 @@ export default function ETSpecBrowser({
     return [...set].sort()
   }, [elementTypes, psRows, recipes])
 
+  const specCheckSkip = useStore(s => s.specCheckSkip)
+  const skippedRefs = useMemo(() => skippedRefsFor(allRefs, elementTypes, specCheckSkip), [allRefs, elementTypes, specCheckSkip])
+
   const groupOptions = useMemo(() => {
     const set = new Set()
     for (const ref of allRefs) set.add(getGroupKey(ref, viewMode, psRowMap, etObjMap))
@@ -107,10 +114,10 @@ export default function ETSpecBrowser({
 
   // Problem-state indices (shown as their own heading sections, like Missing).
   const partialRefs = useMemo(
-    () => allRefs.filter(r => completenessOf(r, psRowMap, missingSet, duplicateCodes) === 'partial'),
+    () => allRefs.filter(r => completenessOf(r, psRowMap, missingSet, duplicateCodes, skippedRefs) === 'partial'),
     [allRefs, psRowMap, missingSet, duplicateCodes])
   const duplicateRefs = useMemo(
-    () => allRefs.filter(r => completenessOf(r, psRowMap, missingSet, duplicateCodes) === 'duplicate'),
+    () => allRefs.filter(r => completenessOf(r, psRowMap, missingSet, duplicateCodes, skippedRefs) === 'duplicate'),
     [allRefs, psRowMap, missingSet, duplicateCodes])
 
   const filtered = useMemo(() => {
@@ -118,7 +125,7 @@ export default function ETSpecBrowser({
     return allRefs.filter(ref => {
       const key = ref.toLowerCase()
       const psRow = psRowMap.get(key)
-      const status = completenessOf(ref, psRowMap, missingSet, duplicateCodes)
+      const status = completenessOf(ref, psRowMap, missingSet, duplicateCodes, skippedRefs)
       const group = getGroupKey(ref, viewMode, psRowMap, etObjMap)
       const code = (psRow?.ProductCode || psRow?.productCode || '').trim().toUpperCase()
       const isDeleted = (psRow?.IsDeleted || psRow?.isDeleted) === 'Y'
@@ -318,7 +325,7 @@ export default function ETSpecBrowser({
           headBg="#fff8e1" border="#fde68a" textColor="#92400e" badgeBg="#f59e0b"
           selectedRef={selectedRef} bulkSelected={bulkSelected}
           onSelect={onSelect} onBulkToggle={onBulkToggle}
-          statusFor={r => completenessOf(r, psRowMap, missingSet, duplicateCodes)}
+          statusFor={r => completenessOf(r, psRowMap, missingSet, duplicateCodes, skippedRefs)}
           psRowMap={psRowMap}
         />
 
@@ -328,7 +335,7 @@ export default function ETSpecBrowser({
           headBg="#fdecec" border="#f5c2c7" textColor="#842029" badgeBg="#dc3545"
           selectedRef={selectedRef} bulkSelected={bulkSelected}
           onSelect={onSelect} onBulkToggle={onBulkToggle}
-          statusFor={r => completenessOf(r, psRowMap, missingSet, duplicateCodes)}
+          statusFor={r => completenessOf(r, psRowMap, missingSet, duplicateCodes, skippedRefs)}
           psRowMap={psRowMap}
         />
 
@@ -355,7 +362,7 @@ export default function ETSpecBrowser({
                 <BrowserRow
                   key={ref}
                   ref_={ref}
-                  status={completenessOf(ref, psRowMap, missingSet, duplicateCodes)}
+                  status={completenessOf(ref, psRowMap, missingSet, duplicateCodes, skippedRefs)}
                   productCode={(psRow?.ProductCode || psRow?.productCode || '').trim()}
                   manufacturer={(psRow?.Manufacturer || psRow?.manufacturer || '').trim()}
                   isTBC={(psRow?.IsTBC || psRow?.isTBC) === 'Y'}

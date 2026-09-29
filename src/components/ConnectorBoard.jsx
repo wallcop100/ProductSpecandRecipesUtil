@@ -108,7 +108,10 @@ function PaletteChip({ refName, spec, onAdd }) {
       <span {...listeners} {...attributes} style={{ cursor: 'grab', display: 'inline-flex' }} title="Drag into a lane">
         <MaterialIcon name="drag_indicator" size={14} style={{ color: '#adb5bd' }} />
       </span>
-      <span className="text-truncate" style={{ fontFamily: 'monospace', flex: 1 }} title={spec || refName}>{refName}</span>
+      <span className="text-truncate" style={{ flex: 1, minWidth: 0 }} title={spec ? `${refName} · ${spec}` : refName}>
+        <span style={{ fontFamily: 'monospace' }}>{refName}</span>
+        {spec && <span className="d-block text-muted text-truncate" style={{ fontSize: 10 }}>{spec}</span>}
+      </span>
       <Button size="sm" variant="link" className="p-0" style={{ fontSize: 10 }} title={`Add ${refName} to Site`}
         aria-label={`Add ${refName} to Site`} onClick={() => onAdd(refName, 'position')}>Site</Button>
       <Button size="sm" variant="link" className="p-0" style={{ fontSize: 10 }} title={`Add ${refName} inside the wrapper`}
