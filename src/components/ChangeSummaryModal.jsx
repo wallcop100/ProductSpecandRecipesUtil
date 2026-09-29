@@ -418,7 +418,8 @@ function BugReportsTab({ reports, copied, onCopy }) {
       {reports.map(r => (
         <div key={r.id} className="border rounded p-2 mb-2" style={{ fontSize: 12 }}>
           <div className="d-flex align-items-center gap-2 text-muted mb-1" style={{ fontSize: 11 }}>
-            <span className="fw-semibold" style={{ fontFamily: 'monospace', color: '#b02a37' }}>{reportId(r)}</span>
+            <span className="fw-semibold" style={{ fontFamily: 'monospace', color: r.kind === 'feature' ? '#6f42c1' : '#b02a37' }}>{reportId(r)}</span>
+            {r.kind === 'feature' && <span className="badge" style={{ background: '#6f42c1' }}>Feature request</span>}
             <span>{r.at?.replace('T', ' ').slice(0, 16)}</span>
             {r.app?.project && <span>· {r.app.project}</span>}
             {r.app?.screen && <span>· {r.app.screen}</span>}

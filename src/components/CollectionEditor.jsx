@@ -119,6 +119,13 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
     } finally { setSaving(false) }
   }
 
+  // A pinned position is held only while it passes this editor's tags.
+  function heldByTags(r) {
+    const t = positionUI[r]?.tags || []
+    if (exclTags.some(x => t.includes(x))) return false
+    return tags.length === 0 || tags.some(x => t.includes(x))
+  }
+
   async function handleSave() {
     if (!name.trim()) return
     const cleanIngredients = partsToIngredients(ingredients.filter(p => p.ref?.trim()))
@@ -134,6 +141,11 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
         })
       } else {
         await createCollection(name.trim(), cleanIngredients, tags, exclTags)
+      }
+      // Pinned positions the tags now leave out are let go, not kept as dead pins.
+      if (collection) {
+        const drop = (pins[collection.CollectionId] || []).filter(r => !heldByTags(r))
+        if (drop.length) await unpinPositions(collection.CollectionId, drop)
       }
       onSaved?.(collection?.CollectionId)
       onHide()
@@ -181,31 +193,42 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
           badgeVariant="danger"
         />
 
-        {collection && ((pins[collection.CollectionId] || []).length > 0 || (excludes[collection.CollectionId] || []).length > 0) && (
-          <Form.Group className="mb-3" data-testid="editor-positions">
-            <Form.Label className="fw-semibold">Positions held by this template</Form.Label>
-            <div className="text-muted mb-1" style={{ fontSize: 12 }}>
-              Pinned positions stay in this template (and out of every other). With Included Tags set, a pinned
-              position also has to carry one of them. Removed positions stay out whatever their tags.
-            </div>
-            <div className="d-flex flex-wrap gap-1">
-              {(pins[collection.CollectionId] || []).map(r => (
-                <Badge key={r} bg="light" text="dark" className="border d-inline-flex align-items-center gap-1" style={{ fontWeight: 400 }}>
-                  <MaterialIcon name="push_pin" size={11} /> <span style={{ fontFamily: 'monospace' }}>{r}</span>
-                  <button type="button" className="btn btn-link p-0" style={{ fontSize: 10 }} aria-label={`Unpin ${r}`} title="Unpin: its tags decide"
-                    onClick={() => unpinPositions(collection.CollectionId, [r])}><MaterialIcon name="close" size={11} /></button>
-                </Badge>
-              ))}
-              {(excludes[collection.CollectionId] || []).map(r => (
-                <Badge key={`x-${r}`} bg="light" text="muted" className="border d-inline-flex align-items-center gap-1" style={{ fontWeight: 400, textDecoration: 'line-through' }}>
-                  <span style={{ fontFamily: 'monospace' }}>{r}</span>
-                  <button type="button" className="btn btn-link p-0" style={{ fontSize: 10, textDecoration: 'none' }} title="Put it back"
-                    onClick={() => restoreToTemplate(collection.CollectionId, [r])}>restore</button>
-                </Badge>
-              ))}
-            </div>
-          </Form.Group>
-        )}
+        {collection && ((pins[collection.CollectionId] || []).length > 0 || (excludes[collection.CollectionId] || []).length > 0) && (() => {
+          // Held = pinned AND passing the tags as they stand in this editor (saved or not).
+          const allPinned = pins[collection.CollectionId] || []
+          const held = allPinned.filter(r => heldByTags(r))
+          const leftOut = allPinned.filter(r => !heldByTags(r))
+          return (
+            <Form.Group className="mb-3" data-testid="editor-positions">
+              <Form.Label className="fw-semibold">Positions held by this template</Form.Label>
+              <div className="text-muted mb-1" style={{ fontSize: 12 }}>
+                Pinned positions stay in this template (and out of every other), as long as they pass the tags above.
+                Removed positions stay out whatever their tags.
+              </div>
+              <div className="d-flex flex-wrap gap-1">
+                {held.map(r => (
+                  <Badge key={r} bg="light" text="dark" className="border d-inline-flex align-items-center gap-1" style={{ fontWeight: 400 }}>
+                    <MaterialIcon name="push_pin" size={11} /> <span style={{ fontFamily: 'monospace' }}>{r}</span>
+                    <button type="button" className="btn btn-link p-0" style={{ fontSize: 10 }} aria-label={`Unpin ${r}`} title="Unpin: its tags decide"
+                      onClick={() => unpinPositions(collection.CollectionId, [r])}><MaterialIcon name="close" size={11} /></button>
+                  </Badge>
+                ))}
+                {(excludes[collection.CollectionId] || []).map(r => (
+                  <Badge key={`x-${r}`} bg="light" text="muted" className="border d-inline-flex align-items-center gap-1" style={{ fontWeight: 400, textDecoration: 'line-through' }}>
+                    <span style={{ fontFamily: 'monospace' }}>{r}</span>
+                    <button type="button" className="btn btn-link p-0" style={{ fontSize: 10, textDecoration: 'none' }} title="Put it back"
+                      onClick={() => restoreToTemplate(collection.CollectionId, [r])}>restore</button>
+                  </Badge>
+                ))}
+              </div>
+              {leftOut.length > 0 && (
+                <div className="mt-1 text-muted" style={{ fontSize: 11 }} data-testid="left-out-by-tags">
+                  <MaterialIcon name="filter_alt" size={12} /> Left out by the tags above (unpinned when you save): {leftOut.join(', ')}
+                </div>
+              )}
+            </Form.Group>
+          )
+        })()}
 
         <Form.Group className="mb-2">
           <Form.Label className="fw-semibold">Parts</Form.Label>

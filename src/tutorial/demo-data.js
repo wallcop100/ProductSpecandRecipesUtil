@@ -216,7 +216,7 @@ export const DEMO_STATUS = {
     },
     { label: 'Every Form product is placed', detail: 'All 2 products are in a recipe.', state: 'done' },
     {
-      label: 'Nothing blocks a correct patch',
+      label: 'Nothing that would make the export patch wrong',
       detail: '1 ElementType is not in the DesignDB master.',
       state: 'open', count: 1,
     },

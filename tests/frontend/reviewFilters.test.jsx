@@ -16,6 +16,7 @@ const { default: ReviewModal } = await import('../../src/components/ReviewModal.
 const { recordMatches, filterMatches, legacyFilters } = await import('../../src/utils/reviewFields.js')
 const { wildcardMatch } = await import('../../src/utils/tagRules.js')
 
+const refs = () => within(screen.getByTestId('review-results')).queryAllByTestId('result-ref').map(e => e.textContent)
 const pos = (posRef, ref) => ({
   _id: `${posRef}-${ref}`, PositionTypeRef: posRef, ContextType: 'PositionType',
   ContextRef: posRef, ElementTypeRef: ref, Quantity: 1,
@@ -57,37 +58,36 @@ describe('Review recipes filters', () => {
     return render(<ReviewModal show onHide={vi.fn()} />)
   }
 
-  test('filter boxes: free text and wildcards narrow the table; a row starts the review there', async () => {
+  test('filter boxes: free text and wildcards narrow the list; a row starts the review there', async () => {
     setup()
-    const table = () => screen.getByTestId('review-results')
-    expect(within(table()).getAllByRole('row')).toHaveLength(4)   // header + 3
+    expect(refs()).toHaveLength(3)
+    expect(screen.getByTestId('review-results').tagName).toBe('UL')   // a list, not a table
     fireEvent.change(screen.getByLabelText('Filter Contains ET'), { target: { value: 'ET-DL-*' } })
-    const rows = within(table()).getAllByRole('row').slice(1).map(r => r.cells[0].textContent)
-    expect(rows).toEqual(['C01r', 'D10'])
+    expect(refs()).toEqual(['C01r', 'D10'])
     fireEvent.change(screen.getByLabelText('Filter Ref'), { target: { value: 'd1' } })   // part of a value
-    expect(within(table()).getAllByRole('row').slice(1).map(r => r.cells[0].textContent)).toEqual(['D10'])
-    fireEvent.click(within(table()).getByText('D10'))
+    expect(refs()).toEqual(['D10'])
+    fireEvent.click(within(screen.getByTestId('review-results')).getByText('D10'))
     expect(screen.getByTestId('review-counter')).toHaveTextContent('1 of 1')
     expect(screen.getByText('Contains ET: ET-DL-*')).toBeInTheDocument()
   })
 
-  test('another column can be added as a filter box', () => {
+  test('another column can be added as a filter box, from a menu split by source', () => {
     setup()
     fireEvent.click(screen.getByText('+ Filter on another column'))
+    const headers = [...document.querySelectorAll('.dropdown-header')].map(h => h.textContent)
+    expect(headers).toEqual(['DesignDB', 'Product Spec', 'Recipes'])   // Tags already has a box
     fireEvent.click(screen.getByText('Recipe rows', { selector: '.dropdown-item' }))
     fireEvent.change(screen.getByLabelText('Filter Recipe rows'), { target: { value: '!0' } })
-    expect(within(screen.getByTestId('review-results')).getAllByRole('row')).toHaveLength(4)
+    expect(refs()).toHaveLength(3)
   })
 
-  test('a column can be added and the table sorts by it', () => {
+  test('a field can be shown on each row and the list sorts', () => {
     setup()
-    fireEvent.click(screen.getByTitle('Columns'))
+    fireEvent.click(screen.getByTitle('Show on each row'))
     fireEvent.click(screen.getByText('Contains ET', { selector: '.dropdown-item' }))
-    const head = [...screen.getByTestId('review-results').querySelectorAll('th')].map(th => th.textContent)
-    expect(head).toContain('Contains ET')
-    fireEvent.click(screen.getByText('Ref ▲'))
-    const first = within(screen.getByTestId('review-results')).getAllByRole('row')[1].cells[0].textContent
-    expect(first).toBe('D10')
+    expect(screen.getByTestId('review-results')).toHaveTextContent('Contains ET: ET-DL-01')
+    fireEvent.click(screen.getByLabelText('Reverse the order'))
+    expect(refs()[0]).toBe('D10')
   })
 
   test('filter sets save per project and load back', async () => {
@@ -98,15 +98,15 @@ describe('Review recipes filters', () => {
     expect(window.electronAPI.db.setPref).toHaveBeenCalledWith(7, 'review_filter_sets', expect.stringContaining('C singles'))
 
     fireEvent.click(screen.getByText('Clear'))
-    expect(within(screen.getByTestId('review-results')).getAllByRole('row')).toHaveLength(4)
+    expect(refs()).toHaveLength(3)
     fireEvent.change(screen.getByLabelText('Saved filter sets'), { target: { value: 'C singles' } })
-    expect(within(screen.getByTestId('review-results')).getAllByRole('row')).toHaveLength(3)
+    expect(refs()).toHaveLength(2)
     expect(screen.getByLabelText('Filter Ref')).toHaveValue('C0?r')
   })
 
   test('the last filter comes back next time', async () => {
     prefs.review_last = JSON.stringify({ unit: 'position', filter: { match: 'all', conditions: [{ field: 'Ref', op: 'matches', value: 'D*' }] } })
     setup()
-    await waitFor(() => expect(within(screen.getByTestId('review-results')).getAllByRole('row')).toHaveLength(2))
+    await waitFor(() => expect(refs()).toHaveLength(1))
   })
 })

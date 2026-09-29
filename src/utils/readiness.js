@@ -103,7 +103,7 @@ export function readiness({
   const blocking = tasks.filter(t => t.blocking && !t.queued)
   clauses.push({
     key: CLAUSE.VALIDATION,
-    label: 'Nothing blocks a correct patch',
+    label: 'Nothing that would make the export patch wrong',
     done: blocking.length === 0,
     queued: false,
     remaining: blocking.reduce((n, t) => n + t.count, 0),

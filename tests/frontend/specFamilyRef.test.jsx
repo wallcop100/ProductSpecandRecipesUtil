@@ -1,5 +1,5 @@
 import { describe, test, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react'
 
 window.electronAPI = { db: { setPref: vi.fn().mockResolvedValue(undefined) } }
 vi.mock('../../src/utils/backend.js', () => ({
@@ -42,5 +42,23 @@ describe('Connector template tags', () => {
     expect(screen.getAllByRole('button', { name: 'Wall-Washer' }).length).toBeGreaterThan(0)
     fireEvent.click(screen.getAllByRole('button', { name: 'Wall-Washer' })[0])
     expect(screen.getAllByText('Wall-Washer').some(el => el.closest('.badge'))).toBe(true)
+  })
+})
+
+describe('Positions held by a template respect its tags', () => {
+  test('a pinned position with an excluded tag is left out, and unpinned on save', async () => {
+    const unpinPositions = vi.fn(async () => {})
+    useStore.setState({
+      tagPalette: [], elementTypes: [],
+      positionUI: { A1: { tags: ['Exterior'] }, A2: { tags: [] } },
+      connectorPins: { 5: ['A1', 'A2'] }, connectorExcludes: {},
+      unpinPositions, updateCollection: vi.fn(async () => {}),
+    })
+    const coll = { CollectionId: 5, Name: 'T', ApplicableTags: '', ExcludedTags: '["Exterior"]', Ingredients: '[]' }
+    render(<CollectionEditor show onHide={vi.fn()} collection={coll} />)
+    const held = screen.getByTestId('editor-positions')
+    expect(within(held).getByTestId('left-out-by-tags')).toHaveTextContent('A1')
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+    await waitFor(() => expect(unpinPositions).toHaveBeenCalledWith(5, ['A1']))
   })
 })

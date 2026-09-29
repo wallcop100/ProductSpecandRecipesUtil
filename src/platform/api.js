@@ -151,6 +151,20 @@ export function installPlatform() {
       }
     },
 
+    /** Remember the Form spreadsheet picked for a project (by its token). */
+    rememberFormFile: async (projectId, token) => fsx.rememberFormFile(projectId, backend.handleOf(token)),
+    /**
+     * Reopen the project's remembered Form spreadsheet. With `ask`, may prompt for access
+     * (needs a click). → { token, name } | { name, needsPermission: true } | null
+     */
+    reopenFormFile: async (projectId, { ask = false } = {}) => {
+      const hit = await fsx.getFormFile(projectId)
+      if (!hit?.handle) return null
+      const ok = ask ? await fsx.ensurePermission(hit.handle).catch(() => false) : await fsx.hasPermission(hit.handle)
+      if (!ok) return { name: hit.name, needsPermission: true }
+      return { token: backend.registerFile(hit.handle), name: hit.name }
+    },
+
     /** Handle-id groups that point at the SAME folder — the wreckage of the old behaviour. */
     findDuplicateFolders: async () => fsx.duplicateGroups(),
     forgetFolder: async folderPath => fsx.forgetDirectory(folderPath),

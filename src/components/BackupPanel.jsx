@@ -55,9 +55,12 @@ export default function BackupPanel() {
   return (
     <div className="mb-3" data-testid="backup-panel">
       <div className="d-flex align-items-center gap-2 text-muted" style={{ fontSize: 11 }}>
-        <MaterialIcon name="save" size={13} /> Your work in this browser:
-        <Button variant="link" size="sm" className="p-0" style={{ fontSize: 11 }} onClick={backUp} disabled={busy} data-testid="backup-btn">Back up to a file</Button>·
-        <Button variant="link" size="sm" className="p-0" style={{ fontSize: 11 }} onClick={() => fileRef.current?.click()} disabled={busy}>Restore from a file…</Button>
+        <Button variant="outline-primary" size="sm" style={{ fontSize: 12 }} onClick={backUp} disabled={busy} data-testid="backup-btn">
+          <MaterialIcon name="save" size={14} /> Back up all my work
+        </Button>
+        <Button variant="outline-primary" size="sm" style={{ fontSize: 12 }} onClick={() => fileRef.current?.click()} disabled={busy}>
+          <MaterialIcon name="restore" size={14} /> Restore all my work…
+        </Button>
         <InfoTip size={11}>
           Everything this browser holds for the app: every project you have opened, its changes not yet
           exported to the workbooks, templates, connector templates, tags, Form captures and settings.

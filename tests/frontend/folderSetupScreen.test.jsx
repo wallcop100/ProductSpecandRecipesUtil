@@ -301,7 +301,7 @@ describe('several DesignDBs in one folder', () => {
     window.electronAPI.db.applyConfigData = vi.fn(async () => { calls.push('apply'); return { pendingRestored: 0, pendingSkipped: 0, localEts: 0 } })
     await pickFolder()
 
-    fireEvent.click(screen.getByRole('button', { name: /Restore from backup/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Restore this project’s settings/ }))
     expect(await screen.findByText(/Restoring from houses.config.yaml/)).toBeTruthy()
     expect(screen.getByLabelText('main.xlsx').checked).toBe(true)
     expect(screen.getByLabelText('guest.xlsx').checked).toBe(false)
@@ -349,7 +349,7 @@ describe('several DesignDBs in one folder', () => {
     }
     window.electronAPI.db.readConfigYAML = vi.fn().mockResolvedValue({ ok: true, data: yaml, path: 'houses.config.yaml' })
     render(<FolderSetupScreen onProjectLoaded={vi.fn()} />)
-    fireEvent.click(await screen.findByRole('button', { name: /Restore from backup/ }))
+    fireEvent.click(await screen.findByRole('button', { name: /Restore one project’s settings/ }))
     const banner = await screen.findByTestId('pending-restore')
     expect(banner.textContent).toMatch(/Backup of 5452 · Houses read/)
     expect(banner.textContent).toMatch(/Guest House/)

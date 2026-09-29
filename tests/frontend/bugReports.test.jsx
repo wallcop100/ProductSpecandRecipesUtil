@@ -49,7 +49,7 @@ describe('bug reports', () => {
     act(() => { screen.getByText('Swap').dispatchEvent(ev) })
     expect(ev.defaultPrevented).toBe(true)
     fireEvent.change(screen.getByLabelText('Bug note'), { target: { value: 'Swap does nothing' } })
-    fireEvent.keyDown(screen.getByLabelText('Bug note'), { key: 'Enter', ctrlKey: true })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     const [r] = useStore.getState().bugReports
     expect(r.note).toBe('Swap does nothing')
@@ -67,6 +67,19 @@ describe('bug reports', () => {
     expect(md).toContain('- **Position:** C01r')
     expect(md).toContain('- **Area:** `ing-row` › `PositionRecipeEditor`')
     expect(md).toContain('- **Row:** | ET-PS-03 | Swap |')
+  })
+
+  test('a note can be saved as a feature request', () => {
+    setup()
+    fireEvent.click(screen.getByTestId('bug-toggle'))
+    act(() => { screen.getByText('Swap').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true })) })
+    fireEvent.change(screen.getByLabelText('Bug note'), { target: { value: 'Swap all at once' } })
+    fireEvent.keyDown(screen.getByLabelText('Bug note'), { key: 'Enter', ctrlKey: true })   // no shortcut any more
+    expect(screen.getByTestId('bug-note')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Save as Feature Request' }))
+    const r = useStore.getState().bugReports.at(-1)
+    expect(r.kind).toBe('feature')
+    expect(reportsToMarkdown([r])).toContain(`## ${r.id} · Feature request · Swap all at once`)
   })
 
   test('Shift + right-click keeps the normal menu', () => {

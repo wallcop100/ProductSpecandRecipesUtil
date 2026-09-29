@@ -33,7 +33,7 @@ describe('tasks, not issues', () => {
 
   test('the headline names what blocks a correct patch', () => {
     render(<ValidationPanel />)
-    expect(screen.getByText(/1 blocks a correct patch/)).toBeTruthy()
+    expect(screen.getByText(/1 must be fixed before export/)).toBeTruthy()
   })
 
   test('detail is folded away until asked for', () => {
@@ -70,7 +70,7 @@ describe('queued is neither broken nor fixed', () => {
     expect(screen.getByText(/Queued for export/)).toBeTruthy()
     expect(screen.queryByText('Fix all 33')).toBeNull()
     // and it no longer counts as blocking
-    expect(screen.queryByText(/blocks a correct patch/)).toBeNull()
+    expect(screen.queryByText(/must be fixed before export/)).toBeNull()
   })
 
   test('everything queued reads as done-for-now, not as clean', () => {
