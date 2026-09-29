@@ -40,7 +40,8 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
     const name = window.prompt(`Name a template for these ${g.positions.length} position${g.positions.length === 1 ? '' : 's'}`, suggestName(g.parts))?.trim()
     if (!name) return
     // A rule from the data that picks out exactly this group; otherwise pin the positions.
-    const found = ruleFor(g.positions, groups.scoped.map(pt => pt.PositionTypeRef), groups.recOf)
+    const scope = groups.scoped.map(pt => pt.PositionTypeRef)
+    const found = ruleFor(g.positions, scope, groups.recOf, { against: scope.filter(r => groups.sigs.has(r)) })
     const saved = await makeTemplateFromGroup(name, g.parts, g.positions, { rule: found?.exact ? found.rule : null })
     if (saved) { setSelectedCell(null); setSelectedCollectionId(saved.CollectionId) }
   }

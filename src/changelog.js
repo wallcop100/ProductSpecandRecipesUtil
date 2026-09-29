@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-09-29', note: 'Connector template rules (F59FQV): suggestions use position fields first, so positions whose recipe isn’t built yet match too, and no longer count connector-less positions against a rule; the editor shows which matching positions go to another template and why, and “Check a position” shows each condition against its values; stray spaces no longer break “equals”' },
   { date: '2026-09-29', note: 'Connector templates apply by a rule, built like a tag rule: any field (tags, DesignDB columns, what the recipe holds) joined by AND / OR; the most specific rule wins. “Suggest from N positions with these connectors” finds a rule from the data and shows what it would change; Make template uses such a rule when it is exact. Fork is an icon' },
   { date: '2026-09-29', note: 'Bug reports: “Save as Feature Request” (purple) beside Save marks a note as a feature request; Ctrl+Enter no longer saves' },
   { date: '2026-09-29', note: 'Start page: “Back up all my work” / “Restore all my work…” are buttons; the per-project file is now “Restore one project’s settings (.config.yaml)” and “Save project settings” in the builder, so the two aren’t confused' },

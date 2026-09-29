@@ -121,7 +121,7 @@ describe('template rules', () => {
     const saved = await useStore.getState().createCollection('5-pin', G.partsToIngredients(parts), [], [])
     render(<CollectionEditor show onHide={vi.fn()} collection={saved} />)
     fireEvent.click(screen.getByTestId('suggest-rule'))
-    expect(screen.getByTestId('suggest-result')).toHaveTextContent('Picks out exactly the 3 positions')
+    expect(screen.getByTestId('suggest-result')).toHaveTextContent('Matches all 3 positions with these connectors and none with other connectors')
     expect(screen.getByTestId('rule-compare')).toHaveTextContent('3 match and already have these connectors')
     expect(screen.getByTestId('rule-compare')).toHaveTextContent('0 match and would change')
     // Loosen it by hand: A04 would change.
@@ -134,5 +134,43 @@ describe('template rules', () => {
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save changes' })) })
     const t = useStore.getState().etCollections.find(c => c.CollectionId === saved.CollectionId)
     expect(t.Rule).toEqual({ match: 'all', conditions: [{ column: 'DriverLocation', op: 'equals', value: 'LOCAL' }] })
+  })
+})
+
+describe('why a position does or does not match (F59FQV)', () => {
+  beforeEach(() => setup())
+
+  test('a suggestion keeps positions with no connectors yet: they are the ones to gain them', () => {
+    // A05: a position like A01–A03 with no recipe yet. A04 (other connectors) differs by control.
+    const ctl = r => ({ ...r, ControlTypeRef: r.PositionTypeRef === 'A04' ? 'DALI' : 'PHASE' })
+    setup({ positionTypes: [...PTS.map(ctl), ctl({ PositionTypeRef: 'A05', DriverLocation: 'LOCAL' })], positionUI: {} })
+    const scope = [...ALL, 'A05']
+    const sigs = G.signatures(useStore.getState().positionTypes, useStore.getState().recipes, useStore.getState()._connectorOpts())
+    const a = T.ruleFor(['A01', 'A02', 'A03'], scope, recOf(), { against: scope.filter(r => sigs.has(r)) })
+    expect(a.exact).toBe(true)
+    expect(a.rule.conditions.some(c => c.column.startsWith('Recipe.'))).toBe(false)
+    expect(T.ruleMatchesRecord(a.rule, recOf()('A05'))).toBe(true)
+  })
+
+  test('equals ignores stray spaces', () => {
+    expect(T.ruleMatchesRecord({ match: 'all', conditions: [{ column: 'DriverLocation', op: 'equals', value: 'LOCAL ' }] }, { DriverLocation: ' Local' })).toBe(true)
+  })
+
+  test('Check a position shows each condition against its values, and who takes it', async () => {
+    const parts = G.connectorSignature(useStore.getState().recipes, 'A01')
+    const other = await useStore.getState().createCollection('Orluna local', G.partsToIngredients(parts), [], [], { match: 'all', conditions: [
+      { column: 'DriverLocation', op: 'equals', value: 'LOCAL' }, { column: 'Tags', op: 'equals', value: 'Orluna' },
+    ] })
+    const saved = await useStore.getState().createCollection('Local', G.partsToIngredients(parts), [], [], { match: 'all', conditions: [
+      { column: 'DriverLocation', op: 'equals', value: 'LOCAL' },
+    ] })
+    render(<CollectionEditor show onHide={vi.fn()} collection={saved} />)
+    expect(screen.getByTestId('rule-taken')).toHaveTextContent('3 match but go elsewhere')
+    expect(screen.getByTestId('rule-taken')).toHaveTextContent(`${other.Name} has a more specific rule`)
+    fireEvent.change(screen.getByLabelText('Check a position'), { target: { value: 'B01' } })
+    const box = screen.getByTestId('check-position')
+    expect(box).toHaveTextContent('✗ DriverLocation equals “LOCAL” — it has REMOTE')
+    fireEvent.change(screen.getByLabelText('Check a position'), { target: { value: 'A04' } })
+    expect(box).toHaveTextContent('→ this template applies to it')
   })
 })

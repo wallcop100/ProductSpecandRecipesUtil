@@ -123,7 +123,9 @@ export function describeRule(rule) {
  * (a rule listing refs is just a pin).
  */
 const SUGGEST_ORDER = [
-  'DriverLocation', 'Recipe.Family', 'Family', 'Tags', 'SecondaryPowerType', 'ControlTypeRef',
+  // Position fields first: they hold for a position before its recipe is built, so the
+  // rule also catches the positions still waiting for these connectors.
+  'DriverLocation', 'Family', 'Tags', 'SecondaryPowerType', 'ControlTypeRef', 'Recipe.Family',
   'Recipe.Manufacturer', 'RequiresControlLink', 'RequiresPrimaryPowerLink', 'RequiresSecondaryPowerLink',
   'UoM', 'IsCollection', 'ParentRef', 'Recipe.ElementType', 'Recipe.ProductCode',
 ]
@@ -147,15 +149,27 @@ const valuesOf = (rec, f) => {
  * the whole group, so the result never loses a member; `exact` says whether it also
  * leaves out everyone else.
  */
-export function ruleFor(group, scope, recOf) {
+export function ruleFor(group, scope, recOf, opts = {}) {
+  // Position fields first, alone: a rule on them also holds for positions whose recipe is
+  // not built yet. Only when they cannot pick the group out are recipe fields used.
+  const plain = ruleSearch(group, scope, recOf, { ...opts, fields: SUGGEST_ORDER.filter(f => !f.startsWith('Recipe.')) })
+  if (plain?.exact) return plain
+  const full = ruleSearch(group, scope, recOf, { ...opts, fields: SUGGEST_ORDER })
+  return full && (full.exact || !plain || full.outsiders.length < plain.outsiders.length) ? full : plain
+}
+
+function ruleSearch(group, scope, recOf, { against = null, fields = SUGGEST_ORDER } = {}) {
   if (!group?.length) return null
   const inGroup = new Set(group)
-  const others = scope.filter(r => !inGroup.has(r))
+  // Who the rule must leave out: by default everyone else; given `against`, only those
+  // (positions with OTHER connectors). A position with no connectors yet is not evidence
+  // against a rule — it may be one that should get them.
+  const others = (against || scope).filter(r => !inGroup.has(r))
   const recs = new Map(scope.concat(group).map(r => [r, recOf(r) || {}]))
 
   // Candidates: shared values (positive) and values no group member has (negative).
   const cands = []
-  SUGGEST_ORDER.forEach((f, rank) => {
+  fields.forEach((f, rank) => {
     const sets = group.map(r => new Set(valuesOf(recs.get(r), f).map(lc)))
     const first = valuesOf(recs.get(group[0]), f)
     for (const v of first) if (sets.every(s => s.has(lc(v)))) cands.push({ cond: { column: f, op: 'equals', value: v }, rank })

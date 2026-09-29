@@ -6,7 +6,8 @@ import InfoTip from './InfoTip'
 import ConnectorBoard from './ConnectorBoard'
 import RuleBuilder from './RuleBuilder'
 import useConnectorGroups from './useConnectorGroups'
-import { templateParts, partsToIngredients, signatureKey } from '../utils/connectorGroups'
+import { templateParts, partsToIngredients, signatureKey, membership } from '../utils/connectorGroups'
+import { conditionMatches, RECIPE_TAG_COLUMNS } from '../utils/tagRules'
 import {
   TEMPLATE_RULE_COLUMNS, templateRule, ruleFromTags, ruleIsEmpty, ruleConditionsOf, ruleMatchesRecord,
   ruleSpecificity, ruleFor, compareRule, EMPTY_RULE,
@@ -19,6 +20,41 @@ const cleanRule = r => ({ match: r.match === 'any' ? 'any' : 'all', conditions: 
 function RefList({ refs, max = 12 }) {
   if (!refs.length) return null
   return <span style={{ fontFamily: 'monospace' }}>{refs.slice(0, max).join(', ')}{refs.length > max ? ` +${refs.length - max} more` : ''}</span>
+}
+
+const fieldLabel = k => RECIPE_TAG_COLUMNS.find(c => c.key === k)?.label || k
+const shown = v => (Array.isArray(v) ? (v.length ? v.join(', ') : '(none)') : (v == null || String(v).trim() === '' ? '(empty)' : String(v)))
+
+/** "Why doesn't A05 match?" — each condition against one position's actual values. */
+function CheckPosition({ refs, value, onChange, rule, rec, inScope, verdict }) {
+  const conds = ruleConditionsOf(rule)
+  return (
+    <div className="mt-2" style={{ fontSize: 12 }} data-testid="check-position">
+      <div className="d-flex align-items-center gap-2">
+        <span className="text-muted">Check a position:</span>
+        <Form.Control size="sm" list="rule-check-refs" value={value} placeholder="PositionTypeRef" aria-label="Check a position"
+          style={{ width: 160, fontSize: 12 }} onChange={e => onChange(e.target.value.trim())} />
+        <datalist id="rule-check-refs">{refs.map(r => <option key={r} value={r} />)}</datalist>
+      </div>
+      {value && rec && (
+        <div className="mt-1 ps-2" style={{ borderLeft: '2px solid #e5e7eb' }}>
+          {!inScope && <div className="text-warning-emphasis">Not in scope (ignored, or its family is ignored): no template applies to it.</div>}
+          {conds.map((c, i) => {
+            const ok = conditionMatches(c, rec)
+            return (
+              <div key={i} className={ok ? 'text-success' : 'text-danger'}>
+                {ok ? '✓' : '✗'} {fieldLabel(c.column)} {c.op} {['isEmpty', 'isNotEmpty'].includes(c.op) ? '' : `“${c.value}”`}
+                <span className="text-muted"> — it has {shown(rec[c.column])}</span>
+              </div>
+            )
+          })}
+          {verdict === 'in' && <div className="text-success fw-semibold">→ this template applies to it</div>}
+          {verdict && verdict !== 'in' && <div className="text-danger fw-semibold">→ matches, but {verdict}</div>}
+        </div>
+      )}
+      {value && !rec && <div className="text-muted mt-1">No position {value}.</div>}
+    </div>
+  )
 }
 
 /**
@@ -37,6 +73,8 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
   const tagPalette       = useStore(s => s.tagPalette)
   const positionUI       = useStore(s => s.positionUI)
   const groups           = useConnectorGroups()
+  const etCollections    = useStore(s => s.etCollections)
+  const positionTypes    = useStore(s => s.positionTypes)
   // The project's own tags (the palette and every tag a position carries, rule-made or not),
   // then the common ones: a rule can only match tags that exist.
   const tagOptions = useMemo(() => {
@@ -49,7 +87,8 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
   const [rule,         setRule]         = useState(EMPTY_RULE)
   const [ingredients,  setIngredients]  = useState([])
   const [saving,       setSaving]       = useState(false)
-  const [suggested,    setSuggested]    = useState(null)   // { exact, outsiders, from }
+  const [suggested,    setSuggested]    = useState(null)   // { exact, outsiders, from, toGain }
+  const [checkRef,     setCheckRef]     = useState('')
 
   useEffect(() => {
     if (show) {
@@ -80,11 +119,35 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
   const cmp = useMemo(() => (empty ? null : compareRule(rule, scope, groups.recOf, hasParts)),
     [rule, scope, groups, partsKey])   // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Positions the rule matches that still don't end up here: pinned elsewhere, removed,
+  // or a more specific (or equally specific) template takes them.
+  const draftId = collection?.CollectionId || '__draft'
+  const verdicts = useMemo(() => {
+    const cs = [...etCollections.filter(c => c.CollectionId !== draftId), { CollectionId: draftId, Rule: rule }]
+    return membership(scope, cs, pins, groups.recOf, excludes)
+  }, [etCollections, draftId, rule, scope, pins, excludes, groups])
+  const nameOf = id => etCollections.find(c => c.CollectionId === id)?.Name || id
+  function whyNot(r) {
+    const m = verdicts.get(r)
+    if (!m || m.templates.includes(draftId)) return null
+    if ((excludes[draftId] || []).includes(r)) return 'removed from this template'
+    if (m.pinnedTo) return `pinned to ${nameOf(m.pinnedTo)}`
+    if (m.templates.length) return `${m.templates.map(nameOf).join(', ')} has a more specific rule`
+    return null
+  }
+  const taken = useMemo(() => (empty ? [] : scope
+    .filter(r => ruleMatchesRecord(rule, groups.recOf(r)))
+    .map(r => ({ ref: r, why: whyNot(r) })).filter(x => x.why)),
+  [verdicts, rule, scope])   // eslint-disable-line react-hooks/exhaustive-deps
+
   function suggest() {
-    const found = ruleFor(carriers, scope, groups.recOf)
+    // Leave out positions with OTHER connectors; ones with none yet may be meant to get these.
+    const against = scope.filter(r => groups.sigs.has(r) && !hasParts(r))
+    const found = ruleFor(carriers, scope, groups.recOf, { against })
     if (!found) { setSuggested({ none: true }); return }
     setRule(found.rule)
-    setSuggested({ exact: found.exact, outsiders: found.outsiders, from: carriers.length })
+    const toGain = scope.filter(r => !groups.sigs.has(r) && ruleMatchesRecord(found.rule, groups.recOf(r)))
+    setSuggested({ exact: found.exact, outsiders: found.outsiders, from: carriers.length, toGain })
   }
 
   async function saveAsCopy() {
@@ -137,6 +200,8 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
             onChange={e => setName(e.target.value)}
             placeholder="e.g. 5-pin WAGO Local"
           />
+          <CheckPosition refs={scope} value={checkRef} onChange={setCheckRef} rule={rule} rec={checkRef && positionTypes.some(p => p.PositionTypeRef === checkRef) ? groups.recOf(checkRef) : null}
+            inScope={scope.includes(checkRef)} verdict={checkRef ? (verdicts.get(checkRef)?.templates.includes(draftId) ? 'in' : whyNot(checkRef)) : null} />
         </Form.Group>
 
         <Form.Group className="mb-3" data-testid="template-rule">
@@ -169,8 +234,9 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
               {suggested.none
                 ? 'Nothing these positions share picks them out; pin them instead.'
                 : suggested.exact
-                  ? <>Picks out exactly the {suggested.from} position{suggested.from === 1 ? '' : 's'} with these connectors.</>
-                  : <>Keeps all {suggested.from}, but also matches <RefList refs={suggested.outsiders} />: they would get these connectors. Add a condition, or remove them from the template.</>}
+                  ? <>Matches all {suggested.from} position{suggested.from === 1 ? '' : 's'} with these connectors and none with other connectors
+                    {suggested.toGain.length > 0 && <>; it also matches {suggested.toGain.length} with no connectors yet, which would get these: <RefList refs={suggested.toGain} /></>}.</>
+                  : <>Keeps all {suggested.from}, but also matches <RefList refs={suggested.outsiders} />, which have other connectors: they would change. Add a condition, or remove them from the template.</>}
             </div>
           )}
 
@@ -178,6 +244,11 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
             <div className="mt-2 d-flex flex-wrap gap-3" style={{ fontSize: 12 }} data-testid="rule-compare">
               <span title={cmp.same.join(', ')}><MaterialIcon name="check_circle" size={13} className="text-success" /> {cmp.same.length} match and already have these connectors</span>
               <span title={cmp.change.join(', ')}><MaterialIcon name="edit" size={13} className="text-primary" /> {cmp.change.length} match and would change</span>
+              {taken.length > 0 && (
+                <span className="text-danger" data-testid="rule-taken" title={taken.map(t => `${t.ref}: ${t.why}`).join('\n')}>
+                  <MaterialIcon name="block" size={13} /> {taken.length} match but go elsewhere: {taken.slice(0, 4).map(t => `${t.ref} (${t.why})`).join('; ')}{taken.length > 4 ? '…' : ''}
+                </span>
+              )}
               {cmp.missed.length > 0 && (
                 <span title={cmp.missed.join(', ')} className="text-warning-emphasis">
                   <MaterialIcon name="report" size={13} /> {cmp.missed.length} have these connectors but the rule leaves them out: <RefList refs={cmp.missed} max={6} />
