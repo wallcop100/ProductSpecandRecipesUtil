@@ -2463,7 +2463,7 @@ const useStore = create((set, get) => ({
       }
       for (const p of diff.add) {
         get().addRecipeRow(posRef, p.section === 'internal' ? 'dl_internal' : 'position',
-          { elementTypeRef: p.ref, quantity: p.quantity, isContractItem: 'Y' }, { recordHistory: false })
+          { elementTypeRef: p.ref, quantity: p.quantity, isContractItem: 'Y' }, { recordHistory: false, asPosition: true })
       }
     }
     return plan
@@ -2535,7 +2535,29 @@ const useStore = create((set, get) => ({
     const { etCollections, recipes, containerETRefs } = get()
     const collection = etCollections.find(c => c.CollectionId === collectionId)
     if (!collection || !posRefs || posRefs.length === 0) return null
-    return planCollectionBulk(recipes, posRefs, collection, containerETRefs)
+    const opts = get()._connectorOpts()
+    return planCollectionBulk(recipes, posRefs, collection, containerETRefs, { isConnector: ref => isConnectorPart(ref, opts) })
+  },
+
+  /**
+   * removeRowsById(ids) — delete exact rows (connector clean-up). Never widened by an
+   * ElementType open in the builder, unlike removeRecipeRow. New rows go, file rows are
+   * soft-deleted so the change exports.
+   */
+  removeRowsById(ids, { recordHistory = true } = {}) {
+    const drop = new Set(ids)
+    if (!drop.size) return
+    const { recipes, rsChanges } = get()
+    if (recordHistory) get()._pushHistory()
+    const hard = new Set(recipes.filter(r => drop.has(r._id) && r._row_num == null).map(r => r._id))
+    const newChanges = []
+    const next = recipes.filter(r => !hard.has(r._id)).map(r => {
+      if (!drop.has(r._id)) return r
+      const u = { ...r, IsDeleted: 'Y', isDeleted: 'Y' }
+      newChanges.push({ _id: r._id, positionTypeRef: r.PositionTypeRef || r.positionTypeRef, action: 'upsert', row: u })
+      return u
+    })
+    set({ recipes: next, rsChanges: mergeRsChanges(rsChanges.filter(c => !hard.has(c._id)), newChanges, recipes) })
   },
 
   /**
@@ -2552,17 +2574,20 @@ const useStore = create((set, get) => ({
    *
    * Returns the plan that was executed, so the caller can report it.
    */
-  applyCollectionBulk(posRefs, collectionId) {
+  applyCollectionBulk(posRefs, collectionId, { removeExtras = false } = {}) {
     const plan = get().planBulk(posRefs, collectionId)
     if (!plan) return null
 
     const todo = effectiveActions(plan)
-    if (todo.length === 0) return plan
+    const extraIds = removeExtras ? [...(plan.extras?.values() || [])].flat().map(x => x.row._id) : []
+    if (todo.length === 0 && extraIds.length === 0) return plan
 
     get()._pushHistory()
+    if (extraIds.length) get().removeRowsById([...new Set(extraIds)], { recordHistory: false })
     for (const a of todo) {
       if (a.action === 'add') {
-        get().addRecipeRow(a.posRef, a.rawSection, { elementTypeRef: a.ref, quantity: a.need }, { recordHistory: false })
+        // asPosition: an ElementType left open in the builder must not swallow these rows.
+        get().addRecipeRow(a.posRef, a.rawSection, { elementTypeRef: a.ref, quantity: a.need }, { recordHistory: false, asPosition: true })
       } else if (a.action === 'topUp') {
         // Raise the first matching row to the required total rather than append.
         const row = a.rows[0]

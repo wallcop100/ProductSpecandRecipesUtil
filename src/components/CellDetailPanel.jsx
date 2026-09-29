@@ -1,10 +1,10 @@
 import React, { useMemo } from 'react'
 import { Button, Badge, Form } from 'react-bootstrap'
 import useStore from '../store/useStore'
-import { filterMatches } from '../utils/connectorGroups'
+import { filterMatches, isConnectorPart } from '../utils/connectorGroups'
 import MaterialIcon from './MaterialIcon'
 import { ACTION_ICONS } from '../utils/entityStyle'
-import { positionRecipeWithWrapperInternals, wrapperUsedBy } from '../utils/collectionStatus'
+import { positionRecipeWithWrapperInternals, wrapperUsedBy, extraConnectorRows } from '../utils/collectionStatus'
 
 const SECTION_LABEL = {
   position: 'free issue',
@@ -35,6 +35,12 @@ export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap,
   const removeCollection    = useStore(s => s.removeCollection)
 
   const collection = etCollections.find(c => c.CollectionId === collectionId)
+  const removeRowsById = useStore(s => s.removeRowsById)
+  const extras = useMemo(() => {
+    if (!collection) return []
+    const opts = useStore.getState()._connectorOpts()
+    return extraConnectorRows(recipes, posRef, collection, ref => isConnectorPart(ref, opts))
+  }, [recipes, posRef, collection])
 
   const applicable = collection ? filterMatches(collection, useStore.getState()._templateRecOf()(posRef)) : false
 
@@ -166,6 +172,23 @@ export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap,
           </div>
         ))}
       </div>
+
+      {/* Connectors here the template doesn't ask for: never kept silently. */}
+      {extras.length > 0 && (
+        <div className="px-3 pb-2" style={{ flexShrink: 0, fontSize: 12 }} data-testid="cell-extra-connectors">
+          <div className="fw-semibold mb-1" style={{ color: '#664d03' }}>
+            <MaterialIcon name="warning" size={13} /> Also has connectors not in this template
+          </div>
+          {extras.map(x => (
+            <div key={x.row._id} className="d-flex align-items-center gap-2">
+              <span style={{ fontFamily: 'monospace' }}>{x.ref}</span>
+              <span className="text-muted" style={{ fontSize: 11 }}>{x.section === 'position' ? 'position level' : `inside ${x.container}`}</span>
+              <Button size="sm" variant="link" className="p-0 ms-auto text-danger" style={{ fontSize: 11 }}
+                onClick={() => removeRowsById([x.row._id])}>Remove</Button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Bulk actions */}
       <div className="border-top px-3 py-2 d-flex flex-column gap-2" style={{ flexShrink: 0 }}>

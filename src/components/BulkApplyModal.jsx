@@ -1,5 +1,5 @@
 import React from 'react'
-import { Modal, Button } from 'react-bootstrap'
+import { Modal, Button, Form } from 'react-bootstrap'
 import MaterialIcon from './MaterialIcon'
 
 /**
@@ -45,10 +45,14 @@ const Ref = ({ r }) => <span style={{ fontFamily: 'monospace' }}>{r}</span>
 const Dim = ({ children }) => <span className="text-muted" style={{ fontSize: 10 }}>{children}</span>
 
 export default function BulkApplyModal({ show, onHide, plan, collectionName, onConfirm, title }) {
+  const [removeExtras, setRemoveExtras] = React.useState(false)
+  React.useEffect(() => { if (show) setRemoveExtras(false) }, [show])
   if (!plan) return null
 
   const counts = plan.counts || {}
-  const changing = (counts.add || 0) + (counts.topUp || 0) + (counts.move || 0)
+  const extras = plan.extras || new Map()
+  const nExtras = [...extras.values()].reduce((n, x) => n + x.length, 0)
+  const changing = (counts.add || 0) + (counts.topUp || 0) + (counts.move || 0) + (removeExtras ? nExtras : 0)
   const positions = [...plan.byPosition.keys()]
 
   return (
@@ -69,6 +73,16 @@ export default function BulkApplyModal({ show, onHide, plan, collectionName, onC
           <div className="px-2 py-1 rounded mb-2" style={{ background: '#f8d7da', color: '#842029', fontSize: 11 }}>
             <MaterialIcon name="block" size={12} /> {counts.blocked} ingredient{counts.blocked === 1 ? '' : 's'} cannot
             be placed: they belong inside a wrapper, and those positions have no design element. They are skipped.
+          </div>
+        )}
+
+        {nExtras > 0 && (
+          <div className="px-2 py-1 rounded mb-2" style={{ background: '#fff3cd', color: '#664d03', fontSize: 11 }} data-testid="bulk-extras">
+            <MaterialIcon name="warning" size={12} /> {extras.size} position{extras.size === 1 ? '' : 's'} also
+            {extras.size === 1 ? ' has' : ' have'} {nExtras} connector{nExtras === 1 ? '' : 's'} this template doesn’t ask for (listed below).
+            <Form.Check type="checkbox" id="bulk-remove-extras" className="mt-1" checked={removeExtras}
+              onChange={e => setRemoveExtras(e.target.checked)}
+              label={`Remove them too (${nExtras} row${nExtras === 1 ? '' : 's'})`} />
           </div>
         )}
 
@@ -96,6 +110,13 @@ export default function BulkApplyModal({ show, onHide, plan, collectionName, onC
                   </div>
                 )
               })}
+              {(extras.get(posRef) || []).map((x, i) => (
+                <div key={`x${i}`} className="d-flex align-items-center gap-2 ps-3 py-1" style={{ color: removeExtras ? '#842029' : '#664d03' }}>
+                  <MaterialIcon name={removeExtras ? 'remove_circle' : 'warning'} size={12} style={{ flexShrink: 0 }} />
+                  <span>{removeExtras ? 'remove' : 'not in this template:'} <Ref r={x.ref} />{' '}
+                    <Dim>({x.section === 'position' ? 'position level' : `inside ${x.container}`})</Dim></span>
+                </div>
+              ))}
             </div>
           )
         })}
@@ -107,7 +128,7 @@ export default function BulkApplyModal({ show, onHide, plan, collectionName, onC
           {counts.skip || 0} skipped{counts.blocked ? ` · ${counts.blocked} blocked` : ''}
         </span>
         <Button size="sm" variant="secondary" onClick={onHide}>Cancel</Button>
-        <Button size="sm" variant="primary" disabled={changing === 0} onClick={onConfirm}>
+        <Button size="sm" variant="primary" disabled={changing === 0} onClick={() => onConfirm?.({ removeExtras })}>
           Apply {changing} change{changing === 1 ? '' : 's'}
         </Button>
       </Modal.Footer>
