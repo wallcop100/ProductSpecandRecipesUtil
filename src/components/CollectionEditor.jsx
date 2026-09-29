@@ -60,6 +60,10 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
   const createCollection = useStore(s => s.createCollection)
   const updateCollection = useStore(s => s.updateCollection)
   const elementTypes     = useStore(s => s.elementTypes)
+  const pins             = useStore(s => s.connectorPins)
+  const excludes         = useStore(s => s.connectorExcludes)
+  const unpinPositions   = useStore(s => s.unpinPositions)
+  const restoreToTemplate = useStore(s => s.restoreToTemplate)
   const tagPalette       = useStore(s => s.tagPalette)
   const positionUI       = useStore(s => s.positionUI)
   // The project's own tags (the palette and every tag a position carries, rule-made or not),
@@ -104,6 +108,15 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
   }
   function removeTag(tag, setter) {
     setter(prev => prev.filter(t => t !== tag))
+  }
+
+  async function saveAsCopy() {
+    const copyName = name.trim() === (collection?.Name || '').trim() ? `${name.trim()} (copy)` : name.trim()
+    setSaving(true)
+    try {
+      await createCollection(copyName, partsToIngredients(ingredients.filter(p => p.ref?.trim())), tags, exclTags)
+      onHide()
+    } finally { setSaving(false) }
   }
 
   async function handleSave() {
@@ -168,6 +181,32 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
           badgeVariant="danger"
         />
 
+        {collection && ((pins[collection.CollectionId] || []).length > 0 || (excludes[collection.CollectionId] || []).length > 0) && (
+          <Form.Group className="mb-3" data-testid="editor-positions">
+            <Form.Label className="fw-semibold">Positions held by this template</Form.Label>
+            <div className="text-muted mb-1" style={{ fontSize: 12 }}>
+              Pinned positions stay in this template (and out of every other). With Included Tags set, a pinned
+              position also has to carry one of them. Removed positions stay out whatever their tags.
+            </div>
+            <div className="d-flex flex-wrap gap-1">
+              {(pins[collection.CollectionId] || []).map(r => (
+                <Badge key={r} bg="light" text="dark" className="border d-inline-flex align-items-center gap-1" style={{ fontWeight: 400 }}>
+                  <MaterialIcon name="push_pin" size={11} /> <span style={{ fontFamily: 'monospace' }}>{r}</span>
+                  <button type="button" className="btn btn-link p-0" style={{ fontSize: 10 }} aria-label={`Unpin ${r}`} title="Unpin: its tags decide"
+                    onClick={() => unpinPositions(collection.CollectionId, [r])}><MaterialIcon name="close" size={11} /></button>
+                </Badge>
+              ))}
+              {(excludes[collection.CollectionId] || []).map(r => (
+                <Badge key={`x-${r}`} bg="light" text="muted" className="border d-inline-flex align-items-center gap-1" style={{ fontWeight: 400, textDecoration: 'line-through' }}>
+                  <span style={{ fontFamily: 'monospace' }}>{r}</span>
+                  <button type="button" className="btn btn-link p-0" style={{ fontSize: 10, textDecoration: 'none' }} title="Put it back"
+                    onClick={() => restoreToTemplate(collection.CollectionId, [r])}>restore</button>
+                </Badge>
+              ))}
+            </div>
+          </Form.Group>
+        )}
+
         <Form.Group className="mb-2">
           <Form.Label className="fw-semibold">Parts</Form.Label>
           <div className="text-muted mb-2" style={{ fontSize: 12 }}>
@@ -179,6 +218,11 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
       </Modal.Body>
       <Modal.Footer>
         <Button variant="secondary" onClick={onHide}>Cancel</Button>
+        {collection && (
+          <Button variant="outline-primary" onClick={saveAsCopy} disabled={saving || !name.trim()} title="Save these settings as a new template; this one is left as it was">
+            Save as a copy
+          </Button>
+        )}
         <Button variant="primary" onClick={handleSave} disabled={saving || !name.trim()}>
           {saving ? 'Saving…' : collection ? 'Save changes' : 'Create template'}
         </Button>

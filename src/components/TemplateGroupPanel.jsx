@@ -20,6 +20,9 @@ export default function TemplateGroupPanel({ collectionId, groups, onEdit, onSel
   const pins = useStore(s => s.connectorPins)
   const pinPositions = useStore(s => s.pinPositions)
   const unpinPositions = useStore(s => s.unpinPositions)
+  const removeFromTemplate = useStore(s => s.removeFromTemplate)
+  const restoreToTemplate = useStore(s => s.restoreToTemplate)
+  const excludes = useStore(s => s.connectorExcludes)
   const forkTemplate = useStore(s => s.forkTemplate)
   const makeTemplateFromGroup = useStore(s => s.makeTemplateFromGroup)
   const planTemplateApply = useStore(s => s.planTemplateApply)
@@ -102,6 +105,10 @@ export default function TemplateGroupPanel({ collectionId, groups, onEdit, onSel
               {diffSize(d) === 0
                 ? <span className="text-success ms-auto"><MaterialIcon name="check" size={12} /> matches</span>
                 : <span className="text-warning ms-auto text-truncate" style={{ maxWidth: 220 }} title={diffText(d)}>{diffText(d)}</span>}
+              <button type="button" className="btn btn-link p-0 text-muted" title={`Take ${r} out of this template`}
+                aria-label={`Remove ${r} from this template`} onClick={() => removeFromTemplate(collectionId, [r])}>
+                <MaterialIcon name="close" size={13} />
+              </button>
             </div>
           )
         })}
@@ -115,6 +122,30 @@ export default function TemplateGroupPanel({ collectionId, groups, onEdit, onSel
           {[...picked].some(r => pinned.has(r)) && (
             <Button size="sm" variant="link" style={{ fontSize: 11 }} onClick={() => { unpinPositions(collectionId, [...picked]); setPicked(new Set()) }}>Unpin</Button>
           )}
+        </div>
+      )}
+
+      {(() => {
+        // Pinned here but outside this template's tags: say so, or the tags look like they do nothing.
+        const outOfTags = [...pinned].filter(r => !memberSet.has(r) && !(excludes[collectionId] || []).includes(r))
+        return outOfTags.length > 0 && (
+          <div className="mb-2 text-muted" style={{ fontSize: 11 }} data-testid="pinned-out-of-tags">
+            <MaterialIcon name="filter_alt" size={12} /> {outOfTags.length} pinned position{outOfTags.length === 1 ? '' : 's'} left out by this template’s tags: {outOfTags.join(', ')}
+          </div>
+        )
+      })()}
+      {(excludes[collectionId] || []).length > 0 && (
+        <div className="mb-3" data-testid="removed-positions">
+          <strong>Removed ({excludes[collectionId].length})</strong>
+          <div className="d-flex flex-wrap gap-1 mt-1">
+            {excludes[collectionId].map(r => (
+              <span key={r} className="badge bg-light text-dark border d-inline-flex align-items-center gap-1" style={{ fontSize: 11, fontWeight: 400 }}>
+                <span style={{ fontFamily: 'monospace' }}>{r}</span>
+                <button type="button" className="btn btn-link p-0" style={{ fontSize: 11 }} title={`Put ${r} back (its tags decide again)`}
+                  onClick={() => restoreToTemplate(collectionId, [r])}>restore</button>
+              </span>
+            ))}
+          </div>
         </div>
       )}
 

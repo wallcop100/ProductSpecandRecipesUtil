@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-09-29', note: 'Connector templates: tags now narrow a template made from a group (its pinned positions must match them too); remove a single fitting from a template (and restore it); Fork from the template list, and “Save as a copy” in the editor' },
   { date: '2026-09-29', note: 'Back up everything this browser holds for the app to a file, and restore it (start page): every project, its unexported changes, templates, tags, captures and settings. The pre-release site is withdrawn' },
   { date: '2026-09-28', note: 'Connector templates as groups: the Connectors screen finds positions sharing the same connectors (“Make template”); templates are set up by dragging parts into Site / Inside wrapper; a template’s panel lists its positions and makes them all match in one Undo, forks it, splits some off, pulls in near misses and settles clashes' },
   { date: '2026-09-28', note: 'Product Spec: “New ElementType” in the header creates one (family prefilled from the one you are on) with its spec row, and selects it' },

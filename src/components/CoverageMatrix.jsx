@@ -50,6 +50,7 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
   const positionUI     = useStore(s => s.positionUI)
   const recipes        = useStore(s => s.recipes)
   const connectorPins  = useStore(s => s.connectorPins)
+  const connectorExcludes = useStore(s => s.connectorExcludes)
   const applyCollectionBulk = useStore(s => s.applyCollectionBulk)
   const planBulk = useStore(s => s.planBulk)
 
@@ -76,7 +77,7 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
   // Pins first, then filters (connectorGroups.membership); two filters on one unpinned
   // position is a clash, flagged on its row.
   const members = useMemo(() => membership(scopedPositions.map(pt => pt.PositionTypeRef), collections, connectorPins,
-    r => positionUI[r]?.tags ?? []), [scopedPositions, collections, connectorPins, positionUI])
+    r => positionUI[r]?.tags ?? [], connectorExcludes), [scopedPositions, collections, connectorPins, positionUI, connectorExcludes])
 
   const statusByPos = useMemo(() => {
     const map = {}

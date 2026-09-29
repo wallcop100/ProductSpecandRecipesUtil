@@ -20,13 +20,14 @@ export default function CollectionBadge({ posRef }) {
   const positionUI    = useStore(s => s.positionUI)
   const recipes       = useStore(s => s.recipes)
   const connectorPins = useStore(s => s.connectorPins)
+  const connectorExcludes = useStore(s => s.connectorExcludes)
 
   const { overall, label } = useMemo(() => {
     if (!etCollections.length) return { overall: null, label: '' }
 
     const tags = positionUI[posRef]?.tags ?? []
     const { combined: posRecipe, wrapperRefs } = positionRecipeWithWrapperInternals(recipes, posRef)
-    const member = membership([posRef], etCollections, connectorPins, () => tags).get(posRef)
+    const member = membership([posRef], etCollections, connectorPins, () => tags, connectorExcludes).get(posRef)
     const statuses = collectionStatusForPosition(posRef, tags, posRecipe, etCollections, wrapperRefs, member)
     const overall = overallCollectionStatus(statuses)
 

@@ -11,9 +11,10 @@
  * strain relief or lever by its ref (process.md §6.1 naming), or any ElementType in a
  * family the user picks.
  *
- * Membership: a template covers a position when the position is PINNED to it, or — when
- * the position is pinned nowhere — when the template's tag filter matches. A position
- * pinned to one template is out of every other template's filter. Two filters matching
+ * Membership: a template covers a position when the position is PINNED to it (and matches
+ * its tags, if it has any), or — when the position is pinned nowhere — when the template's
+ * tag filter matches. A position pinned to one template is out of every other template's
+ * filter; a position REMOVED from a template (excludes) is out of it whatever the filter. Two filters matching
  * one unpinned position is a CLASH, flagged for the user to settle by pinning.
  * Pure.
  */
@@ -145,19 +146,25 @@ export function describeParts(parts) {
  *   Map(posRef → { templates: [collectionId], pinnedTo: id|null, clash: bool })
  * pins: { [collectionId]: [posRef] }.
  */
-export function membership(positionRefs, collections, pins = {}, tagsOf = () => []) {
+export function membership(positionRefs, collections, pins = {}, tagsOf = () => [], excludes = {}) {
   const pinnedTo = new Map()
   for (const [id, refs] of Object.entries(pins || {})) for (const r of refs || []) pinnedTo.set(r, id)
+  const removed = (id, pos) => (excludes?.[id] || []).includes(pos)
   const out = new Map()
   for (const pos of positionRefs) {
+    const tags = tagsOf(pos) || []
     const pin = pinnedTo.get(pos) || null
-    if (pin && (collections || []).some(c => c.CollectionId === pin)) {
-      out.set(pos, { templates: [pin], pinnedTo: pin, clash: false })
+    const pinTpl = pin && (collections || []).find(c => c.CollectionId === pin)
+    if (pinTpl) {
+      // Pinned: this template only — and still subject to its tags, when it has any.
+      const incl = parse(pinTpl.ApplicableTags), excl = parse(pinTpl.ExcludedTags)
+      const ok = !removed(pin, pos) && !(excl.length && excl.some(t => tags.includes(t)))
+        && (incl.length === 0 || incl.some(t => tags.includes(t)))
+      out.set(pos, { templates: ok ? [pin] : [], pinnedTo: pin, clash: false })
       continue
     }
-    const tags = tagsOf(pos) || []
     const matches = (collections || [])
-      .filter(c => filterMatches(c, tags, { hasPins: (pins?.[c.CollectionId] || []).length > 0 }))
+      .filter(c => !removed(c.CollectionId, pos) && filterMatches(c, tags, { hasPins: (pins?.[c.CollectionId] || []).length > 0 }))
       .map(c => c.CollectionId)
     out.set(pos, { templates: matches, pinnedTo: null, clash: matches.length > 1 })
   }
