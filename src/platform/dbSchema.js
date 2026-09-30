@@ -51,6 +51,10 @@ function migrate() {
   if (!hasColumn('et_collections', 'ExcludedTags')) {
     db.exec(`ALTER TABLE et_collections ADD COLUMN ExcludedTags TEXT DEFAULT '[]'`)
   }
+  // templates: a recipe style's rule (recipeStyles.js); NULL = none (read its tags).
+  if (!hasColumn('templates', 'rule')) {
+    db.exec(`ALTER TABLE templates ADD COLUMN rule TEXT`)
+  }
   // et_collections: the rule that picks its positions (templateRules.js); NULL = read the tags.
   if (!hasColumn('et_collections', 'Rule')) {
     db.exec(`ALTER TABLE et_collections ADD COLUMN Rule TEXT`)
@@ -282,6 +286,7 @@ function parseTemplate(row) {
     ...row,
     applicable_tags: parse(row.applicable_tags),
     ingredients: parse(row.ingredients),
+    rule: (() => { try { return row.rule ? JSON.parse(row.rule) : null } catch { return null } })(),
   }
 }
 
@@ -546,11 +551,12 @@ function upsertTemplate(template) {
   const asJson = (v, fallback) => (typeof v === 'string' ? v : JSON.stringify(v ?? fallback))
   const applicable_tags = asJson(template.applicable_tags, [])
   const ingredients = asJson(template.ingredients, [])
+  const rule = template.rule ? asJson(template.rule, null) : null
 
   database
     .prepare(`
-      INSERT INTO templates (id, name, scope, project_id, base_template_id, applicable_tags, ingredients, sort_order, created_at, updated_at)
-      VALUES (@id, @name, @scope, @project_id, @base_template_id, @applicable_tags, @ingredients, @sort_order, @created_at, @updated_at)
+      INSERT INTO templates (id, name, scope, project_id, base_template_id, applicable_tags, ingredients, rule, sort_order, created_at, updated_at)
+      VALUES (@id, @name, @scope, @project_id, @base_template_id, @applicable_tags, @ingredients, @rule, @sort_order, @created_at, @updated_at)
       ON CONFLICT(id) DO UPDATE SET
         name             = excluded.name,
         scope            = excluded.scope,
@@ -558,6 +564,7 @@ function upsertTemplate(template) {
         base_template_id = excluded.base_template_id,
         applicable_tags  = excluded.applicable_tags,
         ingredients      = excluded.ingredients,
+        rule             = excluded.rule,
         sort_order       = excluded.sort_order,
         updated_at       = excluded.updated_at
     `)
@@ -569,6 +576,7 @@ function upsertTemplate(template) {
       base_template_id,
       applicable_tags,
       ingredients,
+      rule,
       sort_order,
       created_at,
       updated_at: ts,

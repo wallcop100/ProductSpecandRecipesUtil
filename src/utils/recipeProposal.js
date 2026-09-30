@@ -21,6 +21,7 @@
  */
 
 import { roleOf, driverOf, envOf, wrapperFor, patternFor, designKind, PRODUCT_ROLES, SHIPPED_PATTERNS, harvestPatterns } from './recipePatterns'
+import { matchStyle, groupKeyFor } from './recipeStyles'
 
 const up = s => String(s ?? '').trim().toUpperCase()
 const refOf = r => r.ElementTypeRef || r.elementTypeRef || ''
@@ -320,7 +321,8 @@ export function proposalFromTemplate(template, posRef, ctx) {
  * built and checked by a person; the rest copy it (as a taught template).
  * → [{ key, kind, label, positions: [posRef], first: posRef, skipped }]
  */
-export function formGroups(posRefs, ctx) {
+export function formGroups(posRefs, ctx, opts = {}) {
+  if (opts.records) return styledGroups(posRefs, ctx, opts)
   const groups = new Map()
   const skipped = []
   for (const ref of posRefs) {
@@ -348,6 +350,41 @@ export function formGroups(posRefs, ctx) {
 }
 
 /**
+ * Grouping with recipe STYLES (recipeStyles.js): a position a style's rule matches joins that
+ * style's group (the most specific rule wins); the rest group by the dimensions chosen
+ * (`by`: 'main' | 'kind' | 'extras'). opts: { records: Map, styles: [template], by }.
+ * Each group: { key, label, positions, first, style (template) | null, sig, kind }.
+ */
+function styledGroups(posRefs, ctx, { records, styles = [], by = ['main', 'kind', 'extras'] }) {
+  const groups = new Map()
+  const skipped = []
+  const richness = new Map()
+  for (const ref of posRefs) {
+    const p = proposeRecipe(ref, ctx)
+    if (p.skip) { skipped.push({ posRef: ref, why: p.skip }); continue }
+    const rec = records.get(ref) || {}
+    const style = matchStyle(rec, styles)
+    const dims = groupKeyFor(rec, by)
+    const labels = []
+    if (by.includes('kind')) labels.push(`${KIND_LABEL[p.kind.wk]} · ${DRIVER_LABEL[p.kind.dl]} · ${p.kind.env === 'EXT' ? 'exterior' : 'interior'}`)
+    if (by.includes('main')) labels.push(rec['Form.Main'] || 'no main product')
+    if (by.includes('extras')) labels.push((rec['Form.Extras'] || []).length ? `+ ${rec['Form.Extras'].join(', ')}` : 'no accessories')
+    const g = style
+      ? { key: `style:${style.id}`, label: style.name, style }
+      : { key: dims.key, label: labels.join(' · ') || 'Everything', style: null }
+    if (!groups.has(g.key)) groups.set(g.key, { ...g, positions: [], sig: p.signature, kind: p.kind })
+    groups.get(g.key).positions.push(ref)
+    richness.set(ref, new Set(p.products.map(x => x.role)).size)
+  }
+  return {
+    groups: [...groups.values()].map(g => ({
+      ...g, first: [...g.positions].sort((a, b) => richness.get(b) - richness.get(a))[0],
+    })).sort((a, b) => (!!b.style - !!a.style) || b.positions.length - a.positions.length),
+    skipped,
+  }
+}
+
+/**
  * Everything proposeRecipe needs, from the store's state and the tool-wide library.
  * `library` = { patterns, exemplars } (recipe patterns and products of projects opened before).
  */
@@ -369,6 +406,9 @@ export function proposalContext(state, library = {}) {
     exemplars: library.exemplars || [],
     containerRefs: containerETRefs,
     kindOfPos: p => kindOf.get(p) || null,
-    sources: precedentSources({ recipes, positionTypes, elementTypes, libraryPatterns: library.patterns || [] }),
+    // "Company style guide" (a new project, per the company rule): precedent from other
+    // projects only, never this project's own recipes.
+    sources: precedentSources({ recipes, positionTypes, elementTypes, libraryPatterns: library.patterns || [] })
+      .filter(s => state.recipeSource !== 'guide' || s.name !== 'this project'),
   }
 }

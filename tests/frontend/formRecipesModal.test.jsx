@@ -35,8 +35,10 @@ describe('recipes from the Form: build one, check it, the rest copy it', () => {
   test('groups by kind; the first is proposed with empty parts flagged; nothing is written until you build it', async () => {
     const onOpen = vi.fn()
     render(<FormRecipesModal show posRefs={[]} onHide={vi.fn()} onOpenPosition={onOpen} />)
-    const groups = await screen.findAllByTestId('form-group')
-    expect(groups).toHaveLength(2)
+    expect(await screen.findAllByTestId('form-group')).toHaveLength(3)     // split by main product too
+    fireEvent.click(screen.getByRole('button', { name: 'Main product' }))  // the old grouping: by kind
+    const groups = screen.getAllByTestId('form-group').filter(g => /Point source/.test(g.textContent))
+    expect(screen.getAllByTestId('form-group')).toHaveLength(2)
     fireEvent.click(within(groups[0]).getByText(/Point source in a DL wrapper/))
     expect(within(groups[0]).getAllByText('empty — add it in the builder').length).toBeGreaterThan(0)
     expect(rowsOf('B1')).toEqual([])
@@ -48,14 +50,18 @@ describe('recipes from the Form: build one, check it, the rest copy it', () => {
   test('once checked, "Use it for the other 1" teaches the group; B2 is built from it with its own product', async () => {
     useStore.getState().buildProposedRecipe('B1')
     render(<FormRecipesModal show posRefs={[]} onHide={vi.fn()} onOpenPosition={vi.fn()} />)
-    const g = (await screen.findAllByTestId('form-group'))[0]
+    await screen.findAllByTestId('form-group')
+    fireEvent.click(screen.getByRole('button', { name: 'Main product' }))
+    const g = screen.getAllByTestId('form-group').find(x => /Point source/.test(x.textContent))
     fireEvent.click(within(g).getByText(/Point source in a DL wrapper/))
     await act(async () => { fireEvent.click(within(g).getByRole('button', { name: 'Use it for the other 1' })) })
-    fireEvent.click(await within(g).findByRole('button', { name: 'Build 1' }))
+    // Saved as a style: the group is now that style's, and B2 is ticked to build from it.
+    const sg = screen.getAllByTestId('form-group').find(x => /style/.test(x.textContent))
+    fireEvent.click(await within(sg).findByRole('button', { name: 'Build 1' }))
     const refs = rowsOf('B2').map(r => r.ElementTypeRef || r.elementTypeRef)
     expect(refs).toContain('ET-PS-02')
     expect(refs).not.toContain('ET-PS-01')
-    expect(screen.getByText(/Built 1 from B1/)).toBeInTheDocument()
+    expect(screen.getByText(/Built 1 from .*B1/)).toBeInTheDocument()
   })
 })
 
@@ -63,7 +69,7 @@ describe('choosing what ships together', () => {
   test('pick a wrapper for the group, send a part separately, and the first one is built that way', async () => {
     useStore.setState({ recipeChoices: {} })
     render(<FormRecipesModal show posRefs={[]} onHide={vi.fn()} onOpenPosition={vi.fn()} />)
-    const g = (await screen.findAllByTestId('form-group'))[1]            // the linear group
+    const g = (await screen.findAllByTestId('form-group')).find(x => /Linear/.test(x.textContent))   // the linear group
     fireEvent.click(within(g).getByText(/Linear in a LIN wrapper/))
     expect(within(g).getByLabelText('Wrapper').value).toBe('LIN')
     fireEvent.change(within(g).getByLabelText('Wrapper'), { target: { value: 'none' } })

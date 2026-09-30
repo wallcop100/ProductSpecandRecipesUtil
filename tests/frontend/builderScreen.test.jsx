@@ -87,7 +87,7 @@ describe('setting up a group: build one, check it in the builder, come back', ()
       elementTypes: [{ ElementTypeRef: 'ET-PS-01', Family: 'ET-PS' }, { ElementTypeRef: 'ET-PS-02', Family: 'ET-PS' }],
       formCaptures: { byPosition: {
         B1: [{ elementTypeRef: 'ET-PS-01', code: 'QC50', role: 'lead' }],
-        B2: [{ elementTypeRef: 'ET-PS-02', code: 'QC51', role: 'lead' }],
+        B2: [{ elementTypeRef: 'ET-PS-01', code: 'QC50', role: 'lead' }],   // the same fitting: one group
       } },
     })
     render(<BuilderScreen onBackToSetup={vi.fn()} onOpenProductSpec={vi.fn()} onOpenTemplateEditor={vi.fn()}
@@ -104,8 +104,8 @@ describe('setting up a group: build one, check it in the builder, come back', ()
 
     expect(screen.queryByTestId('teach-bar')).toBeNull()
     fireEvent.click(await screen.findByRole('button', { name: 'Build 1' }))
-    expect(useStore.getState().recipes.some(r => (r.PositionTypeRef || r.positionTypeRef) === 'B2'
-      && (r.ElementTypeRef || r.elementTypeRef) === 'ET-PS-02')).toBe(true)
+    // Same fitting, same contents: B2 is built and shares B1's wrapper.
+    expect(useStore.getState().recipes.some(r => (r.PositionTypeRef || r.positionTypeRef) === 'B2')).toBe(true)
   })
 })
 
@@ -139,5 +139,18 @@ describe('setting up a group: job-dependent quantities are confirmed, even when 
     fireEvent.click(within(pulse).getByRole('button', { name: /Confirm qty/ }))
     expect(screen.queryByTestId('qty-confirm')).toBeNull()
     expect(within(screen.getByTestId('teach-bar')).getByRole('button', { name: 'Use L1 for the other 1' })).not.toBeDisabled()
+  })
+})
+
+describe('coming from a By-position import', () => {
+  test('a banner names the positions and leads on to the next one', () => {
+    const onNext = vi.fn()
+    render(<BuilderScreen
+      onBackToSetup={vi.fn()} onOpenProductSpec={vi.fn()} onOpenTemplateEditor={vi.fn()}
+      onOpenCodeImport={vi.fn()} onOpenConnectors={vi.fn()}
+      importLoop={{ refs: ['C01r'] }} onNextFromImport={onNext} onEndImportLoop={vi.fn()} />)
+    expect(screen.getByTestId('import-loop')).toHaveTextContent('C01r added to the Product Spec')
+    fireEvent.click(screen.getByRole('button', { name: /Next position/ }))
+    expect(onNext).toHaveBeenCalled()
   })
 })

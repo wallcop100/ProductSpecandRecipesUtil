@@ -150,6 +150,8 @@ const valuesOf = (rec, f) => {
  * leaves out everyone else.
  */
 export function ruleFor(group, scope, recOf, opts = {}) {
+  // A caller with its own field order (recipe styles) searches just that.
+  if (opts.fields) return ruleSearch(group, scope, recOf, opts)
   // Position fields first, alone: a rule on them also holds for positions whose recipe is
   // not built yet. Only when they cannot pick the group out are recipe fields used.
   const plain = ruleSearch(group, scope, recOf, { ...opts, fields: SUGGEST_ORDER.filter(f => !f.startsWith('Recipe.')) })

@@ -21,6 +21,7 @@ import StatusChip from '../components/StatusChip'
 import TutorialHint from '../tutorial/TutorialHint'
 import MapColumnsStep from '../components/MapColumnsStep'
 import FormTable from '../components/import/FormTable'
+import FormPositionList from '../components/import/FormPositionList'
 import CopyButton from '../components/CopyButton'
 import ContextColumnChips from '../components/ContextColumnChips'
 import { capturableColumns, captureContext } from '../utils/formColumns'
@@ -42,6 +43,8 @@ import { resolveFormRefs, buildRefMap, targetFor } from '../utils/ptResolve'
 import { applyKnownCodes, knownTokenIndices } from '../utils/knownCodes'
 import { isObvious, isNothingRow, isTbcRow } from '../utils/obviousRows'
 import { joinAccessories, isPlaceholder, accessoriesFrom, leadOf } from '../utils/accessories'
+import { matchForms, diffRow } from '../utils/formDiff'
+import { groupPositions, positionStatus, mergeCaptures, restrictCaptures } from '../utils/formPositions'
 import { diffCaptures, wrapperDivergence } from '../utils/formSpec'
 
 /** Fuzzy header match: exact normalised hit first, else shortest header containing it. */
@@ -123,7 +126,14 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   // The table: which row is open in the painter, which has keyboard focus, and the view.
   const [expandedId, setExpandedId] = useState(null)
   const [focusId, setFocusId] = useState(null)
-  const [filter, setFilter] = useState('all')      // all | unconfirmed | needsEt
+  const [filter, setFilter] = useState('all')      // all | unconfirmed | needsEt | unchanged | changed | new | removed
+  // The older Form this import is compared with (formDiff.js): { name, rows } or null.
+  const [compareBase, setCompareBase] = useState(null)
+  // "By position" mode: the Form refs already added end to end (kept with the draft).
+  const [stagedRefs, setStagedRefs] = useState([])
+  // Whole Form (the three stages over every row) or By position (a selection end to end).
+  const [mode, setModeState] = useState('form')
+  const [selectedRefs, setSelectedRefs] = useState(() => new Set())
   const [query, setQuery] = useState('')
   const [etFocusCode, setEtFocusCode] = useState(null)
   const [refsOpen, setRefsOpen] = useState(false)
@@ -249,6 +259,46 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     else setError('Could not open it again. Choose the spreadsheet instead.')
   }
 
+  /**
+   * Compare this import with an older Form spreadsheet. Its columns are read by the same
+   * header names as this sheet's mapping (else guessed); it is only read, never imported.
+   */
+  async function compareWithFile() {
+    const path = await window.electronAPI?.openXlsxDialog?.()
+    if (!path) return
+    setBusy(true); setError(null)
+    try {
+      let data = await readSheet(path, null)
+      const col = (mapped, want, hs) => (mapped && hs.includes(mapped) ? mapped : detect(hs, want))
+      if (!col(map.code, 'productcode', data.headers)) {
+        for (const sname of data.sheets || []) {
+          if (sname === data.sheet) continue
+          const alt = await readSheet(path, sname)
+          if (col(map.code, 'productcode', alt.headers)) { data = alt; break }
+        }
+      }
+      const hs = data.headers || []
+      const c = {
+        pt: col(map.pt, 'positiontype', hs), code: col(map.code, 'productcode', hs),
+        mfr: col(map.mfr, 'manufacturer', hs), acc: col(map.acc, 'accessor', hs), exclude: col(map.exclude, 'exclude', hs),
+      }
+      if (!c.code || !c.pt) {
+        setError(`That spreadsheet has no ${!c.code ? 'product code' : 'PositionType'} column to compare with.`)
+        return
+      }
+      const base = (data.rows || [])
+        .filter(r => !(c.exclude && isExcluded(r[c.exclude])))
+        .map(r => ({ formRef: String(r[c.pt] ?? '').trim(), manufacturer: String(r[c.mfr] ?? '').trim(),
+          rawText: joinAccessories(r[c.code], c.acc ? r[c.acc] : null) }))
+        .filter(r => r.rawText !== '')
+      const meta = await fileMeta(path).catch(() => null)
+      setCompareBase({ name: meta?.name || 'the older Form', rows: base })
+      setFilter('all')
+    } catch (err) {
+      setError(err.response?.data?.error || err.message)
+    } finally { setBusy(false) }
+  }
+
   const skipped = useMemo(
     () => (map.exclude ? rawRows.filter(r => isExcluded(r[map.exclude])).length : 0),
     [rawRows, map.exclude]
@@ -335,14 +385,14 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   const draftFromState = useCallback(() => ({
     version: 1,
     source: { ...(source || {}), sheet },
-    step, map, rules, assignments, resolutions, refOverrides, dirStats,
+    step, map, rules, assignments, resolutions, refOverrides, dirStats, compareBase, stagedRefs,
     keptSeparate: [...keptSeparate],
     rows: rows.map(r => ({
       id: r.id, rawText: r.rawText, positionType: r.positionType, manufacturer: r.manufacturer,
       context: r.context, overrides: r.overrides, noteOverride: r.noteOverride, confirmed: r.confirmed,
       accFrom: r.accFrom ?? null, leadCode: r.leadCode ?? null, pre: r.pre || null,
     })),
-  }), [source, sheet, step, map, rules, assignments, resolutions, refOverrides, dirStats, keptSeparate, rows])
+  }), [source, sheet, step, map, rules, assignments, resolutions, refOverrides, dirStats, keptSeparate, rows, compareBase, stagedRefs])
 
   // Debounced: painting a token must not write a pref on every keystroke.
   useEffect(() => {
@@ -383,6 +433,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     setMap(d.map ? { acc: '', ...d.map } : { pt: '', code: '', mfr: '', exclude: '', acc: '', context: [] })
     setSource(d.source || null)
     setSheet(d.source?.sheet || '')
+    setCompareBase(d.compareBase || null)
+    setStagedRefs(d.stagedRefs || [])
     setStaged(null); setUndoSnap(null)
     setStep('review')   // never back to pick/map: no workbook (a draft saved at the old resolve step lands here too)
   }
@@ -422,7 +474,11 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   /** Start again from a (new) Form spreadsheet: the ⋯ menu's Re-import. */
   async function reimport() {
     if (rows.some(r => r.confirmed) && !window.confirm('Start again from a spreadsheet? The painting and confirms on this import are dropped (anything already added to the Product Spec stays).')) return
+    // The Form being replaced becomes what the new one is compared with.
+    const base = rows.length ? { name: source?.name || 'the last import', rows: rows.map(diffRow) } : compareBase
     await discardDraft()
+    setCompareBase(base)
+    setStagedRefs([]); setSelectedRefs(new Set())
     session.load({ rows: [] })
     setStaged(null); setExpandedId(null); setKnownStats(null); setPreKnownRows(null)
     setStep('pick')
@@ -614,14 +670,18 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   }, [current, patchRow, rules, signals, formOrder])
 
   /** Confirm every obvious row at once (one undo step); the doubtful ones stay for you. */
+  // By position: the rows of the selected positions are the whole world.
+  const inSelection = useMemo(() => (mode === 'position'
+    ? r => selectedRefs.has(String(r.positionType ?? '').trim()) : null), [mode, selectedRefs])
+
   const confirmObvious = useCallback(() => {
-    const easy = new Map(resolved.filter(r => isObvious(r, rules, signals, captureOpts)).map(r => [r.id, r]))
+    const easy = new Map(resolved.filter(r => (!inSelection || inSelection(r)) && isObvious(r, rules, signals, captureOpts)).map(r => [r.id, r]))
     if (easy.size === 0) return
     setRows(rs => rs.map(r => {
       const res = easy.get(r.id)
       return res ? { ...acceptSuggestions({ ...r, roles: res.roles }, rules, signals), confirmed: true } : r
     }))
-  }, [resolved, rules, signals, captureOpts])
+  }, [resolved, rules, signals, captureOpts, inSelection])
 
 
   // ---- distinct list (from CONFIRMED rows only) -------------------------------
@@ -844,8 +904,13 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     setBulkOpen(true)
   }
   useEffect(() => {
-    if (bulkOpen && !bulkProposals) setBulkProposals({ proposals, newFamilies })
-  }, [bulkOpen, bulkProposals, proposals, newFamilies])
+    if (!bulkOpen || bulkProposals) return
+    // By position: only the selected positions' codes.
+    const scoped = mode === 'position'
+      ? new Set(entries.filter(e => (e.positionTypes || []).some(pt => selectedRefs.has(String(pt ?? '').trim()))).map(e => norm(e.text)))
+      : null
+    setBulkProposals({ proposals: scoped ? proposals.filter(p => scoped.has(norm(p.code))) : proposals, newFamilies })
+  }, [bulkOpen, bulkProposals, proposals, newFamilies, mode, selectedRefs, entries])
 
   /** Apply the reviewed proposals: new families first, then reuse or create each code. */
   function applyBulk({ families, items, notCodes = [] }) {
@@ -879,12 +944,23 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     assignET(entry.text, ref)
   }
 
-  async function handleStage() {
+  /**
+   * handleStage({ only }) — `only` (a Set of Form refs) stages just those positions ("By
+   * position" mode): their codes' Product Spec rows, and their captures MERGED into the
+   * Form's (formPositions.mergeCaptures), so every other position keeps what it had.
+   * Returns the resolved PositionTypeRefs staged.
+   */
+  async function handleStage({ only = null } = {}) {
+    const inScope = r => !only || only.has(String(r.positionType ?? '').trim())
+    const entryInScope = e => !only || (e.positionTypes || []).some(pt => only.has(String(pt ?? '').trim()))
     // 1. Stage the Product Spec: product code + manufacturer per code, note → ET Description.
     let n = 0
     const codeToEt = new Map()
     for (const e of allEntries) {
       if (!e.etRef) continue
+      // Codes elsewhere in the Form keep their ElementType for the captures below, but
+      // only this selection's codes are written to the spec now.
+      if (!entryInScope(e)) { codeToEt.set(norm(e.text), e.etRef); continue }
       codeToEt.set(norm(e.text), e.etRef)
       const note = e.variants[0]?.note || ''
       if (e.placeholder) {
@@ -928,7 +1004,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     const contextByPosition = {}
     let unrouted = 0
     for (const row of confirmed) {
-      if (!row.positionType) continue
+      if (!row.positionType || !inScope(row)) continue
       const target = map.pt ? ptTarget(row.positionType) : row.positionType
       if (!target) { unrouted++; continue }
       // EVERY column the sheet carries for this position, not just the ones ticked at the
@@ -999,7 +1075,11 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       orphansByPosition: {},
       unrouted: resolutions.filter(r => !r.target).map(r => ({ formRef: r.formRef, rows: r.rows })),
     }
-    const diff = diffCaptures(formCaptures, nextCaptures)
+    // A selection is compared, and merged, only within its own positions.
+    const scopeTargets = only ? [...new Set(confirmed.filter(inScope)
+      .map(r => (map.pt ? ptTarget(r.positionType) : r.positionType)).filter(Boolean))] : null
+    if (only) nextCaptures.unrouted = nextCaptures.unrouted.filter(u => only.has(u.formRef))
+    const diff = diffCaptures(only ? restrictCaptures(formCaptures, scopeTargets) : formCaptures, nextCaptures)
 
     // A code that has left the Form is not deleted — its row is flagged in the pane.
     for (const r of diff.removed) {
@@ -1014,6 +1094,11 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     // The fork decision must outlive this screen, which unmounts on "Review now".
     nextCaptures.divergence = divergence
 
+    if (only) {
+      await saveFormCaptures(mergeCaptures(formCaptures, nextCaptures, scopeTargets, [...only]))
+      setStagedRefs(prev => [...new Set([...prev, ...only])])
+      return scopeTargets
+    }
     await saveFormCaptures(nextCaptures)
     // The draft is kept after adding: coming back to Import picks up this Form where it
     // was (to check it, or add what changed). Only Re-import (⋯) starts again.
@@ -1029,7 +1114,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   }
 
   const remaining = resolved.filter(r => !r.confirmed).length
-  const easyLeft = useMemo(() => resolved.filter(r => isObvious(r, rules, signals, captureOpts)).length, [resolved, rules, signals, captureOpts])
+  const easyLeft = useMemo(() => resolved.filter(r => (!inSelection || inSelection(r)) && isObvious(r, rules, signals, captureOpts)).length, [resolved, rules, signals, captureOpts, inSelection])
 
   // ---- the table ------------------------------------------------------------
   /** The ElementType a code already has: the spec first, then your choice, then last import's. */
@@ -1084,16 +1169,93 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     : productCaptures(r, captureOpts).some(c => !etFor(c.code, r.manufacturer))), [captureOpts, etFor])
   const needsEtCount = useMemo(() => formOrder.filter(needsEt).length, [formOrder, needsEt])
 
+  // ---- By position ------------------------------------------------------------
+  // Remembered per project; Whole Form unless you chose otherwise.
+  useEffect(() => {
+    if (projectId == null) return
+    Promise.resolve(window.electronAPI?.db?.getPref?.(projectId, 'import_mode'))
+      .then(v => { if (v === 'position' || v === 'form') setModeState(v) }).catch(() => {})
+  }, [projectId])
+  const setMode = m => {
+    setModeState(m)
+    if (projectId != null) Promise.resolve(window.electronAPI?.db?.setPref?.(projectId, 'import_mode', m)).catch(() => {})
+  }
+  const scopeRows = useMemo(() => (inSelection ? formOrder.filter(inSelection) : formOrder), [formOrder, inSelection])
+  const stagedSet = useMemo(() => new Set(stagedRefs), [stagedRefs])
+  const formPositions = useMemo(() => groupPositions(formOrder).map(g => ({
+    ...g, target: map.pt ? ptTarget(g.formRef) : g.formRef,
+    status: positionStatus(g, { needsEt, stagedRefs: stagedSet }),
+  })), [formOrder, map.pt, ptTarget, needsEt, stagedSet])
+  // Nothing (or nothing that still exists) selected: take the next position still to do.
+  useEffect(() => {
+    if (mode !== 'position' || step !== 'review' || formPositions.length === 0) return
+    const live = [...selectedRefs].filter(r => formPositions.some(p => p.formRef === r))
+    if (live.length) { if (live.length !== selectedRefs.size) setSelectedRefs(new Set(live)); return }
+    const next = formPositions.find(p => p.status !== 'done') || formPositions[0]
+    setSelectedRefs(new Set([next.formRef]))
+  }, [mode, step, formPositions, selectedRefs])
+  // What the selection still needs, for its checklist.
+  const selection = useMemo(() => {
+    if (mode !== 'position') return null
+    const rowsIn = formOrder.filter(r => selectedRefs.has(String(r.positionType ?? '').trim()))
+    const inSel = e => (e.positionTypes || []).some(pt => selectedRefs.has(String(pt ?? '').trim()))
+    const codes = allEntries.filter(inSel)
+    // Counted from the rows, confirmed or not: the codes they hold with no ElementType yet.
+    const missing = new Set()
+    for (const r of rowsIn) {
+      if (isTbc(r, captureOpts)) { if (!etFor(tbcKey(r), r.manufacturer)) missing.add(norm(tbcKey(r))) }
+      else for (const c of productCaptures(r, captureOpts)) if (!etFor(c.code, r.manufacturer)) missing.add(norm(c.code))
+    }
+    const noEt = Math.max(missing.size, codes.filter(e => !e.etRef).length)
+    const unconfirmedRows = rowsIn.filter(r => !r.confirmed).length
+    const clashes = collisions.filter(inSel).length
+    return {
+      refs: [...selectedRefs], rows: rowsIn.length, unconfirmedRows, codes: codes.length, noEt, clashes,
+      // The ElementTypes window works on confirmed rows' codes.
+      canOpenEts: codes.some(e => !e.etRef) || clashes > 0,
+      ready: rowsIn.length > 0 && unconfirmedRows === 0 && noEt === 0 && clashes === 0,
+    }
+  }, [mode, formOrder, selectedRefs, allEntries, collisions, captureOpts, etFor])
+  // The code list follows the selection in By position mode.
+  const shownEntries = useMemo(() => (mode === 'position'
+    ? panelEntries.filter(e => (e.positionTypes || []).some(pt => selectedRefs.has(String(pt ?? '').trim())))
+    : panelEntries), [mode, panelEntries, selectedRefs])
+  const [addingSel, setAddingSel] = useState(false)
+  async function addSelectionAndBuild() {
+    setAddingSel(true)
+    try {
+      const targets = await handleStage({ only: new Set(selectedRefs) })
+      // Save now: the debounced draft save would die with this screen on the way out.
+      await saveImportDraft({ ...draftFromState(), stagedRefs: [...new Set([...stagedRefs, ...selectedRefs])] })
+      if (onReviewPositions && targets?.length) onReviewPositions(targets, { fromImport: true })
+    } finally { setAddingSel(false) }
+  }
+
+  // What changed since the older Form (formDiff.js), per row id, and what it no longer has.
+  const formDiff = useMemo(() => {
+    if (!compareBase) return null
+    const res = matchForms(compareBase.rows || [], formOrder.map(diffRow))
+    const byId = new Map(formOrder.map((r, i) => [r.id, res.rows[i]]))
+    return { byId, removed: res.removed, counts: res.counts }
+  }, [compareBase, formOrder])
+  /** The codes in an old row the Product Spec knows: "QC7000 · ET-PS-04". */
+  const knownIn = useCallback(old => String(old?.rawText || '').split(/\s+/).filter(Boolean)
+    .map(w => ({ code: w, et: classify(w, ctx, old.manufacturer).elementTypeRef || null }))
+    .filter(x => x.et), [ctx])
+
   const tableRows = useMemo(() => {
     const q = query.trim().toLowerCase()
     return formOrder.filter(r => {
+      if (inSelection && !inSelection(r)) return false
       if (filter === 'unconfirmed' && r.confirmed) return false
       if (filter === 'needsEt' && !needsEt(r)) return false
+      if (['unchanged', 'changed', 'new'].includes(filter) && formDiff?.byId.get(r.id)?.state !== filter) return false
+      if (filter === 'removed') return false
       if (!q) return true
       return [r.rawText, r.positionType, r.manufacturer, ...Object.values(r.context || {})]
         .some(v => String(v ?? '').toLowerCase().includes(q))
     })
-  }, [formOrder, filter, query, needsEt])
+  }, [formOrder, filter, query, needsEt, formDiff, inSelection])
 
   /** The Form's own columns, in its order; ProductCode carries Accessories (they share a cell). */
   const tableColumns = useMemo(() => {
@@ -1200,10 +1362,16 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
         </h5>
         <TutorialHint id="code-import" />
         {source?.name && <span className="text-muted ms-2 text-truncate" style={{ fontSize: 11, maxWidth: 260 }}>{source.name}</span>}
-        <Dropdown align="end" className="ms-auto">
+        <ButtonGroup size="sm" className="ms-auto" aria-label="Work by" data-testid="import-mode">
+          <Button variant={mode === 'form' ? 'primary' : 'outline-secondary'} style={{ fontSize: 11 }} onClick={() => setMode('form')}
+            title="The three stages over the whole Form: every row, then every code, then add them all">Whole Form</Button>
+          <Button variant={mode === 'position' ? 'primary' : 'outline-secondary'} style={{ fontSize: 11 }} onClick={() => setMode('position')}
+            title="One position (or a few) at a time, end to end: rows, ElementTypes, Product Spec, recipe">By position</Button>
+        </ButtonGroup>
+        <Dropdown align="end">
           <Dropdown.Toggle as={IconButton} bsSize="sm" variant="outline-secondary" icon={ACTION_ICONS.more} title="More" aria-label="More" />
           <Dropdown.Menu style={{ fontSize: 12 }}>
-            <Dropdown.Item onClick={handleStage} disabled={!canStage || ready}
+            <Dropdown.Item onClick={() => handleStage()} disabled={!canStage || ready}
               title="Adds the codes that already have an ElementType; the rest wait in your draft">
               <MaterialIcon name="playlist_add" size={14} /> Add only the {stageable} finished now
             </Dropdown.Item>
@@ -1218,7 +1386,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       </div>
 
       {/* The whole workflow, in three. The import owns ① and ②; the builder owns ③. */}
-      <div className="mb-3">
+      <div className="mb-3" style={mode === 'position' ? { display: 'none' } : undefined}>
         <StageBar
           current={staged ? 3 : step === 'review' ? (canStage ? 2 : 1) : 1}
           done={staged ? [1, 2] : []}
@@ -1264,6 +1432,11 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
 
       {step === 'review' && (
         <div className="d-flex gap-3" style={{ flex: 1, minHeight: 0 }}>
+          {mode === 'position' && (
+            <div style={{ width: 200, flexShrink: 0, minHeight: 0 }}>
+              <FormPositionList positions={formPositions} selected={selectedRefs} onSelect={setSelectedRefs} />
+            </div>
+          )}
           {/* What the tool has learned about this sheet's dialect (⋯ → Learned this project). */}
           {showLearned && <div style={{ width: 190, overflowY: 'auto', flexShrink: 0 }} data-testid="learned-panel">
             <div className="fw-semibold text-muted mb-1" style={{ fontSize: 10, textTransform: 'uppercase' }}>
@@ -1331,11 +1504,23 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                   setStep('map')
                 }}>← Columns</Button>
               <ButtonGroup size="sm" aria-label="Show rows">
-                {[['all', `All ${rows.length}`], ['unconfirmed', `Unconfirmed ${remaining}`], ['needsEt', `Needs ET ${needsEtCount}`]].map(([k, label]) => (
+                {[['all', `All ${scopeRows.length}`], ['unconfirmed', `Unconfirmed ${scopeRows.filter(r => !r.confirmed).length}`], ['needsEt', `Needs ET ${scopeRows.filter(needsEt).length}`]].map(([k, label]) => (
                   <Button key={k} variant={filter === k ? 'primary' : 'outline-secondary'} style={{ fontSize: 11 }}
                     onClick={() => setFilter(k)}>{label}</Button>
                 ))}
               </ButtonGroup>
+              {formDiff && (
+                <ButtonGroup size="sm" aria-label="Show changes">
+                  {[['changed', 'Changed', '#b45309'], ['new', 'New', '#0d6efd'], ['removed', 'Removed', '#842029'], ['unchanged', 'Unchanged', '#6c757d']].map(([k, label]) => (
+                    <Button key={k} variant={filter === k ? 'primary' : 'outline-secondary'} style={{ fontSize: 11 }}
+                      onClick={() => setFilter(filter === k ? 'all' : k)}>{label} {formDiff.counts[k]}</Button>
+                  ))}
+                </ButtonGroup>
+              )}
+              <Button size="sm" variant="link" className="p-0" style={{ fontSize: 11 }} onClick={compareWithFile} disabled={busy}
+                title="Pick an older version of this Form: each row shows what changed since then">
+                <MaterialIcon name="difference" size={13} /> Compare with an older Form…
+              </Button>
               {easyLeft > 0 && (
                 <Button size="sm" variant="success" style={{ fontSize: 11 }} onClick={confirmObvious}
                   title="Rows with one clean code (plus '+' extras and accessories), and placeholder rows with nothing to add. One undo takes them all back.">
@@ -1357,6 +1542,18 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                   onClick={() => { session.redo(); setUndoSnap(null) }} />
               </span>
             </div>
+
+            {/* What changed since the older Form. */}
+            {formDiff && (
+              <div className="mb-2 px-2 py-1 rounded d-flex align-items-center gap-2 flex-wrap" data-testid="form-diff-banner"
+                style={{ background: '#fff8e1', border: '1px solid #ffe08a', fontSize: 11, color: '#5c4400' }}>
+                <MaterialIcon name="difference" size={13} />
+                <span>Compared with <strong>{compareBase.name}</strong>: {formDiff.counts.unchanged} unchanged · {formDiff.counts.changed} changed ·{' '}
+                  {formDiff.counts.new} new · {formDiff.counts.removed} removed</span>
+                <Button size="sm" variant="link" className="p-0 ms-auto" style={{ fontSize: 10 }}
+                  onClick={() => { setCompareBase(null); if (['unchanged', 'changed', 'new', 'removed'].includes(filter)) setFilter('all') }}>Clear comparison</Button>
+              </div>
+            )}
 
             {/* Stage ① — what the Product Spec already knew. */}
             {knownStats && (
@@ -1410,6 +1607,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                 onNeedsET={openETFor}
                 onFixRef={() => setRefsOpen(true)}
                 onMakeMain={(rowId, code) => patchRow(rowId, r => ({ ...r, leadCode: code }))}
+                change={formDiff ? r => formDiff.byId.get(r.id) : null}
+                removed={formDiff && (filter === 'all' || filter === 'removed') ? formDiff.removed : null}
+                knownIn={knownIn}
                 expandedId={expandedId}
                 onExpand={id => { setExpandedId(id); if (id != null) setFocusId(id); setUndoSnap(null) }}
                 focusId={focusId}
@@ -1473,14 +1673,50 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
           <div style={{ width: 350, overflowY: 'auto', flexShrink: 0 }} className="border-start ps-3">
             {/* Stage sits on top, sticky: when every code is done it is the next thing to do,
                 not something to scroll past the whole code list to find. */}
+            {selection && (
+              <div className="mb-3 pb-2" data-testid="selection-checklist"
+                style={{ position: 'sticky', top: 0, zIndex: 2, background: 'var(--bs-body-bg, #fff)', fontSize: 12 }}>
+                <div className="fw-semibold mb-1">
+                  {selection.refs.length === 1 ? selection.refs[0] : `${selection.refs.length} positions`}
+                  <span className="text-muted fw-normal"> · {selection.rows} row{selection.rows === 1 ? '' : 's'}</span>
+                </div>
+                {[
+                  { done: selection.unconfirmedRows === 0, label: selection.unconfirmedRows ? `Confirm ${selection.unconfirmedRows} row${selection.unconfirmedRows === 1 ? '' : 's'}` : 'Rows confirmed',
+                    action: selection.unconfirmedRows && easyLeft ? { label: `Confirm ${easyLeft} obvious`, onClick: confirmObvious } : null },
+                  { done: selection.noEt === 0 && selection.clashes === 0,
+                    label: selection.noEt || selection.clashes
+                      ? [selection.noEt && `Give ${selection.noEt} code${selection.noEt === 1 ? '' : 's'} an ElementType`, selection.clashes && `settle ${selection.clashes} clash${selection.clashes === 1 ? '' : 'es'}`].filter(Boolean).join(', ')
+                      : selection.codes ? 'ElementTypes chosen' : 'No codes to assign',
+                    action: selection.canOpenEts ? { label: 'Open', onClick: openBulkCreate }
+                      : selection.noEt && selection.unconfirmedRows ? { label: 'after confirming', onClick: null } : null },
+                ].map((st, i) => (
+                  <div key={i} className="d-flex align-items-center gap-2 mb-1" data-testid={`sel-step-${i + 1}`}>
+                    <MaterialIcon name={st.done ? 'check_circle' : 'radio_button_unchecked'} size={15}
+                      style={{ color: st.done ? '#198754' : '#adb5bd' }} />
+                    <span className={st.done ? 'text-muted' : ''}>{i + 1}. {st.label}</span>
+                    {st.action && (st.action.onClick
+                      ? <Button size="sm" variant="link" className="p-0 ms-auto" style={{ fontSize: 11 }} onClick={st.action.onClick}>{st.action.label}</Button>
+                      : <span className="ms-auto text-muted" style={{ fontSize: 10 }}>{st.action.label}</span>)}
+                  </div>
+                ))}
+                <Button variant="success" size="sm" className="w-100 mt-1" disabled={!selection.ready || addingSel}
+                  onClick={addSelectionAndBuild} data-testid="add-and-build">
+                  <MaterialIcon name="playlist_add" size={14} /> 3. Add to Product Spec &amp; build recipe{selection.refs.length === 1 ? '' : 's'} →
+                </Button>
+                <div className="text-muted mt-1" style={{ fontSize: 10 }}>
+                  Writes these positions’ Product Spec rows, then opens them in the builder to build their recipes.
+                  Other positions are left as they are.
+                </div>
+              </div>
+            )}
             <div className="mb-3 pb-2" data-testid="stage-block"
-              style={{ position: 'sticky', top: 0, zIndex: 2, background: 'var(--bs-body-bg, #fff)' }}>
+              style={{ position: 'sticky', top: 0, zIndex: 2, background: 'var(--bs-body-bg, #fff)', display: selection ? 'none' : undefined }}>
               {leftBehind === 0 && entries.length > 0 ? (
                 <div className="px-2 py-2 rounded mb-1" style={{ background: '#d1e7dd', border: '1px solid #a3cfbb', color: '#0f5132', fontSize: 11 }}>
                   <MaterialIcon name="check_circle" size={14} /> All {entries.length} code{entries.length === 1 ? ' has' : 's have'} an ElementType
                 </div>
               ) : null}
-              <Button variant="success" size="sm" className="w-100" disabled={!ready} onClick={handleStage}>
+              <Button variant="success" size="sm" className="w-100" disabled={!ready} onClick={() => handleStage()}>
                 <MaterialIcon name="playlist_add" size={14} /> Add {stageable} to Product Spec
               </Button>
               {!ready && (unconfirmedCount > 0 || unassigned.length > 0) && (
@@ -1524,7 +1760,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
             </div>
 
             {/* One place to decide ElementTypes: the window's New tab (clashes on top). */}
-            {(unassigned.length > 0 || collisions.length > 0 || similar.length > 0) && (
+            {!selection && (unassigned.length > 0 || collisions.length > 0 || similar.length > 0) && (
               <Button size="sm" variant="primary" className="w-100 mb-2" onClick={openBulkCreate} data-testid="review-ets">
                 <MaterialIcon name="category" size={14} />{' '}
                 {unassigned.length > 0 && <>{unassigned.length} code{unassigned.length === 1 ? '' : 's'} need an ElementType</>}
@@ -1535,7 +1771,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
             )}
 
             <div className="fw-semibold text-muted mb-2 d-flex align-items-center" style={{ fontSize: 10, textTransform: 'uppercase' }}>
-              Distinct codes ({entries.length})
+              Distinct codes ({shownEntries.length}){selection ? ' · this selection' : ''}
               {elementTypes.length > 0 && (
                 <Button size="sm" variant="link" className="p-0 ms-auto text-muted" style={{ fontSize: 10, textTransform: 'none' }}
                   onClick={() => setReviewingExisting(true)} title="Every ElementType in the project">
@@ -1543,9 +1779,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                 </Button>
               )}
             </div>
-            {entries.length > 0 && <StatusLegend />}
+            {shownEntries.length > 0 && <StatusLegend />}
             <CompareCodesPanel
-              entries={panelEntries}
+              entries={shownEntries}
               knownPTs={knownPTs}
               ptTarget={map.pt ? ptTarget : null}
               onJump={jumpToCode}

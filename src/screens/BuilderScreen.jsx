@@ -31,6 +31,7 @@ import PasteMergeModal from '../components/PasteMergeModal'
 import FavoritesPanel from '../components/FavoritesPanel'
 import ReviewModal from '../components/ReviewModal'
 import FormRecipesModal from '../components/FormRecipesModal'
+import RecipeStylesWindow from '../components/RecipeStylesWindow'
 import TeachBar from '../components/TeachBar'
 import ValidationFixModal from '../components/ValidationFixModal'
 import { SaveIndicator } from '../components/SaveStatus'
@@ -54,7 +55,7 @@ import { ACTION_ICONS, ICONS } from '../utils/entityStyle'
  */
 export default function BuilderScreen({
   onOpenTemplateEditor, onOpenProductSpec, onOpenConnectors, onOpenTags, onOpenCodeImport, onBackToSetup,
-  pendingReviewRefs, onConsumePendingReview,
+  pendingReviewRefs, onConsumePendingReview, importLoop = null, onNextFromImport, onEndImportLoop,
 }) {
   const rootView = useStore(s => s.rootView)
   const projectNumber = useStore(s => s.projectNumber)
@@ -114,6 +115,7 @@ export default function BuilderScreen({
   // doesn't reopen on its own.
   const formCaptures = useStore(s => s.formCaptures)
   const [formBuild, setFormBuild] = useState(null)   // { refs, thenReview }
+  const [showStyles, setShowStyles] = useState(false)
   useEffect(() => {
     if (pendingReviewRefs && pendingReviewRefs.length > 0) {
       setReviewInitialRefs(pendingReviewRefs)
@@ -549,6 +551,9 @@ export default function BuilderScreen({
             <Dropdown.Item onClick={() => setFormBuild({ refs: [], thenReview: false })} disabled={!Object.keys(formCaptures?.byPosition || {}).length}>
               <MaterialIcon name="auto_awesome" size={14} /> Build recipes from the Form…
             </Dropdown.Item>
+            <Dropdown.Item onClick={() => setShowStyles(true)}>
+              <MaterialIcon name="style" size={14} /> Recipe styles…
+            </Dropdown.Item>
             <Dropdown.Item onClick={() => setShowSaveTemplate(true)} disabled={!hasRecipeRows}>
               <MaterialIcon name={ACTION_ICONS.saveTemplate} size={14} /> Save this position as a template
             </Dropdown.Item>
@@ -694,6 +699,17 @@ export default function BuilderScreen({
             <ElementTypeTreeView />
           ) : (
             <>
+            {importLoop && (
+              <div className="d-flex align-items-center gap-2 mx-3 mt-2 px-3 py-2 rounded" data-testid="import-loop"
+                style={{ background: '#d1e7dd', border: '1px solid #a3cfbb', fontSize: 12, color: '#0f5132', flexShrink: 0 }}>
+                <MaterialIcon name="checklist" size={16} />
+                <span><strong>From the Form import:</strong> {importLoop.refs.join(', ')} added to the Product Spec. Build {importLoop.refs.length === 1 ? 'its recipe' : 'their recipes'}, then carry on.</span>
+                <Button size="sm" variant="success" className="ms-auto text-nowrap" style={{ fontSize: 11 }} onClick={onNextFromImport}>
+                  Next position →
+                </Button>
+                <IconButton variant="link" bsSize="sm" icon="close" title="Hide" onClick={onEndImportLoop} />
+              </div>
+            )}
             {nextStep && (
               <div className="d-flex align-items-center gap-2 mx-3 mt-2 px-3 py-2 rounded" data-testid="next-step"
                 style={{ background: '#e7f1ff', border: '1px solid #b6d4fe', fontSize: 12, color: '#084298', flexShrink: 0 }}>
@@ -807,6 +823,7 @@ export default function BuilderScreen({
 
       <ElementTypesWindow show={!!showRetire} view={showRetire === 'unused' ? 'unused' : 'existing'} onHide={() => setShowRetire(false)} />
 
+      <RecipeStylesWindow show={showStyles} onHide={() => setShowStyles(false)} />
       <FormRecipesModal show={formBuild != null} posRefs={formBuild?.refs || []} focusGroup={formBuild?.focus || null} onHide={closeFormBuild}
         onOpenPosition={p => { setFormBuild(null); useStore.getState().setActivePosition(p) }} />
       <ReviewModal

@@ -28,6 +28,8 @@ export default function App() {
   // reviewPositionRefs: PositionTypeRefs to jump straight into reviewing (e.g. from
   // the product-code import's "review what the Form named" hand-off)
   const [reviewPositionRefs, setReviewPositionRefs] = useState(null)
+  // Came from a By-position import: the builder offers the way back to the next position.
+  const [importLoop, setImportLoop] = useState(null)   // { refs } | null
   // Where the product-code import was opened from, so Back returns there rather
   // than always dumping you on the Product Spec.
   const [importOrigin, setImportOrigin] = useState('builder')
@@ -114,6 +116,9 @@ export default function App() {
             onBackToSetup={() => navigateTo('folder-setup')}
             pendingReviewRefs={reviewPositionRefs}
             onConsumePendingReview={() => setReviewPositionRefs(null)}
+            importLoop={importLoop}
+            onNextFromImport={() => { setImportLoop(null); navigateTo('product-code-import') }}
+            onEndImportLoop={() => setImportLoop(null)}
           />
         )}
         {activeScreen === 'template-editor' && (
@@ -132,7 +137,10 @@ export default function App() {
         {activeScreen === 'product-code-import' && (
           <ProductCodeImportScreen
             onBack={() => navigateTo(importOrigin)}
-            onReviewPositions={refs => { setReviewPositionRefs(refs); navigateTo('builder') }}
+            onReviewPositions={(refs, opts) => {
+              setImportLoop(opts?.fromImport ? { refs } : null)
+              setReviewPositionRefs(refs); navigateTo('builder')
+            }}
           />
         )}
         {activeScreen === 'connectors' && (
