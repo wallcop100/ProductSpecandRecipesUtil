@@ -5,6 +5,7 @@ import { filterMatches, isConnectorPart } from '../utils/connectorGroups'
 import MaterialIcon from './MaterialIcon'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { positionRecipeWithWrapperInternals, wrapperUsedBy, extraConnectorRows } from '../utils/collectionStatus'
+import { buildPresence, ingredientPresence, wantedSlots, containerForPosition } from '../utils/recipePresence'
 
 const SECTION_LABEL = {
   position: 'free issue',
@@ -29,10 +30,10 @@ export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap,
   const etCollections    = useStore(s => s.etCollections)
   const positionUI       = useStore(s => s.positionUI)
   const recipes          = useStore(s => s.recipes)
-  const addCollectionRef    = useStore(s => s.addCollectionRef)
-  const removeCollectionRef = useStore(s => s.removeCollectionRef)
-  const applyCollection     = useStore(s => s.applyCollection)
-  const removeCollection    = useStore(s => s.removeCollection)
+  const addRecipeRow        = useStore(s => s.addRecipeRow)
+  const updateRecipeRow     = useStore(s => s.updateRecipeRow)
+  const moveRecipeRowToSection = useStore(s => s.moveRecipeRowToSection)
+  const applyCollectionBulk = useStore(s => s.applyCollectionBulk)
 
   const collection = etCollections.find(c => c.CollectionId === collectionId)
   const removeRowsById = useStore(s => s.removeRowsById)
@@ -62,8 +63,22 @@ export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap,
   }, [recipes, posRef])
 
   const ingredients = collection ? parseIngredients(collection) : []
-  const presentCount = ingredients.filter(i => presentRefs.has((i.ElementTypeRef || i.slotLabel || '').toLowerCase())).length
+  // Slot-aware, like the matrix: a ref in the other layer is NOT this part (FWEJ93). A part
+  // wanted inside the wrapper needs a wrapper to go in (CLMJX9).
+  const containerETRefs = useStore(s => s.containerETRefs)
+  const { statusOf, container } = useMemo(() => {
+    const { combined, wrapperRefs } = positionRecipeWithWrapperInternals(recipes, posRef)
+    const presence = buildPresence(combined, wrapperRefs)
+    const wanted = wantedSlots(ingredients)
+    return {
+      statusOf: ing => ingredientPresence(presence, ing, { wanted }),
+      container: containerForPosition(recipes, posRef, containerETRefs),
+    }
+  }, [recipes, posRef, containerETRefs, ingredients])   // eslint-disable-line react-hooks/exhaustive-deps
+  const states = ingredients.map(i => statusOf(i))
+  const presentCount = states.filter(r => r.status === 'present').length
   const missingCount = ingredients.length - presentCount
+  const presentRowIds = [...new Set(states.filter(r => r.status === 'present' || r.status === 'short').flatMap(r => r.rows.map(x => x._id)))]
 
   // Two stacked sections: what sits at PositionType level vs inside the wrapper
   const positionIngs = ingredients.filter(i => (i.section || 'position') === 'position')
@@ -135,8 +150,12 @@ export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap,
             </div>
             {group.ings.map((ing, idx) => {
               const ref = ing.ElementTypeRef || ing.slotLabel || ''
-              const present = presentRefs.has(ref.toLowerCase())
+              const st = statusOf(ing)
+              const present = st.status === 'present'
               const section = ing.section || 'position'
+              const inside = section !== 'position'
+              const noWrapper = inside && !container
+              const where = st.foundAt ? (st.foundAt.section === 'position' ? 'on site (position level)' : `inside ${String(st.foundAt.container || 'a wrapper').toUpperCase()}`) : ''
               return (
                 <div
                   key={`${ref}-${idx}`}
@@ -144,25 +163,41 @@ export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap,
                   style={{ fontSize: 12 }}
                 >
                   <span
-                    title={present ? 'Present in recipe (position or wrapper internals)' : 'Not in recipe'}
-                    style={{ color: present ? '#198754' : '#dc3545', width: 16, textAlign: 'center' }}
+                    title={present ? 'Present, in this place' : st.status === 'misplaced' ? `Present, but ${where}` : st.status === 'short' ? `Only ${st.have} of ${st.need}` : 'Not in recipe'}
+                    style={{ color: present ? '#198754' : st.status === 'missing' ? '#dc3545' : '#b35c00', width: 16, textAlign: 'center' }}
                   >
-                    <MaterialIcon name={present ? ACTION_ICONS.complete : ACTION_ICONS.incomplete} size={14} />
+                    <MaterialIcon name={present ? ACTION_ICONS.complete : st.status === 'missing' ? ACTION_ICONS.incomplete : 'warning'} size={14} />
                   </span>
                   <div className="flex-grow-1" style={{ minWidth: 0 }}>
                     <div style={{ fontFamily: 'monospace', fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {ref}
                     </div>
                     <Badge bg="light" text="dark" style={{ fontSize: 9 }}>{SECTION_LABEL[section] || section}</Badge>
+                    {st.status === 'misplaced' && <span className="ms-1" style={{ fontSize: 10, color: '#b35c00' }} data-testid="misplaced">found {where}</span>}
+                    {st.status === 'short' && <span className="ms-1" style={{ fontSize: 10, color: '#b35c00' }}>×{st.have} of ×{st.need}</span>}
+                    {noWrapper && st.status === 'missing' && <span className="ms-1 text-muted" style={{ fontSize: 10 }}>no wrapper on this position</span>}
                   </div>
                   {present ? (
                     <Button size="sm" variant="outline-danger" style={{ fontSize: 10, padding: '1px 7px' }}
-                      onClick={() => removeCollectionRef(posRef, ref)} title="Soft-delete this ref from the recipe">
+                      onClick={() => removeRowsById(st.rows.map(r => r._id))} title="Remove it from this place only">
                       Remove
                     </Button>
+                  ) : st.status === 'misplaced' ? (
+                    <Button size="sm" variant="outline-warning" style={{ fontSize: 10, padding: '1px 7px' }} disabled={noWrapper}
+                      onClick={() => moveRecipeRowToSection(st.rows[0].PositionTypeRef || st.rows[0].positionTypeRef || posRef, st.rows[0]._id, inside ? (section === 'lin_internal' ? 'lin_internal' : 'dl_internal') : 'position')}
+                      title={noWrapper ? 'This position has no wrapper to move it into' : `Move it from ${where} to where the template wants it`}>
+                      Move here
+                    </Button>
+                  ) : st.status === 'short' ? (
+                    <Button size="sm" variant="outline-warning" style={{ fontSize: 10, padding: '1px 7px' }}
+                      onClick={() => updateRecipeRow(st.rows[0].PositionTypeRef || st.rows[0].positionTypeRef || posRef, st.rows[0]._id, { quantity: st.need, Quantity: st.need })}>
+                      Raise to ×{st.need}
+                    </Button>
                   ) : (
-                    <Button size="sm" variant="outline-success" style={{ fontSize: 10, padding: '1px 7px' }}
-                      onClick={() => addCollectionRef(posRef, ref, section, ing.quantity ?? 1)} title="Add this ref to the recipe">
+                    <Button size="sm" variant="outline-success" style={{ fontSize: 10, padding: '1px 7px' }} disabled={noWrapper}
+                      onClick={() => addRecipeRow(posRef, inside ? (section === 'lin_internal' ? 'lin_internal' : 'dl_internal') : 'position',
+                        { elementTypeRef: ref, quantity: ing.quantity ?? 1 }, { asPosition: true })}
+                      title={noWrapper ? 'Belongs inside a wrapper, and this position has no design element to hold it: add its wrapper in the builder first' : 'Add this ref to the recipe'}>
                       + Add
                     </Button>
                   )}
@@ -195,12 +230,12 @@ export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap,
         <div className="d-flex gap-2">
           <Button size="sm" variant="success" className="flex-grow-1" style={{ fontSize: 11 }}
             disabled={missingCount === 0}
-            onClick={() => applyCollection(posRef, collectionId)}>
+            onClick={() => applyCollectionBulk([posRef], collectionId)}>
             Apply all missing{missingCount > 0 ? ` (${missingCount})` : ''}
           </Button>
           <Button size="sm" variant="outline-danger" className="flex-grow-1" style={{ fontSize: 11 }}
             disabled={presentCount === 0}
-            onClick={() => removeCollection(posRef, collectionId)}>
+            onClick={() => removeRowsById(presentRowIds)}>
             Remove all{presentCount > 0 ? ` (${presentCount})` : ''}
           </Button>
         </div>

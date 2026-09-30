@@ -26,6 +26,9 @@ import { connectorRole } from './connectors'
 import { templateRule, ruleIsEmpty, ruleMatchesRecord, ruleSpecificity, asRecord } from './templateRules'
 
 const lc = s => String(s ?? '').trim().toLowerCase()
+
+/** Families ticked as connector parts until the project chooses its own. */
+export const DEFAULT_CONNECTOR_FAMILIES = ['ET-CONNECTORS']
 const live = r => (r.IsDeleted || r.isDeleted) !== 'Y'
 const etOf = r => r.ElementTypeRef || r.elementTypeRef || ''
 const qtyOf = r => { const q = Number(r.Quantity ?? r.quantity); return Number.isFinite(q) && q > 0 ? q : 1 }

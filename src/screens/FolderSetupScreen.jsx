@@ -1,4 +1,5 @@
 import InfoTip from '../components/InfoTip'
+import { DEFAULT_CONNECTOR_FAMILIES } from '../utils/connectorGroups'
 import React, { useState, useEffect, useCallback } from 'react'
 import {
   Container, Card, Button, Alert, Spinner, Badge, Form, Row, Col,
@@ -558,7 +559,8 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
         manualContainerETs,
         manualContainerExcludeETs,
         connectorPins: (() => { try { return JSON.parse(connectorPinsPref || '{}') || {} } catch { return {} } })(),
-        connectorFamilies: (() => { try { return JSON.parse(connectorFamiliesPref || '[]') || [] } catch { return [] } })(),
+        // Never chosen: the company family for connector parts is ticked (M9KG9A).
+        connectorFamilies: (() => { try { return connectorFamiliesPref == null ? [...DEFAULT_CONNECTOR_FAMILIES] : (JSON.parse(connectorFamiliesPref) || []) } catch { return [...DEFAULT_CONNECTOR_FAMILIES] } })(),
         connectorExcludes: (() => { try { return JSON.parse(connectorExcludesPref || '{}') || {} } catch { return {} } })(),
         specCheckSkip: (() => { try { return specCheckSkipPref ? JSON.parse(specCheckSkipPref) : undefined } catch { return undefined } })(),
         etCollections: etCollections ?? [],

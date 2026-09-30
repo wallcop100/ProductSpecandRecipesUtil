@@ -11,7 +11,7 @@ const { default: ETSpecEditor } = await import('../../src/components/ETSpecEdito
 const { default: CollectionEditor } = await import('../../src/components/CollectionEditor.jsx')
 
 describe('Product Spec: change family or ref', () => {
-  test('picking a family proposes its next ref; Apply moves and renames through spec and recipes', () => {
+  test('picking a family keeps the ref; "Renumber into it" takes its next ref; Apply moves and renames', () => {
     useStore.setState({
       projectId: 1, dbChanges: [], psChanges: [], rsChanges: [], past: [], future: [],
       elementTypes: [
@@ -25,6 +25,8 @@ describe('Product Spec: change family or ref', () => {
     render(<ETSpecEditor selectedRef="ET-LIN-INGREDIENTS-05" onRenamed={onRenamed} />)
     fireEvent.click(screen.getByTestId('family-ref-open'))
     fireEvent.change(screen.getByLabelText('Family'), { target: { value: 'ET-PS-MOUNTING-FRAME' } })
+    expect(screen.getByLabelText('Ref')).toHaveValue('ET-LIN-INGREDIENTS-05')        // not forced (5WZXN9)
+    fireEvent.click(screen.getByTestId('use-family-ref'))
     expect(screen.getByLabelText('Ref')).toHaveValue('ET-PS-MOUNTING-FRAME-02')
     fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
     const s = useStore.getState()
@@ -32,6 +34,40 @@ describe('Product Spec: change family or ref', () => {
     expect(s.psRows[0].ElementTypeRef).toBe('ET-PS-MOUNTING-FRAME-02')
     expect(s.recipes[0].ElementTypeRef).toBe('ET-PS-MOUNTING-FRAME-02')
     expect(onRenamed).toHaveBeenCalledWith('ET-PS-MOUNTING-FRAME-02')
+  })
+})
+
+describe('Product Spec: family only, and fork', () => {
+  const base = () => useStore.setState({
+    projectId: 1, dbChanges: [], psChanges: [], rsChanges: [], past: [], future: [],
+    elementTypes: [
+      { ElementTypeRef: 'ET-2PIN-ORLUNA', Family: 'ET-CONNECTORS', Description: '2-pin' },
+      { ElementTypeRef: 'ET-PS-MOUNTING-FRAME-01', Family: 'ET-PS-MOUNTING-FRAME' },
+    ],
+    psRows: [{ ElementTypeRef: 'ET-2PIN-ORLUNA', Manufacturer: 'Orluna', ProductCode: 'OR-2P' }],
+    recipes: [],
+  })
+
+  test('changing only the family leaves the ref alone', () => {
+    base()
+    render(<ETSpecEditor selectedRef="ET-2PIN-ORLUNA" onRenamed={vi.fn()} />)
+    fireEvent.click(screen.getByTestId('family-ref-open'))
+    fireEvent.change(screen.getByLabelText('Family'), { target: { value: 'ET-PS-MOUNTING-FRAME' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
+    const et = useStore.getState().elementTypes.find(e => e.ElementTypeRef === 'ET-2PIN-ORLUNA')
+    expect(et.Family).toBe('ET-PS-MOUNTING-FRAME')
+  })
+
+  test('Fork makes a new ElementType with a copy of the spec, and selects it', () => {
+    base()
+    const onRenamed = vi.fn()
+    render(<ETSpecEditor selectedRef="ET-2PIN-ORLUNA" onRenamed={onRenamed} />)
+    fireEvent.click(screen.getByTestId('fork-et'))
+    const newRef = onRenamed.mock.calls[0][0]
+    expect(newRef).not.toBe('ET-2PIN-ORLUNA')
+    const s = useStore.getState()
+    expect(s.elementTypes.find(e => e.ElementTypeRef === newRef)).toMatchObject({ Family: 'ET-CONNECTORS' })
+    expect(s.psRows.find(p => p.ElementTypeRef === newRef)).toMatchObject({ Manufacturer: 'Orluna', ProductCode: 'OR-2P' })
   })
 })
 

@@ -13,7 +13,7 @@ import { proposeRecipe, proposalFromTemplate, proposalContext } from '../utils/r
 import { roleOf } from '../utils/recipePatterns.js'
 import { planFamilyMove } from '../utils/etSeed.js'
 import { loadReports, saveReports } from '../utils/bugReports.js'
-import { connectorSignature, templateParts, partsToIngredients, diffParts, isConnectorPart } from '../utils/connectorGroups.js'
+import { connectorSignature, templateParts, partsToIngredients, diffParts, isConnectorPart, DEFAULT_CONNECTOR_FAMILIES } from '../utils/connectorGroups.js'
 import { templateRecords, templateRule } from '../utils/templateRules.js'
 
 /** _templateRecOf's cache: not state (no re-render), keyed on the arrays it reads. */
@@ -616,7 +616,7 @@ const useStore = create((set, get) => ({
       connectorPins: data.connectorPins ?? {},
       connectorExcludes: data.connectorExcludes ?? {},
       specCheckSkip: data.specCheckSkip ?? ['ET-CABLES', 'ET-CABLE'],
-      connectorFamilies: data.connectorFamilies ?? [],
+      connectorFamilies: data.connectorFamilies ?? [...DEFAULT_CONNECTOR_FAMILIES],
       favorites: favorites ?? [],
       ignoredPositionFamilies: ignoredPositionFamilies ?? [],
       containerETManualRefs: manualRefs,
@@ -746,6 +746,8 @@ const useStore = create((set, get) => ({
 
   setActivePosition(ref, { back = false } = {}) {
     const from = get().activePositionRef
+    // An error about another position (a refused add) must not follow you here (Y7QVN4).
+    if (ref !== from && get().recipeError) set({ recipeError: null })
     if (from && ref !== from && get().settleDesign(from) === 'choose') {
       set({ designPrompt: { posRef: from, then: () => get().setActivePosition(ref, { back }) } })
       return
@@ -2658,10 +2660,14 @@ const useStore = create((set, get) => ({
     if (!posRef || !ref) return
     const { recipes, rsChanges } = get()
     const target = ref.toLowerCase()
+    // Only a row in the SAME layer comes back: the same ref may be wanted both on site and
+    // inside the wrapper, and reviving the other one fixes nothing.
+    const wantInside = section !== 'position'
     const revivable = recipes.find(row =>
       (row.PositionTypeRef || row.positionTypeRef) === posRef &&
       (row.ElementTypeRef || row.elementTypeRef || '').toLowerCase() === target &&
-      (row.IsDeleted || row.isDeleted) === 'Y'
+      (row.IsDeleted || row.isDeleted) === 'Y' &&
+      ((row.ContextType || row.contextType) === 'ElementType') === wantInside
     )
     if (revivable) {
       get()._pushHistory()
@@ -3753,6 +3759,33 @@ const useStore = create((set, get) => ({
     set(s => ({ containerETRefs: new Set([...s.containerETRefs, ref.toLowerCase()]) }))
     get().addRecipeRow(posRef, 'position', { elementTypeRef: ref, isDesign: 'Y' }, { recordHistory: false, asPosition: true })
     return ref
+  },
+
+  /**
+   * forkElementType(ref) — a new ElementType beside this one: the next ref in its family (or
+   * `<ref>-FORK`), the same name / description / family, and a copy of its Product Spec row.
+   * Recipes are untouched. Returns the new ref.
+   */
+  forkElementType(ref) {
+    const { elementTypes, psRows } = get()
+    const src = elementTypes.find(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === String(ref).toLowerCase())
+    if (!src) return null
+    const family = src.Family || src.family || null
+    const taken = r => elementTypes.some(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === r.toLowerCase())
+    let next = family ? planFamilyMove([ref], family, elementTypes).moves[0]?.to : null
+    if (!next || next.toLowerCase() === String(ref).toLowerCase() || taken(next)) {
+      const m = String(ref).match(/^(.*?)(\d+)$/)
+      if (m) { let n = Number(m[2]); do { n++ } while (taken(`${m[1]}${String(n).padStart(m[2].length, '0')}`)); next = `${m[1]}${String(n).padStart(m[2].length, '0')}` }
+      else { next = `${ref}-2`; let k = 2; while (taken(next)) next = `${ref}-${++k}` }
+    }
+    get().createElementType({ ref: next, name: src.Name || src.name || null, description: src.Description || src.description || null, family })
+    const ps = psRows.find(p => (p.ElementTypeRef || p.elementTypeRef || '').toLowerCase() === String(ref).toLowerCase())
+    if (ps) {
+      const copy = {}
+      for (const [k, v] of Object.entries(ps)) if (!k.startsWith('_') && !/^elementTypeRef$/i.test(k) && v != null && v !== '') copy[k] = v
+      get().addPSRow(next, copy)
+    }
+    return next
   },
 
   createElementType({ ref, name = null, description = null, family = null, isCollection = false } = {}) {

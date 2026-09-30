@@ -27,6 +27,14 @@ import { roleOf, QTY_CONFIRM_ROLES } from '../utils/recipePatterns'
  *   posRef: string
  *   sectionKey: 'position' | 'dl_internal' | 'lin_internal'
  */
+/** The Product Spec row for a ref: one with a product code when several share it. */
+function specRowFor(psRows, ref) {
+  const lc = String(ref || '').toLowerCase()
+  if (!lc) return null
+  const rows = psRows.filter(p => (p.ElementTypeRef || p.elementTypeRef || '').toLowerCase() === lc)
+  return rows.find(p => p.ProductCode || p.productCode) || rows[0] || null
+}
+
 export default function IngredientCard({ row, posRef, sectionKey, onOpenProductSpec, onReplace }) {
   const updateRecipeRow = useStore(s => s.updateRecipeRow)
   const removeRecipeRow = useStore(s => s.removeRecipeRow)
@@ -84,11 +92,9 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   // New = added in-app this session AND not yet synced to the source file.
   const isNewRow = !isUnresolved && row._row_num == null && isDirty
 
-  // Look up PS row for product code, manufacturer, description
-  const psRow = psRows.find(p => {
-    const ref = p.ElementTypeRef || p.elementTypeRef || ''
-    return ref.toLowerCase() === etRef.toLowerCase()
-  })
+  // Look up PS row for product code, manufacturer, description — the one that has a code,
+  // when a stray blank row shares the ref.
+  const psRow = specRowFor(psRows, etRef)
   const productCode = psRow?.ProductCode || psRow?.productCode || null
   const manufacturer = psRow?.Manufacturer || psRow?.manufacturer || null
 
@@ -428,12 +434,24 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                         className="mt-1 ps-3"
                         style={{ borderLeft: '2px solid #e9ecef', color: '#555' }}
                       >
-                        {internalItems.map(item => (
-                          <div key={item.ref} className="d-flex align-items-center gap-1 mb-1">
-                            <EntityPill type="ElementType" label={item.ref} />
-                            {item.name && <span className="text-muted">— {item.name}</span>}
-                          </div>
-                        ))}
+                        {internalItems.map(item => {
+                          // Each part's product, as the card itself shows it (PZJYJT).
+                          const spec = specRowFor(psRows, item.ref)
+                          const code = spec?.ProductCode || spec?.productCode
+                          const maker = spec?.Manufacturer || spec?.manufacturer
+                          return (
+                            <div key={item.ref} className="d-flex align-items-center gap-1 mb-1" data-testid="contents-item">
+                              <EntityPill type="ElementType" label={item.ref} />
+                              {code
+                                ? <button type="button" className="btn btn-link p-0" style={{ fontSize: 11, color: '#333', textDecoration: 'none' }}
+                                    onClick={() => onOpenProductSpec && onOpenProductSpec(item.ref)} title="Open in Product Spec">
+                                    <span style={{ color: '#666' }}>{maker ? `${maker} – ` : ''}{code}</span>
+                                  </button>
+                                : <span className="text-muted fst-italic" title="No product spec yet">no product spec</span>}
+                              {item.name && <span className="text-muted">— {item.name}</span>}
+                            </div>
+                          )
+                        })}
                       </div>
                     ) : (
                       <div className="mt-1 ps-3 text-muted fst-italic">No internal items yet.</div>
