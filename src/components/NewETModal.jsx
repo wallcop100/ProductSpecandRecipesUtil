@@ -4,6 +4,7 @@ import { Modal, Button, Form } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { getNextAvailableRef } from '../utils/containerUtils'
+import { CANON_FAMILIES } from '../data/etCanon'
 
 /**
  * NewETModal — the one place a brand-new element type is created.
@@ -86,11 +87,20 @@ export default function NewETModal({
   /** After a successful create, the next open of this key must seed afresh. */
   const clearSeed = () => { seededFor.current = Symbol('done') }
 
+  // Every family there is: in use, the project's family rows, and the company's canon ones.
   const familyOptions = useMemo(() => {
     const s = new Set()
-    for (const e of elementTypes) { const f = (e.Family || e.family || '').trim(); if (f) s.add(f) }
-    return [...s].sort((a, b) => a.localeCompare(b))
+    for (const e of elementTypes) {
+      const f = (e.Family || e.family || '').trim(); if (f) s.add(f)
+      if ((e.IsCollection || e.isCollection) === 'Y') s.add(e.ElementTypeRef || e.elementTypeRef)
+    }
+    for (const f of CANON_FAMILIES) s.add(f.ref)
+    return [...s].filter(Boolean).sort((a, b) => a.localeCompare(b))
   }, [elementTypes])
+  // A family the project has no row for yet is created with the ElementType (GX9RLV).
+  const familyIsNew = family.trim() !== ''
+    && !elementTypes.some(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === family.trim().toLowerCase())
+  const [familyParent, setFamilyParent] = useState('')
 
   // All known ET refs for the next-available suggestion
   const allETObjects = useMemo(() => {
@@ -158,6 +168,10 @@ export default function NewETModal({
     try {
       // Register the ET in the catalogue (staging-backed; queues a DB row when
       // DB writes are on).
+      if (familyIsNew) {
+        const canon = CANON_FAMILIES.find(f => f.ref.toLowerCase() === family.trim().toLowerCase())
+        createElementType({ ref: family.trim(), description: canon?.description || null, family: familyParent.trim() || canon?.parent || null, isCollection: true })
+      }
       createElementType({
         ref: trimRef,
         name: name.trim() || null,
@@ -309,6 +323,15 @@ export default function NewETModal({
           <datalist id={familyListId}>
             {familyOptions.map(f => <option key={f} value={f} />)}
           </datalist>
+          {familyIsNew && (
+            <div className="d-flex align-items-center gap-2 mt-1" style={{ fontSize: 11 }} data-testid="new-family">
+              <MaterialIcon name="create_new_folder" size={13} style={{ color: '#0d6efd' }} />
+              <span>New family <strong style={{ fontFamily: 'monospace' }}>{family.trim()}</strong>: its row is created too, under</span>
+              <Form.Control size="sm" list={`${familyListId}-parent`} value={familyParent} onChange={e => setFamilyParent(e.target.value)}
+                placeholder="(top level)" aria-label="Parent family" style={{ fontSize: 11, width: 170 }} />
+              <datalist id={`${familyListId}-parent`}>{familyOptions.map(f => <option key={f} value={f} />)}</datalist>
+            </div>
+          )}
         </Form.Group>
 
         {/* The DesignDB is the master list, so this is not a choice. Say so once. */}

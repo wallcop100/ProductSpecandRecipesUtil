@@ -6,11 +6,11 @@ import InfoTip from './InfoTip'
 import ConnectorBoard from './ConnectorBoard'
 import RuleBuilder from './RuleBuilder'
 import useConnectorGroups from './useConnectorGroups'
-import { templateParts, partsToIngredients, signatureKey, membership } from '../utils/connectorGroups'
+import { templateParts, partsToIngredients, signatureKey, membership, suggestName } from '../utils/connectorGroups'
 import { conditionMatches, RECIPE_TAG_COLUMNS } from '../utils/tagRules'
 import {
   TEMPLATE_RULE_COLUMNS, templateRule, ruleFromTags, ruleIsEmpty, ruleConditionsOf, ruleMatchesRecord,
-  ruleSpecificity, ruleFor, compareRule, EMPTY_RULE,
+  ruleSpecificity, specificityText, ruleFor, compareRule, EMPTY_RULE,
 } from '../utils/templateRules'
 
 const COMMON_TAGS = ['Local', 'Remote-CC', 'Remote-CV', 'LIN', 'IP']
@@ -147,6 +147,9 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
     const found = ruleFor(carriers, scope, groups.recOf, { against })
     if (!found) { setSuggested({ none: true }); return }
     setRule(found.rule)
+    // A blank name, or one made from the parts, becomes what the rule filters on.
+    const partsName = suggestName(templateParts({ Ingredients: partsToIngredients(ingredients.filter(p => p.ref?.trim())) }))
+    if (!name.trim() || name.trim() === partsName) setName(suggestName([], found.rule))
     const toGain = scope.filter(r => !groups.sigs.has(r) && ruleMatchesRecord(found.rule, groups.recOf(r)))
     setSuggested({ exact: found.exact, outsiders: found.outsiders, from: carriers.length, toGain })
   }
@@ -210,11 +213,13 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
             <Form.Label className="fw-semibold mb-0">Applies to positions that match</Form.Label>
             <InfoTip>
               Any field: tags, DesignDB columns, or what the recipe holds besides connectors. When several
-              templates match a position, the most specific rule wins (more conditions joined by AND); a
+              templates match a position, the most specific rule wins: a rule whose positions all fall inside
+              another's, else the higher score. Each condition scores by how much of the project it rules
+              out, so a rare value (a maker, a product) beats a common one (REMOTE, interior); AND adds them up. A
               pinned position always stays with its template. With no rule, a template applies everywhere
               until it holds pinned positions.
             </InfoTip>
-            {!empty && <span className="text-muted" style={{ fontSize: 11 }}>specificity {ruleSpecificity(rule)}</span>}
+            {!empty && <span className="text-muted" style={{ fontSize: 11, cursor: 'help' }} title={specificityText(rule, groups.recOf?.scope)} data-testid="rule-specificity">specificity {ruleSpecificity(rule, groups.recOf?.scope)}</span>}
             <Button size="sm" variant="outline-primary" className="ms-auto" style={{ fontSize: 12 }} onClick={suggest}
               disabled={carriers.length === 0} data-testid="suggest-rule"
               title={carriers.length ? `Find a rule that picks out the ${carriers.length} position(s) that already have these connectors` : 'No position has exactly these connectors yet'}>

@@ -13,7 +13,8 @@
  * reads those as the equivalent conditions, so nothing downstream sees the old shape.
  *
  * PRECEDENCE when several templates' rules match one position: a pin wins; otherwise the
- * MOST SPECIFIC rule wins (specificity below). Two equally specific winners are a clash.
+ * MOST SPECIFIC rule wins (mostSpecific below: a narrower rule, then the higher score from
+ * the project's data). Two equally specific winners are a clash.
  *
  * ruleFor() is the other direction: given the positions that already carry a set of
  * connectors, find a short rule that picks out exactly them. Pure.
@@ -62,13 +63,86 @@ export const ruleConditionsOf = rule => (rule?.conditions || []).filter(usable)
 export const ruleIsEmpty = rule => ruleConditionsOf(rule).length === 0
 
 /**
- * How specific a rule is: its condition count when all must hold; an OR rule is only as
- * specific as one condition. An empty rule is 0.
+ * The project a specificity is measured against: every position's record. Built once per
+ * set of records (it caches what each condition matches).
  */
-export function ruleSpecificity(rule) {
-  const n = ruleConditionsOf(rule).length
-  if (n === 0) return 0
-  return rule.match === 'any' ? 1 : n
+export function specificityScope(records) {
+  const recs = [...(records || [])]
+  return { records: recs, n: recs.length, cache: new Map() }
+}
+
+const keyOf = x => JSON.stringify(x)
+/** Indices of the scope's records a test holds for, cached under `key`. */
+function matchedIn(scope, key, test) {
+  if (!scope.cache.has(key)) {
+    const s = new Set()
+    scope.records.forEach((r, i) => { if (test(r)) s.add(i) })
+    scope.cache.set(key, s)
+  }
+  return scope.cache.get(key)
+}
+const bits = (n, k) => Math.log2(n / Math.max(1, k))
+const round1 = x => Math.round(x * 10) / 10
+
+/**
+ * explainSpecificity(rule, scope) → { total, parts: [{ cond, matched, bits }], match, n }
+ *
+ * How specific a rule is, from the project's own data: each condition scores by how much
+ * of the project it rules out, log2(positions / positions it matches). So a value few
+ * positions have (a maker, a product) scores high, and one half the project has
+ * (DriverLocation is REMOTE, interior) scores about 1; "is not" barely scores. AND adds
+ * its conditions up; OR scores as the positions any of them match. An empty rule is 0.
+ * Without a scope it falls back to counting conditions (an OR rule counts as one).
+ */
+export function explainSpecificity(rule, scope) {
+  const conds = ruleConditionsOf(rule)
+  const match = rule?.match === 'any' ? 'any' : 'all'
+  if (conds.length === 0) return { total: 0, parts: [], match, n: scope?.n || 0 }
+  if (!scope?.n) {
+    return { total: match === 'any' ? 1 : conds.length, parts: conds.map(cond => ({ cond, matched: null, bits: 1 })), match, n: 0 }
+  }
+  const parts = conds.map(cond => {
+    const matched = matchedIn(scope, keyOf(cond), r => conditionMatches(cond, r)).size
+    return { cond, matched, bits: round1(bits(scope.n, matched)) }
+  })
+  const total = match === 'any'
+    ? bits(scope.n, matchedIn(scope, keyOf({ match, conds }), r => conds.some(c => conditionMatches(c, r))).size)
+    : parts.reduce((s, p) => s + bits(scope.n, p.matched), 0)
+  return { total: round1(total), parts, match, n: scope.n }
+}
+
+export const ruleSpecificity = (rule, scope) => explainSpecificity(rule, scope).total
+
+/** "Manufacturer is Wago 5.6 (8 of 400) + DriverLocation is REMOTE 1.0 (200 of 400)". */
+export function specificityText(rule, scope) {
+  const e = explainSpecificity(rule, scope)
+  if (!e.parts.length) return 'no rule'
+  if (!e.n) return `${e.total}: ${e.parts.length} condition(s); measured against the project once it is open`
+  const parts = e.parts.map(p => `${describeRule({ match: 'all', conditions: [p.cond] })}: ${p.bits} (${p.matched} of ${e.n} positions)`)
+  return e.match === 'any'
+    ? `${e.total}: OR scores as the positions any of these match\n${parts.join('\n')}`
+    : `${e.total} = ${e.parts.map(p => p.bits).join(' + ')}\n${parts.join('\n')}\nRarer values score higher.`
+}
+
+/**
+ * mostSpecific(cands, scope) → { winners: [id], beaten: [id] }  cands: [{ id, rule }]
+ *
+ * The rules that all match one position. A rule whose positions all fall inside another's
+ * is narrower and beats it, whatever the scores. Of the rest the highest score wins;
+ * equal scores are a clash (all of them are winners).
+ */
+export function mostSpecific(cands, scope) {
+  if (cands.length <= 1) return { winners: cands.map(c => c.id), beaten: [] }
+  const scored = cands.map(c => ({ ...c, spec: ruleSpecificity(c.rule, scope) }))
+  let alive = scored
+  if (scope?.n) {
+    const setOf = c => matchedIn(scope, keyOf({ rule: c.rule }), r => !ruleIsEmpty(c.rule) && ruleMatchesRecord(c.rule, r))
+    const inside = (a, b) => { const A = setOf(a), B = setOf(b); return A.size > 0 && A.size < B.size && [...A].every(i => B.has(i)) }
+    alive = scored.filter(b => !scored.some(a => a !== b && !ruleIsEmpty(a.rule) && inside(a, b)))
+  }
+  const top = Math.max(-1, ...alive.map(c => c.spec))
+  const winners = alive.filter(c => c.spec === top).map(c => c.id)
+  return { winners, beaten: scored.filter(c => !winners.includes(c.id)).map(c => c.id) }
 }
 
 /** Does a rule hold for a record? An empty rule holds for nothing (callers decide). */

@@ -104,3 +104,19 @@ describe('the guard stays out of the way when nothing is shared', () => {
     expect(removeRecipeRow).toHaveBeenCalledWith('C01r', 'p1')
   })
 })
+
+describe('a wrapper\'s contents show each part\'s product (PZJYJT)', () => {
+  test('maker and code beside every part inside, or "no product spec"', () => {
+    useStore.setState({
+      recipes: [...SHARED, inside('C01r', 'ET-LIN-01', 'ET-TAPE-02', 'i2')],
+      removeRecipeRow,
+      psRows: [{ ElementTypeRef: 'ET-PROF-01', Manufacturer: 'Klus', ProductCode: 'PDS-4' }, { ElementTypeRef: 'ET-PROF-01' }],
+      elementTypes: [], containerETRefs: new Set(['et-lin-01']), containerReasons: {}, selectedRowIds: [],
+    })
+    renderRow(SHARED[0])
+    fireEvent.click(screen.getByTitle('Show contents'))
+    const items = screen.getAllByTestId('contents-item').map(i => i.textContent)
+    expect(items.find(t => t.includes('ET-PROF-01'))).toContain('Klus – PDS-4')
+    expect(items.find(t => t.includes('ET-TAPE-02'))).toContain('no product spec')
+  })
+})

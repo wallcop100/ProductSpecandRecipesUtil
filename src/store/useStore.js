@@ -13,8 +13,8 @@ import { proposeRecipe, proposalFromTemplate, proposalContext } from '../utils/r
 import { roleOf } from '../utils/recipePatterns.js'
 import { planFamilyMove } from '../utils/etSeed.js'
 import { loadReports, saveReports } from '../utils/bugReports.js'
-import { connectorSignature, templateParts, partsToIngredients, diffParts, isConnectorPart } from '../utils/connectorGroups.js'
-import { templateRecords, templateRule } from '../utils/templateRules.js'
+import { connectorSignature, templateParts, partsToIngredients, diffParts, isConnectorPart, DEFAULT_CONNECTOR_FAMILIES } from '../utils/connectorGroups.js'
+import { templateRecords, templateRule, specificityScope } from '../utils/templateRules.js'
 
 /** _templateRecOf's cache: not state (no re-render), keyed on the arrays it reads. */
 let templateRecCache = null
@@ -504,6 +504,20 @@ const useStore = create((set, get) => ({
   // it). Surfaced as a banner; a refusal is always better than a blank ContextRef.
   recipeError: null,
 
+  // Unexported changes brought back from the last session on open: { n } (builder notice).
+  restoredNotice: null,
+  /** Throw away every unexported change (the restored ones included) and reopen. */
+  async discardPendingChanges() {
+    const { projectId } = get()
+    try {
+      await window.electronAPI?.db?.clearPendingChanges?.(projectId)
+      await window.electronAPI?.db?.setPref?.(projectId, 'pending_db_changes', '[]')
+    } catch { /* best-effort */ }
+    set({ psChanges: [], rsChanges: [], dbChanges: [], restoredNotice: null })
+    // The rows on screen still carry them: reopen from the workbooks.
+    if (typeof window !== 'undefined' && window.location && import.meta.env?.MODE !== 'test') window.location.reload()
+  },
+
   // The Form's captures: what the imported spreadsheet says each PositionType uses.
   // Persisted per project (pref `form_captures`) so the Side-by-Side pane renders
   // after a reload without re-importing. null = no Form template attached.
@@ -616,7 +630,7 @@ const useStore = create((set, get) => ({
       connectorPins: data.connectorPins ?? {},
       connectorExcludes: data.connectorExcludes ?? {},
       specCheckSkip: data.specCheckSkip ?? ['ET-CABLES', 'ET-CABLE'],
-      connectorFamilies: data.connectorFamilies ?? [],
+      connectorFamilies: data.connectorFamilies ?? [...DEFAULT_CONNECTOR_FAMILIES],
       favorites: favorites ?? [],
       ignoredPositionFamilies: ignoredPositionFamilies ?? [],
       containerETManualRefs: manualRefs,
@@ -651,41 +665,58 @@ const useStore = create((set, get) => ({
    * Called at the start of every recipe/PS-mutating action.
    */
   _pushHistory() {
-    const { recipes, psRows, rsChanges, psChanges, past } = get()
-    const snapshot = { recipes, psRows, rsChanges, psChanges }
-    const nextPast = [...past, snapshot]
+    const { past } = get()
+    const nextPast = [...past, get()._historySnapshot()]
     if (nextPast.length > HISTORY_LIMIT) nextPast.shift()
     set({ past: nextPast, future: [] })
+  },
+
+  /**
+   * What one Undo step holds. ElementTypes are in it (WJ8TEG): a new ElementType and its
+   * Product Spec row are one addition, so Undo takes both away and Redo brings both back.
+   */
+  _historySnapshot() {
+    const { recipes, psRows, rsChanges, psChanges, elementTypes, localElementTypes, dbChanges, containerETRefs, containerReasons } = get()
+    return { recipes, psRows, rsChanges, psChanges, elementTypes, localElementTypes, dbChanges, containerETRefs, containerReasons }
+  },
+
+  /** Keep the browser's store of new ElementTypes in step with an Undo / Redo. */
+  _syncLocalETs(before = [], after = []) {
+    const { projectId } = get()
+    const db = window.electronAPI?.db
+    if (projectId == null || !db) return
+    const key = e => String(e.ElementTypeRef || e.elementTypeRef || e.ref || '').toLowerCase()
+    const had = new Map(before.map(e => [key(e), e]))
+    const has = new Map(after.map(e => [key(e), e]))
+    for (const [k, e] of had) if (!has.has(k)) db.deleteLocalET?.(projectId, e.ElementTypeRef || e.ref)?.catch?.(() => {})
+    for (const [k, e] of has) if (!had.has(k)) {
+      db.upsertLocalET?.(projectId, { ref: e.ElementTypeRef || e.ref, name: e.Name ?? null, description: e.Description ?? null,
+        family: e.Family ?? null, isCollection: (e.IsCollection || e.isCollection) === 'Y' })?.catch?.(() => {})
+    }
   },
 
   /**
    * undo() — restore the previous snapshot, pushing the current state onto redo.
    */
   undo() {
-    const { past, future, recipes, psRows, rsChanges, psChanges } = get()
+    const { past, future } = get()
     if (past.length === 0) return
     const previous = past[past.length - 1]
-    const current = { recipes, psRows, rsChanges, psChanges }
-    set({
-      ...previous,
-      past: past.slice(0, -1),
-      future: [...future, current],
-    })
+    const current = get()._historySnapshot()
+    set({ ...previous, past: past.slice(0, -1), future: [...future, current] })
+    if (previous.localElementTypes) get()._syncLocalETs(current.localElementTypes, previous.localElementTypes)
   },
 
   /**
    * redo() — re-apply the next snapshot, pushing the current state onto undo.
    */
   redo() {
-    const { past, future, recipes, psRows, rsChanges, psChanges } = get()
+    const { past, future } = get()
     if (future.length === 0) return
     const next = future[future.length - 1]
-    const current = { recipes, psRows, rsChanges, psChanges }
-    set({
-      ...next,
-      past: [...past, current],
-      future: future.slice(0, -1),
-    })
+    const current = get()._historySnapshot()
+    set({ ...next, past: [...past, current], future: future.slice(0, -1) })
+    if (next.localElementTypes) get()._syncLocalETs(current.localElementTypes, next.localElementTypes)
   },
 
   /**
@@ -746,6 +777,8 @@ const useStore = create((set, get) => ({
 
   setActivePosition(ref, { back = false } = {}) {
     const from = get().activePositionRef
+    // An error about another position (a refused add) must not follow you here (Y7QVN4).
+    if (ref !== from && get().recipeError) set({ recipeError: null })
     if (from && ref !== from && get().settleDesign(from) === 'choose') {
       set({ designPrompt: { posRef: from, then: () => get().setActivePosition(ref, { back }) } })
       return
@@ -2504,10 +2537,13 @@ const useStore = create((set, get) => ({
       || c.positionUI !== positionUI || c.connectorFamilies !== connectorFamilies) {
       const opts = get()._connectorOpts()
       const map = templateRecords({ positionTypes, recipes, psRows, elementTypes, positionUI, isConnector: ref => isConnectorPart(ref, opts) })
-      templateRecCache = { positionTypes, recipes, psRows, elementTypes, positionUI, connectorFamilies, map }
+      templateRecCache = { positionTypes, recipes, psRows, elementTypes, positionUI, connectorFamilies, map, scope: specificityScope(map.values()) }
     }
     const map = templateRecCache.map
-    return ref => map.get(ref) || { Tags: positionUI[ref]?.tags || [] }
+    const recOf = ref => map.get(ref) || { Tags: positionUI[ref]?.tags || [] }
+    // What a template rule's specificity is measured against: the whole project.
+    recOf.scope = templateRecCache.scope
+    return recOf
   },
 
   _connectorOpts() {
@@ -2658,10 +2694,14 @@ const useStore = create((set, get) => ({
     if (!posRef || !ref) return
     const { recipes, rsChanges } = get()
     const target = ref.toLowerCase()
+    // Only a row in the SAME layer comes back: the same ref may be wanted both on site and
+    // inside the wrapper, and reviving the other one fixes nothing.
+    const wantInside = section !== 'position'
     const revivable = recipes.find(row =>
       (row.PositionTypeRef || row.positionTypeRef) === posRef &&
       (row.ElementTypeRef || row.elementTypeRef || '').toLowerCase() === target &&
-      (row.IsDeleted || row.isDeleted) === 'Y'
+      (row.IsDeleted || row.isDeleted) === 'Y' &&
+      ((row.ContextType || row.contextType) === 'ElementType') === wantInside
     )
     if (revivable) {
       get()._pushHistory()
@@ -2962,9 +3002,13 @@ const useStore = create((set, get) => ({
   updatePSRow(elementTypeRef, updates, { recordHistory = true } = {}) {
     const { psRows, psChanges, containerETManualRefs, containerETExcludeRefs, elementTypes, recipes } = get()
 
+    const existingRow = psRows.find(r => (r.ElementTypeRef || r.elementTypeRef) === elementTypeRef)
+    // Nothing changes (a field left as it was): no Undo step, so Redo is not wiped (WJ8TEG).
+    const same = (a, b) => String(a ?? '') === String(b ?? '')
+    if (existingRow && Object.entries(updates || {}).every(([k, v]) => same(existingRow[k], v))) return
+
     if (recordHistory) get()._pushHistory()
 
-    const existingRow = psRows.find(r => (r.ElementTypeRef || r.elementTypeRef) === elementTypeRef)
     const before = {}
     for (const key of Object.keys(updates)) {
       before[key] = existingRow ? (existingRow[key] ?? null) : null
@@ -3753,6 +3797,33 @@ const useStore = create((set, get) => ({
     set(s => ({ containerETRefs: new Set([...s.containerETRefs, ref.toLowerCase()]) }))
     get().addRecipeRow(posRef, 'position', { elementTypeRef: ref, isDesign: 'Y' }, { recordHistory: false, asPosition: true })
     return ref
+  },
+
+  /**
+   * forkElementType(ref) — a new ElementType beside this one: the next ref in its family (or
+   * `<ref>-FORK`), the same name / description / family, and a copy of its Product Spec row.
+   * Recipes are untouched. Returns the new ref.
+   */
+  forkElementType(ref) {
+    const { elementTypes, psRows } = get()
+    const src = elementTypes.find(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === String(ref).toLowerCase())
+    if (!src) return null
+    const family = src.Family || src.family || null
+    const taken = r => elementTypes.some(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === r.toLowerCase())
+    let next = family ? planFamilyMove([ref], family, elementTypes).moves[0]?.to : null
+    if (!next || next.toLowerCase() === String(ref).toLowerCase() || taken(next)) {
+      const m = String(ref).match(/^(.*?)(\d+)$/)
+      if (m) { let n = Number(m[2]); do { n++ } while (taken(`${m[1]}${String(n).padStart(m[2].length, '0')}`)); next = `${m[1]}${String(n).padStart(m[2].length, '0')}` }
+      else { next = `${ref}-2`; let k = 2; while (taken(next)) next = `${ref}-${++k}` }
+    }
+    get().createElementType({ ref: next, name: src.Name || src.name || null, description: src.Description || src.description || null, family })
+    const ps = psRows.find(p => (p.ElementTypeRef || p.elementTypeRef || '').toLowerCase() === String(ref).toLowerCase())
+    if (ps) {
+      const copy = {}
+      for (const [k, v] of Object.entries(ps)) if (!k.startsWith('_') && !/^elementTypeRef$/i.test(k) && v != null && v !== '') copy[k] = v
+      get().addPSRow(next, copy)
+    }
+    return next
   },
 
   createElementType({ ref, name = null, description = null, family = null, isCollection = false } = {}) {

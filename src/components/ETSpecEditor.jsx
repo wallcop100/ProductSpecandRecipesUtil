@@ -307,6 +307,7 @@ function FamilyAndRef({ et, onRenamed }) {
   const elementTypes = useStore(s => s.elementTypes)
   const moveElementTypesToFamily = useStore(s => s.moveElementTypesToFamily)
   const renameElementType = useStore(s => s.renameElementType)
+  const forkElementType = useStore(s => s.forkElementType)
   const ref = et.ElementTypeRef || et.elementTypeRef
   const family = et.Family || et.family || ''
   const [open, setOpen] = useState(false)
@@ -320,12 +321,9 @@ function FamilyAndRef({ et, onRenamed }) {
   const taken = r => r.toLowerCase() !== ref.toLowerCase()
     && elementTypes.some(e => (e.ElementTypeRef || '').toLowerCase() === r.toLowerCase())
 
-  // Picking a family proposes its next ref; the ref stays editable.
-  function pickFamily(f) {
-    setFam(f)
-    const plan = f ? planFamilyMove([ref], f, elementTypes).moves[0] : null
-    setNewRef(plan?.to || ref)
-  }
+  // Picking a family changes only the family; its next ref is offered, never forced (5WZXN9).
+  function pickFamily(f) { setFam(f) }
+  const suggested = fam && fam !== family ? planFamilyMove([ref], fam, elementTypes).moves[0]?.to : null
   function apply() {
     const target = newRef.trim()
     if (fam !== family) moveElementTypesToFamily([ref], fam, { renumber: false })
@@ -340,6 +338,11 @@ function FamilyAndRef({ et, onRenamed }) {
         <Button variant="link" size="sm" className="p-0" style={{ fontSize: 11 }} onClick={() => setOpen(true)}
           data-testid="family-ref-open">
           <MaterialIcon name="drive_file_move" size={13} /> Change family or ref
+        </Button>
+        <Button variant="link" size="sm" className="p-0 ms-3" style={{ fontSize: 11 }} data-testid="fork-et"
+          title="Fork: a new ElementType in the same family with a copy of this one's Product Spec, to change on its own"
+          onClick={() => { const r = forkElementType(ref); if (r) onRenamed?.(r) }}>
+          <MaterialIcon name="call_split" size={13} /> Fork
         </Button>
       </div>
     )
@@ -366,7 +369,12 @@ function FamilyAndRef({ et, onRenamed }) {
       <div className="text-muted mt-1" style={{ fontSize: 10 }}>
         {bad ? <span className="text-danger">{bad}</span>
           : newRef.trim() !== ref ? <>Renames {ref} → {newRef.trim()} in the Product Spec and Recipes. Not on Undo: change it back to reverse.</>
-            : 'Picking a family proposes its next ref.'}
+            : fam !== family ? <>Moves {ref} into {fam || 'no family'}; the ref stays as it is.</>
+              : 'Change the family, the ref, or both.'}
+        {suggested && suggested !== newRef.trim() && (
+          <Button size="sm" variant="link" className="p-0 ms-2 align-baseline" style={{ fontSize: 10 }} data-testid="use-family-ref"
+            onClick={() => setNewRef(suggested)}>Renumber into it: {suggested}</Button>
+        )}
       </div>
     </div>
   )

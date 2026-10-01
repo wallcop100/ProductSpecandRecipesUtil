@@ -23,9 +23,12 @@ import { positionRecipeWithWrapperInternals } from './collectionStatus'
 import { rowSlot, normalizeSection, POSITION, INTERNAL } from './recipePresence'
 import { roleOf } from './recipePatterns'
 import { connectorRole } from './connectors'
-import { templateRule, ruleIsEmpty, ruleMatchesRecord, ruleSpecificity, asRecord } from './templateRules'
+import { templateRule, ruleIsEmpty, ruleMatchesRecord, ruleConditionsOf, mostSpecific, asRecord } from './templateRules'
 
 const lc = s => String(s ?? '').trim().toLowerCase()
+
+/** Families ticked as connector parts until the project chooses its own. */
+export const DEFAULT_CONNECTOR_FAMILIES = ['ET-CONNECTORS']
 const live = r => (r.IsDeleted || r.isDeleted) !== 'Y'
 const etOf = r => r.ElementTypeRef || r.elementTypeRef || ''
 const qtyOf = r => { const q = Number(r.Quantity ?? r.quantity); return Number.isFinite(q) && q > 0 ? q : 1 }
@@ -150,10 +153,11 @@ export function describeParts(parts) {
  * (templateRules.templateRecords), or a bare tag list (read as { Tags }).
  *
  * A pin wins. Otherwise every template whose rule matches is a candidate and the MOST
- * SPECIFIC rule wins (templateRules.ruleSpecificity); the ones it beats are `alsoMatched`.
- * Two equally specific winners are a clash.
+ * SPECIFIC rule wins (templateRules.mostSpecific, measured against `scope`, which defaults
+ * to recOf.scope — the store's recOf carries the whole project); the ones it beats are
+ * `alsoMatched`. Two equally specific winners are a clash.
  */
-export function membership(positionRefs, collections, pins = {}, recOf = () => [], excludes = {}) {
+export function membership(positionRefs, collections, pins = {}, recOf = () => [], excludes = {}, scope = recOf?.scope) {
   const pinnedTo = new Map()
   for (const [id, refs] of Object.entries(pins || {})) for (const r of refs || []) pinnedTo.set(r, id)
   const removed = (id, pos) => (excludes?.[id] || []).includes(pos)
@@ -171,10 +175,9 @@ export function membership(positionRefs, collections, pins = {}, recOf = () => [
     }
     const cands = (collections || [])
       .filter(c => !removed(c.CollectionId, pos) && filterMatches(c, rec, { hasPins: (pins?.[c.CollectionId] || []).length > 0 }))
-      .map(c => ({ id: c.CollectionId, spec: ruleSpecificity(templateRule(c)) }))
-    const top = Math.max(-1, ...cands.map(c => c.spec))
-    const winners = cands.filter(c => c.spec === top).map(c => c.id)
-    out.set(pos, { templates: winners, pinnedTo: null, clash: winners.length > 1, alsoMatched: cands.filter(c => c.spec !== top).map(c => c.id) })
+      .map(c => ({ id: c.CollectionId, rule: templateRule(c) }))
+    const { winners, beaten } = mostSpecific(cands, scope)
+    out.set(pos, { templates: winners, pinnedTo: null, clash: winners.length > 1, alsoMatched: beaten })
   }
   return out
 }
@@ -208,8 +211,31 @@ export function nearMisses(parts, sigs, { members = new Set(), max = 2 } = {}) {
   return out.sort((a, b) => (b.member - a.member) || diffSize(a.diff) - diffSize(b.diff) || a.posRef.localeCompare(b.posRef))
 }
 
-/** A readable default name for a group: its site parts, else its wrapper parts. */
-export function suggestName(parts) {
+/**
+ * A readable default name for a template: what its rule filters on ("REMOTE · Exterior ·
+ * not Wago"), as that is what decides where it applies. A value that means nothing alone
+ * (Y, N, a number) keeps its column. Without a rule (a pinned group): its site parts,
+ * else its wrapper parts.
+ */
+export function suggestName(parts, rule = null) {
+  const conds = ruleConditionsOf(rule)
+  if (conds.length) {
+    const col = c => String(c.column).replace(/^Recipe\./, '')
+    const val = c => (/^(y|n|yes|no|true|false|[\d.]+)$/i.test(String(c.value).trim()) ? `${col(c)} ${c.value}` : String(c.value).trim())
+    const word = c => ({
+      equals: val(c), notEquals: `not ${val(c)}`, contains: `*${c.value}*`, notContains: `no *${c.value}*`,
+      startsWith: `${c.value}*`, isEmpty: `no ${col(c)}`, isNotEmpty: `with ${col(c)}`,
+    }[c.op] || `${col(c)} ${c.op} ${c.value}`)
+    // Whole terms only: a name cut mid-word reads as a different value.
+    const sep = rule.match === 'any' ? ' / ' : ' · '
+    let out = ''
+    for (const w of conds.map(word)) {
+      const next = out ? out + sep + w : w
+      if (next.length > 80) return `${out || w.slice(0, 80)} …`
+      out = next
+    }
+    return out
+  }
   const short = r => r.replace(/^ET-/i, '')
   const site = parts.filter(p => p.section === POSITION).map(p => short(p.ref))
   const inside = parts.filter(p => p.section === INTERNAL).map(p => short(p.ref))

@@ -1,4 +1,5 @@
 import InfoTip from '../components/InfoTip'
+import { DEFAULT_CONNECTOR_FAMILIES } from '../utils/connectorGroups'
 import React, { useState, useEffect, useCallback } from 'react'
 import {
   Container, Card, Button, Alert, Spinner, Badge, Form, Row, Col,
@@ -558,7 +559,8 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
         manualContainerETs,
         manualContainerExcludeETs,
         connectorPins: (() => { try { return JSON.parse(connectorPinsPref || '{}') || {} } catch { return {} } })(),
-        connectorFamilies: (() => { try { return JSON.parse(connectorFamiliesPref || '[]') || [] } catch { return [] } })(),
+        // Never chosen: the company family for connector parts is ticked (M9KG9A).
+        connectorFamilies: (() => { try { return connectorFamiliesPref == null ? [...DEFAULT_CONNECTOR_FAMILIES] : (JSON.parse(connectorFamiliesPref) || []) } catch { return [...DEFAULT_CONNECTOR_FAMILIES] } })(),
         connectorExcludes: (() => { try { return JSON.parse(connectorExcludesPref || '{}') || {} } catch { return {} } })(),
         specCheckSkip: (() => { try { return specCheckSkipPref ? JSON.parse(specCheckSkipPref) : undefined } catch { return undefined } })(),
         etCollections: etCollections ?? [],
@@ -574,18 +576,13 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
         localElementTypes,
       })
 
-      // 8b. Offer to restore unexported changes from a previous session
-      // (EXPORT_PLAN §3.1). Declining discards them permanently.
+      // 8b. Unexported changes from a previous session come back on their own: they were
+      // saved as you worked (GS9LXJ). A one-click Cancel used to throw them away for good;
+      // discarding is now a deliberate act on the notice the builder shows.
       if (pendingChanges) {
         const n = (pendingChanges.ps?.length || 0) + (pendingChanges.rs?.length || 0) + (pendingChanges.db?.length || 0)
-        if (window.confirm(`You have ${n} unexported change${n === 1 ? '' : 's'} from a previous session.\n\nRestore them?`)) {
-          useStore.getState().restorePendingChanges(pendingChanges)
-        } else {
-          try {
-            await window.electronAPI.db.clearPendingChanges(projectId)
-            await window.electronAPI.db.setPref(projectId, 'pending_db_changes', '[]')
-          } catch { /* best-effort */ }
-        }
+        useStore.getState().restorePendingChanges(pendingChanges)
+        useStore.setState({ restoredNotice: { n, at: Date.now() } })
       }
 
       // 9. Start file watcher

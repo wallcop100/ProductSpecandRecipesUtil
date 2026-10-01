@@ -18,7 +18,7 @@
  * product, driver + environment, accessories). Pure.
  */
 import { roleOf, driverOf, envOf } from './recipePatterns'
-import { ruleFor, ruleMatchesRecord, ruleSpecificity, ruleIsEmpty } from './templateRules'
+import { ruleFor, ruleMatchesRecord, mostSpecific, ruleIsEmpty } from './templateRules'
 import { positionRecipeWithWrapperInternals } from './collectionStatus'
 import { rowSlot } from './recipePresence'
 import { TAG_COLUMNS } from './tagRules'
@@ -143,16 +143,19 @@ export function styleRuleOf(template) {
   ] }
 }
 
-/** The style for a record: the most specific matching rule; ties go to the first. */
-export function matchStyle(rec, styles) {
-  let best = null
+/**
+ * The style for a record: the most specific matching rule (templateRules.mostSpecific,
+ * measured against `scope`, the project's records); ties go to the first.
+ */
+export function matchStyle(rec, styles, scope) {
+  const cands = []
   for (const t of styles || []) {
     const rule = styleRuleOf(t)
     if (!rule || ruleIsEmpty(rule) || !ruleMatchesRecord(rule, rec)) continue
-    const s = ruleSpecificity(rule)
-    if (!best || s > best.spec) best = { style: t, spec: s }
+    cands.push({ id: cands.length, rule, style: t })
   }
-  return best?.style || null
+  if (!cands.length) return null
+  return cands[mostSpecific(cands, scope).winners[0]].style
 }
 
 export const GROUP_DIMS = [
