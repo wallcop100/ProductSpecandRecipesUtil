@@ -312,15 +312,8 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                     />
                     <MaterialIcon name="arrow_forward" size={14} style={{ color: '#ccc', flexShrink: 0 }} />
                     {productCode ? (
-                      <button
-                        className="btn btn-link p-0 d-inline-flex align-items-center gap-1"
-                        style={{ fontSize: 11, color: '#333', textDecoration: 'none', fontWeight: 500 }}
-                        onClick={() => onOpenProductSpec && onOpenProductSpec(etRef)}
-                        title="Open in Product Spec"
-                      >
-                        <span style={{ color: '#666' }}>{manufacturer ? `${manufacturer} – ` : ''}{productCode}</span>
-                        <MaterialIcon name="edit" size={12} style={{ color: '#aaa' }} />
-                      </button>
+                      <ProductInline etRef={etRef} manufacturer={manufacturer} productCode={productCode}
+                        onOpenProductSpec={onOpenProductSpec} />
                     ) : etRef ? (
                       <IconButton
                         icon={ACTION_ICONS.addToSpec} size={16}
@@ -764,5 +757,54 @@ function FieldInput({ label, value, onChange, width = 80, type = 'text', min, st
         step={step}
       />
     </div>
+  )
+}
+
+/**
+ * Maker – code on a card: click to edit both in place (Enter or leaving saves, Esc
+ * cancels); the pencil opens the full Product Spec row (UY8CQ5). It edits the Product
+ * Spec row, so every position using this ElementType sees the change.
+ */
+function ProductInline({ etRef, manufacturer, productCode, onOpenProductSpec }) {
+  const updatePSRow = useStore(s => s.updatePSRow)
+  const [editing, setEditing] = useState(false)
+  const [mfr, setMfr] = useState('')
+  const [code, setCode] = useState('')
+  const start = () => { setMfr(manufacturer || ''); setCode(productCode || ''); setEditing(true) }
+  const save = () => {
+    setEditing(false)
+    const upd = {}
+    if (mfr.trim() !== String(manufacturer || '')) upd.Manufacturer = mfr.trim()
+    if (code.trim() && code.trim() !== String(productCode || '')) upd.ProductCode = code.trim()
+    if (Object.keys(upd).length) updatePSRow(etRef, upd)
+  }
+  const onKey = e => {
+    if (e.key === 'Enter') { e.preventDefault(); save() }
+    else if (e.key === 'Escape') { e.preventDefault(); setEditing(false) }
+  }
+  // Leaving the pair (not moving between its two boxes) saves.
+  const onBlur = e => { if (!e.currentTarget.contains(e.relatedTarget)) save() }
+  if (editing) {
+    return (
+      <span className="d-inline-flex align-items-center gap-1" onBlur={onBlur} data-testid="product-inline">
+        <input className="form-control form-control-sm" style={{ fontSize: 11, width: 110, padding: '0 4px' }} autoFocus
+          value={mfr} onChange={e => setMfr(e.target.value)} onKeyDown={onKey} placeholder="Manufacturer" aria-label="Manufacturer" />
+        <span className="text-muted">–</span>
+        <input className="form-control form-control-sm" style={{ fontSize: 11, width: 120, padding: '0 4px', fontFamily: 'monospace' }}
+          value={code} onChange={e => setCode(e.target.value)} onKeyDown={onKey} placeholder="Product code" aria-label="Product code" />
+      </span>
+    )
+  }
+  return (
+    <span className="d-inline-flex align-items-center gap-1">
+      <button type="button" className="btn btn-link p-0" style={{ fontSize: 11, color: '#666', textDecoration: 'none', fontWeight: 500 }}
+        onClick={start} title="Click to edit the maker and code here">
+        {manufacturer ? `${manufacturer} – ` : ''}{productCode}
+      </button>
+      <button type="button" className="btn btn-link p-0" style={{ lineHeight: 1 }}
+        onClick={() => onOpenProductSpec && onOpenProductSpec(etRef)} title="Open in Product Spec" aria-label="Open in Product Spec">
+        <MaterialIcon name="edit" size={12} style={{ color: '#aaa' }} />
+      </button>
+    </span>
   )
 }

@@ -171,9 +171,8 @@ export default function BuilderScreen({
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   )
 
-  // The palette is a source you pull FROM into a recipe, so it is only useful while a
-  // position is open — it opens with one, instead of hiding behind a handle nobody clicks.
-  useEffect(() => { if (activePositionRef) setRightOpen(true) }, [activePositionRef])
+  // The palette starts closed and stays as you leave it (2NNZGY); it opens when something
+  // asks for it (a palette tab, adding a row) or from its handle.
 
   // The Form pane is nested too deep to reach this state, so it asks via the store.
   useEffect(() => {
