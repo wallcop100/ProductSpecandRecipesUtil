@@ -48,7 +48,8 @@ function Painter({ showDone, setShowDone,
       {done.length > 0 && (
         <div className="d-flex align-items-center gap-1 py-1 border-bottom" style={{ color: '#0f5132' }} data-testid="compact-done">
           <MaterialIcon name="check_circle" size={13} />
-          <span>{done.length === rows.length ? 'Every row is' : `${done.length} row${done.length === 1 ? ' is' : 's are'}`} in the Product Spec already</span>
+          {/* Their CODES are known; the rows are not saved to this position until you press the button (AHK54U). */}
+          <span>{done.length === rows.length && rows.length > 1 ? `All ${rows.length}` : done.length} row{done.length === 1 ? '' : 's'}: code{done.length === 1 ? '' : 's'} already in the Product Spec</span>
           <Button size="sm" variant="link" className="p-0 ms-auto" style={{ fontSize: 10 }} onClick={() => setShowDone(v => !v)}>
             {showDone ? 'hide' : 'show'}
           </Button>
@@ -97,8 +98,8 @@ function Painter({ showDone, setShowDone,
       ) : (<>
       <Button size="sm" variant="primary" className="mt-2" style={{ fontSize: 11 }} disabled={!selection?.ready || adding}
         onClick={onAdd} data-testid="add-and-build"
-        title={selection?.ready ? `Write ${posRef}'s Product Spec rows` : 'Confirm every row and give every code an ElementType first'}>
-        <MaterialIcon name="playlist_add" size={13} /> Add to Product Spec
+        title={selection?.ready ? `Save what the Form asks for at ${posRef}; codes new to the Product Spec are added to it` : 'Confirm every row and give every code an ElementType first'}>
+        <MaterialIcon name="playlist_add" size={13} /> Save {posRef}'s Form products
       </Button>
       {selection && !selection.ready && (selection.noEt > 0 || selection.clashes > 0) && (
         <span className="text-muted ms-2" style={{ fontSize: 10 }}>

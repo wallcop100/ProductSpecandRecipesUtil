@@ -151,6 +151,11 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   // Who a fork would break this away from: the wrapper's sharers for a container row,
   // otherwise the other positions using this plain ElementType.
   const forkSharers = isContainer ? sharedWith : etSharedWith
+  // The header toggle (5GLMMQ): who else uses this row's ElementType, on every row —
+  // inside wrappers too.
+  const showSharedEverywhere = useStore(s => s.showSharedEverywhere)
+  const usedElsewhere = (showSharedEverywhere && etRef && !isUnresolved && !isContainer)
+    ? getUsedIn(etRef, recipes, posRef) : []
 
   const [showContents, setShowContents] = useState(false)
   const [forking, setForking] = useState(false)
@@ -373,7 +378,15 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                 {/* Shared ElementType (non-container): a quiet icon only — reusing a product
                     across positions is normal, so the detail lives in the tooltip. The fork
                     itself is in the action stack, near the container icon. */}
-                {!isContainer && etRef && etSharedWith.length > 0 && (
+                {usedElsewhere.length > 0 && (
+                  <span className="rounded px-1 d-inline-flex align-items-center gap-1" data-testid="shared-with"
+                    style={{ fontSize: 10, background: '#e7f1ff', color: '#084298' }}
+                    title={`${etRef} is also used by ${usedElsewhere.join(', ')}`}>
+                    <MaterialIcon name="category_search" size={11} />
+                    shared with {usedElsewhere.join(', ')}
+                  </span>
+                )}
+                {!showSharedEverywhere && !isContainer && etRef && etSharedWith.length > 0 && (
                   <MaterialIcon name="group" size={13} style={{ color: '#adb5bd', flexShrink: 0 }}
                     title={`Also used by ${etSharedWith.length} other position${etSharedWith.length === 1 ? '' : 's'}: ${etSharedWith.join(', ')}`} />
                 )}
@@ -449,6 +462,14 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                                   </button>
                                 : <span className="text-muted fst-italic" title="No product spec yet">no product spec</span>}
                               {item.name && <span className="text-muted">— {item.name}</span>}
+                              {showSharedEverywhere && (() => {
+                                const others = getUsedIn(item.ref, recipes, posRef)
+                                return others.length > 0 && (
+                                  <span className="rounded px-1" style={{ fontSize: 10, background: '#e7f1ff', color: '#084298' }} data-testid="shared-with">
+                                    shared with {others.join(', ')}
+                                  </span>
+                                )
+                              })()}
                             </div>
                           )
                         })}

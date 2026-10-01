@@ -12,6 +12,7 @@ export const STATUS_DOT = {
   empty: { color: '#dc3545', label: 'No recipe yet' },
   form: { color: '#fd7e14', label: 'The Form asks for something it lacks' },
   done: { color: '#198754', label: 'Has a recipe' },
+  notInForm: { color: '#adb5bd', label: 'No recipe — the Form asks for nothing here' },
   ignored: { color: '#ced4da', label: 'Ignored' },
 }
 

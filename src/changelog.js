@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-10-01', note: 'Builder: a toggle beside ⋯ (category_search) shows “shared with …” on every row and in wrapper contents, not only on wrappers (5GLMMQ); with a Form loaded, an empty position the Form asks nothing of has a grey dot, not red (F8T5XM); the Form painter says “codes already in the Product Spec” and “Save <position>’s Form products” (AHK54U); the category_search icon draws properly' },
   { date: '2026-10-01', note: 'Form (9GLX5N): with a Product Spec in place, “Teach the tool your dialect” no longer opens by itself, and the builder’s Form spec pane loads the Form and paints the position in place (the whole Import is a small link). The full guided import is for a project starting from nothing' },
   { date: '2026-10-01', note: 'Builder: “Build recipes from the Form” and “Recipe styles” are only under ⋯ now. Adding to the Product Spec no longer opens the bulk build, and the next-step bar opens the first position without a recipe instead' },
   { date: '2026-10-01', note: 'From bug reports: a Form row with no product (n/a, by others…) comes in confirmed, and a position with only such rows says “nothing to add” in the builder painter, with no Add to press; Make template only uses a rule that picks out exactly the group (positions without its connectors are no longer claimed), else it pins the group' },

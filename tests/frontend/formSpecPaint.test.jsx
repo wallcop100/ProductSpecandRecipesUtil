@@ -55,11 +55,11 @@ describe('D4Z9CX: paint one position from the builder', () => {
     fireEvent.click(await screen.findByText('Choose spreadsheet…'))
     await screen.findByTestId('compact-painter')
     // QC50 is in the spec: the row is folded away as settled.
-    await waitFor(() => expect(screen.getByTestId('compact-done')).toHaveTextContent('Every row is in the Product Spec already'))
+    await waitFor(() => expect(screen.getByTestId('compact-done')).toHaveTextContent('1 row: code already in the Product Spec'))
     expect(screen.queryByTestId('compact-row')).toBeNull()
     await waitFor(() => expect(tableRefs()).toEqual(['C01']))          // only this position's rows
     expect(screen.queryByTestId('form-table')).toBeNull()               // condensed, not the full table
-    expect(screen.getByTestId('add-and-build')).toHaveTextContent('Add to Product Spec')
+    expect(screen.getByTestId('add-and-build')).toHaveTextContent("Save C01's Form products")
     await act(async () => { fireEvent.click(screen.getByTestId('add-and-build')) })
 
     await waitFor(() => expect(screen.queryByTestId('compact-painter')).toBeNull())   // closed again

@@ -540,6 +540,7 @@ export default function BuilderScreen({
             </span>
           )}
         </Button>
+        <SharedToggle />
         {/* The once-in-a-while ones. They were four more icons competing with Export for
             your eye, and none of them is something you reach for twice in an hour. */}
         <Dropdown align="end">
@@ -962,5 +963,16 @@ function AddSection({ show, icon, label, children }) {
       </div>
       {children}
     </div>
+  )
+}
+
+/** "Shared with" on every row, not only wrappers (5GLMMQ). */
+function SharedToggle() {
+  const on = useStore(s => s.showSharedEverywhere)
+  const toggle = useStore(s => s.toggleSharedEverywhere)
+  return (
+    <IconButton bsSize="sm" variant={on ? 'primary' : 'outline-secondary'} icon="category_search" onClick={toggle}
+      aria-pressed={on} data-testid="shared-toggle"
+      title={on ? 'Showing which other positions use each row — click to hide' : 'Show which other positions use each row, everywhere (not only wrappers)'} />
   )
 }
