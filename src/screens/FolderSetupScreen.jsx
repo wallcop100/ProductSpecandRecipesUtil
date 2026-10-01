@@ -576,18 +576,13 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
         localElementTypes,
       })
 
-      // 8b. Offer to restore unexported changes from a previous session
-      // (EXPORT_PLAN §3.1). Declining discards them permanently.
+      // 8b. Unexported changes from a previous session come back on their own: they were
+      // saved as you worked (GS9LXJ). A one-click Cancel used to throw them away for good;
+      // discarding is now a deliberate act on the notice the builder shows.
       if (pendingChanges) {
         const n = (pendingChanges.ps?.length || 0) + (pendingChanges.rs?.length || 0) + (pendingChanges.db?.length || 0)
-        if (window.confirm(`You have ${n} unexported change${n === 1 ? '' : 's'} from a previous session.\n\nRestore them?`)) {
-          useStore.getState().restorePendingChanges(pendingChanges)
-        } else {
-          try {
-            await window.electronAPI.db.clearPendingChanges(projectId)
-            await window.electronAPI.db.setPref(projectId, 'pending_db_changes', '[]')
-          } catch { /* best-effort */ }
-        }
+        useStore.getState().restorePendingChanges(pendingChanges)
+        useStore.setState({ restoredNotice: { n, at: Date.now() } })
       }
 
       // 9. Start file watcher

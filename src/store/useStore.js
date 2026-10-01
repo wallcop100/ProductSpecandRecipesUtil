@@ -504,6 +504,20 @@ const useStore = create((set, get) => ({
   // it). Surfaced as a banner; a refusal is always better than a blank ContextRef.
   recipeError: null,
 
+  // Unexported changes brought back from the last session on open: { n } (builder notice).
+  restoredNotice: null,
+  /** Throw away every unexported change (the restored ones included) and reopen. */
+  async discardPendingChanges() {
+    const { projectId } = get()
+    try {
+      await window.electronAPI?.db?.clearPendingChanges?.(projectId)
+      await window.electronAPI?.db?.setPref?.(projectId, 'pending_db_changes', '[]')
+    } catch { /* best-effort */ }
+    set({ psChanges: [], rsChanges: [], dbChanges: [], restoredNotice: null })
+    // The rows on screen still carry them: reopen from the workbooks.
+    if (typeof window !== 'undefined' && window.location && import.meta.env?.MODE !== 'test') window.location.reload()
+  },
+
   // The Form's captures: what the imported spreadsheet says each PositionType uses.
   // Persisted per project (pref `form_captures`) so the Side-by-Side pane renders
   // after a reload without re-importing. null = no Form template attached.
@@ -651,41 +665,58 @@ const useStore = create((set, get) => ({
    * Called at the start of every recipe/PS-mutating action.
    */
   _pushHistory() {
-    const { recipes, psRows, rsChanges, psChanges, past } = get()
-    const snapshot = { recipes, psRows, rsChanges, psChanges }
-    const nextPast = [...past, snapshot]
+    const { past } = get()
+    const nextPast = [...past, get()._historySnapshot()]
     if (nextPast.length > HISTORY_LIMIT) nextPast.shift()
     set({ past: nextPast, future: [] })
+  },
+
+  /**
+   * What one Undo step holds. ElementTypes are in it (WJ8TEG): a new ElementType and its
+   * Product Spec row are one addition, so Undo takes both away and Redo brings both back.
+   */
+  _historySnapshot() {
+    const { recipes, psRows, rsChanges, psChanges, elementTypes, localElementTypes, dbChanges, containerETRefs, containerReasons } = get()
+    return { recipes, psRows, rsChanges, psChanges, elementTypes, localElementTypes, dbChanges, containerETRefs, containerReasons }
+  },
+
+  /** Keep the browser's store of new ElementTypes in step with an Undo / Redo. */
+  _syncLocalETs(before = [], after = []) {
+    const { projectId } = get()
+    const db = window.electronAPI?.db
+    if (projectId == null || !db) return
+    const key = e => String(e.ElementTypeRef || e.elementTypeRef || e.ref || '').toLowerCase()
+    const had = new Map(before.map(e => [key(e), e]))
+    const has = new Map(after.map(e => [key(e), e]))
+    for (const [k, e] of had) if (!has.has(k)) db.deleteLocalET?.(projectId, e.ElementTypeRef || e.ref)?.catch?.(() => {})
+    for (const [k, e] of has) if (!had.has(k)) {
+      db.upsertLocalET?.(projectId, { ref: e.ElementTypeRef || e.ref, name: e.Name ?? null, description: e.Description ?? null,
+        family: e.Family ?? null, isCollection: (e.IsCollection || e.isCollection) === 'Y' })?.catch?.(() => {})
+    }
   },
 
   /**
    * undo() — restore the previous snapshot, pushing the current state onto redo.
    */
   undo() {
-    const { past, future, recipes, psRows, rsChanges, psChanges } = get()
+    const { past, future } = get()
     if (past.length === 0) return
     const previous = past[past.length - 1]
-    const current = { recipes, psRows, rsChanges, psChanges }
-    set({
-      ...previous,
-      past: past.slice(0, -1),
-      future: [...future, current],
-    })
+    const current = get()._historySnapshot()
+    set({ ...previous, past: past.slice(0, -1), future: [...future, current] })
+    if (previous.localElementTypes) get()._syncLocalETs(current.localElementTypes, previous.localElementTypes)
   },
 
   /**
    * redo() — re-apply the next snapshot, pushing the current state onto undo.
    */
   redo() {
-    const { past, future, recipes, psRows, rsChanges, psChanges } = get()
+    const { past, future } = get()
     if (future.length === 0) return
     const next = future[future.length - 1]
-    const current = { recipes, psRows, rsChanges, psChanges }
-    set({
-      ...next,
-      past: [...past, current],
-      future: future.slice(0, -1),
-    })
+    const current = get()._historySnapshot()
+    set({ ...next, past: [...past, current], future: future.slice(0, -1) })
+    if (next.localElementTypes) get()._syncLocalETs(current.localElementTypes, next.localElementTypes)
   },
 
   /**
@@ -2968,9 +2999,13 @@ const useStore = create((set, get) => ({
   updatePSRow(elementTypeRef, updates, { recordHistory = true } = {}) {
     const { psRows, psChanges, containerETManualRefs, containerETExcludeRefs, elementTypes, recipes } = get()
 
+    const existingRow = psRows.find(r => (r.ElementTypeRef || r.elementTypeRef) === elementTypeRef)
+    // Nothing changes (a field left as it was): no Undo step, so Redo is not wiped (WJ8TEG).
+    const same = (a, b) => String(a ?? '') === String(b ?? '')
+    if (existingRow && Object.entries(updates || {}).every(([k, v]) => same(existingRow[k], v))) return
+
     if (recordHistory) get()._pushHistory()
 
-    const existingRow = psRows.find(r => (r.ElementTypeRef || r.elementTypeRef) === elementTypeRef)
     const before = {}
     for (const key of Object.keys(updates)) {
       before[key] = existingRow ? (existingRow[key] ?? null) : null

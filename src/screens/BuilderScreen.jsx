@@ -32,6 +32,7 @@ import FavoritesPanel from '../components/FavoritesPanel'
 import ReviewModal from '../components/ReviewModal'
 import FormRecipesModal from '../components/FormRecipesModal'
 import RecipeStylesWindow from '../components/RecipeStylesWindow'
+import RestoredNotice from '../components/RestoredNotice'
 import TeachBar from '../components/TeachBar'
 import ValidationFixModal from '../components/ValidationFixModal'
 import { SaveIndicator } from '../components/SaveStatus'
@@ -699,6 +700,7 @@ export default function BuilderScreen({
             <ElementTypeTreeView />
           ) : (
             <>
+            <RestoredNotice />
             {importLoop && (
               <div className="d-flex align-items-center gap-2 mx-3 mt-2 px-3 py-2 rounded" data-testid="import-loop"
                 style={{ background: '#d1e7dd', border: '1px solid #a3cfbb', fontSize: 12, color: '#0f5132', flexShrink: 0 }}>
