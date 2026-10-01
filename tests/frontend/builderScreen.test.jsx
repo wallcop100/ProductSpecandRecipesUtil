@@ -65,11 +65,12 @@ describe('the next step on a new project', () => {
     expect(go).toHaveBeenCalled()
   })
 
-  test('after an import, positions with no recipe are offered a build', () => {
+  test('after an import, positions with no recipe are opened one by one (the bulk build is under ⋯)', () => {
     useStore.setState({ formCaptures: { byPosition: { C01r: [{ elementTypeRef: 'ET-PS-01', code: 'QC50', role: 'lead' }] } } })
     draw(vi.fn())
-    fireEvent.click(within(screen.getByTestId('next-step')).getByRole('button', { name: 'Build them' }))
-    expect(screen.getByText('Recipes from the Form')).toBeInTheDocument()
+    fireEvent.click(within(screen.getByTestId('next-step')).getByRole('button', { name: 'Open C01r' }))
+    expect(useStore.getState().activePositionRef).toBe('C01r')
+    expect(screen.queryByText('Recipes from the Form')).toBeNull()
   })
 })
 
@@ -92,7 +93,9 @@ describe('setting up a group: build one, check it in the builder, come back', ()
     })
     render(<BuilderScreen onBackToSetup={vi.fn()} onOpenProductSpec={vi.fn()} onOpenTemplateEditor={vi.fn()}
       onOpenCodeImport={vi.fn()} onOpenConnectors={vi.fn()} />)
-    fireEvent.click(within(screen.getByTestId('next-step')).getByRole('button', { name: 'Build them' }))
+    // Under ⋯ now, not pushed.
+    for (const m of screen.getAllByTitle('More')) { fireEvent.click(m); if (screen.queryByText(/Build recipes from the Form/)) break }
+    fireEvent.click(await screen.findByText(/Build recipes from the Form/))
     const g = (await screen.findAllByTestId('form-group'))[0]
     fireEvent.click(within(g).getByText(/Point source in a DL wrapper/))
     fireEvent.click(within(g).getByRole('button', { name: 'Build B1 and check it in the builder' }))

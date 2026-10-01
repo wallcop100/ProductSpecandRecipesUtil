@@ -120,9 +120,8 @@ export default function BuilderScreen({
   useEffect(() => {
     if (pendingReviewRefs && pendingReviewRefs.length > 0) {
       setReviewInitialRefs(pendingReviewRefs)
-      const fromForm = pendingReviewRefs.filter(r => formCaptures?.byPosition?.[r]?.length)
-      if (fromForm.length > 0) setFormBuild({ refs: fromForm, thenReview: true })
-      else setShowReview(true)
+      // Straight to the positions: "Build recipes from the Form" is under ⋯, never pushed (CWF8ZQ).
+      setShowReview(true)
       onConsumePendingReview?.()
     }
   }, [pendingReviewRefs, onConsumePendingReview])   // eslint-disable-line react-hooks/exhaustive-deps
@@ -140,9 +139,10 @@ export default function BuilderScreen({
     const withRecipe = new Set(live.map(r => r.PositionTypeRef || r.positionTypeRef))
     const unbuilt = imported.filter(p => !withRecipe.has(p))
     if (unbuilt.length > 0) {
+      // Position by position, from the Form spec pane. The bulk build stays under ⋯.
       return { icon: 'auto_awesome', title: `${unbuilt.length} position${unbuilt.length === 1 ? '' : 's'} from the Form ha${unbuilt.length === 1 ? 's' : 've'} no recipe yet.`,
-        text: 'Build one of each kind, check it, and the rest copy it.',
-        action: 'Build them', go: () => setFormBuild({ refs: unbuilt, thenReview: false }) }
+        text: 'Open each one: its Form spec pane adds what the Form asks for.',
+        action: `Open ${unbuilt[0]}`, go: () => useStore.getState().setActivePosition(unbuilt[0]) }
     }
     return null
   }, [hideNextStep, recipes, formCaptures, onOpenCodeImport])
