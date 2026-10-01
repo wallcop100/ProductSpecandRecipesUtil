@@ -14,7 +14,7 @@ import { roleOf } from '../utils/recipePatterns.js'
 import { planFamilyMove } from '../utils/etSeed.js'
 import { loadReports, saveReports } from '../utils/bugReports.js'
 import { connectorSignature, templateParts, partsToIngredients, diffParts, isConnectorPart, DEFAULT_CONNECTOR_FAMILIES } from '../utils/connectorGroups.js'
-import { templateRecords, templateRule } from '../utils/templateRules.js'
+import { templateRecords, templateRule, specificityScope } from '../utils/templateRules.js'
 
 /** _templateRecOf's cache: not state (no re-render), keyed on the arrays it reads. */
 let templateRecCache = null
@@ -2537,10 +2537,13 @@ const useStore = create((set, get) => ({
       || c.positionUI !== positionUI || c.connectorFamilies !== connectorFamilies) {
       const opts = get()._connectorOpts()
       const map = templateRecords({ positionTypes, recipes, psRows, elementTypes, positionUI, isConnector: ref => isConnectorPart(ref, opts) })
-      templateRecCache = { positionTypes, recipes, psRows, elementTypes, positionUI, connectorFamilies, map }
+      templateRecCache = { positionTypes, recipes, psRows, elementTypes, positionUI, connectorFamilies, map, scope: specificityScope(map.values()) }
     }
     const map = templateRecCache.map
-    return ref => map.get(ref) || { Tags: positionUI[ref]?.tags || [] }
+    const recOf = ref => map.get(ref) || { Tags: positionUI[ref]?.tags || [] }
+    // What a template rule's specificity is measured against: the whole project.
+    recOf.scope = templateRecCache.scope
+    return recOf
   },
 
   _connectorOpts() {

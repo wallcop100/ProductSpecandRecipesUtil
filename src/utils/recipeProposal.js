@@ -22,6 +22,7 @@
 
 import { roleOf, driverOf, envOf, wrapperFor, patternFor, designKind, PRODUCT_ROLES, SHIPPED_PATTERNS, harvestPatterns } from './recipePatterns'
 import { matchStyle, groupKeyFor } from './recipeStyles'
+import { specificityScope } from './templateRules'
 
 const up = s => String(s ?? '').trim().toUpperCase()
 const refOf = r => r.ElementTypeRef || r.elementTypeRef || ''
@@ -359,11 +360,12 @@ function styledGroups(posRefs, ctx, { records, styles = [], by = ['main', 'kind'
   const groups = new Map()
   const skipped = []
   const richness = new Map()
+  const specScope = specificityScope(records.values())
   for (const ref of posRefs) {
     const p = proposeRecipe(ref, ctx)
     if (p.skip) { skipped.push({ posRef: ref, why: p.skip }); continue }
     const rec = records.get(ref) || {}
-    const style = matchStyle(rec, styles)
+    const style = matchStyle(rec, styles, specScope)
     const dims = groupKeyFor(rec, by)
     const labels = []
     if (by.includes('kind')) labels.push(`${KIND_LABEL[p.kind.wk]} · ${DRIVER_LABEL[p.kind.dl]} · ${p.kind.env === 'EXT' ? 'exterior' : 'interior'}`)

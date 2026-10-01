@@ -17,6 +17,7 @@ const { default: useStore } = await import('../../src/store/useStore.js')
 const G = await import('../../src/utils/connectorGroups.js')
 const { default: ConnectorsScreen } = await import('../../src/screens/ConnectorsScreen.jsx')
 const T = await import('../../src/utils/templateRules.js')
+const { specificityScope, ruleSpecificity, mostSpecific, specificityText } = T
 const { default: CollectionEditor } = await import('../../src/components/CollectionEditor.jsx')
 
 let n = 0
@@ -251,4 +252,65 @@ describe('Removing connectors: extras and empty templates are checked', () => {
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Apply 3 changes/ })) })
     expect(useStore.getState().recipes.filter(r => r.ElementTypeRef === 'ET-5PIN-SR' && r.IsDeleted !== 'Y')).toHaveLength(0)
   })
+})
+
+describe('specificity from the project’s data', () => {
+  // 16 positions: half REMOTE, half LOCAL; 2 made by Wago, the rest by Hager.
+  const recs = Array.from({ length: 16 }, (_, i) => ({
+    PositionTypeRef: `P${i}`, DriverLocation: i % 2 ? 'REMOTE' : 'LOCAL', Manufacturer: i < 2 ? 'Wago' : 'Hager', Env: 'INT',
+  }))
+  const scope = specificityScope(recs)
+  const R = (...conditions) => ({ match: 'all', conditions })
+  const remote = { column: 'DriverLocation', op: 'equals', value: 'REMOTE' }
+  const wago = { column: 'Manufacturer', op: 'equals', value: 'Wago' }
+  const intr = { column: 'Env', op: 'equals', value: 'INT' }
+
+  test('a rare value scores higher than a common one; a value everyone has scores 0', () => {
+    expect(ruleSpecificity(R(wago), scope)).toBe(3)        // 2 of 16
+    expect(ruleSpecificity(R(remote), scope)).toBe(1)      // 8 of 16
+    expect(ruleSpecificity(R(intr), scope)).toBe(0)
+    expect(ruleSpecificity(R(remote, intr), scope)).toBe(1)
+  })
+
+  test('one rare condition beats two common ones', () => {
+    const cands = [{ id: 'two', rule: R(remote, intr) }, { id: 'maker', rule: R(wago) }]
+    expect(mostSpecific(cands, scope).winners).toEqual(['maker'])
+  })
+
+  test('"is not" barely scores; OR scores as the positions any condition matches', () => {
+    expect(ruleSpecificity(R({ column: 'Manufacturer', op: 'notEquals', value: 'Wago' }), scope)).toBe(0.2)
+    expect(ruleSpecificity({ match: 'any', conditions: [wago, remote] }, scope)).toBe(0.8)   // 9 of 16
+  })
+
+  test('a rule whose positions all fall inside another’s wins, whatever the scores', () => {
+    const wagoRemote = R(wago, remote)                        // P1 only
+    const cands = [{ id: 'a', rule: R(wago, intr) }, { id: 'b', rule: wagoRemote }]
+    expect(mostSpecific(cands, scope)).toEqual({ winners: ['b'], beaten: ['a'] })
+  })
+
+  test('equal scores on overlapping rules are a clash', () => {
+    const local = { column: 'DriverLocation', op: 'equals', value: 'LOCAL' }
+    const hager = { column: 'Manufacturer', op: 'equals', value: 'Hager' }
+    const r = mostSpecific([{ id: 'x', rule: R(remote) }, { id: 'y', rule: R(local) }, { id: 'z', rule: R(hager, intr) }], scope)
+    expect(r.winners).toEqual(['x', 'y'])
+  })
+
+  test('without a scope it counts conditions, and the text explains the score', () => {
+    expect(ruleSpecificity(R(remote, intr))).toBe(2)
+    expect(specificityText(R(wago, remote), scope)).toMatch(/4 = 3 \+ 1[\s\S]*2 of 16/)
+  })
+})
+
+test('membership measures specificity against the scope recOf carries', async () => {
+  const { membership } = await import('../../src/utils/connectorGroups.js')
+  const recs = Array.from({ length: 16 }, (_, i) => ({ DriverLocation: i % 2 ? 'REMOTE' : 'LOCAL', Manufacturer: i < 2 ? 'Wago' : 'Hager', Env: 'INT' }))
+  const recOf = r => recs[Number(r.slice(1))]
+  recOf.scope = specificityScope(recs)
+  const cs = [
+    { CollectionId: 'kind', Rule: { match: 'all', conditions: [{ column: 'DriverLocation', op: 'equals', value: 'REMOTE' }, { column: 'Env', op: 'equals', value: 'INT' }] } },
+    { CollectionId: 'maker', Rule: { match: 'all', conditions: [{ column: 'Manufacturer', op: 'equals', value: 'Wago' }] } },
+  ]
+  const m = membership(['P1', 'P3'], cs, {}, recOf)
+  expect(m.get('P1')).toMatchObject({ templates: ['maker'], clash: false, alsoMatched: ['kind'] })
+  expect(m.get('P3').templates).toEqual(['kind'])
 })

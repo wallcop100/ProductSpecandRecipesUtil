@@ -7,7 +7,7 @@ import RuleBuilder from './RuleBuilder'
 import {
   STYLE_RULE_COLUMNS, FIELD_LABEL, findStyleGroups, styleRecords, recipeShape, styleRuleOf, suggestStyleRule, matchStyle,
 } from '../utils/recipeStyles'
-import { ruleConditionsOf, ruleSpecificity, compareRule, ruleMatchesRecord } from '../utils/templateRules'
+import { ruleConditionsOf, ruleSpecificity, specificityText, specificityScope, compareRule, ruleMatchesRecord } from '../utils/templateRules'
 import { conditionMatches } from '../utils/tagRules'
 
 const EMPTY = { match: 'all', conditions: [] }
@@ -52,6 +52,8 @@ export default function RecipeStylesWindow({ show, onHide, focusId = null, recor
   const styles = useMemo(() => templates.filter(t => styleRuleOf(t)), [templates])
   const scope = useMemo(() => positionTypes.filter(p => (p.IsCollection || p.isCollection) !== 'Y').map(p => p.PositionTypeRef), [positionTypes])
   const recOf = r => records.get(r) || {}
+  // Specificity is measured against the project's positions.
+  const specScope = useMemo(() => specificityScope(scope.map(recOf)), [scope, records])   // eslint-disable-line react-hooks/exhaustive-deps
   const famOf = useMemo(() => new Map(elementTypes.map(e => [up(e.ElementTypeRef), e.Family || e.family || ''])), [elementTypes])
   const shapeOf = useMemo(() => {
     const m = new Map()
@@ -63,7 +65,7 @@ export default function RecipeStylesWindow({ show, onHide, focusId = null, recor
     return m
   }, [scope, recipes, formCaptures, famOf])
   const found = useMemo(() => findStyleGroups(scope, { recipes, formCaptures, elementTypes })
-    .map(g => ({ ...g, covered: g.positions.filter(p => matchStyle(recOf(p), styles)) })), [scope, recipes, formCaptures, elementTypes, styles])   // eslint-disable-line react-hooks/exhaustive-deps
+    .map(g => ({ ...g, covered: g.positions.filter(p => matchStyle(recOf(p), styles, specScope)) })), [scope, recipes, formCaptures, elementTypes, styles])   // eslint-disable-line react-hooks/exhaustive-deps
 
   const current = styles.find(t => t.id === sel) || null
   useEffect(() => { if (show) { setSel(focusId || styles[0]?.id || null); setNote(null); setCheckRef('') } }, [show, focusId])   // eslint-disable-line react-hooks/exhaustive-deps
@@ -128,7 +130,7 @@ export default function RecipeStylesWindow({ show, onHide, focusId = null, recor
                 className="px-2 py-1 rounded mb-1" style={{ background: sel === t.id ? '#cfe2ff' : '#f8f9fa', cursor: 'pointer' }}>
                 <div className="fw-semibold">{t.name}</div>
                 <div className="text-muted text-truncate" style={{ fontSize: 10 }}>
-                  {scope.filter(p => matchStyle(recOf(p), styles)?.id === t.id).length} positions · specificity {ruleSpecificity(styleRuleOf(t))}
+                  {scope.filter(p => matchStyle(recOf(p), styles, specScope)?.id === t.id).length} positions · specificity {ruleSpecificity(styleRuleOf(t), specScope)}
                 </div>
               </div>
             ))}
@@ -152,7 +154,7 @@ export default function RecipeStylesWindow({ show, onHide, focusId = null, recor
               <div data-testid="style-editor">
                 <div className="d-flex align-items-center gap-2 mb-2">
                   <strong style={{ fontSize: 14 }}>{current.name}</strong>
-                  <Badge bg="light" text="dark" className="border">specificity {ruleSpecificity(rule)}</Badge>
+                  <Badge bg="light" text="dark" className="border" title={specificityText(rule, specScope)} data-testid="style-specificity">specificity {ruleSpecificity(rule, specScope)}</Badge>
                   <Button size="sm" variant="outline-primary" className="ms-auto" style={{ fontSize: 11 }} onClick={suggest} disabled={!carrierShape}>
                     <MaterialIcon name="auto_fix_high" size={13} /> Suggest from the positions built like it
                   </Button>
@@ -182,7 +184,7 @@ export default function RecipeStylesWindow({ show, onHide, focusId = null, recor
                       return <div key={i} className={ok ? 'text-success' : 'text-danger'}>{ok ? '✓' : '✗'} {FIELD_LABEL[c.column] || c.column} {OP_WORD[c.op] || c.op} {c.op === 'isEmpty' || c.op === 'isNotEmpty' ? '' : `“${c.value}”`}<span className="text-muted"> — it has {shown(checkRec[c.column])}</span></div>
                     })}
                     {(() => {
-                      const winner = matchStyle(checkRec, styles.map(t => (t.id === current.id ? { ...t, rule } : t)))
+                      const winner = matchStyle(checkRec, styles.map(t => (t.id === current.id ? { ...t, rule } : t)), specScope)
                       return winner?.id === current.id ? <div className="text-success fw-semibold">→ built with this style</div>
                         : winner ? <div className="text-danger fw-semibold">→ {winner.name} is more specific</div>
                           : <div className="text-muted">→ no style: grouped by the chosen dimensions</div>

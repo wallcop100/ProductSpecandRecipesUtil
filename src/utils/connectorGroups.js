@@ -23,7 +23,7 @@ import { positionRecipeWithWrapperInternals } from './collectionStatus'
 import { rowSlot, normalizeSection, POSITION, INTERNAL } from './recipePresence'
 import { roleOf } from './recipePatterns'
 import { connectorRole } from './connectors'
-import { templateRule, ruleIsEmpty, ruleMatchesRecord, ruleSpecificity, asRecord } from './templateRules'
+import { templateRule, ruleIsEmpty, ruleMatchesRecord, mostSpecific, asRecord } from './templateRules'
 
 const lc = s => String(s ?? '').trim().toLowerCase()
 
@@ -153,10 +153,11 @@ export function describeParts(parts) {
  * (templateRules.templateRecords), or a bare tag list (read as { Tags }).
  *
  * A pin wins. Otherwise every template whose rule matches is a candidate and the MOST
- * SPECIFIC rule wins (templateRules.ruleSpecificity); the ones it beats are `alsoMatched`.
- * Two equally specific winners are a clash.
+ * SPECIFIC rule wins (templateRules.mostSpecific, measured against `scope`, which defaults
+ * to recOf.scope — the store's recOf carries the whole project); the ones it beats are
+ * `alsoMatched`. Two equally specific winners are a clash.
  */
-export function membership(positionRefs, collections, pins = {}, recOf = () => [], excludes = {}) {
+export function membership(positionRefs, collections, pins = {}, recOf = () => [], excludes = {}, scope = recOf?.scope) {
   const pinnedTo = new Map()
   for (const [id, refs] of Object.entries(pins || {})) for (const r of refs || []) pinnedTo.set(r, id)
   const removed = (id, pos) => (excludes?.[id] || []).includes(pos)
@@ -174,10 +175,9 @@ export function membership(positionRefs, collections, pins = {}, recOf = () => [
     }
     const cands = (collections || [])
       .filter(c => !removed(c.CollectionId, pos) && filterMatches(c, rec, { hasPins: (pins?.[c.CollectionId] || []).length > 0 }))
-      .map(c => ({ id: c.CollectionId, spec: ruleSpecificity(templateRule(c)) }))
-    const top = Math.max(-1, ...cands.map(c => c.spec))
-    const winners = cands.filter(c => c.spec === top).map(c => c.id)
-    out.set(pos, { templates: winners, pinnedTo: null, clash: winners.length > 1, alsoMatched: cands.filter(c => c.spec !== top).map(c => c.id) })
+      .map(c => ({ id: c.CollectionId, rule: templateRule(c) }))
+    const { winners, beaten } = mostSpecific(cands, scope)
+    out.set(pos, { templates: winners, pinnedTo: null, clash: winners.length > 1, alsoMatched: beaten })
   }
   return out
 }
