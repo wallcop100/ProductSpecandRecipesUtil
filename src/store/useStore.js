@@ -506,6 +506,13 @@ const useStore = create((set, get) => ({
 
   // Unexported changes brought back from the last session on open: { n } (builder notice).
   restoredNotice: null,
+  /** Builder: "shared with" on every row, not only wrappers (5GLMMQ). Remembered in this browser. */
+  showSharedEverywhere: (() => { try { return localStorage.getItem('show_shared_everywhere') === '1' } catch { return false } })(),
+  toggleSharedEverywhere() {
+    const on = !get().showSharedEverywhere
+    try { localStorage.setItem('show_shared_everywhere', on ? '1' : '0') } catch { /* not remembered */ }
+    set({ showSharedEverywhere: on })
+  },
   /** Throw away every unexported change (the restored ones included) and reopen. */
   async discardPendingChanges() {
     const { projectId } = get()

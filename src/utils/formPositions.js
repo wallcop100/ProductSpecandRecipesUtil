@@ -7,6 +7,8 @@
  * captures are MERGED for the staged positions rather than replaced. Pure.
  */
 
+import { isNothingText } from './obviousRows'
+
 /** Rows grouped by Form ref, in the order the Form first mentions each. */
 export function groupPositions(rows = []) {
   const byRef = new Map()
@@ -63,7 +65,7 @@ export function mergeCaptures(prev, next, targets, formRefs = []) {
  * positionPaintStatus(draft, posRef) → { state, rows, unconfirmed, formRefs }
  * Where ONE PositionType stands in the saved import (the builder's Form spec pane):
  * 'noForm' (nothing loaded), 'absent' (the Form has no rows for it), 'todo' (rows to
- * confirm), 'ready' (confirmed, not added yet) or 'added'. A Form ref lands on posRef
+ * confirm), 'ready' (confirmed, not added yet), 'added', or 'nothing' (no product in its rows). A Form ref lands on posRef
  * through the import's resolutions (ptResolve), as Import itself routes it.
  */
 export function positionPaintStatus(draft, posRef, { buildRefMap, targetFor } = {}) {
@@ -74,6 +76,8 @@ export function positionPaintStatus(draft, posRef, { buildRefMap, targetFor } = 
   const groups = groupPositions(draft.rows).filter(g => String(target(g.formRef) || '').toLowerCase() === want)
   const rows = groups.flatMap(g => g.rows)
   if (!rows.length) return { state: 'absent', rows: 0, unconfirmed: 0, formRefs: [] }
+  // No product anywhere in its rows ("n/a", "by others"): nothing to add, nothing to do.
+  if (rows.every(r => isNothingText(r.rawText))) return { state: 'nothing', rows: rows.length, unconfirmed: 0, formRefs: groups.map(g => g.formRef) }
   const unconfirmed = rows.filter(r => !r.confirmed).length
   const staged = new Set(draft.stagedRefs || [])
   const formRefs = groups.map(g => g.formRef)

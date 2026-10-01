@@ -77,3 +77,15 @@ describe('PositionRail in the recipe view', () => {
     expect(screen.getByTestId('rail-A10')).toBeTruthy()
   })
 })
+
+describe('F8T5XM: grey, not red, for an empty position the Form never mentions', () => {
+  test('with a Form loaded: in the Form and empty is red; not in it is grey', () => {
+    setup({ importDraft: null, formCaptures: { byPosition: { A10: [{ elementTypeRef: 'ET-PS-02', code: 'X1' }] } } })
+    expect(screen.getAllByLabelText('No recipe yet')).toHaveLength(1)                  // A10
+    expect(screen.getAllByLabelText('No recipe — the Form asks for nothing here')).toHaveLength(1)    // B1
+  })
+  test('without a Form, empty is red as before', () => {
+    setup({ importDraft: null })
+    expect(screen.getAllByLabelText('No recipe yet')).toHaveLength(2)
+  })
+})

@@ -385,6 +385,21 @@ export default function FormSpecPane({ posRef, embedded = false }) {
   // Stage ① has not happened. Say so once, clearly, and offer the one thing to do.
   if (!formCaptures) {
     if (embedded) return null   // the Review modal is not the place to start a workflow
+    // With a Product Spec in place, start here, with what it knows (9GLX5N): load the Form
+    // and paint this position. The full Import is for a project starting from nothing.
+    if (psRows.some(r => String(r.ProductCode || r.productCode || '').trim())) {
+      return (
+        <div className="border-start ps-3" style={paneStyle} data-painting={painting || undefined}>
+          <SectionLabel>Form spec</SectionLabel>
+          {paintBar}
+          {!painting && (
+            <Button size="sm" variant="link" className="p-0 text-muted" style={{ fontSize: 10 }} onClick={handleReimport}>
+              or go through the whole Form in Import →
+            </Button>
+          )}
+        </div>
+      )
+    }
     return (
       <div className="border-start ps-3" style={paneStyle} data-painting={painting || undefined}>
         <SectionLabel>Form spec</SectionLabel>

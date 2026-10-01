@@ -55,11 +55,11 @@ describe('D4Z9CX: paint one position from the builder', () => {
     fireEvent.click(await screen.findByText('Choose spreadsheet…'))
     await screen.findByTestId('compact-painter')
     // QC50 is in the spec: the row is folded away as settled.
-    await waitFor(() => expect(screen.getByTestId('compact-done')).toHaveTextContent('Every row is in the Product Spec already'))
+    await waitFor(() => expect(screen.getByTestId('compact-done')).toHaveTextContent('1 row: code already in the Product Spec'))
     expect(screen.queryByTestId('compact-row')).toBeNull()
     await waitFor(() => expect(tableRefs()).toEqual(['C01']))          // only this position's rows
     expect(screen.queryByTestId('form-table')).toBeNull()               // condensed, not the full table
-    expect(screen.getByTestId('add-and-build')).toHaveTextContent('Add to Product Spec')
+    expect(screen.getByTestId('add-and-build')).toHaveTextContent("Save C01's Form products")
     await act(async () => { fireEvent.click(screen.getByTestId('add-and-build')) })
 
     await waitFor(() => expect(screen.queryByTestId('compact-painter')).toBeNull())   // closed again
@@ -94,11 +94,60 @@ describe('D4Z9CX: paint one position from the builder', () => {
   })
 
   test('positionPaintStatus follows the resolved ref', () => {
-    const draft = { rows: [{ positionType: 'C01', confirmed: true }], map: { pt: 'PositionTypeRef' },
+    const draft = { rows: [{ positionType: 'C01', rawText: 'QC50', confirmed: true }], map: { pt: 'PositionTypeRef' },
       resolutions: [{ formRef: 'C01', target: 'C01r' }], stagedRefs: ['C01'] }
     const helpers = { buildRefMap: (res) => new Map(res.map(r => [r.formRef.toUpperCase(), r.target])), targetFor: (m, f) => m.get(f.toUpperCase()) || null }
     expect(positionPaintStatus(draft, 'C01r', helpers).state).toBe('added')
     expect(positionPaintStatus(draft, 'C01', helpers).state).toBe('absent')
     expect(positionPaintStatus(null, 'C01r').state).toBe('noForm')
+  })
+})
+
+describe('ZEM43Y / 859SCF: nothing to add is nothing to do', () => {
+  test('an n/a row comes in confirmed; a position with only n/a rows offers no Add', async () => {
+    readSheet.mockResolvedValue({ sheets: ['S'], sheet: 'S', headers: HEAD, rows: [
+      ...ROWS, { PositionTypeRef: 'F01', ManufacturerName: '', ProductCode: 'n/a' },
+    ] })
+    useStore.setState({ positionTypes: ['C01', 'C02', 'C03', 'F01'].map(r => ({ PositionTypeRef: r })) })
+    render(<FormSpecPane posRef="F01" />)
+    fireEvent.click(screen.getByTestId('paint-position'))
+    fireEvent.click(await screen.findByText('Choose spreadsheet…'))
+    expect(await screen.findByTestId('compact-nothing')).toHaveTextContent('Nothing to add')
+    expect(screen.queryByTestId('add-and-build')).toBeNull()
+    await waitFor(() => expect(useStore.getState().importDraft?.rows?.find(r => r.positionType === 'F01')?.confirmed).toBe(true), { timeout: 3000 })
+    expect(positionPaintStatus(useStore.getState().importDraft, 'F01').state).toBe('nothing')
+  })
+})
+
+describe('9GLX5N: with a Product Spec, start straight away', () => {
+  const MESSY = [
+    { PositionTypeRef: 'C01', ManufacturerName: 'iGuzzini', ProductCode: 'QC50 with honeycomb LOUVRE-HC60 and EM pack 3h' },
+    { PositionTypeRef: 'C02', ManufacturerName: 'iGuzzini', ProductCode: 'QC51 c/w snoot SN-22 in black RAL9005' },
+    { PositionTypeRef: 'C03', ManufacturerName: 'iGuzzini', ProductCode: 'QC52 + driver DR-700 (remote) 24V' },
+  ]
+  const open = async () => {
+    const { default: ProductCodeImportScreen } = await import('../../src/screens/ProductCodeImportScreen.jsx')
+    readSheet.mockResolvedValue({ sheets: ['S'], sheet: 'S', headers: HEAD, rows: MESSY })
+    render(<ProductCodeImportScreen onBack={vi.fn()} onReviewPositions={vi.fn()} />)
+    fireEvent.click(await screen.findByText('Choose spreadsheet…'))
+    await screen.findByTestId('form-table')
+  }
+
+  test('no "teach your dialect" when the spec has codes', async () => {
+    await open()
+    expect(screen.queryByText('Teach the tool your dialect')).toBeNull()
+  })
+
+  test('a project starting from nothing still gets it', async () => {
+    useStore.setState({ psRows: [] })
+    await open()
+    expect(await screen.findByText('Teach the tool your dialect')).toBeInTheDocument()
+  })
+
+  test('the builder pane leads with painting in place; the full Import is a small link', () => {
+    render(<FormSpecPane posRef="C01" />)
+    expect(screen.getByTestId('paint-position')).toBeInTheDocument()
+    expect(screen.queryByText('No Form template yet')).toBeNull()
+    expect(screen.getByText(/or go through the whole Form in Import/)).toBeInTheDocument()
   })
 })

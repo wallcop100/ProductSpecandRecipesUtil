@@ -2,6 +2,8 @@ import { useMemo } from 'react'
 import useStore from '../store/useStore'
 import { formWorklist } from '../utils/formSpec'
 import { positionFamilyOf } from '../utils/positionFamily'
+import { positionPaintStatus } from '../utils/formPositions'
+import { buildRefMap, targetFor } from '../utils/ptResolve'
 
 /**
  * usePositionList — the PositionTypes list, filtered, sorted and grouped by family, with a
@@ -9,7 +11,8 @@ import { positionFamilyOf } from '../utils/positionFamily'
  * can never disagree about what is shown or what state a position is in.
  *
  * status: 'empty' (no recipe rows) · 'form' (the Form asks for something it lacks) ·
- *         'done' (has a recipe, nothing outstanding) · 'ignored'
+ *         'done' (has a recipe, nothing outstanding) · 'ignored' ·
+ *         'notInForm' (no recipe, and the loaded Form asks for no product there: F8T5XM)
  */
 export const NO_FAMILY = '(no family)'
 
@@ -24,6 +27,7 @@ export default function usePositionList() {
   const formCaptures = useStore(s => s.formCaptures)
   const containerETRefs = useStore(s => s.containerETRefs)
   const view = useStore(s => s.positionList)
+  const importDraft = useStore(s => s.importDraft)
 
   const countByRef = useMemo(() => {
     const map = {}
@@ -43,9 +47,14 @@ export default function usePositionList() {
     () => new Set(formWorklist(recipes, formCaptures, containerETRefs).map(w => w.posRef)),
     [recipes, formCaptures, containerETRefs])
 
+  // With a Form loaded, an empty position the Form never mentions has nothing to build.
+  const formLoaded = !!formCaptures || !!importDraft?.rows?.length
+  // "In the Form" means it asks for a product here; rows of only "n/a" ask for nothing.
+  const inForm = ref => !!(formCaptures?.byPosition?.[ref]?.length || formCaptures?.pendingByPosition?.[ref]?.length)
+    || !['absent', 'noForm', 'nothing'].includes(positionPaintStatus(importDraft, ref, { buildRefMap, targetFor }).state)
   const statusOf = pt => {
     if (isIgnored(pt)) return 'ignored'
-    if (!countByRef[pt.PositionTypeRef]) return 'empty'
+    if (!countByRef[pt.PositionTypeRef]) return formLoaded && !inForm(pt.PositionTypeRef) ? 'notInForm' : 'empty'
     if (incompleteRefs.has(pt.PositionTypeRef)) return 'form'
     return 'done'
   }
@@ -68,7 +77,7 @@ export default function usePositionList() {
     return ref.toLowerCase().includes(q) || name.toLowerCase().includes(q) || tags.some(t => t.toLowerCase().includes(q))
   })
 
-  const STATUS_ORDER = { form: 0, empty: 1, done: 2, ignored: 3 }
+  const STATUS_ORDER = { form: 0, empty: 1, done: 2, notInForm: 3, ignored: 4 }
   const sortPts = pts => [...pts].sort((a, b) => (view.sort === 'status'
     ? (STATUS_ORDER[statusOf(a)] - STATUS_ORDER[statusOf(b)]) : 0) || byRef(a.PositionTypeRef, b.PositionTypeRef))
 

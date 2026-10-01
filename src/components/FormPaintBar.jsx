@@ -13,6 +13,7 @@ const LABEL = {
   todo: { tone: 'warn', icon: 'brush', text: n => `${n} row${n === 1 ? '' : 's'} to confirm` },
   ready: { tone: 'info', icon: 'playlist_add', text: 'ready to add' },
   added: { tone: 'ok', icon: 'check_circle', text: 'added' },
+  nothing: { tone: 'neutral', icon: 'block', text: 'nothing to add' },
 }
 
 /**

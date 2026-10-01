@@ -17,6 +17,13 @@ export function isNothingRow(row) {
   return cellLines(row).every(isNoProductText)
 }
 
+/** isNothingRow from the cell text alone (a saved import's rows carry no tokens). */
+export function isNothingText(rawText) {
+  const raw = String(rawText || '')
+  if (raw.split(/\s+/).some(w => w && looksLikeProductCode(w))) return false
+  return raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean).every(isNoProductText)
+}
+
 /**
  * A row that wants a product nobody has chosen yet: "TBC", "*custom*", "Awaiting custom
  * code", or words with no code in them ("Light Sheet", "BE/ZEP/IB/**"). It gets a
