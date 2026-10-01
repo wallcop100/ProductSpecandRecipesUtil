@@ -1693,7 +1693,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
           </div>
 
           {/* Compare + stage */}
-          <div style={{ width: embedded ? 300 : 350, overflowY: 'auto', flexShrink: 0 }} className="border-start ps-3">
+          <div style={{ width: embedded ? 260 : 350, overflowY: 'auto', flexShrink: 0 }} className="border-start ps-3">
             {/* Stage sits on top, sticky: when every code is done it is the next thing to do,
                 not something to scroll past the whole code list to find. */}
             {selection && (

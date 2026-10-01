@@ -241,9 +241,14 @@ export default function FormSpecPane({ posRef, embedded = false }) {
    * default view is the comparison and nothing else.
    */
   const [open, setOpen] = useState(() => new Set())
+  // Painting this position's Form rows happens inline: the pane widens to hold the painter.
+  const [painting, setPainting] = useState(false)
+  const paneStyle = painting
+    ? { width: 'min(1100px, 68%)', flexShrink: 0, overflowY: 'auto', transition: 'width .15s' }
+    : { width: 340, flexShrink: 0, overflowY: 'auto', transition: 'width .15s' }
   // After painting this position: show what is no longer in the Form (to remove), if any.
   const paintBar = embedded ? null : (
-    <FormPaintBar posRef={posRef} onStaged={() => {
+    <FormPaintBar posRef={posRef} open={painting} onOpenChange={setPainting} onStaged={() => {
       const orphans = useStore.getState().formCaptures?.orphansByPosition?.[posRef] || []
       if (orphans.length) setOpen(o => new Set([...o, 'orphaned']))
     }} />
@@ -383,7 +388,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
   if (!formCaptures) {
     if (embedded) return null   // the Review modal is not the place to start a workflow
     return (
-      <div className="border-start ps-3" style={{ width: 340, flexShrink: 0, overflowY: 'auto' }}>
+      <div className="border-start ps-3" style={paneStyle} data-painting={painting || undefined}>
         <SectionLabel>Form spec</SectionLabel>
         {paintBar}
         <div className="px-3 py-4 rounded text-center"
@@ -407,7 +412,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
   // A position with ONLY pending products is not a position the Form is silent about.
   if (formEts.length === 0 && result.orphaned.length === 0 && pending.length === 0) {
     return (
-      <div className="border-start ps-3" style={{ width: 340, flexShrink: 0, overflowY: 'auto' }}>
+      <div className="border-start ps-3" style={paneStyle} data-painting={painting || undefined}>
         <div className="d-flex align-items-center gap-1">
           <SectionLabel className="mb-0">Form spec</SectionLabel>
           <span className="ms-auto">
@@ -484,7 +489,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
   const allPresent = missing.length === 0 && formEts.length > 0
 
   return (
-    <div className="border-start ps-3" style={{ width: 340, flexShrink: 0, overflowY: 'auto' }}>
+    <div className="border-start ps-3" style={paneStyle} data-painting={painting || undefined}>
       {/* Where this came from */}
       <div className="d-flex align-items-center gap-1 mb-1">
         <SectionLabel className="mb-0">Form spec</SectionLabel>
