@@ -6,7 +6,7 @@ import InfoTip from './InfoTip'
 import ConnectorBoard from './ConnectorBoard'
 import RuleBuilder from './RuleBuilder'
 import useConnectorGroups from './useConnectorGroups'
-import { templateParts, partsToIngredients, signatureKey, membership } from '../utils/connectorGroups'
+import { templateParts, partsToIngredients, signatureKey, membership, suggestName } from '../utils/connectorGroups'
 import { conditionMatches, RECIPE_TAG_COLUMNS } from '../utils/tagRules'
 import {
   TEMPLATE_RULE_COLUMNS, templateRule, ruleFromTags, ruleIsEmpty, ruleConditionsOf, ruleMatchesRecord,
@@ -147,6 +147,9 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
     const found = ruleFor(carriers, scope, groups.recOf, { against })
     if (!found) { setSuggested({ none: true }); return }
     setRule(found.rule)
+    // A blank name, or one made from the parts, becomes what the rule filters on.
+    const partsName = suggestName(templateParts({ Ingredients: partsToIngredients(ingredients.filter(p => p.ref?.trim())) }))
+    if (!name.trim() || name.trim() === partsName) setName(suggestName([], found.rule))
     const toGain = scope.filter(r => !groups.sigs.has(r) && ruleMatchesRecord(found.rule, groups.recOf(r)))
     setSuggested({ exact: found.exact, outsiders: found.outsiders, from: carriers.length, toGain })
   }

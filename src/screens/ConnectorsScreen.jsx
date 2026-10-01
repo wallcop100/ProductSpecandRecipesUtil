@@ -37,11 +37,12 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
   const allFamilies = [...new Set(elementTypes.map(e => e.Family || e.family).filter(Boolean))].sort()
 
   async function makeTemplate(g) {
-    const name = window.prompt(`Name a template for these ${g.positions.length} position${g.positions.length === 1 ? '' : 's'}`, suggestName(g.parts))?.trim()
-    if (!name) return
     // A rule from the data that picks out exactly this group; otherwise pin the positions.
+    // The name says what the rule filters on.
     const scope = groups.scoped.map(pt => pt.PositionTypeRef)
     const found = ruleFor(g.positions, scope, groups.recOf, { against: scope.filter(r => groups.sigs.has(r)) })
+    const name = window.prompt(`Name a template for these ${g.positions.length} position${g.positions.length === 1 ? '' : 's'}`, suggestName(g.parts, found?.exact ? found.rule : null))?.trim()
+    if (!name) return
     const saved = await makeTemplateFromGroup(name, g.parts, g.positions, { rule: found?.exact ? found.rule : null })
     if (saved) { setSelectedCell(null); setSelectedCollectionId(saved.CollectionId) }
   }

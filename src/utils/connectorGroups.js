@@ -23,7 +23,7 @@ import { positionRecipeWithWrapperInternals } from './collectionStatus'
 import { rowSlot, normalizeSection, POSITION, INTERNAL } from './recipePresence'
 import { roleOf } from './recipePatterns'
 import { connectorRole } from './connectors'
-import { templateRule, ruleIsEmpty, ruleMatchesRecord, mostSpecific, asRecord } from './templateRules'
+import { templateRule, ruleIsEmpty, ruleMatchesRecord, ruleConditionsOf, mostSpecific, asRecord } from './templateRules'
 
 const lc = s => String(s ?? '').trim().toLowerCase()
 
@@ -211,8 +211,31 @@ export function nearMisses(parts, sigs, { members = new Set(), max = 2 } = {}) {
   return out.sort((a, b) => (b.member - a.member) || diffSize(a.diff) - diffSize(b.diff) || a.posRef.localeCompare(b.posRef))
 }
 
-/** A readable default name for a group: its site parts, else its wrapper parts. */
-export function suggestName(parts) {
+/**
+ * A readable default name for a template: what its rule filters on ("REMOTE · Exterior ·
+ * not Wago"), as that is what decides where it applies. A value that means nothing alone
+ * (Y, N, a number) keeps its column. Without a rule (a pinned group): its site parts,
+ * else its wrapper parts.
+ */
+export function suggestName(parts, rule = null) {
+  const conds = ruleConditionsOf(rule)
+  if (conds.length) {
+    const col = c => String(c.column).replace(/^Recipe\./, '')
+    const val = c => (/^(y|n|yes|no|true|false|[\d.]+)$/i.test(String(c.value).trim()) ? `${col(c)} ${c.value}` : String(c.value).trim())
+    const word = c => ({
+      equals: val(c), notEquals: `not ${val(c)}`, contains: `*${c.value}*`, notContains: `no *${c.value}*`,
+      startsWith: `${c.value}*`, isEmpty: `no ${col(c)}`, isNotEmpty: `with ${col(c)}`,
+    }[c.op] || `${col(c)} ${c.op} ${c.value}`)
+    // Whole terms only: a name cut mid-word reads as a different value.
+    const sep = rule.match === 'any' ? ' / ' : ' · '
+    let out = ''
+    for (const w of conds.map(word)) {
+      const next = out ? out + sep + w : w
+      if (next.length > 80) return `${out || w.slice(0, 80)} …`
+      out = next
+    }
+    return out
+  }
   const short = r => r.replace(/^ET-/i, '')
   const site = parts.filter(p => p.section === POSITION).map(p => short(p.ref))
   const inside = parts.filter(p => p.section === INTERNAL).map(p => short(p.ref))

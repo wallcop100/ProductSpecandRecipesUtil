@@ -314,3 +314,18 @@ test('membership measures specificity against the scope recOf carries', async ()
   expect(m.get('P1')).toMatchObject({ templates: ['maker'], clash: false, alsoMatched: ['kind'] })
   expect(m.get('P3').templates).toEqual(['kind'])
 })
+
+test('a derived template is named after what its rule filters on', async () => {
+  const { suggestName } = await import('../../src/utils/connectorGroups.js')
+  const parts = [{ ref: 'ET-5PIN-SOCKET', section: 'position' }]
+  expect(suggestName(parts)).toBe('5PIN-SOCKET')
+  expect(suggestName(parts, { match: 'all', conditions: [
+    { column: 'DriverLocation', op: 'equals', value: 'REMOTE' },
+    { column: 'Tags', op: 'notEquals', value: 'Exterior' },
+    { column: 'RequiresControlLink', op: 'equals', value: 'Y' },
+    { column: 'Recipe.Manufacturer', op: 'isEmpty', value: '' },
+  ] })).toBe('REMOTE · not Exterior · RequiresControlLink Y · no Manufacturer')
+  expect(suggestName(parts, { match: 'any', conditions: [
+    { column: 'Family', op: 'equals', value: 'DL' }, { column: 'Family', op: 'equals', value: 'LIN' },
+  ] })).toBe('DL / LIN')
+})
