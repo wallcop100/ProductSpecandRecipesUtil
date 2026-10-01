@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-10-01', note: 'Import: a Form row whose every code is already in the Product Spec (same maker and code) comes in CONFIRMED, also in a saved import; only new codes, variants and guesses are left to confirm. In the builder’s Form painter those rows fold into “N rows are in the Product Spec already”, so only the new codes show' },
   { date: '2026-10-01', note: 'Builder (D4Z9CX): “Paint <position> from the Form” in the Form spec pane paints just that position’s Form rows inline, condensed to the pane (click a word to make it code / note / discard, tick to confirm), gives its codes ElementTypes and adds them to the Product Spec, without leaving the builder; the pane then shows what to add to the recipe and what is no longer in the Form (Remove). The Form is loaded once for the project: the next position, and Import, carry on without picking the file again' },
   { date: '2026-10-01', note: 'Fix (ZCHMHE): a wrapper card’s contents and “Used in” no longer list parts that were removed; they now match Edit internals' },
   { date: '2026-10-01', note: 'Connector templates made from a group, or given a suggested rule, are named after what the rule filters on (“REMOTE · Exterior · not Wago”) instead of their parts' },

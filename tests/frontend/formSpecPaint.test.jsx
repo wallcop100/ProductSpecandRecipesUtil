@@ -28,7 +28,9 @@ const ROWS = [
 ]
 // The compact painter shows the cell text; the codes here are unique per position.
 const CODE = { QC50: 'C01', QC51: 'C02', QC52: 'C03' }
-const tableRefs = () => screen.getAllByTestId('compact-row').map(r => CODE[r.textContent.match(/QC5\d/)?.[0]])
+// Rows the spec settles are folded: open the fold, then read the rows.
+const openDone = () => { const b = screen.queryByTestId('compact-done'); if (b && /show/.test(b.textContent)) fireEvent.click(within(b).getByText('show')) }
+const tableRefs = () => (openDone(), screen.getAllByTestId('compact-row')).map(r => CODE[r.textContent.match(/QC5\d/)?.[0]])
 
 beforeEach(() => {
   for (const k of Object.keys(prefs)) delete prefs[k]
@@ -52,10 +54,12 @@ describe('D4Z9CX: paint one position from the builder', () => {
     fireEvent.click(screen.getByTestId('paint-position'))
     fireEvent.click(await screen.findByText('Choose spreadsheet…'))
     await screen.findByTestId('compact-painter')
+    // QC50 is in the spec: the row is folded away as settled.
+    await waitFor(() => expect(screen.getByTestId('compact-done')).toHaveTextContent('Every row is in the Product Spec already'))
+    expect(screen.queryByTestId('compact-row')).toBeNull()
     await waitFor(() => expect(tableRefs()).toEqual(['C01']))          // only this position's rows
     expect(screen.queryByTestId('form-table')).toBeNull()               // condensed, not the full table
     expect(screen.getByTestId('add-and-build')).toHaveTextContent('Add to Product Spec')
-    fireEvent.click(screen.getAllByLabelText(/^Confirm row/)[0])
     await act(async () => { fireEvent.click(screen.getByTestId('add-and-build')) })
 
     await waitFor(() => expect(screen.queryByTestId('compact-painter')).toBeNull())   // closed again
@@ -69,7 +73,7 @@ describe('D4Z9CX: paint one position from the builder', () => {
     // Next position: its rows straight away, from the same session.
     view.unmount()
     render(<FormSpecPane posRef="C03" />)
-    expect(screen.getByTestId('paint-status')).toHaveTextContent('1 row to confirm')
+    expect(screen.getByTestId('paint-status')).toHaveTextContent('ready to add')   // QC52 is in the spec: confirmed already
     fireEvent.click(screen.getByTestId('paint-position'))
     await screen.findByTestId('compact-painter')
     await waitFor(() => expect(tableRefs()).toEqual(['C03']))
@@ -82,7 +86,6 @@ describe('D4Z9CX: paint one position from the builder', () => {
     fireEvent.click(screen.getByTestId('paint-position'))
     fireEvent.click(await screen.findByText('Choose spreadsheet…'))
     await waitFor(() => expect(tableRefs()).toEqual(['C01']))
-    fireEvent.click(screen.getAllByLabelText(/^Confirm row/)[0])
     await act(async () => { fireEvent.click(screen.getByTestId('add-and-build')) })
     await screen.findByText('No longer in the Form')
     fireEvent.click(screen.getByRole('button', { name: 'Remove' }))

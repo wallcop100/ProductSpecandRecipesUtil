@@ -342,6 +342,22 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
    * The DesignDB's ExtRef usually answers it; the user confirms and may override.
    * Skipped when the sheet has no PositionType column — nothing to resolve.
    */
+  /**
+   * Rows whose every product code is already in the Product Spec (same maker, same code)
+   * ARE confirmed: the spec has decided them. Not when the spec flagged the row (a variant,
+   * codes side by side) or a code is only a guess. `byRow` is applyKnownCodes's.
+   */
+  function confirmInSpec(rows, rowRules, byRow) {
+    return applyRules(rows, rowRules).map(r => {
+      if (r.confirmed) return r
+      const m = byRow?.get(r.id)
+      if (m && (m.variants?.length || m.adjacent?.length)) return r
+      const caps = productCaptures(r, captureOpts)
+      if (!caps.length || !caps.every(c => classify(c.code, ctx, r.manufacturer).status === 'green')) return r
+      return { ...r, confirmed: true, autoConfirmed: true }
+    })
+  }
+
   function startResolve() {
     const raw = buildRows()
 
@@ -352,7 +368,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     // every confident guess (a maker's code shape, a word shaped like a code) is
     // pre-selected underneath, so the table opens filled in and you only fix mistakes.
     const { rows: known, ...stats } = applyKnownCodes(raw, master, styleLibrary)
-    const built = applyRules(applyRules(known, {}).map(prePaint), {})
+    const built = confirmInSpec(applyRules(applyRules(known, {}).map(prePaint), {}), {}, stats.byRow)
     stats.preCount = built.reduce((n, r) => n + Object.keys(r.pre || {}).length, 0)
     setKnownStats(stats.exactCount || stats.preCount || stats.variantCount || stats.adjacentCount ? stats : null)
     setPreKnownRows(stats.exactCount || stats.preCount ? raw : null)
@@ -398,6 +414,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     rows: rows.map(r => ({
       id: r.id, rawText: r.rawText, positionType: r.positionType, manufacturer: r.manufacturer,
       context: r.context, overrides: r.overrides, noteOverride: r.noteOverride, confirmed: r.confirmed,
+      ...(r.autoConfirmed ? { autoConfirmed: true } : {}),
       accFrom: r.accFrom ?? null, leadCode: r.leadCode ?? null, pre: r.pre || null,
     })),
   }), [source, sheet, step, map, rules, assignments, resolutions, refOverrides, dirStats, keptSeparate, rows, compareBase, stagedRefs])
@@ -418,6 +435,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       overrides: r.overrides || {},
       noteOverride: r.noteOverride || {},
       confirmed: !!r.confirmed,
+      autoConfirmed: !!r.autoConfirmed,
       accFrom: r.accFrom ?? null,
       leadCode: r.leadCode ?? null,
       ...(r.pre ? { pre: r.pre } : {}),
@@ -426,6 +444,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     // MATCH so the amber variant marks and the banner survive a resume too. It is
     // idempotent, and there is nothing left to undo.
     const { rows: _ignored, ...stats } = applyKnownCodes(restored, master, styleLibrary)
+    // Codes the spec has learned since (or rows saved before this rule): confirmed.
+    const settled = confirmInSpec(restored, d.rules || {}, stats.byRow)
+    for (let k = 0; k < restored.length; k++) restored[k] = { ...restored[k], confirmed: settled[k].confirmed, autoConfirmed: !!(settled[k].autoConfirmed || restored[k].autoConfirmed) }
     setKnownStats(stats.exactCount || stats.variantCount || stats.adjacentCount ? stats : null)
     setPreKnownRows(null)
     session.load({
@@ -481,7 +502,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
 
   /** Start again from a (new) Form spreadsheet: the ⋯ menu's Re-import. */
   async function reimport() {
-    if (rows.some(r => r.confirmed) && !window.confirm('Start again from a spreadsheet? The painting and confirms on this import are dropped (anything already added to the Product Spec stays).')) return
+    if (rows.some(r => r.confirmed && !r.autoConfirmed) && !window.confirm('Start again from a spreadsheet? The painting and confirms on this import are dropped (anything already added to the Product Spec stays).')) return
     // The Form being replaced becomes what the new one is compared with.
     const base = rows.length ? { name: source?.name || 'the last import', rows: rows.map(diffRow) } : compareBase
     await discardDraft()
@@ -1307,8 +1328,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   const toggleConfirm = useCallback(rowId => {
     const row = resolved.find(r => r.id === rowId)
     if (!row) return
-    if (row.confirmed) patchRow(rowId, r => ({ ...r, confirmed: false }))
-    else patchRow(rowId, r => ({ ...acceptSuggestions({ ...r, roles: row.roles }, rules, signals), confirmed: true }))
+    if (row.confirmed) patchRow(rowId, r => ({ ...r, confirmed: false, autoConfirmed: false }))
+    else patchRow(rowId, r => ({ ...acceptSuggestions({ ...r, roles: row.roles }, rules, signals), confirmed: true, autoConfirmed: false }))
   }, [resolved, patchRow, rules, signals])
 
   /** "needs ET" on a code: its rows count as confirmed, then the ElementTypes window opens at it. */
@@ -1546,7 +1567,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
                 placeholder="Search rows…" aria-label="Search rows" style={{ maxWidth: 200, fontSize: 12 }} />
               {!embedded && <Button size="sm" variant="link" className="p-0" style={{ fontSize: 11 }} title="Change which columns are read"
                 onClick={() => {
-                  if (rows.some(r => r.confirmed) && !window.confirm('Changing columns re-reads the rows and loses the painting and confirms. Continue?')) return
+                  if (rows.some(r => r.confirmed && !r.autoConfirmed) && !window.confirm('Changing columns re-reads the rows and loses the painting and confirms. Continue?')) return
                   setStep('map')
                 }}>← Columns</Button>}
               <ButtonGroup size="sm" aria-label="Show rows">

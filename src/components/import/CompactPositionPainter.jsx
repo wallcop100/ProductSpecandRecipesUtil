@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Button, Form } from 'react-bootstrap'
 import MaterialIcon from '../MaterialIcon'
 import IconButton from '../IconButton'
@@ -8,9 +8,16 @@ import CellTokens from './CellTokens'
  * CompactPositionPainter — one position's Form rows, condensed to fit the builder's Form
  * spec pane (D4Z9CX). Each row is a card: the cell's words (click one to cycle code →
  * note → discard), each code with its ElementType or "needs ET", and a confirm tick.
+ * Rows the Product Spec already settles (confirmed, every code with an ElementType) fold
+ * into one line: on an existing spec you are here for the NEW codes.
  * The import screen owns the state; this only draws it.
  */
-export default function CompactPositionPainter({
+export default function CompactPositionPainter(props) {
+  const [showDone, setShowDone] = useState(false)
+  return <Painter {...props} showDone={showDone} setShowDone={setShowDone} />
+}
+
+function Painter({ showDone, setShowDone,
   posRef, rows, info, selection, easyLeft, adding,
   onSetRole, onToggleConfirm, onNeedsET, onMakeMain, onConfirmObvious, onAdd, onUndo, onRedo, canUndo, canRedo,
 }) {
@@ -18,6 +25,9 @@ export default function CompactPositionPainter({
     return <div className="text-muted fst-italic" style={{ fontSize: 11 }} data-testid="embedded-no-rows">The Form has no rows for {posRef}.</div>
   }
   const unconfirmed = rows.filter(r => !r.confirmed).length
+  const settled = r => r.confirmed && (() => { const c = info(r).codes; return c.length > 0 && c.every(x => x.etRef) })()
+  const done = rows.filter(settled)
+  const shown = showDone ? rows : rows.filter(r => !settled(r))
   return (
     <div style={{ fontSize: 11 }} data-testid="compact-painter">
       <div className="d-flex align-items-center gap-2 mb-1">
@@ -33,7 +43,16 @@ export default function CompactPositionPainter({
         </span>
       </div>
 
-      {rows.map(row => {
+      {done.length > 0 && (
+        <div className="d-flex align-items-center gap-1 py-1 border-bottom" style={{ color: '#0f5132' }} data-testid="compact-done">
+          <MaterialIcon name="check_circle" size={13} />
+          <span>{done.length === rows.length ? 'Every row is' : `${done.length} row${done.length === 1 ? ' is' : 's are'}`} in the Product Spec already</span>
+          <Button size="sm" variant="link" className="p-0 ms-auto" style={{ fontSize: 10 }} onClick={() => setShowDone(v => !v)}>
+            {showDone ? 'hide' : 'show'}
+          </Button>
+        </div>
+      )}
+      {shown.map(row => {
         const inf = info(row)
         return (
           <div key={row.id} className="py-1 border-bottom" data-testid="compact-row">
