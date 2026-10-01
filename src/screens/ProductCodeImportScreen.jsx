@@ -344,12 +344,14 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
    */
   /**
    * Rows whose every product code is already in the Product Spec (same maker, same code)
-   * ARE confirmed: the spec has decided them. Not when the spec flagged the row (a variant,
+   * ARE confirmed: the spec has decided them. So are rows with no product at all. Not when the spec flagged the row (a variant,
    * codes side by side) or a code is only a guess. `byRow` is applyKnownCodes's.
    */
   function confirmInSpec(rows, rowRules, byRow) {
     return applyRules(rows, rowRules).map(r => {
       if (r.confirmed) return r
+      // "n/a", "by others": nothing to add, so nothing to decide (ZEM43Y).
+      if (isNothingRow(r)) return { ...r, confirmed: true, autoConfirmed: true }
       const m = byRow?.get(r.id)
       if (m && (m.variants?.length || m.adjacent?.length)) return r
       const caps = productCaptures(r, captureOpts)

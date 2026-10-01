@@ -27,6 +27,8 @@ function Painter({ showDone, setShowDone,
   const unconfirmed = rows.filter(r => !r.confirmed).length
   const settled = r => r.confirmed && (() => { const c = info(r).codes; return c.length > 0 && c.every(x => x.etRef) })()
   const done = rows.filter(settled)
+  // Every row says "n/a", "by others"…: no product, so no Add to call for attention (859SCF).
+  const nothing = rows.every(r => info(r).codes.length === 0 && info(r).status?.icon === 'block')
   const shown = showDone ? rows : rows.filter(r => !settled(r))
   return (
     <div style={{ fontSize: 11 }} data-testid="compact-painter">
@@ -88,6 +90,11 @@ function Painter({ showDone, setShowDone,
         )
       })}
 
+      {nothing ? (
+        <div className="text-muted mt-1" data-testid="compact-nothing">
+          <MaterialIcon name="block" size={12} /> Nothing to add: the Form has no product for {posRef}.
+        </div>
+      ) : (<>
       <Button size="sm" variant="primary" className="mt-2" style={{ fontSize: 11 }} disabled={!selection?.ready || adding}
         onClick={onAdd} data-testid="add-and-build"
         title={selection?.ready ? `Write ${posRef}'s Product Spec rows` : 'Confirm every row and give every code an ElementType first'}>
@@ -98,6 +105,7 @@ function Painter({ showDone, setShowDone,
           {[selection.noEt && `${selection.noEt} need an ElementType`, selection.clashes && `${selection.clashes} clash${selection.clashes === 1 ? '' : 'es'}`].filter(Boolean).join(' · ')}
         </span>
       )}
+      </>)}
     </div>
   )
 }

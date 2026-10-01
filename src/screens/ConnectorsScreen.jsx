@@ -37,10 +37,12 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
   const allFamilies = [...new Set(elementTypes.map(e => e.Family || e.family).filter(Boolean))].sort()
 
   async function makeTemplate(g) {
-    // A rule from the data that picks out exactly this group; otherwise pin the positions.
-    // The name says what the rule filters on.
+    // A rule from the data that picks out EXACTLY this group — every other position left
+    // out, those without connectors yet too (YKZMVF: an automatic template must not claim
+    // positions that don't have its parts). Otherwise pin the positions. The name says what
+    // the rule filters on.
     const scope = groups.scoped.map(pt => pt.PositionTypeRef)
-    const found = ruleFor(g.positions, scope, groups.recOf, { against: scope.filter(r => groups.sigs.has(r)) })
+    const found = ruleFor(g.positions, scope, groups.recOf)
     const name = window.prompt(`Name a template for these ${g.positions.length} position${g.positions.length === 1 ? '' : 's'}`, suggestName(g.parts, found?.exact ? found.rule : null))?.trim()
     if (!name) return
     const saved = await makeTemplateFromGroup(name, g.parts, g.positions, { rule: found?.exact ? found.rule : null })

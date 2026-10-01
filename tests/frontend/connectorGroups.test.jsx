@@ -204,3 +204,22 @@ describe('tags and removals on a pinned template (bug D4WRKC)', () => {
   })
 })
 
+
+describe('YKZMVF: an automatic template holds exactly its group', () => {
+  test('a position with none of its parts is not claimed, even when it shares the tag', async () => {
+    setup({
+      positionTypes: [...PTS, { PositionTypeRef: 'C01' }],
+      positionUI: { B01: { tags: ['Remote-CC'] }, B02: { tags: ['Remote-CC'] }, C01: { tags: ['Remote-CC'] } },
+    })
+    vi.spyOn(window, 'prompt').mockReturnValue('Remote')
+    render(<ConnectorsScreen onBack={() => {}} />)
+    const remote = screen.getAllByTestId('found-group').find(g => /2 positions/.test(g.textContent))
+    await act(async () => { fireEvent.click(within(remote).getByText('Make template')) })
+    const s = useStore.getState()
+    const t = s.etCollections.find(c => c.Name === 'Remote')
+    const m = G.membership(['B01', 'B02', 'C01'], s.etCollections, s.connectorPins, s._templateRecOf(), s.connectorExcludes)
+    expect(m.get('B01').templates).toEqual([t.CollectionId])
+    expect(m.get('B02').templates).toEqual([t.CollectionId])
+    expect(m.get('C01').templates).toEqual([])
+  })
+})
