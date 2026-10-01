@@ -118,3 +118,36 @@ describe('ZEM43Y / 859SCF: nothing to add is nothing to do', () => {
     expect(positionPaintStatus(useStore.getState().importDraft, 'F01').state).toBe('nothing')
   })
 })
+
+describe('9GLX5N: with a Product Spec, start straight away', () => {
+  const MESSY = [
+    { PositionTypeRef: 'C01', ManufacturerName: 'iGuzzini', ProductCode: 'QC50 with honeycomb LOUVRE-HC60 and EM pack 3h' },
+    { PositionTypeRef: 'C02', ManufacturerName: 'iGuzzini', ProductCode: 'QC51 c/w snoot SN-22 in black RAL9005' },
+    { PositionTypeRef: 'C03', ManufacturerName: 'iGuzzini', ProductCode: 'QC52 + driver DR-700 (remote) 24V' },
+  ]
+  const open = async () => {
+    const { default: ProductCodeImportScreen } = await import('../../src/screens/ProductCodeImportScreen.jsx')
+    readSheet.mockResolvedValue({ sheets: ['S'], sheet: 'S', headers: HEAD, rows: MESSY })
+    render(<ProductCodeImportScreen onBack={vi.fn()} onReviewPositions={vi.fn()} />)
+    fireEvent.click(await screen.findByText('Choose spreadsheet…'))
+    await screen.findByTestId('form-table')
+  }
+
+  test('no "teach your dialect" when the spec has codes', async () => {
+    await open()
+    expect(screen.queryByText('Teach the tool your dialect')).toBeNull()
+  })
+
+  test('a project starting from nothing still gets it', async () => {
+    useStore.setState({ psRows: [] })
+    await open()
+    expect(await screen.findByText('Teach the tool your dialect')).toBeInTheDocument()
+  })
+
+  test('the builder pane leads with painting in place; the full Import is a small link', () => {
+    render(<FormSpecPane posRef="C01" />)
+    expect(screen.getByTestId('paint-position')).toBeInTheDocument()
+    expect(screen.queryByText('No Form template yet')).toBeNull()
+    expect(screen.getByText(/or go through the whole Form in Import/)).toBeInTheDocument()
+  })
+})

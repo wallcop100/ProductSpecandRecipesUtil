@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-10-01', note: 'Form (9GLX5N): with a Product Spec in place, “Teach the tool your dialect” no longer opens by itself, and the builder’s Form spec pane loads the Form and paints the position in place (the whole Import is a small link). The full guided import is for a project starting from nothing' },
   { date: '2026-10-01', note: 'Builder: “Build recipes from the Form” and “Recipe styles” are only under ⋯ now. Adding to the Product Spec no longer opens the bulk build, and the next-step bar opens the first position without a recipe instead' },
   { date: '2026-10-01', note: 'From bug reports: a Form row with no product (n/a, by others…) comes in confirmed, and a position with only such rows says “nothing to add” in the builder painter, with no Add to press; Make template only uses a rule that picks out exactly the group (positions without its connectors are no longer claimed), else it pins the group' },
   { date: '2026-10-01', note: 'Import: a Form row whose every code is already in the Product Spec (same maker and code) comes in CONFIRMED, also in a saved import; only new codes, variants and guesses are left to confirm. In the builder’s Form painter those rows fold into “N rows are in the Product Spec already”, so only the new codes show' },

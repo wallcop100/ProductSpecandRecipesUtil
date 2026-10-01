@@ -396,6 +396,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     // Teach the dialect from a few examples only when the sheet needs it: if most rows
     // already read as obvious (one clean code, or nothing to add), go straight to the
     // table — "Teach from examples" stays one click away.
+    // Only for a project starting from nothing (9GLX5N): with a Product Spec in place you
+    // start straight away, with what it knows; never from the builder.
+    if (embedded || psRows.some(r => String(r.ProductCode || r.productCode || '').trim())) return
     const obvious = built.filter(r => isObvious(r)).length
     if (built.length >= 3 && obvious < built.length * 0.6) setPriming(true)
   }
