@@ -241,11 +241,9 @@ export default function FormSpecPane({ posRef, embedded = false }) {
    * default view is the comparison and nothing else.
    */
   const [open, setOpen] = useState(() => new Set())
-  // Painting this position's Form rows happens inline: the pane widens to hold the painter.
+  // Painting this position's Form rows happens inline, condensed to the pane.
   const [painting, setPainting] = useState(false)
-  const paneStyle = painting
-    ? { width: 'min(1100px, 68%)', flexShrink: 0, overflowY: 'auto', transition: 'width .15s' }
-    : { width: 340, flexShrink: 0, overflowY: 'auto', transition: 'width .15s' }
+  const paneStyle = { width: 340, flexShrink: 0, overflowY: 'auto' }
   // After painting this position: show what is no longer in the Form (to remove), if any.
   const paintBar = embedded ? null : (
     <FormPaintBar posRef={posRef} open={painting} onOpenChange={setPainting} onStaged={() => {

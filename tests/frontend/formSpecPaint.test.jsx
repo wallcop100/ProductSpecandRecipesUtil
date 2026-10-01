@@ -26,7 +26,9 @@ const ROWS = [
   { PositionTypeRef: 'C02', ManufacturerName: 'iGuzzini', ProductCode: 'QC51' },
   { PositionTypeRef: 'C03', ManufacturerName: 'iGuzzini', ProductCode: 'QC52' },
 ]
-const tableRefs = () => within(screen.getByTestId('form-table')).getAllByRole('row').slice(1).map(r => r.textContent.match(/C0\d/)?.[0]).filter(Boolean)
+// The compact painter shows the cell text; the codes here are unique per position.
+const CODE = { QC50: 'C01', QC51: 'C02', QC52: 'C03' }
+const tableRefs = () => screen.getAllByTestId('compact-row').map(r => CODE[r.textContent.match(/QC5\d/)?.[0]])
 
 beforeEach(() => {
   for (const k of Object.keys(prefs)) delete prefs[k]
@@ -49,14 +51,14 @@ describe('D4Z9CX: paint one position from the builder', () => {
     const view = render(<FormSpecPane posRef="C01" />)
     fireEvent.click(screen.getByTestId('paint-position'))
     fireEvent.click(await screen.findByText('Choose spreadsheet…'))
-    await screen.findByTestId('form-table')
+    await screen.findByTestId('compact-painter')
     await waitFor(() => expect(tableRefs()).toEqual(['C01']))          // only this position's rows
-    expect(screen.queryByTestId('form-position-list')).toBeNull()       // no position list
+    expect(screen.queryByTestId('form-table')).toBeNull()               // condensed, not the full table
     expect(screen.getByTestId('add-and-build')).toHaveTextContent('Add to Product Spec')
     fireEvent.click(screen.getAllByLabelText(/^Confirm row/)[0])
     await act(async () => { fireEvent.click(screen.getByTestId('add-and-build')) })
 
-    await waitFor(() => expect(screen.queryByTestId('embedded-import')).toBeNull())   // closed again
+    await waitFor(() => expect(screen.queryByTestId('compact-painter')).toBeNull())   // closed again
     const caps = useStore.getState().formCaptures
     expect(Object.keys(caps.byPosition)).toEqual(['C01'])               // C02, C03 untouched
     expect(caps.byPosition.C01[0].elementTypeRef).toBe('ET-PS-01')
@@ -69,7 +71,7 @@ describe('D4Z9CX: paint one position from the builder', () => {
     render(<FormSpecPane posRef="C03" />)
     expect(screen.getByTestId('paint-status')).toHaveTextContent('1 row to confirm')
     fireEvent.click(screen.getByTestId('paint-position'))
-    await screen.findByTestId('form-table')
+    await screen.findByTestId('compact-painter')
     await waitFor(() => expect(tableRefs()).toEqual(['C03']))
     expect(window.electronAPI.openXlsxDialog).toHaveBeenCalledTimes(1)
   })

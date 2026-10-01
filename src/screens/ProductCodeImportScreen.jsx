@@ -22,6 +22,7 @@ import TutorialHint from '../tutorial/TutorialHint'
 import MapColumnsStep from '../components/MapColumnsStep'
 import FormTable from '../components/import/FormTable'
 import FormPositionList from '../components/import/FormPositionList'
+import CompactPositionPainter from '../components/import/CompactPositionPainter'
 import CopyButton from '../components/CopyButton'
 import ContextColumnChips from '../components/ContextColumnChips'
 import { capturableColumns, captureContext } from '../utils/formColumns'
@@ -1345,7 +1346,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   const keyRef = useRef(null)
   keyRef.current = { tableRows, focusId, expandedId, current, confirmAndAdvance, confirmObvious, acceptRowSuggestions, toggleConfirm }
   useEffect(() => {
-    if (step !== 'review') return
+    // Not in the builder: single keys there belong to the builder.
+    if (step !== 'review' || embedded) return
     function onKey(e) {
       const t = e.target
       if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return
@@ -1376,7 +1378,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
 
   // ---------------------------------------------------------------------------
   return (
-    <div className={embedded ? 'p-2' : 'p-3'} style={{ height: embedded ? '100%' : '100vh', display: 'flex', flexDirection: 'column' }}
+    <div className={embedded ? '' : 'p-3'} style={embedded ? { fontSize: 11 } : { height: '100vh', display: 'flex', flexDirection: 'column' }}
       data-testid={embedded ? 'embedded-import' : undefined}>
       <div className={embedded ? 'd-none' : 'd-flex align-items-center gap-2 mb-3'}>
         <IconButton icon="arrow_back" size={18} onClick={onBack} title="Back" />
@@ -1453,7 +1455,28 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       )}
 
 
-      {step === 'review' && (
+      {/* Embedded in the builder's Form spec pane: one position's rows, condensed. */}
+      {step === 'review' && embedded && (
+        <CompactPositionPainter
+          posRef={embedded.posRef}
+          rows={scopeRows}
+          info={rowInfo}
+          selection={selection}
+          easyLeft={easyLeft}
+          adding={addingSel}
+          onSetRole={setTokenRole}
+          onToggleConfirm={toggleConfirm}
+          onNeedsET={openETFor}
+          onMakeMain={(rowId, code) => patchRow(rowId, r => ({ ...r, leadCode: code }))}
+          onConfirmObvious={confirmObvious}
+          onAdd={addSelectionAndBuild}
+          onUndo={() => { session.undo(); setUndoSnap(null) }}
+          onRedo={() => { session.redo(); setUndoSnap(null) }}
+          canUndo={session.canUndo} canRedo={session.canRedo}
+        />
+      )}
+
+      {step === 'review' && !embedded && (
         <div className="d-flex gap-3" style={{ flex: 1, minHeight: 0 }}>
           {mode === 'position' && !embedded && (
             <div style={{ width: 200, flexShrink: 0, minHeight: 0 }}>

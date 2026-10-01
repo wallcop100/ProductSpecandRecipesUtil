@@ -21,8 +21,8 @@ const LABEL = {
  * Loading the Form is global (the import session, importDraft, and the remembered file):
  * once loaded, every position — here or in Import — paints from it without picking the
  * file again. Painting is one position at a time: Import's By position mode, embedded and
- * locked to posRef, INLINE in the Form spec pane (which widens while it is open; `open` is
- * the pane's). "Add to Product Spec" closes it; the pane then shows what to add to the
+ * locked to posRef, INLINE in the Form spec pane and condensed to fit it (`open` is the
+ * pane's). "Add to Product Spec" closes it; the pane then shows what to add to the
  * recipe and what is no longer in the Form.
  */
 export default function FormPaintBar({ posRef, open = false, onOpenChange = () => {}, onStaged }) {
@@ -42,7 +42,7 @@ export default function FormPaintBar({ posRef, open = false, onOpenChange = () =
       <div className="d-flex align-items-center gap-1 flex-wrap">
         {open ? (
           <Button size="sm" variant="outline-secondary" style={{ fontSize: 10 }} onClick={() => setOpen(false)} data-testid="paint-close">
-            <MaterialIcon name="close" size={12} /> Close the painter
+            <MaterialIcon name="close" size={12} /> Close
           </Button>
         ) : <Button size="sm" variant={work || state === 'noForm' ? 'primary' : 'outline-secondary'} style={{ fontSize: 10 }}
           onClick={() => setOpen(true)} data-testid="paint-position"
@@ -58,8 +58,7 @@ export default function FormPaintBar({ posRef, open = false, onOpenChange = () =
         )}
       </div>
       {open && (
-        <div className="mt-2 border rounded" style={{ height: 'calc(100vh - 190px)', minHeight: 420, display: 'flex', flexDirection: 'column' }}
-          data-testid="paint-panel">
+        <div className="mt-1 ps-2" style={{ borderLeft: '2px solid #0d6efd' }} data-testid="paint-panel">
           <ProductCodeImportScreen onBack={() => setOpen(false)}
             embedded={{ posRef, onStaged: targets => { setOpen(false); onStaged?.(targets) } }} />
         </div>
