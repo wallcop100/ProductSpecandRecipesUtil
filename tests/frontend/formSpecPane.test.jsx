@@ -260,13 +260,14 @@ describe('FormSpecPane renders the Form beside the recipe', () => {
   test('no Form attached: one clear prompt, not a blank panel', () => {
     setup({ formCaptures: null })
     expect(screen.getByText('No Form template yet')).toBeInTheDocument()
-    expect(screen.getByText(/Import the Form template/)).toBeInTheDocument()
+    expect(screen.getByText(/Import the whole Form template/)).toBeInTheDocument()
     expect(screen.getByText(/Identify codes/)).toBeInTheDocument()   // the 1-2-3
+    expect(screen.getByTestId('paint-position').textContent).toMatch(/Load the Form and paint this position/)
   })
 
   test('the prompt starts stage ① by asking App to change screen', () => {
     setup({ formCaptures: null })
-    fireEvent.click(screen.getByText(/Import the Form template/))
+    fireEvent.click(screen.getByText(/Import the whole Form template/))
     expect(useStore.getState().pendingScreen).toBe('product-code-import')
   })
 

@@ -72,10 +72,9 @@ describe('import By position', () => {
     const view = render(<ProductCodeImportScreen onBack={vi.fn()} onReviewPositions={onReviewPositions} />)
     fireEvent.click(await screen.findByText('Choose spreadsheet…'))
     await screen.findByTestId('form-table')
-    await waitFor(() => expect(tableRefs()).toEqual(['C01']))               // first to-do selected
-    expect(screen.getByTestId('sel-step-1')).toHaveTextContent('Confirm 1 row')
-    expect(screen.getByTestId('add-and-build')).toBeDisabled()
-    fireEvent.click(screen.getAllByLabelText(/^Confirm row/)[0])
+    await waitFor(() => expect(tableRefs()).toEqual(['C01']))               // first position selected
+    // QC50 is in the Product Spec: nothing to confirm, nothing to assign.
+    expect(screen.getByTestId('sel-step-1')).toHaveTextContent('Rows confirmed')
     expect(screen.getByTestId('sel-step-2')).toHaveTextContent('ElementTypes chosen')
     await act(async () => { fireEvent.click(screen.getByTestId('add-and-build')) })
 
@@ -102,7 +101,6 @@ describe('import By position', () => {
     expect(tableRefs()).toEqual(['C02', 'C03'])
     // C03 alone goes through; C01's captures stay.
     fireEvent.click(within(list()).getByRole('option', { name: /C03/ }))
-    fireEvent.click(screen.getAllByLabelText(/^Confirm row/)[0])
     await act(async () => { fireEvent.click(screen.getByTestId('add-and-build')) })
     expect(onReviewPositions).toHaveBeenLastCalledWith(['C03'], { fromImport: true })
     expect(Object.keys(useStore.getState().formCaptures.byPosition).sort()).toEqual(['C01', 'C03', 'X99'])

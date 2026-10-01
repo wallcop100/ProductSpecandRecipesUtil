@@ -191,7 +191,8 @@ describe('the Form, as a table', () => {
     render(<ProductCodeImportScreen onBack={vi.fn()} onReviewPositions={onReviewPositions} />)
     fireEvent.click(await screen.findByText('Choose spreadsheet…'))
     await screen.findByTestId('form-table')
-    fireEvent.click(screen.getAllByLabelText(/^Confirm row/)[0])
+    // QC5010 is in the Product Spec: its row is confirmed already.
+    expect(screen.getAllByLabelText(/^Confirm row/)[0]).toBeChecked()
     fireEvent.click(await screen.findByRole('button', { name: /Add 1 to Product Spec/ }))
     fireEvent.click(await screen.findByRole('button', { name: /Build recipes for this position/ }))
     expect(onReviewPositions).toHaveBeenCalledWith(['A1'])

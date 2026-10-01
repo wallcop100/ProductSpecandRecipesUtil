@@ -110,7 +110,7 @@ export function getUsedIn(etRef, recipes, currentPosRef) {
   const positions = new Set()
   for (const row of recipes) {
     const rowET = (row.ElementTypeRef || row.elementTypeRef || '').toLowerCase()
-    if (rowET !== key) continue
+    if (rowET !== key || (row.IsDeleted || row.isDeleted) === 'Y') continue
     const posRef = row.PositionTypeRef || row.positionTypeRef || ''
     if (posRef && posRef !== currentPosRef) {
       positions.add(posRef)
@@ -123,6 +123,7 @@ export function getUsedIn(etRef, recipes, currentPosRef) {
  * Returns the unique internal items of a container ET as [{ ref, name }].
  * Internal items are recipe rows whose ContextType is ElementType and whose
  * ContextRef matches etRef. Names are resolved from elementTypes when available.
+ * Deleted rows are left out, as Edit internals leaves them out (ZCHMHE).
  */
 export function getInternalItems(etRef, recipes, elementTypes = []) {
   const key = (etRef || '').toLowerCase()
@@ -137,7 +138,7 @@ export function getInternalItems(etRef, recipes, elementTypes = []) {
     const ct = row.ContextType || row.contextType
     const cr = (row.ContextRef || row.contextRef || '').toLowerCase()
     const er = row.ElementTypeRef || row.elementTypeRef
-    if (ct !== 'ElementType' || cr !== key || !er) continue
+    if (ct !== 'ElementType' || cr !== key || !er || (row.IsDeleted || row.isDeleted) === 'Y') continue
     if (seen.has(er)) continue
     seen.add(er)
     const info = etMap.get(er.toLowerCase())
