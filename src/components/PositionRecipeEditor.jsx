@@ -8,6 +8,7 @@ import PositionTagEditor from './PositionTagEditor'
 import TutorialHint from '../tutorial/TutorialHint'
 import MaterialIcon from './MaterialIcon'
 import IconButton from './IconButton'
+import SharedToggle from './SharedToggle'
 import PositionValidationBadge from './PositionValidationBadge'
 import ConnectorSuggestions from './ConnectorSuggestions'
 import RecipeErrorBanner from './RecipeErrorBanner'
@@ -131,6 +132,7 @@ export default function PositionRecipeEditor({
             title={`Paste ${rowClipboard.label} (Ctrl+V)`}
           />
         )}
+        <SharedToggle />
         <Dropdown align="end">
           <Dropdown.Toggle as={IconButton} bsSize="sm" variant="outline-secondary"
             icon={ACTION_ICONS.more} title="Recipe actions" aria-label="Recipe actions" />
