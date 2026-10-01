@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-10-01', note: 'Fix (ZCHMHE): a wrapper card’s contents and “Used in” no longer list parts that were removed; they now match Edit internals' },
   { date: '2026-10-01', note: 'Connector templates made from a group, or given a suggested rule, are named after what the rule filters on (“REMOTE · Exterior · not Wago”) instead of their parts' },
   { date: '2026-10-01', note: 'Connector templates and recipe styles: “most specific” now comes from the project’s data. Each condition scores by how much of the project it rules out (a maker or a product scores high, REMOTE or interior low, “is not” barely), AND adds them up, and a rule whose positions all fall inside another’s always wins; hover the specificity to see why' },
   { date: '2026-10-01', note: 'From bug reports: Undo / Redo now take a new ElementType with its Product Spec row (Redo brings it back), and clicking out of a field you didn’t change no longer wipes Redo; unexported changes from your last session come back by themselves on open, with a notice and “Discard them…” (the old prompt’s Cancel threw them away)' },
