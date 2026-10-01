@@ -87,7 +87,13 @@ const productCaptures = (row, captureOpts) => deriveCaptures(row, captureOpts).c
 /** The entry key of a TBC row: one per Form position. */
 const tbcKey = row => `TBC (${row.positionType || `row ${row.id + 1}`})`
 
-export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
+/**
+ * `embedded`: { posRef, onStaged } — the builder's Form spec pane runs this screen for ONE
+ * PositionType (D4Z9CX): By position, locked to the Form rows that land on posRef, with
+ * the chrome hidden. It is the same session (importDraft), so a position painted here is
+ * done in Import too, and the Form is loaded once for every position.
+ */
+export default function ProductCodeImportScreen({ onBack, onReviewPositions, embedded = null }) {
   const psRows = useStore(s => s.psRows)
   const positionTypes = useStore(s => s.positionTypes)
   const elementTypes = useStore(s => s.elementTypes)
@@ -132,7 +138,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   // "By position" mode: the Form refs already added end to end (kept with the draft).
   const [stagedRefs, setStagedRefs] = useState([])
   // Whole Form (the three stages over every row) or By position (a selection end to end).
-  const [mode, setModeState] = useState('form')
+  const [modeChoice, setModeState] = useState('form')
+  const mode = embedded ? 'position' : modeChoice
   const [selectedRefs, setSelectedRefs] = useState(() => new Set())
   const [query, setQuery] = useState('')
   const [etFocusCode, setEtFocusCode] = useState(null)
@@ -1172,7 +1179,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
   // ---- By position ------------------------------------------------------------
   // Remembered per project; Whole Form unless you chose otherwise.
   useEffect(() => {
-    if (projectId == null) return
+    if (projectId == null || embedded) return
     Promise.resolve(window.electronAPI?.db?.getPref?.(projectId, 'import_mode'))
       .then(v => { if (v === 'position' || v === 'form') setModeState(v) }).catch(() => {})
   }, [projectId])
@@ -1187,8 +1194,22 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
     status: positionStatus(g, { needsEt, stagedRefs: stagedSet }),
   })), [formOrder, map.pt, ptTarget, needsEt, stagedSet])
   // Nothing (or nothing that still exists) selected: take the next position still to do.
+  const embeddedRef = embedded?.posRef || null
   useEffect(() => {
-    if (mode !== 'position' || step !== 'review' || formPositions.length === 0) return
+    if (!embeddedRef || step !== 'review') return
+    // Embedded: the Form refs that land on this PositionType, and nothing else.
+    const want = formPositions.filter(p => String(p.target || '').toLowerCase() === embeddedRef.toLowerCase()).map(p => p.formRef)
+    if (want.length !== selectedRefs.size || want.some(r => !selectedRefs.has(r))) setSelectedRefs(new Set(want))
+  }, [embeddedRef, step, formPositions, selectedRefs])
+  // …and the painter opens on its first row still to confirm.
+  useEffect(() => {
+    if (!embeddedRef || step !== 'review') return
+    const first = formOrder.find(r => selectedRefs.has(String(r.positionType ?? '').trim()) && !r.confirmed)
+    setExpandedId(first ? first.id : null)
+    if (first) setFocusId(first.id)
+  }, [embeddedRef, step, selectedRefs])   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (embeddedRef || mode !== 'position' || step !== 'review' || formPositions.length === 0) return
     const live = [...selectedRefs].filter(r => formPositions.some(p => p.formRef === r))
     if (live.length) { if (live.length !== selectedRefs.size) setSelectedRefs(new Set(live)); return }
     const next = formPositions.find(p => p.status !== 'done') || formPositions[0]
@@ -1227,6 +1248,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       const targets = await handleStage({ only: new Set(selectedRefs) })
       // Save now: the debounced draft save would die with this screen on the way out.
       await saveImportDraft({ ...draftFromState(), stagedRefs: [...new Set([...stagedRefs, ...selectedRefs])] })
+      if (embedded) { embedded.onStaged?.(targets || []); return }
       if (onReviewPositions && targets?.length) onReviewPositions(targets, { fromImport: true })
     } finally { setAddingSel(false) }
   }
@@ -1354,8 +1376,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
 
   // ---------------------------------------------------------------------------
   return (
-    <div className="p-3" style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <div className="d-flex align-items-center gap-2 mb-3">
+    <div className={embedded ? 'p-2' : 'p-3'} style={{ height: embedded ? '100%' : '100vh', display: 'flex', flexDirection: 'column' }}
+      data-testid={embedded ? 'embedded-import' : undefined}>
+      <div className={embedded ? 'd-none' : 'd-flex align-items-center gap-2 mb-3'}>
         <IconButton icon="arrow_back" size={18} onClick={onBack} title="Back" />
         <h5 className="mb-0 d-flex align-items-center gap-2" style={{ fontSize: 16 }}>
           <MaterialIcon name="auto_fix_high" size={20} /> Import product codes
@@ -1386,7 +1409,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
       </div>
 
       {/* The whole workflow, in three. The import owns ① and ②; the builder owns ③. */}
-      <div className="mb-3" style={mode === 'position' ? { display: 'none' } : undefined}>
+      <div className="mb-3" style={mode === 'position' || embedded ? { display: 'none' } : undefined}>
         <StageBar
           current={staged ? 3 : step === 'review' ? (canStage ? 2 : 1) : 1}
           done={staged ? [1, 2] : []}
@@ -1432,13 +1455,13 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
 
       {step === 'review' && (
         <div className="d-flex gap-3" style={{ flex: 1, minHeight: 0 }}>
-          {mode === 'position' && (
+          {mode === 'position' && !embedded && (
             <div style={{ width: 200, flexShrink: 0, minHeight: 0 }}>
               <FormPositionList positions={formPositions} selected={selectedRefs} onSelect={setSelectedRefs} />
             </div>
           )}
           {/* What the tool has learned about this sheet's dialect (⋯ → Learned this project). */}
-          {showLearned && <div style={{ width: 190, overflowY: 'auto', flexShrink: 0 }} data-testid="learned-panel">
+          {showLearned && !embedded && <div style={{ width: 190, overflowY: 'auto', flexShrink: 0 }} data-testid="learned-panel">
             <div className="fw-semibold text-muted mb-1" style={{ fontSize: 10, textTransform: 'uppercase' }}>
               Learned this project
             </div>
@@ -1498,11 +1521,11 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
             <div className="d-flex align-items-center gap-2 mb-2 flex-wrap" data-testid="table-toolbar">
               <Form.Control size="sm" value={query} onChange={e => setQuery(e.target.value)}
                 placeholder="Search rows…" aria-label="Search rows" style={{ maxWidth: 200, fontSize: 12 }} />
-              <Button size="sm" variant="link" className="p-0" style={{ fontSize: 11 }} title="Change which columns are read"
+              {!embedded && <Button size="sm" variant="link" className="p-0" style={{ fontSize: 11 }} title="Change which columns are read"
                 onClick={() => {
                   if (rows.some(r => r.confirmed) && !window.confirm('Changing columns re-reads the rows and loses the painting and confirms. Continue?')) return
                   setStep('map')
-                }}>← Columns</Button>
+                }}>← Columns</Button>}
               <ButtonGroup size="sm" aria-label="Show rows">
                 {[['all', `All ${scopeRows.length}`], ['unconfirmed', `Unconfirmed ${scopeRows.filter(r => !r.confirmed).length}`], ['needsEt', `Needs ET ${scopeRows.filter(needsEt).length}`]].map(([k, label]) => (
                   <Button key={k} variant={filter === k ? 'primary' : 'outline-secondary'} style={{ fontSize: 11 }}
@@ -1517,10 +1540,10 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                   ))}
                 </ButtonGroup>
               )}
-              <Button size="sm" variant="link" className="p-0" style={{ fontSize: 11 }} onClick={compareWithFile} disabled={busy}
+              {!embedded && <Button size="sm" variant="link" className="p-0" style={{ fontSize: 11 }} onClick={compareWithFile} disabled={busy}
                 title="Pick an older version of this Form: each row shows what changed since then">
                 <MaterialIcon name="difference" size={13} /> Compare with an older Form…
-              </Button>
+              </Button>}
               {easyLeft > 0 && (
                 <Button size="sm" variant="success" style={{ fontSize: 11 }} onClick={confirmObvious}
                   title="Rows with one clean code (plus '+' extras and accessories), and placeholder rows with nothing to add. One undo takes them all back.">
@@ -1670,14 +1693,14 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
           </div>
 
           {/* Compare + stage */}
-          <div style={{ width: 350, overflowY: 'auto', flexShrink: 0 }} className="border-start ps-3">
+          <div style={{ width: embedded ? 300 : 350, overflowY: 'auto', flexShrink: 0 }} className="border-start ps-3">
             {/* Stage sits on top, sticky: when every code is done it is the next thing to do,
                 not something to scroll past the whole code list to find. */}
             {selection && (
               <div className="mb-3 pb-2" data-testid="selection-checklist"
                 style={{ position: 'sticky', top: 0, zIndex: 2, background: 'var(--bs-body-bg, #fff)', fontSize: 12 }}>
                 <div className="fw-semibold mb-1">
-                  {selection.refs.length === 1 ? selection.refs[0] : `${selection.refs.length} positions`}
+                  {embedded ? embedded.posRef : selection.refs.length === 1 ? selection.refs[0] : `${selection.refs.length} positions`}
                   <span className="text-muted fw-normal"> · {selection.rows} row{selection.rows === 1 ? '' : 's'}</span>
                 </div>
                 {[
@@ -1699,13 +1722,19 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions }) {
                       : <span className="ms-auto text-muted" style={{ fontSize: 10 }}>{st.action.label}</span>)}
                   </div>
                 ))}
-                <Button variant="success" size="sm" className="w-100 mt-1" disabled={!selection.ready || addingSel}
-                  onClick={addSelectionAndBuild} data-testid="add-and-build">
-                  <MaterialIcon name="playlist_add" size={14} /> 3. Add to Product Spec &amp; build recipe{selection.refs.length === 1 ? '' : 's'} →
-                </Button>
+                {embedded && selection.refs.length === 0 ? (
+                  <div className="text-muted fst-italic" data-testid="embedded-no-rows">The Form has no rows for {embedded.posRef}.</div>
+                ) : (
+                  <Button variant="success" size="sm" className="w-100 mt-1" disabled={!selection.ready || addingSel}
+                    onClick={addSelectionAndBuild} data-testid="add-and-build">
+                    <MaterialIcon name="playlist_add" size={14} />{' '}
+                    {embedded ? '3. Add to Product Spec' : <>3. Add to Product Spec &amp; build recipe{selection.refs.length === 1 ? '' : 's'} →</>}
+                  </Button>
+                )}
                 <div className="text-muted mt-1" style={{ fontSize: 10 }}>
-                  Writes these positions’ Product Spec rows, then opens them in the builder to build their recipes.
-                  Other positions are left as they are.
+                  {embedded
+                    ? 'Writes this position’s Product Spec rows; the Form spec pane then shows what to add to or remove from its recipe.'
+                    : 'Writes these positions’ Product Spec rows, then opens them in the builder to build their recipes. Other positions are left as they are.'}
                 </div>
               </div>
             )}

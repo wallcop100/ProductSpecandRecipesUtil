@@ -17,6 +17,7 @@ import TutorialHint from '../tutorial/TutorialHint'
 import { findProductET, stampPlan } from '../utils/productCodes'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { ago } from '../utils/ago'
+import FormPaintBar from './FormPaintBar'
 
 /**
  * FormSpecPane — the Form's spec beside the recipe it produced.
@@ -240,6 +241,13 @@ export default function FormSpecPane({ posRef, embedded = false }) {
    * default view is the comparison and nothing else.
    */
   const [open, setOpen] = useState(() => new Set())
+  // After painting this position: show what is no longer in the Form (to remove), if any.
+  const paintBar = embedded ? null : (
+    <FormPaintBar posRef={posRef} onStaged={() => {
+      const orphans = useStore.getState().formCaptures?.orphansByPosition?.[posRef] || []
+      if (orphans.length) setOpen(o => new Set([...o, 'orphaned']))
+    }} />
+  )
   const [choosingCols, setChoosingCols] = useState(false)
   const toggleSection = id => setOpen(o => {
     const next = new Set(o)
@@ -377,6 +385,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
     return (
       <div className="border-start ps-3" style={{ width: 340, flexShrink: 0, overflowY: 'auto' }}>
         <SectionLabel>Form spec</SectionLabel>
+        {paintBar}
         <div className="px-3 py-4 rounded text-center"
           style={{ background: '#f8f9fa', border: '1px dashed #ced4da' }}>
           <MaterialIcon name="auto_fix_high" size={28} style={{ color: '#adb5bd' }} />
@@ -384,8 +393,8 @@ export default function FormSpecPane({ posRef, embedded = false }) {
             No Form template yet{' '}
             <InfoTip>Import the Form and this panel shows, for every position, which products it asks for and which are already in the recipe.</InfoTip>
           </div>
-          <Button size="sm" variant="primary" style={{ fontSize: 11 }} onClick={handleReimport}>
-            Import the Form template →
+          <Button size="sm" variant="outline-primary" style={{ fontSize: 11 }} onClick={handleReimport}>
+            Import the whole Form template →
           </Button>
           <div className="text-muted mt-3" style={{ fontSize: 10, lineHeight: 1.6 }}>
             <div><strong>①</strong> Identify codes &nbsp;<strong>②</strong> Assign ElementTypes</div>
@@ -406,6 +415,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
           </span>
         </div>
         <FormStrip formCaptures={formCaptures} />
+        {paintBar}
         <div className="text-muted fst-italic" style={{ fontSize: 11 }}>
           The Form says nothing about {posRef}.
         </div>
@@ -487,6 +497,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
           onReimport={handleReimport} onDetach={handleDetach} />
       </div>
       <FormStrip formCaptures={formCaptures} />
+      {paintBar}
 
       {/* The reference rail. Everything that is NOT the comparison lives behind one of
           these, closed, with its count on the face — so you can see there is something
