@@ -70,3 +70,12 @@ test('GHVUMD: a wrapper content item edits in place too', () => {
   fireEvent.keyDown(screen.getByLabelText('Product code'), { key: 'Enter' })
   expect(useStore.getState().psRows[0].ProductCode).toBe('ZH-2')
 })
+
+test('8D9XNH: a wrapper item’s name that only repeats maker – code is not shown twice', () => {
+  useStore.setState({ containerETRefs: new Set(['et-dl-01']), psRows: [{ ElementTypeRef: 'ET-PS-01', Manufacturer: 'LEDFlex', ProductCode: 'NF240272009' }],
+    elementTypes: [{ ElementTypeRef: 'ET-DL-01' }, { ElementTypeRef: 'ET-PS-01', Name: 'LEDFlex - NF240272009' }] })
+  const r = useStore.getState().recipes.find(x => x._id === 'a')
+  render(<IngredientCard row={r} posRef="A01" sectionKey="position" />)
+  fireEvent.click(screen.getByTitle('Show contents'))
+  expect(screen.getByTestId('contents-item').textContent).not.toMatch(/— LEDFlex/)
+})

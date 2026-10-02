@@ -451,7 +451,8 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                               {code
                                 ? <ProductInline etRef={item.ref} manufacturer={maker} productCode={code} onOpenProductSpec={onOpenProductSpec} />
                                 : <span className="text-muted fst-italic" title="No product spec yet">no product spec</span>}
-                              {item.name && <span className="text-muted">— {item.name}</span>}
+                              {/* The ElementType's name, unless it only repeats the maker – code (8D9XNH). */}
+                              {item.name && !(code && sameText(item.name, `${maker || ''}${code}`)) && <span className="text-muted">— {item.name}</span>}
                               {showSharedEverywhere && (() => {
                                 const others = getUsedIn(item.ref, recipes, posRef)
                                 return others.length > 0 && (
@@ -804,4 +805,10 @@ function ProductInline({ etRef, manufacturer, productCode, onOpenProductSpec }) 
       </button>
     </span>
   )
+}
+
+/** Two labels that differ only in spacing and punctuation ("LEDFlex - X1" / "LEDFlex – X1"). */
+function sameText(a, b) {
+  const n = v => String(v || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+  return n(a) === n(b) || (n(b) && n(a).includes(n(b)) && n(a).length <= n(b).length + 2)
 }

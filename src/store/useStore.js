@@ -1841,6 +1841,16 @@ const useStore = create((set, get) => ({
     }
   },
 
+  /**
+   * Detach the Form from the WHOLE project (4MYUQ7): what it says per position and the
+   * loaded import session both go, else the session puts the Form straight back.
+   * Recipes and the Product Spec are untouched.
+   */
+  async detachForm() {
+    await get().clearFormCaptures()
+    await get().clearImportDraft()
+  },
+
   /** The Form's entries for one PositionType, or [] when it says nothing about it. */
   formEtsForPosition(posRef) {
     return get().formCaptures?.byPosition?.[posRef] ?? []

@@ -89,3 +89,10 @@ describe('F8T5XM: grey, not red, for an empty position the Form never mentions',
     expect(screen.getAllByLabelText('No recipe yet')).toHaveLength(2)
   })
 })
+
+describe('YCU5SZ: a code that needs an ElementType is orange', () => {
+  test('a position with a recipe and a pending Form code is orange, not green', () => {
+    setup({ importDraft: null, formCaptures: { byPosition: {}, pendingByPosition: { A2: [{ code: 'NEW-1' }] } } })
+    expect(screen.getAllByLabelText('The Form asks for something it lacks, or a code needs an ElementType')).toHaveLength(1)
+  })
+})
