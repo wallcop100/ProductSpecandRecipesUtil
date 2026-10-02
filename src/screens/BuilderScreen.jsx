@@ -27,6 +27,7 @@ import SimilarPositionsPanel from '../components/SimilarPositionsPanel'
 import TutorialHint from '../tutorial/TutorialHint'
 import TagRulesModal from '../components/TagRulesModal'
 import FormSpecPane from '../components/FormSpecPane'
+import SurfaceSwitch from '../components/SurfaceSwitch'
 import PasteMergeModal from '../components/PasteMergeModal'
 import ReviewModal from '../components/ReviewModal'
 import FormRecipesModal from '../components/FormRecipesModal'
@@ -479,24 +480,8 @@ export default function BuilderScreen({
 
         {/* Recipes (the tree, 96KPJ5) and the Product Spec (XZ3UBB): the two surfaces you move
             between. Browsing by ElementType, the Form import and Connectors are in ⋮. */}
-        <ButtonGroup size="sm" className="ms-2">
-          <Button
-            variant={rootView === 'positions' ? 'primary' : 'outline-primary'}
-            onClick={() => setRootView('positions')}
-            className="d-inline-flex align-items-center gap-1"
-            title="Recipes: browse by PositionType" data-testid="view-recipes"
-          >
-            <MaterialIcon name="receipt_long" size={15} /> Recipes
-          </Button>
-          <Button
-            variant="outline-primary"
-            onClick={() => onOpenProductSpec()}
-            className="d-inline-flex align-items-center gap-1"
-            title="Product Spec" data-testid="open-product-spec"
-          >
-            <MaterialIcon name="inventory_2" size={15} /> Product Spec
-          </Button>
-        </ButtonGroup>
+        <SurfaceSwitch active={rootView === 'positions' ? 'recipes' : null}
+          onRecipes={() => setRootView('positions')} onProductSpec={() => onOpenProductSpec()} />
 
         <ButtonGroup size="sm" className="ms-2">
           <IconButton variant="outline-secondary" icon={ACTION_ICONS.undo}
