@@ -99,7 +99,7 @@ export default function FormDiffBlock({ posRef }) {
                   <div className="d-flex gap-1 mt-1">
                     <Button size="sm" variant="primary" className="py-0" style={{ fontSize: 10 }} data-testid="diff-update"
                       onClick={() => applyFormChange(c, posRef, 'update')}
-                      title={`Change ${c.fromEt}'s Product Spec row to ${c.toCode}: every position using it gets the new product`}>
+                      title={`Give ${c.fromEt} the code ${c.toCode} in the Product Spec: every recipe using it gets the new product`}>
                       Update {c.fromEt} to {c.toCode}
                     </Button>
                     {c.outsideForm.length > 0 && (

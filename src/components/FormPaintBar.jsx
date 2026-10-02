@@ -3,14 +3,15 @@ import { Button } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import StatusChip from './StatusChip'
+import IconButton from './IconButton'
 import ProductCodeImportScreen from '../screens/ProductCodeImportScreen'
 import { positionPaintStatus } from '../utils/formPositions'
 import { buildRefMap, targetFor } from '../utils/ptResolve'
 
 const LABEL = {
   noForm: null,
-  absent: { tone: 'neutral', icon: 'remove', text: 'no Form rows' },
-  todo: { tone: 'warn', icon: 'brush', text: n => `${n} row${n === 1 ? '' : 's'} to confirm` },
+  absent: { tone: 'neutral', icon: 'remove', text: 'not in the Form' },
+  todo: { tone: 'warn', icon: 'category', text: n => `${n} code${n === 1 ? '' : 's'} need${n === 1 ? 's' : ''} an ElementType` },
   ready: { tone: 'info', icon: 'playlist_add', text: 'ready to add' },
   added: { tone: 'ok', icon: 'check_circle', text: 'added' },
   nothing: { tone: 'neutral', icon: 'block', text: 'nothing to add' },
@@ -40,24 +41,38 @@ export default function FormPaintBar({ posRef, open = false, onOpenChange = () =
   const work = state === 'todo' || state === 'ready'
   const autoSave = st.state === 'ready' && !formCaptures?.byPosition?.[posRef]
 
+  // Nothing to paint here: no button, just what the Form says (n/a, by others) or that it is
+  // not in the Form at all.
+  if (state === 'nothing' || state === 'absent') {
+    return (
+      <div className="mb-2 text-muted d-flex align-items-center gap-1 flex-wrap" style={{ fontSize: 11 }} data-testid="form-paint-bar">
+        <MaterialIcon name={state === 'nothing' ? 'block' : 'remove'} size={12} />
+        {state === 'nothing'
+          ? <>Nothing to add. The Form says: <span style={{ fontFamily: 'monospace', color: '#495057' }} data-testid="form-says">{(st.texts || []).join(' · ') || 'n/a'}</span></>
+          : <span data-testid="paint-status">{posRef} is not in the Form</span>}
+      </div>
+    )
+  }
+
   return (
     <div className="mb-2" data-testid="form-paint-bar">
       <div className="d-flex align-items-center gap-1 flex-wrap">
         {open ? (
-          <Button size="sm" variant="outline-secondary" style={{ fontSize: 10 }} onClick={() => setOpen(false)} data-testid="paint-close">
-            <MaterialIcon name="close" size={12} /> Close
-          </Button>
-        ) : <Button size="sm" variant={work || state === 'noForm' ? 'primary' : 'outline-secondary'} style={{ fontSize: 10 }}
+          <IconButton bsSize="sm" variant="outline-secondary" icon="close" size={13} onClick={() => setOpen(false)}
+            data-testid="paint-close" title="Close the painter" aria-label="Close the painter" />
+        ) : state !== 'noForm' ? (
+          // Not the task here: a small brush, the explanation in its tooltip.
+          <IconButton bsSize="sm" variant={work ? 'primary' : 'outline-secondary'} icon="brush" size={13}
+            onClick={() => setOpen(true)} data-testid="paint-position" aria-label={`Paint ${posRef} from the Form`}
+            title={`Paint ${posRef}'s product codes from the Form: give each an ElementType, then it goes in the recipe`} />
+        ) : <Button size="sm" variant="primary" style={{ fontSize: 10 }}
           onClick={() => setOpen(true)} data-testid="paint-position"
-          title={state === 'noForm'
-            ? 'Load the Form spreadsheet once for the project, then paint just this position'
-            : `Paint ${posRef}'s rows of the Form, give its codes ElementTypes, and add them to the Product Spec`}>
-          <MaterialIcon name={state === 'noForm' ? 'upload_file' : 'brush'} size={12} />{' '}
-          {state === 'noForm' ? 'Load the Form and paint this position' : `Paint ${posRef} from the Form`}
+          title="Load the Form spreadsheet once for the project, then paint just this position">
+          <MaterialIcon name="upload_file" size={12} /> Load the Form and paint this position
         </Button>}
-        {label && (
+        {label && !open && (
           <StatusChip size="xs" tone={label.tone} icon={label.icon} data-testid="paint-status"
-            label={typeof label.text === 'function' ? label.text(st.unconfirmed) : label.text} />
+            label={typeof label.text === 'function' ? label.text(st.newCodes || st.unconfirmed) : label.text} />
         )}
       </div>
       {/* Every row already known, not saved here yet: save it without asking, out of sight,

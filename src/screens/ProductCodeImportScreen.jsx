@@ -1243,6 +1243,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     const clashes = collisions.filter(inSel).length
     return {
       refs: [...selectedRefs], rows: rowsIn.length, unconfirmedRows, codes: codes.length, noEt, clashes,
+      etRefs: [...new Set(codes.map(e => e.etRef).filter(Boolean).map(r => r.toUpperCase()))].sort(),
       // The ElementTypes window works on confirmed rows' codes.
       canOpenEts: codes.some(e => !e.etRef) || clashes > 0,
       ready: rowsIn.length > 0 && unconfirmedRows === 0 && noEt === 0 && clashes === 0,
@@ -1268,9 +1269,18 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   // codes): save them to the position at once, so its Form-vs-recipe comparison shows
   // without a Save step nobody needs. Rows that need a decision are left for the painter.
   const autoSaved = useRef(null)
+  const sawWork = useRef(false)
   useEffect(() => {
     // Only with codes to save: a confirmed row with nothing painted must not save an empty position.
-    if (!(embedded?.autoSave || embedded?.autoSaveAll) || step !== 'review' || !selection?.ready || !selection.codes || addingSel) return
+    // The open painter saves once its work is done (every code given an ElementType) — not
+    // merely for being opened on a position that was already done.
+    if (embedded && selection && !selection.ready) sawWork.current = true
+    // …or when what is saved for the position is not what the Form now gives it (never
+    // saved, or the Form changed). Opening it on a position already saved as-is saves nothing.
+    const saved = embedded?.posRef ? useStore.getState().formCaptures?.byPosition?.[embedded.posRef] : null
+    const savedEts = saved ? [...new Set(saved.map(c => String(c.elementTypeRef || '').toUpperCase()).filter(Boolean))].sort().join('|') : null
+    const differs = embedded?.posRef && selection && savedEts !== selection.etRefs.join('|')
+    if (!(embedded?.autoSave || embedded?.autoSaveAll || (embedded && (sawWork.current || differs))) || step !== 'review' || !selection?.ready || !selection.codes || addingSel) return
     const key = `${embedded.posRef}|${selection.refs.join(',')}`
     if (autoSaved.current === key) return
     autoSaved.current = key
@@ -1484,18 +1494,10 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
           posRef={embedded.posRef}
           rows={scopeRows}
           info={rowInfo}
-          selection={selection}
-          easyLeft={easyLeft}
-          adding={addingSel}
           onSetRole={setTokenRole}
           onToggleConfirm={toggleConfirm}
           onNeedsET={openETFor}
           onMakeMain={(rowId, code) => patchRow(rowId, r => ({ ...r, leadCode: code }))}
-          onConfirmObvious={confirmObvious}
-          onAdd={addSelectionAndBuild}
-          onUndo={() => { session.undo(); setUndoSnap(null) }}
-          onRedo={() => { session.redo(); setUndoSnap(null) }}
-          canUndo={session.canUndo} canRedo={session.canRedo}
         />
       )}
 

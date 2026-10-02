@@ -8,6 +8,7 @@
  */
 
 import { isNothingText } from './obviousRows'
+import { looksLikeProductCode } from './codeHeuristics'
 
 /** Rows grouped by Form ref, in the order the Form first mentions each. */
 export function groupPositions(rows = []) {
@@ -77,10 +78,13 @@ export function positionPaintStatus(draft, posRef, { buildRefMap, targetFor } = 
   const rows = groups.flatMap(g => g.rows)
   if (!rows.length) return { state: 'absent', rows: 0, unconfirmed: 0, formRefs: [] }
   // No product anywhere in its rows ("n/a", "by others"): nothing to add, nothing to do.
-  if (rows.every(r => isNothingText(r.rawText))) return { state: 'nothing', rows: rows.length, unconfirmed: 0, formRefs: groups.map(g => g.formRef) }
+  if (rows.every(r => isNothingText(r.rawText))) return { state: 'nothing', rows: rows.length, unconfirmed: 0, formRefs: groups.map(g => g.formRef), texts: rows.map(r => String(r.rawText || '').trim()).filter(Boolean) }
   const unconfirmed = rows.filter(r => !r.confirmed).length
+  // In product codes, not rows: the code-shaped words still to confirm (at least one a row).
+  const newCodes = rows.filter(r => !r.confirmed)
+    .reduce((n, r) => n + Math.max(1, String(r.rawText || '').split(/\s+/).filter(w => w && looksLikeProductCode(w)).length), 0)
   const staged = new Set(draft.stagedRefs || [])
   const formRefs = groups.map(g => g.formRef)
   const state = unconfirmed ? 'todo' : formRefs.every(f => staged.has(f)) ? 'added' : 'ready'
-  return { state, rows: rows.length, unconfirmed, formRefs }
+  return { state, rows: rows.length, unconfirmed, newCodes, formRefs }
 }

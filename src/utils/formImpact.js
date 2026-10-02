@@ -128,3 +128,32 @@ export function formImpact({ posRef, baseRows = [], newRows = [], recipes = [], 
       canUpdate: consistent && !stillInForm, container, wrapperUsers }
   })
 }
+
+/**
+ * formDiffStates({ posRefs, baseRows, newRows, targetOf, master })
+ *   → Map(posRef → { state: 'add' | 'omit' | 'mixed', added: [code], dropped: [code] })
+ * How each position's PRODUCT CODES moved since the comparison base, for the rail (862MB6):
+ * codes the Form now gives that it didn't (add), codes it no longer gives (omit), or both
+ * (mixed — a code swapped). A change of words around the codes is not a change of product.
+ */
+export function formDiffStates({ posRefs = [], baseRows = [], newRows = [], targetOf = r => r, master = [] }) {
+  const out = new Map()
+  if (!baseRows.length) return out
+  const codesOf = rows => {
+    const set = new Map()
+    for (const r of rows) {
+      const { known, unknown } = readCodes(r, master)
+      for (const c of [...known.values(), ...unknown]) set.set(up(c), c)
+    }
+    return set
+  }
+  for (const p of posRefs) {
+    const was = codesOf(rowsFor(baseRows, p, targetOf))
+    const now = codesOf(rowsFor(newRows, p, targetOf))
+    const added = [...now.keys()].filter(k => !was.has(k)).map(k => now.get(k))
+    const dropped = [...was.keys()].filter(k => !now.has(k)).map(k => was.get(k))
+    if (!added.length && !dropped.length) continue
+    out.set(p, { state: added.length && dropped.length ? 'mixed' : added.length ? 'add' : 'omit', added, dropped })
+  }
+  return out
+}
