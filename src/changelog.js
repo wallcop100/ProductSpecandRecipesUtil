@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-10-02', note: 'Position list (862MB6): while the Form is compared with an older one, a “difference” icon beside each position whose Form rows moved: green for added, red for dropped, yellow for changed or mixed' },
   { date: '2026-10-02', note: 'Form spec pane (WGNPNM): the “Form and recipe disagree about where this is used” warning only shows when the disagreement involves the position you are on' },
   { date: '2026-10-02', note: 'Form spec pane: “Changed since <older Form>” shows each position’s Form changes in-line with the one action that fits: Swap to a known ElementType; Update the existing ElementType’s Product Spec when every position in the Form changes the same way and the old code is gone; otherwise Fork it (or New ElementType) for the positions that change, never touching the ones that keep it. “Compare with an older Form…” is in the pane’s ⋯ (JQSFCU, LH5EC2). A “same recipe as …” pill shows when another position’s whole recipe is identical (A59TJK)' },
   { date: '2026-10-02', note: 'Form: Detach takes the Form off the whole project, loaded session included (4MYUQ7); once a Form is loaded every position whose codes are all known is saved at once, and the Form chip counts every position in the Form (2K4TCY); a position with a code needing an ElementType has an orange dot (YCU5SZ); a wrapper part’s name no longer repeats its maker – code (8D9XNH)' },

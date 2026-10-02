@@ -128,3 +128,24 @@ export function formImpact({ posRef, baseRows = [], newRows = [], recipes = [], 
       canUpdate: consistent && !stillInForm, container, wrapperUsers }
   })
 }
+
+/**
+ * formDiffStates({ posRefs, baseRows, newRows, targetOf }) → Map(posRef → 'add' | 'omit' | 'mixed')
+ * How each position's Form rows moved since the comparison base, for the rail (862MB6):
+ * only new rows → add, only rows gone → omit, anything else that differs → mixed.
+ * Positions with no difference are left out.
+ */
+export function formDiffStates({ posRefs = [], baseRows = [], newRows = [], targetOf = r => r }) {
+  const out = new Map()
+  if (!baseRows.length) return out
+  for (const p of posRefs) {
+    const olds = rowsFor(baseRows, p, targetOf).map(diffRow)
+    const news = rowsFor(newRows, p, targetOf).map(diffRow)
+    if (!olds.length && !news.length) continue
+    const m = matchForms(olds, news)
+    const { new: added, changed, removed } = m.counts
+    if (!added && !changed && !removed) continue
+    out.set(p, changed || (added && removed) ? 'mixed' : added ? 'add' : 'omit')
+  }
+  return out
+}
