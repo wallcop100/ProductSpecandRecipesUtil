@@ -184,7 +184,8 @@ test('W24D3V: the Form shows raw; the brush opens the painter and it stays open,
     rows: [{ id: 0, rawText: 'QC50', positionType: 'C01', manufacturer: 'iGuzzini', context: {}, overrides: {}, noteOverride: {}, confirmed: true, autoConfirmed: true }],
   }, formCaptures: { version: 1, byPosition: { C01: [{ elementTypeRef: 'ET-PS-OLD', code: 'OLD1', manufacturer: 'iGuzzini' }] } } })
   render(<FormSpecPane posRef="C01" />)
-  expect(screen.getByTestId('form-raw')).toHaveTextContent('QC50')
+  expect(screen.getByTestId('form-raw')).toHaveTextContent(/ProductCode\s*QC50/)
+  expect(screen.getByTestId('form-raw')).toHaveTextContent(/ManufacturerName\s*iGuzzini/)
   fireEvent.click(screen.getByTestId('paint-position'))
   // Saved for the Form as it is now, quietly: the painter the user opened stays open.
   await waitFor(() => expect(useStore.getState().formCaptures.byPosition.C01?.[0]?.elementTypeRef).toBe('ET-PS-01'))

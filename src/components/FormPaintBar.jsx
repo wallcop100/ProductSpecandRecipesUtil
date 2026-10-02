@@ -76,10 +76,18 @@ export default function FormPaintBar({ posRef, open = false, onOpenChange = () =
         )}
       </div>
       {/* What the Form says here, raw and plain; the painter (the brush) only when needed. */}
-      {!open && state !== 'noForm' && st.texts?.length > 0 && (
+      {!open && state !== 'noForm' && st.cells?.some(c => c.length) && (
         <div className="mt-1" style={{ fontSize: 11 }} data-testid="form-raw">
-          {st.texts.map((t, i) => (
-            <div key={i} style={{ fontFamily: 'monospace', color: '#495057', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{t}</div>
+          {st.cells.filter(c => c.length).map((row, i) => (
+            <div key={i} className={i ? 'border-top pt-1 mt-1' : ''}
+              style={{ display: 'grid', gridTemplateColumns: 'minmax(0, max-content) 1fr', columnGap: 8 }}>
+              {row.map(({ col, value }) => (
+                <React.Fragment key={col}>
+                  <span className="text-muted text-truncate" style={{ fontSize: 10, maxWidth: 120 }} title={col}>{col}</span>
+                  <span style={{ fontFamily: 'monospace', color: '#495057', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{value}</span>
+                </React.Fragment>
+              ))}
+            </div>
           ))}
         </div>
       )}
