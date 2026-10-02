@@ -30,13 +30,15 @@ export default function FormPaintBar({ posRef, open = false, onOpenChange = () =
   const importDraft = useStore(s => s.importDraft)
   const formCaptures = useStore(s => s.formCaptures)
   const setOpen = onOpenChange
-  // Another position: the painter closes (open it again for that one).
-  useEffect(() => { setOpen(false) }, [posRef])   // eslint-disable-line react-hooks/exhaustive-deps
   const st = positionPaintStatus(importDraft, posRef, { buildRefMap, targetFor })
+  // On each position: the painter is open, inline, when it has Form rows to confirm;
+  // otherwise closed (known codes save themselves, below).
+  useEffect(() => { setOpen(st.state === 'todo') }, [posRef])   // eslint-disable-line react-hooks/exhaustive-deps
   // A Form added as a whole (not position by position) still counts as added here.
   const state = st.state === 'ready' && formCaptures?.byPosition?.[posRef] ? 'added' : st.state
   const label = LABEL[state]
   const work = state === 'todo' || state === 'ready'
+  const autoSave = st.state === 'ready' && !formCaptures?.byPosition?.[posRef]
 
   return (
     <div className="mb-2" data-testid="form-paint-bar">
@@ -58,6 +60,13 @@ export default function FormPaintBar({ posRef, open = false, onOpenChange = () =
             label={typeof label.text === 'function' ? label.text(st.unconfirmed) : label.text} />
         )}
       </div>
+      {/* Every row already known, not saved here yet: save it without asking, out of sight,
+          so the comparison below appears. Nothing to paint, so the painter stays shut. */}
+      {!open && autoSave && (
+        <div style={{ display: 'none' }} data-testid="form-autosave">
+          <ProductCodeImportScreen onBack={() => {}} embedded={{ posRef, autoSave: true, onStaged }} />
+        </div>
+      )}
       {open && (
         <div className="mt-1 ps-2" style={{ borderLeft: '2px solid #0d6efd' }} data-testid="paint-panel">
           <ProductCodeImportScreen onBack={() => setOpen(false)}

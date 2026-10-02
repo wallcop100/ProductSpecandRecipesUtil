@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-10-02', note: 'Form spec pane: a position whose Form rows are all codes already known is saved to it by itself, so its comparison (in the fitting / missing, with Add) shows straight away; the painter opens inline by itself on positions with rows to confirm. “The Form says nothing” only shows when it really has no rows for the position' },
   { date: '2026-10-02', note: 'The Form spec pane is back as it was: the painter opens only when you press Paint (the change that opened it by itself is undone)' },
   { date: '2026-10-02', note: 'Fix (GHVUMD): a wrapper’s contents edit maker – code in place too, with the pencil for the Product Spec' },
   { date: '2026-10-01', note: 'Builder: the palette starts closed and no longer opens on every position (2NNZGY); click a row’s maker – code to edit both in place, the pencil still opens the Product Spec (UY8CQ5)' },

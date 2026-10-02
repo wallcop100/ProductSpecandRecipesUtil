@@ -1280,6 +1280,19 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     } finally { setAddingSel(false) }
   }
 
+  // Embedded with `autoSave` (the builder, for a position whose Form rows are all known
+  // codes): save them to the position at once, so its Form-vs-recipe comparison shows
+  // without a Save step nobody needs. Rows that need a decision are left for the painter.
+  const autoSaved = useRef(null)
+  useEffect(() => {
+    // Only with codes to save: a confirmed row with nothing painted must not save an empty position.
+    if (!embedded?.autoSave || step !== 'review' || !selection?.ready || !selection.codes || addingSel) return
+    const key = `${embedded.posRef}|${selection.refs.join(',')}`
+    if (autoSaved.current === key) return
+    autoSaved.current = key
+    addSelectionAndBuild()
+  })   // eslint-disable-line react-hooks/exhaustive-deps
+
   // What changed since the older Form (formDiff.js), per row id, and what it no longer has.
   const formDiff = useMemo(() => {
     if (!compareBase) return null
