@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-10-02', note: 'Form spec pane: “added” reads “Codes in Product Spec” (MFMVWT); every product row shares one left edge (LJ25EF); no “in the spec” badge (VCYTLE); a Form / recipe disagreement is told on the row\'s status icon, with no extra warning sign (3C3VTE)' },
   { date: '2026-10-02', note: '2EF42C: the Form diff reads codes without their brackets, and ignores “(old code …)” notes: “(FPS2020BG2000)” is FPS2020BG2000, so removing an old-code note is no longer shown as a new code plus two dropped ones' },
   { date: '2026-10-02', note: 'The status is right before you open the painter: the background save also confirms entries whose codes all have ElementTypes and re-saves positions the Form now gives a known product they lack, so opening and closing the painter no longer flips a position to OK. 2EF42C: the diff shows a row\'s text once over its changes, and identical changes once' },
   { date: '2026-10-02', note: 'WYZ3NN: a Form entry whose codes all have ElementTypes (from the spec, this import or an earlier project) confirms itself and is saved; it no longer says a code needs an ElementType. If an entry only needs a tick, the chip says “1 entry to confirm”' },

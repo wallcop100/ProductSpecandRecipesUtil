@@ -14,7 +14,7 @@ const LABEL = {
   absent: { tone: 'neutral', icon: 'remove', text: 'not in the Form' },
   todo: { tone: 'warn', icon: 'category', text: n => `${n} code${n === 1 ? '' : 's'} need${n === 1 ? 's' : ''} an ElementType` },
   ready: { tone: 'info', icon: 'playlist_add', text: 'ready to add' },
-  added: { tone: 'ok', icon: 'check_circle', text: 'added' },
+  added: { tone: 'ok', icon: 'check_circle', text: 'Codes in Product Spec' },   // MFMVWT
   nothing: { tone: 'neutral', icon: 'block', text: 'nothing to add' },
 }
 
