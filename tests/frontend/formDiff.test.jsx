@@ -127,6 +127,20 @@ describe('comparing two Forms in the import', () => {
     expect(await screen.findByTestId('form-diff-banner')).toHaveTextContent('1 removed')
   })
 
+  test('X4AN58: Re-import cancelled at the file picker leaves the loaded Form as it was', async () => {
+    setup()
+    window.electronAPI.openXlsxDialog.mockResolvedValueOnce('tok-old').mockResolvedValueOnce(null)
+    render(<ProductCodeImportScreen onBack={vi.fn()} onReviewPositions={vi.fn()} />)
+    fireEvent.click(await screen.findByText('Choose spreadsheet…'))
+    await screen.findByTestId('form-table')
+    await waitFor(() => expect(useStore.getState().importDraft?.rows?.length).toBeGreaterThan(0), { timeout: 3000 })
+    const before = useStore.getState().importDraft
+    fireEvent.click(screen.getByRole('button', { name: 'More' }))
+    await act(async () => { fireEvent.click(await screen.findByText(/Re-import from a spreadsheet/)) })
+    expect(screen.getByTestId('form-table')).toBeInTheDocument()
+    expect(useStore.getState().importDraft).toBe(before)
+  })
+
   test('an older sheet without a product code column is not compared', async () => {
     setup()
     window.electronAPI.openXlsxDialog.mockResolvedValueOnce('tok-new').mockResolvedValueOnce('tok-bad')

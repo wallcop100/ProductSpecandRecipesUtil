@@ -20,37 +20,48 @@ import { buildRefMap, targetFor } from '../utils/ptResolve'
  * Props:
  *   onReconcile(refs) — start a step-through of the incomplete positions
  */
-export default function FormProgressChip({ onReconcile }) {
+export default function FormProgressChip({ onReconcile, onLoad }) {
   const recipes = useStore(s => s.recipes)
   const containerETRefs = useStore(s => s.containerETRefs)
   const formCaptures = useStore(s => s.formCaptures)
   const importDraft = useStore(s => s.importDraft)
   const positionTypes = useStore(s => s.positionTypes)
+  const loaded = !!importDraft?.rows?.length
 
-  const progress = useMemo(
-    () => formProgress(recipes, formCaptures, containerETRefs),
-    [recipes, formCaptures, containerETRefs]
-  )
-  // Positions the loaded Form gives products for that are not saved yet (a new code to
-  // confirm): part of the Form, and not done (2K4TCY).
-  const unsaved = useMemo(() => (importDraft?.rows?.length ? positionTypes.map(p => p.PositionTypeRef).filter(ref =>
-    !formCaptures?.byPosition?.[ref] && ['todo', 'ready'].includes(positionPaintStatus(importDraft, ref, { buildRefMap, targetFor }).state)) : []),
-  [importDraft, positionTypes, formCaptures])
-  const worklist = useMemo(
-    () => (progress || unsaved.length ? [...formWorklist(recipes, formCaptures, containerETRefs), ...unsaved.map(posRef => ({ posRef }))] : []),
-    [progress, recipes, formCaptures, containerETRefs, unsaved]
-  )
+  // Every position the loaded Form gives products for (X4AN58): to do, ready or added.
+  // Not the ones it never mentions, nor the ones where it says n/a.
+  const inForm = useMemo(() => (loaded ? positionTypes.map(p => p.PositionTypeRef).filter(ref =>
+    ['todo', 'ready', 'added'].includes(positionPaintStatus(importDraft, ref, { buildRefMap, targetFor }).state)) : []),
+  [loaded, importDraft, positionTypes])
+  const incomplete = useMemo(() => new Set(formWorklist(recipes, formCaptures, containerETRefs)
+    .filter(w => w.missing > 0 || w.pending > 0).map(w => w.posRef)), [recipes, formCaptures, containerETRefs])
+  const progress = useMemo(() => formProgress(recipes, formCaptures, containerETRefs), [recipes, formCaptures, containerETRefs])
 
-  // Silent with no Form attached. The prompt lives in the Side-by-Side pane, where
-  // the absence is actually felt; a second button up here was just noise.
-  if (!progress && !unsaved.length) return null
-  const total = (progress?.total || 0) + unsaved.length
-  const complete = progress?.complete || 0
-
+  if (!loaded) {
+    // Saved per position, but no Form loaded: nothing to count against (X4AN58).
+    if (!progress) return null
+    return (
+      <StatusChip tone="neutral" icon="description" tip="No Form is loaded: load it to see where each position stands"
+        label="Form not loaded">
+        {onLoad && (
+          <Button size="sm" variant="link" className="p-0 ms-1" data-testid="form-load"
+            style={{ fontSize: 10, color: 'inherit', textDecoration: 'underline' }} onClick={onLoad}>
+            Load →
+          </Button>
+        )}
+      </StatusChip>
+    )
+  }
+  if (!inForm.length) return null
+  // Done: saved for the position, and the recipe holds everything the Form asks for.
+  const todo = inForm.filter(ref => !formCaptures?.byPosition?.[ref] || incomplete.has(ref))
+  const total = inForm.length
+  const complete = total - todo.length
+  const unsaved = inForm.filter(ref => !formCaptures?.byPosition?.[ref]).length
   const done = complete === total
   const detail = [
-    `${complete} of ${total} positions hold everything the Form specifies`,
-    unsaved.length > 0 && `${unsaved.length} with a new code to confirm`,
+    `${complete} of ${total} positions in the Form hold everything it specifies`,
+    unsaved > 0 && `${unsaved} with a code still to give an ElementType`,
     progress?.missing > 0 && `${progress.missing} missing`,
     progress?.orphans > 0 && `${progress.orphans} dropped from the Form`,
   ].filter(Boolean).join(' · ')
@@ -58,10 +69,10 @@ export default function FormProgressChip({ onReconcile }) {
   return (
     <StatusChip tone={done ? 'ok' : 'warn'} icon="description" tip={detail}
       label={`Form ${complete}/${total}`}>
-      {worklist.length > 0 && onReconcile && (
+      {todo.length > 0 && onReconcile && (
         <Button size="sm" variant="link" className="p-0 ms-1"
           style={{ fontSize: 10, color: 'inherit', textDecoration: 'underline' }}
-          onClick={() => onReconcile(worklist.map(w => w.posRef))}
+          onClick={() => onReconcile(todo)}
           title="Step through every position that still needs reconciling">
           Reconcile →
         </Button>

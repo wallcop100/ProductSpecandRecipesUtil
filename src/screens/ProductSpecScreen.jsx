@@ -19,7 +19,7 @@ import { duplicateProductKeys } from '../utils/productCodes'
  *   onBack: () => void
  *   scrollToRef: string|null — auto-selects this ET on open
  */
-export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImport }) {
+export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImport, onOpenPosition }) {
   const psRows       = useStore(s => s.psRows)
   const psChanges    = useStore(s => s.psChanges)
   const recipes      = useStore(s => s.recipes)
@@ -443,6 +443,7 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
             etUsedIn={etUsedIn}
             missingETs={missingPsETs}
             onNavigate={handleNavigate}
+            onOpenPosition={onOpenPosition}
             focusToken={fillFocus}
             onRenamed={setSelectedRef}
           />

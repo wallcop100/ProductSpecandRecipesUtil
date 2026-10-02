@@ -26,9 +26,8 @@ import ReadinessPanel from '../components/ReadinessPanel'
 import SimilarPositionsPanel from '../components/SimilarPositionsPanel'
 import TutorialHint from '../tutorial/TutorialHint'
 import TagRulesModal from '../components/TagRulesModal'
-import TemplatePicker from '../components/TemplatePicker'
+import FormSpecPane from '../components/FormSpecPane'
 import PasteMergeModal from '../components/PasteMergeModal'
-import FavoritesPanel from '../components/FavoritesPanel'
 import ReviewModal from '../components/ReviewModal'
 import FormRecipesModal from '../components/FormRecipesModal'
 import FormAutoSaveAll from '../components/FormAutoSaveAll'
@@ -56,6 +55,9 @@ import { ACTION_ICONS, ICONS } from '../utils/entityStyle'
  * supporting tabs. Drilling into a container element's internal recipe swaps the
  * centre for a focused ET editor.
  */
+// The right drawer: wide enough for the Form spec pane (K3LGUL).
+const DRAWER_W = 340
+
 export default function BuilderScreen({
   onOpenTemplateEditor, onOpenProductSpec, onOpenConnectors, onOpenTags, onOpenCodeImport, onBackToSetup,
   pendingReviewRefs, onConsumePendingReview, importLoop = null, onNextFromImport, onEndImportLoop,
@@ -155,10 +157,16 @@ export default function BuilderScreen({
   const [justAdded, setJustAdded] = useState(null)           // { etRef, posRef, sectionKey }
   const [reviewAddCtx, setReviewAddCtx] = useState(null)     // { unit, filters } for review→add priming
   const [showFixer, setShowFixer] = useState(false)
-  const [rightTab, setRightTab] = useState('all')
+  const [rightTab, setRightTab] = useState('form')     // the Form spec is the drawer's default (K3LGUL)
   const [addQuery, setAddQuery] = useState('')
-  const [showDeleted, setShowDeleted] = useState(false)
-  const [rightOpen, setRightOpen] = useState(false)
+  const showDeleted = useStore(s => s.showDeleted)
+  // Open unless you closed it; remembered.
+  const [rightOpen, setRightOpenState] = useState(() => { try { return localStorage.getItem('builderDrawer') !== '0' } catch { return true } })
+  const setRightOpen = v => setRightOpenState(prev => {
+    const next = typeof v === 'function' ? v(prev) : v
+    try { localStorage.setItem('builderDrawer', next ? '1' : '0') } catch { /* session only */ }
+    return next
+  })
   const [showStatus, setShowStatus] = useState(false)          // where the project stands
   const [statusTab, setStatusTab] = useState('done')
   const [changeSummary, setChangeSummary] = useState(false)   // open the review + copy-patches modal
@@ -166,8 +174,6 @@ export default function BuilderScreen({
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)   // Transform-into-template modal (T-F4)
   const [showRetire, setShowRetire] = useState(false)               // Clean up unused ElementTypes
   const [showTags, setShowTags] = useState(false)                   // the tags modal (rules + colours)
-  // Track which template (if any) was applied to each position { [posRef]: templateId }
-  const [appliedTemplateId, setAppliedTemplateId] = useState({})
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -353,7 +359,9 @@ export default function BuilderScreen({
   const inETMode = activeContextType === 'ElementType' && !!activeETRef
 
   // Active-position context for the right-hand Tags/Templates tabs
-  const activeTags = activePositionRef ? (positionUI[activePositionRef]?.tags || []) : []
+  // The position the drawer's Form spec is for: the one open in the centre.
+  const allPositionTypes = useStore(s => s.positionTypes)
+  const drawerPos = rootView === 'positions' && allPositionTypes.some(p => p.PositionTypeRef === activePositionRef) ? activePositionRef : null
   const activeGrouped = activePositionRef ? getRecipeForPosition(recipes, activePositionRef) : null
   const hasRecipeRows = !!activeGrouped && (
     activeGrouped.position.length > 0 ||
@@ -465,47 +473,28 @@ export default function BuilderScreen({
         )}
         {/* Silent unless a Form template is attached. "Reconcile →" steps through
             every position that still misses a Form product. */}
-        <FormProgressChip onReconcile={startReconcile} />
+        <FormProgressChip onReconcile={startReconcile} onLoad={onOpenCodeImport} />
         <FormAutoSaveAll />
         <FormFileWatch />
 
-        {/* The other screens you actually move between while building a recipe. Everything
-            rarer lives in the ⋮ at the far end — the toolbar had fourteen controls in a row
-            and no way to tell the daily ones from the once-a-project ones. */}
-        <ButtonGroup size="sm" className="ms-1">
-          <IconButton variant="outline-secondary" icon={ACTION_ICONS.productSpec}
-            title="Product Spec" onClick={() => onOpenProductSpec()} />
-          {/* The Form → product-code workflow used to be reachable only from inside the
-              Product Spec screen, so nothing here said it existed. */}
-          {onOpenCodeImport && (
-            <IconButton variant="outline-secondary" icon="auto_fix_high"
-              title="Import product codes from a Form template" onClick={onOpenCodeImport} />
-          )}
-          {/* Connectors were reachable only from a position you had already opened, so the
-              matrix — the whole point of the screen — was unreachable from here. */}
-          {onOpenConnectors && (
-            <IconButton variant="outline-secondary" icon="cable"
-              title="Connectors — templates and the coverage matrix"
-              onClick={() => onOpenConnectors(null)} />
-          )}
-        </ButtonGroup>
-
+        {/* Recipes (the tree, 96KPJ5) and the Product Spec (XZ3UBB): the two surfaces you move
+            between. Browsing by ElementType, the Form import and Connectors are in ⋮. */}
         <ButtonGroup size="sm" className="ms-2">
           <Button
             variant={rootView === 'positions' ? 'primary' : 'outline-primary'}
             onClick={() => setRootView('positions')}
             className="d-inline-flex align-items-center gap-1"
-            title="Browse by PositionType"
+            title="Recipes: browse by PositionType" data-testid="view-recipes"
           >
-            <MaterialIcon name={ICONS.position} size={15} /> PositionTypes
+            <MaterialIcon name="receipt_long" size={15} /> Recipes
           </Button>
           <Button
-            variant={rootView === 'elements' ? 'primary' : 'outline-primary'}
-            onClick={() => setRootView('elements')}
+            variant="outline-primary"
+            onClick={() => onOpenProductSpec()}
             className="d-inline-flex align-items-center gap-1"
-            title="Browse by ElementType"
+            title="Product Spec" data-testid="open-product-spec"
           >
-            <MaterialIcon name={ICONS.element} size={15} /> ElementTypes
+            <MaterialIcon name="inventory_2" size={15} /> Product Spec
           </Button>
         </ButtonGroup>
 
@@ -517,13 +506,6 @@ export default function BuilderScreen({
         </ButtonGroup>
 
         <div className="flex-grow-1" />
-        <IconButton
-          variant={showDeleted ? 'secondary' : 'outline-secondary'}
-          bsSize="sm"
-          icon={showDeleted ? ACTION_ICONS.hideDeleted : ACTION_ICONS.showDeleted}
-          onClick={() => setShowDeleted(v => !v)}
-          title={showDeleted ? 'Hide IsDeleted rows' : 'Show IsDeleted rows'}
-        />
         {/* Where the project stands. Validation and "Am I done?" were tabs in the palette
             drawer — closed by default, so nobody saw them. They are answers about the
             project, so they belong in the chrome, carrying their own count. */}
@@ -549,6 +531,20 @@ export default function BuilderScreen({
           <Dropdown.Toggle as={IconButton} bsSize="sm" variant="outline-secondary"
             icon={ACTION_ICONS.more} title="More" />
           <Dropdown.Menu style={{ fontSize: 12 }}>
+            <Dropdown.Item onClick={() => setRootView('elements')} active={rootView === 'elements'}>
+              <MaterialIcon name={ICONS.element} size={14} /> Browse ElementTypes
+            </Dropdown.Item>
+            {onOpenCodeImport && (
+              <Dropdown.Item onClick={onOpenCodeImport}>
+                <MaterialIcon name="auto_fix_high" size={14} /> Import product codes from a Form template
+              </Dropdown.Item>
+            )}
+            {onOpenConnectors && (
+              <Dropdown.Item onClick={() => onOpenConnectors(null)}>
+                <MaterialIcon name="cable" size={14} /> Connectors — templates and the coverage matrix
+              </Dropdown.Item>
+            )}
+            <Dropdown.Divider />
             <Dropdown.Item onClick={() => setShowReview(true)}>
               <MaterialIcon name="fact_check" size={14} /> Review recipes…
             </Dropdown.Item>
@@ -618,7 +614,7 @@ export default function BuilderScreen({
           title={rightOpen ? 'Close palette' : 'Open palette'}
           style={{
             position: 'absolute',
-            right: rightOpen ? 280 : 0,
+            right: rightOpen ? DRAWER_W : 0,
             top: '50%',
             transform: 'translateY(-50%)',
             transition: 'right 0.2s ease',
@@ -742,7 +738,7 @@ export default function BuilderScreen({
         <div
           data-debug-id="BuilderScreen/RightDrawer"
           style={{
-            width: rightOpen ? 280 : 0,
+            width: rightOpen ? DRAWER_W : 0,
             flexShrink: 0,
             overflow: 'hidden',
             display: 'flex',
@@ -752,66 +748,47 @@ export default function BuilderScreen({
             transition: 'width 0.2s ease',
           }}
         >
-          {/* The Add panel: one search box over every source of rows — ElementTypes,
-              templates, favourites, positions like this one. "All" stacks them. */}
+          {/* The drawer: this position's Form spec first (K3LGUL), then the ways to add rows —
+              ElementTypes and positions like this one — under one search box. */}
           <div style={{ flexShrink: 0, borderBottom: '1px solid #dee2e6' }} className="px-2 pt-2 pb-1">
-            <div className="d-flex align-items-center gap-1 mb-1">
-              <Form.Control size="sm" value={addQuery} onChange={e => setAddQuery(e.target.value)}
-                placeholder="Search to add…" aria-label="Search to add" style={{ fontSize: 12 }} />
+            <div className="d-flex align-items-center gap-1">
+              <ButtonGroup size="sm" className="flex-grow-1" aria-label="Show">
+                {[
+                  ['form', 'description', 'Form spec'],
+                  ['palette', 'category', 'ElementTypes'],
+                  ['similar', 'compare_arrows', 'Positions like this one'],
+                ].map(([k, icon, label]) => (
+                  <Button key={k} variant={rightTab === k ? 'primary' : 'outline-secondary'} title={label} aria-label={label}
+                    data-testid={`drawer-tab-${k}`} onClick={() => setRightTab(k)} style={{ padding: '1px 4px' }}>
+                    <MaterialIcon name={icon} size={15} />
+                  </Button>
+                ))}
+              </ButtonGroup>
               <TutorialHint id="palette" />
               <button className="btn btn-link p-0" style={{ color: '#888', lineHeight: 1 }} onClick={() => setRightOpen(false)} title="Close palette" aria-label="Close palette"><MaterialIcon name="close" size={18} /></button>
             </div>
-            <ButtonGroup size="sm" className="w-100" aria-label="Show">
-              {[
-                ['all', 'apps', 'All'],
-                ['palette', 'category', 'ElementTypes'],
-                ['templates', 'bookmark', 'Templates'],
-                ['favorites', ACTION_ICONS.favorite, 'Favourites'],
-                ['similar', 'compare_arrows', 'Positions like this one'],
-              ].map(([k, icon, label]) => (
-                <Button key={k} variant={rightTab === k ? 'primary' : 'outline-secondary'} title={label} aria-label={label}
-                  onClick={() => setRightTab(k)} style={{ padding: '1px 4px' }}>
-                  <MaterialIcon name={icon} size={15} />
-                </Button>
-              ))}
-            </ButtonGroup>
+            {rightTab !== 'form' && (
+              <Form.Control size="sm" className="mt-1" value={addQuery} onChange={e => setAddQuery(e.target.value)}
+                placeholder="Search to add…" aria-label="Search to add" style={{ fontSize: 12 }} />
+            )}
           </div>
-          <div style={{ flex: 1, overflowY: 'auto' }}>
-            {(rightTab === 'all' || rightTab === 'templates') && (
-              <AddSection show={rightTab === 'all'} icon="bookmark" label="Templates">
-                <TemplatePicker
-                  posRef={activePositionRef}
-                  activeTags={activeTags}
-                  hasRows={hasRecipeRows}
-                  query={addQuery}
-                  onApply={templateId =>
-                    setAppliedTemplateId(prev => ({ ...prev, [activePositionRef]: templateId }))
-                  }
-                />
-              </AddSection>
+          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+            {rightTab === 'form' && (drawerPos
+              ? <FormSpecPane posRef={drawerPos} inDrawer />
+              : <div className="text-muted fst-italic p-3" style={{ fontSize: 11 }} data-testid="drawer-form-hint">Open a position to see what the Form asks for.</div>)}
+            {rightTab === 'palette' && (
+              <ElementPalette
+                pickTarget={addRowTarget}
+                onPickET={handlePickET}
+                onPickETMulti={handlePickETMulti}
+                onCancelPick={handleCancelPick}
+                onNewET={handleNewET}
+                justAdded={justAdded}
+                onAddToMultiple={handleAddToMultiple}
+                query={addQuery}
+              />
             )}
-            {(rightTab === 'all' || rightTab === 'favorites') && (
-              <AddSection show={rightTab === 'all'} icon={ACTION_ICONS.favorite} label="Favourites"><FavoritesPanel /></AddSection>
-            )}
-            {(rightTab === 'all' || rightTab === 'palette') && (
-              <AddSection show={rightTab === 'all'} icon="category" label="ElementTypes">
-                <ElementPalette
-                  pickTarget={addRowTarget}
-                  onPickET={handlePickET}
-                  onPickETMulti={handlePickETMulti}
-                  onCancelPick={handleCancelPick}
-                  onNewET={handleNewET}
-                  justAdded={justAdded}
-                  onAddToMultiple={handleAddToMultiple}
-                  query={addQuery}
-                />
-              </AddSection>
-            )}
-            {(rightTab === 'all' || rightTab === 'similar') && (
-              <AddSection show={rightTab === 'all'} icon="compare_arrows" label="Positions like this one">
-                <SimilarPositionsPanel posRef={activePositionRef} query={addQuery} />
-              </AddSection>
-            )}
+            {rightTab === 'similar' && <SimilarPositionsPanel posRef={activePositionRef} query={addQuery} />}
           </div>
         </div>
       </div>
@@ -954,16 +931,3 @@ export default function BuilderScreen({
   )
 }
 
-/** A heading over one source in the Add panel's "All" view; nothing when a source is shown alone. */
-function AddSection({ show, icon, label, children }) {
-  if (!show) return children
-  return (
-    <div className="border-bottom">
-      <div className="px-2 pt-2 fw-semibold text-muted d-flex align-items-center gap-1"
-        style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '.04em' }}>
-        <MaterialIcon name={icon} size={12} /> {label}
-      </div>
-      {children}
-    </div>
-  )
-}

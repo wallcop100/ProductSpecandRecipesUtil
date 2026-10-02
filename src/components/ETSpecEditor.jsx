@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { Form, Button } from 'react-bootstrap'
 import useStore from '../store/useStore'
+import { getUsedIn } from '../utils/containerUtils'
 import FlagPill from './FlagPill'
 import EntityPill from './EntityPill'
 import MaterialIcon from './MaterialIcon'
@@ -19,8 +20,9 @@ import { planFamilyMove } from '../utils/etSeed'
  *   missingETs: string[]
  *   onNavigate: ('prev'|'next') => void
  */
-export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = [], onNavigate, focusToken = 0, onRenamed }) {
+export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = [], onNavigate, focusToken = 0, onRenamed, onOpenPosition }) {
   const psRows      = useStore(s => s.psRows)
+  const recipes     = useStore(s => s.recipes)
   const updatePSRow = useStore(s => s.updatePSRow)
   const addPSRow    = useStore(s => s.addPSRow)
   const elementTypes = useStore(s => s.elementTypes)
@@ -95,8 +97,33 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
     return (
       <div className="p-4" style={{ maxWidth: 600 }}>
         <div className="fw-semibold mb-1" style={{ fontSize: 14 }}>{selectedRef}</div>
-        <div className="alert alert-warning py-2 px-3 mb-3" style={{ fontSize: 12 }}>
+        <div className="alert alert-warning py-2 px-3 mb-3" style={{ fontSize: 12 }} data-testid="missing-spec">
           Referenced in recipes but has no product spec entry.
+          {/* Where (E2H3QX): each position using it, and the wrapper it sits in, if any. */}
+          {(() => {
+            const live = recipes.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y'
+              && String(r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === String(selectedRef).toLowerCase())
+            const uses = getUsedIn(selectedRef, recipes).map(p => {
+              const inside = [...new Set(live.filter(r => (r.PositionTypeRef || r.positionTypeRef) === p && (r.ContextType || r.contextType) === 'ElementType')
+                .map(r => r.ContextRef || r.contextRef))]
+              return { p, inside }
+            })
+            if (!uses.length) return null
+            return (
+              <div className="mt-1" data-testid="missing-spec-uses">
+                Used by{' '}
+                {uses.map(({ p, inside }, i) => (
+                  <span key={p}>
+                    {i > 0 && ', '}
+                    {onOpenPosition
+                      ? <Button variant="link" size="sm" className="p-0 align-baseline" style={{ fontSize: 12 }} onClick={() => onOpenPosition(p)}>{p}</Button>
+                      : p}
+                    {inside.length > 0 && <span className="text-muted"> (inside {inside.join(', ')})</span>}
+                  </span>
+                ))}
+              </div>
+            )
+          })()}
         </div>
         <Button variant="primary" size="sm" onClick={() => addPSRow(selectedRef)}>
           + Create spec entry

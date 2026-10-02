@@ -544,13 +544,20 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     if (rows.some(r => r.confirmed && !r.autoConfirmed) && !window.confirm('Start again from a spreadsheet? The painting and confirms on this import are dropped (anything already added to the Product Spec stays).')) return
     // The Form being replaced becomes what the new one is compared with.
     const base = rows.length ? { name: source?.name || 'the last import', rows: rows.map(diffRow) } : compareBase
-    await discardDraft()
+    // Pick first: cancelled, the loaded Form stays as it was (X4AN58). The saved import is
+    // not cleared here either: the new one overwrites it once it has rows, so Back while
+    // mapping the new sheet still leaves the old Form loaded.
+    const path = await window.electronAPI?.openXlsxDialog?.()
+    if (!path) return
+    setResumeDismissed(true)
     setCompareBase(base)
     setStagedRefs([]); setSelectedRefs(new Set())
     session.load({ rows: [] })
     setStaged(null); setExpandedId(null); setKnownStats(null); setPreKnownRows(null)
     setStep('pick')
-    handlePick()
+    try { await window.electronAPI?.rememberFormFile?.(projectId, path) } catch { /* not remembered */ }
+    setRemembered(null)
+    openToken(path)
   }
 
   // ---- review ---------------------------------------------------------------

@@ -507,6 +507,9 @@ const useStore = create((set, get) => ({
   // Unexported changes brought back from the last session on open: { n } (builder notice).
   restoredNotice: null,
   /** Builder: "shared with" on every row, not only wrappers (5GLMMQ). Remembered in this browser. */
+  // Show IsDeleted rows in recipes (DD66AT: toggled from the Recipe actions menu).
+  showDeleted: false,
+  toggleShowDeleted() { set({ showDeleted: !get().showDeleted }) },
   showSharedEverywhere: (() => { try { return localStorage.getItem('show_shared_everywhere') === '1' } catch { return false } })(),
   toggleSharedEverywhere() {
     const on = !get().showSharedEverywhere
