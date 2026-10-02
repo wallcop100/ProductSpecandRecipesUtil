@@ -67,6 +67,7 @@ describe('D4Z9CX: paint one position from the builder', () => {
     await waitFor(() => expect(screen.getByTestId('paint-status')).toHaveTextContent('added'))
     fireEvent.click(screen.getByTestId('paint-position'))
     expect(await screen.findByTestId('compact-known')).toHaveTextContent('QC52 → ET-PS-03')
+    expect(screen.getAllByTestId('compact-row')).toHaveLength(1)                 // 5FGNH2: its words, to paint
     expect(screen.queryByTestId('add-and-build')).toBeNull()                  // no Save button
     expect(window.electronAPI.openXlsxDialog).toHaveBeenCalledTimes(1)
   })

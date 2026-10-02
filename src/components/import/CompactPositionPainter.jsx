@@ -39,10 +39,11 @@ export default function CompactPositionPainter({ posRef, rows, info, onSetRole, 
       </div>
     )
   }
-  const known = infos.flatMap(({ row, inf }) => inf.codes.filter(c => c.etRef).map(c => ({ ...c, row })))
-  const work = infos.filter(({ inf }) => inf.codes.length === 0 || inf.codes.some(c => !c.etRef))
   const needEt = infos.flatMap(({ inf }) => inf.codes.filter(c => !c.etRef)).length
 
+  // Every Form entry, with its words to paint (5FGNH2: also the ones already settled, so
+  // opening the painter always shows something to paint), then each code it reads:
+  // settled ones as code → ElementType · in the recipe or not, new ones with the button.
   return (
     <div style={{ fontSize: 11 }} data-testid="compact-painter">
       {needEt > 0 && (
@@ -51,7 +52,7 @@ export default function CompactPositionPainter({ posRef, rows, info, onSetRole, 
         </div>
       )}
 
-      {work.map(({ row, inf }) => (
+      {infos.map(({ row, inf }) => (
         <div key={row.id} className="py-1 border-bottom" data-testid="compact-row">
           <div className="d-flex align-items-start gap-1">
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -69,38 +70,40 @@ export default function CompactPositionPainter({ posRef, rows, info, onSetRole, 
               {inf.suggested?.length && !row.confirmed ? 'Underlined words look like codes: click one to use it' : (inf.status?.label || 'no code')}
             </div>
           )}
-          {inf.codes.map(c => (
+          {inf.codes.some(c => c.etRef) && (
+            <div className="mt-1" data-testid="compact-known">
+              {inf.codes.filter(c => c.etRef).map(c => (
+                <div key={c.code} className="d-flex align-items-center gap-1" style={{ fontSize: 10 }} data-testid="known-code">
+                  {inf.codes.length > 1 && <MainStar c={c} onMakeMain={() => onMakeMain(row.id, c.code)} />}
+                  <MaterialIcon name="check_circle" size={12} style={{ color: '#198754' }} />
+                  <span style={{ ...mono, fontWeight: 600 }}>{c.code}</span> → <span style={mono}>{c.etRef}</span>
+                  <span className="text-muted">· {inRecipe(c.etRef) ? 'in the recipe' : 'not in the recipe yet'}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {inf.codes.filter(c => !c.etRef).map(c => (
             <div key={c.code} className="d-flex align-items-center gap-1 flex-wrap mt-1">
-              {inf.codes.length > 1 && (
-                <span role={c.main ? undefined : 'button'} title={c.main ? 'Main product' : 'Extra: click to make it the main product'}
-                  style={{ color: c.main ? '#0d6efd' : '#adb5bd', cursor: c.main ? 'default' : 'pointer' }}
-                  onClick={c.main ? undefined : () => onMakeMain(row.id, c.code)}>
-                  <MaterialIcon name={c.main ? 'star' : 'star_border'} size={11} />
-                </span>
-              )}
-              {c.etRef
-                ? <span style={{ fontSize: 10 }}><span style={{ ...mono, fontWeight: 600 }}>{c.code}</span> → <span style={{ ...mono, color: '#0f5132' }}>{c.etRef}</span></span>
-                : <Button size="sm" variant="primary" className="py-0" style={{ fontSize: 11 }} data-testid="give-et"
-                    onClick={() => onNeedsET(c.code)}>
-                    Give <span style={mono}>{c.code}</span> an ElementType
-                  </Button>}
+              {inf.codes.length > 1 && <MainStar c={c} onMakeMain={() => onMakeMain(row.id, c.code)} />}
+              <Button size="sm" variant="primary" className="py-0" style={{ fontSize: 11 }} data-testid="give-et"
+                onClick={() => onNeedsET(c.code)}>
+                Give <span style={mono}>{c.code}</span> an ElementType
+              </Button>
             </div>
           ))}
         </div>
       ))}
-
-      {/* What is already settled: always in view, code → ElementType → recipe. */}
-      {known.length > 0 && (
-        <div className="mt-1" data-testid="compact-known">
-          {known.map(c => (
-            <div key={`${c.row.id}-${c.code}`} className="d-flex align-items-center gap-1" style={{ fontSize: 10 }} data-testid="known-code">
-              <MaterialIcon name="check_circle" size={12} style={{ color: '#198754' }} />
-              <span style={{ ...mono, fontWeight: 600 }}>{c.code}</span> → <span style={mono}>{c.etRef}</span>
-              <span className="text-muted">· {inRecipe(c.etRef) ? 'in the recipe' : 'not in the recipe yet'}</span>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
+  )
+}
+
+/** Main product or extra, for an entry with several codes: click an extra to make it main. */
+function MainStar({ c, onMakeMain }) {
+  return (
+    <span role={c.main ? undefined : 'button'} title={c.main ? 'Main product' : 'Extra: click to make it the main product'}
+      style={{ color: c.main ? '#0d6efd' : '#adb5bd', cursor: c.main ? 'default' : 'pointer' }}
+      onClick={c.main ? undefined : onMakeMain}>
+      <MaterialIcon name={c.main ? 'star' : 'star_border'} size={11} />
+    </span>
   )
 }

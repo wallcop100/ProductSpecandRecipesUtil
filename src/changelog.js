@@ -7,6 +7,8 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-10-02', note: 'TEE8EV: the Review recipes window shows the “Changed since” diff too, with the same Swap / Update / Fork' },
+  { date: '2026-10-02', note: 'ZMRK2Y: Recipes | Product Spec is the first thing in both headers, so it stays put when you switch. 5FGNH2: the painter shows every Form entry\'s words to paint, the settled ones too, each with its code → ElementType line' },
   { date: '2026-10-02', note: 'WVYVW6: the rail ticks and the toolbar Form chip use one answer for “done”; a position not saved yet (e.g. right after a refresh) whose recipe already holds its known codes counts as done in both. QATFST: the “Changed since” diff has a show/hide that is remembered' },
   { date: '2026-10-02', note: '3VHRQP: the “Changed since” diff also shows codes the Product Spec does not know yet: a new one (it needs an ElementType) and one the Form dropped; before, a Form change made only of such codes showed no diff at all' },
   { date: '2026-10-02', note: '98GPK7: the Product Spec header has the same Recipes | Product Spec switch as the builder toolbar, so the way back is where the way in was' },

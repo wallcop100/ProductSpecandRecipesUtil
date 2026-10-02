@@ -459,6 +459,9 @@ export default function BuilderScreen({
         style={{ flexShrink: 0 }}
         data-debug-id="BuilderScreen/Toolbar"
       >
+        {/* First, as on the Product Spec's header, so it does not move between them (ZMRK2Y). */}
+        <SurfaceSwitch active={rootView === 'positions' ? 'recipes' : null} className=""
+          onRecipes={() => setRootView('positions')} onProductSpec={() => onOpenProductSpec()} />
         {/* Not a "back": it closes the project. Says so, and asks first. */}
         <IconButton variant="outline-secondary" bsSize="sm" icon="logout"
           title="Close project — back to choosing a project" onClick={() => setConfirmClose(true)} />
@@ -480,8 +483,6 @@ export default function BuilderScreen({
 
         {/* Recipes (the tree, 96KPJ5) and the Product Spec (XZ3UBB): the two surfaces you move
             between. Browsing by ElementType, the Form import and Connectors are in ⋮. */}
-        <SurfaceSwitch active={rootView === 'positions' ? 'recipes' : null}
-          onRecipes={() => setRootView('positions')} onProductSpec={() => onOpenProductSpec()} />
 
         <ButtonGroup size="sm" className="ms-2">
           <IconButton variant="outline-secondary" icon={ACTION_ICONS.undo}
