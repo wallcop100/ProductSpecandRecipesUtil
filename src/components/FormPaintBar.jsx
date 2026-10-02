@@ -30,14 +30,13 @@ export default function FormPaintBar({ posRef, open = false, onOpenChange = () =
   const importDraft = useStore(s => s.importDraft)
   const formCaptures = useStore(s => s.formCaptures)
   const setOpen = onOpenChange
+  // Another position: the painter closes (open it again for that one).
+  useEffect(() => { setOpen(false) }, [posRef])   // eslint-disable-line react-hooks/exhaustive-deps
   const st = positionPaintStatus(importDraft, posRef, { buildRefMap, targetFor })
   // A Form added as a whole (not position by position) still counts as added here.
   const state = st.state === 'ready' && formCaptures?.byPosition?.[posRef] ? 'added' : st.state
   const label = LABEL[state]
   const work = state === 'todo' || state === 'ready'
-  // On each position: its Form rows open by themselves when they are loaded but not yet
-  // saved to it (GCEKBN), else the painter stays closed.
-  useEffect(() => { setOpen(work) }, [posRef])   // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="mb-2" data-testid="form-paint-bar">

@@ -74,7 +74,7 @@ describe('D4Z9CX: paint one position from the builder', () => {
     view.unmount()
     render(<FormSpecPane posRef="C03" />)
     expect(screen.getByTestId('paint-status')).toHaveTextContent('ready to add')   // QC52 is in the spec: confirmed already
-    // Its rows are loaded but not saved to C03: the painter opens on them by itself (GCEKBN).
+    fireEvent.click(screen.getByTestId('paint-position'))
     await screen.findByTestId('compact-painter')
     await waitFor(() => expect(tableRefs()).toEqual(['C03']))
     expect(window.electronAPI.openXlsxDialog).toHaveBeenCalledTimes(1)
@@ -149,21 +149,5 @@ describe('9GLX5N: with a Product Spec, start straight away', () => {
     expect(screen.getByTestId('paint-position')).toBeInTheDocument()
     expect(screen.queryByText('No Form template yet')).toBeNull()
     expect(screen.getByText(/or go through the whole Form in Import/)).toBeInTheDocument()
-  })
-})
-
-describe('GCEKBN: on reopening, a position’s unsaved Form rows show', () => {
-  test('the painter opens by itself on them; no "the Form says nothing"', async () => {
-    const draft = {
-      version: 1, step: 'review', source: { name: 'form.xlsx', sheet: 'S' },
-      map: { pt: '', code: 'ProductCode', mfr: 'ManufacturerName', exclude: '', acc: '', context: [] },
-      rules: {}, assignments: {}, resolutions: [], refOverrides: {}, dirStats: { forward: 0, backward: 0 }, stagedRefs: [], keptSeparate: [],
-      rows: [{ id: 0, rawText: 'QC51', positionType: 'C02', manufacturer: 'iGuzzini', context: {}, overrides: {}, noteOverride: {}, confirmed: false }],
-    }
-    useStore.setState({ importDraft: draft, formCaptures: { version: 1, byPosition: { C01: [{ elementTypeRef: 'ET-PS-01', code: 'QC50' }] } } })
-    render(<FormSpecPane posRef="C02" />)
-    expect(await screen.findByTestId('compact-painter')).toBeInTheDocument()
-    expect(screen.queryByText(/The Form says nothing about C02/)).toBeNull()
-    expect(screen.getAllByTestId('compact-row')[0]).toHaveTextContent('QC51')
   })
 })
