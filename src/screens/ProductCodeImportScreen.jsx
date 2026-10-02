@@ -1222,6 +1222,13 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   })), [formOrder, map.pt, ptTarget, needsEt, stagedSet])
   // Nothing (or nothing that still exists) selected: take the next position still to do.
   const embeddedRef = embedded?.posRef || null
+  // Embedded `autoSaveAll` (the builder, once a Form is loaded): every position whose rows
+  // are all confirmed and all have an ElementType, in one selection, saved together.
+  useEffect(() => {
+    if (!embedded?.autoSaveAll || step !== 'review') return
+    const want = formPositions.filter(p => p.status === 'ready').map(p => p.formRef)
+    if (want.length !== selectedRefs.size || want.some(r => !selectedRefs.has(r))) setSelectedRefs(new Set(want))
+  }, [embedded, step, formPositions, selectedRefs])
   useEffect(() => {
     if (!embeddedRef || step !== 'review') return
     // Embedded: the Form refs that land on this PositionType, and nothing else.
@@ -1236,7 +1243,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     if (first) setFocusId(first.id)
   }, [embeddedRef, step, selectedRefs])   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (embeddedRef || mode !== 'position' || step !== 'review' || formPositions.length === 0) return
+    if (embedded || mode !== 'position' || step !== 'review' || formPositions.length === 0) return
     const live = [...selectedRefs].filter(r => formPositions.some(p => p.formRef === r))
     if (live.length) { if (live.length !== selectedRefs.size) setSelectedRefs(new Set(live)); return }
     const next = formPositions.find(p => p.status !== 'done') || formPositions[0]
@@ -1286,7 +1293,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   const autoSaved = useRef(null)
   useEffect(() => {
     // Only with codes to save: a confirmed row with nothing painted must not save an empty position.
-    if (!embedded?.autoSave || step !== 'review' || !selection?.ready || !selection.codes || addingSel) return
+    if (!(embedded?.autoSave || embedded?.autoSaveAll) || step !== 'review' || !selection?.ready || !selection.codes || addingSel) return
     const key = `${embedded.posRef}|${selection.refs.join(',')}`
     if (autoSaved.current === key) return
     autoSaved.current = key

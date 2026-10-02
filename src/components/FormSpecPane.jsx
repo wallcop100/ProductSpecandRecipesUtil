@@ -381,8 +381,8 @@ export default function FormSpecPane({ posRef, embedded = false }) {
 
   const handleReimport = () => requestScreen('product-code-import')
   const handleDetach = () => {
-    if (window.confirm('Detach the Form template? The recipes stay; only the Form comparison goes.')) {
-      clearFormCaptures()
+    if (window.confirm('Detach the Form template from the whole project? Every position loses its Form comparison and the loaded Form is closed. Recipes and the Product Spec stay.')) {
+      useStore.getState().detachForm()
     }
   }
 

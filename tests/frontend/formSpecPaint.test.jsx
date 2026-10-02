@@ -186,3 +186,25 @@ describe('known codes save themselves to the position', () => {
     expect(useStore.getState().formCaptures).toBeNull()
   })
 })
+
+test('4MYUQ7: Detach takes the Form off the whole project, session included', async () => {
+  useStore.setState({ importDraft: { rows: [{ id: 0, rawText: 'QC50', positionType: 'C01' }] }, formCaptures: { byPosition: { C01: [{ elementTypeRef: 'ET-PS-01', code: 'QC50' }] } } })
+  await useStore.getState().detachForm()
+  expect(useStore.getState().formCaptures).toBeNull()
+  expect(useStore.getState().importDraft).toBeNull()
+})
+
+test('2K4TCY: every known position is saved at once; the chip counts the whole Form', async () => {
+  const { default: FormAutoSaveAll } = await import('../../src/components/FormAutoSaveAll.jsx')
+  const { default: FormProgressChip } = await import('../../src/components/FormProgressChip.jsx')
+  const r = (id, rawText, pt, x = {}) => ({ id, rawText, positionType: pt, manufacturer: 'iGuzzini', context: {}, overrides: { 0: 'code' }, noteOverride: {}, confirmed: false, ...x })
+  useStore.setState({ formCaptures: null, importDraft: {
+    version: 1, step: 'review', source: { name: 'form.xlsx', sheet: 'S' },
+    map: { pt: '', code: 'ProductCode', mfr: 'ManufacturerName', exclude: '', acc: '', context: [] },
+    rules: {}, assignments: {}, resolutions: [], refOverrides: {}, dirStats: { forward: 0, backward: 0 }, stagedRefs: [], keptSeparate: [],
+    rows: [r(0, 'QC50', 'C01', { confirmed: true }), r(1, 'QC51', 'C02'), r(2, 'QC52', 'C03', { confirmed: true })],
+  } })
+  render(<><FormAutoSaveAll /><FormProgressChip onReconcile={() => {}} /></>)
+  await waitFor(() => expect(Object.keys(useStore.getState().formCaptures?.byPosition || {}).sort()).toEqual(['C01', 'C03']))
+  expect(screen.getByText(/Form \d\/3/)).toBeInTheDocument()
+})

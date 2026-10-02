@@ -31,6 +31,7 @@ import PasteMergeModal from '../components/PasteMergeModal'
 import FavoritesPanel from '../components/FavoritesPanel'
 import ReviewModal from '../components/ReviewModal'
 import FormRecipesModal from '../components/FormRecipesModal'
+import FormAutoSaveAll from '../components/FormAutoSaveAll'
 import RecipeStylesWindow from '../components/RecipeStylesWindow'
 import RestoredNotice from '../components/RestoredNotice'
 import TeachBar from '../components/TeachBar'
@@ -464,6 +465,7 @@ export default function BuilderScreen({
         {/* Silent unless a Form template is attached. "Reconcile →" steps through
             every position that still misses a Form product. */}
         <FormProgressChip onReconcile={startReconcile} />
+        <FormAutoSaveAll />
 
         {/* The other screens you actually move between while building a recipe. Everything
             rarer lives in the ⋮ at the far end — the toolbar had fourteen controls in a row

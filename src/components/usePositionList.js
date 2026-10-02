@@ -52,10 +52,14 @@ export default function usePositionList() {
   // "In the Form" means it asks for a product here; rows of only "n/a" ask for nothing.
   const inForm = ref => !!(formCaptures?.byPosition?.[ref]?.length || formCaptures?.pendingByPosition?.[ref]?.length)
     || !['absent', 'noForm', 'nothing'].includes(positionPaintStatus(importDraft, ref, { buildRefMap, targetFor }).state)
+  // A Form code here with no ElementType yet (YCU5SZ): saved as pending, or a row of the
+  // loaded Form still to confirm (codes the spec knows confirm themselves).
+  const needsEt = ref => !!formCaptures?.pendingByPosition?.[ref]?.length
+    || positionPaintStatus(importDraft, ref, { buildRefMap, targetFor }).state === 'todo'
   const statusOf = pt => {
     if (isIgnored(pt)) return 'ignored'
     if (!countByRef[pt.PositionTypeRef]) return formLoaded && !inForm(pt.PositionTypeRef) ? 'notInForm' : 'empty'
-    if (incompleteRefs.has(pt.PositionTypeRef)) return 'form'
+    if (incompleteRefs.has(pt.PositionTypeRef) || needsEt(pt.PositionTypeRef)) return 'form'
     return 'done'
   }
 

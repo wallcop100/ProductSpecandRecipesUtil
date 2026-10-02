@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-10-02', note: 'Form: Detach takes the Form off the whole project, loaded session included (4MYUQ7); once a Form is loaded every position whose codes are all known is saved at once, and the Form chip counts every position in the Form (2K4TCY); a position with a code needing an ElementType has an orange dot (YCU5SZ); a wrapper part’s name no longer repeats its maker – code (8D9XNH)' },
   { date: '2026-10-02', note: 'Form spec pane: a position whose Form rows are all codes already known is saved to it by itself, so its comparison (in the fitting / missing, with Add) shows straight away; the painter opens inline by itself on positions with rows to confirm. “The Form says nothing” only shows when it really has no rows for the position' },
   { date: '2026-10-02', note: 'The Form spec pane is back as it was: the painter opens only when you press Paint (the change that opened it by itself is undone)' },
   { date: '2026-10-02', note: 'Fix (GHVUMD): a wrapper’s contents edit maker – code in place too, with the pencil for the Product Spec' },
