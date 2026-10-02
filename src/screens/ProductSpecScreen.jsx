@@ -9,6 +9,7 @@ import ChangeSummaryModal from '../components/ChangeSummaryModal'
 import IconButton from '../components/IconButton'
 import TutorialHint from '../tutorial/TutorialHint'
 import MaterialIcon from '../components/MaterialIcon'
+import SurfaceSwitch from '../components/SurfaceSwitch'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { duplicateProductKeys } from '../utils/productCodes'
 
@@ -251,9 +252,8 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
         className="d-flex align-items-center gap-2 px-3 py-2 border-bottom bg-white"
         style={{ flexShrink: 0 }}
       >
-        <IconButton variant="outline-secondary" bsSize="sm" icon={ACTION_ICONS.back}
-          title="Back to builder" onClick={onBack} />
-        <span className="fw-semibold ms-1">Product Spec</span>
+        {/* The same switch as the builder's toolbar: the way back is where the way in was (98GPK7). */}
+        <SurfaceSwitch active="spec" onRecipes={onBack} onProductSpec={() => {}} className="" />
         <TutorialHint id="product-spec" />
         <Dropdown align="end" autoClose="outside">
           <Dropdown.Toggle as={IconButton} bsSize="sm" variant="outline-secondary" icon={ACTION_ICONS.more}

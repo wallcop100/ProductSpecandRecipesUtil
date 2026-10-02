@@ -208,3 +208,12 @@ test('E2H3QX: a missing spec says which positions use it, and where', async () =
   fireEvent.click(screen.getByRole('button', { name: 'A05' }))
   expect(open).toHaveBeenCalledWith('A05')
 })
+
+test('98GPK7: the Product Spec has the same Recipes | Product Spec switch; Recipes goes back', async () => {
+  const { default: ProductSpecScreen } = await import('../../src/screens/ProductSpecScreen.jsx')
+  const back = vi.fn()
+  render(<ProductSpecScreen onBack={back} />)
+  expect(screen.getByTestId('open-product-spec').className).toMatch(/btn-primary/)
+  fireEvent.click(screen.getByTestId('view-recipes'))
+  expect(back).toHaveBeenCalled()
+})

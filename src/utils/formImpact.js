@@ -12,6 +12,8 @@
  *             Product Spec row could take the new code (or a new ElementType is made)
  *   add     — a known code is new to the Form here
  *   remove  — a known code left the Form here
+ *   addNew  — a code the spec does not know yet is new here (it needs an ElementType)
+ *   dropNew — such a code left the Form here
  *
  * SHARING. An ElementType is one Product Spec row, used by every position whose recipe
  * holds it (inside a shared wrapper too). Changing it in place changes them all. So each
@@ -87,6 +89,11 @@ function rawChanges(posRef, { baseRows, newRows, master, targetOf }) {
       else out.push({ kind: 'remove', fromEt: et, fromCode: a.known.get(et), ...base })
     }
     for (const et of came.slice(n)) out.push({ kind: 'add', toEt: et, toCode: b.known.get(et), ...base })
+    // Codes the spec does not know yet (3VHRQP): new ones still to give an ElementType, and
+    // unknown ones the Form dropped. Without these a changed Form row could show no diff.
+    for (const w of freshLeft) out.push({ kind: 'addNew', toCode: w, ...base })
+    const nowWords = new Set([...b.unknown, ...b.known.values()].map(up))
+    for (const w of a.unknown) if (!nowWords.has(up(w))) out.push({ kind: 'dropNew', fromCode: w, ...base })
   }
   return out
 }
@@ -109,6 +116,7 @@ export function formImpact({ posRef, baseRows = [], newRows = [], recipes = [], 
   const stillNamed = new Set()
   for (const r of newRows) for (const et of readCodes(r, master).known.keys()) stillNamed.add(up(et))
   return changesOf(posRef).map(c => {
+    if (c.kind === 'addNew' || c.kind === 'dropNew') return { ...c, inRecipe: false, sharers: [], changing: [], notChanging: [], outsideForm: [], consistent: true, canUpdate: false }
     if (c.kind === 'add') return { ...c, inRecipe: held.has(up(c.toEt)), sharers: [], changing: [], notChanging: [], outsideForm: [], consistent: true, canUpdate: false }
     const inRecipe = held.has(up(c.fromEt))
     const sharers = inRecipe ? getUsedIn(c.fromEt, recipes, posRef) : []

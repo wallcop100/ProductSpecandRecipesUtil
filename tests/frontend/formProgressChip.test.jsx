@@ -91,4 +91,16 @@ describe('the chip reports Form progress, and only that', () => {
     }, { onReconcile })
     expect(screen.getByLabelText(/^Form 1\/2:/)).toBeInTheDocument()     // C05r says n/a: not counted
   })
+
+  test('WVYVW6: a position not saved yet (e.g. after a refresh) whose recipe holds its known codes counts as done, like its tick', () => {
+    setup({
+      psRows: [{ ElementTypeRef: 'ET-PROF-01', Manufacturer: 'M', ProductCode: 'PROF-1' }],
+      formCaptures: { version: 1, byPosition: { C03r: [ent('ET-LAMP')] } },
+      importDraft: { rows: [
+        { id: 0, positionType: 'C01r', manufacturer: 'M', rawText: 'PROF-1', confirmed: true },
+        { id: 1, positionType: 'C03r', manufacturer: 'M', rawText: 'C-ET-LAMP', confirmed: true },
+      ], stagedRefs: ['C03r'] },
+    }, { onReconcile })
+    expect(screen.getByLabelText(/^Form 2\/2:/)).toBeInTheDocument()
+  })
 })

@@ -14,6 +14,11 @@ const row = (pt, rawText) => ({ positionType: pt, formRef: pt, manufacturer: 'Or
 const run = (posRef, baseRows, newRows, recipes) => formImpact({ posRef, baseRows, newRows, recipes, master })
 
 describe('formImpact', () => {
+  test('3VHRQP: a code the spec does not know, added or dropped, still shows as a change', () => {
+    const c = run('A1', [row('A1', 'ZH-OLD-1 ZH-GONE-7')], [row('A1', 'ZH-OLD-1 + ZH-BRAND-9')], [pos('A1', 'ET-PS-01')])
+    expect(c).toMatchObject([{ kind: 'addNew', toCode: 'ZH-BRAND-9' }, { kind: 'dropNew', fromCode: 'ZH-GONE-7' }])
+  })
+
   test('a known code replaced by another known code is a swap', () => {
     const c = run('A1', [row('A1', 'ZH-OLD-1')], [row('A1', 'ZH-NEW-2')], [pos('A1', 'ET-PS-01')])
     expect(c).toMatchObject([{ kind: 'swap', fromEt: 'ET-PS-01', toEt: 'ET-PS-02', inRecipe: true, consistent: true }])

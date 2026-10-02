@@ -93,4 +93,18 @@ describe('in-line Form diff actions', () => {
     fireEvent.click(await screen.findByText('+ Add at position level'))
     expect(liveA1()).toEqual(['ET-PS-01', 'ET-PS-02', 'ET-PS-03'])
   })
+
+  test('QATFST: the diff can be hidden, and stays hidden', () => {
+    localStorage.removeItem('formDiffShown')
+    setup([row(0, 'A1', 'ZH-NEW-9'), row(1, 'A2', 'ZH-OLD-1')], [row(0, 'A1', 'ZH-OLD-1'), row(1, 'A2', 'ZH-OLD-1')])
+    const view = render(<FormDiffBlock posRef="A1" />)
+    fireEvent.click(screen.getByTestId('diff-toggle'))
+    expect(screen.queryByTestId('form-diff-line')).toBeNull()
+    expect(screen.getByTestId('diff-hidden')).toHaveTextContent('1 change hidden')
+    view.unmount()
+    render(<FormDiffBlock posRef="A1" />)
+    expect(screen.queryByTestId('form-diff-line')).toBeNull()
+    fireEvent.click(screen.getByTestId('diff-toggle'))
+    expect(screen.getByTestId('form-diff-line')).toBeInTheDocument()
+  })
 })
