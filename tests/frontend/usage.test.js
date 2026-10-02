@@ -165,6 +165,12 @@ describe('divergingRefs — the whole set in one pass', () => {
     },
   }
 
+  test('WGNPNM: for one position, only a disagreement that involves it counts', () => {
+    const recipes = [rec('C01r', 'ET-TAPE-01')]                 // C03r asks, nothing built there
+    expect(divergingRefs({ recipes, formCaptures: captures, posRef: 'C01r' }).has('et-tape-01')).toBe(false)
+    expect(divergingRefs({ recipes, formCaptures: captures, posRef: 'C03r' }).has('et-tape-01')).toBe(true)
+  })
+
   test('the Form asks somewhere the recipe has not got it', () => {
     const set = divergingRefs({ recipes: [rec('C01r', 'ET-TAPE-01')], formCaptures: captures })
     expect(set.has('et-tape-01')).toBe(true)   // C03r asks, nothing built

@@ -101,9 +101,13 @@ export function elementTypeUsage(ref, { recipes = [], psRows = [], elementTypes 
  * expensive to do for a panel full of rows. Once it is one pass, the panel can simply SHOW
  * which rows disagree, and the popover is left to explain the ones you ask about.
  *
+ * With `posRef`, only disagreements that involve THAT position count (WGNPNM): the Form asks
+ * for it here and the recipe hasn't got it, or the recipe has it here and the Form doesn't.
+ * Elsewhere in the project is not this position's business.
+ *
  * Pure, read-only, and null-safe: no Form attached means nothing can diverge.
  */
-export function divergingRefs({ recipes = [], formCaptures = null } = {}) {
+export function divergingRefs({ recipes = [], formCaptures = null, posRef = null } = {}) {
   const out = new Set()
   if (!formCaptures) return out
 
@@ -134,7 +138,10 @@ export function divergingRefs({ recipes = [], formCaptures = null } = {}) {
     // ...or the recipe has it somewhere the Form does not. Only meaningful for an ET the
     // Form mentions AT ALL; otherwise every connector and kit would "diverge".
     const onlyInRecipe = [...recipePos].some(p => !formPos.has(p))
-    if (onlyInForm || onlyInRecipe) out.add(key)
+    if (posRef) {
+      const here = lc(posRef)
+      if (formPos.has(here) !== recipePos.has(here)) out.add(key)
+    } else if (onlyInForm || onlyInRecipe) out.add(key)
   }
   return out
 }

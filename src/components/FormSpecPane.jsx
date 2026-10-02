@@ -330,7 +330,8 @@ export default function FormSpecPane({ posRef, embedded = false }) {
    * Every ET whose Form and recipe disagree about WHERE it is used. One pass for the whole
    * set, so the panel can mark them; the popover still explains any one you ask about.
    */
-  const diverging = useMemo(() => divergingRefs({ recipes, formCaptures }), [recipes, formCaptures])
+  // Only a disagreement that involves this position earns a warning here (WGNPNM).
+  const diverging = useMemo(() => divergingRefs({ recipes, formCaptures, posRef }), [recipes, formCaptures, posRef])
   const diverges = ref => diverging.has(String(ref).toLowerCase())
 
   // "X consistently has Y" — learned, advisory, only consulted for orphans.
