@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useRef } from 'react'
 import { Button } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
@@ -31,6 +31,8 @@ export default function FormPaintBar({ posRef, open = false, onOpenChange = () =
   const importDraft = useStore(s => s.importDraft)
   const formCaptures = useStore(s => s.formCaptures)
   const setOpen = onOpenChange
+  // Opened on a Form already loaded (not to load one): a re-save on opening keeps it open.
+  const onLoaded = useRef(false)
   const st = positionPaintStatus(importDraft, posRef, { buildRefMap, targetFor })
   // On each position: the painter is open, inline, when it has Form rows to confirm;
   // otherwise closed (known codes save themselves, below).
@@ -57,16 +59,14 @@ export default function FormPaintBar({ posRef, open = false, onOpenChange = () =
   return (
     <div className="mb-2" data-testid="form-paint-bar">
       <div className="d-flex align-items-center gap-1 flex-wrap">
-        {open ? (
-          <IconButton bsSize="sm" variant="outline-secondary" icon="close" size={13} onClick={() => setOpen(false)}
-            data-testid="paint-close" title="Close the painter" aria-label="Close the painter" />
-        ) : state !== 'noForm' ? (
-          // Not the task here: a small brush, the explanation in its tooltip.
-          <IconButton bsSize="sm" variant={work ? 'primary' : 'outline-secondary'} icon="brush" size={13}
-            onClick={() => setOpen(true)} data-testid="paint-position" aria-label={`Paint ${posRef} from the Form`}
-            title={`Paint ${posRef}'s product codes from the Form: give each an ElementType, then it goes in the recipe`} />
+        {state !== 'noForm' ? (
+          // Paint mode is a toggle: the brush, lit while painting (W24D3V).
+          <IconButton bsSize="sm" variant={open ? 'primary' : work ? 'outline-primary' : 'outline-secondary'} icon="brush" size={13}
+            onClick={() => { onLoaded.current = true; setOpen(!open) }} data-testid="paint-position" aria-pressed={open}
+            aria-label={open ? 'Stop painting' : `Paint ${posRef} from the Form`}
+            title={open ? 'Stop painting' : `Paint ${posRef}'s product codes from the Form: give each an ElementType, then it goes in the recipe`} />
         ) : <Button size="sm" variant="primary" style={{ fontSize: 10 }}
-          onClick={() => setOpen(true)} data-testid="paint-position"
+          onClick={() => { onLoaded.current = false; setOpen(true) }} data-testid="paint-position"
           title="Load the Form spreadsheet once for the project, then paint just this position">
           <MaterialIcon name="upload_file" size={12} /> Load the Form and paint this position
         </Button>}
@@ -75,6 +75,14 @@ export default function FormPaintBar({ posRef, open = false, onOpenChange = () =
             label={typeof label.text === 'function' ? label.text(st.newCodes || st.unconfirmed) : label.text} />
         )}
       </div>
+      {/* What the Form says here, raw and plain; the painter (the brush) only when needed. */}
+      {!open && state !== 'noForm' && st.texts?.length > 0 && (
+        <div className="mt-1" style={{ fontSize: 11 }} data-testid="form-raw">
+          {st.texts.map((t, i) => (
+            <div key={i} style={{ fontFamily: 'monospace', color: '#495057', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{t}</div>
+          ))}
+        </div>
+      )}
       {/* Every row already known, not saved here yet: save it without asking, out of sight,
           so the comparison below appears. Nothing to paint, so the painter stays shut. */}
       {!open && autoSave && (
@@ -85,7 +93,7 @@ export default function FormPaintBar({ posRef, open = false, onOpenChange = () =
       {open && (
         <div className="mt-1 ps-2" style={{ borderLeft: '2px solid #0d6efd' }} data-testid="paint-panel">
           <ProductCodeImportScreen onBack={() => setOpen(false)}
-            embedded={{ posRef, onStaged: targets => { setOpen(false); onStaged?.(targets) } }} />
+            embedded={{ posRef, quiet: onLoaded.current, onStaged: targets => { setOpen(false); onStaged?.(targets) } }} />
         </div>
       )}
     </div>

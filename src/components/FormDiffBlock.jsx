@@ -76,7 +76,7 @@ export default function FormDiffBlock({ posRef }) {
                     Swap in {list(who(c))}
                   </Button>
                 </>
-              ) : <div className="text-muted">Not in this recipe.</div>}
+              ) : <div className="text-muted" data-testid="diff-not-used">{posRef}'s recipe doesn't use {c.fromEt}, so there is nothing to swap here.</div>}
             </>
           )}
 
@@ -86,7 +86,7 @@ export default function FormDiffBlock({ posRef }) {
                 <span style={mono}>{c.fromEt}</span> → new code <span style={{ ...mono, fontWeight: 600 }}>{c.toCode}</span>
                 {c.container && <span className="text-muted"> · inside {c.container}</span>}
               </div>
-              {!c.inRecipe ? <div className="text-muted">Not in this recipe.</div> : c.canUpdate ? (
+              {!c.inRecipe ? <div className="text-muted" data-testid="diff-not-used">{posRef}'s recipe doesn't use {c.fromEt}, so nothing changes here.</div> : c.canUpdate ? (
                 <>
                   <div className="text-muted">
                     {c.changing.length ? `Every position in the Form using it changes the same way (${list([posRef, ...c.changing])})` : `In the Form, only ${posRef} uses it`}, and the old code is gone from the Form.
