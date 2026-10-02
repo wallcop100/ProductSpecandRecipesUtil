@@ -374,7 +374,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
     } else if (plan.action === 'conflict') {
       if (!window.confirm(
         `${ref} is already ${plan.current.manufacturer || 'no maker'} / ${plan.current.code} in the Product Spec.\n\n` +
-        `Link "${p.code}" to it anyway? The spec row is left exactly as it is.`
+        `Link "${p.code}" to it anyway? The Product Spec is left as it is.`
       )) return
     } else if (plan.action === 'stamp') {
       updatePSRow(ref, plan.updates)

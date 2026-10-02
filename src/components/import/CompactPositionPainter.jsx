@@ -22,7 +22,7 @@ function Painter({ showDone, setShowDone,
   onSetRole, onToggleConfirm, onNeedsET, onMakeMain, onConfirmObvious, onAdd, onUndo, onRedo, canUndo, canRedo,
 }) {
   if (!rows.length) {
-    return <div className="text-muted fst-italic" style={{ fontSize: 11 }} data-testid="embedded-no-rows">The Form has no rows for {posRef}.</div>
+    return <div className="text-muted fst-italic" style={{ fontSize: 11 }} data-testid="embedded-no-rows">The Form gives no product code for {posRef}.</div>
   }
   const unconfirmed = rows.filter(r => !r.confirmed).length
   const settled = r => r.confirmed && (() => { const c = info(r).codes; return c.length > 0 && c.every(x => x.etRef) })()
@@ -30,13 +30,22 @@ function Painter({ showDone, setShowDone,
   // Every row says "n/a", "by others"…: no product, so no Add to call for attention (859SCF).
   const nothing = rows.every(r => info(r).codes.length === 0 && info(r).status?.icon === 'block')
   const shown = showDone ? rows : rows.filter(r => !settled(r))
+  // Counted as product codes, not spreadsheet rows: code → ElementType → recipe.
+  const codes = rows.flatMap(r => info(r).codes)
+  const withEt = codes.filter(c => c.etRef).length
+  const toConfirm = rows.filter(r => !r.confirmed).reduce((n, r) => n + Math.max(1, info(r).codes.length || (info(r).suggested || []).length), 0)
+  const doneCodes = done.flatMap(r => info(r).codes).length
+  const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`
   return (
     <div style={{ fontSize: 11 }} data-testid="compact-painter">
+      <div className="text-muted" data-testid="compact-summary">
+        {plural(codes.length, 'code')}{codes.length ? ` · ${withEt} with an ElementType` : ''}{codes.length - withEt ? ` · ${codes.length - withEt} need${codes.length - withEt === 1 ? 's' : ''} one` : ''}
+        {unconfirmed ? ` · ${plural(toConfirm, 'new code')} to confirm` : ''}
+      </div>
       <div className="d-flex align-items-center gap-2 mb-1">
-        <span className="text-muted">{rows.length} row{rows.length === 1 ? '' : 's'}{unconfirmed ? ` · ${unconfirmed} to confirm` : ''}</span>
         {easyLeft > 0 && (
           <Button size="sm" variant="link" className="p-0" style={{ fontSize: 11 }} onClick={onConfirmObvious}>
-            confirm {easyLeft} obvious
+            confirm the obvious
           </Button>
         )}
         <span className="ms-auto d-inline-flex">
@@ -48,8 +57,8 @@ function Painter({ showDone, setShowDone,
       {done.length > 0 && (
         <div className="d-flex align-items-center gap-1 py-1 border-bottom" style={{ color: '#0f5132' }} data-testid="compact-done">
           <MaterialIcon name="check_circle" size={13} />
-          {/* Their CODES are known; the rows are not saved to this position until you press the button (AHK54U). */}
-          <span>{done.length === rows.length && rows.length > 1 ? `All ${rows.length}` : done.length} row{done.length === 1 ? '' : 's'}: code{done.length === 1 ? '' : 's'} already in the Product Spec</span>
+          {/* Their CODES are known (an ElementType each). */}
+          <span>{plural(doneCodes, 'code')} already in the Product Spec, with an ElementType</span>
           <Button size="sm" variant="link" className="p-0 ms-auto" style={{ fontSize: 10 }} onClick={() => setShowDone(v => !v)}>
             {showDone ? 'hide' : 'show'}
           </Button>
@@ -98,7 +107,7 @@ function Painter({ showDone, setShowDone,
       ) : (<>
       <Button size="sm" variant="primary" className="mt-2" style={{ fontSize: 11 }} disabled={!selection?.ready || adding}
         onClick={onAdd} data-testid="add-and-build"
-        title={selection?.ready ? `Save what the Form asks for at ${posRef}; codes new to the Product Spec are added to it` : 'Confirm every row and give every code an ElementType first'}>
+        title={selection?.ready ? `Save what the Form asks for at ${posRef}; codes new to the Product Spec are added to it` : 'Confirm each new code and give it an ElementType first'}>
         <MaterialIcon name="playlist_add" size={13} /> Save {posRef}'s Form products
       </Button>
       {selection && !selection.ready && (selection.noEt > 0 || selection.clashes > 0) && (

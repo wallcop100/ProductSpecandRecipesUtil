@@ -8,6 +8,7 @@ import usePositionList from './usePositionList'
 import { positionFamilyOf } from '../utils/positionFamily'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { formDiffStates } from '../utils/formImpact'
+import { buildMaster } from '../utils/productCodes'
 import { buildRefMap, targetFor } from '../utils/ptResolve'
 
 export const STATUS_DOT = {
@@ -20,7 +21,7 @@ export const STATUS_DOT = {
 
 /** The Form compared with an older one (862MB6): what moved for each position. */
 const DIFF_COLOR = { add: '#198754', omit: '#dc3545', mixed: '#e0a800' }
-const DIFF_LABEL = { add: 'Form changed: products added', omit: 'Form changed: products dropped', mixed: 'Form changed' }
+const diffLabel = d => [d.added.length && `Form adds ${d.added.join(', ')}`, d.dropped.length && `Form drops ${d.dropped.join(', ')}`].filter(Boolean).join(' · ')
 
 const LS_KEY = 'positionRail'
 const readLS = () => { try { return JSON.parse(localStorage.getItem(LS_KEY)) || {} } catch { return {} } }
@@ -40,13 +41,14 @@ export default function PositionRail({ onReviewEmpty, onReviewDrift }) {
   const positionTypes = useStore(s => s.positionTypes)
   const list = usePositionList()
   const importDraft = useStore(s => s.importDraft)
+  const psRows = useStore(s => s.psRows)
   const diffStates = useMemo(() => {
     const base = importDraft?.compareBase?.rows
     if (!base?.length || !importDraft?.rows?.length) return new Map()
     const refMap = importDraft.map?.pt ? buildRefMap(importDraft.resolutions || [], importDraft.refOverrides || {}) : null
     return formDiffStates({ posRefs: positionTypes.map(p => p.PositionTypeRef), baseRows: base, newRows: importDraft.rows,
-      targetOf: f => (refMap ? targetFor(refMap, f) : f) })
-  }, [importDraft, positionTypes])
+      targetOf: f => (refMap ? targetFor(refMap, f) : f), master: buildMaster(psRows) })
+  }, [importDraft, positionTypes, psRows])
   const { view, groups, ignoredGroups, statusOf, availableTags, order, incompleteRefs } = list
 
   const [prefs, setPrefs] = useState(() => ({ width: 200, collapsed: false, ...readLS() }))
@@ -128,8 +130,8 @@ export default function PositionRail({ onReviewEmpty, onReviewDrift }) {
               <span className="text-truncate">{ref}</span>
               {tagDrift?.[ref] && <MaterialIcon name="warning" size={12} style={{ color: '#e0a800' }} title="Tags changed" />}
               {diffStates.has(ref) && (
-                <span className="ms-auto d-inline-flex" data-testid={`rail-diff-${ref}`} aria-label={DIFF_LABEL[diffStates.get(ref)]}>
-                  <MaterialIcon name="difference" size={13} style={{ color: DIFF_COLOR[diffStates.get(ref)] }} title={DIFF_LABEL[diffStates.get(ref)]} />
+                <span className="ms-auto d-inline-flex" data-testid={`rail-diff-${ref}`} aria-label={diffLabel(diffStates.get(ref))}>
+                  <MaterialIcon name="difference" size={13} style={{ color: DIFF_COLOR[diffStates.get(ref).state] }} title={diffLabel(diffStates.get(ref))} />
                 </span>
               )}
             </div>

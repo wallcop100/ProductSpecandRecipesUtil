@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-10-02', note: 'Builder: the Form painter and its chips speak in product codes, not spreadsheet rows (“2 codes · 1 with an ElementType · 1 needs one”, “1 new code to confirm”); the rail’s difference icon compares the codes each position gets, and its tooltip names them' },
   { date: '2026-10-02', note: 'Position list (862MB6): while the Form is compared with an older one, a “difference” icon beside each position whose Form rows moved: green for added, red for dropped, yellow for changed or mixed' },
   { date: '2026-10-02', note: 'Form spec pane (WGNPNM): the “Form and recipe disagree about where this is used” warning only shows when the disagreement involves the position you are on' },
   { date: '2026-10-02', note: 'Form spec pane: “Changed since <older Form>” shows each position’s Form changes in-line with the one action that fits: Swap to a known ElementType; Update the existing ElementType’s Product Spec when every position in the Form changes the same way and the old code is gone; otherwise Fork it (or New ElementType) for the positions that change, never touching the ones that keep it. “Compare with an older Form…” is in the pane’s ⋯ (JQSFCU, LH5EC2). A “same recipe as …” pill shows when another position’s whole recipe is identical (A59TJK)' },

@@ -9,8 +9,8 @@ import { buildRefMap, targetFor } from '../utils/ptResolve'
 
 const LABEL = {
   noForm: null,
-  absent: { tone: 'neutral', icon: 'remove', text: 'no Form rows' },
-  todo: { tone: 'warn', icon: 'brush', text: n => `${n} row${n === 1 ? '' : 's'} to confirm` },
+  absent: { tone: 'neutral', icon: 'remove', text: 'not in the Form' },
+  todo: { tone: 'warn', icon: 'brush', text: n => `${n} new code${n === 1 ? '' : 's'} to confirm` },
   ready: { tone: 'info', icon: 'playlist_add', text: 'ready to add' },
   added: { tone: 'ok', icon: 'check_circle', text: 'added' },
   nothing: { tone: 'neutral', icon: 'block', text: 'nothing to add' },
@@ -51,13 +51,13 @@ export default function FormPaintBar({ posRef, open = false, onOpenChange = () =
           onClick={() => setOpen(true)} data-testid="paint-position"
           title={state === 'noForm'
             ? 'Load the Form spreadsheet once for the project, then paint just this position'
-            : `Paint ${posRef}'s rows of the Form, give its codes ElementTypes, and add them to the Product Spec`}>
+            : `Paint ${posRef}'s product codes from the Form: give each an ElementType, then it goes in the recipe`}>
           <MaterialIcon name={state === 'noForm' ? 'upload_file' : 'brush'} size={12} />{' '}
           {state === 'noForm' ? 'Load the Form and paint this position' : `Paint ${posRef} from the Form`}
         </Button>}
         {label && (
           <StatusChip size="xs" tone={label.tone} icon={label.icon} data-testid="paint-status"
-            label={typeof label.text === 'function' ? label.text(st.unconfirmed) : label.text} />
+            label={typeof label.text === 'function' ? label.text(st.newCodes || st.unconfirmed) : label.text} />
         )}
       </div>
       {/* Every row already known, not saved here yet: save it without asking, out of sight,

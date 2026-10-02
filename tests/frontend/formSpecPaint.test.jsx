@@ -55,7 +55,7 @@ describe('D4Z9CX: paint one position from the builder', () => {
     fireEvent.click(await screen.findByText('Choose spreadsheet…'))
     await screen.findByTestId('compact-painter')
     // QC50 is in the spec: the row is folded away as settled.
-    await waitFor(() => expect(screen.getByTestId('compact-done')).toHaveTextContent('1 row: code already in the Product Spec'))
+    await waitFor(() => expect(screen.getByTestId('compact-done')).toHaveTextContent('1 code already in the Product Spec, with an ElementType'))
     expect(screen.queryByTestId('compact-row')).toBeNull()
     await waitFor(() => expect(tableRefs()).toEqual(['C01']))          // only this position's rows
     expect(screen.queryByTestId('form-table')).toBeNull()               // condensed, not the full table
@@ -180,7 +180,7 @@ describe('known codes save themselves to the position', () => {
     useStore.setState({ importDraft: draft, formCaptures: null })
     render(<FormSpecPane posRef="C02" />)
     expect(screen.queryByTestId('form-autosave')).toBeNull()
-    expect(screen.getByTestId('paint-status')).toHaveTextContent('1 row to confirm')
+    expect(screen.getByTestId('paint-status')).toHaveTextContent('1 new code to confirm')
     // Rows to confirm: the painter is open inline by itself.
     expect(await screen.findByTestId('compact-painter')).toBeInTheDocument()
     expect(useStore.getState().formCaptures).toBeNull()

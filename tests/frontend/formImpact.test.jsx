@@ -70,8 +70,9 @@ test('a position using the ElementType that the Form never mentions does not blo
 
 test('862MB6: per-position diff state for the rail — add / omit / mixed', async () => {
   const { formDiffStates } = await import('../../src/utils/formImpact.js')
-  const base = [row('A1', 'X1'), row('A2', 'X2'), row('A3', 'X3'), row('A4', 'X4')]
-  const now = [row('A1', 'X1'), row('A1', 'Y9'), row('A3', 'X3-B'), row('A4', 'X4')]
+  const base = [row('A1', 'QC50'), row('A2', 'QC52'), row('A3', 'QC53'), row('A4', 'QC54 white')]
+  const now = [row('A1', 'QC50'), row('A1', 'QC59'), row('A3', 'QC63'), row('A4', 'QC54 black')]
   const m = formDiffStates({ posRefs: ['A1', 'A2', 'A3', 'A4'], baseRows: base, newRows: now })
-  expect(Object.fromEntries(m)).toEqual({ A1: 'add', A2: 'omit', A3: 'mixed' })
+  expect(Object.fromEntries([...m].map(([k, v]) => [k, v.state]))).toEqual({ A1: 'add', A2: 'omit', A3: 'mixed' })   // A4: only words around the code
+  expect(m.get('A3')).toMatchObject({ added: ['QC63'], dropped: ['QC53'] })
 })
