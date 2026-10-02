@@ -157,6 +157,14 @@ export default function FormDiffBlock({ posRef }) {
             </>
           )}
 
+          {c.kind === 'addNew' && (
+            <div data-testid="diff-add-new"><span style={{ ...mono, fontWeight: 600 }}>{c.toCode}</span> is new in the Form here <span className="text-muted">· needs an ElementType (paint it with the brush below)</span></div>
+          )}
+
+          {c.kind === 'dropNew' && (
+            <div data-testid="diff-drop-new"><span style={mono}>{c.fromCode}</span> is no longer in the Form here <span className="text-muted">· it never had an ElementType</span></div>
+          )}
+
           {c.kind === 'add' && (
             <>
               <div><span style={mono}>{c.toEt}</span> is new in the Form here</div>
