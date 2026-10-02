@@ -438,7 +438,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
         </div>
         <FormStrip formCaptures={formCaptures} />
         {paintBar}
-        {/* Only when the loaded Form really has no rows here, not when they are just unsaved. */}
+        {/* Only when the loaded Form really has no rows here, not when they wait to be painted. */}
         {!draftHasRows && (
           <div className="text-muted fst-italic" style={{ fontSize: 11 }}>
             The Form says nothing about {posRef}.

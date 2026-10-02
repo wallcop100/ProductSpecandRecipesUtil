@@ -73,8 +73,10 @@ describe('D4Z9CX: paint one position from the builder', () => {
     // Next position: its rows straight away, from the same session.
     view.unmount()
     render(<FormSpecPane posRef="C03" />)
-    expect(screen.getByTestId('paint-status')).toHaveTextContent('ready to add')   // QC52 is in the spec: confirmed already
-    // Its rows are loaded but not saved to C03: the painter opens on them by itself (GCEKBN).
+    // QC52 is in the spec: C03 is saved by itself, no file picked again.
+    await waitFor(() => expect(useStore.getState().formCaptures.byPosition.C03?.[0]?.elementTypeRef).toBe('ET-PS-03'))
+    await waitFor(() => expect(screen.getByTestId('paint-status')).toHaveTextContent('added'))
+    fireEvent.click(screen.getByTestId('paint-position'))
     await screen.findByTestId('compact-painter')
     await waitFor(() => expect(tableRefs()).toEqual(['C03']))
     expect(window.electronAPI.openXlsxDialog).toHaveBeenCalledTimes(1)
@@ -152,18 +154,35 @@ describe('9GLX5N: with a Product Spec, start straight away', () => {
   })
 })
 
-describe('GCEKBN: on reopening, a position’s unsaved Form rows show', () => {
-  test('the painter opens by itself on them; no "the Form says nothing"', async () => {
+describe('known codes save themselves to the position', () => {
+  test('a position whose Form rows are all known shows its comparison, no painter, no Save', async () => {
+    const draft = {
+      version: 1, step: 'review', source: { name: 'form.xlsx', sheet: 'S' },
+      map: { pt: '', code: 'ProductCode', mfr: 'ManufacturerName', exclude: '', acc: '', context: [] },
+      rules: {}, assignments: {}, resolutions: [], refOverrides: {}, dirStats: { forward: 0, backward: 0 }, stagedRefs: [], keptSeparate: [],
+      rows: [{ id: 0, rawText: 'QC50', positionType: 'C01', manufacturer: 'iGuzzini', context: {}, overrides: {}, noteOverride: {}, confirmed: true, autoConfirmed: true }],
+    }
+    useStore.setState({ importDraft: draft, formCaptures: null })
+    render(<FormSpecPane posRef="C01" />)
+    await waitFor(() => expect(useStore.getState().formCaptures?.byPosition?.C01?.[0]?.elementTypeRef).toBe('ET-PS-01'))
+    expect(screen.queryByTestId('compact-painter')).toBeNull()
+    expect(await screen.findByText(/ET-PS-01/)).toBeInTheDocument()
+    expect(screen.getByTestId('paint-status')).toHaveTextContent('added')
+  })
+
+  test('a position with a new code is not saved for you', async () => {
     const draft = {
       version: 1, step: 'review', source: { name: 'form.xlsx', sheet: 'S' },
       map: { pt: '', code: 'ProductCode', mfr: 'ManufacturerName', exclude: '', acc: '', context: [] },
       rules: {}, assignments: {}, resolutions: [], refOverrides: {}, dirStats: { forward: 0, backward: 0 }, stagedRefs: [], keptSeparate: [],
       rows: [{ id: 0, rawText: 'QC51', positionType: 'C02', manufacturer: 'iGuzzini', context: {}, overrides: {}, noteOverride: {}, confirmed: false }],
     }
-    useStore.setState({ importDraft: draft, formCaptures: { version: 1, byPosition: { C01: [{ elementTypeRef: 'ET-PS-01', code: 'QC50' }] } } })
+    useStore.setState({ importDraft: draft, formCaptures: null })
     render(<FormSpecPane posRef="C02" />)
+    expect(screen.queryByTestId('form-autosave')).toBeNull()
+    expect(screen.getByTestId('paint-status')).toHaveTextContent('1 row to confirm')
+    // Rows to confirm: the painter is open inline by itself.
     expect(await screen.findByTestId('compact-painter')).toBeInTheDocument()
-    expect(screen.queryByText(/The Form says nothing about C02/)).toBeNull()
-    expect(screen.getAllByTestId('compact-row')[0]).toHaveTextContent('QC51')
+    expect(useStore.getState().formCaptures).toBeNull()
   })
 })
