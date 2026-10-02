@@ -45,6 +45,7 @@ import { applyKnownCodes, knownTokenIndices } from '../utils/knownCodes'
 import { isObvious, isNothingRow, isTbcRow } from '../utils/obviousRows'
 import { joinAccessories, isPlaceholder, accessoriesFrom, leadOf } from '../utils/accessories'
 import { matchForms, diffRow } from '../utils/formDiff'
+import { readOlderForm } from '../utils/olderForm'
 import { groupPositions, positionStatus, mergeCaptures, restrictCaptures } from '../utils/formPositions'
 import { diffCaptures, wrapperDivergence } from '../utils/formSpec'
 
@@ -276,31 +277,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     if (!path) return
     setBusy(true); setError(null)
     try {
-      let data = await readSheet(path, null)
-      const col = (mapped, want, hs) => (mapped && hs.includes(mapped) ? mapped : detect(hs, want))
-      if (!col(map.code, 'productcode', data.headers)) {
-        for (const sname of data.sheets || []) {
-          if (sname === data.sheet) continue
-          const alt = await readSheet(path, sname)
-          if (col(map.code, 'productcode', alt.headers)) { data = alt; break }
-        }
-      }
-      const hs = data.headers || []
-      const c = {
-        pt: col(map.pt, 'positiontype', hs), code: col(map.code, 'productcode', hs),
-        mfr: col(map.mfr, 'manufacturer', hs), acc: col(map.acc, 'accessor', hs), exclude: col(map.exclude, 'exclude', hs),
-      }
-      if (!c.code || !c.pt) {
-        setError(`That spreadsheet has no ${!c.code ? 'product code' : 'PositionType'} column to compare with.`)
-        return
-      }
-      const base = (data.rows || [])
-        .filter(r => !(c.exclude && isExcluded(r[c.exclude])))
-        .map(r => ({ formRef: String(r[c.pt] ?? '').trim(), manufacturer: String(r[c.mfr] ?? '').trim(),
-          rawText: joinAccessories(r[c.code], c.acc ? r[c.acc] : null) }))
-        .filter(r => r.rawText !== '')
-      const meta = await fileMeta(path).catch(() => null)
-      setCompareBase({ name: meta?.name || 'the older Form', rows: base })
+      setCompareBase(await readOlderForm(path, map, { readSheet, fileMeta }))
       setFilter('all')
     } catch (err) {
       setError(err.response?.data?.error || err.message)

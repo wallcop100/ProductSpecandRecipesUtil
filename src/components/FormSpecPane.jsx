@@ -18,6 +18,9 @@ import { findProductET, stampPlan } from '../utils/productCodes'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { ago } from '../utils/ago'
 import FormPaintBar from './FormPaintBar'
+import FormDiffBlock from './FormDiffBlock'
+import { readOlderForm } from '../utils/olderForm'
+import { readSheet, fileMeta } from '../utils/backend'
 import { positionPaintStatus } from '../utils/formPositions'
 import { buildRefMap, targetFor } from '../utils/ptResolve'
 
@@ -135,7 +138,7 @@ function RailToggle({ id, icon, count, open, onToggle, title, tone }) {
  * be in, including the one where the Form is silent about this position. Hence one component,
  * rendered in both branches.
  */
-function PaneMenu({ onColumns, onReimport, onDetach, columnsDisabled }) {
+function PaneMenu({ onColumns, onReimport, onDetach, columnsDisabled, onCompare, onClearCompare }) {
   const [about, setAbout] = useState(false)
   return (
     <>
@@ -155,6 +158,16 @@ function PaneMenu({ onColumns, onReimport, onDetach, columnsDisabled }) {
         <Dropdown.Item onClick={onReimport}>
           <MaterialIcon name="sync" size={12} /> Re-import
         </Dropdown.Item>
+        {onCompare && (
+          <Dropdown.Item onClick={onCompare} title="Pick an older revision of the Form: each position shows what changed since then">
+            <MaterialIcon name="difference" size={12} /> Compare with an older Form…
+          </Dropdown.Item>
+        )}
+        {onClearCompare && (
+          <Dropdown.Item onClick={onClearCompare}>
+            <MaterialIcon name="close" size={12} /> Clear comparison
+          </Dropdown.Item>
+        )}
         <Dropdown.Item onClick={onDetach} className="text-danger">
           <MaterialIcon name={ACTION_ICONS.delete} size={12} /> Detach
         </Dropdown.Item>
@@ -380,6 +393,17 @@ export default function FormSpecPane({ posRef, embedded = false }) {
   }, [embedded, recipes, formCaptures, containerETRefs, posRef])
 
   const handleReimport = () => requestScreen('product-code-import')
+  // An older revision to compare with (LH5EC2): read here, kept in the import session.
+  const compareProps = importDraft?.rows?.length ? {
+    onCompare: async () => {
+      const path = await window.electronAPI?.openXlsxDialog?.()
+      if (!path) return
+      try { await useStore.getState().setCompareBase(await readOlderForm(path, importDraft.map || {}, { readSheet, fileMeta })) }
+      catch (err) { window.alert(err.message) }
+    },
+    onClearCompare: importDraft.compareBase ? () => useStore.getState().setCompareBase(null) : null,
+  } : {}
+  const diffBlock = embedded ? null : <FormDiffBlock posRef={posRef} />
   const handleDetach = () => {
     if (window.confirm('Detach the Form template from the whole project? Every position loses its Form comparison and the loaded Form is closed. Recipes and the Product Spec stay.')) {
       useStore.getState().detachForm()
@@ -395,6 +419,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
       return (
         <div className="border-start ps-3" style={paneStyle} data-painting={painting || undefined}>
           <SectionLabel>Form spec</SectionLabel>
+          {diffBlock}
           {paintBar}
           {!painting && (
             <Button size="sm" variant="link" className="p-0 text-muted" style={{ fontSize: 10 }} onClick={handleReimport}>
@@ -407,6 +432,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
     return (
       <div className="border-start ps-3" style={paneStyle} data-painting={painting || undefined}>
         <SectionLabel>Form spec</SectionLabel>
+        {diffBlock}
         {paintBar}
         <div className="px-3 py-4 rounded text-center"
           style={{ background: '#f8f9fa', border: '1px dashed #ced4da' }}>
@@ -433,10 +459,11 @@ export default function FormSpecPane({ posRef, embedded = false }) {
         <div className="d-flex align-items-center gap-1">
           <SectionLabel className="mb-0">Form spec</SectionLabel>
           <span className="ms-auto">
-            <PaneMenu onReimport={handleReimport} onDetach={handleDetach} />
+            <PaneMenu onReimport={handleReimport} onDetach={handleDetach} {...compareProps} />
           </span>
         </div>
         <FormStrip formCaptures={formCaptures} />
+        {diffBlock}
         {paintBar}
         {/* Only when the loaded Form really has no rows here, not when they wait to be painted. */}
         {!draftHasRows && (
@@ -519,9 +546,10 @@ export default function FormSpecPane({ posRef, embedded = false }) {
           {coverage.present}/{coverage.total + pending.length} present
         </span>
         <PaneMenu onColumns={() => setChoosingCols(true)} columnsDisabled={offerCols.length === 0}
-          onReimport={handleReimport} onDetach={handleDetach} />
+          onReimport={handleReimport} onDetach={handleDetach} {...compareProps} />
       </div>
       <FormStrip formCaptures={formCaptures} />
+      {diffBlock}
       {paintBar}
 
       {/* The reference rail. Everything that is NOT the comparison lives behind one of

@@ -23,7 +23,7 @@ import { evaluateTags, effectiveTags, snapshotForPosition, migrateRules, recipeT
 import { runValidation } from '../utils/validationRules.js'
 import { computeContainerInfo, looksLikeContainer, getNextAvailableRef } from '../utils/containerUtils.js'
 import { containerForPosition, rowSlot, normalizeSection } from '../utils/recipePresence.js'
-import { planCollectionBulk, effectiveActions, positionRecipeWithWrapperInternals } from '../utils/collectionStatus.js'
+import { planCollectionBulk, effectiveActions, positionRecipeWithWrapperInternals, wrapperUsedBy } from '../utils/collectionStatus.js'
 import { positionFamilyOf, ignoredPositionRefs } from '../utils/positionFamily.js'
 import { alignmentGaps } from '../utils/specAlignment.js'
 import { planSwap, swapPatch } from '../utils/swapPlan.js'
@@ -1839,6 +1839,49 @@ const useStore = create((set, get) => ({
     if (projectId != null) {
       await window.electronAPI.db.setPref(projectId, 'form_captures', JSON.stringify(null))
     }
+  },
+
+  /** The Form to compare the loaded one with (older revision), kept in the import session. */
+  async setCompareBase(base) {
+    const d = get().importDraft
+    if (!d) return
+    await get().saveImportDraft({ ...d, compareBase: base || null })
+  },
+
+  /**
+   * applyFormChange(change, posRef, mode, { toEt }) — act on one in-line Form diff line
+   * (formImpact), as ONE undo step:
+   *   'update' — the ElementType takes the new code in its Product Spec row (every user changes)
+   *   'fork'   — a copy of it carries the new code; the changing positions swap to the copy
+   *   'swap'   — the changing positions swap to `toEt` (a known one, or one just made)
+   * A position whose row sits in a wrapper other positions keep gets its own copy of the
+   * wrapper first, so they are untouched.
+   */
+  applyFormChange(change, posRef, mode, { toEt = null } = {}) {
+    const pastBefore = get().past
+    const snap = get()._historySnapshot()
+    const targets = [posRef, ...(change.changing || [])]
+    const swapIn = newRef => {
+      for (const p of targets) {
+        const { recipes, elementTypes } = get()
+        const row = recipes.find(r => (r.IsDeleted || r.isDeleted) !== 'Y' && (r.PositionTypeRef || r.positionTypeRef) === p
+          && String(r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === String(change.fromEt).toLowerCase())
+        if (!row) continue
+        const w = (row.ContextType || row.contextType) === 'ElementType' ? (row.ContextRef || row.contextRef) : null
+        if (w && wrapperUsedBy(recipes, w).some(u => !targets.includes(u))) {
+          get().duplicateET(w, getNextAvailableRef(w, elementTypes), p)
+        }
+        get().swapElementType(change.fromEt, newRef, { scope: 'position', posRef: p })
+      }
+    }
+    const spec = { ProductCode: change.toCode, ...(change.maker ? { Manufacturer: change.maker } : {}) }
+    if (mode === 'update') get().updatePSRow(change.fromEt, spec)
+    else if (mode === 'fork') {
+      const copy = get().forkElementType(change.fromEt)
+      if (copy) { get().updatePSRow(copy, spec, { recordHistory: false }); swapIn(copy) }
+    } else if (mode === 'swap') swapIn(toEt || change.toEt)
+    // The steps above each record history; Undo takes them back together.
+    set({ past: [...pastBefore, snap].slice(-HISTORY_LIMIT), future: [] })
   },
 
   /**
