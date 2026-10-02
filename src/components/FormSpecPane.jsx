@@ -263,7 +263,7 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
   const formChanges = usePositionFormImpact(posRef)
   const applyFormChange = useStore(s => s.applyFormChange)
   const [swapPick, setSwapPick] = useState({})     // toEt → the ElementType chosen to replace
-  const paintSt = positionPaintStatus(importDraft, posRef, { buildRefMap, targetFor, knows: (m, c) => !!findProductET(psRows, m, c) })
+  const paintSt = positionPaintStatus(importDraft, posRef, { buildRefMap, targetFor, knows: (m, c) => !!findProductET(psRows, m, c) || !!importDraft?.assignments?.[String(c || '').trim().toUpperCase()] })
   const draftHasRows = !['absent', 'noForm'].includes(paintSt.state)
   // Codes the loaded Form gives here that have no ElementType yet (not saved to the position).
   const draftNewCodes = paintSt.state === 'todo' ? (paintSt.newCodes || paintSt.unconfirmed || 0) : 0

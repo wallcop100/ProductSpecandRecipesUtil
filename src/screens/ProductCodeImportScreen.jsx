@@ -1256,6 +1256,17 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     if (projectId != null) Promise.resolve(window.electronAPI?.db?.setPref?.(projectId, 'import_mode', m)).catch(() => {})
   }
   const scopeRows = useMemo(() => (inSelection ? formOrder.filter(inSelection) : formOrder), [formOrder, inSelection])
+  // In the builder's painter, an entry whose every code already has an ElementType (from
+  // the spec, this import, or an earlier project) is confirmed: nothing is left to decide
+  // there, and a tick no one is offered must not hold the position back (WYZ3NN).
+  useEffect(() => {
+    if (!embedded || step !== 'review') return
+    for (const r of scopeRows) {
+      if (r.confirmed) continue
+      const inf = rowInfo(r)
+      if (inf.codes.length && inf.codes.every(c => c.etRef)) patchRow(r.id, x => ({ ...x, confirmed: true, autoConfirmed: true }))
+    }
+  }, [embedded, step, scopeRows, rowInfo, patchRow])
   const stagedSet = useMemo(() => new Set(stagedRefs), [stagedRefs])
   const formPositions = useMemo(() => groupPositions(formOrder).map(g => ({
     ...g, target: map.pt ? ptTarget(g.formRef) : g.formRef,
