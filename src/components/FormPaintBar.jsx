@@ -10,7 +10,7 @@ import { buildRefMap, targetFor } from '../utils/ptResolve'
 const LABEL = {
   noForm: null,
   absent: { tone: 'neutral', icon: 'remove', text: 'not in the Form' },
-  todo: { tone: 'warn', icon: 'brush', text: n => `${n} new code${n === 1 ? '' : 's'} to confirm` },
+  todo: { tone: 'warn', icon: 'category', text: n => `${n} code${n === 1 ? '' : 's'} need${n === 1 ? 's' : ''} an ElementType` },
   ready: { tone: 'info', icon: 'playlist_add', text: 'ready to add' },
   added: { tone: 'ok', icon: 'check_circle', text: 'added' },
   nothing: { tone: 'neutral', icon: 'block', text: 'nothing to add' },

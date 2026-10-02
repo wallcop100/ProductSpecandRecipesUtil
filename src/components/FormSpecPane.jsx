@@ -259,7 +259,10 @@ export default function FormSpecPane({ posRef, embedded = false }) {
   // Painting this position's Form rows happens inline, condensed to the pane.
   const [painting, setPainting] = useState(false)
   const importDraft = useStore(s => s.importDraft)
-  const draftHasRows = !['absent', 'noForm'].includes(positionPaintStatus(importDraft, posRef, { buildRefMap, targetFor }).state)
+  const paintSt = positionPaintStatus(importDraft, posRef, { buildRefMap, targetFor })
+  const draftHasRows = !['absent', 'noForm'].includes(paintSt.state)
+  // Codes the loaded Form gives here that have no ElementType yet (not saved to the position).
+  const draftNewCodes = paintSt.state === 'todo' ? (paintSt.newCodes || paintSt.unconfirmed || 0) : 0
   const paneStyle = { width: 340, flexShrink: 0, overflowY: 'auto' }
   // After painting this position: show what is no longer in the Form (to remove), if any.
   const paintBar = embedded ? null : (
@@ -534,7 +537,9 @@ export default function FormSpecPane({ posRef, embedded = false }) {
   // Tape, profile, neon… is a linear assembly; anything else a downlight-style one.
   const wrapperKind = formEts.some(e => /\b(TAPE|PROF\w*|FLEX|NEON|DIFF\w*|LIN\w*|STRIP)\b|-(TAPE|PROF|FLEX|LIN)-/i
     .test(`${e.elementTypeRef} ${e.note || ''}`)) ? 'LIN' : 'DL'
-  const allPresent = missing.length === 0 && formEts.length > 0
+  // Not "all present" while a Form code still has no ElementType, saved or not.
+  const waitingEt = pending.length + draftNewCodes
+  const allPresent = missing.length === 0 && formEts.length > 0 && waitingEt === 0
 
   return (
     <div className="border-start ps-3" style={paneStyle} data-painting={painting || undefined}>
@@ -543,8 +548,8 @@ export default function FormSpecPane({ posRef, embedded = false }) {
         <SectionLabel className="mb-0">Form spec</SectionLabel>
         <TutorialHint id="form-pane" size={12} concept={CONCEPTS.INTENT} />
         <span className="ms-auto text-muted" style={{ fontSize: 10 }}
-          title={pending.length > 0 ? `${pending.length} product${pending.length === 1 ? '' : 's'} still need an ElementType before they can be added` : ''}>
-          {coverage.present}/{coverage.total + pending.length} present
+          title={waitingEt > 0 ? `${waitingEt} code${waitingEt === 1 ? '' : 's'} still need an ElementType before they can be added` : ''}>
+          {coverage.present}/{coverage.total + waitingEt} present
         </span>
         <PaneMenu onColumns={() => setChoosingCols(true)} columnsDisabled={offerCols.length === 0}
           onReimport={handleReimport} onDetach={handleDetach} {...compareProps} />
@@ -703,6 +708,14 @@ export default function FormSpecPane({ posRef, embedded = false }) {
               Next: <span style={{ fontFamily: 'monospace' }}>{nextUnreconciled}</span> →
             </Button>
           )}
+        </div>
+      )}
+
+      {/* Nothing missing from the recipe, but a Form code still has no ElementType: not done. */}
+      {!allPresent && missing.length === 0 && waitingEt > 0 && (
+        <div className="mb-2 px-2 py-2 rounded d-flex align-items-center gap-2" data-testid="form-waiting-et"
+          style={{ background: '#fff3cd', border: '1px solid #ffe69c', color: '#664d03', fontSize: 11 }}>
+          <MaterialIcon name="warning" size={14} /> {waitingEt} code{waitingEt === 1 ? '' : 's'} still need{waitingEt === 1 ? 's' : ''} an ElementType
         </div>
       )}
 

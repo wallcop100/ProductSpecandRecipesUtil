@@ -49,46 +49,34 @@ beforeEach(() => {
 })
 
 describe('D4Z9CX: paint one position from the builder', () => {
-  test('load the Form once, paint just this position, add it; the next position needs no file', async () => {
+  test('load the Form once; a position whose codes are all known saves itself; the next needs no file', async () => {
     const view = render(<FormSpecPane posRef="C01" />)
     fireEvent.click(screen.getByTestId('paint-position'))
     fireEvent.click(await screen.findByText('Choose spreadsheet…'))
-    await screen.findByTestId('compact-painter')
-    // QC50 is in the spec: the row is folded away as settled.
-    await waitFor(() => expect(screen.getByTestId('compact-done')).toHaveTextContent('1 code already in the Product Spec, with an ElementType'))
-    expect(screen.queryByTestId('compact-row')).toBeNull()
-    await waitFor(() => expect(tableRefs()).toEqual(['C01']))          // only this position's rows
-    expect(screen.queryByTestId('form-table')).toBeNull()               // condensed, not the full table
-    expect(screen.getByTestId('add-and-build')).toHaveTextContent("Save C01's Form products")
-    await act(async () => { fireEvent.click(screen.getByTestId('add-and-build')) })
-
-    await waitFor(() => expect(screen.queryByTestId('compact-painter')).toBeNull())   // closed again
-    const caps = useStore.getState().formCaptures
-    expect(Object.keys(caps.byPosition)).toEqual(['C01'])               // C02, C03 untouched
-    expect(caps.byPosition.C01[0].elementTypeRef).toBe('ET-PS-01')
+    // QC50 is in the spec: nothing to ask, no Save to press. C01 is saved and the painter closes.
+    await waitFor(() => expect(useStore.getState().formCaptures?.byPosition?.C01?.[0]?.elementTypeRef).toBe('ET-PS-01'))
+    expect(Object.keys(useStore.getState().formCaptures.byPosition)).toEqual(['C01'])   // C02, C03 untouched
+    await waitFor(() => expect(screen.queryByTestId('compact-painter')).toBeNull())
     expect(screen.getByTestId('paint-status')).toHaveTextContent('added')
-    // The pane now shows the Form product as missing from the recipe, to add.
     expect(screen.getByText(/ET-PS-01/)).toBeInTheDocument()
 
-    // Next position: its rows straight away, from the same session.
+    // Next position: from the same session, saved by itself; opened, its known code is listed.
     view.unmount()
     render(<FormSpecPane posRef="C03" />)
-    // QC52 is in the spec: C03 is saved by itself, no file picked again.
     await waitFor(() => expect(useStore.getState().formCaptures.byPosition.C03?.[0]?.elementTypeRef).toBe('ET-PS-03'))
     await waitFor(() => expect(screen.getByTestId('paint-status')).toHaveTextContent('added'))
     fireEvent.click(screen.getByTestId('paint-position'))
-    await screen.findByTestId('compact-painter')
-    await waitFor(() => expect(tableRefs()).toEqual(['C03']))
+    expect(await screen.findByTestId('compact-known')).toHaveTextContent('QC52 → ET-PS-03')
+    expect(screen.queryByTestId('add-and-build')).toBeNull()                  // no Save button
     expect(window.electronAPI.openXlsxDialog).toHaveBeenCalledTimes(1)
   })
 
-  test('a product the Form no longer gives shows as to remove, with Remove', async () => {
+  test('the Form now gives something else than was saved: saved again, and the dropped product shows to remove', async () => {
     useStore.setState({ formCaptures: { version: 1, byPosition: { C01: [{ elementTypeRef: 'ET-PS-OLD', code: 'OLD1', manufacturer: 'iGuzzini' }] } } })
     render(<FormSpecPane posRef="C01" />)
     fireEvent.click(screen.getByTestId('paint-position'))
     fireEvent.click(await screen.findByText('Choose spreadsheet…'))
-    await waitFor(() => expect(tableRefs()).toEqual(['C01']))
-    await act(async () => { fireEvent.click(screen.getByTestId('add-and-build')) })
+    await waitFor(() => expect(useStore.getState().formCaptures.byPosition.C01?.[0]?.elementTypeRef).toBe('ET-PS-01'))
     await screen.findByText('No longer in the Form')
     fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
     const r1 = useStore.getState().recipes.find(r => r._id === 'r1')
@@ -180,8 +168,8 @@ describe('known codes save themselves to the position', () => {
     useStore.setState({ importDraft: draft, formCaptures: null })
     render(<FormSpecPane posRef="C02" />)
     expect(screen.queryByTestId('form-autosave')).toBeNull()
-    expect(screen.getByTestId('paint-status')).toHaveTextContent('1 new code to confirm')
-    // Rows to confirm: the painter is open inline by itself.
+    expect(screen.getByTestId('paint-status')).toHaveTextContent('1 code needs an ElementType')
+    // A code needs an ElementType: the painter is open inline by itself, with the one button.
     expect(await screen.findByTestId('compact-painter')).toBeInTheDocument()
     expect(useStore.getState().formCaptures).toBeNull()
   })
