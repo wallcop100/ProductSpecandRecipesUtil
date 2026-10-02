@@ -119,7 +119,6 @@ describe('the drawer\'s Connectors tab, for one position', () => {
     const card = screen.getByTestId('suggested-template')
     expect(within(card).getByTestId('assumed-parts')).toHaveTextContent('5PIN-SOCKET')
     expect(within(card).getByTestId('assumed-parts')).toHaveTextContent('5PIN-PLUG')
-    expect(within(card).getByTestId('assumed-where').textContent).toMatch(/A02.*A03|equals/)
     await act(async () => { fireEvent.click(within(card).getByTestId('make-template')) })
     const made = useStore.getState().etCollections[0]
     const pins = useStore.getState().connectorPins[made.CollectionId] || []
@@ -141,24 +140,33 @@ describe('the drawer\'s Connectors tab, for one position', () => {
     expect(pins).not.toContain('A04')      // lacks the SR
   })
 
-  test('Make with conditions: the rule is set at the point of creation, with a live count; one leaving this position out is refused', async () => {
+  test('Make with conditions opens WHERE on the card: pills edited in place, AND/OR flips, live matches; leaving this position out is refused', async () => {
     setup({ etCollections: [], connectorPins: {}, positionUI: { A02: { tags: ['LOCAL'] }, A03: { tags: ['LOCAL'] } } })
     render(<ConnectorsPane posRef="A02" />)
-    fireEvent.click(screen.getByTestId('make-template-rule'))
-    const win = await screen.findByTestId('make-with-rule')
-    // Start from no conditions, then add one.
-    for (const x of within(win).queryAllByLabelText('Remove condition')) fireEvent.click(x)
-    fireEvent.click(within(win).getByText('Add condition'))
-    const value = within(win).getByLabelText('Value')
-    fireEvent.change(value, { target: { value: 'LOCAL' } })
-    expect(screen.getByTestId('rule-preview')).toHaveTextContent(/Matches 2:\s*A02\s*A03/)
-    fireEvent.change(value, { target: { value: 'REMOTE' } })
+    const card = screen.getByTestId('suggested-template')
+    expect(within(card).queryByTestId('section-where')).toBeNull()                 // hidden until asked
+    fireEvent.click(within(card).getByTestId('make-template-rule'))
+    for (const x of within(card).queryAllByTestId('cond-pill')) { fireEvent.click(x); fireEvent.click(within(card).getByLabelText('Remove condition')) }
+    fireEvent.click(within(card).getByTestId('add-cond'))
+    fireEvent.change(within(card).getByLabelText('Value'), { target: { value: 'LOCAL' } })
+    fireEvent.click(within(card).getByLabelText('Done'))
+    expect(within(card).getByTestId('cond-pill')).toHaveTextContent('Tags equals LOCAL')
+    expect(screen.getByTestId('rule-preview')).toHaveTextContent(/A02\s*A03/)
+    fireEvent.click(within(card).getByTestId('cond-pill'))
+    fireEvent.change(within(card).getByLabelText('Value'), { target: { value: 'REMOTE' } })
     expect(screen.getByTestId('rule-misses-this')).toBeInTheDocument()
-    expect(screen.getByTestId('make-with-rule-ok')).toBeDisabled()
-    fireEvent.change(value, { target: { value: 'LOCAL' } })
-    fireEvent.change(within(win).getByLabelText('New template name'), { target: { value: 'Local 5-pin' } })
-    await act(async () => { fireEvent.click(screen.getByTestId('make-with-rule-ok')) })
+    expect(within(card).getByTestId('make-template')).toBeDisabled()
+    fireEvent.change(within(card).getByLabelText('Value'), { target: { value: 'LOCAL' } })
+    fireEvent.click(within(card).getByLabelText('Done'))
+    fireEvent.click(within(card).getByTestId('add-cond'))
+    fireEvent.change(within(card).getByLabelText('Value'), { target: { value: 'X' } })
+    fireEvent.click(within(card).getByLabelText('Done'))
+    fireEvent.click(within(card).getByTestId('rule-join'))
+    expect(within(card).getByTestId('rule-join')).toHaveTextContent('OR')
+    fireEvent.change(within(card).getByLabelText('Template name'), { target: { value: 'Local 5-pin' } })
+    await act(async () => { fireEvent.click(within(card).getByTestId('make-template')) })
     const made = useStore.getState().etCollections.find(c => c.Name === 'Local 5-pin')
+    expect(made.Rule.match).toBe('any')
     expect(JSON.stringify(made.Rule)).toContain('LOCAL')
   })
 })

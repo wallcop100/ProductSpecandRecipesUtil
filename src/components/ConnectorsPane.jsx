@@ -2,13 +2,12 @@ import React, { useMemo, useState } from 'react'
 import { Button, Dropdown, Form, Modal } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
-import InfoTip from './InfoTip'
 import IconButton from './IconButton'
 import CellDetailPanel from './CellDetailPanel'
 import useConnectorGroups from './useConnectorGroups'
 import { templateParts, partsToIngredients, diffParts, diffSize, describeParts, findGroups, suggestName } from '../utils/connectorGroups'
 import { templateRule, ruleIsEmpty, describeRule, ruleFor, ruleMatchesRecord, TEMPLATE_RULE_COLUMNS } from '../utils/templateRules'
-import RuleBuilder, { RulePills } from './RuleBuilder'
+import { TAG_OPS } from '../utils/tagRules'
 
 const mono = { fontFamily: 'monospace' }
 const lc = s => String(s || '').toLowerCase()
@@ -86,6 +85,14 @@ export default function ConnectorsPane({ posRef, onOpenConnectors }) {
     askTemplateChange(current, templateParts(current).filter(p => lc(p.ref) !== ref), `Take ${ing.ElementTypeRef || ing.slotLabel} out of ${current.Name}`)
   }
 
+  // From the card: as assumed, or with the conditions set under Make with conditions.
+  async function makeFromCard() {
+    if (!withRule || (ruleIsEmpty(withRule.rule) && !suggestion.rule)) return makeTemplate(suggestion.positions)
+    const name = (tplName ?? suggestion.name).trim() || suggestion.name
+    const empty = ruleIsEmpty(withRule.rule)
+    await makeTemplateFromGroup(name, have, empty ? suggestion.positions : [posRef], { rule: empty ? null : withRule.rule })
+    setWithRule(null); setTplName(null)
+  }
   async function makeTemplate(positions) {
     const name = (tplName ?? suggestion.name).trim() || suggestion.name
     await makeTemplateFromGroup(name, have, positions, { rule: positions.length > 1 ? suggestion.rule : null })
@@ -169,16 +176,34 @@ export default function ConnectorsPane({ posRef, onOpenConnectors }) {
               <div className="fw-semibold mb-1" style={{ fontSize: 10 }}>New template from {posRef}</div>
               <Form.Control size="sm" value={tplName ?? suggestion.name} onChange={e => setTplName(e.target.value)}
                 aria-label="Template name" style={{ fontSize: 11 }} />
-              {/* What Make template assumes, said before you press it. */}
-              <Assumed have={have} suggestion={suggestion} posRef={posRef} />
-              {/* No questions: the positions built the same way join it too, and from then on
-                  any position that ends up built this way joins it by itself. */}
-              <div className="d-flex gap-1 mt-1">
+              <Section title="Parts"><PartPills have={have} /></Section>
+              {/* Make with conditions opens WHERE here, on the card: the conditions as pills,
+                  each edited in place, and the positions they match, live. */}
+              {withRule && (
+                <Section title="Where">
+                  <InlineRule rule={withRule.rule} onChange={rule => setWithRule(w => ({ ...w, rule }))} tagOptions={tagOptions} />
+                  <div className="mt-1" data-testid="rule-preview">
+                    <span className="d-flex flex-wrap align-items-center gap-1">
+                      <MaterialIcon name="arrow_forward" size={12} style={{ color: '#6c757d' }} />
+                      {(ruleIsEmpty(withRule.rule) ? suggestion.positions : ruleMatches).slice(0, 16).map(r => (
+                        <span key={r} className="rounded-pill px-2" style={{ ...pill, fontFamily: 'monospace', fontWeight: r === posRef ? 700 : 400 }}>
+                          {ruleIsEmpty(withRule.rule) && <MaterialIcon name="push_pin" size={10} style={{ marginRight: 2, verticalAlign: '-1px', color: '#6c757d' }} />}{r}
+                        </span>
+                      ))}
+                      {!ruleIsEmpty(withRule.rule) && ruleMatches.length === 0 && <span className="text-muted">no position</span>}
+                      {!ruleIsEmpty(withRule.rule) && ruleMatches.length > 16 && <span className="text-muted">+{ruleMatches.length - 16}</span>}
+                    </span>
+                    {!ruleHasThis && <div className="text-danger" data-testid="rule-misses-this">These conditions leave out {posRef} itself.</div>}
+                  </div>
+                </Section>
+              )}
+              <div className="d-flex gap-1 mt-2">
                 <Button size="sm" variant="primary" className="py-0" style={{ fontSize: 10 }} data-testid="make-template"
-                  onClick={() => makeTemplate(suggestion.positions)}>Make template</Button>
-                <Button size="sm" variant="outline-primary" className="py-0" style={{ fontSize: 10 }} data-testid="make-template-rule"
-                  onClick={() => setWithRule({ name: (tplName ?? suggestion.name), rule: suggestion.rule || { match: 'all', conditions: [] } })}>
-                  Make with conditions…
+                  disabled={!ruleHasThis} onClick={makeFromCard}>Make template</Button>
+                <Button size="sm" variant={withRule ? 'secondary' : 'outline-primary'} className="py-0" style={{ fontSize: 10 }} data-testid="make-template-rule"
+                  aria-expanded={!!withRule}
+                  onClick={() => setWithRule(w => (w ? null : { rule: suggestion.rule || { match: 'all', conditions: [] } }))}>
+                  Make with conditions {withRule ? '▴' : '▾'}
                 </Button>
               </div>
             </div>
@@ -194,52 +219,6 @@ export default function ConnectorsPane({ posRef, onOpenConnectors }) {
         </div>
       )}
 
-      {/* Make with conditions: name and rule at the point of creation. With no conditions it
-          holds this position and those built the same way (pinned), as Make template does. */}
-      <Modal show={!!withRule} onHide={() => setWithRule(null)} size="lg">
-        <Modal.Header closeButton><Modal.Title style={{ fontSize: 14 }}>New template from {posRef}</Modal.Title></Modal.Header>
-        <Modal.Body style={{ fontSize: 12 }} data-testid="make-with-rule">
-          <Form.Label className="fw-semibold mb-1">Name</Form.Label>
-          <Form.Control size="sm" value={withRule?.name || ''} aria-label="New template name"
-            onChange={e => setWithRule(w => ({ ...w, name: e.target.value }))} />
-          {/* Where it applies is the editor below: only the parts here. */}
-          <div className="mt-2"><Assumed have={have} suggestion={suggestion} posRef={posRef} where={false} /></div>
-          <Form.Label className="fw-semibold mt-2 mb-1">Applies to positions that match</Form.Label>
-          {withRule && (
-            <RuleBuilder rule={withRule.rule} columns={TEMPLATE_RULE_COLUMNS} valueOptions={{ Tags: tagOptions }} minConditions={0}
-              newCondition={{ column: 'Tags', op: 'equals', value: '' }}
-              onChange={patch => setWithRule(w => ({ ...w, rule: { ...w.rule, ...patch } }))} />
-          )}
-          <div className="mt-2" data-testid="rule-preview">
-            {withRule && ruleIsEmpty(withRule.rule)
-              ? <span className="d-flex flex-wrap align-items-center gap-1">
-                  <span className="text-muted">No conditions: pinned to</span>
-                  {(suggestion?.positions || []).map(r => (
-                    <span key={r} className="rounded-pill px-2" style={{ ...pill, fontFamily: 'monospace', fontWeight: r === posRef ? 700 : 400 }}>
-                      <MaterialIcon name="push_pin" size={10} style={{ marginRight: 2, verticalAlign: '-1px', color: '#6c757d' }} />{r}
-                    </span>
-                  ))}
-                </span>
-              : <span className="d-flex flex-wrap align-items-center gap-1">
-                  <span className="text-muted">Matches {ruleMatches.length}:</span>
-                  {ruleMatches.slice(0, 16).map(r => (
-                    <span key={r} className="rounded-pill px-2" style={{ ...pill, fontFamily: 'monospace', fontWeight: r === posRef ? 700 : 400 }}>{r}</span>
-                  ))}
-                  {ruleMatches.length > 16 && <span className="text-muted">+{ruleMatches.length - 16}</span>}
-                </span>}
-            {!ruleHasThis && <div className="text-danger" data-testid="rule-misses-this">These conditions leave out {posRef} itself.</div>}
-          </div>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button size="sm" variant="link" onClick={() => setWithRule(null)}>Cancel</Button>
-          <Button size="sm" variant="primary" disabled={!ruleHasThis || !withRule?.name?.trim()} data-testid="make-with-rule-ok"
-            onClick={async () => {
-              const empty = ruleIsEmpty(withRule.rule)
-              await makeTemplateFromGroup(withRule.name.trim(), have, empty ? suggestion.positions : [posRef], { rule: empty ? null : withRule.rule })
-              setWithRule(null); setTplName(null)
-            }}>Make template</Button>
-        </Modal.Footer>
-      </Modal>
 
       {/* 4. A change to the template, which reaches every position on it */}
       <Modal show={!!confirm} onHide={() => setConfirm(null)} size="sm">
@@ -261,47 +240,103 @@ export default function ConnectorsPane({ posRef, onOpenConnectors }) {
   )
 }
 
-/**
- * What a new template from this position assumes, at the point of creation, as pills:
- *   PARTS — exactly this position's connectors (wrapper ones marked)
- *   WHERE — the rule that picks out the positions built the same way, or those positions
- *           (pinned) when no rule does
- * Positions built like it later join by themselves: in the ⓘ, not in the way.
- */
-const short = ref => String(ref).replace(/^ET-/i, '')
-const pill = { fontSize: 10, lineHeight: '18px', background: '#f1f3f5', border: '1px solid #dee2e6' }
-function Assumed({ have, suggestion, posRef, where = true }) {
-  if (!suggestion) return null
-  const label = { fontSize: 9, fontWeight: 700, letterSpacing: '.05em', color: '#6c757d', paddingTop: 3 }
+/** A boxed section of the new-template card, headed like the recipe's sections. */
+function Section({ title, children }) {
   return (
-    <div data-testid="assumed" className="mt-1"
-      style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', columnGap: 8, rowGap: 4, fontSize: 11 }}>
-      <span style={label}>PARTS</span>
-      <span className="d-flex flex-wrap gap-1" data-testid="assumed-parts">
-        {have.map(p => (
-          <span key={`${p.section}|${p.ref}`} className="rounded-pill px-2" title={`${p.ref}${p.section === 'internal' ? ', inside the wrapper' : ', on site'}${p.quantity > 1 ? ` ×${p.quantity}` : ''}`}
-            style={{ ...pill, fontFamily: 'monospace', ...(p.section === 'internal' ? { background: '#fff', borderStyle: 'dashed' } : {}) }}>
-            {p.section === 'internal' && <MaterialIcon name="inventory_2" size={10} style={{ marginRight: 2, verticalAlign: '-1px' }} />}
-            {short(p.ref)}{p.quantity > 1 ? ` ×${p.quantity}` : ''}
-          </span>
-        ))}
-      </span>
-      {where && <span style={label}>WHERE</span>}
-      {where && <span className="d-flex flex-wrap align-items-center gap-1" data-testid="assumed-where">
-        {suggestion.rule
-          ? <RulePills rule={suggestion.rule} />
-          : suggestion.positions.map(p => (
-            <span key={p} className="rounded-pill px-2" style={{ ...pill, fontFamily: 'monospace', fontWeight: p === posRef ? 700 : 400 }}>
-              <MaterialIcon name="push_pin" size={10} style={{ marginRight: 2, verticalAlign: '-1px', color: '#6c757d' }} />{p}
+    <div className="mt-2" data-testid={`section-${title.toLowerCase()}`}>
+      <div className="d-flex align-items-center gap-2 mb-1">
+        <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.06em', color: '#6c757d' }}>{title.toUpperCase()}</span>
+        <span style={{ flex: 1, borderTop: '1px solid #dee2e6' }} />
+      </div>
+      <div className="ps-1">{children}</div>
+    </div>
+  )
+}
+
+const short = ref => String(ref).replace(/^ET-/i, '')
+const pill = { fontSize: 10, lineHeight: '18px', background: '#fff', border: '1px solid #dee2e6' }
+
+/** This position's connectors: on site, then (dashed) inside the wrapper. */
+function PartPills({ have }) {
+  const row = (parts, inside) => parts.length > 0 && (
+    <div className="d-flex flex-wrap align-items-center gap-1 mb-1">
+      {parts.map(p => (
+        <span key={`${p.section}|${p.ref}`} className="rounded-pill px-2" title={p.ref}
+          style={{ ...pill, fontFamily: 'monospace', ...(inside ? { borderStyle: 'dashed' } : {}) }}>
+          {inside && <MaterialIcon name="inventory_2" size={10} style={{ marginRight: 2, verticalAlign: '-1px' }} />}
+          {short(p.ref)}{p.quantity > 1 ? ` ×${p.quantity}` : ''}
+        </span>
+      ))}
+      {inside && <span className="text-muted" style={{ fontSize: 10 }}>in wrapper</span>}
+    </div>
+  )
+  return (
+    <div data-testid="assumed-parts">
+      {row(have.filter(p => p.section !== 'internal'), false)}
+      {row(have.filter(p => p.section === 'internal'), true)}
+    </div>
+  )
+}
+
+/**
+ * InlineRule — a rule edited on the card: each condition a pill; tapping one opens it in
+ * place (column / operator / value); the AND / OR pill between them flips on a tap; "+"
+ * adds one, opened for typing.
+ */
+function InlineRule({ rule, onChange, tagOptions = [] }) {
+  const [editing, setEditing] = useState(null)
+  const conds = rule?.conditions || []
+  const any = rule?.match === 'any'
+  const set = (i, patch) => onChange({ ...rule, conditions: conds.map((c, k) => (k === i ? { ...c, ...patch } : c)) })
+  const remove = i => { onChange({ ...rule, conditions: conds.filter((_, k) => k !== i) }); setEditing(null) }
+  const add = () => { onChange({ ...rule, match: rule?.match || 'all', conditions: [...conds, { column: 'Tags', op: 'equals', value: '' }] }); setEditing(conds.length) }
+  const join = { color: any ? '#b45309' : '#0d6efd', background: any ? '#fff4e5' : '#e7f1ff' }
+  const opOf = op => TAG_OPS.find(o => o.op === op) || TAG_OPS[0]
+  const sel = { fontSize: 10, padding: '0 18px 0 4px', height: 22, width: 'auto', minWidth: 0, backgroundPosition: 'right 3px center', backgroundSize: '9px 7px' }
+  return (
+    <div className="d-flex flex-wrap align-items-center gap-1" data-testid="inline-rule">
+      {conds.map((c, i) => (
+        <React.Fragment key={i}>
+          {i > 0 && (
+            <button type="button" className="rounded-pill border-0 px-2" data-testid="rule-join"
+              title={any ? 'OR: any condition. Tap for AND.' : 'AND: every condition. Tap for OR.'}
+              onClick={() => onChange({ ...rule, match: any ? 'all' : 'any' })}
+              style={{ fontSize: 9, fontWeight: 700, letterSpacing: 0.5, lineHeight: '16px', cursor: 'pointer', ...join }}>{any ? 'OR' : 'AND'}</button>
+          )}
+          {editing === i ? (
+            <span className="d-inline-flex flex-wrap align-items-center gap-1 rounded px-1 py-1" style={{ background: '#fff', border: '1px solid #86b7fe' }} data-testid="cond-editing">
+              <Form.Select size="sm" value={c.column} aria-label="Column" style={sel} onChange={e => set(i, { column: e.target.value })}>
+                {TEMPLATE_RULE_COLUMNS.map(g => (
+                  <optgroup key={g.label} label={g.label}>{g.options.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}</optgroup>
+                ))}
+              </Form.Select>
+              <Form.Select size="sm" value={c.op} aria-label="Operator" style={sel} onChange={e => set(i, { op: e.target.value })}>
+                {TAG_OPS.map(o => <option key={o.op} value={o.op}>{o.label}</option>)}
+              </Form.Select>
+              {opOf(c.op).needsValue && (
+                <Form.Control size="sm" value={c.value ?? ''} aria-label="Value" autoFocus list={c.column === 'Tags' ? 'inline-rule-tags' : undefined}
+                  style={{ fontSize: 10, height: 22, width: 90, padding: '0 4px' }}
+                  onChange={e => set(i, { value: e.target.value })} onKeyDown={e => { if (e.key === 'Enter') setEditing(null) }} />
+              )}
+              <button type="button" className="btn btn-link p-0" title="Done" aria-label="Done" onClick={() => setEditing(null)}>
+                <MaterialIcon name="check" size={14} />
+              </button>
+              <button type="button" className="btn btn-link p-0 text-danger" title="Remove condition" aria-label="Remove condition" onClick={() => remove(i)}>
+                <MaterialIcon name="close" size={14} />
+              </button>
             </span>
-          ))}
-        <InfoTip size={11}>
-          {suggestion.rule
-            ? `The rule that picks out ${suggestion.positions.join(', ')}: the positions built like ${posRef} with no template yet.`
-            : `No rule picks out exactly the positions built like ${posRef}, so they are pinned.`}
-          {' '}Positions built exactly like it later join it by themselves.
-        </InfoTip>
-      </span>}
+          ) : (
+            <button type="button" className="rounded-pill px-2" data-testid="cond-pill" title="Tap to change"
+              onClick={() => setEditing(i)} style={{ ...pill, background: '#f1f3f5', cursor: 'pointer' }}>
+              <span className="text-muted">{String(c.column).replace(/^Recipe\./, '')}</span> {opOf(c.op).label}
+              {opOf(c.op).needsValue && <> <strong>{String(c.value ?? '') || '…'}</strong></>}
+            </button>
+          )}
+        </React.Fragment>
+      ))}
+      <button type="button" className="rounded-pill px-2" data-testid="add-cond" onClick={add}
+        style={{ ...pill, borderStyle: 'dashed', color: '#6c757d', cursor: 'pointer' }}>+ condition</button>
+      <datalist id="inline-rule-tags">{tagOptions.map(t => <option key={t} value={t} />)}</datalist>
     </div>
   )
 }
