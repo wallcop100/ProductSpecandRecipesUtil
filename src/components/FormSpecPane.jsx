@@ -263,7 +263,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
   const formChanges = usePositionFormImpact(posRef)
   const applyFormChange = useStore(s => s.applyFormChange)
   const [swapPick, setSwapPick] = useState({})     // toEt → the ElementType chosen to replace
-  const paintSt = positionPaintStatus(importDraft, posRef, { buildRefMap, targetFor })
+  const paintSt = positionPaintStatus(importDraft, posRef, { buildRefMap, targetFor, knows: (m, c) => !!findProductET(psRows, m, c) })
   const draftHasRows = !['absent', 'noForm'].includes(paintSt.state)
   // Codes the loaded Form gives here that have no ElementType yet (not saved to the position).
   const draftNewCodes = paintSt.state === 'todo' ? (paintSt.newCodes || paintSt.unconfirmed || 0) : 0
@@ -282,7 +282,13 @@ export default function FormSpecPane({ posRef, embedded = false }) {
     return next
   })
 
-  const captured = formCaptures?.byPosition?.[posRef] ?? []
+  // Not saved here yet (a code still needs an ElementType): the codes the Product Spec
+  // already knows are compared with the recipe all the same (44VCYZ).
+  const draftKnown = useMemo(() => (formCaptures?.byPosition?.[posRef] ? [] : (paintSt.formRows || []).flatMap(r =>
+    String(r.rawText || '').split(/\s+/).filter(Boolean).map(code => ({ code, manufacturer: r.manufacturer || '', elementTypeRef: findProductET(psRows, r.manufacturer, code), formRef: r.positionType }))
+      .filter(e => e.elementTypeRef))
+    .filter((e, i, a) => a.findIndex(x => x.elementTypeRef === e.elementTypeRef) === i)), [formCaptures, posRef, paintSt.formRows, psRows])
+  const captured = formCaptures?.byPosition?.[posRef] ?? draftKnown
   const context = formCaptures?.contextByPosition?.[posRef] ?? {}
 
   /**

@@ -69,7 +69,7 @@ export function mergeCaptures(prev, next, targets, formRefs = []) {
  * confirm), 'ready' (confirmed, not added yet), 'added', or 'nothing' (no product in its rows). A Form ref lands on posRef
  * through the import's resolutions (ptResolve), as Import itself routes it.
  */
-export function positionPaintStatus(draft, posRef, { buildRefMap, targetFor } = {}) {
+export function positionPaintStatus(draft, posRef, { buildRefMap, targetFor, knows = null } = {}) {
   if (!draft?.rows?.length) return { state: 'noForm', rows: 0, unconfirmed: 0, formRefs: [] }
   const refMap = draft.map?.pt && buildRefMap ? buildRefMap(draft.resolutions || [], draft.refOverrides || {}) : null
   const target = f => (refMap ? targetFor(refMap, f) : f)
@@ -96,11 +96,16 @@ export function positionPaintStatus(draft, posRef, { buildRefMap, targetFor } = 
   // No product anywhere in its rows ("n/a", "by others"): nothing to add, nothing to do.
   if (rows.every(r => isNothingText(r.rawText))) return { state: 'nothing', rows: rows.length, unconfirmed: 0, formRefs: groups.map(g => g.formRef), texts, cells }
   const unconfirmed = rows.filter(r => !r.confirmed).length
-  // In product codes, not rows: the code-shaped words still to confirm (at least one a row).
-  const newCodes = rows.filter(r => !r.confirmed)
-    .reduce((n, r) => n + Math.max(1, String(r.rawText || '').split(/\s+/).filter(w => w && looksLikeProductCode(w)).length), 0)
+  // In product codes, not rows: the code-shaped words still to confirm (an entry with no
+  // code at all counts as one). With `knows(manufacturer, code)`, codes the Product Spec
+  // already names are not counted: only the ones that need an ElementType (44VCYZ).
+  const newCodes = rows.filter(r => !r.confirmed).reduce((n, r) => {
+    const ws = String(r.rawText || '').split(/\s+/).filter(w => w && looksLikeProductCode(w))
+    if (!ws.length) return n + 1
+    return n + (knows ? ws.filter(w => !knows(r.manufacturer, w)).length : ws.length)
+  }, 0)
   const staged = new Set(draft.stagedRefs || [])
   const formRefs = groups.map(g => g.formRef)
   const state = unconfirmed ? 'todo' : formRefs.every(f => staged.has(f)) ? 'added' : 'ready'
-  return { state, rows: rows.length, unconfirmed, newCodes, formRefs, texts, cells }
+  return { state, rows: rows.length, unconfirmed, newCodes, formRefs, texts, cells, formRows: rows }
 }
