@@ -89,12 +89,26 @@ export default function FormDiffBlock({ posRef }) {
               {!c.inRecipe ? <div className="text-muted">Not in this recipe.</div> : c.canUpdate ? (
                 <>
                   <div className="text-muted">
-                    {c.sharers.length ? `Every position using it changes the same way (${list([posRef, ...c.sharers])})` : `Only ${posRef} uses it`}, and the old code is gone from the Form.
+                    {c.changing.length ? `Every position in the Form using it changes the same way (${list([posRef, ...c.changing])})` : `In the Form, only ${posRef} uses it`}, and the old code is gone from the Form.
                   </div>
-                  <Button size="sm" variant="primary" className="mt-1 py-0" style={{ fontSize: 10 }} data-testid="diff-update"
-                    onClick={() => applyFormChange(c, posRef, 'update')}>
-                    Update {c.fromEt} to {c.toCode}
-                  </Button>
+                  {c.outsideForm.length > 0 && (
+                    <div style={{ color: '#856404' }} data-testid="diff-outside">
+                      <MaterialIcon name="warning" size={11} /> Also changes {list(c.outsideForm)} (not in the Form), which use{c.outsideForm.length === 1 ? 's' : ''} {c.fromEt} too.
+                    </div>
+                  )}
+                  <div className="d-flex gap-1 mt-1">
+                    <Button size="sm" variant="primary" className="py-0" style={{ fontSize: 10 }} data-testid="diff-update"
+                      onClick={() => applyFormChange(c, posRef, 'update')}
+                      title={`Change ${c.fromEt}'s Product Spec row to ${c.toCode}: every position using it gets the new product`}>
+                      Update {c.fromEt} to {c.toCode}
+                    </Button>
+                    {c.outsideForm.length > 0 && (
+                      <Button size="sm" variant="outline-primary" className="py-0" style={{ fontSize: 10 }} data-testid="diff-fork"
+                        onClick={() => applyFormChange(c, posRef, 'fork')} title={`Leave ${list(c.outsideForm)} on ${c.fromEt}`}>
+                        Fork instead
+                      </Button>
+                    )}
+                  </div>
                 </>
               ) : (
                 <>

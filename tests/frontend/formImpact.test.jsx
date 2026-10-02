@@ -61,3 +61,9 @@ describe('recipeSignature (A59TJK)', () => {
     expect(g.get('A3')).toEqual([])
   })
 })
+
+test('a position using the ElementType that the Form never mentions does not block an update, but is named', () => {
+  const recipes = [pos('A1', 'ET-PS-01'), pos('A7', 'ET-PS-01')]
+  const c = run('A1', [row('A1', 'ZH-OLD-1')], [row('A1', 'ZH-BRAND-9')], recipes)
+  expect(c[0]).toMatchObject({ kind: 'respec', consistent: true, canUpdate: true, outsideForm: ['A7'], notChanging: [] })
+})

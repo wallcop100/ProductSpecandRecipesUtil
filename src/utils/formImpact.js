@@ -17,8 +17,9 @@
  * holds it (inside a shared wrapper too). Changing it in place changes them all. So each
  * swap / respec says who else holds the old ElementType and whether THEIR Form rows make
  * the same change. The rule for a code that changed (respec):
- *   - change the ElementType in place only when every position holding it changes the
- *     same way AND the old code is nowhere in the new Form (`canUpdate`);
+ *   - change the ElementType in place only when every position holding it THAT IS IN THE
+ *     FORM changes the same way AND the old code is nowhere in the new Form (`canUpdate`);
+ *     positions using it that the Form never mentions change with it (`outsideForm`);
  *   - otherwise the old one stays in use: fork it (a copy carrying the new code) or make a
  *     new ElementType, and swap it in for the positions that change.
  * A row inside a wrapper is the wrapper's: `container` / `wrapperUsers` say whether
@@ -108,18 +109,22 @@ export function formImpact({ posRef, baseRows = [], newRows = [], recipes = [], 
   const stillNamed = new Set()
   for (const r of newRows) for (const et of readCodes(r, master).known.keys()) stillNamed.add(up(et))
   return changesOf(posRef).map(c => {
-    if (c.kind === 'add') return { ...c, inRecipe: held.has(up(c.toEt)), sharers: [], changing: [], notChanging: [], consistent: true, canUpdate: false }
+    if (c.kind === 'add') return { ...c, inRecipe: held.has(up(c.toEt)), sharers: [], changing: [], notChanging: [], outsideForm: [], consistent: true, canUpdate: false }
     const inRecipe = held.has(up(c.fromEt))
     const sharers = inRecipe ? getUsedIn(c.fromEt, recipes, posRef) : []
-    const changing = sharers.filter(p => changesOf(p).some(x => sameChange(x, c)))
-    const notChanging = sharers.filter(p => !changing.includes(p))
+    // Only positions IN the Form have a say: one the Form never mentions keeps nothing and
+    // changes nothing there, but an in-place update still reaches it (`outsideForm`).
+    const inForm = p => rowsFor(baseRows, p, targetOf).length > 0 || rowsFor(newRows, p, targetOf).length > 0
+    const changing = sharers.filter(p => inForm(p) && changesOf(p).some(x => sameChange(x, c)))
+    const outsideForm = sharers.filter(p => !inForm(p))
+    const notChanging = sharers.filter(p => inForm(p) && !changing.includes(p))
     const consistent = notChanging.length === 0
     const stillInForm = stillNamed.has(up(c.fromEt))
     // Where this position holds it: on site, or inside a wrapper (and who else uses that).
     const row = recipes.find(r => live(r) && (r.PositionTypeRef || r.positionTypeRef) === posRef && up(r.ElementTypeRef || r.elementTypeRef) === up(c.fromEt))
     const container = row && (row.ContextType || row.contextType) === 'ElementType' ? (row.ContextRef || row.contextRef) : null
     const wrapperUsers = container ? wrapperUsedBy(recipes, container).filter(p => p !== posRef) : []
-    return { ...c, inRecipe, sharers, changing, notChanging, consistent, stillInForm,
+    return { ...c, inRecipe, sharers, changing, notChanging, outsideForm, consistent, stillInForm,
       canUpdate: consistent && !stillInForm, container, wrapperUsers }
   })
 }
