@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Button } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
@@ -33,6 +33,7 @@ export default function FormPaintBar({ posRef, open = false, onOpenChange = () =
   const setOpen = onOpenChange
   // Opened on a Form already loaded (not to load one): a re-save on opening keeps it open.
   const onLoaded = useRef(false)
+  const [allCols, setAllCols] = useState(false)    // the Form's other columns, behind ⋯
   const st = positionPaintStatus(importDraft, posRef, { buildRefMap, targetFor })
   // On each position: the painter is open, inline, when it has Form rows to confirm;
   // otherwise closed (known codes save themselves, below).
@@ -76,21 +77,31 @@ export default function FormPaintBar({ posRef, open = false, onOpenChange = () =
         )}
       </div>
       {/* What the Form says here, raw and plain; the painter (the brush) only when needed. */}
-      {!open && state !== 'noForm' && st.cells?.some(c => c.length) && (
-        <div className="mt-1" style={{ fontSize: 11 }} data-testid="form-raw">
-          {st.cells.filter(c => c.length).map((row, i) => (
-            <div key={i} className={i ? 'border-top pt-1 mt-1' : ''}
-              style={{ display: 'grid', gridTemplateColumns: 'minmax(0, max-content) 1fr', columnGap: 8 }}>
-              {row.map(({ col, value }) => (
-                <React.Fragment key={col}>
-                  <span className="text-muted text-truncate" style={{ fontSize: 10, maxWidth: 120 }} title={col}>{col}</span>
-                  <span style={{ fontFamily: 'monospace', color: '#495057', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{value}</span>
-                </React.Fragment>
+      {!open && state !== 'noForm' && st.cells?.some(c => c.length) && (() => {
+        const more = st.cells.some(row => row.some(c => c.more))
+        return (
+          <div className="mt-1 d-flex align-items-start gap-1" style={{ fontSize: 11 }} data-testid="form-raw">
+            <div style={{ flex: 1, minWidth: 0 }}>
+              {st.cells.map(row => row.filter(c => allCols || !c.more)).filter(row => row.length).map((row, i) => (
+                <div key={i} className={i ? 'border-top pt-1 mt-1' : ''}
+                  style={{ display: 'grid', gridTemplateColumns: 'minmax(0, max-content) 1fr', columnGap: 8 }}>
+                  {row.map(({ col, value, more: m }) => (
+                    <React.Fragment key={col}>
+                      <span className="text-muted text-truncate" style={{ fontSize: 10, maxWidth: 120, fontStyle: m ? 'italic' : undefined }} title={col}>{col}</span>
+                      <span style={{ fontFamily: 'monospace', color: m ? '#6c757d' : '#495057', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{value}</span>
+                    </React.Fragment>
+                  ))}
+                </div>
               ))}
             </div>
-          ))}
-        </div>
-      )}
+            {more && (
+              <IconButton bsSize="sm" variant={allCols ? 'secondary' : 'outline-secondary'} icon="more_horiz" size={12}
+                onClick={() => setAllCols(v => !v)} aria-pressed={allCols} data-testid="form-raw-more"
+                aria-label={allCols ? 'Fewer Form columns' : 'All Form columns'} title={allCols ? 'Just manufacturer, product code and accessories' : 'Show the Form\'s other columns'} />
+            )}
+          </div>
+        )
+      })()}
       {/* Every row already known, not saved here yet: save it without asking, out of sight,
           so the comparison below appears. Nothing to paint, so the painter stays shut. */}
       {!open && autoSave && (

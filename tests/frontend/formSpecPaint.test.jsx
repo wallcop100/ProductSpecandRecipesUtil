@@ -198,6 +198,29 @@ test('W24D3V: the Form shows raw; the brush opens the painter and it stays open,
   expect(screen.getByTestId('form-raw')).toBeInTheDocument()
 })
 
+test('TKJTDE: the raw view shows manufacturer, code and accessories; the other columns behind ⋯', () => {
+  useStore.setState({ formCaptures: null, importDraft: {
+    rows: [{ id: 0, rawText: 'QC50\nTRIM-1', accFrom: 5, positionType: 'C01', manufacturer: 'iGuzzini', context: { Notes: 'white finish' }, confirmed: false }],
+    map: { code: 'ProductCode', mfr: 'Maker', acc: 'Accessories' },
+  } })
+  const st = positionPaintStatus(useStore.getState().importDraft, 'C01')
+  expect(st.cells[0].map(c => [c.col, c.value, c.more])).toEqual([
+    ['Maker', 'iGuzzini', false], ['ProductCode', 'QC50', false], ['Accessories', 'TRIM-1', false], ['Notes', 'white finish', true]])
+})
+
+test('TKJTDE: ⋯ shows and hides the other Form columns', async () => {
+  const { default: FormPaintBar } = await import('../../src/components/FormPaintBar.jsx')
+  useStore.setState({ formCaptures: { byPosition: { C01: [{ elementTypeRef: 'ET-PS-01', code: 'QC50' }] } }, importDraft: {
+    rows: [{ id: 0, rawText: 'QC50', positionType: 'C01', manufacturer: 'iGuzzini', context: { Notes: 'white finish' }, confirmed: true }],
+    map: { code: 'ProductCode', mfr: 'Maker' }, stagedRefs: ['C01'],
+  } })
+  render(<FormPaintBar posRef="C01" />)
+  expect(screen.getByTestId('form-raw')).toHaveTextContent(/ProductCode\s*QC50/)
+  expect(screen.getByTestId('form-raw')).not.toHaveTextContent('white finish')
+  fireEvent.click(screen.getByTestId('form-raw-more'))
+  expect(screen.getByTestId('form-raw')).toHaveTextContent(/Notes\s*white finish/)
+})
+
 test('4MYUQ7: Detach takes the Form off the whole project, session included', async () => {
   useStore.setState({ importDraft: { rows: [{ id: 0, rawText: 'QC50', positionType: 'C01' }] }, formCaptures: { byPosition: { C01: [{ elementTypeRef: 'ET-PS-01', code: 'QC50' }] } } })
   await useStore.getState().detachForm()

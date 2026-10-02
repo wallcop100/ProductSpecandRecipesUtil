@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-10-02', note: 'TKJTDE: the raw Form view shows just manufacturer, product code and accessories (when given); ⋯ shows the Form\'s other columns' },
   { date: '2026-10-02', note: 'Swap where a product is missing: pick which ElementType it replaces (any this position holds, at position level or inside its wrapper), or ⋯ to just add it at position level or inside the wrapper' },
   { date: '2026-10-02', note: 'A product the Form swapped in (the diff above says Swap) offers that same Swap where it shows as missing, not + Position, so it replaces the old one instead of being added beside it; Add all leaves it out' },
   { date: '2026-10-02', note: 'W24D3V / SQJJ4W: the Form spec pane shows what the Form says here, raw and plain, each value under its Form column name; the brush toggles paint mode, and the painter no longer flashes shut when it re-saves a position whose Form changed; a diff line for an ElementType the recipe doesn\'t use says so plainly (“A05\'s recipe doesn\'t use ET-PS-10, so there is nothing to swap here”)' },

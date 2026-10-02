@@ -79,12 +79,20 @@ export function positionPaintStatus(draft, posRef, { buildRefMap, targetFor } = 
   if (!rows.length) return { state: 'absent', rows: 0, unconfirmed: 0, formRefs: [] }
   // What the Form says here, raw, one entry per row (W24D3V: shown as is, painting optional).
   const texts = rows.map(r => String(r.rawText || '').trim()).filter(Boolean)
-  // …and per row, each cell under its Form column name: code, manufacturer, the context columns.
-  const cells = rows.map(r => [
-    [draft.map?.code || 'Product code', r.rawText],
-    [draft.map?.mfr || 'Manufacturer', r.manufacturer],
-    ...Object.entries(r.context || {}),
-  ].map(([col, v]) => ({ col, value: String(v ?? '').trim() })).filter(c => c.value))
+  // …and per row, each cell under its Form column name (TKJTDE): manufacturer, product code
+  // and accessories (when given) up front; the other columns marked `more`, behind a ⋯.
+  const cells = rows.map(r => {
+    const raw = String(r.rawText ?? '')
+    const cut = r.accFrom != null && r.accFrom > 0 ? r.accFrom : null
+    const code = r.accFrom === 0 ? '' : cut != null ? raw.slice(0, cut - 1) : raw
+    const acc = r.accFrom === 0 ? raw : cut != null ? raw.slice(cut) : ''
+    return [
+      [draft.map?.mfr || 'Manufacturer', r.manufacturer],
+      [draft.map?.code || 'Product code', code],
+      [draft.map?.acc || 'Accessories', acc],
+      ...Object.entries(r.context || {}).map(([c, v]) => [c, v, true]),
+    ].map(([col, v, more]) => ({ col, value: String(v ?? '').trim(), more: !!more })).filter(c => c.value)
+  })
   // No product anywhere in its rows ("n/a", "by others"): nothing to add, nothing to do.
   if (rows.every(r => isNothingText(r.rawText))) return { state: 'nothing', rows: rows.length, unconfirmed: 0, formRefs: groups.map(g => g.formRef), texts, cells }
   const unconfirmed = rows.filter(r => !r.confirmed).length
