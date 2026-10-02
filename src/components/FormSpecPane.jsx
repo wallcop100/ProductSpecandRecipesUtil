@@ -18,6 +18,8 @@ import { findProductET, stampPlan } from '../utils/productCodes'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { ago } from '../utils/ago'
 import FormPaintBar from './FormPaintBar'
+import { positionPaintStatus } from '../utils/formPositions'
+import { buildRefMap, targetFor } from '../utils/ptResolve'
 
 /**
  * FormSpecPane — the Form's spec beside the recipe it produced.
@@ -243,6 +245,8 @@ export default function FormSpecPane({ posRef, embedded = false }) {
   const [open, setOpen] = useState(() => new Set())
   // Painting this position's Form rows happens inline, condensed to the pane.
   const [painting, setPainting] = useState(false)
+  const importDraft = useStore(s => s.importDraft)
+  const draftHasRows = !['absent', 'noForm'].includes(positionPaintStatus(importDraft, posRef, { buildRefMap, targetFor }).state)
   const paneStyle = { width: 340, flexShrink: 0, overflowY: 'auto' }
   // After painting this position: show what is no longer in the Form (to remove), if any.
   const paintBar = embedded ? null : (
@@ -434,9 +438,12 @@ export default function FormSpecPane({ posRef, embedded = false }) {
         </div>
         <FormStrip formCaptures={formCaptures} />
         {paintBar}
-        <div className="text-muted fst-italic" style={{ fontSize: 11 }}>
-          The Form says nothing about {posRef}.
-        </div>
+        {/* Only when the loaded Form really has no rows here, not when they are just unsaved. */}
+        {!draftHasRows && (
+          <div className="text-muted fst-italic" style={{ fontSize: 11 }}>
+            The Form says nothing about {posRef}.
+          </div>
+        )}
         {/* Silence is not an answer. It may well be a technical-only position — so offer
             the thing that settles it: what do comparable positions actually do? */}
         <InfoTip size={11}>It may be a technical-only position. Compare it with the ones the Form does describe.</InfoTip>
