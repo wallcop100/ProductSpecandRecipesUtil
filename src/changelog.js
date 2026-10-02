@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-10-02', note: 'S3JLGL: Detach is for the whole project and now sticks: an open painter closes, and no open or hidden import screen writes the old Form back afterwards' },
   { date: '2026-10-02', note: 'TKJTDE: the raw Form view shows just manufacturer, product code and accessories (when given); ⋯ shows the Form\'s other columns' },
   { date: '2026-10-02', note: 'Swap where a product is missing: pick which ElementType it replaces (any this position holds, at position level or inside its wrapper), or ⋯ to just add it at position level or inside the wrapper' },
   { date: '2026-10-02', note: 'A product the Form swapped in (the diff above says Swap) offers that same Swap where it shows as missing, not + Position, so it replaces the old one instead of being added beside it; Add all leaves it out' },

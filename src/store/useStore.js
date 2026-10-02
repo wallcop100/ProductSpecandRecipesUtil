@@ -534,6 +534,9 @@ const useStore = create((set, get) => ({
   // screen's useState, so Back or the Review hand-off destroyed it silently. Saved
   // on a debounce, offered as "Resume?", cleared once staging lands the work.
   importDraft: null,
+  // Bumped by Detach: an import screen still open (the painter, a hidden auto-save) holds
+  // the old Form in memory and must not write it back (S3JLGL).
+  formGen: 0,
 
   // A one-shot screen request from deep in the tree (App consumes it). Mirrors
   // pendingReviewRefs — the pane is nested too far to reach App's navigateTo.
@@ -1890,6 +1893,7 @@ const useStore = create((set, get) => ({
    * Recipes and the Product Spec are untouched.
    */
   async detachForm() {
+    set({ formGen: get().formGen + 1 })
     await get().clearFormCaptures()
     await get().clearImportDraft()
   },

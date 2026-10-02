@@ -401,10 +401,14 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     })),
   }), [source, sheet, step, map, rules, assignments, resolutions, refOverrides, dirStats, keptSeparate, rows, compareBase, stagedRefs])
 
+  // The Form this screen opened with; once it is detached, nothing here writes it back.
+  const formGen = useRef(useStore.getState().formGen)
+  const detached = () => useStore.getState().formGen !== formGen.current
+
   // Debounced: painting a token must not write a pref on every keystroke.
   useEffect(() => {
     if (!draftable) return
-    const t = setTimeout(() => { saveImportDraft(draftFromState()) }, 1000)
+    const t = setTimeout(() => { if (!detached()) saveImportDraft(draftFromState()) }, 1000)
     return () => clearTimeout(t)
   }, [draftable, draftFromState, saveImportDraft])
 
@@ -1255,6 +1259,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     : panelEntries), [mode, panelEntries, selectedRefs])
   const [addingSel, setAddingSel] = useState(false)
   async function addSelectionAndBuild({ stay = false } = {}) {
+    if (detached()) return
     setAddingSel(true)
     try {
       const targets = await handleStage({ only: new Set(selectedRefs) })

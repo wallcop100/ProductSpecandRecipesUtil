@@ -38,6 +38,9 @@ export default function FormPaintBar({ posRef, open = false, onOpenChange = () =
   // On each position: the painter is open, inline, when it has Form rows to confirm;
   // otherwise closed (known codes save themselves, below).
   useEffect(() => { setOpen(st.state === 'todo') }, [posRef])   // eslint-disable-line react-hooks/exhaustive-deps
+  // Detached (for the whole project): the painter closes with it (S3JLGL).
+  const formGen = useStore(s => s.formGen)
+  useEffect(() => { if (formGen) setOpen(false) }, [formGen])   // eslint-disable-line react-hooks/exhaustive-deps
   // A Form added as a whole (not position by position) still counts as added here.
   const state = st.state === 'ready' && formCaptures?.byPosition?.[posRef] ? 'added' : st.state
   const label = LABEL[state]
