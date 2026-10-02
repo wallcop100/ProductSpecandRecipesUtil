@@ -449,10 +449,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                             <div key={item.ref} className="d-flex align-items-center gap-1 mb-1" data-testid="contents-item">
                               <EntityPill type="ElementType" label={item.ref} />
                               {code
-                                ? <button type="button" className="btn btn-link p-0" style={{ fontSize: 11, color: '#333', textDecoration: 'none' }}
-                                    onClick={() => onOpenProductSpec && onOpenProductSpec(item.ref)} title="Open in Product Spec">
-                                    <span style={{ color: '#666' }}>{maker ? `${maker} – ` : ''}{code}</span>
-                                  </button>
+                                ? <ProductInline etRef={item.ref} manufacturer={maker} productCode={code} onOpenProductSpec={onOpenProductSpec} />
                                 : <span className="text-muted fst-italic" title="No product spec yet">no product spec</span>}
                               {item.name && <span className="text-muted">— {item.name}</span>}
                               {showSharedEverywhere && (() => {

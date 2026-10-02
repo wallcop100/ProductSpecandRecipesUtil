@@ -58,3 +58,15 @@ describe('UY8CQ5: maker and code edited in place', () => {
     expect(open).toHaveBeenCalledWith('ET-5PIN-SOCKET')
   })
 })
+
+test('GHVUMD: a wrapper content item edits in place too', () => {
+  useStore.setState({ showSharedEverywhere: false, psRows: [{ ElementTypeRef: 'ET-PS-01', Manufacturer: 'Orluna', ProductCode: 'ZH-1' }], past: [], future: [], psChanges: [],
+    containerETRefs: new Set(['et-dl-01']) })
+  const r = useStore.getState().recipes.find(x => x._id === 'a')
+  render(<IngredientCard row={r} posRef="A01" sectionKey="position" />)
+  fireEvent.click(screen.getByTitle('Show contents'))
+  fireEvent.click(screen.getByText('Orluna – ZH-1'))
+  fireEvent.change(screen.getByLabelText('Product code'), { target: { value: 'ZH-2' } })
+  fireEvent.keyDown(screen.getByLabelText('Product code'), { key: 'Enter' })
+  expect(useStore.getState().psRows[0].ProductCode).toBe('ZH-2')
+})
