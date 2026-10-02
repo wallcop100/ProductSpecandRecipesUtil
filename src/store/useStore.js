@@ -507,6 +507,12 @@ const useStore = create((set, get) => ({
   // Unexported changes brought back from the last session on open: { n } (builder notice).
   restoredNotice: null,
   /** Builder: "shared with" on every row, not only wrappers (5GLMMQ). Remembered in this browser. */
+  // The builder's right drawer (K3LGUL): open unless closed (remembered), and its tab. A
+  // banner elsewhere can open it at a tab (the Connector suggestions' "details →").
+  drawerOpen: (() => { try { return localStorage.getItem('builderDrawer') !== '0' } catch { return true } })(),
+  setDrawerOpen(open) { try { localStorage.setItem('builderDrawer', open ? '1' : '0') } catch { /* session only */ } set({ drawerOpen: !!open }) },
+  drawerTab: 'form',
+  setDrawerTab(tab) { get().setDrawerOpen(true); set({ drawerTab: tab }) },
   // Show IsDeleted rows in recipes (DD66AT: toggled from the Recipe actions menu).
   showDeleted: false,
   toggleShowDeleted() { set({ showDeleted: !get().showDeleted }) },

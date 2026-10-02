@@ -25,8 +25,12 @@ function parseIngredients(collection) {
  * add/remove toggle, plus whole-collection Apply / Remove / Swap.
  *
  * Reads recipes from the store so it updates live as the user toggles refs.
+ *
+ * `compact` (the builder drawer's Connectors tab): no header of its own, no Swap (the tab
+ * has its own), and, with `onAddToTemplate` / `onRemoveFromTemplate`, the template itself
+ * can be changed from here (the tab asks first, naming the positions it affects).
  */
-export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap, onOpenPosition }) {
+export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap, onOpenPosition, compact = false, onAddToTemplate = null, onRemoveFromTemplate = null }) {
   const etCollections    = useStore(s => s.etCollections)
   const positionUI       = useStore(s => s.positionUI)
   const recipes          = useStore(s => s.recipes)
@@ -91,9 +95,9 @@ export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap,
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: compact ? 'auto' : '100%' }} data-testid="cell-detail">
       {/* Header */}
-      <div className="d-flex align-items-start gap-2 px-3 py-2 border-bottom" style={{ flexShrink: 0 }}>
+      {!compact && <div className="d-flex align-items-start gap-2 px-3 py-2 border-bottom" style={{ flexShrink: 0 }}>
         <div className="flex-grow-1">
           <div className="fw-semibold" style={{ fontSize: 13 }}>{collection.Name}</div>
           <div
@@ -107,10 +111,10 @@ export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap,
         </div>
         <Button variant="link" size="sm" className="p-0 text-muted" style={{ lineHeight: 1 }}
           onClick={onClose} title="Close" aria-label="Close"><MaterialIcon name="close" size={18} /></Button>
-      </div>
+      </div>}
 
       {/* Applicability note */}
-      <div className="px-3 pt-2" style={{ flexShrink: 0 }}>
+      <div className={compact ? 'pt-1' : 'px-3 pt-2'} style={{ flexShrink: 0 }}>
         {applicable ? (
           <div className="small text-muted mb-1">
             {presentCount}/{ingredients.length} ingredients present
@@ -123,7 +127,7 @@ export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap,
       </div>
 
       {/* Ingredient list — split by where each ref lives */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0 12px' }}>
+      <div style={compact ? {} : { flex: 1, overflowY: 'auto', padding: '0 12px' }}>
         {/* Only warn about shared wrappers when this template actually places
             something inside the wrapper — otherwise it's not relevant here. */}
         {internalIngs.length > 0 && sharedWrappers.length > 0 && (
@@ -177,6 +181,12 @@ export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap,
                     {st.status === 'short' && <span className="ms-1" style={{ fontSize: 10, color: '#b35c00' }}>×{st.have} of ×{st.need}</span>}
                     {noWrapper && st.status === 'missing' && <span className="ms-1 text-muted" style={{ fontSize: 10 }}>no wrapper on this position</span>}
                   </div>
+                  {onRemoveFromTemplate && (
+                    <Button size="sm" variant="link" className="p-0 text-muted" style={{ fontSize: 10 }} data-testid="tpl-remove-part"
+                      onClick={() => onRemoveFromTemplate(ing)} title="Take this part out of the template (every position on it)">
+                      <MaterialIcon name="playlist_remove" size={14} />
+                    </Button>
+                  )}
                   {present ? (
                     <Button size="sm" variant="outline-danger" style={{ fontSize: 10, padding: '1px 7px' }}
                       onClick={() => removeRowsById(st.rows.map(r => r._id))} title="Remove it from this place only">
@@ -210,7 +220,7 @@ export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap,
 
       {/* Connectors here the template doesn't ask for: never kept silently. */}
       {extras.length > 0 && (
-        <div className="px-3 pb-2" style={{ flexShrink: 0, fontSize: 12 }} data-testid="cell-extra-connectors">
+        <div className={compact ? 'pb-2 pt-1' : 'px-3 pb-2'} style={{ flexShrink: 0, fontSize: 12 }} data-testid="cell-extra-connectors">
           <div className="fw-semibold mb-1" style={{ color: '#664d03' }}>
             <MaterialIcon name="warning" size={13} /> Also has connectors not in this template
           </div>
@@ -218,7 +228,11 @@ export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap,
             <div key={x.row._id} className="d-flex align-items-center gap-2">
               <span style={{ fontFamily: 'monospace' }}>{x.ref}</span>
               <span className="text-muted" style={{ fontSize: 11 }}>{x.section === 'position' ? 'position level' : `inside ${x.container}`}</span>
-              <Button size="sm" variant="link" className="p-0 ms-auto text-danger" style={{ fontSize: 11 }}
+              {onAddToTemplate && (
+                <Button size="sm" variant="link" className="p-0 ms-auto" style={{ fontSize: 11 }} data-testid="tpl-add-part"
+                  onClick={() => onAddToTemplate(x)} title="Make it part of the template (every position on it)">+ template</Button>
+              )}
+              <Button size="sm" variant="link" className={`p-0 text-danger${onAddToTemplate ? '' : ' ms-auto'}`} style={{ fontSize: 11 }}
                 onClick={() => removeRowsById([x.row._id])}>Remove</Button>
             </div>
           ))}
@@ -226,7 +240,7 @@ export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap,
       )}
 
       {/* Bulk actions */}
-      <div className="border-top px-3 py-2 d-flex flex-column gap-2" style={{ flexShrink: 0 }}>
+      <div className={`border-top ${compact ? 'py-2' : 'px-3 py-2'} d-flex flex-column gap-2`} style={{ flexShrink: 0 }}>
         <div className="d-flex gap-2">
           <Button size="sm" variant="success" className="flex-grow-1" style={{ fontSize: 11 }}
             disabled={missingCount === 0}
@@ -239,10 +253,12 @@ export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap,
             Remove all{presentCount > 0 ? ` (${presentCount})` : ''}
           </Button>
         </div>
-        <Button size="sm" variant="outline-secondary" style={{ fontSize: 11 }}
-          onClick={() => onSwap(posRef, collectionId)}>
-          Swap for another template…
-        </Button>
+        {!compact && (
+          <Button size="sm" variant="outline-secondary" style={{ fontSize: 11 }}
+            onClick={() => onSwap(posRef, collectionId)}>
+            Swap for another template…
+          </Button>
+        )}
       </div>
     </div>
   )

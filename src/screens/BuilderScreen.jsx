@@ -28,6 +28,8 @@ import TutorialHint from '../tutorial/TutorialHint'
 import TagRulesModal from '../components/TagRulesModal'
 import FormSpecPane from '../components/FormSpecPane'
 import SurfaceSwitch from '../components/SurfaceSwitch'
+import ConnectorsPane from '../components/ConnectorsPane'
+import { connectorGapsForPosition } from '../utils/collectionStatus'
 import PasteMergeModal from '../components/PasteMergeModal'
 import ReviewModal from '../components/ReviewModal'
 import FormRecipesModal from '../components/FormRecipesModal'
@@ -158,16 +160,14 @@ export default function BuilderScreen({
   const [justAdded, setJustAdded] = useState(null)           // { etRef, posRef, sectionKey }
   const [reviewAddCtx, setReviewAddCtx] = useState(null)     // { unit, filters } for review→add priming
   const [showFixer, setShowFixer] = useState(false)
-  const [rightTab, setRightTab] = useState('form')     // the Form spec is the drawer's default (K3LGUL)
+  // The drawer's tab and open state live in the store, so a banner can open it at a tab.
+  const rightTab = useStore(s => s.drawerTab)
+  const setRightTab = useStore(s => s.setDrawerTab)
   const [addQuery, setAddQuery] = useState('')
   const showDeleted = useStore(s => s.showDeleted)
-  // Open unless you closed it; remembered.
-  const [rightOpen, setRightOpenState] = useState(() => { try { return localStorage.getItem('builderDrawer') !== '0' } catch { return true } })
-  const setRightOpen = v => setRightOpenState(prev => {
-    const next = typeof v === 'function' ? v(prev) : v
-    try { localStorage.setItem('builderDrawer', next ? '1' : '0') } catch { /* session only */ }
-    return next
-  })
+  const rightOpen = useStore(s => s.drawerOpen)
+  const setDrawerOpen = useStore(s => s.setDrawerOpen)
+  const setRightOpen = v => setDrawerOpen(typeof v === 'function' ? v(useStore.getState().drawerOpen) : v)
   const [showStatus, setShowStatus] = useState(false)          // where the project stands
   const [statusTab, setStatusTab] = useState('done')
   const [changeSummary, setChangeSummary] = useState(false)   // open the review + copy-patches modal
@@ -362,7 +362,13 @@ export default function BuilderScreen({
   // Active-position context for the right-hand Tags/Templates tabs
   // The position the drawer's Form spec is for: the one open in the centre.
   const allPositionTypes = useStore(s => s.positionTypes)
+  const etCollections = useStore(s => s.etCollections)
+  const containerETRefs = useStore(s => s.containerETRefs)
   const drawerPos = rootView === 'positions' && allPositionTypes.some(p => p.PositionTypeRef === activePositionRef) ? activePositionRef : null
+  // Connector gaps on the open position: a dot on the drawer's Connectors tab.
+  const connectorGaps = useMemo(() => (drawerPos
+    ? connectorGapsForPosition(recipes, drawerPos, useStore.getState()._templateRecOf()(drawerPos), etCollections, containerETRefs).length : 0),
+  [drawerPos, recipes, etCollections, containerETRefs])
   const activeGrouped = activePositionRef ? getRecipeForPosition(recipes, activePositionRef) : null
   const hasRecipeRows = !!activeGrouped && (
     activeGrouped.position.length > 0 ||
@@ -741,19 +747,23 @@ export default function BuilderScreen({
               <ButtonGroup size="sm" className="flex-grow-1" aria-label="Show">
                 {[
                   ['form', 'description', 'Form spec'],
+                  ['connectors', 'cable', 'Connectors'],
                   ['palette', 'category', 'ElementTypes'],
                   ['similar', 'compare_arrows', 'Positions like this one'],
                 ].map(([k, icon, label]) => (
                   <Button key={k} variant={rightTab === k ? 'primary' : 'outline-secondary'} title={label} aria-label={label}
-                    data-testid={`drawer-tab-${k}`} onClick={() => setRightTab(k)} style={{ padding: '1px 4px' }}>
+                    data-testid={`drawer-tab-${k}`} onClick={() => setRightTab(k)} style={{ padding: '1px 4px', position: 'relative' }}>
                     <MaterialIcon name={icon} size={15} />
+                    {k === 'connectors' && connectorGaps > 0 && (
+                      <span data-testid="connector-gap-dot" style={{ position: 'absolute', top: 2, right: 6, width: 7, height: 7, borderRadius: '50%', background: '#dc3545' }} />
+                    )}
                   </Button>
                 ))}
               </ButtonGroup>
               <TutorialHint id="palette" />
               <button className="btn btn-link p-0" style={{ color: '#888', lineHeight: 1 }} onClick={() => setRightOpen(false)} title="Close palette" aria-label="Close palette"><MaterialIcon name="close" size={18} /></button>
             </div>
-            {rightTab !== 'form' && (
+            {!['form', 'connectors'].includes(rightTab) && (
               <Form.Control size="sm" className="mt-1" value={addQuery} onChange={e => setAddQuery(e.target.value)}
                 placeholder="Search to add…" aria-label="Search to add" style={{ fontSize: 12 }} />
             )}
@@ -762,6 +772,9 @@ export default function BuilderScreen({
             {rightTab === 'form' && (drawerPos
               ? <FormSpecPane posRef={drawerPos} inDrawer />
               : <div className="text-muted fst-italic p-3" style={{ fontSize: 11 }} data-testid="drawer-form-hint">Open a position to see what the Form asks for.</div>)}
+            {rightTab === 'connectors' && (drawerPos
+              ? <ConnectorsPane posRef={drawerPos} onOpenConnectors={onOpenConnectors} />
+              : <div className="text-muted fst-italic p-3" style={{ fontSize: 11 }}>Open a position to see its connectors.</div>)}
             {rightTab === 'palette' && (
               <ElementPalette
                 pickTarget={addRowTarget}
