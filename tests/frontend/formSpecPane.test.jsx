@@ -215,14 +215,15 @@ describe('FormSpecPane renders the Form beside the recipe', () => {
 
   test('a position whose design element is not a wrapper is not offered one', () => {
     setup({ recipes: [pos('C01r', 'ET-LAMP', { IsDesign: 'Y' })], containerETRefs: new Set() })
-    expect(screen.getByTestId('no-wrapper')).toHaveTextContent(/land at position level/)
-    expect(screen.queryByText(/wrapper$/, { selector: 'button' })).toBeNull()
+    expect(screen.queryByTestId('no-wrapper')).toBeNull()                 // nothing to offer
   })
 
   test('a blank position offers a wrapper; the kind that fits the Form is filled', () => {
     setup({ recipes: [], containerETRefs: new Set(), elementTypes: [{ ElementTypeRef: 'ET-LIN-04' }] })
-    const lin = screen.getByText('+ LIN wrapper')
-    expect(lin.className).toMatch(/btn-primary/)          // tape + profile → linear
+    // One small icon; its menu lists the kind that fits the Form first.
+    fireEvent.click(screen.getByLabelText('Add a wrapper'))
+    const lin = screen.getByText(/\+ LIN wrapper/)
+    expect(lin.textContent).toMatch(/fits these products/)   // tape + profile → linear
     fireEvent.click(lin)
     const st = useStore.getState()
     const row = st.recipes.find(r => r.PositionTypeRef === 'C01r')
@@ -237,7 +238,8 @@ describe('FormSpecPane renders the Form beside the recipe', () => {
 
   test('adding a wrapper is one undo step', () => {
     setup({ recipes: [], containerETRefs: new Set() })
-    fireEvent.click(screen.getByText('+ DL wrapper'))
+    fireEvent.click(screen.getByLabelText('Add a wrapper'))
+    fireEvent.click(screen.getByText(/\+ DL wrapper/))
     expect(useStore.getState().recipes).toHaveLength(1)
     useStore.getState().undo()
     expect(useStore.getState().recipes).toHaveLength(0)

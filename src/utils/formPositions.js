@@ -78,7 +78,7 @@ export function positionPaintStatus(draft, posRef, { buildRefMap, targetFor } = 
   const rows = groups.flatMap(g => g.rows)
   if (!rows.length) return { state: 'absent', rows: 0, unconfirmed: 0, formRefs: [] }
   // No product anywhere in its rows ("n/a", "by others"): nothing to add, nothing to do.
-  if (rows.every(r => isNothingText(r.rawText))) return { state: 'nothing', rows: rows.length, unconfirmed: 0, formRefs: groups.map(g => g.formRef) }
+  if (rows.every(r => isNothingText(r.rawText))) return { state: 'nothing', rows: rows.length, unconfirmed: 0, formRefs: groups.map(g => g.formRef), texts: rows.map(r => String(r.rawText || '').trim()).filter(Boolean) }
   const unconfirmed = rows.filter(r => !r.confirmed).length
   // In product codes, not rows: the code-shaped words still to confirm (at least one a row).
   const newCodes = rows.filter(r => !r.confirmed)

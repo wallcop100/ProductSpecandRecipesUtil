@@ -40,6 +40,19 @@ export default function FormPaintBar({ posRef, open = false, onOpenChange = () =
   const work = state === 'todo' || state === 'ready'
   const autoSave = st.state === 'ready' && !formCaptures?.byPosition?.[posRef]
 
+  // Nothing to paint here: no button, just what the Form says (n/a, by others) or that it is
+  // not in the Form at all.
+  if (state === 'nothing' || state === 'absent') {
+    return (
+      <div className="mb-2 text-muted d-flex align-items-center gap-1 flex-wrap" style={{ fontSize: 11 }} data-testid="form-paint-bar">
+        <MaterialIcon name={state === 'nothing' ? 'block' : 'remove'} size={12} />
+        {state === 'nothing'
+          ? <>Nothing to add. The Form says: <span style={{ fontFamily: 'monospace', color: '#495057' }} data-testid="form-says">{(st.texts || []).join(' · ') || 'n/a'}</span></>
+          : <span data-testid="paint-status">{posRef} is not in the Form</span>}
+      </div>
+    )
+  }
+
   return (
     <div className="mb-2" data-testid="form-paint-bar">
       <div className="d-flex align-items-center gap-1 flex-wrap">
@@ -55,7 +68,7 @@ export default function FormPaintBar({ posRef, open = false, onOpenChange = () =
           <MaterialIcon name={state === 'noForm' ? 'upload_file' : 'brush'} size={12} />{' '}
           {state === 'noForm' ? 'Load the Form and paint this position' : `Paint ${posRef} from the Form`}
         </Button>}
-        {label && (
+        {label && !open && (
           <StatusChip size="xs" tone={label.tone} icon={label.icon} data-testid="paint-status"
             label={typeof label.text === 'function' ? label.text(st.newCodes || st.unconfirmed) : label.text} />
         )}

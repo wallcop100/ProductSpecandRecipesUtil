@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-10-02', note: 'Form spec pane, quieter: while the painter is open it is the only call (no chip, no banner); “no wrapper” is one small icon with a menu; “All Form products present” is one line; a position with nothing to add shows what the Form says (e.g. n/a) and no Paint button; one not in the Form says so once, with no Paint button; the empty 0 · 0 · 0 chips are hidden' },
   { date: '2026-10-02', note: 'Form spec pane: one call to action. A new code shows “Give <code> an ElementType”; known codes are always listed (code → ElementType · in the recipe or not); no Save button, tick, “confirm the obvious” or painter undo — the position saves itself once every code has an ElementType; “All Form products present” only when that is true' },
   { date: '2026-10-02', note: 'Builder: the Form painter and its chips speak in product codes, not spreadsheet rows (“2 codes · 1 with an ElementType · 1 needs one”, “1 new code to confirm”); the rail’s difference icon compares the codes each position gets, and its tooltip names them' },
   { date: '2026-10-02', note: 'Position list (862MB6): while the Form is compared with an older one, a “difference” icon beside each position whose Form rows moved: green for added, red for dropped, yellow for changed or mixed' },

@@ -470,7 +470,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
         {diffBlock}
         {paintBar}
         {/* Only when the loaded Form really has no rows here, not when they wait to be painted. */}
-        {!draftHasRows && (
+        {paintSt.state === 'noForm' && (
           <div className="text-muted fst-italic" style={{ fontSize: 11 }}>
             The Form says nothing about {posRef}.
           </div>
@@ -561,7 +561,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
       {/* The reference rail. Everything that is NOT the comparison lives behind one of
           these, closed, with its count on the face — so you can see there is something
           there without it taking up the panel. */}
-      <div className="d-flex align-items-center gap-1 mb-2">
+      <div className="align-items-center gap-1 mb-2" style={{ display: shownCols.length + extra.length + orphaned.length ? 'flex' : 'none' }}>
         <RailToggle id="context" icon="notes" count={shownCols.length} open={open} onToggle={toggleSection}
           title="What the Form itself says about this position" />
         <RailToggle id="extra" icon={ACTION_ICONS.suggest} count={extra.length} open={open} onToggle={toggleSection}
@@ -678,32 +678,30 @@ export default function FormSpecPane({ posRef, embedded = false }) {
 
       {/* No wrapper yet (a blank position, usually). Offer one, rather than only saying
           so: the kind that fits the Form's products is the filled button. */}
-      {missing.length > 0 && !container && (
-        <div className="text-muted mb-2 d-flex align-items-center gap-1 flex-wrap" style={{ fontSize: 10 }} data-testid="no-wrapper">
-          <MaterialIcon name="info" size={10} /> {posRef} has no wrapper.
-          {!hasDesign ? (
-            <>
-              {['LIN', 'DL'].map(k => (
-                <Button key={k} size="sm" variant={k === wrapperKind ? 'primary' : 'outline-primary'}
-                  style={{ fontSize: 10, padding: '0 6px' }}
-                  title={`Create the next ET-${k}-NN and make it ${posRef}'s design element`}
-                  onClick={() => addWrapper(posRef, k, { name: formCaptures.contextByPosition?.[posRef]?.ProductName || null })}>
-                  + {k} wrapper
-                </Button>
+      {missing.length > 0 && !container && !hasDesign && (
+        <div className="mb-1 d-flex justify-content-end" data-testid="no-wrapper">
+          <Dropdown align="end">
+            <Dropdown.Toggle as={IconButton} bsSize="sm" variant="outline-secondary" icon="inventory_2" size={13}
+              title={`${posRef} has no wrapper: add one, or add the products at position level`} aria-label="Add a wrapper" />
+            <Dropdown.Menu style={{ fontSize: 11 }}>
+              <Dropdown.Header style={{ fontSize: 10 }}>{posRef} has no wrapper</Dropdown.Header>
+              {['DL', 'LIN'].sort((a, b) => (a === wrapperKind ? -1 : b === wrapperKind ? 1 : 0)).map(k => (
+                <Dropdown.Item key={k} onClick={() => addWrapper(posRef, k, { name: formCaptures.contextByPosition?.[posRef]?.ProductName || null })}>
+                  + {k} wrapper{k === wrapperKind ? ' (fits these products)' : ''}
+                </Dropdown.Item>
               ))}
-              <span>or add at position level.</span>
-            </>
-          ) : <span>Products land at position level.</span>}
+            </Dropdown.Menu>
+          </Dropdown>
         </div>
       )}
 
       {/* Done: say so at the top, with the next thing to do as the obvious button. */}
       {allPresent && (
-        <div className="mb-2 px-2 py-2 rounded d-flex align-items-center gap-2 flex-wrap" data-testid="form-all-present"
-          style={{ background: '#d1e7dd', border: '1px solid #a3cfbb', color: '#0f5132', fontSize: 11 }}>
-          <MaterialIcon name="check_circle" size={14} /> All Form products present
+        <div className="mb-2 d-flex align-items-center gap-1" data-testid="form-all-present"
+          style={{ color: '#0f5132', fontSize: 11 }}>
+          <MaterialIcon name="check_circle" size={13} /> All Form products present
           {nextUnreconciled && (
-            <Button size="sm" variant="success" className="ms-auto" style={{ fontSize: 11 }}
+            <Button size="sm" variant="link" className="p-0 ms-auto" style={{ fontSize: 11 }}
               onClick={() => setActivePosition(nextUnreconciled)}>
               Next: <span style={{ fontFamily: 'monospace' }}>{nextUnreconciled}</span> →
             </Button>
@@ -712,7 +710,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
       )}
 
       {/* Nothing missing from the recipe, but a Form code still has no ElementType: not done. */}
-      {!allPresent && missing.length === 0 && waitingEt > 0 && (
+      {!allPresent && missing.length === 0 && waitingEt > 0 && !painting && (
         <div className="mb-2 px-2 py-2 rounded d-flex align-items-center gap-2" data-testid="form-waiting-et"
           style={{ background: '#fff3cd', border: '1px solid #ffe69c', color: '#664d03', fontSize: 11 }}>
           <MaterialIcon name="warning" size={14} /> {waitingEt} code{waitingEt === 1 ? '' : 's'} still need{waitingEt === 1 ? 's' : ''} an ElementType

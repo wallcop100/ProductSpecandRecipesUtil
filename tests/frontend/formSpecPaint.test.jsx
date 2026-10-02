@@ -168,9 +168,10 @@ describe('known codes save themselves to the position', () => {
     useStore.setState({ importDraft: draft, formCaptures: null })
     render(<FormSpecPane posRef="C02" />)
     expect(screen.queryByTestId('form-autosave')).toBeNull()
-    expect(screen.getByTestId('paint-status')).toHaveTextContent('1 code needs an ElementType')
-    // A code needs an ElementType: the painter is open inline by itself, with the one button.
+    // A code needs an ElementType: the painter is open inline by itself, and is the one call.
     expect(await screen.findByTestId('compact-painter')).toBeInTheDocument()
+    expect(screen.getByTestId('give-et')).toHaveTextContent('Give QC51 an ElementType')
+    expect(screen.queryByTestId('paint-status')).toBeNull()        // no second call while it is open
     expect(useStore.getState().formCaptures).toBeNull()
   })
 })
