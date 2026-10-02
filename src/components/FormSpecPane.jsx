@@ -262,6 +262,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
   // A product the Form swapped in for one the recipe holds: the swap, not an add.
   const formChanges = usePositionFormImpact(posRef)
   const applyFormChange = useStore(s => s.applyFormChange)
+  const [swapPick, setSwapPick] = useState({})     // toEt → the ElementType chosen to replace
   const paintSt = positionPaintStatus(importDraft, posRef, { buildRefMap, targetFor })
   const draftHasRows = !['absent', 'noForm'].includes(paintSt.state)
   // Codes the loaded Form gives here that have no ElementType yet (not saved to the position).
@@ -787,14 +788,41 @@ export default function FormSpecPane({ posRef, embedded = false }) {
                   usual place for this ElementType is the filled button. */}
               {isMissing && swapOf(e.elementTypeRef) && (() => {
                 const c = swapOf(e.elementTypeRef)
+                // Which ElementType it replaces: the one the Form dropped by default, or any
+                // other this position holds, at position level or inside its wrapper.
+                const held = recipes.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y' && (r.PositionTypeRef || r.positionTypeRef) === posRef
+                  && String(r.ElementTypeRef || r.elementTypeRef || '').toUpperCase() !== String(e.elementTypeRef).toUpperCase())
+                  .map(r => ({ ref: r.ElementTypeRef || r.elementTypeRef, inside: (r.ContextType || r.contextType) === 'ElementType' ? (r.ContextRef || r.contextRef) : null }))
+                  .filter((h, i, a) => a.findIndex(x => x.ref.toUpperCase() === h.ref.toUpperCase()) === i)
+                const pick = swapPick[e.elementTypeRef] || c.fromEt
+                const chosen = String(pick).toUpperCase() === String(c.fromEt).toUpperCase()
+                  ? c : { ...c, fromEt: pick, changing: [] }
                 return (
                   <div className="mt-1" data-testid="missing-swap">
-                    <Button size="sm" variant="primary" style={{ fontSize: 10, padding: '0 6px' }}
-                      onClick={() => applyFormChange(c, posRef, 'swap')}
-                      title={`Replace ${c.fromEt} with ${c.toEt}, as the Form now says`}>
-                      {swapLabel(c, posRef)}
-                    </Button>
-                    <div className="text-muted" style={{ fontSize: 10 }}>replaces <span style={{ fontFamily: 'monospace' }}>{c.fromEt}</span></div>
+                    <div className="d-flex align-items-center gap-1">
+                      <Button size="sm" variant="primary" style={{ fontSize: 10, padding: '0 6px' }}
+                        onClick={() => applyFormChange(chosen, posRef, 'swap')}
+                        title={`Replace ${pick} with ${e.elementTypeRef}`}>
+                        {swapLabel(chosen, posRef)}
+                      </Button>
+                      <span data-testid="missing-swap-more"><Dropdown>
+                        <Dropdown.Toggle as={IconButton} bsSize="sm" variant="outline-secondary" icon="more_horiz" size={12}
+                          aria-label={`Other ways to add ${e.elementTypeRef}`} title="Add it instead, keeping what is there" />
+                        <Dropdown.Menu style={{ fontSize: 11 }}>
+                          <Dropdown.Item onClick={() => addNow([e.elementTypeRef], 'position')}>+ Add at position level</Dropdown.Item>
+                          {container && <Dropdown.Item onClick={() => addNow([e.elementTypeRef], 'internal')}>+ Add inside {container}</Dropdown.Item>}
+                        </Dropdown.Menu>
+                      </Dropdown></span>
+                    </div>
+                    <div className="d-flex align-items-center gap-1 text-muted mt-1" style={{ fontSize: 10 }}>
+                      replaces
+                      <Form.Select size="sm" value={held.find(h => h.ref.toUpperCase() === String(pick).toUpperCase())?.ref || pick}
+                        onChange={ev => setSwapPick(m => ({ ...m, [e.elementTypeRef]: ev.target.value }))}
+                        aria-label={`ElementType ${e.elementTypeRef} replaces`} data-testid="missing-swap-from"
+                        style={{ fontSize: 10, fontFamily: 'monospace', padding: '0 22px 0 4px', width: 'auto', minWidth: 0, backgroundPosition: 'right 5px center', backgroundSize: '10px 8px' }}>
+                        {held.map(h => <option key={h.ref} value={h.ref}>{h.ref}{h.inside ? ` (in ${h.inside})` : ''}</option>)}
+                      </Form.Select>
+                    </div>
                   </div>
                 )
               })()}
