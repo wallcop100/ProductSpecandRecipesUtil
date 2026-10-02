@@ -9,6 +9,7 @@ import TutorialHint from '../tutorial/TutorialHint'
 import MaterialIcon from './MaterialIcon'
 import IconButton from './IconButton'
 import SharedToggle from './SharedToggle'
+import SameRecipePill from './SameRecipePill'
 import PositionValidationBadge from './PositionValidationBadge'
 import ConnectorSuggestions from './ConnectorSuggestions'
 import RecipeErrorBanner from './RecipeErrorBanner'
@@ -119,6 +120,7 @@ export default function PositionRecipeEditor({
         <span className="fw-semibold" style={{ fontSize: 15 }}>{ref}</span>
         {name && name !== ref && <span className="text-muted" style={{ fontSize: 12 }}>{name}</span>}
         <PositionTagEditor posRef={ref} />
+        <SameRecipePill posRef={ref} />
         <TutorialHint id="recipe-editor" />
         <div className="flex-grow-1" />
         {/* Paste is visible only when there is something to paste; the rare acts (copy the
