@@ -6,7 +6,8 @@ import IconButton from './IconButton'
 import CellDetailPanel from './CellDetailPanel'
 import useConnectorGroups from './useConnectorGroups'
 import { templateParts, partsToIngredients, diffParts, diffSize, describeParts, findGroups, suggestName } from '../utils/connectorGroups'
-import { templateRule, ruleIsEmpty, describeRule, ruleFor } from '../utils/templateRules'
+import { templateRule, ruleIsEmpty, describeRule, ruleFor, ruleMatchesRecord, TEMPLATE_RULE_COLUMNS } from '../utils/templateRules'
+import RuleBuilder from './RuleBuilder'
 
 const mono = { fontFamily: 'monospace' }
 const lc = s => String(s || '').toLowerCase()
@@ -62,6 +63,14 @@ export default function ConnectorsPane({ posRef, onOpenConnectors }) {
     return { positions, rule, name: suggestName(have, rule) }
   }, [have, sameAs, posRef, groups])
   const [tplName, setTplName] = useState(null)
+  // "Make with conditions…": the template's rule set at the point of creation.
+  const [withRule, setWithRule] = useState(null)   // { name, rule } while the window is open
+  const positionUI = useStore(s => s.positionUI)
+  const tagOptions = useMemo(() => [...new Set(Object.values(positionUI || {}).flatMap(u => u?.tags || []))].sort(), [positionUI])
+  const scopeRefs = groups.scoped.map(pt => pt.PositionTypeRef)
+  const ruleMatches = withRule && !ruleIsEmpty(withRule.rule)
+    ? scopeRefs.filter(r => ruleMatchesRecord(withRule.rule, groups.recOf(r))) : []
+  const ruleHasThis = !withRule || ruleIsEmpty(withRule.rule) || ruleMatches.includes(posRef)
 
   // Changing the template changes every position on it: ask, naming them.
   function askTemplateChange(collection, parts, title) {
@@ -161,8 +170,14 @@ export default function ConnectorsPane({ posRef, onOpenConnectors }) {
                 aria-label="Template name" style={{ fontSize: 11 }} />
               {/* No questions: the positions built the same way join it too, and from then on
                   any position that ends up built this way joins it by itself. */}
-              <Button size="sm" variant="primary" className="py-0 mt-1" style={{ fontSize: 10 }} data-testid="make-template"
-                onClick={() => makeTemplate(suggestion.positions)}>Make template</Button>
+              <div className="d-flex gap-1 mt-1">
+                <Button size="sm" variant="primary" className="py-0" style={{ fontSize: 10 }} data-testid="make-template"
+                  onClick={() => makeTemplate(suggestion.positions)}>Make template</Button>
+                <Button size="sm" variant="outline-primary" className="py-0" style={{ fontSize: 10 }} data-testid="make-template-rule"
+                  onClick={() => setWithRule({ name: (tplName ?? suggestion.name), rule: suggestion.rule || { match: 'all', conditions: [] } })}>
+                  Make with conditions…
+                </Button>
+              </div>
             </div>
           )}
           {excludedFrom.length > 0 && (
@@ -175,6 +190,39 @@ export default function ConnectorsPane({ posRef, onOpenConnectors }) {
           )}
         </div>
       )}
+
+      {/* Make with conditions: name and rule at the point of creation. With no conditions it
+          holds this position and those built the same way (pinned), as Make template does. */}
+      <Modal show={!!withRule} onHide={() => setWithRule(null)} size="lg">
+        <Modal.Header closeButton><Modal.Title style={{ fontSize: 14 }}>New template from {posRef}</Modal.Title></Modal.Header>
+        <Modal.Body style={{ fontSize: 12 }} data-testid="make-with-rule">
+          <Form.Label className="fw-semibold mb-1">Name</Form.Label>
+          <Form.Control size="sm" value={withRule?.name || ''} aria-label="New template name"
+            onChange={e => setWithRule(w => ({ ...w, name: e.target.value }))} />
+          <div className="mt-2 mb-1" style={{ fontFamily: 'monospace', fontSize: 11 }}>{describeParts(have)}</div>
+          <Form.Label className="fw-semibold mt-2 mb-1">Applies to positions that match</Form.Label>
+          {withRule && (
+            <RuleBuilder rule={withRule.rule} columns={TEMPLATE_RULE_COLUMNS} valueOptions={{ Tags: tagOptions }} minConditions={0}
+              newCondition={{ column: 'Tags', op: 'equals', value: '' }}
+              onChange={patch => setWithRule(w => ({ ...w, rule: { ...w.rule, ...patch } }))} />
+          )}
+          <div className="mt-2" data-testid="rule-preview">
+            {withRule && ruleIsEmpty(withRule.rule)
+              ? <span className="text-muted">No conditions: pinned to {suggestion?.positions.join(', ')}.</span>
+              : <>Matches {ruleMatches.length} position{ruleMatches.length === 1 ? '' : 's'}: <span style={{ fontFamily: 'monospace' }}>{ruleMatches.slice(0, 12).join(', ')}{ruleMatches.length > 12 ? '…' : ''}</span></>}
+            {!ruleHasThis && <div className="text-danger" data-testid="rule-misses-this">These conditions leave out {posRef} itself.</div>}
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button size="sm" variant="link" onClick={() => setWithRule(null)}>Cancel</Button>
+          <Button size="sm" variant="primary" disabled={!ruleHasThis || !withRule?.name?.trim()} data-testid="make-with-rule-ok"
+            onClick={async () => {
+              const empty = ruleIsEmpty(withRule.rule)
+              await makeTemplateFromGroup(withRule.name.trim(), have, empty ? suggestion.positions : [posRef], { rule: empty ? null : withRule.rule })
+              setWithRule(null); setTplName(null)
+            }}>Make template</Button>
+        </Modal.Footer>
+      </Modal>
 
       {/* 4. A change to the template, which reaches every position on it */}
       <Modal show={!!confirm} onHide={() => setConfirm(null)} size="sm">

@@ -137,4 +137,25 @@ describe('the drawer\'s Connectors tab, for one position', () => {
     expect(pins).not.toContain('A01')      // has an extra part
     expect(pins).not.toContain('A04')      // lacks the SR
   })
+
+  test('Make with conditions: the rule is set at the point of creation, with a live count; one leaving this position out is refused', async () => {
+    setup({ etCollections: [], connectorPins: {}, positionUI: { A02: { tags: ['LOCAL'] }, A03: { tags: ['LOCAL'] } } })
+    render(<ConnectorsPane posRef="A02" />)
+    fireEvent.click(screen.getByTestId('make-template-rule'))
+    const win = await screen.findByTestId('make-with-rule')
+    // Start from no conditions, then add one.
+    for (const x of within(win).queryAllByLabelText('Remove condition')) fireEvent.click(x)
+    fireEvent.click(within(win).getByText('Add condition'))
+    const value = within(win).getByLabelText('Value')
+    fireEvent.change(value, { target: { value: 'LOCAL' } })
+    expect(screen.getByTestId('rule-preview')).toHaveTextContent('Matches 2 positions: A02, A03')
+    fireEvent.change(value, { target: { value: 'REMOTE' } })
+    expect(screen.getByTestId('rule-misses-this')).toBeInTheDocument()
+    expect(screen.getByTestId('make-with-rule-ok')).toBeDisabled()
+    fireEvent.change(value, { target: { value: 'LOCAL' } })
+    fireEvent.change(within(win).getByLabelText('New template name'), { target: { value: 'Local 5-pin' } })
+    await act(async () => { fireEvent.click(screen.getByTestId('make-with-rule-ok')) })
+    const made = useStore.getState().etCollections.find(c => c.Name === 'Local 5-pin')
+    expect(JSON.stringify(made.Rule)).toContain('LOCAL')
+  })
 })
