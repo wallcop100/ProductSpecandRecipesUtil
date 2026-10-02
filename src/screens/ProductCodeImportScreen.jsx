@@ -1261,12 +1261,14 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   // there, and a tick no one is offered must not hold the position back (WYZ3NN).
   useEffect(() => {
     if (!embedded || step !== 'review') return
-    for (const r of scopeRows) {
+    // The builder's background save goes over the whole Form, so the status is right
+    // before anyone opens a painter.
+    for (const r of (embedded.autoSaveAll ? formOrder : scopeRows)) {
       if (r.confirmed) continue
       const inf = rowInfo(r)
       if (inf.codes.length && inf.codes.every(c => c.etRef)) patchRow(r.id, x => ({ ...x, confirmed: true, autoConfirmed: true }))
     }
-  }, [embedded, step, scopeRows, rowInfo, patchRow])
+  }, [embedded, step, scopeRows, formOrder, rowInfo, patchRow])
   const stagedSet = useMemo(() => new Set(stagedRefs), [stagedRefs])
   const formPositions = useMemo(() => groupPositions(formOrder).map(g => ({
     ...g, target: map.pt ? ptTarget(g.formRef) : g.formRef,

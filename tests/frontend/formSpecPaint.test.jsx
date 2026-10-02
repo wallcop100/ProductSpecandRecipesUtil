@@ -269,6 +269,18 @@ test('WYZ3NN: an entry whose codes all have ElementTypes (here one given in this
   expect(screen.queryByText(/needs an ElementType/)).toBeNull()
 })
 
+test('the status is right before the painter is opened: the background save confirms and saves an entry whose codes all have ElementTypes', async () => {
+  const { default: FormAutoSaveAll } = await import('../../src/components/FormAutoSaveAll.jsx')
+  useStore.setState({ formCaptures: null, importDraft: {
+    version: 1, step: 'review', source: { name: 'form.xlsx', sheet: 'S' },
+    map: { pt: '', code: 'ProductCode', mfr: 'ManufacturerName', exclude: '', acc: '', context: [] },
+    rules: {}, assignments: { QC51: 'ET-PS-03' }, resolutions: [], refOverrides: {}, dirStats: { forward: 0, backward: 0 }, stagedRefs: [], keptSeparate: [],
+    rows: [{ id: 0, rawText: 'QC51', positionType: 'C02', manufacturer: 'iGuzzini', context: {}, overrides: {}, noteOverride: {}, confirmed: false }],
+  } })
+  render(<FormAutoSaveAll />)                                   // no painter opened
+  await waitFor(() => expect(useStore.getState().formCaptures?.byPosition?.C02?.[0]?.elementTypeRef).toBe('ET-PS-03'), { timeout: 4000 })
+})
+
 test('4MYUQ7: Detach takes the Form off the whole project, session included', async () => {
   useStore.setState({ importDraft: { rows: [{ id: 0, rawText: 'QC50', positionType: 'C01' }] }, formCaptures: { byPosition: { C01: [{ elementTypeRef: 'ET-PS-01', code: 'QC50' }] } } })
   await useStore.getState().detachForm()
