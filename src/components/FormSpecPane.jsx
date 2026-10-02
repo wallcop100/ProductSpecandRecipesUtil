@@ -419,7 +419,8 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
     },
     onClearCompare: importDraft.compareBase ? () => useStore.getState().setCompareBase(null) : null,
   } : {}
-  const diffBlock = embedded ? null : <FormDiffBlock posRef={posRef} />
+  // Also in the Review window (TEE8EV): its Swap / Update / Fork are the same one-click acts.
+  const diffBlock = <FormDiffBlock posRef={posRef} />
   const handleDetach = () => {
     if (window.confirm('Detach the Form template from the whole project? Every position loses its Form comparison and the loaded Form is closed. Recipes and the Product Spec stay.')) {
       useStore.getState().detachForm()
