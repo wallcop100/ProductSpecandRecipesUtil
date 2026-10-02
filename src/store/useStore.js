@@ -2461,6 +2461,7 @@ const useStore = create((set, get) => ({
       Rule: rule,
     }
     const saved = await window.electronAPI.db.upsertCollection(projectId, collection)
+    if (!saved) return null   // not saved: no empty template in the list
     set(s => ({ etCollections: [...s.etCollections, saved] }))
     return saved
   },

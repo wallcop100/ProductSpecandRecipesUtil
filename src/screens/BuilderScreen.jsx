@@ -29,6 +29,7 @@ import TagRulesModal from '../components/TagRulesModal'
 import FormSpecPane from '../components/FormSpecPane'
 import SurfaceSwitch from '../components/SurfaceSwitch'
 import ConnectorsPane from '../components/ConnectorsPane'
+import ConnectorAutoJoin from '../components/ConnectorAutoJoin'
 import { connectorGapsForPosition } from '../utils/collectionStatus'
 import PasteMergeModal from '../components/PasteMergeModal'
 import ReviewModal from '../components/ReviewModal'
@@ -486,6 +487,7 @@ export default function BuilderScreen({
         <FormProgressChip onReconcile={startReconcile} onLoad={onOpenCodeImport} />
         <FormAutoSaveAll />
         <FormFileWatch />
+        <ConnectorAutoJoin />
 
         {/* Recipes (the tree, 96KPJ5) and the Product Spec (XZ3UBB): the two surfaces you move
             between. Browsing by ElementType, the Form import and Connectors are in ⋮. */}

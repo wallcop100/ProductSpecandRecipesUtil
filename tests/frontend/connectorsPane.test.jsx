@@ -117,10 +117,24 @@ describe('the drawer\'s Connectors tab, for one position', () => {
     setup({ etCollections: [], connectorPins: {} })
     render(<ConnectorsPane posRef="A02" />)
     const card = screen.getByTestId('suggested-template')
-    expect(card).toHaveTextContent('Built the same way, no template yet: A03')     // A01 has an extra part, A04 lacks the SR
-    await act(async () => { fireEvent.click(within(card).getByTestId('make-template-group')) })
+    await act(async () => { fireEvent.click(within(card).getByTestId('make-template')) })
     const made = useStore.getState().etCollections[0]
     const pins = useStore.getState().connectorPins[made.CollectionId] || []
     expect(pins.length ? [...pins].sort() : 'by rule').toEqual(pins.length ? ['A02', 'A03'] : 'by rule')
+  })
+
+  test('a position built exactly like a template joins it by itself; one taken out stays out', async () => {
+    const { default: ConnectorAutoJoin } = await import('../../src/components/ConnectorAutoJoin.jsx')
+    setup({ connectorPins: { t1: ['A02'] }, etCollections: [T1] })
+    const view = render(<ConnectorAutoJoin />)
+    await waitFor(() => expect(useStore.getState().connectorPins.t1).toContain('A03'))   // joined by itself
+    view.unmount()
+    setup({ connectorPins: { t1: ['A02'] }, connectorExcludes: { t1: ['A03'] }, etCollections: [T1] })
+    render(<ConnectorAutoJoin />)
+    await new Promise(r => setTimeout(r, 50))
+    const pins = useStore.getState().connectorPins.t1
+    expect(pins).not.toContain('A03')      // taken out
+    expect(pins).not.toContain('A01')      // has an extra part
+    expect(pins).not.toContain('A04')      // lacks the SR
   })
 })

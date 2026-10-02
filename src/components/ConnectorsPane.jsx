@@ -159,27 +159,10 @@ export default function ConnectorsPane({ posRef, onOpenConnectors }) {
               <div className="fw-semibold mb-1" style={{ fontSize: 10 }}>New template from {posRef}</div>
               <Form.Control size="sm" value={tplName ?? suggestion.name} onChange={e => setTplName(e.target.value)}
                 aria-label="Template name" style={{ fontSize: 11 }} />
-              {sameAs.length > 0 && (
-                <div className="mt-1">
-                  <span className="text-muted">Built the same way, no template yet: </span>
-                  {sameAs.map((p, i) => (
-                    <span key={p}>{i > 0 && ', '}
-                      <Button variant="link" size="sm" className="p-0 align-baseline" style={{ fontSize: 11 }} onClick={() => setActivePosition(p)}>{p}</Button>
-                    </span>
-                  ))}
-                  <div className="text-muted" style={{ fontSize: 10 }}>
-                    {suggestion.rule ? <>Applies by rule: {describeRule(suggestion.rule)}</> : <>Pinned to them (no rule picks out exactly these)</>}
-                  </div>
-                </div>
-              )}
-              <div className="d-flex gap-1 mt-1 flex-wrap">
-                {sameAs.length > 0 && (
-                  <Button size="sm" variant="primary" className="py-0" style={{ fontSize: 10 }} data-testid="make-template-group"
-                    onClick={() => makeTemplate(suggestion.positions)}>Create for all {suggestion.positions.length}</Button>
-                )}
-                <Button size="sm" variant={sameAs.length ? 'outline-secondary' : 'primary'} className="py-0" style={{ fontSize: 10 }} data-testid="make-template"
-                  onClick={() => makeTemplate([posRef])}>{sameAs.length ? `Only ${posRef}` : `Create for ${posRef}`}</Button>
-              </div>
+              {/* No questions: the positions built the same way join it too, and from then on
+                  any position that ends up built this way joins it by itself. */}
+              <Button size="sm" variant="primary" className="py-0 mt-1" style={{ fontSize: 10 }} data-testid="make-template"
+                onClick={() => makeTemplate(suggestion.positions)}>Make template</Button>
             </div>
           )}
           {excludedFrom.length > 0 && (
