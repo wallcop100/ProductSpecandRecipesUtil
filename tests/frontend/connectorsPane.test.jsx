@@ -161,3 +161,13 @@ describe('the drawer\'s Connectors tab, for one position', () => {
     expect(JSON.stringify(made.Rule)).toContain('LOCAL')
   })
 })
+
+test('RulePills: each condition a pill, joined by coloured AND / OR pills', async () => {
+  const { RulePills } = await import('../../src/components/RuleBuilder.jsx')
+  const { rerender } = render(<RulePills rule={{ match: 'all', conditions: [{ column: 'Tags', op: 'equals', value: 'LOCAL' }, { column: 'Family', op: 'contains', value: 'DL' }] }} />)
+  expect(screen.getByTestId('rule-pills')).toHaveTextContent('Tags equals LOCAL')
+  expect(screen.getByTestId('rule-join')).toHaveTextContent('AND')
+  rerender(<RulePills rule={{ match: 'any', conditions: [{ column: 'Tags', op: 'equals', value: 'LOCAL' }, { column: 'Family', op: 'isEmpty' }] }} />)
+  expect(screen.getByTestId('rule-join')).toHaveTextContent('OR')
+  expect(screen.getByTestId('rule-pills')).toHaveTextContent('Family is empty')
+})

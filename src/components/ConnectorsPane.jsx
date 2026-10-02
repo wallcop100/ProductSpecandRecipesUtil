@@ -7,7 +7,7 @@ import CellDetailPanel from './CellDetailPanel'
 import useConnectorGroups from './useConnectorGroups'
 import { templateParts, partsToIngredients, diffParts, diffSize, describeParts, findGroups, suggestName } from '../utils/connectorGroups'
 import { templateRule, ruleIsEmpty, describeRule, ruleFor, ruleMatchesRecord, TEMPLATE_RULE_COLUMNS } from '../utils/templateRules'
-import RuleBuilder from './RuleBuilder'
+import RuleBuilder, { RulePills } from './RuleBuilder'
 
 const mono = { fontFamily: 'monospace' }
 const lc = s => String(s || '').toLowerCase()
@@ -262,7 +262,7 @@ function Assumed({ have, suggestion, posRef }) {
       <li>
         <span className="text-muted">Applies to: </span>
         {suggestion.rule
-          ? <>positions where <strong>{describeRule(suggestion.rule)}</strong></>
+          ? <>positions where <RulePills rule={suggestion.rule} /></>
           : <>pinned to {suggestion.positions.join(', ')}</>}
         {others.length > 0
           ? <span className="text-muted"> ({others.length} other{others.length === 1 ? '' : 's'} built the same way, with no template yet)</span>
