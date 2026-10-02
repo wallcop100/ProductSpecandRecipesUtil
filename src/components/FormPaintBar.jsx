@@ -3,6 +3,7 @@ import { Button } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import StatusChip from './StatusChip'
+import IconButton from './IconButton'
 import ProductCodeImportScreen from '../screens/ProductCodeImportScreen'
 import { positionPaintStatus } from '../utils/formPositions'
 import { buildRefMap, targetFor } from '../utils/ptResolve'
@@ -57,16 +58,17 @@ export default function FormPaintBar({ posRef, open = false, onOpenChange = () =
     <div className="mb-2" data-testid="form-paint-bar">
       <div className="d-flex align-items-center gap-1 flex-wrap">
         {open ? (
-          <Button size="sm" variant="outline-secondary" style={{ fontSize: 10 }} onClick={() => setOpen(false)} data-testid="paint-close">
-            <MaterialIcon name="close" size={12} /> Close
-          </Button>
-        ) : <Button size="sm" variant={work || state === 'noForm' ? 'primary' : 'outline-secondary'} style={{ fontSize: 10 }}
+          <IconButton bsSize="sm" variant="outline-secondary" icon="close" size={13} onClick={() => setOpen(false)}
+            data-testid="paint-close" title="Close the painter" aria-label="Close the painter" />
+        ) : state !== 'noForm' ? (
+          // Not the task here: a small brush, the explanation in its tooltip.
+          <IconButton bsSize="sm" variant={work ? 'primary' : 'outline-secondary'} icon="brush" size={13}
+            onClick={() => setOpen(true)} data-testid="paint-position" aria-label={`Paint ${posRef} from the Form`}
+            title={`Paint ${posRef}'s product codes from the Form: give each an ElementType, then it goes in the recipe`} />
+        ) : <Button size="sm" variant="primary" style={{ fontSize: 10 }}
           onClick={() => setOpen(true)} data-testid="paint-position"
-          title={state === 'noForm'
-            ? 'Load the Form spreadsheet once for the project, then paint just this position'
-            : `Paint ${posRef}'s product codes from the Form: give each an ElementType, then it goes in the recipe`}>
-          <MaterialIcon name={state === 'noForm' ? 'upload_file' : 'brush'} size={12} />{' '}
-          {state === 'noForm' ? 'Load the Form and paint this position' : `Paint ${posRef} from the Form`}
+          title="Load the Form spreadsheet once for the project, then paint just this position">
+          <MaterialIcon name="upload_file" size={12} /> Load the Form and paint this position
         </Button>}
         {label && !open && (
           <StatusChip size="xs" tone={label.tone} icon={label.icon} data-testid="paint-status"
