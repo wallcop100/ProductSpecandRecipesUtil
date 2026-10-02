@@ -63,7 +63,7 @@ export function mergeCaptures(prev, next, targets, formRefs = []) {
 }
 
 /**
- * positionPaintStatus(draft, posRef) → { state, rows, unconfirmed, formRefs }
+ * positionPaintStatus(draft, posRef) → { state, rows, unconfirmed, formRefs, texts, cells }
  * Where ONE PositionType stands in the saved import (the builder's Form spec pane):
  * 'noForm' (nothing loaded), 'absent' (the Form has no rows for it), 'todo' (rows to
  * confirm), 'ready' (confirmed, not added yet), 'added', or 'nothing' (no product in its rows). A Form ref lands on posRef
@@ -77,8 +77,16 @@ export function positionPaintStatus(draft, posRef, { buildRefMap, targetFor } = 
   const groups = groupPositions(draft.rows).filter(g => String(target(g.formRef) || '').toLowerCase() === want)
   const rows = groups.flatMap(g => g.rows)
   if (!rows.length) return { state: 'absent', rows: 0, unconfirmed: 0, formRefs: [] }
+  // What the Form says here, raw, one entry per row (W24D3V: shown as is, painting optional).
+  const texts = rows.map(r => String(r.rawText || '').trim()).filter(Boolean)
+  // …and per row, each cell under its Form column name: code, manufacturer, the context columns.
+  const cells = rows.map(r => [
+    [draft.map?.code || 'Product code', r.rawText],
+    [draft.map?.mfr || 'Manufacturer', r.manufacturer],
+    ...Object.entries(r.context || {}),
+  ].map(([col, v]) => ({ col, value: String(v ?? '').trim() })).filter(c => c.value))
   // No product anywhere in its rows ("n/a", "by others"): nothing to add, nothing to do.
-  if (rows.every(r => isNothingText(r.rawText))) return { state: 'nothing', rows: rows.length, unconfirmed: 0, formRefs: groups.map(g => g.formRef), texts: rows.map(r => String(r.rawText || '').trim()).filter(Boolean) }
+  if (rows.every(r => isNothingText(r.rawText))) return { state: 'nothing', rows: rows.length, unconfirmed: 0, formRefs: groups.map(g => g.formRef), texts, cells }
   const unconfirmed = rows.filter(r => !r.confirmed).length
   // In product codes, not rows: the code-shaped words still to confirm (at least one a row).
   const newCodes = rows.filter(r => !r.confirmed)
@@ -86,5 +94,5 @@ export function positionPaintStatus(draft, posRef, { buildRefMap, targetFor } = 
   const staged = new Set(draft.stagedRefs || [])
   const formRefs = groups.map(g => g.formRef)
   const state = unconfirmed ? 'todo' : formRefs.every(f => staged.has(f)) ? 'added' : 'ready'
-  return { state, rows: rows.length, unconfirmed, newCodes, formRefs }
+  return { state, rows: rows.length, unconfirmed, newCodes, formRefs, texts, cells }
 }

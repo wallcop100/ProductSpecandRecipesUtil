@@ -176,6 +176,28 @@ describe('known codes save themselves to the position', () => {
   })
 })
 
+test('W24D3V: the Form shows raw; the brush opens the painter and it stays open, even when it re-saves', async () => {
+  useStore.setState({ importDraft: {
+    version: 1, step: 'review', source: { name: 'form.xlsx', sheet: 'S' },
+    map: { pt: '', code: 'ProductCode', mfr: 'ManufacturerName', exclude: '', acc: '', context: [] },
+    rules: {}, assignments: {}, resolutions: [], refOverrides: {}, dirStats: { forward: 0, backward: 0 }, stagedRefs: ['C01'], keptSeparate: [],
+    rows: [{ id: 0, rawText: 'QC50', positionType: 'C01', manufacturer: 'iGuzzini', context: {}, overrides: {}, noteOverride: {}, confirmed: true, autoConfirmed: true }],
+  }, formCaptures: { version: 1, byPosition: { C01: [{ elementTypeRef: 'ET-PS-OLD', code: 'OLD1', manufacturer: 'iGuzzini' }] } } })
+  render(<FormSpecPane posRef="C01" />)
+  expect(screen.getByTestId('form-raw')).toHaveTextContent(/ProductCode\s*QC50/)
+  expect(screen.getByTestId('form-raw')).toHaveTextContent(/ManufacturerName\s*iGuzzini/)
+  fireEvent.click(screen.getByTestId('paint-position'))
+  // Saved for the Form as it is now, quietly: the painter the user opened stays open.
+  await waitFor(() => expect(useStore.getState().formCaptures.byPosition.C01?.[0]?.elementTypeRef).toBe('ET-PS-01'))
+  await new Promise(r => setTimeout(r, 50))
+  expect(screen.getByTestId('compact-painter')).toBeInTheDocument()
+  expect(screen.queryByTestId('form-raw')).toBeNull()
+  // The brush is a toggle.
+  fireEvent.click(screen.getByTestId('paint-position'))
+  expect(screen.queryByTestId('compact-painter')).toBeNull()
+  expect(screen.getByTestId('form-raw')).toBeInTheDocument()
+})
+
 test('4MYUQ7: Detach takes the Form off the whole project, session included', async () => {
   useStore.setState({ importDraft: { rows: [{ id: 0, rawText: 'QC50', positionType: 'C01' }] }, formCaptures: { byPosition: { C01: [{ elementTypeRef: 'ET-PS-01', code: 'QC50' }] } } })
   await useStore.getState().detachForm()

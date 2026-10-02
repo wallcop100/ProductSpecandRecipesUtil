@@ -22,18 +22,13 @@ const list = refs => refs.join(', ')
  *     Fork it for the positions that change, or make a New ElementType.
  * Nothing happens without a click; each click is one Undo.
  */
-export default function FormDiffBlock({ posRef }) {
+/** What the Form revision means for posRef (formImpact), shared by the diff and the pane. */
+export function usePositionFormImpact(posRef) {
   const importDraft = useStore(s => s.importDraft)
   const recipes = useStore(s => s.recipes)
   const psRows = useStore(s => s.psRows)
-  const applyFormChange = useStore(s => s.applyFormChange)
-  const addRecipeRow = useStore(s => s.addRecipeRow)
-  const removeRecipeRow = useStore(s => s.removeRecipeRow)
-  const setCompareBase = useStore(s => s.setCompareBase)
-  const [creating, setCreating] = useState(null)   // the change a New ElementType is for
-
   const base = importDraft?.compareBase
-  const changes = useMemo(() => {
+  return useMemo(() => {
     if (!base?.rows?.length || !importDraft?.rows?.length) return []
     const refMap = importDraft.map?.pt ? buildRefMap(importDraft.resolutions || [], importDraft.refOverrides || {}) : null
     return formImpact({
@@ -41,6 +36,22 @@ export default function FormDiffBlock({ posRef }) {
       targetOf: f => (refMap ? targetFor(refMap, f) : f),
     })
   }, [base, importDraft, recipes, psRows, posRef])
+}
+
+/** The label of a swap's button, the same wherever it is offered. */
+export const swapLabel = (c, posRef) => `Swap in ${list([posRef, ...c.changing])}`
+
+export default function FormDiffBlock({ posRef }) {
+  const importDraft = useStore(s => s.importDraft)
+  const recipes = useStore(s => s.recipes)
+  const applyFormChange = useStore(s => s.applyFormChange)
+  const addRecipeRow = useStore(s => s.addRecipeRow)
+  const removeRecipeRow = useStore(s => s.removeRecipeRow)
+  const setCompareBase = useStore(s => s.setCompareBase)
+  const [creating, setCreating] = useState(null)   // the change a New ElementType is for
+
+  const base = importDraft?.compareBase
+  const changes = usePositionFormImpact(posRef)
 
   if (!base || !changes.length) return null
 
@@ -73,10 +84,10 @@ export default function FormDiffBlock({ posRef }) {
                   )}
                   <Button size="sm" variant="primary" className="mt-1 py-0" style={{ fontSize: 10 }} data-testid="diff-swap"
                     onClick={() => applyFormChange(c, posRef, 'swap')}>
-                    Swap in {list(who(c))}
+                    {swapLabel(c, posRef)}
                   </Button>
                 </>
-              ) : <div className="text-muted">Not in this recipe.</div>}
+              ) : <div className="text-muted" data-testid="diff-not-used">{posRef}'s recipe doesn't use {c.fromEt}, so there is nothing to swap here.</div>}
             </>
           )}
 
@@ -86,7 +97,7 @@ export default function FormDiffBlock({ posRef }) {
                 <span style={mono}>{c.fromEt}</span> → new code <span style={{ ...mono, fontWeight: 600 }}>{c.toCode}</span>
                 {c.container && <span className="text-muted"> · inside {c.container}</span>}
               </div>
-              {!c.inRecipe ? <div className="text-muted">Not in this recipe.</div> : c.canUpdate ? (
+              {!c.inRecipe ? <div className="text-muted" data-testid="diff-not-used">{posRef}'s recipe doesn't use {c.fromEt}, so nothing changes here.</div> : c.canUpdate ? (
                 <>
                   <div className="text-muted">
                     {c.changing.length ? `Every position in the Form using it changes the same way (${list([posRef, ...c.changing])})` : `In the Form, only ${posRef} uses it`}, and the old code is gone from the Form.

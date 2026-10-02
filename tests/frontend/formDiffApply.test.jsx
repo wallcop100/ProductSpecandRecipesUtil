@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within, act } from '@testing-library/react'
 
 window.electronAPI = { db: new Proxy({}, { get: () => vi.fn().mockResolvedValue(null) }) }
 vi.mock('../../src/utils/backend.js', () => ({
@@ -49,5 +49,48 @@ describe('in-line Form diff actions', () => {
     render(<FormDiffBlock posRef="A1" />)
     fireEvent.click(screen.getByTestId('diff-update'))
     expect(useStore.getState().psRows.find(r => r.ElementTypeRef === 'ET-PS-01').ProductCode).toBe('ZH-NEW-9')
+  })
+
+  test('a product the Form swapped in shows the same Swap where it is missing, not + Position', async () => {
+    const { default: FormSpecPane } = await import('../../src/components/FormSpecPane.jsx')
+    setup([row(0, 'A1', 'ZH-NEW-2')], [row(0, 'A1', 'ZH-OLD-1')])
+    useStore.setState({
+      elementTypes: [{ ElementTypeRef: 'ET-PS-01', Family: 'ET-PS' }, { ElementTypeRef: 'ET-PS-02', Family: 'ET-PS' }],
+      psRows: [{ ElementTypeRef: 'ET-PS-01', Manufacturer: 'Orluna', ProductCode: 'ZH-OLD-1' }, { ElementTypeRef: 'ET-PS-02', Manufacturer: 'Orluna', ProductCode: 'ZH-NEW-2' }],
+      positionTypes: [{ PositionTypeRef: 'A1' }, { PositionTypeRef: 'A2' }],
+      formCaptures: { version: 1, byPosition: { A1: [{ elementTypeRef: 'ET-PS-02', code: 'ZH-NEW-2', manufacturer: 'Orluna' }] } },
+    })
+    render(<FormSpecPane posRef="A1" />)
+    const at = screen.getByTestId('missing-swap')
+    expect(at).toHaveTextContent('Swap in A1')
+    expect(screen.getByTestId('missing-swap-from')).toHaveValue('ET-PS-01')
+    expect(screen.queryByRole('button', { name: 'Add ET-PS-02 at position level' })).toBeNull()
+    fireEvent.click(within(at).getByRole('button', { name: /Swap in A1/ }))
+    const live = useStore.getState().recipes.filter(r => r.PositionTypeRef === 'A1' && (r.IsDeleted || 'N') !== 'Y').map(r => r.ElementTypeRef)
+    expect(live).toEqual(['ET-PS-02'])
+  })
+
+  test('the swap can replace any ElementType the position holds, or the ⋯ menu just adds it', async () => {
+    const { default: FormSpecPane } = await import('../../src/components/FormSpecPane.jsx')
+    setup([row(0, 'A1', 'ZH-NEW-2')], [row(0, 'A1', 'ZH-OLD-1')])
+    useStore.setState({
+      recipes: [pos('A1', 'ET-PS-01'), pos('A1', 'ET-PS-03'), pos('A2', 'ET-PS-01')],
+      elementTypes: ['ET-PS-01', 'ET-PS-02', 'ET-PS-03'].map(r => ({ ElementTypeRef: r, Family: 'ET-PS' })),
+      psRows: [{ ElementTypeRef: 'ET-PS-01', Manufacturer: 'Orluna', ProductCode: 'ZH-OLD-1' }, { ElementTypeRef: 'ET-PS-02', Manufacturer: 'Orluna', ProductCode: 'ZH-NEW-2' }],
+      positionTypes: [{ PositionTypeRef: 'A1' }, { PositionTypeRef: 'A2' }],
+      formCaptures: { version: 1, byPosition: { A1: [{ elementTypeRef: 'ET-PS-02', code: 'ZH-NEW-2', manufacturer: 'Orluna' }] } },
+    })
+    const liveA1 = () => useStore.getState().recipes.filter(r => r.PositionTypeRef === 'A1' && (r.IsDeleted || 'N') !== 'Y').map(r => r.ElementTypeRef).sort()
+    render(<FormSpecPane posRef="A1" />)
+    const from = screen.getByTestId('missing-swap-from')
+    expect(from).toHaveValue('ET-PS-01')
+    fireEvent.change(from, { target: { value: 'ET-PS-03' } })
+    fireEvent.click(within(screen.getByTestId('missing-swap')).getByRole('button', { name: /Swap in A1/ }))
+    expect(liveA1()).toEqual(['ET-PS-01', 'ET-PS-02'])
+    act(() => useStore.getState().undo())
+    expect(liveA1()).toEqual(['ET-PS-01', 'ET-PS-03'])
+    fireEvent.click(within(screen.getByTestId('missing-swap-more')).getByRole('button'))
+    fireEvent.click(await screen.findByText('+ Add at position level'))
+    expect(liveA1()).toEqual(['ET-PS-01', 'ET-PS-02', 'ET-PS-03'])
   })
 })

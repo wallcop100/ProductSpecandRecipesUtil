@@ -18,7 +18,7 @@ import { findProductET, stampPlan } from '../utils/productCodes'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { ago } from '../utils/ago'
 import FormPaintBar from './FormPaintBar'
-import FormDiffBlock from './FormDiffBlock'
+import FormDiffBlock, { usePositionFormImpact, swapLabel } from './FormDiffBlock'
 import { readOlderForm } from '../utils/olderForm'
 import { readSheet, fileMeta } from '../utils/backend'
 import { positionPaintStatus } from '../utils/formPositions'
@@ -259,6 +259,10 @@ export default function FormSpecPane({ posRef, embedded = false }) {
   // Painting this position's Form rows happens inline, condensed to the pane.
   const [painting, setPainting] = useState(false)
   const importDraft = useStore(s => s.importDraft)
+  // A product the Form swapped in for one the recipe holds: the swap, not an add.
+  const formChanges = usePositionFormImpact(posRef)
+  const applyFormChange = useStore(s => s.applyFormChange)
+  const [swapPick, setSwapPick] = useState({})     // toEt → the ElementType chosen to replace
   const paintSt = positionPaintStatus(importDraft, posRef, { buildRefMap, targetFor })
   const draftHasRows = !['absent', 'noForm'].includes(paintSt.state)
   // Codes the loaded Form gives here that have no ElementType yet (not saved to the position).
@@ -494,6 +498,11 @@ export default function FormSpecPane({ posRef, embedded = false }) {
   }
 
   const { matched, missing, orphaned, extra, container, coverage } = result
+  // Missing because the Form swapped it in for one the recipe holds (the diff above): its
+  // button is that same Swap, so it replaces rather than adds alongside.
+  const swapFor = new Map(formChanges.filter(c => c.kind === 'swap' && c.inRecipe).map(c => [String(c.toEt).toUpperCase(), c]))
+  const swapOf = ref => swapFor.get(String(ref).toUpperCase())
+  const addable = missing.filter(m => !swapOf(m.elementTypeRef))
 
   // The fork question, if it is about the wrapper this position actually uses.
   const divergence = (formCaptures.divergence || []).find(
@@ -731,18 +740,18 @@ export default function FormSpecPane({ posRef, embedded = false }) {
       )}
 
       {/* What the Form asks for: add everything missing in one click. */}
-      {missing.length > 1 && (
+      {addable.length > 1 && (
         <div className="d-flex align-items-center gap-1 mb-1 flex-wrap">
           <Button size="sm" variant="primary" style={{ fontSize: 10, padding: '1px 8px' }}
-            onClick={() => addNow(missing.map(m => m.elementTypeRef), 'usual')}
+            onClick={() => addNow(addable.map(m => m.elementTypeRef), 'usual')}
             title="Each where it usually goes: inside the wrapper if that is where it sits in other recipes, else position level">
-            <MaterialIcon name="playlist_add" size={12} /> Add all {missing.length}
+            <MaterialIcon name="playlist_add" size={12} /> Add all {addable.length}
           </Button>
           <Button size="sm" variant="link" className="p-0" style={{ fontSize: 10 }}
-            onClick={() => addNow(missing.map(m => m.elementTypeRef), 'position')}>all at position</Button>
+            onClick={() => addNow(addable.map(m => m.elementTypeRef), 'position')}>all at position</Button>
           {container && (
             <Button size="sm" variant="link" className="p-0" style={{ fontSize: 10 }}
-              onClick={() => addNow(missing.map(m => m.elementTypeRef), 'internal')}>all inside {container}</Button>
+              onClick={() => addNow(addable.map(m => m.elementTypeRef), 'internal')}>all inside {container}</Button>
           )}
         </div>
       )}
@@ -777,7 +786,47 @@ export default function FormSpecPane({ posRef, embedded = false }) {
               {e.note && <div className="text-muted" style={{ fontSize: 10 }}>{e.note}</div>}
               {/* A missing row adds in one click, at the position or inside its wrapper; the
                   usual place for this ElementType is the filled button. */}
-              {isMissing && (() => {
+              {isMissing && swapOf(e.elementTypeRef) && (() => {
+                const c = swapOf(e.elementTypeRef)
+                // Which ElementType it replaces: the one the Form dropped by default, or any
+                // other this position holds, at position level or inside its wrapper.
+                const held = recipes.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y' && (r.PositionTypeRef || r.positionTypeRef) === posRef
+                  && String(r.ElementTypeRef || r.elementTypeRef || '').toUpperCase() !== String(e.elementTypeRef).toUpperCase())
+                  .map(r => ({ ref: r.ElementTypeRef || r.elementTypeRef, inside: (r.ContextType || r.contextType) === 'ElementType' ? (r.ContextRef || r.contextRef) : null }))
+                  .filter((h, i, a) => a.findIndex(x => x.ref.toUpperCase() === h.ref.toUpperCase()) === i)
+                const pick = swapPick[e.elementTypeRef] || c.fromEt
+                const chosen = String(pick).toUpperCase() === String(c.fromEt).toUpperCase()
+                  ? c : { ...c, fromEt: pick, changing: [] }
+                return (
+                  <div className="mt-1" data-testid="missing-swap">
+                    <div className="d-flex align-items-center gap-1">
+                      <Button size="sm" variant="primary" style={{ fontSize: 10, padding: '0 6px' }}
+                        onClick={() => applyFormChange(chosen, posRef, 'swap')}
+                        title={`Replace ${pick} with ${e.elementTypeRef}`}>
+                        {swapLabel(chosen, posRef)}
+                      </Button>
+                      <span data-testid="missing-swap-more"><Dropdown>
+                        <Dropdown.Toggle as={IconButton} bsSize="sm" variant="outline-secondary" icon="more_horiz" size={12}
+                          aria-label={`Other ways to add ${e.elementTypeRef}`} title="Add it instead, keeping what is there" />
+                        <Dropdown.Menu style={{ fontSize: 11 }}>
+                          <Dropdown.Item onClick={() => addNow([e.elementTypeRef], 'position')}>+ Add at position level</Dropdown.Item>
+                          {container && <Dropdown.Item onClick={() => addNow([e.elementTypeRef], 'internal')}>+ Add inside {container}</Dropdown.Item>}
+                        </Dropdown.Menu>
+                      </Dropdown></span>
+                    </div>
+                    <div className="d-flex align-items-center gap-1 text-muted mt-1" style={{ fontSize: 10 }}>
+                      replaces
+                      <Form.Select size="sm" value={held.find(h => h.ref.toUpperCase() === String(pick).toUpperCase())?.ref || pick}
+                        onChange={ev => setSwapPick(m => ({ ...m, [e.elementTypeRef]: ev.target.value }))}
+                        aria-label={`ElementType ${e.elementTypeRef} replaces`} data-testid="missing-swap-from"
+                        style={{ fontSize: 10, fontFamily: 'monospace', padding: '0 22px 0 4px', width: 'auto', minWidth: 0, backgroundPosition: 'right 5px center', backgroundSize: '10px 8px' }}>
+                        {held.map(h => <option key={h.ref} value={h.ref}>{h.ref}{h.inside ? ` (in ${h.inside})` : ''}</option>)}
+                      </Form.Select>
+                    </div>
+                  </div>
+                )
+              })()}
+              {isMissing && !swapOf(e.elementTypeRef) && (() => {
                 const usual = usualPlace(e.elementTypeRef)
                 return (
                   <div className="d-flex align-items-center gap-1 mt-1">
@@ -798,7 +847,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
                 )
               })()}
               {isMissing
-                ? <span className="text-danger" style={{ fontSize: 10 }}>
+                ? swapOf(e.elementTypeRef) ? null : <span className="text-danger" style={{ fontSize: 10 }}>
                     {e.inSpec ? 'already an ElementType — add it' : 'missing from the recipe'}
                   </span>
                 : <FoundIn foundIn={e.foundIn} container={container} />}

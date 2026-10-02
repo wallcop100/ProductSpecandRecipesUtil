@@ -1254,13 +1254,15 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     ? panelEntries.filter(e => (e.positionTypes || []).some(pt => selectedRefs.has(String(pt ?? '').trim())))
     : panelEntries), [mode, panelEntries, selectedRefs])
   const [addingSel, setAddingSel] = useState(false)
-  async function addSelectionAndBuild() {
+  async function addSelectionAndBuild({ stay = false } = {}) {
     setAddingSel(true)
     try {
       const targets = await handleStage({ only: new Set(selectedRefs) })
       // Save now: the debounced draft save would die with this screen on the way out.
       await saveImportDraft({ ...draftFromState(), stagedRefs: [...new Set([...stagedRefs, ...selectedRefs])] })
-      if (embedded) { embedded.onStaged?.(targets || []); return }
+      // `stay`: a quiet re-save on opening a painter on a loaded Form (the Form changed
+      // since it was saved) — the painter the user just opened stays open (W24D3V).
+      if (embedded) { if (!stay) embedded.onStaged?.(targets || []); return }
       if (onReviewPositions && targets?.length) onReviewPositions(targets, { fromImport: true })
     } finally { setAddingSel(false) }
   }
@@ -1274,7 +1276,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     // Only with codes to save: a confirmed row with nothing painted must not save an empty position.
     // The open painter saves once its work is done (every code given an ElementType) — not
     // merely for being opened on a position that was already done.
-    if (embedded && selection && !selection.ready) sawWork.current = true
+    if (embedded && step === 'review' && selection?.rows && !selection.ready) sawWork.current = true
     // …or when what is saved for the position is not what the Form now gives it (never
     // saved, or the Form changed). Opening it on a position already saved as-is saves nothing.
     const saved = embedded?.posRef ? useStore.getState().formCaptures?.byPosition?.[embedded.posRef] : null
@@ -1284,7 +1286,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     const key = `${embedded.posRef}|${selection.refs.join(',')}`
     if (autoSaved.current === key) return
     autoSaved.current = key
-    addSelectionAndBuild()
+    addSelectionAndBuild({ stay: !!embedded.quiet && !(embedded.autoSave || embedded.autoSaveAll || sawWork.current) })
   })   // eslint-disable-line react-hooks/exhaustive-deps
 
   // What changed since the older Form (formDiff.js), per row id, and what it no longer has.
