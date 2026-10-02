@@ -119,3 +119,30 @@ export default function RuleBuilder({ rule, columns, valueOptions = {}, onChange
     </>
   )
 }
+
+/**
+ * RulePills — a rule read-only, as the editor shows it: each condition a pill, joined by
+ * the same coloured AND / OR pills. For saying what a rule is without opening the editor.
+ */
+export function RulePills({ rule, ...rest }) {
+  const conds = (rule?.conditions || []).filter(c => c && c.column && c.op)
+  if (!conds.length) return null
+  const any = rule.match === 'any'
+  const join = { color: any ? '#b45309' : '#0d6efd', background: any ? '#fff4e5' : '#e7f1ff' }
+  const col = c => String(c.column).replace(/^Recipe\./, '')
+  return (
+    <span className="d-inline-flex flex-wrap align-items-center gap-1" data-testid="rule-pills" {...rest}>
+      {conds.map((c, i) => (
+        <React.Fragment key={i}>
+          {i > 0 && (
+            <span className="rounded-pill px-2" data-testid="rule-join"
+              style={{ fontSize: 9, fontWeight: 700, letterSpacing: 0.5, lineHeight: '16px', ...join }}>{any ? 'OR' : 'AND'}</span>
+          )}
+          <span className="rounded-pill px-2" style={{ fontSize: 10, lineHeight: '18px', background: '#f1f3f5', border: '1px solid #dee2e6' }}>
+            <span className="text-muted">{col(c)}</span> {OP.get(c.op)?.label || c.op}{OP.get(c.op)?.needsValue === false ? '' : <> <strong>{String(c.value ?? '')}</strong></>}
+          </span>
+        </React.Fragment>
+      ))}
+    </span>
+  )
+}

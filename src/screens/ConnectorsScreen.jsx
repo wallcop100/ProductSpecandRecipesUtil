@@ -222,7 +222,7 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
             )
           })}
 
-          <div className="small text-muted mt-3 mb-1 px-1" data-testid="groups-found">
+          <div className="small text-muted mt-3 mb-1 px-1 d-flex align-items-center" data-testid="groups-found">
             Groups found in the recipes {groups.groups.length ? `(${groups.groups.length})` : ''}
           </div>
           {groups.groups.length === 0 && <p className="text-muted px-1" style={{ fontSize: 11 }}>Every connector set-up here is already a template.</p>}

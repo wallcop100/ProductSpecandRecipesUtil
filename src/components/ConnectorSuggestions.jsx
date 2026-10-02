@@ -52,8 +52,11 @@ export default function ConnectorSuggestions({ posRef }) {
 
   return (
     <div className="mb-3 px-3 py-2 rounded" style={{ background: '#fff8e1', border: '1px solid #f0e0a8', fontSize: 12 }}>
-      <div className="fw-semibold mb-1" style={{ fontSize: 11, color: '#92400e' }}>
+      <div className="fw-semibold mb-1 d-flex align-items-center" style={{ fontSize: 11, color: '#92400e' }}>
         Connector suggestions
+        {/* The detail (which template, extras, switching it) is in the drawer's Connectors tab. */}
+        <Button size="sm" variant="link" className="p-0 ms-auto" style={{ fontSize: 11 }} data-testid="connector-details"
+          onClick={() => useStore.getState().setDrawerTab('connectors')}>details →</Button>
       </div>
       {gaps.map(g => {
         const s = STYLE[g.status] || STYLE.missing
