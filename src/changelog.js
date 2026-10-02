@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-10-02', note: 'A product the Form swapped in (the diff above says Swap) offers that same Swap where it shows as missing, not + Position, so it replaces the old one instead of being added beside it; Add all leaves it out' },
   { date: '2026-10-02', note: 'W24D3V / SQJJ4W: the Form spec pane shows what the Form says here, raw and plain, each value under its Form column name; the brush toggles paint mode, and the painter no longer flashes shut when it re-saves a position whose Form changed; a diff line for an ElementType the recipe doesn\'t use says so plainly (“A05\'s recipe doesn\'t use ET-PS-10, so there is nothing to swap here”)' },
   { date: '2026-10-02', note: 'Form spec pane, quieter: while the painter is open it is the only call (no chip, no banner); “no wrapper” is one small icon with a menu; “All Form products present” is one line; a position with nothing to add shows what the Form says (e.g. n/a) and no Paint button; one not in the Form says so once, with no Paint button; the empty 0 · 0 · 0 chips are hidden; Paint and Close are small icons (brush, ×), the text button only to load the Form' },
   { date: '2026-10-02', note: 'Form spec pane: one call to action. A new code shows “Give <code> an ElementType”; known codes are always listed (code → ElementType · in the recipe or not); no Save button, tick, “confirm the obvious” or painter undo — the position saves itself once every code has an ElementType; “All Form products present” only when that is true' },
