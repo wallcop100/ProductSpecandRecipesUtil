@@ -40,8 +40,12 @@ const live = r => (r.IsDeleted || r.isDeleted) !== 'Y'
 export function readCodes(row, master) {
   const known = new Map()   // ET → code
   const unknown = []
-  for (const w of String(row?.rawText || '').split(/[\s,;]+/).filter(Boolean)) {
-    if (w === '+') continue
+  // An "(old code …)" note is not a product; brackets and trailing punctuation are not
+  // part of a code: "(FPS2020BG2000)" is FPS2020BG2000 (2EF42C).
+  const text = String(row?.rawText || '').replace(/\(\s*old\s+code[^)]*\)/gi, ' ')
+  for (const raw of text.split(/[\s,;]+/)) {
+    const w = raw.replace(/^[([{"'<]+/, '').replace(/[)\]}"'>.:]+$/, '')
+    if (!w || w === '+') continue
     const c = classify(w, { master }, row.manufacturer)
     if (c.elementTypeRef) known.set(c.elementTypeRef, w)
     else if (looksLikeProductCode(w)) unknown.push(w)
