@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react'
 import { Button, Dropdown, Form, Modal } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
+import InfoTip from './InfoTip'
 import IconButton from './IconButton'
 import CellDetailPanel from './CellDetailPanel'
 import useConnectorGroups from './useConnectorGroups'
@@ -146,7 +147,7 @@ export default function ConnectorsPane({ posRef, onOpenConnectors }) {
       {!current && !m.clash && (
         <div data-testid="connector-none">
           <div className="text-muted mb-1">
-            {have.length ? <>No template for {posRef}. Its connectors: <span style={mono}>{describeParts(have)}</span></> : <>No connectors here, and no template asks for any.</>}
+            {have.length ? <>No template for {posRef} yet.</> : <>No connectors here, and no template asks for any.</>}
           </div>
           {nearest.length > 0 && (
             <div className="mb-2">
@@ -201,10 +202,9 @@ export default function ConnectorsPane({ posRef, onOpenConnectors }) {
           <Form.Label className="fw-semibold mb-1">Name</Form.Label>
           <Form.Control size="sm" value={withRule?.name || ''} aria-label="New template name"
             onChange={e => setWithRule(w => ({ ...w, name: e.target.value }))} />
-          <div className="mt-2 mb-1 text-muted" style={{ fontSize: 11 }}>Make template would assume:</div>
-          <Assumed have={have} suggestion={suggestion} posRef={posRef} />
+          {/* Where it applies is the editor below: only the parts here. */}
+          <div className="mt-2"><Assumed have={have} suggestion={suggestion} posRef={posRef} where={false} /></div>
           <Form.Label className="fw-semibold mt-2 mb-1">Applies to positions that match</Form.Label>
-          {suggestion?.rule && <div className="text-muted mb-1" style={{ fontSize: 11 }}>Filled in with the assumed rule: change it, add to it, or remove it.</div>}
           {withRule && (
             <RuleBuilder rule={withRule.rule} columns={TEMPLATE_RULE_COLUMNS} valueOptions={{ Tags: tagOptions }} minConditions={0}
               newCondition={{ column: 'Tags', op: 'equals', value: '' }}
@@ -212,8 +212,21 @@ export default function ConnectorsPane({ posRef, onOpenConnectors }) {
           )}
           <div className="mt-2" data-testid="rule-preview">
             {withRule && ruleIsEmpty(withRule.rule)
-              ? <span className="text-muted">No conditions: pinned to {suggestion?.positions.join(', ')}.</span>
-              : <>Matches {ruleMatches.length} position{ruleMatches.length === 1 ? '' : 's'}: <span style={{ fontFamily: 'monospace' }}>{ruleMatches.slice(0, 12).join(', ')}{ruleMatches.length > 12 ? '…' : ''}</span></>}
+              ? <span className="d-flex flex-wrap align-items-center gap-1">
+                  <span className="text-muted">No conditions: pinned to</span>
+                  {(suggestion?.positions || []).map(r => (
+                    <span key={r} className="rounded-pill px-2" style={{ ...pill, fontFamily: 'monospace', fontWeight: r === posRef ? 700 : 400 }}>
+                      <MaterialIcon name="push_pin" size={10} style={{ marginRight: 2, verticalAlign: '-1px', color: '#6c757d' }} />{r}
+                    </span>
+                  ))}
+                </span>
+              : <span className="d-flex flex-wrap align-items-center gap-1">
+                  <span className="text-muted">Matches {ruleMatches.length}:</span>
+                  {ruleMatches.slice(0, 16).map(r => (
+                    <span key={r} className="rounded-pill px-2" style={{ ...pill, fontFamily: 'monospace', fontWeight: r === posRef ? 700 : 400 }}>{r}</span>
+                  ))}
+                  {ruleMatches.length > 16 && <span className="text-muted">+{ruleMatches.length - 16}</span>}
+                </span>}
             {!ruleHasThis && <div className="text-danger" data-testid="rule-misses-this">These conditions leave out {posRef} itself.</div>}
           </div>
         </Modal.Body>
@@ -249,26 +262,46 @@ export default function ConnectorsPane({ posRef, onOpenConnectors }) {
 }
 
 /**
- * What a new template from this position assumes (asked for at the point of creation):
- * its parts are exactly this position's connectors, and it applies by the rule that picks
- * out the positions built the same way, or, with none, is pinned to them.
+ * What a new template from this position assumes, at the point of creation, as pills:
+ *   PARTS — exactly this position's connectors (wrapper ones marked)
+ *   WHERE — the rule that picks out the positions built the same way, or those positions
+ *           (pinned) when no rule does
+ * Positions built like it later join by themselves: in the ⓘ, not in the way.
  */
-function Assumed({ have, suggestion, posRef }) {
+const short = ref => String(ref).replace(/^ET-/i, '')
+const pill = { fontSize: 10, lineHeight: '18px', background: '#f1f3f5', border: '1px solid #dee2e6' }
+function Assumed({ have, suggestion, posRef, where = true }) {
   if (!suggestion) return null
-  const others = suggestion.positions.filter(p => p !== posRef)
+  const label = { fontSize: 9, fontWeight: 700, letterSpacing: '.05em', color: '#6c757d', paddingTop: 3 }
   return (
-    <ul className="mb-0 mt-1 ps-3" style={{ fontSize: 11 }} data-testid="assumed">
-      <li><span className="text-muted">Parts: exactly {posRef}'s connectors, </span><span style={{ fontFamily: 'monospace' }}>{describeParts(have)}</span></li>
-      <li>
-        <span className="text-muted">Applies to: </span>
+    <div data-testid="assumed" className="mt-1"
+      style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', columnGap: 8, rowGap: 4, fontSize: 11 }}>
+      <span style={label}>PARTS</span>
+      <span className="d-flex flex-wrap gap-1" data-testid="assumed-parts">
+        {have.map(p => (
+          <span key={`${p.section}|${p.ref}`} className="rounded-pill px-2" title={`${p.ref}${p.section === 'internal' ? ', inside the wrapper' : ', on site'}${p.quantity > 1 ? ` ×${p.quantity}` : ''}`}
+            style={{ ...pill, fontFamily: 'monospace', ...(p.section === 'internal' ? { background: '#fff', borderStyle: 'dashed' } : {}) }}>
+            {p.section === 'internal' && <MaterialIcon name="inventory_2" size={10} style={{ marginRight: 2, verticalAlign: '-1px' }} />}
+            {short(p.ref)}{p.quantity > 1 ? ` ×${p.quantity}` : ''}
+          </span>
+        ))}
+      </span>
+      {where && <span style={label}>WHERE</span>}
+      {where && <span className="d-flex flex-wrap align-items-center gap-1" data-testid="assumed-where">
         {suggestion.rule
-          ? <>positions where <RulePills rule={suggestion.rule} /></>
-          : <>pinned to {suggestion.positions.join(', ')}</>}
-        {others.length > 0
-          ? <span className="text-muted"> ({others.length} other{others.length === 1 ? '' : 's'} built the same way, with no template yet)</span>
-          : <span className="text-muted"> (no other position is built the same way)</span>}
-      </li>
-      <li className="text-muted">Positions built exactly like it later join it by themselves</li>
-    </ul>
+          ? <RulePills rule={suggestion.rule} />
+          : suggestion.positions.map(p => (
+            <span key={p} className="rounded-pill px-2" style={{ ...pill, fontFamily: 'monospace', fontWeight: p === posRef ? 700 : 400 }}>
+              <MaterialIcon name="push_pin" size={10} style={{ marginRight: 2, verticalAlign: '-1px', color: '#6c757d' }} />{p}
+            </span>
+          ))}
+        <InfoTip size={11}>
+          {suggestion.rule
+            ? `The rule that picks out ${suggestion.positions.join(', ')}: the positions built like ${posRef} with no template yet.`
+            : `No rule picks out exactly the positions built like ${posRef}, so they are pinned.`}
+          {' '}Positions built exactly like it later join it by themselves.
+        </InfoTip>
+      </span>}
+    </div>
   )
 }
