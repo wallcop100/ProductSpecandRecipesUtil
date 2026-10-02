@@ -95,11 +95,11 @@ const ROW_STATUS = {
   missing:  { icon: 'error', color: '#dc3545', title: 'missing from the recipe' },
   question: { icon: 'help', color: '#997404', title: 'no ElementType yet — nothing can be added until it has one' },
 }
-function RowStatus({ status }) {
+function RowStatus({ status, note = null }) {
   const s = ROW_STATUS[status]
   if (!s) return null
   return (
-    <MaterialIcon name={s.icon} size={13} title={s.title}
+    <MaterialIcon name={s.icon} size={13} title={note ? `${s.title}. ${note}` : s.title}
       style={{ color: s.color, flexShrink: 0, marginTop: 1 }} />
   )
 }
@@ -770,11 +770,13 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
         const status = !isMissing ? 'present' : e.inSpec ? 'addable' : 'missing'
         return (
           <div key={e.elementTypeRef} className="d-flex align-items-start gap-2 py-1 border-bottom" style={{ fontSize: 11 }}>
-            {!isMissing && <span style={{ width: 13, flexShrink: 0 }} />}
+            {/* One left edge for every row, missing or present (LJ25EF). */}
             <div style={{ minWidth: 0, flex: 1 }}>
               {/* Manufacturer and product code are one thing, and always shown together. */}
               <div className="d-flex align-items-baseline gap-1">
-                <RowStatus status={status} />
+                {/* Where the Form and the recipe disagree, the status icon says so on hover:
+                    no second warning sign (3C3VTE). */}
+                <RowStatus status={status} note={diverges(e.elementTypeRef) ? 'The Form and the recipe disagree about where this is used: hover the ElementType for the detail' : null} />
                 <Ref>{e.code || e.elementTypeRef}</Ref>
                 {e.formRef && <span className="text-muted" style={{ fontSize: 9 }}>{e.formRef}</span>}
               </div>
@@ -782,15 +784,10 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
                 {e.manufacturer || 'no manufacturer'}
               </div>
               <div className="d-flex align-items-baseline gap-1 text-truncate">
-                <UsagePopover etRef={e.elementTypeRef} placement="left" diverges={diverges(e.elementTypeRef)}>
+                {/* No "in the spec" badge (VCYTLE): an ElementType shown here is in the spec. */}
+                <UsagePopover etRef={e.elementTypeRef} placement="left">
                   <span style={{ fontFamily: 'monospace', fontSize: 10, color: '#6c757d' }}>{e.elementTypeRef}</span>
                 </UsagePopover>
-                {e.inSpec && (
-                  <span className="rounded px-1" style={{ fontSize: 9, background: '#d1e7dd', color: '#0f5132' }}
-                    title="This manufacturer + product code already names an ElementType in the Product Spec">
-                    in the spec
-                  </span>
-                )}
               </div>
               {e.note && <div className="text-muted" style={{ fontSize: 10 }}>{e.note}</div>}
               {/* A missing row adds in one click, at the position or inside its wrapper; the

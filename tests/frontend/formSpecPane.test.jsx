@@ -130,15 +130,16 @@ describe('FormSpecPane renders the Form beside the recipe', () => {
    * The divergence line was the most useful sentence the popover knew, and you could only
    * reach it by hovering the exact ref you already suspected. It is now marked on the row.
    */
-  test('an ET the Form and the recipe disagree about is marked, not left to a hover', () => {
+  test('3C3VTE: a disagreement is told on the row\'s status icon, with no second warning sign', () => {
     // C03r's recipe holds ET-TAPE-01; the Form only asks for it on C01r.
     setup({ recipes: [...recipes(), pos('C03r', 'ET-TAPE-01')] })
-    expect(screen.getAllByLabelText(/the Form and the recipe disagree/i).length).toBeGreaterThan(0)
+    expect(screen.getAllByTitle(/the Form and the recipe disagree/i).length).toBeGreaterThan(0)
+    expect(screen.queryByLabelText(/the Form and the recipe disagree/i)).not.toBeInTheDocument()
   })
 
   test('an ET they agree about carries no warning', () => {
     setup({ recipes: [...recipes(), pos('C01r', 'ET-TAPE-01')] })
-    expect(screen.queryByLabelText(/the Form and the recipe disagree/i)).not.toBeInTheDocument()
+    expect(screen.queryByTitle(/the Form and the recipe disagree/i)).not.toBeInTheDocument()
   })
 
   test('recipe rows absent from the Form are derived detail, never errors', () => {
@@ -299,7 +300,7 @@ describe('manufacturer + product code are one identity', () => {
   test('a maker+code already in the spec is offered as a shopping-list add', () => {
     // The spec already names ET-TAPE-99 for Nichia / LL240272024.
     setup({ psRows: [{ ElementTypeRef: 'ET-TAPE-99', Manufacturer: 'Nichia', ProductCode: 'LL240272024' }] })
-    expect(screen.getByText('in the spec')).toBeInTheDocument()
+    expect(screen.queryByText('in the spec')).toBeNull()                       // VCYTLE: no badge
     expect(screen.getByText('already an ElementType — add it')).toBeInTheDocument()
     expect(screen.getByText('ET-TAPE-99')).toBeInTheDocument()   // the spec's ET, not the captured one
   })
@@ -317,7 +318,6 @@ describe('manufacturer + product code are one identity', () => {
       { ElementTypeRef: 'ET-OTHER', Manufacturer: 'Phos', ProductCode: 'LL240272024' },
       { ElementTypeRef: 'ET-DECOY', Manufacturer: 'Acme', ProductCode: 'LL240272024' },
     ] })
-    expect(screen.queryByText('in the spec')).toBeNull()
     expect(screen.getByText('missing from the recipe')).toBeInTheDocument()
     expect(screen.queryByText('ET-OTHER')).toBeNull()
   })

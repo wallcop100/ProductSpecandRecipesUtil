@@ -57,14 +57,14 @@ describe('D4Z9CX: paint one position from the builder', () => {
     await waitFor(() => expect(useStore.getState().formCaptures?.byPosition?.C01?.[0]?.elementTypeRef).toBe('ET-PS-01'))
     expect(Object.keys(useStore.getState().formCaptures.byPosition)).toEqual(['C01'])   // C02, C03 untouched
     await waitFor(() => expect(screen.queryByTestId('compact-painter')).toBeNull())
-    expect(screen.getByTestId('paint-status')).toHaveTextContent('added')
+    expect(screen.getByTestId('paint-status')).toHaveTextContent('Codes in Product Spec')
     expect(screen.getByText(/ET-PS-01/)).toBeInTheDocument()
 
     // Next position: from the same session, saved by itself; opened, its known code is listed.
     view.unmount()
     render(<FormSpecPane posRef="C03" />)
     await waitFor(() => expect(useStore.getState().formCaptures.byPosition.C03?.[0]?.elementTypeRef).toBe('ET-PS-03'))
-    await waitFor(() => expect(screen.getByTestId('paint-status')).toHaveTextContent('added'))
+    await waitFor(() => expect(screen.getByTestId('paint-status')).toHaveTextContent('Codes in Product Spec'))
     fireEvent.click(screen.getByTestId('paint-position'))
     expect(await screen.findByTestId('compact-known')).toHaveTextContent('QC52 → ET-PS-03')
     expect(screen.getAllByTestId('compact-row')).toHaveLength(1)                 // 5FGNH2: its words, to paint
@@ -156,7 +156,7 @@ describe('known codes save themselves to the position', () => {
     await waitFor(() => expect(useStore.getState().formCaptures?.byPosition?.C01?.[0]?.elementTypeRef).toBe('ET-PS-01'))
     expect(screen.queryByTestId('compact-painter')).toBeNull()
     expect(await screen.findByText(/ET-PS-01/)).toBeInTheDocument()
-    expect(screen.getByTestId('paint-status')).toHaveTextContent('added')
+    expect(screen.getByTestId('paint-status')).toHaveTextContent('Codes in Product Spec')
   })
 
   test('a position with a new code is not saved for you', async () => {
