@@ -223,3 +223,20 @@ describe('YKZMVF: an automatic template holds exactly its group', () => {
     expect(m.get('C01').templates).toEqual([])
   })
 })
+
+test('templates for an existing project in one pass: every group, named, groups of two or more ticked', async () => {
+  setup()
+  render(<ConnectorsScreen onBack={vi.fn()} />)
+  fireEvent.click(screen.getByTestId('open-suggest-templates'))
+  const rows = await screen.findAllByTestId('suggested-template')
+  expect(rows.length).toBe(3)                                                    // A01–A03, A04, B01–B02
+  // A04 alone is left unticked
+  const a04 = rows.find(r => /: A04$/m.test(r.textContent) || r.textContent.includes('1 position: A04'))
+  expect(within(a04).getByRole('checkbox')).not.toBeChecked()
+  expect(screen.getByTestId('create-templates')).toHaveTextContent('Create 2 templates')
+  await act(async () => { fireEvent.click(screen.getByTestId('create-templates')) })
+  expect(useStore.getState().etCollections).toHaveLength(2)
+  const ids = useStore.getState().etCollections.map(c => c.CollectionId)
+  const members = ids.map(id => (useStore.getState().connectorPins[id] || []).join(','))
+  expect(members.join('|')).toMatch(/A01,A02,A03|B01,B02/)
+})

@@ -10,6 +10,7 @@ import { collectionStatusForPosition, positionRecipeWithWrapperInternals } from 
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { Dropdown } from 'react-bootstrap'
 import TemplateGroupPanel from '../components/TemplateGroupPanel'
+import SuggestTemplatesModal from '../components/SuggestTemplatesModal'
 import useConnectorGroups from '../components/useConnectorGroups'
 import MaterialIcon from '../components/MaterialIcon'
 import { describeParts, suggestName, isConnectorPart } from '../utils/connectorGroups'
@@ -49,6 +50,7 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
     if (saved) { setSelectedCell(null); setSelectedCollectionId(saved.CollectionId) }
   }
 
+  const [suggesting, setSuggesting] = useState(false)   // every group as a template, in one pass
   const [selectedCollectionId, setSelectedCollectionId] = useState(null)
   const [selectedCell, setSelectedCell] = useState(null) // { posRef, collectionId }
   const [editorOpen, setEditorOpen] = useState(false)
@@ -222,8 +224,12 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
             )
           })}
 
-          <div className="small text-muted mt-3 mb-1 px-1" data-testid="groups-found">
+          <div className="small text-muted mt-3 mb-1 px-1 d-flex align-items-center" data-testid="groups-found">
             Groups found in the recipes {groups.groups.length ? `(${groups.groups.length})` : ''}
+            {groups.groups.length > 0 && (
+              <Button size="sm" variant="primary" className="ms-auto py-0" style={{ fontSize: 10 }} data-testid="open-suggest-templates"
+                onClick={() => setSuggesting(true)} title="Every group as a template, in one go">Suggest all…</Button>
+            )}
           </div>
           {groups.groups.length === 0 && <p className="text-muted px-1" style={{ fontSize: 11 }}>Every connector set-up here is already a template.</p>}
           {groups.groups.map(g => (
@@ -311,6 +317,7 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
           </Button>
         </Modal.Footer>
       </Modal>
+      <SuggestTemplatesModal show={suggesting} onHide={() => setSuggesting(false)} groups={groups} />
     </div>
   )
 }
