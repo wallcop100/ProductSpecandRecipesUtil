@@ -36,7 +36,7 @@ export default function FormPaintBar({ posRef, open = false, onOpenChange = () =
   const onLoaded = useRef(false)
   const [allCols, setAllCols] = useState(false)    // the Form's other columns, behind ⋯
   const psRows = useStore(s => s.psRows)
-  const st = positionPaintStatus(importDraft, posRef, { buildRefMap, targetFor, knows: (m, c) => !!findProductET(psRows, m, c) })
+  const st = positionPaintStatus(importDraft, posRef, { buildRefMap, targetFor, knows: (m, c) => !!findProductET(psRows, m, c) || !!importDraft?.assignments?.[String(c || '').trim().toUpperCase()] })
   // On each position: the painter is open, inline, when it has Form rows to confirm;
   // otherwise closed (known codes save themselves, below).
   useEffect(() => { setOpen(st.state === 'todo') }, [posRef])   // eslint-disable-line react-hooks/exhaustive-deps
@@ -79,7 +79,8 @@ export default function FormPaintBar({ posRef, open = false, onOpenChange = () =
         </Button>}
         {label && !open && (
           <StatusChip size="xs" tone={label.tone} icon={label.icon} data-testid="paint-status"
-            label={typeof label.text === 'function' ? label.text(st.newCodes || st.unconfirmed) : label.text} />
+            label={state === 'todo' && !st.newCodes ? `${st.unconfirmed} entr${st.unconfirmed === 1 ? 'y' : 'ies'} to confirm`
+              : typeof label.text === 'function' ? label.text(st.newCodes || st.unconfirmed) : label.text} />
         )}
       </div>
       {/* What the Form says here, raw and plain; the painter (the brush) only when needed. */}

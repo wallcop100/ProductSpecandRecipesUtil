@@ -122,4 +122,12 @@ describe('in-line Form diff actions', () => {
     expect(screen.getByTestId('diff-swap')).toHaveTextContent('Swap in A1')
     expect(screen.getByTestId('missing-swap')).toBeInTheDocument()
   })
+
+  test('2EF42C: a row\'s text shows once over its changes, and identical changes once', () => {
+    setup([row(0, 'A1', 'ZH-OLD-1 ZH-NEW-7 ZH-NEW-8'), row(1, 'A1', 'ZH-OLD-1 ZH-NEW-7 ZH-NEW-8')], [row(0, 'A1', 'ZH-OLD-1'), row(1, 'A1', 'ZH-OLD-1')])
+    localStorage.removeItem('formDiffShown')
+    render(<FormDiffBlock posRef="A1" />)
+    expect(screen.getAllByTestId('diff-add-new')).toHaveLength(2)             // ZH-NEW-7, ZH-NEW-8: not four
+    expect(screen.getAllByTestId('row-text').length).toBe(1)
+  })
 })

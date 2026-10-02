@@ -7,6 +7,9 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-10-02', note: '2EF42C: the Form diff reads codes without their brackets, and ignores “(old code …)” notes: “(FPS2020BG2000)” is FPS2020BG2000, so removing an old-code note is no longer shown as a new code plus two dropped ones' },
+  { date: '2026-10-02', note: 'The status is right before you open the painter: the background save also confirms entries whose codes all have ElementTypes and re-saves positions the Form now gives a known product they lack, so opening and closing the painter no longer flips a position to OK. 2EF42C: the diff shows a row\'s text once over its changes, and identical changes once' },
+  { date: '2026-10-02', note: 'WYZ3NN: a Form entry whose codes all have ElementTypes (from the spec, this import or an earlier project) confirms itself and is saved; it no longer says a code needs an ElementType. If an entry only needs a tick, the chip says “1 entry to confirm”' },
   { date: '2026-10-02', note: 'TEE8EV: the Review recipes window shows the “Changed since” diff too, with the same Swap / Update / Fork' },
   { date: '2026-10-02', note: 'ZMRK2Y: Recipes | Product Spec is the first thing in both headers, so it stays put when you switch. 5FGNH2: the painter shows every Form entry\'s words to paint, the settled ones too, each with its code → ElementType line' },
   { date: '2026-10-02', note: 'WVYVW6: the rail ticks and the toolbar Form chip use one answer for “done”; a position not saved yet (e.g. right after a refresh) whose recipe already holds its known codes counts as done in both. QATFST: the “Changed since” diff has a show/hide that is remembered' },

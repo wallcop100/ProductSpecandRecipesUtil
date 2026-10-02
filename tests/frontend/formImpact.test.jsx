@@ -14,6 +14,11 @@ const row = (pt, rawText) => ({ positionType: pt, formRef: pt, manufacturer: 'Or
 const run = (posRef, baseRows, newRows, recipes) => formImpact({ posRef, baseRows, newRows, recipes, master })
 
 describe('formImpact', () => {
+  test('2EF42C: brackets and an "(old code …)" note are not codes: dropping the note is no change of product', () => {
+    const c = run('A1', [row('A1', 'Tape ZH-OLD-1 + Profile (ZH-BRAND-9 (old code 021-1102))')], [row('A1', 'Tape ZH-OLD-1 + Profile (ZH-BRAND-9)')], [pos('A1', 'ET-PS-01')])
+    expect(c).toEqual([])
+  })
+
   test('3VHRQP: a code the spec does not know, added or dropped, still shows as a change', () => {
     const c = run('A1', [row('A1', 'ZH-OLD-1 ZH-GONE-7')], [row('A1', 'ZH-OLD-1 + ZH-BRAND-9')], [pos('A1', 'ET-PS-01')])
     expect(c).toMatchObject([{ kind: 'addNew', toCode: 'ZH-BRAND-9' }, { kind: 'dropNew', fromCode: 'ZH-GONE-7' }])

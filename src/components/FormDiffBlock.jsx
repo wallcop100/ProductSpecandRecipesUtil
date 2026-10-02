@@ -54,7 +54,11 @@ export default function FormDiffBlock({ posRef }) {
   const toggleShown = () => setShown(v => { try { localStorage.setItem('formDiffShown', v ? '0' : '1') } catch { /* session only */ } return !v })
 
   const base = importDraft?.compareBase
-  const changes = usePositionFormImpact(posRef)
+  // The same change from identical Form rows once (2EF42C).
+  const changes = usePositionFormImpact(posRef).filter((c, i, all) => all.findIndex(x =>
+    ['kind', 'fromEt', 'toEt', 'toCode', 'fromCode', 'oldText', 'newText'].every(k => x[k] === c[k])) === i)
+  // A row's text once, over all the changes it makes (2EF42C).
+  const sameRow = i => i > 0 && changes[i - 1].oldText === changes[i].oldText && changes[i - 1].newText === changes[i].newText
 
   if (!base || !changes.length) return null
 
@@ -73,9 +77,9 @@ export default function FormDiffBlock({ posRef }) {
       </div>
       {!shown && <div className="text-muted" style={{ fontSize: 10 }} data-testid="diff-hidden">{changes.length} change{changes.length === 1 ? '' : 's'} hidden</div>}
       {shown && changes.map((c, i) => (
-        <div key={i} className="py-1 border-top" style={{ borderColor: '#ffe08a' }} data-testid="form-diff-line">
-          {(c.oldText != null || c.newText != null) && (
-            <div className="mb-1">
+        <div key={i} className={sameRow(i) ? 'pb-1' : 'py-1 border-top'} style={{ borderColor: '#ffe08a' }} data-testid="form-diff-line">
+          {!sameRow(i) && (c.oldText != null || c.newText != null) && (
+            <div className="mb-1" data-testid="row-text">
               {c.oldText != null && c.newText != null ? <WordDiff before={c.oldText} after={c.newText} />
                 : c.newText != null ? <span style={{ ...mono, background: '#d1e7dd' }}>{c.newText}</span>
                   : <span style={{ ...mono, background: '#f8d7da', textDecoration: 'line-through' }}>{c.oldText}</span>}
