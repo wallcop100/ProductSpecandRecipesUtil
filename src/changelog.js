@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-10-02', note: 'WVYVW6: the rail ticks and the toolbar Form chip use one answer for “done”; a position not saved yet (e.g. right after a refresh) whose recipe already holds its known codes counts as done in both. QATFST: the “Changed since” diff has a show/hide that is remembered' },
   { date: '2026-10-02', note: '3VHRQP: the “Changed since” diff also shows codes the Product Spec does not know yet: a new one (it needs an ElementType) and one the Form dropped; before, a Form change made only of such codes showed no diff at all' },
   { date: '2026-10-02', note: '98GPK7: the Product Spec header has the same Recipes | Product Spec switch as the builder toolbar, so the way back is where the way in was' },
   { date: '2026-10-02', note: 'K3LGUL: the Form spec moves into the right drawer as its default tab (open by default, 340px); the drawer drops All, Templates and Favourites; Apply a template… is in Recipe actions. Toolbar: Recipes and Product Spec (96KPJ5, XZ3UBB); Browse ElementTypes, the Form import and Connectors are in ⋮ (M7DYP4, A8GNSJ). Recipe actions gains Connectors and Show IsDeleted rows (B3DGQT, DD66AT); the shared toggle fills blue when on (AFEHZM). X4AN58: Re-import keeps the loaded Form until a new sheet is chosen; the Form chip says “Form not loaded” when none is, and counts every position the Form gives products for. E2H3QX: a missing spec lists the positions using it, with links' },

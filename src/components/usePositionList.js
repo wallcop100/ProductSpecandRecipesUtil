@@ -4,6 +4,7 @@ import { formWorklist } from '../utils/formSpec'
 import { positionFamilyOf } from '../utils/positionFamily'
 import { positionPaintStatus } from '../utils/formPositions'
 import { buildRefMap, targetFor } from '../utils/ptResolve'
+import { positionFormDone } from '../utils/formDone'
 
 /**
  * usePositionList — the PositionTypes list, filtered, sorted and grouped by family, with a
@@ -28,6 +29,7 @@ export default function usePositionList() {
   const containerETRefs = useStore(s => s.containerETRefs)
   const view = useStore(s => s.positionList)
   const importDraft = useStore(s => s.importDraft)
+  const psRows = useStore(s => s.psRows)
 
   const countByRef = useMemo(() => {
     const map = {}
@@ -59,7 +61,10 @@ export default function usePositionList() {
   const statusOf = pt => {
     if (isIgnored(pt)) return 'ignored'
     if (!countByRef[pt.PositionTypeRef]) return formLoaded && !inForm(pt.PositionTypeRef) ? 'notInForm' : 'empty'
-    if (incompleteRefs.has(pt.PositionTypeRef) || needsEt(pt.PositionTypeRef)) return 'form'
+    // The same answer as the toolbar chip (WVYVW6).
+    if (needsEt(pt.PositionTypeRef) || (inForm(pt.PositionTypeRef)
+      ? !positionFormDone(pt.PositionTypeRef, { importDraft, formCaptures, recipes, psRows, containerETRefs, incomplete: incompleteRefs })
+      : incompleteRefs.has(pt.PositionTypeRef))) return 'form'
     return 'done'
   }
 

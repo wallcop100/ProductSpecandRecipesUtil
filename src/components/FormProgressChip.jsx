@@ -5,6 +5,7 @@ import StatusChip from './StatusChip'
 import { formProgress, formWorklist } from '../utils/formSpec'
 import { positionPaintStatus } from '../utils/formPositions'
 import { buildRefMap, targetFor } from '../utils/ptResolve'
+import { positionFormDone } from '../utils/formDone'
 
 /**
  * FormProgressChip — how much of the Form is reconciled, and a way into what's left.
@@ -26,6 +27,7 @@ export default function FormProgressChip({ onReconcile, onLoad }) {
   const formCaptures = useStore(s => s.formCaptures)
   const importDraft = useStore(s => s.importDraft)
   const positionTypes = useStore(s => s.positionTypes)
+  const psRows = useStore(s => s.psRows)
   const loaded = !!importDraft?.rows?.length
 
   // Every position the loaded Form gives products for (X4AN58): to do, ready or added.
@@ -54,7 +56,8 @@ export default function FormProgressChip({ onReconcile, onLoad }) {
   }
   if (!inForm.length) return null
   // Done: saved for the position, and the recipe holds everything the Form asks for.
-  const todo = inForm.filter(ref => !formCaptures?.byPosition?.[ref] || incomplete.has(ref))
+  // The same answer as the rail's ticks (WVYVW6).
+  const todo = inForm.filter(ref => !positionFormDone(ref, { importDraft, formCaptures, recipes, psRows, containerETRefs, incomplete }))
   const total = inForm.length
   const complete = total - todo.length
   const unsaved = inForm.filter(ref => !formCaptures?.byPosition?.[ref]).length

@@ -49,6 +49,9 @@ export default function FormDiffBlock({ posRef }) {
   const removeRecipeRow = useStore(s => s.removeRecipeRow)
   const setCompareBase = useStore(s => s.setCompareBase)
   const [creating, setCreating] = useState(null)   // the change a New ElementType is for
+  // Shown or hidden, remembered across positions and reloads (QATFST).
+  const [shown, setShown] = useState(() => { try { return localStorage.getItem('formDiffShown') !== '0' } catch { return true } })
+  const toggleShown = () => setShown(v => { try { localStorage.setItem('formDiffShown', v ? '0' : '1') } catch { /* session only */ } return !v })
 
   const base = importDraft?.compareBase
   const changes = usePositionFormImpact(posRef)
@@ -59,12 +62,17 @@ export default function FormDiffBlock({ posRef }) {
   return (
     <div className="mb-2 p-2 rounded" style={{ background: '#fff8e1', border: '1px solid #ffe08a', fontSize: 11 }} data-testid="form-diff-block">
       <div className="d-flex align-items-center gap-1 mb-1" style={{ color: '#5c4400' }}>
+        <span role="button" onClick={toggleShown} aria-expanded={shown} data-testid="diff-toggle" className="d-inline-flex align-items-center"
+          title={shown ? 'Hide the changes' : 'Show the changes'}>
+          <MaterialIcon name={shown ? 'expand_more' : 'chevron_right'} size={14} />
+        </span>
         <MaterialIcon name="difference" size={13} />
         <strong>Changed since</strong> <span className="text-truncate" title={base.name}>{base.name}</span>
         <Button size="sm" variant="link" className="p-0 ms-auto text-muted" style={{ fontSize: 10 }}
           onClick={() => setCompareBase(null)} title="Stop comparing with the older Form">clear</Button>
       </div>
-      {changes.map((c, i) => (
+      {!shown && <div className="text-muted" style={{ fontSize: 10 }} data-testid="diff-hidden">{changes.length} change{changes.length === 1 ? '' : 's'} hidden</div>}
+      {shown && changes.map((c, i) => (
         <div key={i} className="py-1 border-top" style={{ borderColor: '#ffe08a' }} data-testid="form-diff-line">
           {(c.oldText != null || c.newText != null) && (
             <div className="mb-1">
