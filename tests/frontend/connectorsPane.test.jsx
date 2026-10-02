@@ -95,8 +95,8 @@ describe('the drawer\'s Connectors tab, for one position', () => {
 
   test('make a template from this position', async () => {
     setup({ etCollections: [], connectorPins: {} })
-    window.prompt = vi.fn(() => 'A04 kit')
     render(<ConnectorsPane posRef="A04" />)
+    fireEvent.change(screen.getByLabelText('Template name'), { target: { value: 'A04 kit' } })
     await act(async () => { fireEvent.click(screen.getByTestId('make-template')) })
     const made = useStore.getState().etCollections.find(c => c.Name === 'A04 kit')
     expect(made).toBeTruthy()
@@ -111,5 +111,16 @@ describe('the drawer\'s Connectors tab, for one position', () => {
     fireEvent.click(screen.getByTestId('connector-details'))
     expect(useStore.getState().drawerTab).toBe('connectors')
     expect(screen.getByTestId('connectors-pane')).toBeInTheDocument()
+  })
+
+  test('type by type: a new template for this position and the ones built the same way with no template yet', async () => {
+    setup({ etCollections: [], connectorPins: {} })
+    render(<ConnectorsPane posRef="A02" />)
+    const card = screen.getByTestId('suggested-template')
+    expect(card).toHaveTextContent('Built the same way, no template yet: A03')     // A01 has an extra part, A04 lacks the SR
+    await act(async () => { fireEvent.click(within(card).getByTestId('make-template-group')) })
+    const made = useStore.getState().etCollections[0]
+    const pins = useStore.getState().connectorPins[made.CollectionId] || []
+    expect(pins.length ? [...pins].sort() : 'by rule').toEqual(pins.length ? ['A02', 'A03'] : 'by rule')
   })
 })

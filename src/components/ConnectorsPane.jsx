@@ -1,12 +1,12 @@
 import React, { useMemo, useState } from 'react'
-import { Button, Dropdown, Modal } from 'react-bootstrap'
+import { Button, Dropdown, Form, Modal } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import IconButton from './IconButton'
 import CellDetailPanel from './CellDetailPanel'
 import useConnectorGroups from './useConnectorGroups'
 import { templateParts, partsToIngredients, diffParts, diffSize, describeParts, findGroups, suggestName } from '../utils/connectorGroups'
-import { templateRule, ruleIsEmpty, describeRule } from '../utils/templateRules'
+import { templateRule, ruleIsEmpty, describeRule, ruleFor } from '../utils/templateRules'
 
 const mono = { fontFamily: 'monospace' }
 const lc = s => String(s || '').toLowerCase()
@@ -48,9 +48,20 @@ export default function ConnectorsPane({ posRef, onOpenConnectors }) {
     .filter(x => x.n <= Math.max(2, Math.ceil(templateParts(x.c).length / 2)))
     .sort((a, b) => a.n - b.n || String(a.c.Name).localeCompare(String(b.c.Name)))
     .slice(0, 3), [etCollections, have])
+  // Precedent from this project (type by type): the positions built like this one that
+  // have no template yet, and the rule that picks them out exactly, if there is one.
   const sameAs = useMemo(() => (have.length
-    ? (findGroups(groups.sigs).find(g => g.positions.includes(posRef))?.positions || []).filter(p => p !== posRef)
-    : []), [groups.sigs, have, posRef])
+    ? (findGroups(groups.sigs).find(g => g.positions.includes(posRef))?.positions || [])
+      .filter(p => p !== posRef && !(groups.members.get(p)?.templates || []).length)
+    : []), [groups, have, posRef])
+  const suggestion = useMemo(() => {
+    if (!have.length) return null
+    const positions = [posRef, ...sameAs]
+    const found = ruleFor(positions, groups.scoped.map(pt => pt.PositionTypeRef), groups.recOf)
+    const rule = found?.exact && positions.length > 1 ? found.rule : null
+    return { positions, rule, name: suggestName(have, rule) }
+  }, [have, sameAs, posRef, groups])
+  const [tplName, setTplName] = useState(null)
 
   // Changing the template changes every position on it: ask, naming them.
   function askTemplateChange(collection, parts, title) {
@@ -65,9 +76,10 @@ export default function ConnectorsPane({ posRef, onOpenConnectors }) {
     askTemplateChange(current, templateParts(current).filter(p => lc(p.ref) !== ref), `Take ${ing.ElementTypeRef || ing.slotLabel} out of ${current.Name}`)
   }
 
-  async function makeTemplate() {
-    const name = window.prompt(`Name a template from ${posRef}'s connectors`, suggestName(have))?.trim()
-    if (name) await makeTemplateFromGroup(name, have, [posRef])
+  async function makeTemplate(positions) {
+    const name = (tplName ?? suggestion.name).trim() || suggestion.name
+    await makeTemplateFromGroup(name, have, positions, { rule: positions.length > 1 ? suggestion.rule : null })
+    setTplName(null)
   }
 
   const how = current
@@ -142,20 +154,33 @@ export default function ConnectorsPane({ posRef, onOpenConnectors }) {
               ))}
             </div>
           )}
-          {sameAs.length > 0 && (
-            <div className="mb-2">
-              <span className="text-muted">Same connectors as </span>
-              {sameAs.map((p, i) => (
-                <span key={p}>{i > 0 && ', '}
-                  <Button variant="link" size="sm" className="p-0 align-baseline" style={{ fontSize: 11 }} onClick={() => setActivePosition(p)}>{p}</Button>
-                </span>
-              ))}
+          {suggestion && (
+            <div className="p-2 rounded mb-2" style={{ background: '#f8f9fa', border: '1px solid #dee2e6' }} data-testid="suggested-template">
+              <div className="fw-semibold mb-1" style={{ fontSize: 10 }}>New template from {posRef}</div>
+              <Form.Control size="sm" value={tplName ?? suggestion.name} onChange={e => setTplName(e.target.value)}
+                aria-label="Template name" style={{ fontSize: 11 }} />
+              {sameAs.length > 0 && (
+                <div className="mt-1">
+                  <span className="text-muted">Built the same way, no template yet: </span>
+                  {sameAs.map((p, i) => (
+                    <span key={p}>{i > 0 && ', '}
+                      <Button variant="link" size="sm" className="p-0 align-baseline" style={{ fontSize: 11 }} onClick={() => setActivePosition(p)}>{p}</Button>
+                    </span>
+                  ))}
+                  <div className="text-muted" style={{ fontSize: 10 }}>
+                    {suggestion.rule ? <>Applies by rule: {describeRule(suggestion.rule)}</> : <>Pinned to them (no rule picks out exactly these)</>}
+                  </div>
+                </div>
+              )}
+              <div className="d-flex gap-1 mt-1 flex-wrap">
+                {sameAs.length > 0 && (
+                  <Button size="sm" variant="primary" className="py-0" style={{ fontSize: 10 }} data-testid="make-template-group"
+                    onClick={() => makeTemplate(suggestion.positions)}>Create for all {suggestion.positions.length}</Button>
+                )}
+                <Button size="sm" variant={sameAs.length ? 'outline-secondary' : 'primary'} className="py-0" style={{ fontSize: 10 }} data-testid="make-template"
+                  onClick={() => makeTemplate([posRef])}>{sameAs.length ? `Only ${posRef}` : `Create for ${posRef}`}</Button>
+              </div>
             </div>
-          )}
-          {have.length > 0 && (
-            <Button size="sm" variant="outline-secondary" className="py-0" style={{ fontSize: 10 }} onClick={makeTemplate} data-testid="make-template">
-              Make a template from {posRef}
-            </Button>
           )}
           {excludedFrom.length > 0 && (
             <div className="text-muted mt-2" style={{ fontSize: 10 }}>
