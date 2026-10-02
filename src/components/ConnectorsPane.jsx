@@ -168,6 +168,8 @@ export default function ConnectorsPane({ posRef, onOpenConnectors }) {
               <div className="fw-semibold mb-1" style={{ fontSize: 10 }}>New template from {posRef}</div>
               <Form.Control size="sm" value={tplName ?? suggestion.name} onChange={e => setTplName(e.target.value)}
                 aria-label="Template name" style={{ fontSize: 11 }} />
+              {/* What Make template assumes, said before you press it. */}
+              <Assumed have={have} suggestion={suggestion} posRef={posRef} />
               {/* No questions: the positions built the same way join it too, and from then on
                   any position that ends up built this way joins it by itself. */}
               <div className="d-flex gap-1 mt-1">
@@ -199,8 +201,10 @@ export default function ConnectorsPane({ posRef, onOpenConnectors }) {
           <Form.Label className="fw-semibold mb-1">Name</Form.Label>
           <Form.Control size="sm" value={withRule?.name || ''} aria-label="New template name"
             onChange={e => setWithRule(w => ({ ...w, name: e.target.value }))} />
-          <div className="mt-2 mb-1" style={{ fontFamily: 'monospace', fontSize: 11 }}>{describeParts(have)}</div>
+          <div className="mt-2 mb-1 text-muted" style={{ fontSize: 11 }}>Make template would assume:</div>
+          <Assumed have={have} suggestion={suggestion} posRef={posRef} />
           <Form.Label className="fw-semibold mt-2 mb-1">Applies to positions that match</Form.Label>
+          {suggestion?.rule && <div className="text-muted mb-1" style={{ fontSize: 11 }}>Filled in with the assumed rule: change it, add to it, or remove it.</div>}
           {withRule && (
             <RuleBuilder rule={withRule.rule} columns={TEMPLATE_RULE_COLUMNS} valueOptions={{ Tags: tagOptions }} minConditions={0}
               newCondition={{ column: 'Tags', op: 'equals', value: '' }}
@@ -241,5 +245,30 @@ export default function ConnectorsPane({ posRef, onOpenConnectors }) {
         </Modal.Footer>
       </Modal>
     </div>
+  )
+}
+
+/**
+ * What a new template from this position assumes (asked for at the point of creation):
+ * its parts are exactly this position's connectors, and it applies by the rule that picks
+ * out the positions built the same way, or, with none, is pinned to them.
+ */
+function Assumed({ have, suggestion, posRef }) {
+  if (!suggestion) return null
+  const others = suggestion.positions.filter(p => p !== posRef)
+  return (
+    <ul className="mb-0 mt-1 ps-3" style={{ fontSize: 11 }} data-testid="assumed">
+      <li><span className="text-muted">Parts: exactly {posRef}'s connectors, </span><span style={{ fontFamily: 'monospace' }}>{describeParts(have)}</span></li>
+      <li>
+        <span className="text-muted">Applies to: </span>
+        {suggestion.rule
+          ? <>positions where <strong>{describeRule(suggestion.rule)}</strong></>
+          : <>pinned to {suggestion.positions.join(', ')}</>}
+        {others.length > 0
+          ? <span className="text-muted"> ({others.length} other{others.length === 1 ? '' : 's'} built the same way, with no template yet)</span>
+          : <span className="text-muted"> (no other position is built the same way)</span>}
+      </li>
+      <li className="text-muted">Positions built exactly like it later join it by themselves</li>
+    </ul>
   )
 }

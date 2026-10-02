@@ -117,6 +117,8 @@ describe('the drawer\'s Connectors tab, for one position', () => {
     setup({ etCollections: [], connectorPins: {} })
     render(<ConnectorsPane posRef="A02" />)
     const card = screen.getByTestId('suggested-template')
+    expect(within(card).getByTestId('assumed')).toHaveTextContent('Parts: exactly A02\'s connectors')
+    expect(within(card).getByTestId('assumed')).toHaveTextContent(/Applies to: (pinned to A02, A03|positions where)/)
     await act(async () => { fireEvent.click(within(card).getByTestId('make-template')) })
     const made = useStore.getState().etCollections[0]
     const pins = useStore.getState().connectorPins[made.CollectionId] || []
