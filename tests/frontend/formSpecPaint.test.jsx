@@ -221,6 +221,39 @@ test('TKJTDE: ⋯ shows and hides the other Form columns', async () => {
   expect(screen.getByTestId('form-raw')).toHaveTextContent(/Notes\s*white finish/)
 })
 
+test('S3JLGL: Detach with the painter open closes it, and the open painter does not write the Form back', async () => {
+  useStore.setState({ formCaptures: null, importDraft: {
+    version: 1, step: 'review', source: { name: 'form.xlsx', sheet: 'S' },
+    map: { pt: '', code: 'ProductCode', mfr: 'ManufacturerName', exclude: '', acc: '', context: [] },
+    rules: {}, assignments: {}, resolutions: [], refOverrides: {}, dirStats: { forward: 0, backward: 0 }, stagedRefs: [], keptSeparate: [],
+    rows: [{ id: 0, rawText: 'QC51', positionType: 'C02', manufacturer: 'iGuzzini', context: {}, overrides: {}, noteOverride: {}, confirmed: false }],
+  } })
+  render(<FormSpecPane posRef="C02" />)
+  await screen.findByTestId('compact-painter')
+  await act(async () => { await useStore.getState().detachForm() })
+  await waitFor(() => expect(screen.queryByTestId('compact-painter')).toBeNull())
+  await act(async () => { await new Promise(r => setTimeout(r, 1300)) })   // past the draft save debounce
+  expect(useStore.getState().importDraft).toBeNull()
+  expect(screen.getByTestId('paint-position')).toHaveTextContent('Load the Form')
+})
+
+test('44VCYZ: a code still needs an ElementType; the known ones are compared with the recipe anyway, and the chip counts only the new one', async () => {
+  useStore.setState({ formCaptures: { version: 1, byPosition: { C03: [{ elementTypeRef: 'ET-PS-03', code: 'QC52' }] } }, importDraft: {
+    version: 1, step: 'review', source: { name: 'form.xlsx', sheet: 'S' },
+    map: { pt: '', code: 'ProductCode', mfr: 'ManufacturerName', exclude: '', acc: '', context: [] },
+    rules: {}, assignments: {}, resolutions: [], refOverrides: {}, dirStats: { forward: 0, backward: 0 }, stagedRefs: [], keptSeparate: [],
+    rows: [{ id: 0, rawText: 'QC50 QC51', positionType: 'C01', manufacturer: 'iGuzzini', context: {}, overrides: {}, noteOverride: {}, confirmed: false }],
+  } })
+  const st = positionPaintStatus(useStore.getState().importDraft, 'C01', { knows: (m, c) => c === 'QC50' })
+  expect(st.newCodes).toBe(1)
+  render(<FormSpecPane posRef="C01" />)
+  fireEvent.click(screen.getByTestId('paint-position'))          // close the painter
+  await waitFor(() => expect(screen.queryByTestId('compact-painter')).toBeNull())
+  expect(screen.getByTestId('paint-status')).toHaveTextContent('1 code needs an ElementType')
+  expect(screen.getByText('ET-PS-01')).toBeInTheDocument()       // QC50's ElementType, compared with the recipe
+  expect(screen.getByText('already an ElementType — add it')).toBeInTheDocument()
+})
+
 test('4MYUQ7: Detach takes the Form off the whole project, session included', async () => {
   useStore.setState({ importDraft: { rows: [{ id: 0, rawText: 'QC50', positionType: 'C01' }] }, formCaptures: { byPosition: { C01: [{ elementTypeRef: 'ET-PS-01', code: 'QC50' }] } } })
   await useStore.getState().detachForm()

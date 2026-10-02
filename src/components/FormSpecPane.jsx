@@ -222,7 +222,7 @@ const WHY = {
   reuse:  'the same product elsewhere in the spec',
 }
 
-export default function FormSpecPane({ posRef, embedded = false }) {
+export default function FormSpecPane({ posRef, embedded = false, inDrawer = false }) {
   const recipes = useStore(s => s.recipes)
   const psRows = useStore(s => s.psRows)
   const elementTypes = useStore(s => s.elementTypes)
@@ -263,11 +263,13 @@ export default function FormSpecPane({ posRef, embedded = false }) {
   const formChanges = usePositionFormImpact(posRef)
   const applyFormChange = useStore(s => s.applyFormChange)
   const [swapPick, setSwapPick] = useState({})     // toEt → the ElementType chosen to replace
-  const paintSt = positionPaintStatus(importDraft, posRef, { buildRefMap, targetFor })
+  const paintSt = positionPaintStatus(importDraft, posRef, { buildRefMap, targetFor, knows: (m, c) => !!findProductET(psRows, m, c) })
   const draftHasRows = !['absent', 'noForm'].includes(paintSt.state)
   // Codes the loaded Form gives here that have no ElementType yet (not saved to the position).
   const draftNewCodes = paintSt.state === 'todo' ? (paintSt.newCodes || paintSt.unconfirmed || 0) : 0
-  const paneStyle = { width: 340, flexShrink: 0, overflowY: 'auto' }
+  // In the builder's right drawer (K3LGUL) the drawer gives the width and the edge.
+  const paneStyle = inDrawer ? { flex: 1, minWidth: 0, overflowY: 'auto' } : { width: 340, flexShrink: 0, overflowY: 'auto' }
+  const paneClass = inDrawer ? 'px-2 pt-2' : 'border-start ps-3'
   // After painting this position: show what is no longer in the Form (to remove), if any.
   const paintBar = embedded ? null : (
     <FormPaintBar posRef={posRef} open={painting} onOpenChange={setPainting} onStaged={() => {
@@ -282,7 +284,13 @@ export default function FormSpecPane({ posRef, embedded = false }) {
     return next
   })
 
-  const captured = formCaptures?.byPosition?.[posRef] ?? []
+  // Not saved here yet (a code still needs an ElementType): the codes the Product Spec
+  // already knows are compared with the recipe all the same (44VCYZ).
+  const draftKnown = useMemo(() => (formCaptures?.byPosition?.[posRef] ? [] : (paintSt.formRows || []).flatMap(r =>
+    String(r.rawText || '').split(/\s+/).filter(Boolean).map(code => ({ code, manufacturer: r.manufacturer || '', elementTypeRef: findProductET(psRows, r.manufacturer, code), formRef: r.positionType }))
+      .filter(e => e.elementTypeRef))
+    .filter((e, i, a) => a.findIndex(x => x.elementTypeRef === e.elementTypeRef) === i)), [formCaptures, posRef, paintSt.formRows, psRows])
+  const captured = formCaptures?.byPosition?.[posRef] ?? draftKnown
   const context = formCaptures?.contextByPosition?.[posRef] ?? {}
 
   /**
@@ -425,7 +433,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
     // and paint this position. The full Import is for a project starting from nothing.
     if (psRows.some(r => String(r.ProductCode || r.productCode || '').trim())) {
       return (
-        <div className="border-start ps-3" style={paneStyle} data-painting={painting || undefined}>
+        <div className={paneClass} style={paneStyle} data-painting={painting || undefined}>
           <SectionLabel>Form spec</SectionLabel>
           {diffBlock}
           {paintBar}
@@ -438,7 +446,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
       )
     }
     return (
-      <div className="border-start ps-3" style={paneStyle} data-painting={painting || undefined}>
+      <div className={paneClass} style={paneStyle} data-painting={painting || undefined}>
         <SectionLabel>Form spec</SectionLabel>
         {diffBlock}
         {paintBar}
@@ -463,7 +471,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
   // A position with ONLY pending products is not a position the Form is silent about.
   if (formEts.length === 0 && result.orphaned.length === 0 && pending.length === 0) {
     return (
-      <div className="border-start ps-3" style={paneStyle} data-painting={painting || undefined}>
+      <div className={paneClass} style={paneStyle} data-painting={painting || undefined}>
         <div className="d-flex align-items-center gap-1">
           <SectionLabel className="mb-0">Form spec</SectionLabel>
           <span className="ms-auto">
@@ -551,7 +559,7 @@ export default function FormSpecPane({ posRef, embedded = false }) {
   const allPresent = missing.length === 0 && formEts.length > 0 && waitingEt === 0
 
   return (
-    <div className="border-start ps-3" style={paneStyle} data-painting={painting || undefined}>
+    <div className={paneClass} style={paneStyle} data-painting={painting || undefined}>
       {/* Where this came from */}
       <div className="d-flex align-items-center gap-1 mb-1">
         <SectionLabel className="mb-0">Form spec</SectionLabel>

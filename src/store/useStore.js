@@ -507,6 +507,9 @@ const useStore = create((set, get) => ({
   // Unexported changes brought back from the last session on open: { n } (builder notice).
   restoredNotice: null,
   /** Builder: "shared with" on every row, not only wrappers (5GLMMQ). Remembered in this browser. */
+  // Show IsDeleted rows in recipes (DD66AT: toggled from the Recipe actions menu).
+  showDeleted: false,
+  toggleShowDeleted() { set({ showDeleted: !get().showDeleted }) },
   showSharedEverywhere: (() => { try { return localStorage.getItem('show_shared_everywhere') === '1' } catch { return false } })(),
   toggleSharedEverywhere() {
     const on = !get().showSharedEverywhere
@@ -534,6 +537,9 @@ const useStore = create((set, get) => ({
   // screen's useState, so Back or the Review hand-off destroyed it silently. Saved
   // on a debounce, offered as "Resume?", cleared once staging lands the work.
   importDraft: null,
+  // Bumped by Detach: an import screen still open (the painter, a hidden auto-save) holds
+  // the old Form in memory and must not write it back (S3JLGL).
+  formGen: 0,
 
   // A one-shot screen request from deep in the tree (App consumes it). Mirrors
   // pendingReviewRefs — the pane is nested too far to reach App's navigateTo.
@@ -1752,6 +1758,15 @@ const useStore = create((set, get) => ({
    * recipe lives on C01r). Without this the import's knowledge dies with the
    * screen — rows added from the Form carry `_origin:'form'` in memory only.
    */
+  /** Forget what was saved for these positions (their Form rows changed): saved afresh. */
+  async dropFormCaptures(posRefs = []) {
+    const fc = get().formCaptures
+    if (!fc || !posRefs.length) return
+    const byPosition = { ...(fc.byPosition || {}) }
+    for (const p of posRefs) delete byPosition[p]
+    await get().saveFormCaptures({ ...fc, byPosition })
+  },
+
   async saveFormCaptures(captures) {
     const { projectId } = get()
     set({ formCaptures: captures })
@@ -1890,6 +1905,7 @@ const useStore = create((set, get) => ({
    * Recipes and the Product Spec are untouched.
    */
   async detachForm() {
+    set({ formGen: get().formGen + 1 })
     await get().clearFormCaptures()
     await get().clearImportDraft()
   },

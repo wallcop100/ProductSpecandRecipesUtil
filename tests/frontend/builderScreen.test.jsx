@@ -34,21 +34,23 @@ describe('the Add panel', () => {
     onBackToSetup={vi.fn()} onOpenProductSpec={vi.fn()} onOpenTemplateEditor={vi.fn()}
     onOpenCodeImport={vi.fn()} onOpenConnectors={vi.fn()} />)
 
-  test('one search box over every source; All stacks them', () => {
+  test('K3LGUL: the drawer opens on the Form spec; no All, Templates or Favourites', () => {
+    localStorage.removeItem('builderDrawer')
     draw()
-    expect(screen.getByLabelText('Search to add')).toBeInTheDocument()
-    for (const l of ['All', 'ElementTypes', 'Templates', 'Favourites', 'Positions like this one']) {
-      expect(within(screen.getByRole('group', { name: 'Show' })).getByRole('button', { name: l })).toBeInTheDocument()
-    }
-    // the sources no longer carry search boxes of their own
-    expect(screen.queryByPlaceholderText('Search templates…')).toBeNull()
-    expect(screen.queryByPlaceholderText('Search elements…')).toBeNull()
+    const tabs = within(screen.getByRole('group', { name: 'Show' }))
+    for (const l of ['Form spec', 'ElementTypes', 'Positions like this one']) expect(tabs.getByRole('button', { name: l })).toBeInTheDocument()
+    expect(tabs.queryByRole('button', { name: 'All' })).toBeNull()
+    expect(tabs.queryByRole('button', { name: 'Templates' })).toBeNull()
+    expect(tabs.queryByRole('button', { name: 'Favourites' })).toBeNull()
+    expect(screen.getByTestId('drawer-form-hint')).toBeInTheDocument()        // no position open
+    expect(screen.queryByLabelText('Search to add')).toBeNull()                // search is for the add tabs
   })
 
-  test('an icon shows one source alone', () => {
+  test('an add tab shows one search box', () => {
     draw()
-    fireEvent.click(within(screen.getByRole('group', { name: 'Show' })).getByRole('button', { name: 'Templates' }))
-    expect(screen.getByText(/No templates yet/)).toBeInTheDocument()
+    fireEvent.click(within(screen.getByRole('group', { name: 'Show' })).getByRole('button', { name: 'ElementTypes' }))
+    expect(screen.getByLabelText('Search to add')).toBeInTheDocument()
+    expect(screen.queryByPlaceholderText('Search elements…')).toBeNull()
   })
 })
 
@@ -156,4 +158,53 @@ describe('coming from a By-position import', () => {
     fireEvent.click(screen.getByRole('button', { name: /Next position/ }))
     expect(onNext).toHaveBeenCalled()
   })
+})
+
+describe('toolbars (96KPJ5, XZ3UBB, M7DYP4, A8GNSJ, DD66AT, B3DGQT, AFEHZM)', () => {
+  test('top bar: Recipes + Product Spec; ElementTypes, Form import and Connectors in ⋮; no deleted toggle', async () => {
+    const openPS = vi.fn(), openImport = vi.fn()
+    render(<BuilderScreen onBackToSetup={vi.fn()} onOpenProductSpec={openPS} onOpenTemplateEditor={vi.fn()}
+      onOpenCodeImport={openImport} onOpenConnectors={vi.fn()} />)
+    expect(screen.getByTestId('view-recipes')).toHaveTextContent('Recipes')
+    fireEvent.click(screen.getByTestId('open-product-spec'))
+    expect(openPS).toHaveBeenCalled()
+    expect(screen.queryByTitle('Import product codes from a Form template')).toBeNull()
+    expect(screen.queryByTitle('Connectors — templates and the coverage matrix')).toBeNull()
+    expect(screen.queryByTitle('Show IsDeleted rows')).toBeNull()
+    fireEvent.click(screen.getByTitle('More'))
+    fireEvent.click(await screen.findByText('Browse ElementTypes'))
+    expect(useStore.getState().rootView).toBe('elements')
+  })
+
+  test('Recipe actions: connectors, IsDeleted rows and apply a template; shared toggle fills blue', async () => {
+    const { default: PositionRecipeEditor } = await import('../../src/components/PositionRecipeEditor.jsx')
+    const openConn = vi.fn()
+    useStore.setState({ showDeleted: false, showSharedEverywhere: false })
+    render(<PositionRecipeEditor posRef="C01r" onOpenConnectors={openConn} />)
+    expect(screen.getByTestId('shared-toggle').className).toMatch(/outline-secondary/)
+    fireEvent.click(screen.getByTestId('shared-toggle'))
+    expect(screen.getByTestId('shared-toggle').className).toMatch(/btn-primary/)
+    fireEvent.click(screen.getByLabelText('Recipe actions'))
+    fireEvent.click(await screen.findByText('Connectors for this PositionType'))
+    expect(openConn).toHaveBeenCalledWith('C01r')
+    fireEvent.click(screen.getByLabelText('Recipe actions'))
+    fireEvent.click(await screen.findByTestId('toggle-deleted'))
+    expect(useStore.getState().showDeleted).toBe(true)
+    fireEvent.click(screen.getByLabelText('Recipe actions'))
+    fireEvent.click(await screen.findByTestId('apply-template'))
+    expect(await screen.findByText('Apply a template to C01r')).toBeInTheDocument()
+  })
+})
+
+test('E2H3QX: a missing spec says which positions use it, and where', async () => {
+  const { default: ETSpecEditor } = await import('../../src/components/ETSpecEditor.jsx')
+  const open = vi.fn()
+  useStore.setState({ psRows: [], elementTypes: [], recipes: [
+    { _id: 'a', PositionTypeRef: 'A02', ContextType: 'PositionType', ContextRef: 'A02', ElementTypeRef: 'ET-LIN-CLIP-02' },
+    { _id: 'b', PositionTypeRef: 'A05', ContextType: 'ElementType', ContextRef: 'ET-LIN-03', ElementTypeRef: 'ET-LIN-CLIP-02' },
+  ] })
+  render(<ETSpecEditor selectedRef="ET-LIN-CLIP-02" missingETs={['ET-LIN-CLIP-02']} onOpenPosition={open} />)
+  expect(screen.getByTestId('missing-spec-uses')).toHaveTextContent('Used by A02, A05 (inside ET-LIN-03)')
+  fireEvent.click(screen.getByRole('button', { name: 'A05' }))
+  expect(open).toHaveBeenCalledWith('A05')
 })

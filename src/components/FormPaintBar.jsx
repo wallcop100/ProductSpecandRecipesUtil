@@ -7,6 +7,7 @@ import IconButton from './IconButton'
 import ProductCodeImportScreen from '../screens/ProductCodeImportScreen'
 import { positionPaintStatus } from '../utils/formPositions'
 import { buildRefMap, targetFor } from '../utils/ptResolve'
+import { findProductET } from '../utils/productCodes'
 
 const LABEL = {
   noForm: null,
@@ -34,10 +35,15 @@ export default function FormPaintBar({ posRef, open = false, onOpenChange = () =
   // Opened on a Form already loaded (not to load one): a re-save on opening keeps it open.
   const onLoaded = useRef(false)
   const [allCols, setAllCols] = useState(false)    // the Form's other columns, behind ⋯
-  const st = positionPaintStatus(importDraft, posRef, { buildRefMap, targetFor })
+  const psRows = useStore(s => s.psRows)
+  const st = positionPaintStatus(importDraft, posRef, { buildRefMap, targetFor, knows: (m, c) => !!findProductET(psRows, m, c) })
   // On each position: the painter is open, inline, when it has Form rows to confirm;
   // otherwise closed (known codes save themselves, below).
   useEffect(() => { setOpen(st.state === 'todo') }, [posRef])   // eslint-disable-line react-hooks/exhaustive-deps
+  // Detached (for the whole project): the painter closes with it (S3JLGL).
+  const formGen = useStore(s => s.formGen)
+  const seenGen = useRef(formGen)
+  useEffect(() => { if (formGen !== seenGen.current) { seenGen.current = formGen; setOpen(false) } }, [formGen])   // eslint-disable-line react-hooks/exhaustive-deps
   // A Form added as a whole (not position by position) still counts as added here.
   const state = st.state === 'ready' && formCaptures?.byPosition?.[posRef] ? 'added' : st.state
   const label = LABEL[state]

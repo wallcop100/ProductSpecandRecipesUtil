@@ -128,6 +128,11 @@ export default function App() {
           <ProductSpecScreen
             scrollToRef={psScrollToRef}
             onOpenCodeImport={() => openCodeImport('product-spec')}
+            onOpenPosition={ref => {
+              setPsScrollToRef(null)
+              useStore.getState().setActivePosition(ref)
+              navigateTo('builder')
+            }}
             onBack={() => {
               setPsScrollToRef(null)
               navigateTo('builder')

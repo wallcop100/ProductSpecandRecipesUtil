@@ -299,7 +299,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   const capturable = useMemo(() => capturableColumns(headers, map), [headers, map])
 
   /** The rows the mapping selects, in queue order. */
-  const buildRows = useCallback(() => rawRows
+  const buildRowsFrom = (raw, cols = capturable) => raw
     .filter(r => !(map.exclude && isExcluded(r[map.exclude])))
     // The Accessories column (when mapped) is more codes for the same position.
     .map(r => ({ r, text: joinAccessories(r[map.code], map.acc ? r[map.acc] : null) }))
@@ -308,11 +308,12 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       ...makeRow(i, text, {
         positionType: String(r[map.pt] ?? '').trim(),
         manufacturer: String(r[map.mfr] ?? '').trim(),
-        context: captureContext(r, capturable),
+        context: captureContext(r, cols),
       }),
       // Where the Accessories text starts: codes after it are extras by default.
       accFrom: accessoriesFrom(r[map.code], text),
-    })), [rawRows, map, capturable])
+    }))
+  const buildRows = useCallback(() => buildRowsFrom(rawRows), [rawRows, map, capturable])   // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
    * Before reviewing a single code, settle where each Form ref's recipe belongs.
@@ -388,23 +389,28 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   /** Only from `resolve` onward: earlier steps still need the workbook itself. */
   const draftable = rows.length > 0 && (step === 'resolve' || step === 'review') && !staged
 
+  const draftRow = r => ({
+    id: r.id, rawText: r.rawText, positionType: r.positionType, manufacturer: r.manufacturer,
+    context: r.context, overrides: r.overrides, noteOverride: r.noteOverride, confirmed: r.confirmed,
+    ...(r.autoConfirmed ? { autoConfirmed: true } : {}),
+    accFrom: r.accFrom ?? null, leadCode: r.leadCode ?? null, pre: r.pre || null,
+  })
   const draftFromState = useCallback(() => ({
     version: 1,
     source: { ...(source || {}), sheet },
     step, map, rules, assignments, resolutions, refOverrides, dirStats, compareBase, stagedRefs,
     keptSeparate: [...keptSeparate],
-    rows: rows.map(r => ({
-      id: r.id, rawText: r.rawText, positionType: r.positionType, manufacturer: r.manufacturer,
-      context: r.context, overrides: r.overrides, noteOverride: r.noteOverride, confirmed: r.confirmed,
-      ...(r.autoConfirmed ? { autoConfirmed: true } : {}),
-      accFrom: r.accFrom ?? null, leadCode: r.leadCode ?? null, pre: r.pre || null,
-    })),
+    rows: rows.map(draftRow),
   }), [source, sheet, step, map, rules, assignments, resolutions, refOverrides, dirStats, keptSeparate, rows, compareBase, stagedRefs])
+
+  // The Form this screen opened with; once it is detached, nothing here writes it back.
+  const formGen = useRef(useStore.getState().formGen)
+  const detached = () => useStore.getState().formGen !== formGen.current
 
   // Debounced: painting a token must not write a pref on every keystroke.
   useEffect(() => {
     if (!draftable) return
-    const t = setTimeout(() => { saveImportDraft(draftFromState()) }, 1000)
+    const t = setTimeout(() => { if (!detached()) saveImportDraft(draftFromState()) }, 1000)
     return () => clearTimeout(t)
   }, [draftable, draftFromState, saveImportDraft])
 
@@ -450,6 +456,57 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     setStep('review')   // never back to pick/map: no workbook (a draft saved at the old resolve step lands here too)
   }
 
+  /**
+   * Refresh from the Form file, changed on disk since this import was saved (S3JLGL follow-up):
+   * read it again with the same columns; a row whose text, PositionType and manufacturer are
+   * unchanged keeps what you did to it (confirms, code / note choices, main product), new or
+   * changed rows are read as on a first import. The copy before the refresh becomes the
+   * comparison, and positions whose rows changed are saved afresh.
+   */
+  async function refreshFromFile(token) {
+    const data = await readSheetFrom(token, sheet || null)
+    const cols = capturableColumns(data.headers, map)
+    const raw = buildRowsFrom(data.rows, cols)
+    const k = r => [r.positionType, r.manufacturer, r.rawText].map(x => String(x ?? '').trim().toLowerCase()).join('|')
+    const before = new Map(rows.map(r => [k(r), r]))
+    const { rows: known, ...stats } = applyKnownCodes(raw, master, styleLibrary)
+    const fresh = confirmInSpec(applyRules(applyRules(known, {}).map(prePaint), rules), rules, stats.byRow)
+    const built = applyRules(fresh.map(r => {
+      const o = before.get(k(r))
+      return o ? { ...r, overrides: o.overrides || {}, noteOverride: o.noteOverride || {}, confirmed: o.confirmed, autoConfirmed: o.autoConfirmed, leadCode: o.leadCode ?? null } : r
+    }), rules)
+    // Form refs whose rows changed: theirs is saved again.
+    const after = new Set(built.map(k))
+    const changed = new Set([...built.filter(r => !before.has(k(r))), ...rows.filter(r => !after.has(k(r)))]
+      .map(r => String(r.positionType ?? '').trim()))
+    const known_ = new Set(resolutions.map(r => String(r.formRef).toLowerCase()))
+    const added = map.pt ? resolveFormRefs(built.map(r => r.positionType).filter(f => !known_.has(String(f).trim().toLowerCase())), positionTypes) : []
+    const nextRes = [...resolutions, ...added]
+    setCompareBase({ name: `${source?.name || 'the Form'} (before refresh)`, rows: rows.map(diffRow) })
+    session.load({ rows: built, rules, assignments, refOverrides, keptSeparate, dirStats })
+    setResolutions(nextRes)
+    setStagedRefs(s => s.filter(f => !changed.has(f)))
+    setFilepath(token); setHeaders(data.headers); setRawRows(data.rows)
+    const meta = await fileMeta(token)
+    setSource(meta)
+    const compare = { name: `${source?.name || 'the Form'} (before refresh)`, rows: rows.map(diffRow) }
+    // Saved now: this screen may close before the debounced save would run.
+    await saveImportDraft({ ...draftFromState(), source: { ...(meta || {}), sheet }, rows: built.map(draftRow),
+      resolutions: nextRes, compareBase: compare, stagedRefs: stagedRefs.filter(f => !changed.has(f)) })
+    const refMap = map.pt ? buildRefMap(nextRes, refOverrides) : null
+    await useStore.getState().dropFormCaptures([...changed].map(f => (refMap ? targetFor(refMap, f) : f) || f))
+    return changed.size
+  }
+
+  // Embedded `refresh` (the builder, when the Form file changed): once the saved import is
+  // back, refresh it from the file, then say so.
+  const refreshed = useRef(false)
+  useEffect(() => {
+    if (!embedded?.refresh || refreshed.current || step !== 'review' || !rows.length) return
+    refreshed.current = true
+    refreshFromFile(embedded.refresh).then(n => embedded.onRefreshed?.(n), e => embedded.onRefreshed?.(null, e))
+  })   // eslint-disable-line react-hooks/exhaustive-deps
+
   /** Un-paint everything the spec matched, in one step. */
   function undoKnownPaint() {
     if (!preKnownRows) return
@@ -487,13 +544,20 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     if (rows.some(r => r.confirmed && !r.autoConfirmed) && !window.confirm('Start again from a spreadsheet? The painting and confirms on this import are dropped (anything already added to the Product Spec stays).')) return
     // The Form being replaced becomes what the new one is compared with.
     const base = rows.length ? { name: source?.name || 'the last import', rows: rows.map(diffRow) } : compareBase
-    await discardDraft()
+    // Pick first: cancelled, the loaded Form stays as it was (X4AN58). The saved import is
+    // not cleared here either: the new one overwrites it once it has rows, so Back while
+    // mapping the new sheet still leaves the old Form loaded.
+    const path = await window.electronAPI?.openXlsxDialog?.()
+    if (!path) return
+    setResumeDismissed(true)
     setCompareBase(base)
     setStagedRefs([]); setSelectedRefs(new Set())
     session.load({ rows: [] })
     setStaged(null); setExpandedId(null); setKnownStats(null); setPreKnownRows(null)
     setStep('pick')
-    handlePick()
+    try { await window.electronAPI?.rememberFormFile?.(projectId, path) } catch { /* not remembered */ }
+    setRemembered(null)
+    openToken(path)
   }
 
   // ---- review ---------------------------------------------------------------
@@ -1255,6 +1319,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     : panelEntries), [mode, panelEntries, selectedRefs])
   const [addingSel, setAddingSel] = useState(false)
   async function addSelectionAndBuild({ stay = false } = {}) {
+    if (detached()) return
     setAddingSel(true)
     try {
       const targets = await handleStage({ only: new Set(selectedRefs) })

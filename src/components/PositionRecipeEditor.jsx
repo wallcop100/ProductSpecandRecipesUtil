@@ -1,6 +1,6 @@
 import SaveTemplateModal from './SaveTemplateModal'
 import React, { useState, useEffect } from 'react'
-import { Button, Dropdown } from 'react-bootstrap'
+import { Button, Dropdown, Modal } from 'react-bootstrap'
 import useStore, { getRecipeForPosition } from '../store/useStore'
 import RecipeSection from './RecipeSection'
 import TagBadge from './TagBadge'
@@ -15,6 +15,7 @@ import ConnectorSuggestions from './ConnectorSuggestions'
 import RecipeErrorBanner from './RecipeErrorBanner'
 import FormSpecPane from './FormSpecPane'
 import ForkPositionModal from './ForkPositionModal'
+import TemplatePicker from './TemplatePicker'
 import { colorsForType, ICONS, ACTION_ICONS } from '../utils/entityStyle'
 
 // Group container-internal rows by ContextRef so each container gets a section
@@ -61,6 +62,9 @@ export default function PositionRecipeEditor({
   const rowClipboard = useStore(s => s.rowClipboard)
   const [pasteMsg, setPasteMsg] = useState(null)
   const [forking, setForking] = useState(false)
+  const [applyingTemplate, setApplyingTemplate] = useState(false)
+  const showDeletedRows = useStore(s => s.showDeleted)
+  const toggleShowDeleted = useStore(s => s.toggleShowDeleted)
   const [savingTemplate, setSavingTemplate] = useState(false)
 
   const ref = posRef
@@ -149,12 +153,20 @@ export default function PositionRecipeEditor({
             <Dropdown.Item disabled={count === 0} onClick={() => setSavingTemplate(true)}>
               <MaterialIcon name="bookmark_add" size={14} /> Save as template…
             </Dropdown.Item>
+            <Dropdown.Item onClick={() => setApplyingTemplate(true)} data-testid="apply-template">
+              <MaterialIcon name="bookmark" size={14} /> Apply a template…
+            </Dropdown.Item>
+            <Dropdown.Divider />
+            {onOpenConnectors && (
+              <Dropdown.Item onClick={() => onOpenConnectors(ref)}>
+                <MaterialIcon name="cable" size={14} /> Connectors for this PositionType
+              </Dropdown.Item>
+            )}
+            <Dropdown.Item onClick={toggleShowDeleted} data-testid="toggle-deleted">
+              <MaterialIcon name={showDeletedRows ? ACTION_ICONS.hideDeleted : ACTION_ICONS.showDeleted} size={14} /> {showDeletedRows ? 'Hide IsDeleted rows' : 'Show IsDeleted rows'}
+            </Dropdown.Item>
           </Dropdown.Menu>
         </Dropdown>
-        {onOpenConnectors && (
-          <IconButton variant="outline-secondary" bsSize="sm" style={{ fontSize: 11 }} icon="cable"
-            onClick={() => onOpenConnectors(ref)} title="Connectors for this PositionType" />
-        )}
         <PositionValidationBadge posRef={ref} size={16} showOk={count > 0} />
       </div>
 
@@ -220,10 +232,18 @@ export default function PositionRecipeEditor({
           </div>
         )}
       </div>
-      {/* Always rendered: with no Form attached it is the prompt to start stage ①. */}
-      <FormSpecPane posRef={ref} embedded={embedded} />
+      {/* In the builder the Form spec lives in the right drawer (K3LGUL); the Review
+          window has no drawer, so it keeps its own beside the recipe. */}
+      {embedded && <FormSpecPane posRef={ref} embedded />}
       </div>
 
+      <Modal show={applyingTemplate} onHide={() => setApplyingTemplate(false)} size="sm" scrollable>
+        <Modal.Header closeButton><Modal.Title style={{ fontSize: 14 }}>Apply a template to {ref}</Modal.Title></Modal.Header>
+        <Modal.Body className="p-0">
+          <TemplatePicker posRef={ref} activeTags={tags.map(t => t.name || t)} hasRows={count > 0}
+            onApply={() => setApplyingTemplate(false)} />
+        </Modal.Body>
+      </Modal>
       <ForkPositionModal show={forking} sourceRef={ref} onHide={() => setForking(false)} />
       <SaveTemplateModal show={savingTemplate} posRef={ref} name={name}
         onHide={saved => { setSavingTemplate(false); if (saved) flashPaste('Saved as a template — find it under Templates') }} />
