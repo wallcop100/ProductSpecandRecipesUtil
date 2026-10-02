@@ -1755,6 +1755,15 @@ const useStore = create((set, get) => ({
    * recipe lives on C01r). Without this the import's knowledge dies with the
    * screen — rows added from the Form carry `_origin:'form'` in memory only.
    */
+  /** Forget what was saved for these positions (their Form rows changed): saved afresh. */
+  async dropFormCaptures(posRefs = []) {
+    const fc = get().formCaptures
+    if (!fc || !posRefs.length) return
+    const byPosition = { ...(fc.byPosition || {}) }
+    for (const p of posRefs) delete byPosition[p]
+    await get().saveFormCaptures({ ...fc, byPosition })
+  },
+
   async saveFormCaptures(captures) {
     const { projectId } = get()
     set({ formCaptures: captures })
