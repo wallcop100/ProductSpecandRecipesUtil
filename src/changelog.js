@@ -7,6 +7,7 @@
  * line under the title.
  */
 export const CHANGELOG = [
+  { date: '2026-10-02', note: 'Fix (GHVUMD): a wrapper’s contents edit maker – code in place too, with the pencil for the Product Spec' },
   { date: '2026-10-01', note: 'Builder: the palette starts closed and no longer opens on every position (2NNZGY); click a row’s maker – code to edit both in place, the pencil still opens the Product Spec (UY8CQ5)' },
   { date: '2026-10-01', note: 'Builder: a toggle beside the Recipe actions ⋯ (category_search, lit while on) shows “shared with …” on every row and in wrapper contents, not only on wrappers (5GLMMQ); with a Form loaded, an empty position the Form asks nothing of has a grey dot, not red (F8T5XM); the Form painter says “codes already in the Product Spec” and “Save <position>’s Form products” (AHK54U); the category_search icon draws properly' },
   { date: '2026-10-01', note: 'Form (9GLX5N): with a Product Spec in place, “Teach the tool your dialect” no longer opens by itself, and the builder’s Form spec pane loads the Form and paints the position in place (the whole Import is a small link). The full guided import is for a project starting from nothing' },
