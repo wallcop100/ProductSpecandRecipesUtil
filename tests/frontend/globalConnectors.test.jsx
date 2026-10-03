@@ -49,11 +49,14 @@ describe('the shipped global templates JSON (n8n rewrites it)', () => {
         expect(['socket', 'plug', 'sr']).toContain(p.role)
         expect(p.code && p.label).toBeTruthy()
         expect(c.superseded[p.code]).toBeUndefined()
+        // the page's ref style: ET-<pins>PIN[-<variant>]-<SOCKET|PLUG>[-SR]
+        expect(p.ref).toMatch(/^ET-\dPIN(-[A-Z]+)?-(SOCKET|PLUG)(-SR)?$/)
       }
     }
     for (const x of c.combos) for (const k of x.of) expect(keys.has(k)).toBe(true)
     // one ElementType per part, and no two parts of one entry share a ref
-    for (const e of G.globalConnectors()) expect(new Set(e.parts.map(G.suggestRef)).size).toBe(e.parts.length)
+    for (const e of G.globalConnectors()) expect(new Set(e.parts.map(p => p.ref)).size).toBe(e.parts.length)
+    expect(new Set(c.templates.flatMap(t => [...t.site, ...t.driver].map(p => p.ref))).size).toBe(c.templates.flatMap(t => [...t.site, ...t.driver]).length)
   })
 })
 

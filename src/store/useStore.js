@@ -2569,7 +2569,7 @@ const useStore = create((set, get) => ({
       if (have) return { part, ref: have, action: 'reuse' }
       const old = live.find(r => supersededBy(r.ProductCode) === part.code)
       if (old) return { part, ref: old.ElementTypeRef || old.elementTypeRef, action: 'old', oldCode: old.ProductCode }
-      let ref = suggestRef(part)
+      let ref = part.ref || suggestRef(part)
       if (taken.has(ref.toLowerCase())) ref = `ET-CONN-WAGO-${part.code.replace(/[^0-9A-Z]+/gi, '-')}`
       taken.add(ref.toLowerCase())
       return { part, ref, action: 'create' }

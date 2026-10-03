@@ -37,7 +37,7 @@ function useFits() {
 }
 
 /**
- * WagoLibrary — the company's Wago templates (Kaizen page 101097), on the Connectors
+ * WagoLibrary — the company's Wago templates (Kaizen page 141527), on the Connectors
  * screen: open when the project has no templates, folded under "Add from library"
  * otherwise. Add makes the template this project's, with any ElementTypes it lacks.
  */

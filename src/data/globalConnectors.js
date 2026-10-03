@@ -1,8 +1,8 @@
 /**
  * globalConnectors.js — the company's Wago connector set-ups as GLOBAL connector templates.
  *
- * The data is globalTemplates.json (`connectors`), copied from Kaizen page 101097 (Lighting
- * Manufacturing - Wago plugs) and rewritten by an n8n job when the page changes; see
+ * The data is globalTemplates.json (`connectors`), copied from Kaizen page 141527 (Global
+ * Templates - PSR Tool; codes as on the Wago plugs page, 101097) and rewritten by an n8n job when the page changes; see
  * docs/global-connector-templates.md. Only the page's CURRENT parts ship; superseded codes
  * are listed so an existing project's old parts are recognised, never offered.
  *
@@ -40,7 +40,7 @@ export const globalConnector = key => globalConnectors().find(g => g.key === key
 export const sectionOf = part => (part.side === 'driver' ? INTERNAL : POSITION)
 
 /**
- * The ElementType ref a new part gets: ET-<pins>PIN[-<variant>]-<SOCKET|PLUG>[-SR]. A strain
+ * The ElementType ref a new part gets when the data names none (each part's `ref` wins): ET-<pins>PIN[-<variant>]-<SOCKET|PLUG>[-SR]. A strain
  * relief is named for its side, so the site and driver reliefs of one set never share a ref.
  */
 export function suggestRef(part) {

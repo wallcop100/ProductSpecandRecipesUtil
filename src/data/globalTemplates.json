@@ -1,10 +1,10 @@
 {
-  "_readme": "Global templates shipped with the app. Read and written by tools (n8n). Contract: docs/global-connector-templates.md. Keep each template's key stable; ship current parts only; list superseded codes under superseded (old: new). combos is the team's choice and is not on the Kaizen page.",
+  "_readme": "Global templates shipped with the app. Read and written by tools (n8n) from Kaizen page 141527. Contract: docs/global-connector-templates.md. Keep each template's key stable; ship current parts only; superseded codes are old: new.",
   "connectors": {
     "source": {
       "system": "Kaizen",
-      "pageId": 101097,
-      "title": "Lighting Manufacturing - Wago plugs",
+      "pageId": 141527,
+      "title": "Global Templates - PSR Tool",
       "syncedAt": "2026-10-03"
     },
     "manufacturer": "WAGO",
@@ -18,19 +18,22 @@
           {
             "code": "770-105",
             "role": "socket",
-            "label": "5-pin socket"
+            "label": "5-pin socket",
+            "ref": "ET-5PIN-SOCKET"
           }
         ],
         "driver": [
           {
             "code": "770-215",
             "role": "plug",
-            "label": "5-pin plug"
+            "label": "5-pin plug",
+            "ref": "ET-5PIN-PLUG"
           },
           {
             "code": "770-505/023-000",
             "role": "sr",
-            "label": "5-pin plug strain relief"
+            "label": "5-pin plug strain relief",
+            "ref": "ET-5PIN-PLUG-SR"
           }
         ]
       },
@@ -43,24 +46,28 @@
           {
             "code": "770-244",
             "role": "socket",
-            "label": "4-pin socket"
+            "label": "4-pin socket",
+            "ref": "ET-4PIN-SOCKET"
           },
           {
             "code": "770-504",
             "role": "sr",
-            "label": "4-pin socket strain relief"
+            "label": "4-pin socket strain relief",
+            "ref": "ET-4PIN-SOCKET-SR"
           }
         ],
         "driver": [
           {
             "code": "770-254",
             "role": "plug",
-            "label": "4-pin plug"
+            "label": "4-pin plug",
+            "ref": "ET-4PIN-PLUG"
           },
           {
             "code": "770-504/023-000",
             "role": "sr",
-            "label": "4-pin plug strain relief"
+            "label": "4-pin plug strain relief",
+            "ref": "ET-4PIN-PLUG-SR"
           }
         ]
       },
@@ -73,24 +80,28 @@
           {
             "code": "770-203",
             "role": "socket",
-            "label": "3-pin socket"
+            "label": "3-pin socket",
+            "ref": "ET-3PIN-SOCKET"
           },
           {
             "code": "770-503",
             "role": "sr",
-            "label": "3-pin socket strain relief"
+            "label": "3-pin socket strain relief",
+            "ref": "ET-3PIN-SOCKET-SR"
           }
         ],
         "driver": [
           {
             "code": "770-213",
             "role": "plug",
-            "label": "3-pin plug"
+            "label": "3-pin plug",
+            "ref": "ET-3PIN-PLUG"
           },
           {
             "code": "770-503/023-000",
             "role": "sr",
-            "label": "3-pin plug strain relief"
+            "label": "3-pin plug strain relief",
+            "ref": "ET-3PIN-PLUG-SR"
           }
         ]
       },
@@ -104,24 +115,28 @@
           {
             "code": "770-1102",
             "role": "socket",
-            "label": "2-pin DALI socket"
+            "label": "2-pin DALI socket",
+            "ref": "ET-2PIN-DALI-SOCKET"
           },
           {
             "code": "770-502/041-000",
             "role": "sr",
-            "label": "2-pin DALI socket strain relief"
+            "label": "2-pin DALI socket strain relief",
+            "ref": "ET-2PIN-DALI-SOCKET-SR"
           }
         ],
         "driver": [
           {
             "code": "770-1112",
             "role": "plug",
-            "label": "2-pin DALI plug"
+            "label": "2-pin DALI plug",
+            "ref": "ET-2PIN-DALI-PLUG"
           },
           {
             "code": "770-502/042-000",
             "role": "sr",
-            "label": "2-pin DALI plug strain relief"
+            "label": "2-pin DALI plug strain relief",
+            "ref": "ET-2PIN-DALI-PLUG-SR"
           }
         ]
       }
