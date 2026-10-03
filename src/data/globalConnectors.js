@@ -1,6 +1,8 @@
 /**
  * globalConnectors.js — the company's Wago connector set-ups as GLOBAL connector templates.
  *
+ * Where it lives and how n8n updates it: docs/global-connector-templates.md.
+ *
  * The data block at the bottom is copied from Kaizen page 101097 (Lighting Manufacturing -
  * Wago plugs) and is rewritten by an n8n job when the page changes: keep logic above the
  * markers and only plain data between them. Only the page's CURRENT parts ship; superseded
