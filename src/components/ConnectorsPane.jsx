@@ -4,6 +4,7 @@ import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import IconButton from './IconButton'
 import CellDetailPanel from './CellDetailPanel'
+import { WagoSuggestion } from './GlobalConnectors'
 import useConnectorGroups from './useConnectorGroups'
 import { templateParts, partsToIngredients, diffParts, diffSize, describeParts, findGroups, suggestName } from '../utils/connectorGroups'
 import { templateRule, ruleIsEmpty, describeRule, ruleFor, ruleMatchesRecord, TEMPLATE_RULE_COLUMNS } from '../utils/templateRules'
@@ -156,6 +157,7 @@ export default function ConnectorsPane({ posRef, onOpenConnectors }) {
           <div className="text-muted mb-1">
             {have.length ? <>No template for {posRef} yet.</> : <>No connectors here, and no template asks for any.</>}
           </div>
+          <WagoSuggestion posRef={posRef} />
           {nearest.length > 0 && (
             <div className="mb-2">
               <div className="fw-semibold" style={{ fontSize: 10 }}>Nearest templates</div>

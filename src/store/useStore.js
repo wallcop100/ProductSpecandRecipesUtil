@@ -13,7 +13,8 @@ import { proposeRecipe, proposalFromTemplate, proposalContext } from '../utils/r
 import { roleOf } from '../utils/recipePatterns.js'
 import { planFamilyMove } from '../utils/etSeed.js'
 import { loadReports, saveReports } from '../utils/bugReports.js'
-import { connectorSignature, templateParts, partsToIngredients, diffParts, isConnectorPart, DEFAULT_CONNECTOR_FAMILIES } from '../utils/connectorGroups.js'
+import { connectorSignature, templateParts, partsToIngredients, diffParts, isConnectorPart, DEFAULT_CONNECTOR_FAMILIES, sortParts, signatureKey } from '../utils/connectorGroups.js'
+import { globalConnector, suggestRef, partName, sectionOf, supersededBy, WAGO } from '../data/globalConnectors.js'
 import { templateRecords, templateRule, specificityScope } from '../utils/templateRules.js'
 
 /** _templateRecOf's cache: not state (no re-render), keyed on the arrays it reads. */
@@ -28,7 +29,7 @@ import { positionFamilyOf, ignoredPositionRefs } from '../utils/positionFamily.j
 import { alignmentGaps } from '../utils/specAlignment.js'
 import { planSwap, swapPatch } from '../utils/swapPlan.js'
 import { guessCollection, missingFamilies } from '../utils/collectionGuess.js'
-import { hasProductIdentity } from '../utils/productCodes.js'
+import { hasProductIdentity, findProductET } from '../utils/productCodes.js'
 import { deadPositionRefs, retirableElementTypes } from '../utils/deadPositions.js'
 import { familyOf } from '../utils/etRef.js'
 import { DIM_QTY_COMPONENTS, AUTO_CONTRACT_ITEMS } from '../utils/constants.js'
@@ -2548,6 +2549,76 @@ const useStore = create((set, get) => ({
     const saved = await get().createCollection(name || `${src.Name} (copy)`, ingredients.map(i => ({ ...i })), [], [], rule)
     if (saved && positions?.length) await get().pinPositions(saved.CollectionId, positions)
     return saved
+  },
+
+  /**
+   * planGlobalConnector(key) → { entry, parts: [{ part, ref, action: 'reuse'|'old'|'create' }], collection }
+   * What applying a global connector template (data/globalConnectors.js) would do here:
+   * reuse the ElementType already carrying each Wago code, else one carrying the code it
+   * superseded, else make one. `collection` is the project template with those parts, if
+   * there is one already.
+   */
+  planGlobalConnector(key) {
+    const entry = globalConnector(key)
+    if (!entry) return null
+    const { psRows, elementTypes, etCollections } = get()
+    const live = psRows.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
+    const taken = new Set(elementTypes.map(e => (e.ElementTypeRef || '').toLowerCase()))
+    const parts = entry.parts.map(part => {
+      const have = findProductET(psRows, WAGO, part.code)
+      if (have) return { part, ref: have, action: 'reuse' }
+      const old = live.find(r => supersededBy(r.ProductCode) === part.code)
+      if (old) return { part, ref: old.ElementTypeRef || old.elementTypeRef, action: 'old', oldCode: old.ProductCode }
+      let ref = suggestRef(part)
+      if (taken.has(ref.toLowerCase())) ref = `ET-CONN-WAGO-${part.code.replace(/[^0-9A-Z]+/gi, '-')}`
+      taken.add(ref.toLowerCase())
+      return { part, ref, action: 'create' }
+    })
+    const key2 = signatureKey(parts.map(p => ({ ref: p.ref, section: sectionOf(p.part), quantity: 1 })))
+    const collection = etCollections.find(c => signatureKey(templateParts(c)) === key2) || null
+    return { entry, parts, collection }
+  },
+
+  /**
+   * applyGlobalConnector(key, { posRefs, rule }) — make the global template this project's:
+   * new ElementTypes and Product Spec rows for the parts it lacks (one Undo step), the
+   * project template (or the one it already has), and `posRefs` pinned to it. `rule` is
+   * kept on a new template unless another template already has the same rule.
+   */
+  async applyGlobalConnector(key, { posRefs = [], rule = null } = {}) {
+    const plan = get().planGlobalConnector(key)
+    if (!plan) return null
+    const toCreate = plan.parts.filter(p => p.action === 'create')
+    if (toCreate.length) {
+      get()._pushHistory()
+      const family = get().connectorFamilies?.[0] || DEFAULT_CONNECTOR_FAMILIES[0]
+      for (const { part, ref } of toCreate) {
+        get().createElementType({ ref, name: partName(part), family })
+        get().addPSRow(ref, { Manufacturer: WAGO, ProductCode: part.code, ComponentDescription: partName(part) }, { recordHistory: false })
+      }
+    }
+    let collection = plan.collection
+    if (!collection) {
+      const parts = sortParts(plan.parts.map(p => ({ ref: p.ref, section: sectionOf(p.part), quantity: 1 })))
+      const same = rule && get().etCollections.some(c => JSON.stringify(templateRule(c)) === JSON.stringify(rule))
+      collection = await get().createCollection(plan.entry.name, partsToIngredients(parts), [], [], same ? null : rule)
+    }
+    if (collection && posRefs.length) await get().pinPositions(collection.CollectionId, posRefs)
+    return { collection, created: toCreate.map(p => p.ref), old: plan.parts.filter(p => p.action === 'old') }
+  },
+
+  /** Product Spec rows still on a superseded Wago code: [{ ref, code, to }]. */
+  supersededWagoParts() {
+    return get().psRows
+      .filter(r => (r.IsDeleted || r.isDeleted) !== 'Y' && supersededBy(r.ProductCode))
+      .map(r => ({ ref: r.ElementTypeRef || r.elementTypeRef, code: r.ProductCode, to: supersededBy(r.ProductCode) }))
+  },
+
+  /** Move those rows to the current code. The ElementTypes and recipes stay; one Undo step. */
+  upgradeSupersededWago(items) {
+    if (!items?.length) return
+    get()._pushHistory()
+    for (const { ref, to } of items) get().updatePSRow(ref, { ProductCode: to }, { recordHistory: false })
   },
 
   /**
