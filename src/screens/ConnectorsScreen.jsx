@@ -14,6 +14,7 @@ import useConnectorGroups from '../components/useConnectorGroups'
 import MaterialIcon from '../components/MaterialIcon'
 import { describeParts, suggestName, isConnectorPart } from '../utils/connectorGroups'
 import { ruleFor, templateRule, describeRule, ruleIsEmpty } from '../utils/templateRules'
+import { WagoLibrary, WagoUpgradeBanner, wagoNameOf } from '../components/GlobalConnectors'
 
 /**
  * ConnectorsScreen — dedicated screen for managing virtual ElementType Collections
@@ -33,6 +34,7 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
   const connectorFamilies = useStore(s => s.connectorFamilies)
   const setConnectorFamilies = useStore(s => s.setConnectorFamilies)
   const elementTypes = useStore(s => s.elementTypes)
+  const psRows = useStore(s => s.psRows)
   const groups = useConnectorGroups()
   const allFamilies = [...new Set(elementTypes.map(e => e.Family || e.family).filter(Boolean))].sort()
 
@@ -153,6 +155,8 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
         <Button variant="primary" size="sm" onClick={handleNew}>+ New Template</Button>
       </div>
 
+      <WagoUpgradeBanner />
+
       {/* Body: left panel + matrix */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
@@ -167,6 +171,7 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
           }}
           className="p-2"
         >
+          <WagoLibrary />
           <div className="small text-muted mb-2 px-1">Connector Templates</div>
           {etCollections.length === 0 && (
             <p className="text-muted small px-1">No templates yet.</p>
@@ -187,7 +192,10 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
                   marginBottom: 2,
                 }}
               >
-                <div className="fw-semibold" style={{ fontSize: 13 }}>{c.Name}</div>
+                <div className="fw-semibold" style={{ fontSize: 13 }}>
+                  {c.Name}
+                  {(() => { const w = wagoNameOf(c, psRows); return w && w !== c.Name ? <span className="badge rounded-pill text-bg-light border ms-1 fw-normal" style={{ fontSize: 9 }} data-testid="wago-pill" title="Its parts are this Wago template">{w}</span> : null })()}
+                </div>
                 <div style={{ fontSize: 11, color: '#6c757d' }}>
                   {groups.membersOf(c.CollectionId).length} position{groups.membersOf(c.CollectionId).length !== 1 ? 's' : ''} · {ings.length} part{ings.length !== 1 ? 's' : ''}
                   {!ruleIsEmpty(rule) && (
