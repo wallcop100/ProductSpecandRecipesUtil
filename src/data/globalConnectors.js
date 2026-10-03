@@ -1,12 +1,10 @@
 /**
  * globalConnectors.js — the company's Wago connector set-ups as GLOBAL connector templates.
  *
- * Where it lives and how n8n updates it: docs/global-connector-templates.md.
- *
- * The data block at the bottom is copied from Kaizen page 101097 (Lighting Manufacturing -
- * Wago plugs) and is rewritten by an n8n job when the page changes: keep logic above the
- * markers and only plain data between them. Only the page's CURRENT parts ship; superseded
- * codes are listed so an existing project's old parts are recognised, never offered.
+ * The data is globalTemplates.json (`connectors`), copied from Kaizen page 101097 (Lighting
+ * Manufacturing - Wago plugs) and rewritten by an n8n job when the page changes; see
+ * docs/global-connector-templates.md. Only the page's CURRENT parts ship; superseded codes
+ * are listed so an existing project's old parts are recognised, never offered.
  *
  * One ElementType per Wago part. Site side (socket) parts go in the position section, driver
  * side (plug) parts inside the wrapper, as a project template's Ingredients do.
@@ -18,6 +16,7 @@
  */
 import { POSITION, INTERNAL } from '../utils/recipePresence'
 import { ruleMatchesRecord } from '../utils/templateRules'
+import GLOBAL from './globalTemplates.json'
 
 const norm = s => String(s ?? '').trim().toUpperCase().replace(/\s+/g, '')
 export const WAGO = 'WAGO'
@@ -105,27 +104,8 @@ export const SUGGESTIONS = [
     rule: { match: 'all', conditions: [cond('ControlTypeRef', 'isNotEmpty'), cond('ControlTypeRef', 'notContains', 'DALI'), cond('ControlTypeRef', 'notContains', 'DMX'), HAS_DRIVER_LOCATION, NOT_REMOTE] } },
 ]
 
-// <<< WAGO-TEMPLATES (generated from Kaizen page 101097 — do not hand-edit) >>>
-export const WAGO_PAGE = { pageId: 101097, title: 'Lighting Manufacturing - Wago plugs', syncedAt: '2026-10-03' }
-export const WAGO_TEMPLATES = [
-  { key: '5pin-dali-perm', name: 'Wago 5-pin DALI + perm', pins: 5, note: 'Needs 57mm minimum cut-out, else use 3-pin + 2-pin',
-    site: [{ code: '770-105', role: 'socket', label: '5-pin socket' }],
-    driver: [{ code: '770-215', role: 'plug', label: '5-pin plug' }, { code: '770-505/023-000', role: 'sr', label: '5-pin plug strain relief' }] },
-  { key: '4pin-switched-perm', name: 'Wago 4-pin switched + perm', pins: 4, note: 'Switched live plus permanent feed',
-    site: [{ code: '770-244', role: 'socket', label: '4-pin socket' }, { code: '770-504', role: 'sr', label: '4-pin socket strain relief' }],
-    driver: [{ code: '770-254', role: 'plug', label: '4-pin plug' }, { code: '770-504/023-000', role: 'sr', label: '4-pin plug strain relief' }] },
-  { key: '3pin-len', name: 'Wago 3-pin LEN', pins: 3, note: 'Live, earth, neutral',
-    site: [{ code: '770-203', role: 'socket', label: '3-pin socket' }, { code: '770-503', role: 'sr', label: '3-pin socket strain relief' }],
-    driver: [{ code: '770-213', role: 'plug', label: '3-pin plug' }, { code: '770-503/023-000', role: 'sr', label: '3-pin plug strain relief' }] },
-  { key: '2pin-dali', name: 'Wago 2-pin DALI', pins: 2, variant: 'DALI', note: 'Blue, coding I: will not mate with mains connectors',
-    site: [{ code: '770-1102', role: 'socket', label: '2-pin DALI socket' }, { code: '770-502/041-000', role: 'sr', label: '2-pin DALI socket strain relief' }],
-    driver: [{ code: '770-1112', role: 'plug', label: '2-pin DALI plug' }, { code: '770-502/042-000', role: 'sr', label: '2-pin DALI plug strain relief' }] },
-]
-export const WAGO_COMBOS = [
-  { key: 'dali-2+3', name: 'Wago 2-pin DALI + 3-pin LEN', of: ['2pin-dali', '3pin-len'], note: 'For 2 + 3 core cable' },
-]
-export const WAGO_SUPERSEDED = {
-  '770-243': '770-203', '770-253': '770-213',
-  '770-242': '770-1102', '770-252': '770-1112',
-}
-// <<< /WAGO-TEMPLATES >>>
+const { connectors: C } = GLOBAL
+export const WAGO_PAGE = C.source
+export const WAGO_TEMPLATES = C.templates
+export const WAGO_COMBOS = C.combos
+export const WAGO_SUPERSEDED = C.superseded

@@ -1,0 +1,147 @@
+{
+  "_readme": "Global templates shipped with the app. Read and written by tools (n8n). Contract: docs/global-connector-templates.md. Keep each template's key stable; ship current parts only; list superseded codes under superseded (old: new). combos is the team's choice and is not on the Kaizen page.",
+  "connectors": {
+    "source": {
+      "system": "Kaizen",
+      "pageId": 101097,
+      "title": "Lighting Manufacturing - Wago plugs",
+      "syncedAt": "2026-10-03"
+    },
+    "manufacturer": "WAGO",
+    "templates": [
+      {
+        "key": "5pin-dali-perm",
+        "name": "Wago 5-pin DALI + perm",
+        "pins": 5,
+        "note": "Needs 57mm minimum cut-out, else use 3-pin + 2-pin",
+        "site": [
+          {
+            "code": "770-105",
+            "role": "socket",
+            "label": "5-pin socket"
+          }
+        ],
+        "driver": [
+          {
+            "code": "770-215",
+            "role": "plug",
+            "label": "5-pin plug"
+          },
+          {
+            "code": "770-505/023-000",
+            "role": "sr",
+            "label": "5-pin plug strain relief"
+          }
+        ]
+      },
+      {
+        "key": "4pin-switched-perm",
+        "name": "Wago 4-pin switched + perm",
+        "pins": 4,
+        "note": "Switched live plus permanent feed",
+        "site": [
+          {
+            "code": "770-244",
+            "role": "socket",
+            "label": "4-pin socket"
+          },
+          {
+            "code": "770-504",
+            "role": "sr",
+            "label": "4-pin socket strain relief"
+          }
+        ],
+        "driver": [
+          {
+            "code": "770-254",
+            "role": "plug",
+            "label": "4-pin plug"
+          },
+          {
+            "code": "770-504/023-000",
+            "role": "sr",
+            "label": "4-pin plug strain relief"
+          }
+        ]
+      },
+      {
+        "key": "3pin-len",
+        "name": "Wago 3-pin LEN",
+        "pins": 3,
+        "note": "Live, earth, neutral",
+        "site": [
+          {
+            "code": "770-203",
+            "role": "socket",
+            "label": "3-pin socket"
+          },
+          {
+            "code": "770-503",
+            "role": "sr",
+            "label": "3-pin socket strain relief"
+          }
+        ],
+        "driver": [
+          {
+            "code": "770-213",
+            "role": "plug",
+            "label": "3-pin plug"
+          },
+          {
+            "code": "770-503/023-000",
+            "role": "sr",
+            "label": "3-pin plug strain relief"
+          }
+        ]
+      },
+      {
+        "key": "2pin-dali",
+        "name": "Wago 2-pin DALI",
+        "pins": 2,
+        "variant": "DALI",
+        "note": "Blue, coding I: will not mate with mains connectors",
+        "site": [
+          {
+            "code": "770-1102",
+            "role": "socket",
+            "label": "2-pin DALI socket"
+          },
+          {
+            "code": "770-502/041-000",
+            "role": "sr",
+            "label": "2-pin DALI socket strain relief"
+          }
+        ],
+        "driver": [
+          {
+            "code": "770-1112",
+            "role": "plug",
+            "label": "2-pin DALI plug"
+          },
+          {
+            "code": "770-502/042-000",
+            "role": "sr",
+            "label": "2-pin DALI plug strain relief"
+          }
+        ]
+      }
+    ],
+    "combos": [
+      {
+        "key": "dali-2+3",
+        "name": "Wago 2-pin DALI + 3-pin LEN",
+        "of": [
+          "2pin-dali",
+          "3pin-len"
+        ],
+        "note": "For 2 + 3 core cable"
+      }
+    ],
+    "superseded": {
+      "770-243": "770-203",
+      "770-253": "770-213",
+      "770-242": "770-1102",
+      "770-252": "770-1112"
+    }
+  }
+}

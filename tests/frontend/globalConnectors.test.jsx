@@ -31,19 +31,27 @@ function setup(over = {}) {
     ...over,
   })
 }
-const codes = t => [...t.site, ...t.driver].map(p => p.code)
 
-describe('the shipped Wago data (n8n rewrites the marked block)', () => {
-  test('the block is between its markers, shaped, and ships no superseded code', () => {
-    const src = readFileSync(resolve(process.cwd(), 'src/data/globalConnectors.js'), 'utf8')
-    expect(src).toMatch(/<<< WAGO-TEMPLATES[\s\S]*export const WAGO_TEMPLATES[\s\S]*export const WAGO_COMBOS[\s\S]*export const WAGO_SUPERSEDED[\s\S]*<<< \/WAGO-TEMPLATES >>>/)
-    const keys = new Set(G.WAGO_TEMPLATES.map(t => t.key))
-    for (const t of G.WAGO_TEMPLATES) {
+describe('the shipped global templates JSON (n8n rewrites it)', () => {
+  test('it parses, is shaped, and ships no superseded code', () => {
+    const json = JSON.parse(readFileSync(resolve(process.cwd(), 'src/data/globalTemplates.json'), 'utf8'))
+    const c = json.connectors
+    expect(c.source.pageId).toBeTruthy()
+    expect(c.source.syncedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    expect(Array.isArray(c.templates) && Array.isArray(c.combos) && typeof c.superseded === 'object').toBe(true)
+    const keys = new Set(c.templates.map(t => t.key))
+    expect(keys.size).toBe(c.templates.length)
+    // the keys the suggestion rules and combos name must still be there
+    for (const s of G.SUGGESTIONS) for (const k of s.keys) expect(keys.has(k) || c.combos.some(x => x.key === k)).toBe(true)
+    for (const t of c.templates) {
       expect(t.name && t.pins && t.site.length && t.driver.length).toBeTruthy()
-      for (const p of [...t.site, ...t.driver]) expect(['socket', 'plug', 'sr']).toContain(p.role)
-      for (const c of codes(t)) expect(G.WAGO_SUPERSEDED[c]).toBeUndefined()
+      for (const p of [...t.site, ...t.driver]) {
+        expect(['socket', 'plug', 'sr']).toContain(p.role)
+        expect(p.code && p.label).toBeTruthy()
+        expect(c.superseded[p.code]).toBeUndefined()
+      }
     }
-    for (const c of G.WAGO_COMBOS) for (const k of c.of) expect(keys.has(k)).toBe(true)
+    for (const x of c.combos) for (const k of x.of) expect(keys.has(k)).toBe(true)
     // one ElementType per part, and no two parts of one entry share a ref
     for (const e of G.globalConnectors()) expect(new Set(e.parts.map(G.suggestRef)).size).toBe(e.parts.length)
   })
