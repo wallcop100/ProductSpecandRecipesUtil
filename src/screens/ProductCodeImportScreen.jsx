@@ -1,4 +1,6 @@
 import useImportSession from './import/useImportSession'
+import useCatalogue, { catalogueKey, shareAssignments } from './import/useCatalogue'
+import { useCompanion } from '../platform/companion'
 import InfoTip from '../components/InfoTip'
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { Button, ButtonGroup, Form, Alert, Spinner, Modal, Dropdown } from 'react-bootstrap'
@@ -823,6 +825,11 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     return [...byKey.values()]
   }, [confirmed, captureOpts, assignments, priorEtByCode])
   const codeEntries = entries
+  // A shared catalogue's view of these codes, when the app is served beside one (advisory).
+  const companion = useCompanion()
+  const catalogue = useCatalogue(entries)
+  const [sharedCount, setSharedCount] = useState(0)
+  const projectLabel = useStore(s => s.projectLabel || s.projectNumber || '')
   const allEntries = useMemo(() => [...codeEntries, ...tbcEntries], [codeEntries, tbcEntries])
 
   const { collisions, similar } = useMemo(
@@ -967,12 +974,14 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       // A supplier's old numbering, from the shipped shape table — worth a look even once assigned.
       const old = matchShape(e.text, e.manufacturers[0] || '', shippedShapes.shapes).superseded
       e = old ? { ...e, superseded: { example: old.example } } : e
+      const known = catalogue[catalogueKey(e.text, e.manufacturers.length === 1 ? e.manufacturers[0] : '')]
+      if (known) e = { ...e, catalogue: known }
       if (e.etRef || !e.suggested) return e
       const p = seed.get(norm(e.text))
       const ref = e.suggested.reason === 'new' && p?.ref ? p.ref : e.suggested.ref
       return { ...e, suggestedRef: ref, seed: p }
     })
-  }, [entries, proposals])
+  }, [entries, proposals, catalogue])
 
   function openBulkCreate() {
     setEtFocusCode(null)
@@ -1168,6 +1177,11 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
 
     // The fork decision must outlive this screen, which unmounts on "Review now".
     nextCaptures.divergence = divergence
+
+    // Offer the new decisions to the shared catalogue for review, when there is one. Never
+    // awaited: staging does not depend on a server being there.
+    shareAssignments(companion, allEntries.filter(e => e.status !== 'green' && entryInScope(e)), { project: String(projectLabel) })
+      .then(k => { if (k) setSharedCount(c => c + k) })
 
     if (only) {
       await saveFormCaptures(mergeCaptures(formCaptures, nextCaptures, scopeTargets, [...only]))
@@ -1980,7 +1994,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
               <div>
                 <strong>{staged.products}</strong> product{staged.products === 1 ? '' : 's'} across{' '}
                 <strong>{staged.positions}</strong> PositionType{staged.positions === 1 ? '' : 's'}
-                {staged.codes > 0 && <> · {staged.codes} new Product Spec row{staged.codes === 1 ? '' : 's'}</>}{' '}
+                {staged.codes > 0 && <> · {staged.codes} new Product Spec row{staged.codes === 1 ? '' : 's'}</>}
+                {sharedCount > 0 && <> · {sharedCount} ElementType choice{sharedCount === 1 ? '' : 's'} shared for review</>}{' '}
                 <InfoTip>No recipe was touched. In the builder, the Side-by-Side pane shows what the Form asks for, position by position, and adds each product in one click.</InfoTip>
               </div>
               {staged.unrouted > 0 && (

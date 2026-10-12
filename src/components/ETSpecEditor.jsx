@@ -3,6 +3,7 @@ import { Form, Button } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import { getUsedIn } from '../utils/containerUtils'
 import FlagPill from './FlagPill'
+import CatalogueFacts from './CatalogueFacts'
 import EntityPill from './EntityPill'
 import MaterialIcon from './MaterialIcon'
 import IconButton from './IconButton'
@@ -275,6 +276,9 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
             )}
           </div>
         </div>
+
+        {/* A shared catalogue's facts for this product (only when served beside one) */}
+        {!isDeleted && <CatalogueFacts code={productCode} manufacturer={manufacturer} />}
 
         {/* Internal notes (collapsed) */}
         <div className="mb-3">
