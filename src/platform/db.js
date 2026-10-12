@@ -22,12 +22,21 @@ let conn = null
 let persistTimer = null
 let persisting = null
 
+/** Call `fn` after each debounced write reaches IndexedDB (workspace.js syncs from here). */
+const persistListeners = new Set()
+export function onPersisted(fn) {
+  persistListeners.add(fn)
+  return () => persistListeners.delete(fn)
+}
+
 /** Debounced serialize → IndexedDB. Writes are frequent; the blob is small. */
 function schedulePersist() {
   if (!conn) return
   clearTimeout(persistTimer)
   persistTimer = setTimeout(() => {
-    persisting = idbSet(DB_KEY, conn.export()).catch(err => {
+    persisting = idbSet(DB_KEY, conn.export()).then(() => {
+      for (const fn of persistListeners) { try { fn() } catch { /* a listener never breaks a save */ } }
+    }).catch(err => {
       console.error('[db] persist failed', err)
     })
   }, PERSIST_MS)
