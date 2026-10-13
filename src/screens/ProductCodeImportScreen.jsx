@@ -882,6 +882,11 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   // no reason to hold the finished ones hostage to it. The draft survives so the
   // rest can be finished later.
   const stageable = allEntries.filter(e => e.etRef).length
+  // What the click writes to the spec: codes not in it yet (and placeholders). Codes already
+  // in it are not written again (8FFDRP); the click then only saves what the Form asks for per
+  // position, and the button says so.
+  const toSpec = allEntries.filter(e => e.etRef && (e.placeholder || e.status !== 'green')).length
+  const inSpec = stageable - toSpec
   const leftBehind = allEntries.length - stageable
   const canStage = stageable > 0
   // The main button waits for the whole Form: every row confirmed, every code with an
@@ -1957,8 +1962,14 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
                 </div>
               ) : null}
               <Button variant="success" size="sm" className="w-100" disabled={!ready} onClick={() => handleStage()}>
-                <MaterialIcon name="playlist_add" size={14} /> Add {stageable} to Product Spec
+                <MaterialIcon name={toSpec ? 'playlist_add' : 'save'} size={14} />{' '}
+                {toSpec ? `Add ${toSpec} to Product Spec` : 'Save the Form to its positions'}
               </Button>
+              {inSpec > 0 && (
+                <div className="text-muted mt-1" style={{ fontSize: 10 }} data-testid="stage-in-spec">
+                  {toSpec ? `${inSpec} more already in the Product Spec` : `All ${inSpec} code${inSpec === 1 ? ' is' : 's are'} already in the Product Spec: nothing new is written to it`}
+                </div>
+              )}
               {!ready && (unconfirmedCount > 0 || unassigned.length > 0) && (
                 <div className="mt-1 px-2 py-1 rounded" data-testid="stage-todo"
                   style={{ fontSize: 11, background: '#fff3cd', border: '1px solid #ffe69c', color: '#664d03' }}>
@@ -1986,7 +1997,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
               <div className="text-muted mt-1 d-flex align-items-center gap-1" style={{ fontSize: 10 }}>
                 Recipes are not touched{' '}
                 <InfoTip size={11}>
-                  Writes a Product Spec row (code and maker) for each code with an ElementType, and remembers
+                  Writes a Product Spec row (code and maker) for each code not in it yet, and remembers
                   what the Form asks for per position. You then add each product to its recipe in the builder,
                   where the Side-by-Side pane lists them.
                 </InfoTip>
