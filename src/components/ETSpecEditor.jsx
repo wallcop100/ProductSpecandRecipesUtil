@@ -3,7 +3,8 @@ import { Form, Button } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import { getUsedIn } from '../utils/containerUtils'
 import FlagPill from './FlagPill'
-import CatalogueFacts from './CatalogueFacts'
+import { getCompanion } from '../platform/companion'
+import { retiredFor } from '../platform/retired'
 import EntityPill from './EntityPill'
 import MaterialIcon from './MaterialIcon'
 import IconButton from './IconButton'
@@ -28,6 +29,7 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
   const addPSRow    = useStore(s => s.addPSRow)
   const elementTypes = useStore(s => s.elementTypes)
   const mfrInputRef = useRef(null)
+  const retiredCodes = useStore(s => s.retiredCodes)
 
   // "Fill next" bumps focusToken: jump the caret into the manufacturer field so the user
   // can just type. Guard on the row existing so we don't focus an empty/missing panel.
@@ -152,6 +154,7 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
   const isTBC         = psRow.IsTBC || psRow.isTBC || null
   const isPropTBC     = psRow.IsPropertiesTBC || psRow.isPropertiesTBC || null
   const isDeleted     = (psRow.IsDeleted || psRow.isDeleted) === 'Y'
+  const retired       = retiredFor(retiredCodes, productCode)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflowY: 'auto' }}>
@@ -244,12 +247,28 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
             size="sm"
             key={`code-${selectedRef}-${productCode}`}
             defaultValue={productCode}
-            onBlur={e => { const v = e.target.value.trim(); if (v !== productCode) updatePSRow(selectedRef, { ProductCode: v }) }}
+            onBlur={e => {
+              const v = e.target.value.trim()
+              if (v === productCode) return
+              updatePSRow(selectedRef, { ProductCode: v })
+              // A code swapped for another under the same maker is evidence of a renumbering. Noted
+              // in the background (reviewed before it is ever relied on); nothing is shown here.
+              if (productCode && v && manufacturer && !/^tbc$/i.test(productCode)) {
+                getCompanion().then(api => api?.contribute?.({ kind: 'supersession', code: productCode, replacement: v, manufacturer }))
+              }
+            }}
             onKeyDown={e => { if (e.key === 'Enter') e.target.blur() }}
             style={{ fontSize: 12, ...(!productCode && !isDeleted ? { borderColor: '#f5c2c7', background: '#fff8f8' } : null) }}
             disabled={isDeleted}
           />
         </Form.Group>
+
+        {retired && !isDeleted && (
+          <div className="mb-3" style={{ fontSize: 11, color: '#842029', marginTop: -8 }} data-testid="retired">
+            <MaterialIcon name="history" size={11} /> replaced by{' '}
+            <span style={{ fontFamily: 'monospace' }}>{retired.replacement}</span> — check the current code
+          </div>
+        )}
 
         {/* Description */}
         <Form.Group className="mb-3">
@@ -276,9 +295,6 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
             )}
           </div>
         </div>
-
-        {/* A shared catalogue's facts for this product (only when served beside one) */}
-        {!isDeleted && <CatalogueFacts code={productCode} manufacturer={manufacturer} />}
 
         {/* Internal notes (collapsed) */}
         <div className="mb-3">

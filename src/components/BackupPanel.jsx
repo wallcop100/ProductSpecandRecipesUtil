@@ -4,7 +4,6 @@ import MaterialIcon from './MaterialIcon'
 import InfoTip from './InfoTip'
 import { savePendingNow } from '../store/useStore'
 import { download } from '../platform/fs'
-import WorkspaceSync from './WorkspaceSync'
 import { makeBackup, restoreBackup, checkBackup, hasSavedWork, describeBackup } from '../platform/backup'
 
 /**
@@ -70,7 +69,6 @@ export default function BackupPanel() {
         <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={fromFile} data-testid="restore-input" />
       </div>
       {msg && <div className={`mt-1 ${msg.ok ? 'text-success' : 'text-danger'}`} style={{ fontSize: 11 }} data-testid="backup-msg">{msg.text}</div>}
-      <div className="mt-2"><WorkspaceSync /></div>
     </div>
   )
 }

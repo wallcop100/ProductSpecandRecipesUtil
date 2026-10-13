@@ -49,39 +49,6 @@ function CodeDiff({ code, other }) {
   )
 }
 
-/**
- * What a shared product catalogue says about this code (only when the app is served beside
- * one — see platform/companion.js). Advisory: the refs other projects gave it are there to
- * copy, never applied. A retired code leads with its replacement.
- */
-function CatalogueNote({ product }) {
-  const refs = product.refsUsed.slice(0, 3)
-  const facts = product.facts.map(f => `${f.attribute} = ${f.value}${f.tier ? ` (${f.tier})` : ''}`).join('\n')
-  return (
-    <div style={{ fontSize: 10 }} className="text-muted" data-testid="catalogue-note" title={facts || undefined}>
-      {product.retired && (
-        <div style={{ color: '#842029' }}>
-          <MaterialIcon name="block" size={10} /> retired{product.replacement && <> — replaced by{' '}
-            <span style={{ fontFamily: 'monospace' }}>{product.replacement}</span></>}
-        </div>
-      )}
-      {refs.length > 0 && (
-        <div className="d-flex align-items-center gap-1 flex-wrap">
-          <MaterialIcon name="travel_explore" size={10} /> elsewhere:
-          {refs.map(r => (
-            <span key={r.ref} className="d-inline-flex align-items-center">
-              <span style={{ fontFamily: 'monospace' }}>{r.ref}</span>
-              {r.count > 1 && <span>×{r.count}</span>}
-              <CopyButton text={r.ref} what={`ref ${r.ref}`} size={10} />
-            </span>
-          ))}
-          {product.facts.length > 0 && <span>· {product.facts.length} fact{product.facts.length === 1 ? '' : 's'}</span>}
-        </div>
-      )}
-    </div>
-  )
-}
-
 /** The code's status in StatusChip terms: one tone and one icon per colour. */
 export const TONE = { green: 'ok', amber: 'warn', blue: 'info', grey: 'neutral' }
 export const ICON = { green: 'check_circle', amber: 'difference', blue: 'repeat', grey: 'fiber_new' }
@@ -171,14 +138,20 @@ export default function CompareCodesPanel({ entries, knownPTs, ptTarget, onCreat
               </div>
             )}
 
-            {e.superseded && (
+            {e.retired && (
+              <div style={{ fontSize: 10, color: '#842029' }} data-testid="retired"
+                title={e.retired.retired ? `Replaced by the manufacturer (${e.retired.retired})` : 'Replaced by the manufacturer'}>
+                <MaterialIcon name="history" size={10} /> replaced by{' '}
+                <span style={{ fontFamily: 'monospace' }}>{e.retired.replacement}</span> — check the current code
+              </div>
+            )}
+
+            {!e.retired && e.superseded && (
               <div style={{ fontSize: 10, color: '#842029' }} data-testid="superseded"
                 title={`Codes shaped like ${e.superseded.example} are ${e.manufacturers[0] || 'the maker'}'s old numbering`}>
                 <MaterialIcon name="history" size={10} /> old {e.manufacturers[0] || ''} numbering — check the current code
               </div>
             )}
-
-            {e.catalogue && <CatalogueNote product={e.catalogue} />}
 
             <PositionTypes pts={e.positionTypes} knownPTs={knownPTs} ptTarget={ptTarget} />
 

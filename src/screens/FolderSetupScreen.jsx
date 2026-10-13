@@ -9,6 +9,9 @@ import { evaluateTags, effectiveTags, computeTagDrift, recipeTagIndex, withRecip
 import { extractProjectId } from '../utils/projectId'
 import { detectFiles as detectProjectFiles, importFiles } from '../utils/backend'
 import { harvestExemplars } from '../utils/styleLibrary'
+import { getCompanion } from '../platform/companion'
+import { sweepCodes } from '../platform/retired'
+import { pullConfig } from '../platform/projectConfig'
 import { harvestPatterns } from '../utils/recipePatterns'
 import { groupProjects, adoptPlan, pickCanonical, UNASSIGNED, dbFilesOf, pickDbs } from '../utils/projectIdentity'
 import ProjectCard from '../components/ProjectCard'
@@ -411,9 +414,15 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
       // Feed the tool-wide style library: how this project named its products' ElementTypes.
       // Best-effort and silent — it only ever helps a later import seed refs.
       try {
-        await window.electronAPI.db.recordStyleExemplars?.(harvestExemplars({
+        const exemplars = harvestExemplars({
           elementTypes, psRows: ps_rows, source: [projectNumber, label].filter(Boolean).join(' ') || folder,
-        }))
+        })
+        await window.electronAPI.db.recordStyleExemplars?.(exemplars)
+        // …and, beside a companion, to the library other projects learn from; and ask which of
+        // this spec's codes have since been replaced. Both silent; both need nothing back.
+        if (projectNumber) getCompanion().then(api => api?.shareLibrary?.(projectNumber, exemplars))
+        sweepCodes((ps_rows ?? []).filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
+          .map(r => ({ code: r.ProductCode || r.productCode, manufacturer: r.Manufacturer || r.manufacturer })))
       } catch { /* the library is a convenience, never a reason not to open */ }
       // …and how it built its recipes, by kind: precedent for the next project's first recipes.
       try {
@@ -440,6 +449,10 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
       // Locally-created ElementTypes: minted here, not yet in the DesignDB workbook.
       let localElementTypes = []
       try { localElementTypes = await window.electronAPI.db.getLocalETs(projectId) || [] } catch { /* none */ }
+
+      // The project's configuration as last saved anywhere under this project number (beside
+      // a companion; silent, bounded, configuration only — see platform/projectConfig.js).
+      try { await pullConfig(projectId, projectNumber) } catch { /* open with what is here */ }
 
       // 3. Load SQLite data
       const [positionUIArr, templates, slotMappings, containerETPref, containerExcludePref, etCollections, ignoredFamiliesPref, tagRulesPref, tagPalettePref, tagSnapshotsPref, favorites, tagColorsPref, formCapturesPref, importDraftPref, connectorPinsPref, connectorFamiliesPref, connectorExcludesPref, specCheckSkipPref] = await Promise.all([
