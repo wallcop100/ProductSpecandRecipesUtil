@@ -138,7 +138,15 @@ export default function CompareCodesPanel({ entries, knownPTs, ptTarget, onCreat
               </div>
             )}
 
-            {e.superseded && (
+            {e.retired && (
+              <div style={{ fontSize: 10, color: '#842029' }} data-testid="retired"
+                title={e.retired.retired ? `Replaced by the manufacturer (${e.retired.retired})` : 'Replaced by the manufacturer'}>
+                <MaterialIcon name="history" size={10} /> replaced by{' '}
+                <span style={{ fontFamily: 'monospace' }}>{e.retired.replacement}</span> — check the current code
+              </div>
+            )}
+
+            {!e.retired && e.superseded && (
               <div style={{ fontSize: 10, color: '#842029' }} data-testid="superseded"
                 title={`Codes shaped like ${e.superseded.example} are ${e.manufacturers[0] || 'the maker'}'s old numbering`}>
                 <MaterialIcon name="history" size={10} /> old {e.manufacturers[0] || ''} numbering — check the current code

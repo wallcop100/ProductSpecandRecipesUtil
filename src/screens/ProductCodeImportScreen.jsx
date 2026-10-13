@@ -1,4 +1,7 @@
 import useImportSession from './import/useImportSession'
+import { useCompanion } from '../platform/companion'
+import useProjectKnowledge, { learnedRef, localEtsNeeded, shareDecisions, offerAssignments, orderLibrary } from './import/useProjectKnowledge'
+import { sweepCodes, retiredFor } from '../platform/retired'
 import InfoTip from '../components/InfoTip'
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { Button, ButtonGroup, Form, Alert, Spinner, Modal, Dropdown } from 'react-bootstrap'
@@ -170,6 +173,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       .catch(() => { /* no library yet */ })
     return () => { live = false }
   }, [])
+  // The same library from other projects (companion `library`): how they turned these makers'
+  // products into ElementTypes. Appended, so the family seeding below treats them alike.
+  const [sharedLibrary, setSharedLibrary] = useState([])
   // Identity of the picked workbook. `filepath` is an in-memory token that cannot
   // survive a reload, so the draft (and the captures) carry this instead.
   const [source, setSource] = useState(null)
@@ -771,6 +777,12 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
    * and a clash is never overwritten. Those merges would go pending again on every
    * re-import. So the previous captures are consulted LAST, after the spec has had its say.
    */
+  // What earlier sessions on this project number learned: defaults below the person's own
+  // choices, never announced (useProjectKnowledge.js).
+  const projectNumber = useStore(s => s.projectNumber)
+  const knowledge = useProjectKnowledge(projectNumber)
+  const knownRefs = useMemo(() => new Set(elementTypes.map(e => norm(e.ElementTypeRef || e.elementTypeRef || ''))), [elementTypes])
+
   const priorEtByCode = useMemo(() => {
     const m = new Map()
     for (const entries of Object.values(formCaptures?.byPosition ?? {})) {
@@ -789,7 +801,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     // A product is (maker, code): the same code from another maker is another product.
     const c = classify(e.text, ctx, e.manufacturers[0] || '')
     // The spec wins; your past decision is only consulted where the spec is silent.
-    const etRef = c.elementTypeRef || assignments[norm(e.text)] || priorEtByCode.get(norm(e.text)) || null
+    const etRef = c.elementTypeRef || assignments[norm(e.text)] || priorEtByCode.get(norm(e.text))
+      || learnedRef(knowledge, e, knownRefs) || null
     const note = e.variants[0]?.note || ''
     // Only unresolved codes need a suggestion / reuse candidates.
     const help = etRef ? {} : {
@@ -797,7 +810,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       suggested: suggestRef(e.text, note, e.manufacturers[0] || '', convention, elementTypes, psRows),
     }
     return { ...e, ...c, etRef, ...help }
-  }), [confirmed, ctx, assignments, captureOpts, psRows, elementTypes, convention, priorEtByCode])
+  }), [confirmed, ctx, assignments, captureOpts, psRows, elementTypes, convention, priorEtByCode, knowledge, knownRefs])
 
   /**
    * TBC rows ("TBC", "*custom*", "Awaiting custom code", "Light Sheet"): a product is wanted
@@ -823,6 +836,41 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     return [...byKey.values()]
   }, [confirmed, captureOpts, assignments, priorEtByCode])
   const codeEntries = entries
+  const companion = useCompanion()
+  const projectLabel = useStore(s => s.projectLabel || s.projectNumber || '')
+  const localElementTypes = useStore(s => s.localElementTypes)
+  const retiredCodes = useStore(s => s.retiredCodes)
+  const [mergedKeys, setMergedKeys] = useState(() => new Set())
+
+  // Learned local ElementTypes this Form's codes were given before: made here first, so the
+  // learned assignment can stand (it is dropped if the ref cannot be resolved).
+  useEffect(() => {
+    for (const et of localEtsNeeded(knowledge, entries, knownRefs)) {
+      createElementType({ ref: et.ref, name: et.name || null, description: et.description || null, family: et.family || null })
+    }
+  }, [knowledge, entries, knownRefs])   // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The code-column dialect and near-miss rulings learned on this project (and dialect agreed
+  // across projects): seeded once, under the person's own — theirs always win.
+  const seededFrom = useRef(null)
+  useEffect(() => {
+    if (!knowledge.ready || seededFrom.current === projectNumber) return
+    seededFrom.current = projectNumber
+    if (Object.keys(knowledge.rules).length) setRules(rl => ({ ...knowledge.rules, ...rl }))
+    if (knowledge.separate.length) setKeptSeparate(s => new Set([...knowledge.separate, ...s]))
+  }, [knowledge, projectNumber])   // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Which of these codes their maker has since replaced — a quiet line under the code.
+  useEffect(() => {
+    sweepCodes(entries.map(e => ({ code: e.text, manufacturer: e.manufacturers.length === 1 ? e.manufacturers[0] : '' })))
+  }, [entries])
+  const makersKey = useMemo(() => [...new Set(entries.flatMap(e => e.manufacturers || []))].sort().join('|'), [entries])
+  useEffect(() => {
+    if (!companion?.library || !makersKey) return
+    let live = true
+    companion.library(makersKey.split('|'), { prefer: projectNumber || '' }).then(rows => { if (live) setSharedLibrary(rows) })
+    return () => { live = false }
+  }, [companion, makersKey, projectNumber])
   const allEntries = useMemo(() => [...codeEntries, ...tbcEntries], [codeEntries, tbcEntries])
 
   const { collisions, similar } = useMemo(
@@ -868,6 +916,21 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   /** These near-miss codes are genuinely different products — stop asking. */
   function handleKeepSeparate(group) {
     setKeptSeparate(s => new Set(s).add(groupKey(group)))
+    sharePair(group, 'different')
+  }
+
+  /** Evidence for the catalogue: a same/different ruling (one maker only; reviewed elsewhere). */
+  function sharePair(group, verdict) {
+    if (!companion?.contribute) return
+    const [lead, ...rest] = group
+    const maker = lead.manufacturers?.length === 1 ? lead.manufacturers[0] : ''
+    if (!maker) return
+    for (const other of rest) {
+      if ((other.manufacturers || []).length === 1 && other.manufacturers[0] === maker) {
+        companion.contribute({ kind: 'pair', code: lead.text, other: other.text, manufacturer: maker,
+          verdict, project: String(projectNumber || '') })
+      }
+    }
   }
 
   /**
@@ -875,6 +938,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
    * ref, the rest join it; otherwise the user creates a single ET for all of them.
    */
   function handleMerge(group, existingRef) {
+    setMergedKeys(s => new Set(s).add(groupKey(group)))
+    sharePair(group, 'same')
     if (existingRef) {
       group.forEach(e => assignET(e.text, existingRef))
       return
@@ -943,9 +1008,11 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       ptTarget: map.pt ? ptTarget : r => r, contextFor,
       roleOf: e => (leads.has(norm(e.text)) ? 'lead' : 'extra'),
       pageTypeFor,
-      library: styleLibrary,
+      // The first exact-code hit wins in etSeed, so order is precedence: this project's own
+      // latest decisions (corrections included), then this browser's library, then other projects.
+      library: sharedLibrary.length ? orderLibrary(sharedLibrary, styleLibrary, projectNumber) : styleLibrary,
     })
-  }, [unassigned, confirmed, captureOpts, elementTypes, psRows, recipes, positionTypes, dbCollectionRefs, map.pt, ptTarget, styleLibrary])
+  }, [unassigned, confirmed, captureOpts, elementTypes, psRows, recipes, positionTypes, dbCollectionRefs, map.pt, ptTarget, styleLibrary, sharedLibrary])
 
   /** Every family the project already has: collection rows, and the ParentRefs in use. */
   const knownFamilies = useMemo(() => [...new Set([
@@ -967,12 +1034,14 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       // A supplier's old numbering, from the shipped shape table — worth a look even once assigned.
       const old = matchShape(e.text, e.manufacturers[0] || '', shippedShapes.shapes).superseded
       e = old ? { ...e, superseded: { example: old.example } } : e
+      const retired = retiredFor(retiredCodes, e.text)
+      if (retired) e = { ...e, retired }
       if (e.etRef || !e.suggested) return e
       const p = seed.get(norm(e.text))
       const ref = e.suggested.reason === 'new' && p?.ref ? p.ref : e.suggested.ref
       return { ...e, suggestedRef: ref, seed: p }
     })
-  }, [entries, proposals])
+  }, [entries, proposals, retiredCodes])
 
   function openBulkCreate() {
     setEtFocusCode(null)
@@ -1168,6 +1237,20 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
 
     // The fork decision must outlive this screen, which unmounts on "Review now".
     nextCaptures.divergence = divergence
+
+    // Learning, in the background and never awaited: staging does not depend on it. The
+    // project's decisions (latest wins), and evidence for the catalogue (reviewed elsewhere).
+    offerAssignments(companion, allEntries.filter(e => e.status !== 'green' && entryInScope(e)), {
+      project: String(projectNumber || projectLabel),
+      familyOf: ref => {
+        const et = useStore.getState().elementTypes.find(x => norm(x.ElementTypeRef || x.elementTypeRef || '') === norm(ref))
+        return et?.Family || et?.family || ''
+      },
+    })
+    shareDecisions(companion, projectNumber, {
+      entries: allEntries.filter(entryInScope), rules, keptSeparate, merged: mergedKeys,
+      localEts: localElementTypes,
+    })
 
     if (only) {
       await saveFormCaptures(mergeCaptures(formCaptures, nextCaptures, scopeTargets, [...only]))
