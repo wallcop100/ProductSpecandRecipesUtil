@@ -18,6 +18,7 @@ const ATTR_RE = /^[A-Za-z]+\.[A-Za-z][\w()% /-]*$/
 export default function CatalogueFacts({ code, manufacturer }) {
   const api = useCompanion()
   const [product, setProduct] = useState(undefined)
+  const [mine, setMine] = useState(null)         // how this browser's earlier offers went
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState({ attribute: '', value: '', source: '' })
   const [sent, setSent] = useState(null)
@@ -29,6 +30,10 @@ export default function CatalogueFacts({ code, manufacturer }) {
     api.lookupProduct(code, manufacturer).then(p => { if (live) setProduct(p) })
     return () => { live = false }
   }, [api, code, manufacturer])
+
+  useEffect(() => {
+    if (open && api?.contributionStatus) api.contributionStatus().then(setMine)
+  }, [open, api])
 
   if (!api?.lookupProduct || !code || !manufacturer) return null
 
@@ -85,8 +90,38 @@ export default function CatalogueFacts({ code, manufacturer }) {
             </InfoTip>
           </div>
           {sent && <div className="mt-1 text-muted">{sent}</div>}
+          {mine && (mine.accepted + mine.rejected + mine.queued) > 0 && (
+            <div className="mt-1 text-muted" data-testid="contribution-status">
+              What you have shared: {mine.accepted} accepted · {mine.rejected} rejected · {mine.queued} waiting for review
+            </div>
+          )}
         </div>
       )}
+    </div>
+  )
+}
+
+/**
+ * After a ProductCode is swapped for another under the same maker: was the old one retired?
+ * Answered yes, it is offered for review; once confirmed, every project still carrying the old
+ * code is told (RetiredBanner). Shown only beside a companion.
+ */
+export function SupersessionOffer({ swap, onDone }) {
+  const api = useCompanion()
+  const [sent, setSent] = useState(false)
+  if (!api?.contribute) return null
+  if (sent) return <div className="mb-2 text-muted" style={{ fontSize: 11 }}>Sent for review.</div>
+  return (
+    <div className="mb-2 p-2 rounded d-flex align-items-center gap-2 flex-wrap" style={{ fontSize: 11, background: '#fff8e6' }}
+      data-testid="supersession-offer">
+      <MaterialIcon name="swap_horiz" size={14} />
+      <span>Has {swap.maker} replaced <code>{swap.from}</code> with <code>{swap.to}</code>?</span>
+      <Button size="sm" variant="outline-primary" style={{ fontSize: 10, padding: '0 6px' }}
+        onClick={async () => {
+          await api.contribute({ kind: 'supersession', code: swap.from, replacement: swap.to, manufacturer: swap.maker })
+          setSent(true); setTimeout(onDone, 2500)
+        }}>Yes, share it</Button>
+      <Button size="sm" variant="link" className="text-muted p-0" style={{ fontSize: 10 }} onClick={onDone}>No, a different product</Button>
     </div>
   )
 }

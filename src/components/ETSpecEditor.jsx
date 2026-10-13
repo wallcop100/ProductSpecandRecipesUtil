@@ -3,7 +3,7 @@ import { Form, Button } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import { getUsedIn } from '../utils/containerUtils'
 import FlagPill from './FlagPill'
-import CatalogueFacts from './CatalogueFacts'
+import CatalogueFacts, { SupersessionOffer } from './CatalogueFacts'
 import EntityPill from './EntityPill'
 import MaterialIcon from './MaterialIcon'
 import IconButton from './IconButton'
@@ -28,6 +28,8 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
   const addPSRow    = useStore(s => s.addPSRow)
   const elementTypes = useStore(s => s.elementTypes)
   const mfrInputRef = useRef(null)
+  const [swap, setSwap] = useState(null)       // { from, to, maker } after a ProductCode edit
+  useEffect(() => { setSwap(null) }, [selectedRef])
 
   // "Fill next" bumps focusToken: jump the caret into the manufacturer field so the user
   // can just type. Guard on the row existing so we don't focus an empty/missing panel.
@@ -244,12 +246,20 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
             size="sm"
             key={`code-${selectedRef}-${productCode}`}
             defaultValue={productCode}
-            onBlur={e => { const v = e.target.value.trim(); if (v !== productCode) updatePSRow(selectedRef, { ProductCode: v }) }}
+            onBlur={e => {
+              const v = e.target.value.trim()
+              if (v === productCode) return
+              updatePSRow(selectedRef, { ProductCode: v })
+              // A code swapped for another under the same maker may be a retirement worth sharing.
+              if (productCode && v && manufacturer && !/^tbc$/i.test(productCode)) setSwap({ from: productCode, to: v, maker: manufacturer })
+            }}
             onKeyDown={e => { if (e.key === 'Enter') e.target.blur() }}
             style={{ fontSize: 12, ...(!productCode && !isDeleted ? { borderColor: '#f5c2c7', background: '#fff8f8' } : null) }}
             disabled={isDeleted}
           />
         </Form.Group>
+
+        {swap && <SupersessionOffer swap={swap} onDone={() => setSwap(null)} />}
 
         {/* Description */}
         <Form.Group className="mb-3">

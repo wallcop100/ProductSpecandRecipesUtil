@@ -12,6 +12,7 @@ import ProductSpecScreen from './screens/ProductSpecScreen'
 import ProductCodeImportScreen from './screens/ProductCodeImportScreen'
 import ConnectorsScreen from './screens/ConnectorsScreen'
 import FileWatchBanner from './components/FileWatchBanner'
+import RetiredBanner from './components/RetiredBanner'
 import ErrorBoundary from './components/ErrorBoundary'
 
 /**
@@ -90,6 +91,7 @@ export default function App() {
       </Badge>
       <BugReporter screen={activeScreen} />
       <FileWatchBanner />
+      <RetiredBanner />
       <DesignPickerModal />
       <SaveShortcut />
       <UndoShortcut screen={activeScreen} />

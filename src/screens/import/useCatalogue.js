@@ -37,15 +37,15 @@ const shared = new Set()
 
 /**
  * Offer the ElementType decisions just staged back to the catalogue, for a person on the
- * other side to review. Only decisions with one maker (a product is the pair), and each
+ * other side to review. The family goes with the ref: it is the part another project can use. Only decisions with one maker (a product is the pair), and each
  * once per session. → how many were offered.
  */
-export async function shareAssignments(api, entries, { project = '' } = {}) {
+export async function shareAssignments(api, entries, { project = '', familyOf = () => '' } = {}) {
   if (!api?.contribute) return 0
   const offers = (entries || []).filter(e => e.etRef && !e.placeholder && e.manufacturers?.length === 1)
     .map(e => ({
       kind: 'et-assignment', code: e.text, manufacturer: e.manufacturers[0], ref: e.etRef,
-      description: e.variants?.[0]?.note || '', project,
+      family: familyOf(e.etRef) || '', description: e.variants?.[0]?.note || '', project,
     }))
     .filter(o => !shared.has(catalogueKey(o.code, o.manufacturer) + '|' + o.ref))
   const ok = await Promise.all(offers.map(o => api.contribute(o)))

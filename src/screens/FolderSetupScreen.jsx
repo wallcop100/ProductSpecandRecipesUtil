@@ -9,6 +9,7 @@ import { evaluateTags, effectiveTags, computeTagDrift, recipeTagIndex, withRecip
 import { extractProjectId } from '../utils/projectId'
 import { detectFiles as detectProjectFiles, importFiles } from '../utils/backend'
 import { harvestExemplars } from '../utils/styleLibrary'
+import { getCompanion } from '../platform/companion'
 import { harvestPatterns } from '../utils/recipePatterns'
 import { groupProjects, adoptPlan, pickCanonical, UNASSIGNED, dbFilesOf, pickDbs } from '../utils/projectIdentity'
 import ProjectCard from '../components/ProjectCard'
@@ -411,9 +412,13 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
       // Feed the tool-wide style library: how this project named its products' ElementTypes.
       // Best-effort and silent — it only ever helps a later import seed refs.
       try {
-        await window.electronAPI.db.recordStyleExemplars?.(harvestExemplars({
+        const exemplars = harvestExemplars({
           elementTypes, psRows: ps_rows, source: [projectNumber, label].filter(Boolean).join(' ') || folder,
-        }))
+        })
+        await window.electronAPI.db.recordStyleExemplars?.(exemplars)
+        // …and to the shared library, when served beside one: other projects' imports then
+        // seed families the way this project did. Needs a project number to say whose it is.
+        if (projectNumber) getCompanion().then(api => api?.shareLibrary?.(projectNumber, exemplars))
       } catch { /* the library is a convenience, never a reason not to open */ }
       // …and how it built its recipes, by kind: precedent for the next project's first recipes.
       try {

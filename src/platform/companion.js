@@ -6,8 +6,11 @@
  * the same build is served next to a companion that speaks the protocol in
  * docs/companion-api.md, three things light up:
  *
- *   products       — what a shared product catalogue knows about a code (advisory only);
- *   contributions  — offer an ElementType decision or a product fact back to it;
+ *   products       — what a shared product catalogue knows about a code (advisory only),
+ *                    and which codes its makers have retired (`sweep`);
+ *   contributions  — offer a decision back for review, and later see how it went;
+ *   library        — the style library (styleLibrary.js) shared across browsers and projects;
+ *   projects       — what a project's users decided, offered back as suggestions;
  *   workspaces     — keep this browser's work (a backup, see backup.js) on the server.
  *
  * Every call is relative to the page, so the build needs no configuration and knows
@@ -41,6 +44,9 @@ export function normalizeProduct(body) {
     manufacturer: body.manufacturer || '',
     retired: !!body.retired,
     replacement: body.replacement || null,
+    families: list(body.families)
+      .filter(f => f && f.family)
+      .map(f => ({ family: String(f.family), projects: list(f.projects).map(String), tier: f.tier || '' })),
     refsUsed: list(body.refsUsed)
       .map(r => (typeof r === 'string' ? { ref: r, count: 1 } : r))
       .filter(r => r && r.ref)
@@ -50,6 +56,13 @@ export function normalizeProduct(body) {
       .map(f => ({ attribute: String(f.attribute), value: String(f.value ?? ''), tier: f.tier || '', source: f.source || '' })),
   }
 }
+
+const post = (url, body) => getJson(url, {
+  method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+})
+/** GET/POST a JSON answer, or null on any failure — a companion that is down is no companion. */
+const quiet = p => p.then(({ res, body }) => (res.ok ? body : null)).catch(() => null)
+const projectUrl = n => `./api/projects/${encodeURIComponent(String(n).trim())}`
 
 function build(features) {
   const has = f => features.has(f)
@@ -76,16 +89,56 @@ function build(features) {
      * → true when the companion accepted it for review.
      */
     contribute: has('contributions') ? async payload => {
-      try {
-        const res = await fetch('./api/contributions', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
-        })
-        return res.ok
-      } catch { return false }
+      const out = await quiet(post('./api/contributions', payload))
+      if (out?.id) rememberContribution(out.id, payload)
+      return !!out
+    } : null,
+
+    /** → [{ code, manufacturer, replacement, retired }] for the codes the maker has retired. */
+    sweep: has('sweep') ? async codes => (await quiet(post('./api/products/sweep', { codes })))?.retired || [] : null,
+
+    /** Exemplars from OTHER projects for these makers, in style_exemplars row shape. */
+    library: has('library') ? async (makers, exclude = '') => {
+      const q = new URLSearchParams({ makers: [...new Set(makers.filter(Boolean))].join(','), exclude: String(exclude || '') })
+      return (await quiet(getJson(`./api/library?${q}`)))?.exemplars || []
+    } : null,
+    shareLibrary: has('library') ? (project, exemplars) => quiet(post('./api/library', { project: String(project), exemplars })) : null,
+
+    /** { items: [{ id, kind, key, value }], dialect: [{ maker, token, role, projects }] } | null */
+    projectItems: has('projects') ? n => quiet(getJson(projectUrl(n))) : null,
+    shareProjectItems: has('projects') ? (n, items) => quiet(post(`${projectUrl(n)}/items`, { items })) : null,
+    /** How a suggestion was taken: 'shown' | 'accepted' | 'rejected'. Fire-and-forget. */
+    feedback: has('projects') ? (n, itemId, outcome) => { quiet(post(`${projectUrl(n)}/feedback`, { item_id: itemId, outcome })) } : () => {},
+
+    /** → { accepted, rejected, queued } for everything this browser has offered. */
+    contributionStatus: has('contribution-status') ? async () => {
+      const mine = readContributions()
+      const open = mine.filter(c => !c.settled).slice(0, 50)
+      await Promise.all(open.map(async c => {
+        const out = await quiet(getJson(`./api/contributions/${c.id}`))
+        if (out?.status === 'accepted' || out?.status === 'rejected') c.settled = out.status
+      }))
+      writeContributions(mine)
+      const n = s => mine.filter(c => (c.settled || 'queued') === s).length
+      return { accepted: n('accepted'), rejected: n('rejected'), queued: n('queued') }
     } : null,
 
     workspaces: has('workspaces'),
   }
+}
+
+// What this browser has offered, so it can be told later how each one went.
+const CONTRIB_KEY = 'rb-contributions'
+function readContributions() {
+  try { return JSON.parse(localStorage.getItem(CONTRIB_KEY) || '[]') } catch { return [] }
+}
+function writeContributions(list) {
+  try { localStorage.setItem(CONTRIB_KEY, JSON.stringify(list.slice(-500))) } catch { /* blocked */ }
+}
+function rememberContribution(id, payload) {
+  const list = readContributions()
+  if (!list.some(c => c.id === id)) list.push({ id, kind: payload.kind, code: payload.code })
+  writeContributions(list)
 }
 
 /** → the companion API, or null when this build is served without one. Probed once. */

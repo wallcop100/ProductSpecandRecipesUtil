@@ -1,6 +1,8 @@
 import useImportSession from './import/useImportSession'
 import useCatalogue, { catalogueKey, shareAssignments } from './import/useCatalogue'
 import { useCompanion } from '../platform/companion'
+import useProjectKnowledge, { colleagueHint, pendingRules, separatedByColleagues, shareDecisions } from './import/useProjectKnowledge'
+import ColleagueSuggestions from '../components/import/ColleagueSuggestions'
 import InfoTip from '../components/InfoTip'
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { Button, ButtonGroup, Form, Alert, Spinner, Modal, Dropdown } from 'react-bootstrap'
@@ -172,6 +174,10 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       .catch(() => { /* no library yet */ })
     return () => { live = false }
   }, [])
+  // The same library, shared: how OTHER projects turned these makers' products into
+  // ElementTypes (companion `library`). Appended, so the seeding below treats them alike; each
+  // carries `source: "shared · <project>"`, which the proposal shows as its reason.
+  const [sharedLibrary, setSharedLibrary] = useState([])
   // Identity of the picked workbook. `filepath` is an in-memory token that cannot
   // survive a reload, so the draft (and the captures) carry this instead.
   const [source, setSource] = useState(null)
@@ -830,6 +836,19 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   const catalogue = useCatalogue(entries)
   const [sharedCount, setSharedCount] = useState(0)
   const projectLabel = useStore(s => s.projectLabel || s.projectNumber || '')
+  const projectNumber = useStore(s => s.projectNumber)
+  const localElementTypes = useStore(s => s.localElementTypes)
+  // What colleagues on this project number decided — suggestions only (useProjectKnowledge.js).
+  const knowledge = useProjectKnowledge(projectNumber)
+  const [mergedKeys, setMergedKeys] = useState(() => new Set())
+  const knownRefs = useMemo(() => new Set(elementTypes.map(e => norm(e.ElementTypeRef || e.elementTypeRef || ''))), [elementTypes])
+  const makersKey = useMemo(() => [...new Set(entries.flatMap(e => e.manufacturers || []))].sort().join('|'), [entries])
+  useEffect(() => {
+    if (!companion?.library || !makersKey) return
+    let live = true
+    companion.library(makersKey.split('|'), projectNumber || '').then(rows => { if (live) setSharedLibrary(rows) })
+    return () => { live = false }
+  }, [companion, makersKey, projectNumber])
   const allEntries = useMemo(() => [...codeEntries, ...tbcEntries], [codeEntries, tbcEntries])
 
   const { collisions, similar } = useMemo(
@@ -875,6 +894,21 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   /** These near-miss codes are genuinely different products — stop asking. */
   function handleKeepSeparate(group) {
     setKeptSeparate(s => new Set(s).add(groupKey(group)))
+    sharePair(group, 'different')
+  }
+
+  /** Offer a same/different ruling to the shared catalogue, for review (one maker only). */
+  function sharePair(group, verdict) {
+    if (!companion?.contribute) return
+    const [lead, ...rest] = group
+    const maker = lead.manufacturers?.length === 1 ? lead.manufacturers[0] : ''
+    if (!maker) return
+    for (const other of rest) {
+      if ((other.manufacturers || []).length === 1 && other.manufacturers[0] === maker) {
+        companion.contribute({ kind: 'pair', code: lead.text, other: other.text, manufacturer: maker,
+          verdict, project: String(projectNumber || '') })
+      }
+    }
   }
 
   /**
@@ -882,6 +916,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
    * ref, the rest join it; otherwise the user creates a single ET for all of them.
    */
   function handleMerge(group, existingRef) {
+    setMergedKeys(s => new Set(s).add(groupKey(group)))
+    sharePair(group, 'same')
     if (existingRef) {
       group.forEach(e => assignET(e.text, existingRef))
       return
@@ -950,9 +986,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       ptTarget: map.pt ? ptTarget : r => r, contextFor,
       roleOf: e => (leads.has(norm(e.text)) ? 'lead' : 'extra'),
       pageTypeFor,
-      library: styleLibrary,
+      library: sharedLibrary.length ? [...styleLibrary, ...sharedLibrary] : styleLibrary,
     })
-  }, [unassigned, confirmed, captureOpts, elementTypes, psRows, recipes, positionTypes, dbCollectionRefs, map.pt, ptTarget, styleLibrary])
+  }, [unassigned, confirmed, captureOpts, elementTypes, psRows, recipes, positionTypes, dbCollectionRefs, map.pt, ptTarget, styleLibrary, sharedLibrary])
 
   /** Every family the project already has: collection rows, and the ParentRefs in use. */
   const knownFamilies = useMemo(() => [...new Set([
@@ -976,12 +1012,19 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       e = old ? { ...e, superseded: { example: old.example } } : e
       const known = catalogue[catalogueKey(e.text, e.manufacturers.length === 1 ? e.manufacturers[0] : '')]
       if (known) e = { ...e, catalogue: known }
+      const hint = colleagueHint(knowledge, e, knownRefs)
+      if (hint) e = { ...e, colleague: hint }
       if (e.etRef || !e.suggested) return e
       const p = seed.get(norm(e.text))
       const ref = e.suggested.reason === 'new' && p?.ref ? p.ref : e.suggested.ref
       return { ...e, suggestedRef: ref, seed: p }
     })
-  }, [entries, proposals, catalogue])
+  }, [entries, proposals, catalogue, knowledge, knownRefs])
+
+  // A colleague's choice that was put in front of someone counts as shown, once per session.
+  useEffect(() => {
+    for (const e of panelEntries) if (e.colleague) knowledge.report(e.colleague.item, 'shown')
+  }, [panelEntries, knowledge])
 
   function openBulkCreate() {
     setEtFocusCode(null)
@@ -1180,8 +1223,19 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
 
     // Offer the new decisions to the shared catalogue for review, when there is one. Never
     // awaited: staging does not depend on a server being there.
-    shareAssignments(companion, allEntries.filter(e => e.status !== 'green' && entryInScope(e)), { project: String(projectLabel) })
+    shareAssignments(companion, allEntries.filter(e => e.status !== 'green' && entryInScope(e)), {
+      project: String(projectNumber || projectLabel),
+      familyOf: ref => {
+        const et = useStore.getState().elementTypes.find(x => norm(x.ElementTypeRef || x.elementTypeRef || '') === norm(ref))
+        return et?.Family || et?.family || ''
+      },
+    })
       .then(k => { if (k) setSharedCount(c => c + k) })
+    // …and, for the next person on this project, every decision (latest wins on the server).
+    shareDecisions(companion, projectNumber, {
+      entries: allEntries.filter(entryInScope), rules, keptSeparate, merged: mergedKeys,
+      localEts: localElementTypes,
+    })
 
     if (only) {
       await saveFormCaptures(mergeCaptures(formCaptures, nextCaptures, scopeTargets, [...only]))
@@ -1951,12 +2005,33 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
               )}
             </div>
             {shownEntries.length > 0 && <StatusLegend />}
+            <ColleagueSuggestions
+              rules={pendingRules(knowledge, rules)}
+              separate={separatedByColleagues(knowledge, similar, keptSeparate)}
+              onApplyRules={list => {
+                setRules(rl => list.reduce((acc, r) => setRule(acc, r.token, r.role), rl))
+                list.forEach(r => r.item && knowledge.report(r.item, 'accepted'))
+              }}
+              onRefuseRules={list => list.forEach(r => r.item && knowledge.report(r.item, 'rejected'))}
+              onApplySeparate={groups => groups.forEach(g => setKeptSeparate(s => new Set(s).add(groupKey(g))))}
+              onShown={list => list.forEach(r => r.item && knowledge.report(r.item, 'shown'))}
+            />
             <CompareCodesPanel
               entries={shownEntries}
               knownPTs={knownPTs}
               ptTarget={map.pt ? ptTarget : null}
               onJump={jumpToCode}
               onNeedsET={e => openETFor(e.text)}
+              onUseColleague={e => {
+                const { ref, local, item } = e.colleague
+                if (!knownRefs.has(norm(ref)) && local) {
+                  createElementType({ ref, name: local.value?.name || null, description: local.value?.description || null,
+                    family: local.value?.family || null })
+                }
+                assignET(e.text, ref)
+                knowledge.report(item, 'accepted')
+              }}
+              onDismissColleague={e => knowledge.report(e.colleague.item, 'rejected')}
             />
 
 
