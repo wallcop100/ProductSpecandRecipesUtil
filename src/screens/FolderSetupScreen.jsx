@@ -3,7 +3,6 @@ import React, { useState, useEffect, useCallback } from 'react'
 import {
   Container, Card, Button, Alert, Spinner, Badge, Form, Row, Col,
 } from 'react-bootstrap'
-import useStore from '../store/useStore'
 import { extractProjectId } from '../utils/projectId'
 import { detectFiles as detectProjectFiles, importFiles } from '../utils/backend'
 import { openProject } from '../platform/openProject'
