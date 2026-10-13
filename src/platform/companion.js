@@ -46,11 +46,14 @@ function build(features) {
     sweep: has('sweep') ? async codes => (await quiet(post('./api/products/sweep', { codes })))?.retired || [] : null,
 
     /** Exemplars from OTHER projects for these makers, in style_exemplars row shape. */
-    library: has('library') ? async (makers, exclude = '') => {
-      const q = new URLSearchParams({ makers: [...new Set(makers.filter(Boolean))].join(','), exclude: String(exclude || '') })
+    /** `prefer`: this project's rows come first, newest first (its own corrections win). */
+    library: has('library') ? async (makers, { exclude = '', prefer = '' } = {}) => {
+      const q = new URLSearchParams({ makers: [...new Set(makers.filter(Boolean))].join(','), exclude: String(exclude || ''), prefer: String(prefer || '') })
       return (await quiet(getJson(`./api/library?${q}`)))?.exemplars || []
     } : null,
-    shareLibrary: has('library') ? (project, exemplars) => quiet(post('./api/library', { project: String(project), exemplars })) : null,
+    /** mode 'replace' (a project's whole harvest) or 'merge' (only these codes; `{deleted: true}` removes). */
+    shareLibrary: has('library') ? (project, exemplars, mode = 'replace') =>
+      quiet(post('./api/library', { project: String(project), exemplars, mode })) : null,
 
     /** { items: [{ id, kind, key, value, updated_at }], dialect: [...] } | null — `since` for only newer items. */
     projectItems: has('projects') ? (n, since = '') =>

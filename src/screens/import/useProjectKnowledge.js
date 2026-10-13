@@ -108,6 +108,17 @@ export function shareDecisions(api, projectNumber, { entries = [], rules = {}, k
   return items.length ? api.shareProjectItems(number, items.slice(0, 2000)) : Promise.resolve(null)
 }
 
+/**
+ * The style library in precedence order for etSeed (first exact-code hit wins): this project's
+ * own shared rows (newest first, as served), then this browser's, then other projects'.
+ */
+export function orderLibrary(shared = [], local = [], projectNumber = '') {
+  const n = String(projectNumber || '').trim()
+  const own = n ? shared.filter(e => String(e.source || '') === n) : []
+  const others = n ? shared.filter(e => String(e.source || '') !== n) : shared
+  return [...own, ...local, ...others]
+}
+
 const offered = new Set()
 
 /**

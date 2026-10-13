@@ -74,7 +74,9 @@ export function diffForPush(current, snap = {}) {
   for (const k of Object.keys(snap)) {
     if (k in now) continue
     const [kind, key] = k.split('\u0000')
-    if (kind === 'cfg-template' || kind === 'cfg-slot') {
+    // Gone here means gone everywhere: a renamed local ElementType must not come back under its
+    // old ref in another browser.
+    if (kind === 'cfg-template' || kind === 'cfg-slot' || kind === 'local-et') {
       items.push({ kind, key, value: { deleted: true } })
     }
   }
@@ -101,11 +103,12 @@ export function pickForPull(pulled, current, snap = {}) {
 /** Pulled items back into collectConfigData's shape, plus the deletions to make. */
 export function itemsToConfig(items) {
   const cfg = { version: 2, position_ui: [], templates: [], slot_mappings: {}, collections: [], prefs: {}, local_element_types: [] }
-  const deletes = { templates: [], slots: [] }
+  const deletes = { templates: [], slots: [], localEts: [] }
   for (const { kind, key, value } of items) {
     if (value?.deleted) {
       if (kind === 'cfg-template') deletes.templates.push(key)
       if (kind === 'cfg-slot') deletes.slots.push(key.split('|'))
+      if (kind === 'local-et') deletes.localEts.push(key)
       continue
     }
     if (kind === 'cfg-position') cfg.position_ui.push({ position_type_ref: key, ...value })
@@ -141,6 +144,7 @@ export async function pullConfig(projectId, projectNumber, { timeoutMs = 3000 } 
   dbApi.applyConfigData(projectId, cfg)
   for (const t of deletes.templates) dbApi.deleteTemplate(t)
   for (const [tid, slot] of deletes.slots) dbApi.deleteSlotMapping(projectId, tid, slot)
+  for (const ref of deletes.localEts) dbApi.deleteLocalElementType(projectId, ref)
   // The applied values are now the synced picture; anything changed here stays different and
   // is sent on the next push.
   const snap = { ...st.snap }
