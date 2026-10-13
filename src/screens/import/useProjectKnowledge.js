@@ -1,104 +1,91 @@
 /**
- * useProjectKnowledge — what other people on THIS project (same project number) decided, offered
- * back as suggestions when the app is served beside a companion that keeps it (see
- * platform/companion.js). Without one, or without a project number, it is empty and inert.
+ * useProjectKnowledge — what earlier sessions on THIS project number decided, as DEFAULTS.
  *
- * Nothing here is applied on its own. Each suggestion is shown, and the person takes it or
- * refuses it — and that answer is reported back, so the suggestions several people keep refusing
- * stop being made. That is how several people's configurations converge on one.
+ * Served beside a companion (platform/companion.js) the import starts from that learning
+ * instead of from nothing: codes arrive already assigned, the code column's dialect is already
+ * known, near-miss codes already ruled different stay apart. It is applied the way the app's
+ * own memory is (`priorEtByCode`), never announced and never asked about. Precedence, highest
+ * first — a lower level only fills what the higher ones leave empty:
  *
- * Item kinds and keys (the companion stores them opaquely; these are the app's own):
+ *   1. the Product Spec / DesignDB          (unchanged)
+ *   2. what this person decided here        (unchanged; always beats learning)
+ *   3. what this project number learned     (this hook)
+ *   4. what other projects learned          (dialect agreed by 2+ projects; families via the library)
+ *
+ * A learned value that cannot stand — a ref this project cannot resolve — is dropped, and the
+ * app behaves exactly as it would without it. Without a companion or a project number the hook
+ * is inert.
+ *
+ * Item kinds and keys (the companion stores them opaquely):
  *   assignment  `${MAKER}|${CODE}`  → { ref, code, maker }
- *   local-et    ref                 → { name, description, family }   (made here, not in the DesignDB yet)
- *   rule        token text          → { role, maker }                 (codeLearning rules)
+ *   local-et    ref                 → { name, description, family }
+ *   rule        token text          → { role, maker }
  *   pair        groupKey(codes)     → { verdict: 'same' | 'different' }
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useCompanion } from '../../platform/companion'
-import { norm, groupKey } from '../../utils/productCodes'
+import { norm } from '../../utils/productCodes'
 
 export const assignmentKey = (code, maker) => `${norm(maker || '')}|${norm(code)}`
 
 const EMPTY = { items: [], dialect: [] }
 
+/** The learning, reduced to the defaults the import uses. Pure; exported for tests. */
+export function digest({ items = [], dialect = [] } = EMPTY) {
+  const out = { assignments: new Map(), localEts: new Map(), rules: {}, separate: [] }
+  for (const d of dialect) if (d.token && d.role) out.rules[String(d.token).toLowerCase()] = d.role
+  for (const it of items) {
+    if (it.kind === 'assignment' && it.value?.ref) out.assignments.set(it.key, it.value.ref)
+    else if (it.kind === 'local-et') out.localEts.set(norm(it.key), { ref: it.key, ...(it.value || {}) })
+    else if (it.kind === 'rule' && it.value?.role) out.rules[String(it.key).toLowerCase()] = it.value.role   // project beats dialect
+    else if (it.kind === 'pair' && it.value?.verdict === 'different') out.separate.push(it.key)
+  }
+  return out
+}
+
 export default function useProjectKnowledge(projectNumber) {
   const api = useCompanion()
   const number = String(projectNumber || '').trim()
-  const [data, setData] = useState(EMPTY)
-  const [refused, setRefused] = useState(() => new Set())
-  const shown = useRef(new Set())
+  const [data, setData] = useState(null)
 
   useEffect(() => {
+    setData(null)
     if (!api?.projectItems || !number) return
     let live = true
-    api.projectItems(number).then(d => { if (live && d) setData({ items: d.items || [], dialect: d.dialect || [] }) })
+    api.projectItems(number).then(d => { if (live && d) setData(d) })
     return () => { live = false }
   }, [api, number])
 
-  const byKind = useMemo(() => {
-    const out = { assignment: new Map(), 'local-et': new Map(), rule: [], pair: new Map() }
-    for (const it of data.items) {
-      if (refused.has(it.id)) continue
-      if (it.kind === 'rule') out.rule.push(it)
-      else out[it.kind]?.set(it.kind === 'local-et' ? norm(it.key) : it.key, it)
-    }
-    return out
-  }, [data, refused])
-
-  const report = useCallback((item, outcome) => {
-    if (!api?.feedback || !item?.id || !number) return
-    if (outcome === 'shown') {
-      if (shown.current.has(item.id)) return
-      shown.current.add(item.id)
-    }
-    if (outcome === 'rejected') setRefused(s => new Set(s).add(item.id))
-    api.feedback(number, item.id, outcome)
-  }, [api, number])
-
-  return { active: !!(api?.projectItems && number), byKind, dialect: data.dialect, report }
+  return useMemo(() => (data ? { ready: true, ...digest(data) } : { ready: false, ...digest() }), [data])
 }
 
 /**
- * What to say about one code: the ref a colleague gave it on this project, and whether it can be
- * used as is (the project knows the ref, or a colleague's local ET describes it).
+ * The learned ElementType for one code, or null. Usable only when this project knows the ref, or
+ * a learned local ElementType describes it (the caller creates that first) — otherwise it is
+ * dropped rather than guessed at.
  */
-export function colleagueHint(knowledge, entry, knownRefs) {
-  if (!knowledge?.active || entry.etRef) return null
+export function learnedRef(knowledge, entry, knownRefs) {
+  if (!knowledge?.ready) return null
   const maker = entry.manufacturers?.length === 1 ? entry.manufacturers[0] : ''
-  const item = knowledge.byKind.assignment.get(assignmentKey(entry.text, maker))
-  const ref = item?.value?.ref
+  const ref = knowledge.assignments.get(assignmentKey(entry.text, maker))
   if (!ref) return null
-  const local = knowledge.byKind['local-et'].get(norm(ref)) || null
-  return { ref, item, local, usable: knownRefs.has(norm(ref)) || !!local }
+  return knownRefs.has(norm(ref)) ? ref : null
 }
 
-/** Rules colleagues use (here, or on two or more projects) that this batch does not have yet. */
-export function pendingRules(knowledge, rules = {}) {
-  if (!knowledge?.active) return []
+/** Learned local ElementTypes this Form's codes need and this project does not have yet. */
+export function localEtsNeeded(knowledge, entries, knownRefs) {
+  if (!knowledge?.ready) return []
   const out = new Map()
-  for (const it of knowledge.byKind.rule) {
-    const t = String(it.key).toLowerCase()
-    if (it.value?.role && rules[t] !== it.value.role) out.set(t, { token: t, role: it.value.role, item: it })
-  }
-  for (const d of knowledge.dialect || []) {
-    if (!out.has(d.token) && rules[d.token] !== d.role) out.set(d.token, { token: d.token, role: d.role, item: null })
+  for (const e of entries) {
+    const maker = e.manufacturers?.length === 1 ? e.manufacturers[0] : ''
+    const ref = knowledge.assignments.get(assignmentKey(e.text, maker))
+    const et = ref && !knownRefs.has(norm(ref)) ? knowledge.localEts.get(norm(ref)) : null
+    if (et) out.set(norm(ref), et)
   }
   return [...out.values()]
 }
 
-/** Near-miss groups a colleague on this project already ruled were different products. */
-export function separatedByColleagues(knowledge, similar = [], keptSeparate = new Set()) {
-  if (!knowledge?.active) return []
-  return similar.filter(g => {
-    const k = groupKey(g)
-    return !keptSeparate.has(k) && knowledge.byKind.pair.get(k)?.value?.verdict === 'different'
-  })
-}
-
-/**
- * What this browser decided, for the next person on the project. Sent after staging; the
- * companion keeps the latest per key. → the companion's answer, or null.
- */
+/** What this session decided, for the next session on the project. Background; latest wins. */
 export function shareDecisions(api, projectNumber, { entries = [], rules = {}, keptSeparate = new Set(),
   merged = [], localEts = [] } = {}) {
   const number = String(projectNumber || '').trim()
@@ -119,4 +106,24 @@ export function shareDecisions(api, projectNumber, { entries = [], rules = {}, k
     if (et.ref) items.push({ kind: 'local-et', key: et.ref, value: { name: et.name || '', description: et.description || '', family: et.family || '' } })
   }
   return items.length ? api.shareProjectItems(number, items.slice(0, 2000)) : Promise.resolve(null)
+}
+
+const offered = new Set()
+
+/**
+ * Evidence for the catalogue: the ElementType (and its family) each staged code was given. It is
+ * reviewed on the other side before anything relies on it. Single-maker codes only (a product
+ * is the pair), each once per session.
+ */
+export async function offerAssignments(api, entries, { project = '', familyOf = () => '' } = {}) {
+  if (!api?.contribute) return 0
+  const offers = (entries || []).filter(e => e.etRef && !e.placeholder && e.manufacturers?.length === 1)
+    .map(e => ({
+      kind: 'et-assignment', code: e.text, manufacturer: e.manufacturers[0], ref: e.etRef,
+      family: familyOf(e.etRef) || '', description: e.variants?.[0]?.note || '', project,
+    }))
+    .filter(o => !offered.has(assignmentKey(o.code, o.manufacturer) + '|' + o.ref))
+  const ok = await Promise.all(offers.map(o => api.contribute(o)))
+  offers.forEach((o, i) => { if (ok[i]) offered.add(assignmentKey(o.code, o.manufacturer) + '|' + o.ref) })
+  return ok.filter(Boolean).length
 }

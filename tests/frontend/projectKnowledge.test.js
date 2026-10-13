@@ -1,56 +1,44 @@
 import { describe, it, expect, vi } from 'vitest'
 import {
-  assignmentKey, colleagueHint, pendingRules, separatedByColleagues, shareDecisions,
+  assignmentKey, digest, learnedRef, localEtsNeeded, shareDecisions, offerAssignments,
 } from '../../src/screens/import/useProjectKnowledge'
-import { groupKey } from '../../src/utils/productCodes'
 
-const know = (items = [], dialect = []) => {
-  const byKind = { assignment: new Map(), 'local-et': new Map(), rule: [], pair: new Map() }
-  for (const it of items) {
-    if (it.kind === 'rule') byKind.rule.push(it)
-    else byKind[it.kind].set(it.kind === 'local-et' ? it.key.toUpperCase() : it.key, it)
-  }
-  return { active: true, byKind, dialect, report: vi.fn() }
-}
+const know = (items = [], dialect = []) => ({ ready: true, ...digest({ items, dialect }) })
+const entry = { text: 'dl0560', manufacturers: ['Acme'], etRef: null }
 
-describe('colleagueHint', () => {
-  const entry = { text: 'dl0560', manufacturers: ['Acme'], etRef: null }
-  it('offers what a colleague chose, usable when the project knows the ref', () => {
-    const k = know([{ id: 1, kind: 'assignment', key: assignmentKey('DL0560', 'acme'), value: { ref: 'ET-DL-01' } }])
-    expect(colleagueHint(k, entry, new Set(['ET-DL-01']))).toMatchObject({ ref: 'ET-DL-01', usable: true })
-    expect(colleagueHint(k, entry, new Set())).toMatchObject({ usable: false })
+describe('learned defaults', () => {
+  it('a learned ref stands only when the project can resolve it', () => {
+    const k = know([{ kind: 'assignment', key: assignmentKey('DL0560', 'acme'), value: { ref: 'ET-DL-01' } }])
+    expect(learnedRef(k, entry, new Set(['ET-DL-01']))).toBe('ET-DL-01')
+    expect(learnedRef(k, entry, new Set())).toBeNull()
   })
-  it('is usable through a colleague\'s local ElementType', () => {
+  it('a learned local ElementType is made first so its ref can be resolved', () => {
     const k = know([
-      { id: 1, kind: 'assignment', key: assignmentKey('DL0560', 'Acme'), value: { ref: 'ET-NEW-01' } },
-      { id: 2, kind: 'local-et', key: 'et-new-01', value: { family: 'ET-NEW' } },
+      { kind: 'assignment', key: assignmentKey('DL0560', 'Acme'), value: { ref: 'ET-NEW-01' } },
+      { kind: 'local-et', key: 'ET-NEW-01', value: { family: 'ET-NEW' } },
     ])
-    expect(colleagueHint(k, entry, new Set())).toMatchObject({ usable: true, local: { id: 2 } })
+    expect(localEtsNeeded(k, [entry], new Set())).toEqual([{ ref: 'ET-NEW-01', family: 'ET-NEW' }])
+    expect(localEtsNeeded(k, [entry], new Set(['ET-NEW-01']))).toEqual([])
   })
-  it('says nothing once the code has an ElementType, or without knowledge', () => {
-    expect(colleagueHint(know(), { ...entry, etRef: 'X' }, new Set())).toBeNull()
-    expect(colleagueHint({ active: false }, entry, new Set())).toBeNull()
+  it('is inert until knowledge arrives', () => {
+    expect(learnedRef({ ready: false }, entry, new Set(['X']))).toBeNull()
+    expect(localEtsNeeded({ ready: false }, [entry], new Set())).toEqual([])
   })
-})
-
-describe('pendingRules', () => {
-  it('offers rules this batch lacks, project ones before dialect', () => {
-    const k = know([{ id: 1, kind: 'rule', key: 'Tape', value: { role: 'note' } }],
-      [{ token: 'tape', role: 'code', projects: 3 }, { token: 'clip', role: 'note', projects: 2 }])
-    expect(pendingRules(k, { clip: 'note' })).toEqual([{ token: 'tape', role: 'note', item: expect.objectContaining({ id: 1 }) }])
+  it('project rules beat cross-project dialect; separate pairs are kept', () => {
+    const k = know([{ kind: 'rule', key: 'Tape', value: { role: 'note' } },
+      { kind: 'pair', key: 'A|B', value: { verdict: 'different' } },
+      { kind: 'pair', key: 'C|D', value: { verdict: 'same' } }],
+    [{ token: 'tape', role: 'code' }, { token: 'clip', role: 'note' }])
+    expect(k.rules).toEqual({ tape: 'note', clip: 'note' })
+    expect(k.separate).toEqual(['A|B'])
   })
-})
-
-describe('separatedByColleagues', () => {
-  it('finds near-miss groups a colleague kept apart', () => {
-    const g = [{ text: 'A1' }, { text: 'A1-EM' }]
-    const k = know([{ id: 1, kind: 'pair', key: groupKey(g), value: { verdict: 'different' } }])
-    expect(separatedByColleagues(k, [g], new Set())).toEqual([g])
-    expect(separatedByColleagues(k, [g], new Set([groupKey(g)]))).toEqual([])
+  it('the person\'s own rules win when seeded (spread order used by the import)', () => {
+    const k = know([{ kind: 'rule', key: 'tape', value: { role: 'note' } }])
+    expect({ ...k.rules, ...{ tape: 'code' } }).toEqual({ tape: 'code' })
   })
 })
 
-describe('shareDecisions', () => {
+describe('learning from the session', () => {
   it('sends assignments, rules, pairs and local ElementTypes for the project', async () => {
     const shareProjectItems = vi.fn(async () => ({ stored: 5 }))
     await shareDecisions({ shareProjectItems }, '4343', {
@@ -66,5 +54,15 @@ describe('shareDecisions', () => {
     const shareProjectItems = vi.fn()
     expect(await shareDecisions({ shareProjectItems }, '', { rules: { a: 'note' } })).toBeNull()
     expect(shareProjectItems).not.toHaveBeenCalled()
+  })
+  it('offers single-maker ElementType decisions once, with their family', async () => {
+    const contribute = vi.fn(async () => true)
+    const entries = [
+      { text: 'C1', manufacturers: ['Acme'], etRef: 'ET-1', variants: [{ note: 'n' }] },
+      { text: 'C2', manufacturers: ['A', 'B'], etRef: 'ET-2', variants: [] },
+    ]
+    expect(await offerAssignments({ contribute }, entries, { project: 'P1', familyOf: () => 'ET-F' })).toBe(1)
+    expect(contribute).toHaveBeenCalledWith(expect.objectContaining({ kind: 'et-assignment', code: 'C1', family: 'ET-F' }))
+    expect(await offerAssignments({ contribute }, entries)).toBe(0)
   })
 })

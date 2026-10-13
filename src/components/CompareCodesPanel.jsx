@@ -24,8 +24,6 @@ import { codeDiff } from '../utils/etRefSuggest'
  *   onCreateET(entry)   — entry carries `suggestedRef` to prefill the new ET
  *   onReuse(entry, ref) — assign an existing ElementType instead of creating one
  *   onJump(entry)       — click the code to jump back to the row that produced it
- *   onUseColleague(entry) / onDismissColleague(entry) — take or refuse what a colleague on
- *                         this project chose (entry.colleague)
  */
 
 /**
@@ -47,65 +45,6 @@ function CodeDiff({ code, other }) {
       style={{ fontFamily: 'monospace', fontSize: 11, lineHeight: 1.45, background: '#f8f9fa' }}>
       <div><span className="text-muted" style={label}>this</span>{line('del', '#842029', '#f5c2c7')}</div>
       <div><span className="text-muted" style={label}>existing</span>{line('add', '#0f5132', '#a3cfbb')}</div>
-    </div>
-  )
-}
-
-/**
- * What a shared product catalogue says about this code (only when the app is served beside
- * one — see platform/companion.js). A ref is per project and does not travel; the FAMILY does,
- * so that is what is shown, with the projects that used it. A retired code leads with its
- * replacement. Advisory: nothing here is applied.
- */
-function CatalogueNote({ product }) {
-  const fams = product.families.slice(0, 3)
-  const facts = product.facts.map(f => `${f.attribute} = ${f.value}${f.tier ? ` (${f.tier})` : ''}`).join('\n')
-  if (!product.retired && !fams.length) return null
-  return (
-    <div style={{ fontSize: 10 }} className="text-muted" data-testid="catalogue-note" title={facts || undefined}>
-      {product.retired && (
-        <div style={{ color: '#842029' }}>
-          <MaterialIcon name="block" size={10} /> retired{product.replacement && <> — replaced by{' '}
-            <span style={{ fontFamily: 'monospace' }}>{product.replacement}</span></>}
-        </div>
-      )}
-      {fams.length > 0 && (
-        <div className="d-flex align-items-center gap-1 flex-wrap">
-          <MaterialIcon name="travel_explore" size={10} /> family elsewhere:
-          {fams.map(f => (
-            <span key={f.family} className="d-inline-flex align-items-center"
-              title={f.projects.length ? `on ${f.projects.join(', ')}${f.tier === 'confirmed' ? ' — confirmed' : ''}` : f.tier}>
-              <span style={{ fontFamily: 'monospace' }}>{f.family}</span>
-              {f.tier === 'confirmed' && <MaterialIcon name="verified" size={10} style={{ color: '#198754' }} />}
-              {f.projects.length > 0 && <span>&nbsp;· {f.projects.length} project{f.projects.length === 1 ? '' : 's'}</span>}
-              <CopyButton text={f.family} what={`family ${f.family}`} size={10} />
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-/**
- * What someone else on THIS project chose for the code (project knowledge, see
- * screens/import/useProjectKnowledge.js). Refs are valid within a project, so this one can be
- * used directly — but only when this project knows the ref; otherwise it is a hint.
- */
-function ColleagueNote({ hint, onUse, onDismiss }) {
-  return (
-    <div style={{ fontSize: 10 }} className="d-flex align-items-center gap-1 text-muted" data-testid="colleague-note">
-      <MaterialIcon name="group" size={10} /> on this project:
-      <span style={{ fontFamily: 'monospace' }}>{hint.ref}</span>
-      {hint.usable && onUse && (
-        <Button size="sm" variant="outline-success" style={{ fontSize: 9, padding: '0 5px' }}
-          title={`Use ${hint.ref}, as a colleague did`} onClick={onUse}>Use</Button>
-      )}
-      {onDismiss && (
-        <button className="btn btn-link p-0 text-muted" style={{ fontSize: 9 }} title="Not this one" onClick={onDismiss}>
-          not this
-        </button>
-      )}
     </div>
   )
 }
@@ -158,7 +97,7 @@ function PositionTypes({ pts, knownPTs, ptTarget }) {
   )
 }
 
-export default function CompareCodesPanel({ entries, knownPTs, ptTarget, onCreateET, onReuse, onJump, onNeedsET , onUseColleague, onDismissColleague}) {
+export default function CompareCodesPanel({ entries, knownPTs, ptTarget, onCreateET, onReuse, onJump, onNeedsET }) {
   if (!entries.length) {
     return <div className="text-muted fst-italic" style={{ fontSize: 11 }}>Confirm a row to collect its codes.</div>
   }
@@ -199,18 +138,19 @@ export default function CompareCodesPanel({ entries, knownPTs, ptTarget, onCreat
               </div>
             )}
 
-            {e.superseded && (
+            {e.retired && (
+              <div style={{ fontSize: 10, color: '#842029' }} data-testid="retired"
+                title={e.retired.retired ? `Replaced by the manufacturer (${e.retired.retired})` : 'Replaced by the manufacturer'}>
+                <MaterialIcon name="history" size={10} /> replaced by{' '}
+                <span style={{ fontFamily: 'monospace' }}>{e.retired.replacement}</span> — check the current code
+              </div>
+            )}
+
+            {!e.retired && e.superseded && (
               <div style={{ fontSize: 10, color: '#842029' }} data-testid="superseded"
                 title={`Codes shaped like ${e.superseded.example} are ${e.manufacturers[0] || 'the maker'}'s old numbering`}>
                 <MaterialIcon name="history" size={10} /> old {e.manufacturers[0] || ''} numbering — check the current code
               </div>
-            )}
-
-            {e.catalogue && <CatalogueNote product={e.catalogue} />}
-            {!e.etRef && e.colleague && (
-              <ColleagueNote hint={e.colleague}
-                onUse={onUseColleague ? () => onUseColleague(e) : null}
-                onDismiss={onDismissColleague ? () => onDismissColleague(e) : null} />
             )}
 
             <PositionTypes pts={e.positionTypes} knownPTs={knownPTs} ptTarget={ptTarget} />

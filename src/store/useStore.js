@@ -1023,6 +1023,19 @@ const useStore = create((set, get) => ({
     return refs.length
   },
 
+  // Product codes their manufacturer has replaced: CODE -> { replacement, retired }. Filled
+  // quietly by platform/retired.js when a companion knows; empty otherwise.
+  retiredCodes: {},
+  noteRetired(rows = []) {
+    set(s => {
+      const next = { ...s.retiredCodes }
+      for (const r of rows) {
+        if (r?.code && r.replacement) next[String(r.code).trim().toUpperCase()] = { replacement: r.replacement, retired: r.retired || null }
+      }
+      return { retiredCodes: next }
+    })
+  },
+
   // The tool-wide library: recipe patterns and products of every project opened before.
   library: { patterns: [], exemplars: [] },
   async loadLibrary() {
