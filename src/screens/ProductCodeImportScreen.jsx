@@ -1099,7 +1099,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
    * Form's (formPositions.mergeCaptures), so every other position keeps what it had.
    * Returns the resolved PositionTypeRefs staged.
    */
-  async function handleStage({ only = null } = {}) {
+  async function handleStage({ only = null, go = false } = {}) {
     const inScope = r => !only || only.has(String(r.positionType ?? '').trim())
     const entryInScope = e => !only || (e.positionTypes || []).some(pt => only.has(String(pt ?? '').trim()))
     // 1. Stage the Product Spec: product code + manufacturer per code, note → ET Description.
@@ -1273,6 +1273,12 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       unrouted, diff, divergence, leftBehind,
       pending: [...pendingByPos.values()].reduce((n, l) => n + l.length, 0),
     })
+    // Nothing new for the spec ("Go to Recipes"): straight on to the recipes, unless a shared
+    // wrapper needs a decision first; that is in the summary.
+    if (go && onReviewPositions && byPos.size && !divergence.length) {
+      onReviewPositions([...byPos.keys()])
+      return
+    }
     setStagedOpen(true)
   }
 
@@ -1961,13 +1967,13 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
                   <MaterialIcon name="check_circle" size={14} /> All {entries.length} code{entries.length === 1 ? ' has' : 's have'} an ElementType
                 </div>
               ) : null}
-              <Button variant="success" size="sm" className="w-100" disabled={!ready} onClick={() => handleStage()}>
-                <MaterialIcon name={toSpec ? 'playlist_add' : 'save'} size={14} />{' '}
-                {toSpec ? `Add ${toSpec} to Product Spec` : 'Save the Form to its positions'}
+              <Button variant="success" size="sm" className="w-100" disabled={!ready} onClick={() => handleStage({ go: !toSpec })}>
+                <MaterialIcon name={toSpec ? 'playlist_add' : 'playlist_add_check'} size={14} />{' '}
+                {toSpec ? `Add ${toSpec} to Product Spec` : 'Go to Recipes'}
               </Button>
               {inSpec > 0 && (
                 <div className="text-muted mt-1" style={{ fontSize: 10 }} data-testid="stage-in-spec">
-                  {toSpec ? `${inSpec} more already in the Product Spec` : `All ${inSpec} code${inSpec === 1 ? ' is' : 's are'} already in the Product Spec: nothing new is written to it`}
+                  {toSpec ? `${inSpec} more already in the Product Spec` : `All ${inSpec} code${inSpec === 1 ? ' is' : 's are'} already in the Product Spec`}
                 </div>
               )}
               {!ready && (unconfirmedCount > 0 || unassigned.length > 0) && (

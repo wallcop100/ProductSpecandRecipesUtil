@@ -196,9 +196,9 @@ describe('the Form, as a table', () => {
     // 8FFDRP: already in the spec, so nothing is added to it; the click saves the Form per position.
     expect(screen.queryByRole('button', { name: /to Product Spec/ })).toBeNull()
     expect(screen.getByTestId('stage-in-spec')).toHaveTextContent('All 1 code is already in the Product Spec')
-    fireEvent.click(await screen.findByRole('button', { name: /Save the Form to its positions/ }))
-    fireEvent.click(await screen.findByRole('button', { name: /Build recipes for this position/ }))
-    expect(onReviewPositions).toHaveBeenCalledWith(['A1'])
+    fireEvent.click(await screen.findByRole('button', { name: /Go to Recipes/ }))
+    await tick()
+    expect(onReviewPositions).toHaveBeenCalledWith(['A1'])   // straight there: nothing to add first
   })
 })
 
@@ -281,7 +281,7 @@ describe('finish first, then add', () => {
     })
     render(<ProductCodeImportScreen onBack={vi.fn()} onReviewPositions={vi.fn()} />)
     await screen.findByTestId('form-table')
-    expect(screen.getByRole('button', { name: /Save the Form to its positions/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Go to Recipes/ })).toBeDisabled()
     expect(screen.getByTestId('stage-todo')).toHaveTextContent('confirm 1 row')
     fireEvent.click(screen.getByLabelText('More'))
     expect(await screen.findByText(/Add only the 1 finished now/)).toBeInTheDocument()
@@ -311,7 +311,7 @@ describe('finish first, then add', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Apply 1$/ }))
     await tick()
     expect(screen.queryByTestId('stage-todo')).toBeNull()
-    expect(screen.getByRole('button', { name: /Save the Form to its positions/ })).not.toBeDisabled()
+    expect(screen.getByRole('button', { name: /Go to Recipes/ })).not.toBeDisabled()
   })
 })
 
