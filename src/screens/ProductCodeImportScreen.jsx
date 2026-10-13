@@ -1,6 +1,6 @@
 import useImportSession from './import/useImportSession'
 import { useCompanion } from '../platform/companion'
-import useProjectKnowledge, { learnedRef, localEtsNeeded, shareDecisions, offerAssignments } from './import/useProjectKnowledge'
+import useProjectKnowledge, { learnedRef, localEtsNeeded, shareDecisions, offerAssignments, orderLibrary } from './import/useProjectKnowledge'
 import { sweepCodes, retiredFor } from '../platform/retired'
 import InfoTip from '../components/InfoTip'
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
@@ -868,7 +868,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   useEffect(() => {
     if (!companion?.library || !makersKey) return
     let live = true
-    companion.library(makersKey.split('|'), projectNumber || '').then(rows => { if (live) setSharedLibrary(rows) })
+    companion.library(makersKey.split('|'), { prefer: projectNumber || '' }).then(rows => { if (live) setSharedLibrary(rows) })
     return () => { live = false }
   }, [companion, makersKey, projectNumber])
   const allEntries = useMemo(() => [...codeEntries, ...tbcEntries], [codeEntries, tbcEntries])
@@ -1008,7 +1008,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       ptTarget: map.pt ? ptTarget : r => r, contextFor,
       roleOf: e => (leads.has(norm(e.text)) ? 'lead' : 'extra'),
       pageTypeFor,
-      library: sharedLibrary.length ? [...styleLibrary, ...sharedLibrary] : styleLibrary,
+      // The first exact-code hit wins in etSeed, so order is precedence: this project's own
+      // latest decisions (corrections included), then this browser's library, then other projects.
+      library: sharedLibrary.length ? orderLibrary(sharedLibrary, styleLibrary, projectNumber) : styleLibrary,
     })
   }, [unassigned, confirmed, captureOpts, elementTypes, psRows, recipes, positionTypes, dbCollectionRefs, map.pt, ptTarget, styleLibrary, sharedLibrary])
 

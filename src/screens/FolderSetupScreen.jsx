@@ -12,6 +12,7 @@ import { harvestExemplars } from '../utils/styleLibrary'
 import { getCompanion } from '../platform/companion'
 import { sweepCodes } from '../platform/retired'
 import { pullConfig } from '../platform/projectConfig'
+import { primeLearning } from '../platform/learning'
 import { harvestPatterns } from '../utils/recipePatterns'
 import { groupProjects, adoptPlan, pickCanonical, UNASSIGNED, dbFilesOf, pickDbs } from '../utils/projectIdentity'
 import ProjectCard from '../components/ProjectCard'
@@ -421,6 +422,8 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
         // …and, beside a companion, to the library other projects learn from; and ask which of
         // this spec's codes have since been replaced. Both silent; both need nothing back.
         if (projectNumber) getCompanion().then(api => api?.shareLibrary?.(projectNumber, exemplars))
+        // What the project says as it opens is the baseline; only later edits are corrections.
+        primeLearning(projectNumber, { elementTypes, psRows: ps_rows ?? [] })
         sweepCodes((ps_rows ?? []).filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
           .map(r => ({ code: r.ProductCode || r.productCode, manufacturer: r.Manufacturer || r.manufacturer })))
       } catch { /* the library is a convenience, never a reason not to open */ }

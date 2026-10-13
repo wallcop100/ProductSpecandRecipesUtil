@@ -34,6 +34,16 @@ describe('project configuration', () => {
     ]))
     expect(sent).toHaveLength(3)
   })
+  it('a renamed local ElementType leaves a tombstone, applied as a deletion', () => {
+    const { snap } = diffForPush(configItems(cfg()), {})
+    const next = cfg(); next.local_element_types = [{ ref: 'ET-L-02', family: 'ET-L' }]
+    const sent = diffForPush(configItems(next), snap).items
+    expect(sent).toEqual(expect.arrayContaining([
+      { kind: 'local-et', key: 'ET-L-01', value: { deleted: true } },
+      expect.objectContaining({ kind: 'local-et', key: 'ET-L-02' }),
+    ]))
+    expect(itemsToConfig(sent).deletes.localEts).toEqual(['ET-L-01'])
+  })
   it('a pull never overwrites what this session changed but has not sent', () => {
     const { snap } = diffForPush(configItems(cfg()), {})
     const here = cfg(); here.position_ui[0].ignored = false                       // changed here
