@@ -6,6 +6,7 @@ vi.mock('../../src/utils/backend.js', () => ({
   importFiles: vi.fn(), detectFiles: vi.fn(), readSheet: vi.fn(),
   registerFile: vi.fn(), setActiveDirectory: vi.fn(), getActiveDirectory: vi.fn(), fileMeta: vi.fn(),
 }))
+vi.mock('../../src/platform/companion', () => ({ useCompanion: () => null, getCompanion: async () => null }))
 
 const { default: useStore } = await import('../../src/store/useStore.js')
 const { default: BugReporter } = await import('../../src/components/BugReporter.jsx')

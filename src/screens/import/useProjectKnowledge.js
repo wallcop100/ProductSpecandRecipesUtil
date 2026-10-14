@@ -32,12 +32,17 @@ const EMPTY = { items: [], dialect: [] }
 
 /** The learning, reduced to the defaults the import uses. Pure; exported for tests. */
 export function digest({ items = [], dialect = [] } = EMPTY) {
-  const out = { assignments: new Map(), localEts: new Map(), rules: {}, separate: [] }
-  for (const d of dialect) if (d.token && d.role) out.rules[String(d.token).toLowerCase()] = d.role
+  const out = { assignments: new Map(), localEts: new Map(), rules: {}, ruleTiers: {}, separate: [] }
+  for (const d of dialect) {
+    if (d.token && d.role) { out.rules[String(d.token).toLowerCase()] = d.role; out.ruleTiers[String(d.token).toLowerCase()] = 'dialect' }
+  }
   for (const it of items) {
     if (it.kind === 'assignment' && it.value?.ref) out.assignments.set(it.key, it.value.ref)
     else if (it.kind === 'local-et') out.localEts.set(norm(it.key), { ref: it.key, ...(it.value || {}) })
-    else if (it.kind === 'rule' && it.value?.role) out.rules[String(it.key).toLowerCase()] = it.value.role   // project beats dialect
+    else if (it.kind === 'rule' && it.value?.role) {
+      out.rules[String(it.key).toLowerCase()] = it.value.role   // project beats dialect
+      out.ruleTiers[String(it.key).toLowerCase()] = 'project'
+    }
     else if (it.kind === 'pair' && it.value?.verdict === 'different') out.separate.push(it.key)
   }
   return out

@@ -12,6 +12,8 @@ speaks this protocol, it adds three optional features:
 | `library`       | Shares the style library (`style_exemplars`: maker, code → family, ref, name, description) across browsers and projects, so ElementType families are seeded the way other projects did it. |
 | `projects`      | Keeps what a project's users decided, by project number, and offers it back to the next person as suggestions. |
 | `contribution-status` | Shows contributors whether what they offered was accepted. |
+| `outcomes`      | Says what became of each default the app filled in from `projects` or `library`: kept, changed or cleared. Sent in the background at staging and at ElementType creation; nothing is shown. |
+| `reports`       | Shows a ⚑ beside the bug-report button. A report written there is sent straight away, with what was on screen; one that cannot be sent is kept with the browser's own bug reports. |
 
 All paths are **relative to the page** (`./api/...`), so a build needs no configuration. If any
 call fails, the feature behaves as though it is absent. Nothing in the app depends on a
@@ -103,6 +105,27 @@ Nothing is applied without a click.
 | `local-et` | ElementType ref | `{ name, description, family }` |
 | `rule` | token | `{ role, maker }` (code-column dialect) |
 | `pair` | sorted codes joined by `\|` | `{ verdict: "same" \| "different" }` |
+
+## outcomes
+
+`POST api/projects/<number>/outcomes` with `{ "outcomes": [{ kind, key, tier, source, supplied,
+final, outcome }] }`. A key is sent again only when its outcome changes. Nothing reads these back.
+
+| field | meaning |
+|---|---|
+| `kind`, `key` | as in `projects`, plus `family` (key `MAKER\|CODE`: the family an ElementType proposal took from the library) |
+| `tier` | where the value came from: `project` (this project number), `dialect` (agreed across projects), `library` (the same product elsewhere), `style` (a maker's product line elsewhere) |
+| `source` | for `library` / `style`, the project number of the exemplar, when known |
+| `supplied`, `final` | the value filled in, and the value when the person staged or created (`null` if cleared) |
+| `outcome` | `kept`, `changed` or `cleared` |
+
+## reports
+
+`POST api/reports` with one report, in the shape the app's bug reports already have
+(`src/utils/bugReports.js`: `note`, `kind`, `version`, `build`, `app`, `dom`, `trail`, `viewport`),
+plus `project` (the project number) and `learned` (`[{ kind, key, value, tier, source }]`, the
+learned values behind the code in view) → `{ "received": true, "id" }`. A server should cap the
+size and rate, and treat the content as untrusted text for a person to read.
 
 ## workspaces
 

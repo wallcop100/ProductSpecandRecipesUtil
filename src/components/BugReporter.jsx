@@ -5,12 +5,18 @@ import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { buildReport, describeElement, domContext, reportsToMarkdown } from '../utils/bugReports'
 import { download } from '../platform/fs'
+import { useCompanion } from '../platform/companion'
+import { learnedInView } from '../platform/outcomes'
 
 /**
  * BugReporter — the alpha's bug-report mode. The bug beside ALPHA turns it on; then a
  * right-click anywhere opens a note at the pointer and saves it with what was on screen
  * (bugReports.js). Shift + right-click keeps the browser's own menu. The ▾ beside the bug
  * copies or saves every report as Markdown; the export window has the same, per report.
+ *
+ * Served beside a companion with `reports`, a ⚑ beside the bug writes a report and sends it
+ * straight away (and a right-click note can be sent too). Without one there is no ⚑, and a
+ * report that cannot be sent is kept here like any other.
  */
 export default function BugReporter({ screen }) {
   const bugMode = useStore(s => s.bugMode)
@@ -20,6 +26,10 @@ export default function BugReporter({ screen }) {
   const clearBugReports = useStore(s => s.clearBugReports)
   const [draft, setDraft] = useState(null)   // { x, y, target, note, capture, preview }
   const [copied, setCopied] = useState(false)
+  const [sent, setSent] = useState(null)      // 'sent' | 'kept' — a moment's word beside the ⚑
+  const companion = useCompanion()
+  const canSend = !!companion?.report
+  const flagRef = useRef(null)
   const trail = useRef([])
   const noteRef = useRef(null)
   const screenRef = useRef(screen)
@@ -57,13 +67,37 @@ export default function BugReporter({ screen }) {
 
   useEffect(() => { if (draft) setTimeout(() => noteRef.current?.focus(), 0) }, [!!draft])
 
-  function save(kind = 'bug') {
-    if (!draft?.note.trim()) return
-    addBugReport(buildReport({
+  function build(kind) {
+    return buildReport({
       note: draft.note, kind, target: draft.target, state: useStore.getState(), screen: screenRef.current,
       trail: trail.current, capture: draft.capture, taken: useStore.getState().bugReports.map(r => r.id),
-    }))
+    })
+  }
+
+  function save(kind = 'bug') {
+    if (!draft?.note.trim()) return
+    addBugReport(build(kind))
     setDraft(null)
+  }
+
+  /** Send now; if it can't go, keep it here like any other report. */
+  async function send(kind = 'bug') {
+    if (!draft?.note.trim() || !canSend) return
+    const r = build(kind)
+    const learned = r.dom ? learnedInView([r.dom.code, ...(r.dom.refs || []), r.app?.elementType]) : []
+    setDraft(null)
+    const ok = await companion.report({ ...r, project: useStore.getState().projectNumber || null, ...(learned.length ? { learned } : {}) })
+    if (!ok) addBugReport(r)
+    setSent(ok ? 'sent' : 'kept')
+    setTimeout(() => setSent(null), 2500)
+  }
+
+  function openFlag() {
+    const b = flagRef.current?.getBoundingClientRect()
+    setDraft({
+      host: document.body, x: b ? b.left - 140 : 80, y: b ? b.bottom + 6 : 40, target: null, note: '', capture: true,
+      flag: true, preview: screenRef.current || '',
+    })
   }
 
   async function copyAll() {
@@ -104,6 +138,15 @@ export default function BugReporter({ screen }) {
             </Dropdown.Menu>
           </Dropdown>
         </ButtonGroup>
+        {canSend && (
+          <Button size="sm" variant="light" ref={flagRef} onClick={openFlag} data-testid="report-flag" className="ms-1"
+            title="Report a problem" aria-label="Report a problem"
+            style={{ padding: '1px 6px', lineHeight: 1, boxShadow: '0 1px 4px rgba(0,0,0,.25)' }}>
+            <MaterialIcon name="flag" size={16} />
+          </Button>
+        )}
+        {sent && <span className="ms-1 small" role="status" style={{ background: '#fff', borderRadius: 4, padding: '1px 6px', boxShadow: '0 1px 4px rgba(0,0,0,.25)' }}>
+          {sent === 'sent' ? 'Sent, thank you' : 'Kept with your bug reports'}</span>}
       </div>
 
       {draft && createPortal(
@@ -114,7 +157,7 @@ export default function BugReporter({ screen }) {
           style={{ position: 'fixed', left, top, width: W, zIndex: 2100, background: '#fff', border: '1px solid #dc3545',
             borderRadius: 6, boxShadow: '0 4px 16px rgba(0,0,0,.25)', padding: 10, fontSize: 12 }}>
           <div className="d-flex align-items-center gap-1 mb-1 fw-semibold" style={{ color: '#b02a37' }}>
-            <MaterialIcon name="bug_report" size={14} /> What went wrong?
+            <MaterialIcon name={draft.flag ? 'flag' : 'bug_report'} size={14} /> {draft.flag ? 'Report a problem' : 'What went wrong?'}
           </div>
           <Form.Control as="textarea" rows={4} ref={noteRef} value={draft.note} aria-label="Bug note" style={{ fontSize: 12 }}
             placeholder="What you did, what you expected, what happened…" onChange={e => setDraft(d => ({ ...d, note: e.target.value }))} />
@@ -123,9 +166,14 @@ export default function BugReporter({ screen }) {
             label={<span className="text-muted" style={{ fontSize: 11 }}>Record where: {draft.preview || 'this screen'}</span>} />
           <div className="d-flex justify-content-end gap-2 mt-2">
             <Button size="sm" variant="link" className="text-muted p-0" onClick={() => setDraft(null)}>Cancel</Button>
-            <Button size="sm" disabled={!draft.note.trim()} onClick={() => save('feature')}
-              style={{ background: '#6f42c1', borderColor: '#6f42c1', color: '#fff' }}>Save as Feature Request</Button>
-            <Button size="sm" variant="danger" disabled={!draft.note.trim()} onClick={() => save()}>Save</Button>
+            {draft.flag ? (
+              <Button size="sm" variant="danger" disabled={!draft.note.trim()} onClick={() => send()} data-testid="report-send">Send</Button>
+            ) : (<>
+              <Button size="sm" disabled={!draft.note.trim()} onClick={() => save('feature')}
+                style={{ background: '#6f42c1', borderColor: '#6f42c1', color: '#fff' }}>Save as Feature Request</Button>
+              <Button size="sm" variant="danger" disabled={!draft.note.trim()} onClick={() => save()}>Save</Button>
+              {canSend && <Button size="sm" variant="outline-danger" disabled={!draft.note.trim()} onClick={() => send()}>Send</Button>}
+            </>)}
           </div>
         </div>, draft.host?.isConnected ? draft.host : document.body
       )}

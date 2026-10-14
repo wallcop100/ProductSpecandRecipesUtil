@@ -1,6 +1,7 @@
 import useImportSession from './import/useImportSession'
 import { useCompanion } from '../platform/companion'
-import useProjectKnowledge, { learnedRef, localEtsNeeded, shareDecisions, offerAssignments, orderLibrary } from './import/useProjectKnowledge'
+import useProjectKnowledge, { learnedRef, localEtsNeeded, shareDecisions, offerAssignments, orderLibrary, assignmentKey } from './import/useProjectKnowledge'
+import { noteSupplied, forgetSupplied, settle, shareOutcomes } from '../platform/outcomes'
 import { sweepCodes, retiredFor } from '../platform/retired'
 import InfoTip from '../components/InfoTip'
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
@@ -90,6 +91,7 @@ const isTbc = (row, captureOpts) => {
 /** A row's captures that are products: "TBC" / "N/A" painted as a code are not. */
 const productCaptures = (row, captureOpts) => deriveCaptures(row, captureOpts).captures.filter(c => hasProductIdentity(c.code))
 /** The entry key of a TBC row: one per Form position. */
+const makerOf = e => (e.manufacturers?.length === 1 ? e.manufacturers[0] : '')
 const tbcKey = row => `TBC (${row.positionType || `row ${row.id + 1}`})`
 
 /**
@@ -801,16 +803,25 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     // A product is (maker, code): the same code from another maker is another product.
     const c = classify(e.text, ctx, e.manufacturers[0] || '')
     // The spec wins; your past decision is only consulted where the spec is silent.
-    const etRef = c.elementTypeRef || assignments[norm(e.text)] || priorEtByCode.get(norm(e.text))
-      || learnedRef(knowledge, e, knownRefs) || null
+    const own = c.elementTypeRef || assignments[norm(e.text)] || priorEtByCode.get(norm(e.text))
+    const fromLearning = own ? null : learnedRef(knowledge, e, knownRefs)
+    const etRef = own || fromLearning || null
     const note = e.variants[0]?.note || ''
     // Only unresolved codes need a suggestion / reuse candidates.
     const help = etRef ? {} : {
       reuse: reuseCandidates(e.text, note, { psRows, elementTypes, manufacturer: e.manufacturers[0] || '' }, 3),
       suggested: suggestRef(e.text, note, e.manufacturers[0] || '', convention, elementTypes, psRows),
     }
-    return { ...e, ...c, etRef, ...help }
+    return { ...e, ...c, etRef, ...(fromLearning ? { etLearned: fromLearning } : {}), ...help }
   }), [confirmed, ctx, assignments, captureOpts, psRows, elementTypes, convention, priorEtByCode, knowledge, knownRefs])
+
+  // Which defaults came from learning, so staging can record what became of them (outcomes.js).
+  useEffect(() => { forgetSupplied() }, [projectNumber])
+  useEffect(() => {
+    for (const e of entries) {
+      if (e.etLearned) noteSupplied({ kind: 'assignment', key: assignmentKey(e.text, makerOf(e)), tier: 'project', value: e.etLearned, code: e.text })
+    }
+  }, [entries])
 
   /**
    * TBC rows ("TBC", "*custom*", "Awaiting custom code", "Light Sheet"): a product is wanted
@@ -856,8 +867,16 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   useEffect(() => {
     if (!knowledge.ready || seededFrom.current === projectNumber) return
     seededFrom.current = projectNumber
-    if (Object.keys(knowledge.rules).length) setRules(rl => ({ ...knowledge.rules, ...rl }))
-    if (knowledge.separate.length) setKeptSeparate(s => new Set([...knowledge.separate, ...s]))
+    if (Object.keys(knowledge.rules).length) setRules(rl => {
+      for (const [token, role] of Object.entries(knowledge.rules)) {
+        if (!(token in rl)) noteSupplied({ kind: 'rule', key: token, tier: knowledge.ruleTiers?.[token] || 'project', value: role })
+      }
+      return { ...knowledge.rules, ...rl }
+    })
+    if (knowledge.separate.length) setKeptSeparate(s => {
+      for (const k of knowledge.separate) if (!s.has(k)) noteSupplied({ kind: 'pair', key: k, tier: 'project', value: 'different' })
+      return new Set([...knowledge.separate, ...s])
+    })
   }, [knowledge, projectNumber])   // eslint-disable-line react-hooks/exhaustive-deps
 
   // Which of these codes their maker has since replaced — a quiet line under the code.
@@ -1014,6 +1033,15 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     })
   }, [unassigned, confirmed, captureOpts, elementTypes, psRows, recipes, positionTypes, dbCollectionRefs, map.pt, ptTarget, styleLibrary, sharedLibrary])
 
+  // A family the library supplied (the same product elsewhere, or a maker's product line).
+  useEffect(() => {
+    for (const p of proposals) {
+      if (p.action !== 'create' || !p.family || !['library', 'style'].includes(p.why)) continue
+      noteSupplied({ kind: 'family', key: assignmentKey(p.code, p.manufacturer || ''), tier: p.why,
+        source: p.styledOn?.source || '', value: p.family, code: p.code })
+    }
+  }, [proposals])
+
   /** Every family the project already has: collection rows, and the ParentRefs in use. */
   const knownFamilies = useMemo(() => [...new Set([
     ...dbCollectionRefs, ...elementTypes.map(e => e.Family || e.family).filter(Boolean),
@@ -1058,6 +1086,12 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
 
   /** Apply the reviewed proposals: new families first, then reuse or create each code. */
   function applyBulk({ families, items, notCodes = [] }) {
+    // A proposal's family taken from the library: what the person created instead, if anything.
+    const chosen = new Map(items.map(p => [norm(p.code), p.action === 'reuse' ? p.reuseRef : p.family]))
+    shareOutcomes(companion, projectNumber, settle(projectNumber, 'family', k => {
+      const code = norm(k.split('|').slice(1).join('|'))
+      return chosen.has(code) ? (chosen.get(code) || null) : undefined
+    }))
     // "Not a code": its words are a note on every row, from now on (revocable like any rule).
     const words = [...new Set(notCodes.flatMap(c => String(c).split(/\s+/).filter(Boolean)))]
     if (words.length) {
@@ -1251,6 +1285,13 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       entries: allEntries.filter(entryInScope), rules, keptSeparate, merged: mergedKeys,
       localEts: localElementTypes,
     })
+    // What became of the learned defaults among them: kept, changed or cleared (outcomes.js).
+    const finals = new Map(allEntries.filter(entryInScope).map(e => [assignmentKey(e.text, makerOf(e)), e.etRef || null]))
+    shareOutcomes(companion, projectNumber, [
+      ...settle(projectNumber, 'assignment', k => (finals.has(k) ? finals.get(k) : undefined)),
+      ...settle(projectNumber, 'rule', t => rules[t] ?? null),
+      ...settle(projectNumber, 'pair', k => (mergedKeys.has(k) ? 'same' : keptSeparate.has(k) ? 'different' : null)),
+    ])
 
     if (only) {
       await saveFormCaptures(mergeCaptures(formCaptures, nextCaptures, scopeTargets, [...only]))
