@@ -14,6 +14,7 @@
  *   contributions  evidence for the catalogue, reviewed before it is relied on
  *   outcomes       what became of each learned default (kept / changed / cleared), to read
  *   reports        a problem someone flagged (the ⚑ beside the bug), with what was on screen
+ *   jobs           what job a product does in a recipe (tape, profile, clips …), by maker + code
  *
  * Every call is relative to the page, so the build needs no configuration and knows nothing
  * about who answers. Failures are quiet: a companion that is down is the same as none.
@@ -64,6 +65,14 @@ function build(features) {
 
     /** What became of the learned defaults: [{ kind, key, tier, source, supplied, final, outcome }]. */
     shareOutcomes: has('outcomes') ? (n, outcomes) => quiet(post(`${projectUrl(n)}/outcomes`, { outcomes })) : null,
+
+    /** What job each product does → Map `${makerKey}|${CODE}` → { slot, variant, category }. */
+    jobs: has('jobs') ? async codes => {
+      const out = new Map()
+      const body = await quiet(post('./api/products/jobs', { codes: codes.slice(0, 2000) }))
+      for (const j of body?.jobs || []) out.set(`${String(j.maker_key || '').toLowerCase()}|${String(j.code || '').toUpperCase()}`, j)
+      return out
+    } : null,
 
     /** One report (bugReports.js shape) → { received, id } | null. */
     report: has('reports') ? report => quiet(post('./api/reports', report)) : null,

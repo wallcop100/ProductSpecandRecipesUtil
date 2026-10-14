@@ -44,7 +44,12 @@ const WHY = {
   parent: p => `position parent ${p} (not a company family)`,
   extra: 'extra code in its cell',
   you: 'you chose it',
+  job: r => `${JOB_LABEL[r.job?.slot === 'TAPE' ? `TAPE:${r.job.variant}` : r.job?.slot] || 'its job'}${r.wasFamily ? ` (not ${r.wasFamily})` : ''}`,
 }
+const JOB_LABEL = { 'TAPE:tape': 'LED tape', 'TAPE:flex': 'neon / flex', 'TAPE:fixed': 'fixed linear', PROFILE: 'a profile', DIFFUSER: 'a diffuser',
+  END_CAPS: 'end caps', CLIPS: 'clips', MOUNT_CHANNEL: 'a mounting channel', MOUNT_COLLAR: 'a mounting collar / frame', LOCAL_DRIVER: 'a driver',
+  REMOTE_DRIVER: 'a driver', EMERGENCY: 'an emergency pack', OPTIC_ACCESSORY: 'an optic accessory', ACCESSORY: 'an accessory', FIRE_HOOD: 'a fire hood',
+  LOCKING_LEVER: 'a locking lever', TRACK_ACCESSORY: 'a track accessory' }
 const whyText = r => (typeof WHY[r.why] === 'function' ? WHY[r.why](r.why === 'parent' ? r.parent : r) : WHY[r.why] || '')
 /** Placed by a firm rule: shown as a tick, not a sentence. */
 const verified = r => !!r.why && !r.checkRef && r.why !== 'parent' && r.why !== 'you'

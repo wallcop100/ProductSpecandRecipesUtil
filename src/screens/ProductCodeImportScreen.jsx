@@ -884,6 +884,17 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     sweepCodes(entries.map(e => ({ code: e.text, manufacturer: e.manufacturers.length === 1 ? e.manufacturers[0] : '' })))
   }, [entries])
   const makersKey = useMemo(() => [...new Set(entries.flatMap(e => e.manufacturers || []))].sort().join('|'), [entries])
+  // What job each code does (tape, profile, clips …), where the companion knows: it settles the
+  // ElementType family (etSeed.js). Without one, codeJobs.js reads it from the code and its words.
+  const [codeJobsKnown, setCodeJobsKnown] = useState(null)
+  useEffect(() => {
+    if (!companion?.jobs || !entries.length) return
+    let live = true
+    companion.jobs(entries.map(e => ({ code: e.text, manufacturer: e.manufacturers.length === 1 ? e.manufacturers[0] : '' })))
+      .then(m => { if (live) setCodeJobsKnown(m) })
+    return () => { live = false }
+  }, [companion, makersKey, entries.length])   // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (!companion?.library || !makersKey) return
     let live = true
@@ -1030,8 +1041,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       // The first exact-code hit wins in etSeed, so order is precedence: this project's own
       // latest decisions (corrections included), then this browser's library, then other projects.
       library: sharedLibrary.length ? orderLibrary(sharedLibrary, styleLibrary, projectNumber) : styleLibrary,
+      jobs: codeJobsKnown,
     })
-  }, [unassigned, confirmed, captureOpts, elementTypes, psRows, recipes, positionTypes, dbCollectionRefs, map.pt, ptTarget, styleLibrary, sharedLibrary])
+  }, [unassigned, confirmed, captureOpts, elementTypes, psRows, recipes, positionTypes, dbCollectionRefs, map.pt, ptTarget, styleLibrary, sharedLibrary, codeJobsKnown])
 
   // A family the library supplied (the same product elsewhere, or a maker's product line).
   useEffect(() => {
