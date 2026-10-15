@@ -14,6 +14,11 @@ speaks this protocol, it adds three optional features:
 | `contribution-status` | Shows contributors whether what they offered was accepted. |
 | `outcomes`      | Says what became of each default the app filled in from `projects` or `library`: kept, changed or cleared. Sent in the background at staging and at ElementType creation; nothing is shown. |
 | `reports`       | Shows a ⚑ beside the bug-report button. A report written there is sent straight away, with what was on screen; one that cannot be sent is kept with the browser's own bug reports. |
+| `jobs`          | Knows what job a product does in a recipe (tape, profile, clips …), by maker + code; it settles the ElementType family over the words. |
+| `patterns`      | Recipe patterns from other projects, in `recipePatterns.js` shape, used as precedent below this browser's own. |
+| `kinds`         | What positions like this one usually have (design, power, slots with their shares and rules). Shown as inline suggestions in the recipe editor and at the Form step; never applied unasked. |
+| `kits`          | The parts used with a profile / channel on other projects. Inline suggestions in the ElementType review and the recipe editor. |
+| `templates`     | Global templates to show beside the built-in ones (read-only); one that `replaces` a built-in hides it. |
 
 All paths are **relative to the page** (`./api/...`), so a build needs no configuration. If any
 call fails, the feature behaves as though it is absent. Nothing in the app depends on a
@@ -126,6 +131,24 @@ final, outcome }] }`. A key is sent again only when its outcome changes. Nothing
 plus `project` (the project number) and `learned` (`[{ kind, key, value, tier, source }]`, the
 learned values behind the code in view) → `{ "received": true, "id" }`. A server should cap the
 size and rate, and treat the content as untrusted text for a person to read.
+
+## jobs
+
+`POST api/products/jobs` with `{ "codes": [{ code, manufacturer }] }` → `{ "jobs": [{ code, maker_key, slot, variant, category }] }`.
+`maker_key` is the manufacturer in lower-case letters and digits; `slot` is a template slot key (`TAPE`, `PROFILE`,
+`END_CAPS` …) or null when only `category` is known.
+
+## patterns, kinds, kits, templates
+
+- `GET api/recipes/patterns` → `{ "patterns": [...] }` (the shape `harvestPatterns` makes).
+- `GET api/recipes/kinds` → `{ "kinds": [{ id, name, design, driver, secondary, defining, positions, projects,
+  slots: [{ slot, core, share, section, qty, dim, contract, integer }], connectors: [{ set, positions }] }] }`.
+- `POST api/recipes/kits` with `{ "codes": [{ code, manufacturer }], "project" }` → `{ "kits": [{ key, anchor, part:
+  { code, slot, name }, share, qty, dim, integer, contract }] }`.
+- `GET api/recipes/templates` → `{ "templates": [{ id, name, applicable_tags, ingredients, replaces, version }] }`.
+
+Suggestions answered with Add or dismiss go back through `outcomes` with `kind` `kit` / `kind` / `same` /
+`connector` and `outcome` `accepted` / `dismissed`.
 
 ## workspaces
 

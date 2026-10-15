@@ -46,6 +46,7 @@ import { styleFor } from './styleLibrary'
 import { matchShape, makerKey } from './codeShapes'
 import { productLineFor } from '../data/productLines'
 import { CANON_FAMILIES, classifyText } from '../data/etCanon'
+import { jobOf, familyForJob, familiesForJob } from './codeJobs'
 import shippedShapes from '../data/codeShapes.json'
 
 const lc = s => String(s ?? '').trim().toLowerCase()
@@ -203,12 +204,15 @@ export function proposeElementTypes(entries = [], project = {}) {
   const {
     elementTypes = [], psRows = [], recipes = [], positionTypes = [], collectionRefs = [],
     ptTarget = r => r, contextFor = () => '', roleOf = () => 'lead', pageTypeFor = () => '', library = [],
-    shapes = shippedShapes.shapes || [], families = CANON_FAMILIES,
+    shapes = shippedShapes.shapes || [], families = CANON_FAMILIES, jobs = null,
   } = project
   const canonByRef = new Map(families.map(f => [lc(f.ref), f]))
 
   const etFamily = new Map(elementTypes.map(e => [lc(refOf(e)), famOf(e)]))
   const existingFamilies = new Set([...collectionRefs, ...elementTypes.map(famOf)].filter(Boolean).map(lc))
+  // A family "exists" for the job check only when it has a row: ET-LIN-COMPONENTS, named by 32
+  // ElementTypes on one project and a row on none, must not be copied to the next product.
+  const familyRows = new Set([...collectionRefs, ...elementTypes.map(refOf)].filter(Boolean).map(f => String(f).toUpperCase()))
   const parentOf = new Map(positionTypes.map(p => [lc(ptRefOf(p)), p.ParentRef || p.parentRef || '']))
 
   const products = []
@@ -288,6 +292,30 @@ export function proposeElementTypes(entries = [], project = {}) {
         why: 'canon', canon: `not ${pick.family} (wrappers only)`, flag: true, seen: null, style: null })
     }
 
+    // The code's JOB (codeJobs.js) settles the family when the evidence above did not: a tape is
+    // filed with tapes. This project's own family for that job wins (if it has a row), then the
+    // house family. Only the code's own evidence counts — its maker and code, its own note, a
+    // known job or catalogue category — and the row's words only when they name one kind of product.
+    if (!e.placeholder && !same) {
+      const known = jobs?.get?.(`${makerKey(manufacturer)}|${norm(e.text)}`)
+      const rowWords = classifyText(context)
+      const job = known?.slot ? known : jobOf({
+        maker: manufacturer, code: e.text, category: known?.category || '',
+        name: [note, rowWords && !rowWords.others.length ? context : ''].join(' '),
+      })
+      const house = familyForJob(job)
+      if (house && job.slot !== 'CONNECTOR' && job.slot !== 'FITTING') {
+        const ok = familiesForJob(job, { elementTypes, familyRows })
+        pick.job = job
+        if (!ok.has(String(pick.family || '').toUpperCase())) {
+          const own = [...ok].find(f => f !== house.family.toUpperCase())
+          const fam = own ? elementTypes.find(x => String(refOf(x)).toUpperCase() === own) : null
+          Object.assign(pick, { family: fam ? refOf(fam) : house.family, head: house.head,
+            why: 'job', flag: false, was: pick.family || null, seen: pick.seen?.family === pick.family ? null : pick.seen })
+        }
+      }
+    }
+
     const family = pick.family
     // Propose the family, and any parent of it the project lacks, from the canon.
     const propose = (ref, from) => {
@@ -327,6 +355,8 @@ export function proposeElementTypes(entries = [], project = {}) {
       spread: pick.spread,
       styledOn: pick.seen ? { ref: pick.seen.ref, code: pick.seen.code, source: pick.seen.source }
         : pick.style ? { ref: pick.style.exemplar.ref, code: pick.style.exemplar.code, source: pick.style.exemplar.source } : null,
+      job: pick.job || null,
+      wasFamily: pick.was || null,
       shapedOn: pick.shape ? { shape: pick.shape.shape, example: pick.shape.example, n: pick.shape.n } : null,
       canon: pick.canon || null,
       checkRef: !!pick.flag,

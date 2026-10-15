@@ -262,3 +262,42 @@ describe('planFamilyMove', () => {
     expect(newFamilies).toEqual([])
   })
 })
+
+describe('the job settles the family (5642: everything linear under a family with no row)', () => {
+  const ets = [
+    { ElementTypeRef: 'ET-LIN-TAPE-01', Name: 'LEDFlex - NF240', Family: 'ET-LIN-COMPONENTS' },
+    { ElementTypeRef: 'ET-LIN-PROF-01', Name: 'LEDFlex - FPS2020BG2000', Family: 'ET-LIN-COMPONENTS' },
+    { ElementTypeRef: 'ET-LIN-CLIP-01', Name: 'LEDFlex - FPSN0809MC', Family: 'ET-LIN-CLIP-METAL' },
+    { ElementTypeRef: 'ET-LIN-CLIP-METAL', Name: 'Metal clips', IsCollection: 'Y' },
+  ]
+  const ps = [
+    { ElementTypeRef: 'ET-LIN-TAPE-01', Manufacturer: 'LEDFlex', ProductCode: 'NF240' },
+    { ElementTypeRef: 'ET-LIN-PROF-01', Manufacturer: 'LEDFlex', ProductCode: 'FPS2020BG2000' },
+    { ElementTypeRef: 'ET-LIN-CLIP-01', Manufacturer: 'LEDFlex', ProductCode: 'FPSN0809MC' },
+  ]
+  const proj = { elementTypes: ets, psRows: ps, positionTypes: [{ PositionTypeRef: 'C1', ParentRef: 'LINEAR' }],
+    collectionRefs: ['ET-LIN-CLIP-METAL'], pageTypeFor: () => 'Linear', roleOf: () => 'extra' }
+  const one = (code, note, more = {}) => proposeElementTypes([entry(code, 'LEDFlex', ['C1'], { variants: [{ note }] })], { ...proj, ...more })
+
+  test('a neon tape is filed under the house flex family, not the sibling family with no row', () => {
+    const { proposals: [p], newFamilies } = one('UN16TVC2715G2', '')
+    expect(p.family).toBe('ET-LIN-FLEX')
+    expect(p.ref).toMatch(/^ET-LIN-FLEX-\d+$/)
+    expect(p.job).toEqual({ slot: 'TAPE', variant: 'flex' })
+    expect(newFamilies.map(f => f.ref)).toEqual(expect.arrayContaining(['ET-LIN-FLEX', 'ET-LIN-INGREDIENTS']))
+  })
+  test("an end cap goes to the profile family with a CAP ref, whatever its sibling's family", () => {
+    const { proposals: [p] } = one('FPS2020ECG', 'End cap set')
+    expect(p.family).toBe('ET-LIN-PROF')
+    expect(p.ref).toMatch(/^ET-LIN-CAP-\d+$/)
+  })
+  test("the project's own family for a job wins when it has a row", () => {
+    const { proposals: [p] } = one('FPSN1013MC', 'Mounting clips')
+    expect(p.family).toBe('ET-LIN-CLIP-METAL')
+  })
+  test('a known job (served beside a companion) beats the words', () => {
+    const jobs = new Map([['ledflex|UN16GFSLW1000', { slot: 'MOUNT_CHANNEL', variant: '' }]])
+    const { proposals: [p] } = one('UN16GFSLW1000', 'Flexible grip silicone profile', { jobs })
+    expect(p.family).toBe('ET-LIN-MOUNT')
+  })
+})

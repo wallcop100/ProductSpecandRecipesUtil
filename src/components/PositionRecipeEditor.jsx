@@ -12,6 +12,7 @@ import SharedToggle from './SharedToggle'
 import SameRecipePill from './SameRecipePill'
 import PositionValidationBadge from './PositionValidationBadge'
 import ConnectorSuggestions from './ConnectorSuggestions'
+import RecipeSuggestions from './RecipeSuggestions'
 import RecipeErrorBanner from './RecipeErrorBanner'
 import FormSpecPane from './FormSpecPane'
 import ForkPositionModal from './ForkPositionModal'
@@ -201,6 +202,7 @@ export default function PositionRecipeEditor({
           </div>
         )}
         <RecipeErrorBanner />
+        <RecipeSuggestions posRef={ref} />
         <ConnectorSuggestions posRef={ref} />
         <RecipeSection
           title="PositionType Level"

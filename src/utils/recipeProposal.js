@@ -39,10 +39,12 @@ export const KIND_LABEL = {
 export const DRIVER_LABEL = { LOCAL: 'local driver', REMOTE: 'remote driver', INTEGRAL: 'integral driver', NONE: 'no driver location' }
 
 /** Where precedent comes from, best first: this project, projects opened before, shipped. */
-export function precedentSources({ recipes = [], positionTypes = [], elementTypes = [], libraryPatterns = [] }) {
+export function precedentSources({ recipes = [], positionTypes = [], elementTypes = [], libraryPatterns = [], otherPatterns = [] }) {
   return [
     { name: 'this project', patterns: harvestPatterns({ recipes, positionTypes, elementTypes, source: 'this project' }) },
     { name: 'projects opened before', patterns: libraryPatterns },
+    // Served beside a companion (platform/companion.js `patterns`): the same shape, from other projects.
+    { name: 'other projects', patterns: otherPatterns },
     { name: 'finished projects', patterns: SHIPPED_PATTERNS },
   ].filter(s => s.patterns.length > 0)
 }
@@ -410,7 +412,7 @@ export function proposalContext(state, library = {}) {
     kindOfPos: p => kindOf.get(p) || null,
     // "Company style guide" (a new project, per the company rule): precedent from other
     // projects only, never this project's own recipes.
-    sources: precedentSources({ recipes, positionTypes, elementTypes, libraryPatterns: library.patterns || [] })
+    sources: precedentSources({ recipes, positionTypes, elementTypes, libraryPatterns: library.patterns || [], otherPatterns: library.others || [] })
       .filter(s => state.recipeSource !== 'guide' || s.name !== 'this project'),
   }
 }

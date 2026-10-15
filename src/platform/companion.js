@@ -14,6 +14,10 @@
  *   contributions  evidence for the catalogue, reviewed before it is relied on
  *   outcomes       what became of each learned default (kept / changed / cleared), to read
  *   reports        a problem someone flagged (the ⚑ beside the bug), with what was on screen
+ *   jobs           what job a product does in a recipe (tape, profile, clips …), by maker + code
+ *   patterns       recipe patterns from other projects, below this browser's own (recipeProposal.js)
+ *   kinds / kits   what positions like this one usually have, and the parts used with a profile:
+ *                  inline suggestions in the recipe editor (RecipeSuggestions.jsx), never applied unasked
  *
  * Every call is relative to the page, so the build needs no configuration and knows nothing
  * about who answers. Failures are quiet: a companion that is down is the same as none.
@@ -64,6 +68,27 @@ function build(features) {
 
     /** What became of the learned defaults: [{ kind, key, tier, source, supplied, final, outcome }]. */
     shareOutcomes: has('outcomes') ? (n, outcomes) => quiet(post(`${projectUrl(n)}/outcomes`, { outcomes })) : null,
+
+    /** Global templates published for this app (Orion): [{ id, name, applicable_tags, ingredients, replaces }]. */
+    templates: has('templates') ? async () => (await quiet(getJson('./api/recipes/templates')))?.templates || null : null,
+
+    /** Recipe kinds from other projects (recipeKinds.js): design, power, slots with shares and rules. */
+    kinds: has('kinds') ? async () => (await quiet(getJson('./api/recipes/kinds')))?.kinds || null : null,
+
+    /** The parts used with these profiles / channels on other projects → [{ key, anchor, part, share, qty, dim, … }]. */
+    kits: has('kits') ? async (codes, project = '') =>
+      (await quiet(post('./api/recipes/kits', { codes: codes.slice(0, 200), project: String(project || '') })))?.kits || [] : null,
+
+    /** Recipe patterns from other projects, in recipePatterns.js shape → [pattern] | null. */
+    patterns: has('patterns') ? async () => (await quiet(getJson('./api/recipes/patterns')))?.patterns || null : null,
+
+    /** What job each product does → Map `${makerKey}|${CODE}` → { slot, variant, category }. */
+    jobs: has('jobs') ? async codes => {
+      const out = new Map()
+      const body = await quiet(post('./api/products/jobs', { codes: codes.slice(0, 2000) }))
+      for (const j of body?.jobs || []) out.set(`${String(j.maker_key || '').toLowerCase()}|${String(j.code || '').toUpperCase()}`, j)
+      return out
+    } : null,
 
     /** One report (bugReports.js shape) → { received, id } | null. */
     report: has('reports') ? report => quiet(post('./api/reports', report)) : null,
