@@ -117,16 +117,26 @@ export function familyForJob({ slot, variant } = {}) {
 }
 
 /** Every family a job may sit in on a project: the house one, plus this project's own family rows
- *  that already hold ElementTypes doing that job. A family with no row of its own never counts. */
-export function familiesForJob(job, { elementTypes = [], familyRows = new Set() } = {}) {
+ *  whose ElementTypes MOSTLY do that job, or jobs the house files with it (at least `share` of
+ *  them). A catch-all family holding tape, profiles and clips alike (ET-LIN-COMPONENTS) is no home
+ *  for any of them. A family with no
+ *  row of its own never counts. */
+export function familiesForJob(job, { elementTypes = [], familyRows = new Set(), share = 0.6 } = {}) {
   const out = new Set()
   const house = familyForJob(job)
   if (house) out.add(house.family.toUpperCase())
+  const tally = new Map()   // family → [doing this job, all]
   for (const e of elementTypes) {
     const fam = U(e.Family || e.family).trim()
     if (!fam || !familyRows.has(fam)) continue
     const j = jobOf({ ref: e.ElementTypeRef || e.elementTypeRef, family: fam, name: e.Name || e.name, description: e.Description || e.description })
-    if (j.slot === job.slot && (job.slot !== 'TAPE' || j.variant === job.variant)) out.add(fam)
+    const t = tally.get(fam) || [0, 0]
+    // Jobs filed together in the house (profile, caps and diffuser in ET-LIN-PROF) count as one.
+    const same = j.slot === job.slot && (job.slot !== 'TAPE' || j.variant === job.variant)
+    if (same || (house && familyForJob(j)?.family === house.family)) t[0]++
+    t[1]++
+    tally.set(fam, t)
   }
+  for (const [fam, [n, all]] of tally) if (n && n / all >= share) out.add(fam)
   return out
 }

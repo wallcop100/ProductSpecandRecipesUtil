@@ -33,4 +33,13 @@ describe('code jobs', () => {
     expect([...familiesForJob({ slot: 'CLIPS' }, { elementTypes, familyRows })].sort()).toEqual(['ET-LIN-CLIP', 'ET-LIN-CLIP-METAL'])
     expect([...familiesForJob({ slot: 'TAPE', variant: 'tape' }, { elementTypes, familyRows })]).toEqual(['ET-LIN-TAPE'])
   })
+  it('a catch-all family is no home for any job; one filing what the house files together is', () => {
+    const elementTypes = [
+      ...['ET-LIN-TAPE-01', 'ET-LIN-PROF-01', 'ET-LIN-CLIP-01'].map(r => ({ ElementTypeRef: r, Family: 'ET-LIN-COMPONENTS' })),
+      ...['ET-LIN-PROF-02', 'ET-LIN-CAP-02', 'ET-LIN-DIFF-02'].map(r => ({ ElementTypeRef: r, Family: 'ET-PROFILES' })),
+    ]
+    const familyRows = new Set(['ET-LIN-COMPONENTS', 'ET-PROFILES'])
+    expect([...familiesForJob({ slot: 'CLIPS' }, { elementTypes, familyRows })]).toEqual(['ET-LIN-CLIP'])
+    expect([...familiesForJob({ slot: 'END_CAPS' }, { elementTypes, familyRows })].sort()).toEqual(['ET-LIN-PROF', 'ET-PROFILES'])
+  })
 })
