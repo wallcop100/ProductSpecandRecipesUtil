@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Button, Form } from 'react-bootstrap'
+import { Button, Dropdown, Form } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { useCompanion } from '../platform/companion'
@@ -8,7 +8,7 @@ import { familiesForJob, familyForJob, jobOf } from '../utils/codeJobs'
 import { nextRef } from '../utils/etSeed'
 import {
   indexes, positionMakeup, sameKindAs, matchKind, usuallyMissing, elementTypesForJob, sectionFor, rowFromSlot,
-  jobLabel, ruleText, usualConnectors, anchorOf, fitFor, pickRangePart, rangeStem, FITS_PROFILE,
+  jobLabel, ruleText, usualConnectors, anchorOf, fitFor, pickRangePart, rangeStem, codeIsTbc, FITS_PROFILE,
 } from '../utils/recipeKinds'
 
 /**
@@ -26,14 +26,24 @@ import {
  *              ("Positions like this usually also have end caps (96%)"). For caps, diffusers and
  *              clips the part is the one that fits THIS profile (recipeKinds.fitFor): used with it
  *              here, or from its range (FPS1709MC for FPS1709BG2000), made as an ElementType when
- *              the project has none. A range that has no such part (FPS2020: no clip) means no line;
- *              with nothing known at all, it says so and asks.
+ *              the project has none. A range that has no such part (FPS2020: no clip) means no line.
+ *              With nothing known, Add makes a TBC placeholder for this profile, and ⋯ picks one of
+ *              the project's own instead.
+ *   tbc      — a part of this recipe made for the profile whose code is still TBC, once the
+ *              profile's range is known: "End caps ET-LIN-CAP-06 is TBC — this profile's is
+ *              FPS0808ECG" sets its Product Spec code.
  *   connector — the connector set positions like this usually carry, mapped onto this project's
  *              own connector ElementTypes, each where the project puts it.
  *
  * Every Add and every dismiss is an outcome (platform/outcomes.js): it is what makes the next
- * suggestion better. A dismissed line stays dismissed for this project.
+ * suggestion better. × hides a line for now; ⋯ → "Don't show this again" hides it for good on this
+ * position only (and is the dismissal that feeds back). An added line goes because the part is
+ * there, and comes back if it is removed.
  */
+const Dots = React.forwardRef(({ onClick }, ref) => (
+  <button ref={ref} type="button" className="btn btn-link btn-sm text-muted p-0" style={{ fontSize: 13, lineHeight: 1 }}
+    aria-label="More" title="More" onClick={e => { e.preventDefault(); onClick(e) }}>⋯</button>
+))
 let libraryAsked = false
 const DISMISSED = n => `psr-suggestions-dismissed:${n || '-'}`
 function readDismissed(n) {
@@ -54,6 +64,7 @@ export default function RecipeSuggestions({ posRef }) {
   const [dismissed, setDismissed] = useState(() => readDismissed(projectNumber))
   const [kits, setKits] = useState([])
   const [pick, setPick] = useState({})
+  const [hidden, setHidden] = useState(() => new Set())   // × — for now, this position
   useEffect(() => { setDismissed(readDismissed(projectNumber)) }, [projectNumber])
   // The library (with what other projects do, beside a companion) loads once, on first use.
   useEffect(() => { if (!libraryAsked) { libraryAsked = true; useStore.getState().loadLibrary?.() } }, [])
@@ -90,6 +101,15 @@ export default function RecipeSuggestions({ posRef }) {
     const named = `${anchor?.manufacturer || ''} - ${part.code}`.replace(/^ - /, '')
     st.createElementType({ ref, name: (!fromRange && part.name) || named, description: fromRange ? part.name || null : null, family: own || house.family || null })
     st.addPSRow(ref, { Manufacturer: anchor?.manufacturer || '', ProductCode: part.code })
+    return ref
+  }
+  /** A TBC ElementType holding the place of a profile's part, until its code is known. */
+  function makePlaceholder(job, label) {
+    const st = useStore.getState()
+    const house = familyForJob({ slot: job }) || {}
+    const ref = nextRef(house.head || 'ET-LIN', st.elementTypes.map(e => e.ElementTypeRef))
+    st.createElementType({ ref, name: label, family: house.family || null })
+    st.addPSRow(ref, { Manufacturer: profile?.maker || null, IsTBC: 'Y', ComponentDescription: label.replace(/^TBC - /, '') })
     return ref
   }
   const ownByCode = code => elementTypes.find(e => String(idx.psByRef.get(String(e.ElementTypeRef || '').toUpperCase())?.ProductCode || '').toUpperCase() === code)
@@ -153,19 +173,44 @@ export default function RecipeSuggestions({ posRef }) {
       const own = rangeStem(idx.psByRef.get(String(e.ElementTypeRef || '').toUpperCase())?.ProductCode)
       return !stem || !own || own === stem
     })
-    const chosen = pick[s.slot] ?? (fitsProfile ? '' : options[0]?.ElementTypeRef || '')
+    if (fitsProfile) {
+      // Nothing known to fit: a placeholder for THIS profile, its code TBC; ⋯ for one of the project's own.
+      const label = `TBC - ${jobLabel(s.slot)} for ${profile.ref}`
+      const placeholder = elementTypes.find(e => e.Name === label)
+      lines.push({ ...base, supplied: placeholder?.ElementTypeRef || 'placeholder', addLabel: placeholder ? 'Add' : 'Add placeholder',
+        add: () => addRow(placeholder?.ElementTypeRef || makePlaceholder(s.slot, label)),
+        more: options.slice(0, 12).map(o => ({ ref: o.ElementTypeRef, label: `${o.ElementTypeRef}${o.Name ? ` — ${o.Name}` : ''}`, add: () => addRow(o.ElementTypeRef) })),
+        text: <>{head}<span className="text-muted"> — {profile.code ? `not known for ${profile.code}` : `${profile.ref}'s code is TBC: fill it in for the right part`}
+          {placeholder ? <>; <span className="font-monospace">{placeholder.ElementTypeRef}</span> holds its place</> : ''}</span></> })
+      continue
+    }
+    const chosen = pick[s.slot] ?? options[0]?.ElementTypeRef ?? ''
     lines.push({ ...base, supplied: chosen || null,
-      text: <>{head}{fitsProfile && <span className="text-muted">{options.length ? ` — none here is known to fit ${profile.code || profile.ref}; pick one` : ` — none here fits ${profile.code || profile.ref} yet`}</span>}
-        {(options.length > 1 || (fitsProfile && options.length)) && (
+      text: <>{head}
+        {options.length > 1 && (
           <Form.Select size="sm" className="d-inline-block ms-2" style={{ width: 'auto', fontSize: 11, padding: '0 22px 0 6px' }}
             value={chosen} onChange={e => setPick(p => ({ ...p, [s.slot]: e.target.value }))} aria-label={`${jobLabel(s.slot)} to add`}>
-            {fitsProfile && <option value="">choose…</option>}
             {options.slice(0, 12).map(o => <option key={o.ElementTypeRef} value={o.ElementTypeRef}>{o.ElementTypeRef}{o.Name ? ` — ${o.Name}` : ''}</option>)}
           </Form.Select>
         )}
-        {options.length === 1 && !fitsProfile && <> <span className="font-monospace">{chosen}</span></>}
-        {!options.length && !fitsProfile && <span className="text-muted fst-italic ms-1">no ElementType for it yet</span>}</>,
+        {options.length === 1 && <> <span className="font-monospace">{chosen}</span></>}
+        {!options.length && <span className="text-muted fst-italic ms-1">no ElementType for it yet</span>}</>,
       add: chosen ? () => addRow(chosen) : null })
+  }
+  // Parts of this recipe made for the profile whose code is still TBC: the profile's range names them.
+  if (profile?.code && kits.some(k => k.range)) {
+    for (const job of FITS_PROFILE) {
+      for (const r of me.jobs.get(job) || []) {
+        const ref = r.ElementTypeRef || r.elementTypeRef
+        if (!codeIsTbc(ref, idx)) continue
+        const part = pickRangePart(kits.filter(k => k.range && k.part.slot === job).map(k => k.part), profile, job, state, idx)
+        if (!part) continue
+        lines.push({ key: `tbc|${ref}|${part.code}`, kind: 'tbc', icon: 'edit', supplied: part.code, addLabel: 'Set code',
+          text: <><b>{jobLabel(job)}</b> <span className="font-monospace">{ref}</span> is TBC — this profile's is <span className="font-monospace">{part.code}</span>
+            {part.name ? <span className="text-muted"> ({part.name.toLowerCase()})</span> : null}</>,
+          add: () => useStore.getState().updatePSRow(ref, { Manufacturer: profile.maker || null, ProductCode: part.code, IsTBC: null }) })
+      }
+    }
   }
   if (connectors) {
     lines.push({ key: `connector|${kind.id}|${connectors.rows.map(r => r.etRef).join('+')}`, kind: 'connector', icon: 'cable',
@@ -174,16 +219,21 @@ export default function RecipeSuggestions({ posRef }) {
       add: () => { for (const r of connectors.rows) useStore.getState().addRecipeRow(posRef, r.section, { elementTypeRef: r.etRef }, { asPosition: true }) },
       supplied: connectors.rows.map(r => r.etRef).join('+') })
   }
-  const shown = lines.filter(l => !dismissed.has(l.key))
+  // Keys stored before dismissals were per position hid a line project-wide; they still do.
+  const here = l => `${posRef}|${l.key}`
+  const shown = lines.filter(l => !dismissed.has(l.key) && !dismissed.has(here(l)) && !hidden.has(here(l)))
   if (!shown.length) return null
 
-  function answer(l, outcome) {
-    if (outcome === 'accepted') l.add?.()
-    const next = new Set(dismissed); next.add(l.key)
-    setDismissed(next); writeDismissed(projectNumber, next)
+  function answer(l, outcome, chosen = null) {
+    if (outcome === 'accepted') (chosen ? chosen.add : l.add)?.()
+    // Only a dismissal hides a line for good: an added part's line goes because the part is there.
+    if (outcome === 'dismissed') {
+      const next = new Set(dismissed); next.add(here(l))
+      setDismissed(next); writeDismissed(projectNumber, next)
+    }
     shareOutcomes(companion, projectNumber, [{
-      kind: l.kind, key: l.key.replace(/^(same|kit|kind|connector)\|/, ''), tier: l.kind, source: kind ? String(kind.id) : '',
-      supplied: l.supplied || null, final: outcome === 'accepted' ? (l.supplied || 'added') : null, outcome,
+      kind: l.kind, key: l.key.replace(/^(same|kit|kind|tbc|connector)\|/, ''), tier: l.kind, source: kind ? String(kind.id) : '',
+      supplied: l.supplied || null, final: outcome === 'accepted' ? (chosen?.ref || l.supplied || 'added') : null, outcome,
     }])
   }
 
@@ -194,10 +244,21 @@ export default function RecipeSuggestions({ posRef }) {
           <MaterialIcon name={l.icon} size={13} style={{ color: '#1c5cab', flexShrink: 0 }} />
           <span style={{ flex: 1 }}>{l.text}</span>
           {l.add && (
-            <Button size="sm" variant="outline-primary" style={{ fontSize: 11, padding: '0px 8px' }} onClick={() => answer(l, 'accepted')}>Add</Button>
+            <Button size="sm" variant="outline-primary" style={{ fontSize: 11, padding: '0px 8px' }} onClick={() => answer(l, 'accepted')}>{l.addLabel || 'Add'}</Button>
           )}
-          <Button size="sm" variant="link" className="text-muted p-0" style={{ fontSize: 11 }} aria-label="Dismiss" title="Not for this one"
-            onClick={() => answer(l, 'dismissed')}>
+          <Dropdown align="end">
+            <Dropdown.Toggle as={Dots} />
+            <Dropdown.Menu style={{ fontSize: 12 }}>
+              {l.more?.length > 0 && <>
+                <Dropdown.Header>Add one of this project's own</Dropdown.Header>
+                {l.more.map(o => <Dropdown.Item key={o.ref} onClick={() => answer(l, 'accepted', o)}>{o.label}</Dropdown.Item>)}
+                <Dropdown.Divider />
+              </>}
+              <Dropdown.Item onClick={() => answer(l, 'dismissed')}>Don't show this again for {posRef}</Dropdown.Item>
+            </Dropdown.Menu>
+          </Dropdown>
+          <Button size="sm" variant="link" className="text-muted p-0" style={{ fontSize: 11 }} aria-label="Hide" title="Not now"
+            onClick={() => setHidden(h => new Set(h).add(here(l)))}>
             <MaterialIcon name="close" size={13} />
           </Button>
         </div>

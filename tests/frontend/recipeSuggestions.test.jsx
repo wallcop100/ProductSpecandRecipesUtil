@@ -43,9 +43,17 @@ describe('recipe suggestions', () => {
     setup()
     expect(screen.getByTestId('suggestion-same').textContent).toMatch(/Same profile as C01r \(ET-LIN-PROF-01\): clips/)
     expect(screen.queryByTestId('suggestion-kind')).toBeNull()
-    fireEvent.click(screen.getByLabelText('Dismiss'))
+    fireEvent.click(screen.getByLabelText('More'))
+    fireEvent.click(screen.getByText("Don't show this again for C05r"))
     expect(screen.queryByTestId('recipe-suggestions')).toBeNull()
-    expect(JSON.parse(localStorage.getItem('psr-suggestions-dismissed:7900'))).toHaveLength(1)
+    expect(JSON.parse(localStorage.getItem('psr-suggestions-dismissed:7900'))).toEqual([expect.stringMatching(/^C05r\|same\|C01r>C05r/)])
+  })
+
+  test('× hides a line for now only, and says nothing back', () => {
+    setup()
+    fireEvent.click(screen.getByLabelText('Hide'))
+    expect(screen.queryByTestId('recipe-suggestions')).toBeNull()
+    expect(localStorage.getItem('psr-suggestions-dismissed:7900')).toBeNull()
   })
 
   test('"same as" adds just the missing parts', () => {
@@ -60,7 +68,7 @@ describe('recipe suggestions', () => {
     await act(async () => { setup() })
     expect(api.current.kits).toHaveBeenCalledWith([{ code: '021-8810-02', manufacturer: 'LEDFlex' }], '7900')
     expect(screen.getByTestId('suggestion-kit').textContent).toMatch(/Usually with this profile: end caps 021-8810-11 LED Flex - 8810 Cap ×2/)
-    expect(screen.getByTestId('suggestion-kind').textContent).toMatch(/usually also have diffuser \(96%\), 1 per m — none here is known to fit 021-8810-02; pick one/)
+    expect(screen.getByTestId('suggestion-kind').textContent).toMatch(/usually also have diffuser \(96%\), 1 per m — not known for 021-8810-02/)
     const addRow = vi.spyOn(useStore.getState(), 'addRecipeRow')
     const kit = screen.getByTestId('suggestion-kit')
     await act(async () => { fireEvent.click(kit.querySelector('button')) })
@@ -68,7 +76,8 @@ describe('recipe suggestions', () => {
     expect(s.elementTypes.find(e => e.ElementTypeRef === 'ET-LIN-CAP-01')).toMatchObject({ Family: 'ET-LIN-PROF' })
     expect(addRow).toHaveBeenCalledWith('C05r', 'lin_internal', expect.objectContaining({ elementTypeRef: 'ET-LIN-CAP-01', quantity: 2, isContractItem: 'Y' }), { asPosition: true })
     expect(api.current.shareOutcomes).toHaveBeenCalledWith('7900', [expect.objectContaining({ kind: 'kit', key: KIT.key, outcome: 'accepted' })])
-    await act(async () => { fireEvent.click(screen.getByTestId('suggestion-kind').querySelector('[aria-label="Dismiss"]')) })
+    fireEvent.click(screen.getByTestId('suggestion-kind').querySelector('[aria-label="More"]'))
+    await act(async () => { fireEvent.click(screen.getByText("Don't show this again for C05r")) })
     expect(api.current.shareOutcomes).toHaveBeenLastCalledWith('7900', [expect.objectContaining({ kind: 'kind', key: '2|DIFFUSER', outcome: 'dismissed' })])
   })
 
@@ -93,16 +102,41 @@ describe('recipe suggestions', () => {
     expect(addRow).toHaveBeenCalledWith('C05r', 'lin_internal', expect.objectContaining({ elementTypeRef: made.ElementTypeRef, dimQtyMultiplier: 3 }), { asPosition: true })
   })
 
-  test('with nothing known to fit the profile, no clip is pre-chosen', async () => {
+  test('with nothing known to fit the profile: a TBC placeholder for it, ⋯ for one of the project\'s own', async () => {
     api.current = { kits: vi.fn(async () => []), shareOutcomes: vi.fn(async () => ({ stored: 1 })) }
     const CLIPS = { ...KIND, slots: [{ slot: 'CLIPS', core: false, share: 0.92, section: 'lin_internal' }] }
     await act(async () => { setup() })
     await act(async () => useStore.setState({ library: { patterns: [], exemplars: [], kinds: [CLIPS] },
       recipes: useStore.getState().recipes.filter(r => r.ElementTypeRef !== 'ET-LIN-CLIP-01') }))
     const line = screen.getByTestId('suggestion-kind')
-    expect(line.textContent).toMatch(/none here is known to fit 021-8810-02; pick one/)
-    expect(line.querySelector('select').value).toBe('')
-    expect([...line.querySelectorAll('button')].map(b => b.textContent)).not.toContain('Add')
+    expect(line.textContent).toMatch(/clips \(92%\) — not known for 021-8810-02/)
+    expect(line.querySelector('select')).toBeNull()
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Add placeholder' })) })
+    const ph = useStore.getState().elementTypes.find(e => e.Name === 'TBC - clips for ET-LIN-PROF-01')
+    expect(ph).toMatchObject({ Family: 'ET-LIN-CLIP' })
+    expect(useStore.getState().psRows.find(r => r.ElementTypeRef === ph.ElementTypeRef)).toMatchObject({ IsTBC: 'Y', Manufacturer: 'LEDFlex' })
+    expect(screen.queryByTestId('suggestion-kind')).toBeNull()
+    // Removing it brings the line back (an Add is not a dismissal), now naming the placeholder.
+    await act(async () => useStore.setState({ recipes: useStore.getState().recipes.filter(r => r.ElementTypeRef !== ph.ElementTypeRef) }))
+    expect(screen.getByTestId('suggestion-kind').textContent).toMatch(new RegExp(`${ph.ElementTypeRef} holds its place`))
+    fireEvent.click(screen.getByLabelText('More'))
+    expect(screen.getByText(/^ET-LIN-CLIP-01/)).toBeInTheDocument()
+  })
+
+  test('a TBC part of the recipe gets the code of this profile\'s range', async () => {
+    const cap = { key: 'r', range: 'FPSC0808', anchor: { code: 'FPSC0808BG2000' }, part: { maker_key: 'ledflex', code: 'FPSC0808ECG', slot: 'END_CAPS', name: 'FLEX PROFILE SURFACE CORNER 0808 END CAP SET GREY' } }
+    api.current = { kits: vi.fn(async () => [cap]), shareOutcomes: vi.fn(async () => ({ stored: 1 })) }
+    await act(async () => { setup() })
+    await act(async () => useStore.setState({ library: { patterns: [], exemplars: [], kinds: [] },
+      elementTypes: [...useStore.getState().elementTypes, { ElementTypeRef: 'ET-LIN-CAP-06', Family: 'ET-LIN-PROF', Name: 'LEDFlex - Half Moon 0808 end cap' }],
+      psRows: [{ ElementTypeRef: 'ET-LIN-PROF-01', Manufacturer: 'LEDFlex', ProductCode: 'FPSC0808BG2000' },
+        { ElementTypeRef: 'ET-LIN-CAP-06', Manufacturer: 'LEDFlex', ProductCode: 'TBC', IsTBC: 'Y' }],
+      recipes: [...useStore.getState().recipes, row('C05r', 'ET-LIN-CAP-06', 'ElementType', { _id: 'cap6' })] }))
+    const line = screen.getByTestId('suggestion-tbc')
+    expect(line.textContent).toMatch(/end caps ET-LIN-CAP-06 is TBC — this profile's is FPSC0808ECG/)
+    const upd = vi.spyOn(useStore.getState(), 'updatePSRow')
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Set code' })) })
+    expect(upd).toHaveBeenCalledWith('ET-LIN-CAP-06', { Manufacturer: 'LEDFlex', ProductCode: 'FPSC0808ECG', IsTBC: null })
   })
 
   test('a profile whose range has no clip gets no clip line', async () => {

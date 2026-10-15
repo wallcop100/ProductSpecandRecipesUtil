@@ -139,9 +139,32 @@ export function fitFor(job, anchor, state, idx = indexes(state)) {
     if (r && sameAnchor(anchor, anchorOf(m, idx))) return { etRef: refOf(r), why: `used with ${anchor.ref} on ${p}` }
   }
   const stem = rangeStem(anchor.code)
-  if (stem.length < 5) return null
-  const fits = elementTypesForJob(job, state, idx).filter(e => rangeStem(codeOf(refOf(e), idx)) === stem)
-  return fits.length ? { etRef: refOf(fits[0]), why: `${stem} range` } : null
+  const cands = elementTypesForJob(job, state, idx)
+  if (stem.length >= 5) {
+    const fits = cands.filter(e => rangeStem(codeOf(refOf(e), idx)) === stem)
+    if (fits.length) return { etRef: refOf(fits[0]), why: `${stem} range` }
+  }
+  // Codes still TBC: the words say which profile a part is for ("End cap, Half Moon 0808").
+  const size = sizeOf(textOf(anchor.ref, state, idx))
+  if (size) {
+    const named = cands.filter(e => !rangeStem(codeOf(refOf(e), idx)) && sizeOf(textOf(refOf(e), state, idx)) === size)
+    if (named.length) return { etRef: refOf(named[0]), why: `named for the ${size} profile` }
+  }
+  return null
+}
+
+/** An ElementType's words: name, description and its Product Spec description. */
+function textOf(ref, state, idx) {
+  const e = idx.etByRef.get(U(ref)) || {}, ps = idx.psByRef.get(U(ref)) || {}
+  return U([e.Name, e.Description, ps.ComponentDescription].filter(Boolean).join(' '))
+}
+/** A profile size in words ("Half Moon 0808" → 0808, "2020 profile" → 2020): four digits on their own. */
+const sizeOf = t => (t.match(/(?:^|[^\d])(\d{4})(?!\d)/) || [])[1] || ''
+
+/** True when the ElementType's Product Spec row has no real code yet (TBC, N/A or blank). */
+export const codeIsTbc = (ref, idx) => {
+  const ps = idx.psByRef.get(U(ref))
+  return !!ps && (/^(TBC|-)?$/.test(codeOf(ref, idx)) || U(ps.IsTBC) === 'Y')
 }
 
 /**

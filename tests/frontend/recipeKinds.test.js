@@ -110,4 +110,12 @@ describe('parts made for a profile', async () => {
     expect(pickRangePart([part('FPS1709ECB'), part('FPS1709ECG')], a, 'END_CAPS', st, idx).code).toBe('FPS1709ECG')
     expect(pickRangePart([part('FPS1709PCCD2000'), part('FPS1709PCOPD2000')], a, 'DIFFUSER', st, idx).code).toBe('FPS1709PCOPD2000')
   })
+  it('with codes still TBC, the words say which profile a part is for', () => {
+    const t = { ...st,
+      elementTypes: [...st.elementTypes, { ElementTypeRef: 'ET-LIN-PROF-08', Family: 'ET-LIN-PROF', Name: 'LEDFlex - Flex Profile Surface Opal Half Moon 0808' },
+        { ElementTypeRef: 'ET-LIN-CLIP-09', Family: 'ET-LIN-CLIP', Name: 'LEDFlex - Half Moon 0808 clips' }],
+      psRows: [...st.psRows, { ElementTypeRef: 'ET-LIN-PROF-08', ProductCode: 'TBC' }, { ElementTypeRef: 'ET-LIN-CLIP-09', ProductCode: 'TBC' }] }
+    const i = indexes(t)
+    expect(fitFor('CLIPS', { ref: 'ET-LIN-PROF-08', code: '', maker: 'LEDFlex' }, t, i)).toEqual({ etRef: 'ET-LIN-CLIP-09', why: 'named for the 0808 profile' })
+  })
 })
