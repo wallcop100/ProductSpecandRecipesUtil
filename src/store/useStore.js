@@ -264,6 +264,17 @@ function applyPsPending(psRows, psChanges) {
  * export addresses rows by _row_num so this is harmless; re-key if a
  * post-reload edit of the same row ever needs to coalesce with its entry.
  */
+/** ElementTypes, one per ref (case-blind): a row the workbook has wins over a local copy. */
+function oneEachRef(ets) {
+  const best = new Map()
+  for (const e of ets) {
+    const k = String(e.ElementTypeRef || e.elementTypeRef || '').toLowerCase()
+    const had = best.get(k)
+    if (!had || (had._row_num == null && e._row_num != null)) best.set(k, e)
+  }
+  return ets.filter(e => best.get(String(e.ElementTypeRef || e.elementTypeRef || '').toLowerCase()) === e)
+}
+
 function applyRsPending(recipes, rsChanges) {
   if (!rsChanges || rsChanges.length === 0) return recipes
   const byRowNum = new Map()
@@ -3645,7 +3656,9 @@ const useStore = create((set, get) => ({
       dbChanges: db,
       psRows: applyPsPending(s.psRows, ps),
       recipes: applyRsPending(s.recipes, rs),
-      elementTypes: applyPsPending(s.elementTypes, db),
+      // A renamed ElementType's local copy already carries the new ref; re-applying the rename to the
+      // workbook's row gives it the same one. Keep one: the workbook's (it knows its Excel row).
+      elementTypes: oneEachRef(applyPsPending(s.elementTypes, db)),
     }))
   },
 

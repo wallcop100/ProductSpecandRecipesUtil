@@ -306,3 +306,24 @@ describe('Office Scripts rules', () => {
     }
   })
 })
+
+describe('a rename reaches the DesignDB and Product Spec patches', () => {
+  it('writes the new ref into the row found by the old one', () => {
+    const db = buildDbScript([{ elementTypeRef: 'ET-LIN-TAPE-06', updates: { Family: 'ET-LIN-FLEX', ElementTypeRef: 'ET-LIN-FLEX-01' } }])
+    expect(db).toMatch(/rowOf\["ET-LIN-TAPE-06"\]/)
+    expect(db).toMatch(/writeCell\(S, r, col\["Ref"\], "ET-LIN-FLEX-01"\); rowOf\["ET-LIN-FLEX-01"\] = r;/)
+    expect(db).toMatch(/writeCell\(S, r, col\["ParentRef"\], "ET-LIN-FLEX"\)/)
+    const ps = buildPsScript([{ elementTypeRef: 'ET-LIN-TAPE-06', updates: { ElementTypeRef: 'ET-LIN-FLEX-01' } }])
+    expect(ps).toMatch(/writeCell\(S, r, col\["EntityRef"\], "ET-LIN-FLEX-01"\)/)
+  })
+})
+
+describe('reopening with a pending rename', async () => {
+  const { default: useStore } = await import('../../src/store/useStore.js')
+  it('keeps one ElementType per ref: the workbook row, renamed', () => {
+    useStore.setState({ elementTypes: [{ ElementTypeRef: 'ET-LIN-TAPE-06', _row_num: 40 }, { ElementTypeRef: 'ET-LIN-FLEX-01', _row_num: null }],
+      psRows: [], recipes: [] })
+    useStore.getState().restorePendingChanges({ db: [{ elementTypeRef: 'ET-LIN-TAPE-06', updates: { ElementTypeRef: 'ET-LIN-FLEX-01' } }] })
+    expect(useStore.getState().elementTypes).toEqual([expect.objectContaining({ ElementTypeRef: 'ET-LIN-FLEX-01', _row_num: 40 })])
+  })
+})
