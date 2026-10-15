@@ -69,6 +69,9 @@ function build(features) {
     /** What became of the learned defaults: [{ kind, key, tier, source, supplied, final, outcome }]. */
     shareOutcomes: has('outcomes') ? (n, outcomes) => quiet(post(`${projectUrl(n)}/outcomes`, { outcomes })) : null,
 
+    /** Global templates published for this app (Orion): [{ id, name, applicable_tags, ingredients, replaces }]. */
+    templates: has('templates') ? async () => (await quiet(getJson('./api/recipes/templates')))?.templates || null : null,
+
     /** Recipe kinds from other projects (recipeKinds.js): design, power, slots with shares and rules. */
     kinds: has('kinds') ? async () => (await quiet(getJson('./api/recipes/kinds')))?.kinds || null : null,
 

@@ -676,6 +676,9 @@ const useStore = create((set, get) => ({
       showContextTree: false,
       loadError: null,
     })
+    get().applyServedTemplates()
+    // What other projects do (beside a companion): patterns, kinds, templates — in the background.
+    get().loadLibrary?.()
   },
 
 
@@ -1036,6 +1039,22 @@ const useStore = create((set, get) => ({
     })
   },
 
+  /**
+   * Global templates served beside a companion (`templates`): read-only like the built-in ones, under
+   * their own ids (`served:<id>`), never written to this browser's database. One that `replaces` a
+   * built-in hides it while it is served. Applied again after every project load.
+   */
+  applyServedTemplates() {
+    const served = get().library?.templates
+    if (!served) return
+    const hidden = new Set(served.map(t => t.replaces).filter(Boolean))
+    const own = get().templates.filter(t => !t._served && !(t.scope === 'global' && hidden.has(t.id)))
+    set({ templates: [...own, ...served.map(t => ({
+      ...t, id: `served:${t.id}`, scope: 'global', project_id: null, base_template_id: null, _served: true,
+      sort_order: t.sort_order ?? 500,
+    }))] })
+  },
+
   // The tool-wide library: recipe patterns and products of every project opened before.
   library: { patterns: [], exemplars: [] },
   async loadLibrary() {
@@ -1050,9 +1069,11 @@ const useStore = create((set, get) => ({
     try {
       const { getCompanion } = await import('../platform/companion.js')
       const api = await getCompanion()
-      const [served, kinds] = await Promise.all([api?.patterns ? api.patterns() : null, api?.kinds ? api.kinds() : null])
+      const [served, kinds, templates] = await Promise.all([api?.patterns ? api.patterns() : null,
+        api?.kinds ? api.kinds() : null, api?.templates ? api.templates() : null])
       if (served?.length) set({ library: { ...get().library, others: served } })
       if (kinds?.length) set({ library: { ...get().library, kinds } })
+      if (templates) { set({ library: { ...get().library, templates } }); get().applyServedTemplates() }
     } catch { /* the same */ }
   },
 
