@@ -6,7 +6,12 @@ import {
 } from '@dnd-kit/core'
 import MaterialIcon from './MaterialIcon'
 import IconButton from './IconButton'
-import { refamily, ACCESSORIES } from '../utils/etSeed'
+import { refamily, ACCESSORIES, nextRef } from '../utils/etSeed'
+import { useCompanion } from '../platform/companion'
+import { shareOutcomes } from '../platform/outcomes'
+import { familyForJob } from '../utils/codeJobs'
+import { jobLabel, ruleText } from '../utils/recipeKinds'
+import useStore from '../store/useStore'
 import { CANON_FAMILIES } from '../data/etCanon'
 
 /**
@@ -44,6 +49,7 @@ const WHY = {
   parent: p => `position parent ${p} (not a company family)`,
   extra: 'extra code in its cell',
   you: 'you chose it',
+  kit: r => `usually with ${r.kitOf}`,
   job: r => `${JOB_LABEL[r.job?.slot === 'TAPE' ? `TAPE:${r.job.variant}` : r.job?.slot] || 'its job'}${r.wasFamily ? ` (not ${r.wasFamily})` : ''}`,
 }
 const JOB_LABEL = { 'TAPE:tape': 'LED tape', 'TAPE:flex': 'neon / flex', 'TAPE:fixed': 'fixed linear', PROFILE: 'a profile', DIFFUSER: 'a diffuser',
@@ -159,6 +165,37 @@ export default function BulkCreateETModal({
   }, [rows, fams])
 
   const patch = (i, next) => setRows(rs => rs.map((r, k) => (k === i ? { ...r, ...next } : r)))
+  // Kits, beside a companion: the parts used with a profile / channel on other projects. A line
+  // each, never added unasked; Add proposes the part's ElementType with the rest.
+  const companion = useCompanion()
+  const projectNumber = useStore(s => s.projectNumber)
+  const [kits, setKits] = useState([])
+  const [kitAnswered, setKitAnswered] = useState(() => new Set())
+  const anchorKey = rows.filter(r => r.include && ['PROFILE', 'MOUNT_CHANNEL'].includes(r.job?.slot)).map(r => `${r.manufacturer}|${r.code}`).sort().join(',')
+  useEffect(() => {
+    setKits([])
+    if (!show || !companion?.kits || !anchorKey) return
+    let live = true
+    companion.kits(anchorKey.split(',').map(k => { const [manufacturer, code] = k.split('|'); return { code, manufacturer } }), projectNumber)
+      .then(k => { if (live) setKits(k || []) })
+    return () => { live = false }
+  }, [show, companion, anchorKey, projectNumber])
+  const kitLines = kits.filter(k => !kitAnswered.has(k.key) && !rows.some(r => String(r.code).toUpperCase() === k.part.code))
+  function answerKit(k, outcome) {
+    setKitAnswered(s => new Set(s).add(k.key))
+    shareOutcomes(companion, projectNumber, [{ kind: 'kit', key: k.key, tier: 'kit', outcome, supplied: k.part.code, final: outcome === 'accepted' ? k.part.code : null }])
+    if (outcome !== 'accepted') return
+    const anchorRow = rows.find(r => String(r.code).toUpperCase() === k.anchor.code)
+    const house = familyForJob({ slot: k.part.slot }) || { family: ACCESSORIES, head: ACCESSORIES }
+    const taken = [...elementTypes.map(e => e.ElementTypeRef || e.elementTypeRef), ...rows.map(r => r.ref)].filter(Boolean)
+    setRows(rs => [...rs, {
+      code: k.part.code, manufacturer: anchorRow?.manufacturer || '', include: true, action: 'create', reuseRef: null,
+      family: house.family, ref: nextRef(house.head, taken), name: k.part.name || `${anchorRow?.manufacturer || ''} - ${k.part.code}`.trim(),
+      description: '', why: 'kit', kitOf: k.anchor.code, job: { slot: k.part.slot, variant: '' }, parent: null, spread: 0,
+    }])
+    setFams(fs => withFamily(fs, house.family))
+  }
+
   const included = rows.filter(r => r.include && r.action !== 'skip')
   const notCodes = rows.filter(r => !r.include && r.notCode).map(r => r.code)
   const nCreate = included.filter(r => r.action === 'create').length
@@ -190,6 +227,22 @@ export default function BulkCreateETModal({
       </Modal.Header>
       <Modal.Body style={{ fontSize: 12 }}>
         {header}
+        {kitLines.length > 0 && (
+          <div className="mb-2 px-2 py-1 rounded" data-testid="kit-suggestions" style={{ background: '#eef5ff', border: '1px solid #c9dcf5' }}>
+            {kitLines.map(k => (
+              <div key={k.key} className="d-flex align-items-center gap-2 py-1">
+                <MaterialIcon name="extension" size={13} style={{ color: '#1c5cab' }} />
+                <span style={{ flex: 1 }}>Usually with <span className="font-monospace">{k.anchor.code}</span>: <b>{jobLabel(k.part.slot)}</b>{' '}
+                  <span className="font-monospace">{k.part.code}</span>{k.part.name ? <span className="text-muted"> {k.part.name}</span> : null}
+                  {ruleText({ qty: k.qty, dim: k.dim, integer: k.integer ? 1 : 0 }) ? `, ${ruleText({ qty: k.qty, dim: k.dim, integer: k.integer ? 1 : 0 })}` : ''}</span>
+                <Button size="sm" variant="outline-primary" style={{ fontSize: 11, padding: '0px 8px' }} onClick={() => answerKit(k, 'accepted')}>Add</Button>
+                <Button size="sm" variant="link" className="text-muted p-0" aria-label="Dismiss" onClick={() => answerKit(k, 'dismissed')}>
+                  <MaterialIcon name="close" size={13} />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
         <div className="d-flex align-items-start gap-2 mb-2">
           <div className="text-muted d-flex align-items-center gap-2" style={{ fontSize: 11 }}>
             <span><MaterialIcon name="check_box" size={12} /> untick what is wrong</span>

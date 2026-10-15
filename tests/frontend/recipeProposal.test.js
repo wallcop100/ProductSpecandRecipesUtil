@@ -161,3 +161,13 @@ describe('exterior means the DesignDB says exterior', () => {
     expect(envOf({ PositionTypeRef: 'Z1', ParentRef: 'TEXTURED-WALL' })).toBe('INT')
   })
 })
+
+describe('patterns from other projects (served beside a companion)', () => {
+  test('rank below this browser and above the shipped set', async () => {
+    const { precedentSources } = await import('../../src/utils/recipeProposal.js')
+    const p = { wk: 'LIN', dl: 'REMOTE', env: 'INT', lvl: 'I', role: 'CAP', n: 3, of: 4 }
+    const names = precedentSources({ libraryPatterns: [p], otherPatterns: [p] }).map(s => s.name)
+    expect(names).toEqual(['projects opened before', 'other projects', 'finished projects'])
+    expect(precedentSources({}).map(s => s.name)).not.toContain('other projects')
+  })
+})

@@ -1044,8 +1044,16 @@ const useStore = create((set, get) => ({
         window.electronAPI?.db?.getRecipePatterns?.() ?? [],
         window.electronAPI?.db?.getStyleExemplars?.() ?? [],
       ])
-      set({ library: { patterns: patterns || [], exemplars: exemplars || [] } })
+      set({ library: { ...get().library, patterns: patterns || [], exemplars: exemplars || [] } })
     } catch { /* the library only ever helps */ }
+    // Served beside a companion: recipe patterns from other projects, below this browser's own.
+    try {
+      const { getCompanion } = await import('../platform/companion.js')
+      const api = await getCompanion()
+      const [served, kinds] = await Promise.all([api?.patterns ? api.patterns() : null, api?.kinds ? api.kinds() : null])
+      if (served?.length) set({ library: { ...get().library, others: served } })
+      if (kinds?.length) set({ library: { ...get().library, kinds } })
+    } catch { /* the same */ }
   },
 
   /**
