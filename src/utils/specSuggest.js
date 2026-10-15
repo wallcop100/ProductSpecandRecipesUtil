@@ -38,7 +38,8 @@ export function familyFix(et, ps, elementTypes = []) {
     if (Math.max(0, ...houses.values()) / Math.max(1, members.length) >= 0.6) return null
   }
   const own = [...ok].find(f => f !== U(house.family))
-  return { family: own ? elementTypes.find(e => U(e.ElementTypeRef) === own).ElementTypeRef : house.family, job }
+  const ownRow = own && elementTypes.find(e => U(e.ElementTypeRef) === own)
+  return { family: own ? (ownRow ? ownRow.ElementTypeRef : elementTypes.find(e => U(e.Family) === own).Family) : house.family, job }
 }
 
 /** A connector's kind without the side it sits on: 3pin-strain-relief@mains → 3pin-strain-relief. */
