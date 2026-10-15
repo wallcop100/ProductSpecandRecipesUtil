@@ -12,7 +12,8 @@ const ps = [{ ElementTypeRef: 'ET-3Pin-Mains-Plug', Manufacturer: 'WAGO', Produc
 
 describe('Product Spec hints', () => {
   it('a part in a catch-all family is offered its house family; a connector is not filed by job', () => {
-    expect(familyFix(ets[3], null, ets)).toMatchObject({ family: 'ET-LIN-PROF' })
+    expect(familyFix(ets[3], null, ets)).toMatchObject({ family: 'ET-LIN-CAPS' })
+    expect(familyFix(ets[2], null, ets)).toMatchObject({ family: 'ET-LIN-PROF' })
     expect(familyFix(ets[4], null, ets)).toMatchObject({ family: 'ET-LIN-CLIP' })
     expect(familyFix({ ElementTypeRef: 'ET-LIN-PROF-09', Family: 'ET-LIN-PROF' }, null, ets)).toBeNull()
     expect(familyFix(ets[7], ps[1], ets)).toBeNull()
@@ -30,5 +31,15 @@ describe('Product Spec hints', () => {
     expect(codeElsewhere(ets[7], ps[1], { elementTypes: ets, psRows: ps, exemplars })).toEqual(
       { maker: 'WAGO', code: '770-503', ref: 'ET-3Pin-SR', description: '3-pin strain relief for local driver connectors', source: '4343' })
     expect(codeElsewhere(ets[6], ps[0], { elementTypes: ets, psRows: ps, exemplars })).toBeNull()   // has a code
+  })
+  it('a linear wrapper is filed by what is inside it', () => {
+    const w = [{ ElementTypeRef: 'ET-LIN-01', Family: 'ET-LIN', IsCollection: 'Y' }, { ElementTypeRef: 'ET-LIN-02', Family: 'ET-LIN-TP', IsCollection: 'Y' },
+      { ElementTypeRef: 'ET-LIN-03', Family: 'ET-LIN', IsCollection: 'Y' },
+      { ElementTypeRef: 'ET-LIN-TAPE-01', Family: 'ET-LIN-TAPE' }, { ElementTypeRef: 'ET-LIN-FLEX-01', Family: 'ET-LIN-FLEX' }]
+    const inside = (wr, et) => ({ ContextType: 'ElementType', ContextRef: wr, ElementTypeRef: et })
+    const recipes = [inside('ET-LIN-01', 'ET-LIN-TAPE-01'), inside('ET-LIN-02', 'ET-LIN-TAPE-01'), inside('ET-LIN-03', 'ET-LIN-FLEX-01')]
+    expect(familyFix(w[0], null, w, { recipes })).toMatchObject({ family: 'ET-LIN-TP' })
+    expect(familyFix(w[1], null, w, { recipes })).toBeNull()
+    expect(familyFix(w[2], null, w, { recipes })).toMatchObject({ family: 'ET-LIN-ENCAPSULATED' })
   })
 })

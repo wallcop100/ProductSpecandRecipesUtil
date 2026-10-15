@@ -94,7 +94,7 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
     elsewhereAsked = getCompanion().then(api => (api?.library ? api.library(makers, { exclude: projectNumber || '' }) : [])).catch(() => [])
     elsewhereAsked.then(setOthers)
   }, [needsCode])   // eslint-disable-line react-hooks/exhaustive-deps
-  const fix = useMemo(() => (etObj ? familyFix(etObj, psRow, elementTypes) : null), [etObj, psRow, elementTypes])
+  const fix = useMemo(() => (etObj ? familyFix(etObj, psRow, elementTypes, { recipes, psRows }) : null), [etObj, psRow, elementTypes, recipes, psRows])
   const elsewhere = useMemo(() => (etObj && needsCode
     ? codeElsewhere(etObj, psRow, { elementTypes, psRows, exemplars: [...(localExemplars || []), ...others] }) : null),
   [etObj, psRow, needsCode, elementTypes, psRows, localExemplars, others])

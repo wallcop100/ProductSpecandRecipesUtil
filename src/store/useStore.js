@@ -12,6 +12,7 @@ import { findBestTemplate, recipeTemplateFromRows, isRecipeTemplate, isFormTempl
 import { proposeRecipe, proposalFromTemplate, proposalContext } from '../utils/recipeProposal.js'
 import { roleOf } from '../utils/recipePatterns.js'
 import { planFamilyMove } from '../utils/etSeed.js'
+import { jobOf, linearWrapperFamily } from '../utils/codeJobs.js'
 import { loadReports, saveReports } from '../utils/bugReports.js'
 import { connectorSignature, templateParts, partsToIngredients, diffParts, isConnectorPart, DEFAULT_CONNECTOR_FAMILIES, sortParts, signatureKey } from '../utils/connectorGroups.js'
 import { globalConnector, suggestRef, partName, sectionOf, supersededBy, WAGO } from '../data/globalConnectors.js'
@@ -1184,7 +1185,10 @@ const useStore = create((set, get) => ({
     if (p.wrapper?.isNew) {
       const k = p.wrapper.family === 'ET-LIN' ? 'LIN' : 'DL'
       wrapperRef = getNextAvailableRef(`ET-${k}-01`, get().elementTypes)
-      get().createElementType({ ref: wrapperRef, family: `ET-${k}`, isCollection: true })
+      // A linear wrapper is filed by what is inside it (etCanon / page 1409596): ET-LIN-TP, -ENCAPSULATED, -FIXED.
+      const family = k === 'LIN' ? linearWrapperFamily(p.rows.filter(r => r.section === 'internal').map(r => jobOf({
+        ref: r.ref || '', maker: r.exemplar?.maker, code: r.exemplar?.code, name: r.exemplar?.name, family: r.exemplar?.family }))) : 'ET-DL'
+      get().createElementType({ ref: wrapperRef, family, isCollection: true })
       set(s => ({ containerETRefs: new Set([...s.containerETRefs, wrapperRef.toLowerCase()]) }))
     }
     const data = r => ({
@@ -1288,7 +1292,12 @@ const useStore = create((set, get) => ({
       if (ing.newWrapper) {
         const k = ing.newWrapper === 'LIN' ? 'LIN' : 'DL'
         const ref = getNextAvailableRef(`ET-${k}-01`, get().elementTypes)
-        get().createElementType({ ref, family: `ET-${k}`, isCollection: true })
+        const tape = ings.find(i => i.slotKey === 'TAPE')
+        const family = k === 'LIN'
+          ? linearWrapperFamily(tape ? [/FLEX|NEON|ENCAPS/i.test(tape.slotLabel) ? 'TAPE:flex' : /FIXED|RIGID/i.test(tape.slotLabel) ? 'TAPE:fixed' : 'TAPE:tape']
+            : ings.some(i => i.slotKey === 'MOUNT_CHANNEL') ? ['TAPE:flex'] : [])
+          : 'ET-DL'
+        get().createElementType({ ref, family, isCollection: true })
         set(s => ({ containerETRefs: new Set([...s.containerETRefs, ref.toLowerCase()]) }))
         get().addRecipeRow(posRef, 'position', { ...data(ing), elementTypeRef: ref, isDesign: 'Y' },
           { recordHistory: false, asPosition: true })

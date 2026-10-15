@@ -19,6 +19,18 @@ const U = s => String(s ?? '').toUpperCase()
 const STEM = /[-_]?\d+[A-Z]?$/
 const CONN = /(\d)\s*-?PIN|SOCKET|PLUG|STRAIN|\bSR\b|-SR\b|-SR-|ST16|GLAND|CONNECTOR|WIELAND|TERMINAL|WAGO|JUNCTION|XLR/
 const WRAPPER_FAMILIES = new Set(['ET-LIN', 'ET-LIN-TP', 'ET-LIN-ENCAPSULATED', 'ET-LINEAR'])
+
+/**
+ * The collection a linear wrapper (ET-LIN-NN) is filed under, from what is inside it (page 1409596):
+ * flex → ET-LIN-ENCAPSULATED, fixed linear → ET-LIN-FIXED, otherwise tape and profile → ET-LIN-TP.
+ * `jobs` are the jobs of its ingredients (jobOf results or jobKeys).
+ */
+export function linearWrapperFamily(jobs = []) {
+  const keys = jobs.map(j => (typeof j === 'string' ? j : jobKey(j)))
+  if (keys.includes('TAPE:flex')) return 'ET-LIN-ENCAPSULATED'
+  if (keys.includes('TAPE:fixed')) return 'ET-LIN-FIXED'
+  return 'ET-LIN-TP'
+}
 const CONNECTION_FAMILIES = new Set(['ET-CONNECTION', 'ET-CONNECTIONS', 'ET-CONNECTORS'])
 
 function connector(ref, text) {
@@ -100,8 +112,8 @@ export function familyForJob({ slot, variant } = {}) {
     case 'TAPE': return variant === 'flex' ? { family: 'ET-LIN-FLEX', head: 'ET-LIN-FLEX' }
       : variant === 'fixed' ? { family: 'ET-LIN-FIXED', head: 'ET-LIN-FIXED' } : { family: 'ET-LIN-TAPE', head: 'ET-LIN-TAPE' }
     case 'PROFILE': return { family: 'ET-LIN-PROF', head: 'ET-LIN-PROF' }
-    case 'DIFFUSER': return { family: 'ET-LIN-PROF', head: 'ET-LIN-DIFF' }
-    case 'END_CAPS': return { family: 'ET-LIN-PROF', head: 'ET-LIN-CAP' }
+    case 'DIFFUSER': return { family: 'ET-LIN-DIFF', head: 'ET-LIN-DIFF' }
+    case 'END_CAPS': return { family: 'ET-LIN-CAPS', head: 'ET-LIN-CAP' }
     case 'CLIPS': return { family: 'ET-LIN-CLIP', head: 'ET-LIN-CLIP' }
     case 'MOUNT_CHANNEL': return { family: 'ET-LIN-MOUNT', head: 'ET-LIN-MOUNT' }
     case 'MOUNT_COLLAR': return variant === 'frame' ? { family: 'ET-PS-MOUNTING-FRAME', head: 'ET-PS-MOUNTING-FRAME' }

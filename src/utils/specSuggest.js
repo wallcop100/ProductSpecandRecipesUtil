@@ -1,22 +1,41 @@
 /**
  * specSuggest.js — two inline hints for one ElementType in the Product Spec editor. Pure.
  *
- *   familyFix(et, ps, elementTypes)  → { family, job } when it has no family, or sits in a mixed
- *                                      catch-all (a cap in ET-LIN-COMPONENTS → ET-LIN-PROF)
+ *   familyFix(et, ps, elementTypes, { recipes, psRows })
+ *                                    → { family, job } when it has no family, or sits in a mixed
+ *                                      catch-all (a cap in ET-LIN-COMPONENTS → ET-LIN-CAPS); a linear
+ *                                      wrapper is filed by its contents (ET-LIN-01 → ET-LIN-TP)
  *   codeElsewhere(et, ps, { … })     → { maker, code, ref, description, source } — the code the same
  *                                      part has on another project, when this one has none yet
  *                                      (ET-3Pin-Mains-SR ← ET-3Pin-SR, WAGO 770-503)
  */
-import { jobOf, familyForJob, familiesForJob } from './codeJobs'
+import { jobOf, familyForJob, familiesForJob, linearWrapperFamily } from './codeJobs'
 
 const U = s => String(s ?? '').trim().toUpperCase()
 const mk = s => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
 const NO_CODE = /^(TBC|N\/?A|-)?$/
 const NOT_FILED_BY_JOB = new Set(['CONNECTOR', 'FITTING', 'DESIGN_ELEMENT', 'OTHER', 'LOCKING_LEVER'])
 
-export function familyFix(et, ps, elementTypes = []) {
-  if (!et || U(et.IsCollection) === 'Y') return null
+
+export function familyFix(et, ps, elementTypes = [], { recipes = [], psRows = [] } = {}) {
+  if (!et) return null
   const fam = U(et.Family)
+  // A linear wrapper (ET-LIN-NN): its collection follows what is inside it (page 1409596).
+  if (/^ET-LIN-?\d+$/.test(U(et.ElementTypeRef))) {
+    const inside = recipes.filter(r => (r.ContextType || r.contextType) === 'ElementType'
+      && U(r.ContextRef || r.contextRef) === U(et.ElementTypeRef) && U(r.IsDeleted || r.isDeleted) !== 'Y')
+    if (!inside.length) return null
+    const psBy = new Map(psRows.map(r => [U(r.ElementTypeRef), r]))
+    const etBy = new Map(elementTypes.map(e => [U(e.ElementTypeRef), e]))
+    const jobs = inside.map(r => {
+      const ref = r.ElementTypeRef || r.elementTypeRef, e = etBy.get(U(ref)) || {}, p = psBy.get(U(ref)) || {}
+      return jobOf({ ref, family: e.Family, name: e.Name, description: e.Description, maker: p.Manufacturer, code: p.ProductCode })
+    })
+    const want = linearWrapperFamily(jobs)
+    return fam === want ? null
+      : { family: want, job: { slot: 'DESIGN_ELEMENT', variant: 'LIN' } }
+  }
+  if (U(et.IsCollection) === 'Y') return null
   const job = jobOf({ ref: et.ElementTypeRef, family: fam, name: et.Name, description: et.Description,
     maker: ps?.Manufacturer, code: ps?.ProductCode })
   if (NOT_FILED_BY_JOB.has(job.slot)) return null

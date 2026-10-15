@@ -73,7 +73,7 @@ describe('recipe suggestions', () => {
     const kit = screen.getByTestId('suggestion-kit')
     await act(async () => { fireEvent.click(kit.querySelector('button')) })
     const s = useStore.getState()
-    expect(s.elementTypes.find(e => e.ElementTypeRef === 'ET-LIN-CAP-01')).toMatchObject({ Family: 'ET-LIN-PROF' })
+    expect(s.elementTypes.find(e => e.ElementTypeRef === 'ET-LIN-CAP-01')).toMatchObject({ Family: 'ET-LIN-CAPS' })
     expect(addRow).toHaveBeenCalledWith('C05r', 'lin_internal', expect.objectContaining({ elementTypeRef: 'ET-LIN-CAP-01', quantity: 2, isContractItem: 'Y' }), { asPosition: true })
     expect(api.current.shareOutcomes).toHaveBeenCalledWith('7900', [expect.objectContaining({ kind: 'kit', key: KIT.key, outcome: 'accepted' })])
     fireEvent.click(screen.getByTestId('suggestion-kind').querySelector('[aria-label="More"]'))

@@ -44,8 +44,8 @@ describe('an early project: company families, from the Form and the shape table'
 
   test('a Linear page files by keyword; the ref carries the keyword even under a shared family', () => {
     const { proposals, newFamilies } = proposeElementTypes([entry('X-DIFF', 'Acme', ['W1'])], { ...linear, contextFor: () => 'Opal diffuser 2m' })
-    expect(proposals[0]).toMatchObject({ family: 'ET-LIN-PROF', ref: 'ET-LIN-DIFF-01', why: 'canon' })
-    expect(newFamilies.map(f => f.ref)).toEqual(['ET-LIN-PROF', 'ET-LIN-INGREDIENTS'])
+    expect(proposals[0]).toMatchObject({ family: 'ET-LIN-DIFF', ref: 'ET-LIN-DIFF-01', why: 'canon' })
+    expect(newFamilies.map(f => f.ref)).toEqual(['ET-LIN-DIFF', 'ET-LIN-INGREDIENTS'])
   })
 
   test('a Linear page with no keyword falls to ET-LIN-INGREDIENTS and is flagged', () => {
@@ -286,9 +286,9 @@ describe('the job settles the family (5642: everything linear under a family wit
     expect(p.job).toEqual({ slot: 'TAPE', variant: 'flex' })
     expect(newFamilies.map(f => f.ref)).toEqual(expect.arrayContaining(['ET-LIN-FLEX', 'ET-LIN-INGREDIENTS']))
   })
-  test("an end cap goes to the profile family with a CAP ref, whatever its sibling's family", () => {
+  test("an end cap goes to ET-LIN-CAPS with a CAP ref, whatever its sibling's family", () => {
     const { proposals: [p] } = one('FPS2020ECG', 'End cap set')
-    expect(p.family).toBe('ET-LIN-PROF')
+    expect(p.family).toBe('ET-LIN-CAPS')
     expect(p.ref).toMatch(/^ET-LIN-CAP-\d+$/)
   })
   test("the project's own family for a job wins when it has a row", () => {

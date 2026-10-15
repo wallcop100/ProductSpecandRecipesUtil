@@ -23,7 +23,8 @@ describe('code jobs', () => {
     expect(jobOf({ ref: 'ET-DL-02', isDesign: true, section: 'position' })).toEqual({ slot: 'DESIGN_ELEMENT', variant: 'DL' })
   })
   it('gives each job its house family and ref head', () => {
-    expect(familyForJob({ slot: 'END_CAPS' })).toEqual({ family: 'ET-LIN-PROF', head: 'ET-LIN-CAP' })
+    expect(familyForJob({ slot: 'END_CAPS' })).toEqual({ family: 'ET-LIN-CAPS', head: 'ET-LIN-CAP' })
+    expect(familyForJob({ slot: 'DIFFUSER' })).toEqual({ family: 'ET-LIN-DIFF', head: 'ET-LIN-DIFF' })
     expect(familyForJob({ slot: 'TAPE', variant: 'flex' }).family).toBe('ET-LIN-FLEX')
     expect(jobKey({ slot: 'TAPE', variant: 'tape' })).toBe('TAPE:tape')
   })
@@ -37,9 +38,12 @@ describe('code jobs', () => {
     const elementTypes = [
       ...['ET-LIN-TAPE-01', 'ET-LIN-PROF-01', 'ET-LIN-CLIP-01'].map(r => ({ ElementTypeRef: r, Family: 'ET-LIN-COMPONENTS' })),
       ...['ET-LIN-PROF-02', 'ET-LIN-CAP-02', 'ET-LIN-DIFF-02'].map(r => ({ ElementTypeRef: r, Family: 'ET-PROFILES' })),
+      ...['ET-CCR-D-300-1CH-01', 'ET-CCL-D-250-1CH-01', 'ET-EM-PACK-01'].map(r => ({ ElementTypeRef: r, Family: 'ET-DRIVERS' })),
     ]
-    const familyRows = new Set(['ET-LIN-COMPONENTS', 'ET-PROFILES'])
+    const familyRows = new Set(['ET-LIN-COMPONENTS', 'ET-PROFILES', 'ET-DRIVERS'])
     expect([...familiesForJob({ slot: 'CLIPS' }, { elementTypes, familyRows })]).toEqual(['ET-LIN-CLIP'])
-    expect([...familiesForJob({ slot: 'END_CAPS' }, { elementTypes, familyRows })].sort()).toEqual(['ET-LIN-PROF', 'ET-PROFILES'])
+    // Caps have a family of their own (page 1409596): a profiles-and-caps family is no home for them.
+    expect([...familiesForJob({ slot: 'END_CAPS' }, { elementTypes, familyRows })]).toEqual(['ET-LIN-CAPS'])
+    expect([...familiesForJob({ slot: 'REMOTE_DRIVER' }, { elementTypes, familyRows })].sort()).toEqual(['ET-DRIVER', 'ET-DRIVERS'])
   })
 })
