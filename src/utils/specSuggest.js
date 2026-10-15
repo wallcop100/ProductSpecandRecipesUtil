@@ -1,8 +1,8 @@
 /**
  * specSuggest.js — two inline hints for one ElementType in the Product Spec editor. Pure.
  *
- *   familyFix(et, ps, elementTypes)  → { family, job } when its family is no home for what it does
- *                                      (a cap filed in a catch-all ET-LIN-COMPONENTS → ET-LIN-PROF)
+ *   familyFix(et, ps, elementTypes)  → { family, job } when it has no family, or sits in a mixed
+ *                                      catch-all (a cap in ET-LIN-COMPONENTS → ET-LIN-PROF)
  *   codeElsewhere(et, ps, { … })     → { maker, code, ref, description, source } — the code the same
  *                                      part has on another project, when this one has none yet
  *                                      (ET-3Pin-Mains-SR ← ET-3Pin-SR, WAGO 770-503)
@@ -22,9 +22,21 @@ export function familyFix(et, ps, elementTypes = []) {
   if (NOT_FILED_BY_JOB.has(job.slot)) return null
   const house = familyForJob(job)
   if (!house) return null
-  const familyRows = new Set(elementTypes.map(e => U(e.ElementTypeRef)))
+  // A family in use counts here even without a row of its own: only its make-up decides.
+  const familyRows = new Set([...elementTypes.map(e => U(e.ElementTypeRef)), ...elementTypes.map(e => U(e.Family)).filter(Boolean)])
   const ok = familiesForJob(job, { elementTypes, familyRows })
   if (ok.has(fam)) return null
+  // A family whose members hang together (cables, drivers…) is a scheme of its own: only a mixed
+  // catch-all, or no family at all, gets the hint.
+  if (fam) {
+    const houses = new Map()
+    const members = elementTypes.filter(e => U(e.Family) === fam)
+    for (const e of members) {
+      const h = familyForJob(jobOf({ ref: e.ElementTypeRef, family: fam, name: e.Name, description: e.Description }))?.family || '-'
+      houses.set(h, (houses.get(h) || 0) + 1)
+    }
+    if (Math.max(0, ...houses.values()) / Math.max(1, members.length) >= 0.6) return null
+  }
   const own = [...ok].find(f => f !== U(house.family))
   return { family: own ? elementTypes.find(e => U(e.ElementTypeRef) === own).ElementTypeRef : house.family, job }
 }

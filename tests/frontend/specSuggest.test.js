@@ -16,6 +16,10 @@ describe('Product Spec hints', () => {
     expect(familyFix(ets[4], null, ets)).toMatchObject({ family: 'ET-LIN-CLIP' })
     expect(familyFix({ ElementTypeRef: 'ET-LIN-PROF-09', Family: 'ET-LIN-PROF' }, null, ets)).toBeNull()
     expect(familyFix(ets[7], ps[1], ets)).toBeNull()
+    const drivers = [...['ET-CCR-D-300-1CH-01', 'ET-CCR-D-350-1CH-01'].map(r => ({ ElementTypeRef: r, Family: 'ET-REMOTE-DRIVERS' })),
+      ...['LC1', 'LC2', 'LC2-EM'].map(r => ({ ElementTypeRef: r, Family: 'ET-CABLE' }))]
+    expect(familyFix(drivers[0], null, drivers)).toBeNull()                   // a family of its own scheme
+    expect(familyFix(drivers[4], null, drivers)).toBeNull()                   // an odd one in a coherent family
   })
   it('a part with no code gets the code the same kind of part has elsewhere, from its family\'s maker', () => {
     const exemplars = [
