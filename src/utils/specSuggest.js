@@ -26,8 +26,8 @@ export function familyFix(et, ps, elementTypes = []) {
   const familyRows = new Set([...elementTypes.map(e => U(e.ElementTypeRef)), ...elementTypes.map(e => U(e.Family)).filter(Boolean)])
   const ok = familiesForJob(job, { elementTypes, familyRows })
   if (ok.has(fam)) return null
-  // A family whose members hang together (cables, drivers…) is a scheme of its own: only a mixed
-  // catch-all, or no family at all, gets the hint.
+  // A family of things no house family covers (cables…) is a scheme of its own: an odd member is
+  // left alone. A mixed catch-all, or no family at all, gets the hint.
   if (fam) {
     const houses = new Map()
     const members = elementTypes.filter(e => U(e.Family) === fam)
@@ -35,7 +35,8 @@ export function familyFix(et, ps, elementTypes = []) {
       const h = familyForJob(jobOf({ ref: e.ElementTypeRef, family: fam, name: e.Name, description: e.Description }))?.family || '-'
       houses.set(h, (houses.get(h) || 0) + 1)
     }
-    if (Math.max(0, ...houses.values()) / Math.max(1, members.length) >= 0.6) return null
+    const [top, n] = [...houses.entries()].sort((a, b) => b[1] - a[1])[0] || ['-', 0]
+    if (top === '-' && n / Math.max(1, members.length) >= 0.6) return null
   }
   const own = [...ok].find(f => f !== U(house.family))
   const ownRow = own && elementTypes.find(e => U(e.ElementTypeRef) === own)

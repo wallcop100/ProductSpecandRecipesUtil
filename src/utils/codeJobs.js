@@ -121,7 +121,7 @@ export function familyForJob({ slot, variant } = {}) {
  *  them). A catch-all family holding tape, profiles and clips alike (ET-LIN-COMPONENTS) is no home
  *  for any of them. A family with no
  *  row of its own never counts. */
-export function familiesForJob(job, { elementTypes = [], familyRows = new Set(), share = 0.6 } = {}) {
+export function familiesForJob(job, { elementTypes = [], familyRows = new Set(), share = 0.8 } = {}) {
   const out = new Set()
   const house = familyForJob(job)
   if (house) out.add(house.family.toUpperCase())
