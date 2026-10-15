@@ -26,7 +26,8 @@ import {
  *              ("Positions like this usually also have end caps (96%)"). For caps, diffusers and
  *              clips the part is the one that fits THIS profile (recipeKinds.fitFor): used with it
  *              here, or from its range (FPS1709MC for FPS1709BG2000), made as an ElementType when
- *              the project has none. With nothing known to fit, it says so and asks.
+ *              the project has none. A range that has no such part (FPS2020: no clip) means no line;
+ *              with nothing known at all, it says so and asks.
  *   connector — the connector set positions like this usually carry, mapped onto this project's
  *              own connector ElementTypes, each where the project puts it.
  *
@@ -135,7 +136,10 @@ export default function RecipeSuggestions({ posRef }) {
         text: <>{head}: <span className="font-monospace">{fit.etRef}</span> <span className="text-muted">— {fit.why}</span></> })
       continue
     }
+    const rangeKnown = kits.some(k => k.range)
     const part = fitsProfile ? pickRangePart(kits.filter(k => k.range && k.part.slot === s.slot).map(k => k.part), profile, s.slot, state, idx) : null
+    // The maker's range for this profile is known and has no such part (FPS2020 has no clip): nothing to suggest.
+    if (fitsProfile && !part && rangeKnown) continue
     if (part) {
       const own = ownByCode(part.code)
       lines.push({ ...base, supplied: part.code, add: () => addRow(elementTypeFor(s.slot, part, { fromRange: true })),

@@ -87,7 +87,8 @@ export function anchorOf(m, idx) {
     const r = (m.jobs.get(k) || [])[0]
     if (!r) continue
     const ps = idx.psByRef.get(U(refOf(r))) || {}
-    return { ref: refOf(r), code: U(ps.ProductCode || ps.productCode), maker: ps.Manufacturer || ps.manufacturer || '' }
+    const code = U(ps.ProductCode || ps.productCode)
+    return { ref: refOf(r), code: /^(TBC|N\/?A|-)?$/.test(code) ? '' : code, maker: ps.Manufacturer || ps.manufacturer || '' }
   }
   return null
 }

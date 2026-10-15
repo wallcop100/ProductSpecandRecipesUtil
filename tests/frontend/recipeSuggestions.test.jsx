@@ -104,4 +104,14 @@ describe('recipe suggestions', () => {
     expect(line.querySelector('select').value).toBe('')
     expect([...line.querySelectorAll('button')].map(b => b.textContent)).not.toContain('Add')
   })
+
+  test('a profile whose range has no clip gets no clip line', async () => {
+    const cap = { key: 'r', range: 'FPS2020', anchor: { code: 'FPS2020BG2000' }, part: { maker_key: 'ledflex', code: 'FPS2020ECG', slot: 'END_CAPS', name: 'END CAP' } }
+    api.current = { kits: vi.fn(async () => [cap]), shareOutcomes: vi.fn(async () => ({ stored: 1 })) }
+    const CLIPS = { ...KIND, slots: [{ slot: 'CLIPS', core: false, share: 0.92, section: 'lin_internal' }] }
+    await act(async () => { setup() })
+    await act(async () => useStore.setState({ library: { patterns: [], exemplars: [], kinds: [CLIPS] },
+      recipes: useStore.getState().recipes.filter(r => r.ElementTypeRef !== 'ET-LIN-CLIP-01') }))
+    expect(screen.queryByTestId('suggestion-kind')).toBeNull()
+  })
 })
