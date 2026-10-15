@@ -12,6 +12,8 @@
  *   library        how products became ElementTypes elsewhere (styleLibrary.js rows)
  *   projects       a project's decisions and configuration, by project number
  *   contributions  evidence for the catalogue, reviewed before it is relied on
+ *   outcomes       what became of each learned default (kept / changed / cleared), to read
+ *   reports        a problem someone flagged (the ⚑ beside the bug), with what was on screen
  *
  * Every call is relative to the page, so the build needs no configuration and knows nothing
  * about who answers. Failures are quiet: a companion that is down is the same as none.
@@ -59,6 +61,12 @@ function build(features) {
     projectItems: has('projects') ? (n, since = '') =>
       quiet(getJson(`${projectUrl(n)}${since ? `?${new URLSearchParams({ since })}` : ''}`)) : null,
     shareProjectItems: has('projects') ? (n, items) => quiet(post(`${projectUrl(n)}/items`, { items })) : null,
+
+    /** What became of the learned defaults: [{ kind, key, tier, source, supplied, final, outcome }]. */
+    shareOutcomes: has('outcomes') ? (n, outcomes) => quiet(post(`${projectUrl(n)}/outcomes`, { outcomes })) : null,
+
+    /** One report (bugReports.js shape) → { received, id } | null. */
+    report: has('reports') ? report => quiet(post('./api/reports', report)) : null,
 
     /** Evidence for the catalogue (reviewed on the other side). Fire-and-forget → accepted? */
     contribute: has('contributions') ? async payload => !!(await quiet(post('./api/contributions', payload))) : null,

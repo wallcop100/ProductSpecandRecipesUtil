@@ -107,7 +107,7 @@ export default function CompareCodesPanel({ entries, knownPTs, ptTarget, onCreat
       {entries.map(e => {
         const blocked = hasNoteCollision(e)
         return (
-          <div key={e.text} className="py-1 border-bottom" style={{ fontSize: 11, opacity: blocked ? 0.5 : 1 }}>
+          <div key={e.text} data-code={e.text} className="py-1 border-bottom" style={{ fontSize: 11, opacity: blocked ? 0.5 : 1 }}>
             <div className="d-flex align-items-center gap-1">
               <span onClick={() => onJump?.(e)}
                 title="Jump back to the row this came from, to adjust it"
