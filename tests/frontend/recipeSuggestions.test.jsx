@@ -41,7 +41,7 @@ describe('recipe suggestions', () => {
 
   test('without a companion: only "same as" from this project, and dismissing it stays dismissed', () => {
     setup()
-    expect(screen.getByTestId('suggestion-same').textContent).toMatch(/Same as C01r: clips/)
+    expect(screen.getByTestId('suggestion-same').textContent).toMatch(/Same profile as C01r \(ET-LIN-PROF-01\): clips/)
     expect(screen.queryByTestId('suggestion-kind')).toBeNull()
     fireEvent.click(screen.getByLabelText('Dismiss'))
     expect(screen.queryByTestId('recipe-suggestions')).toBeNull()
@@ -60,7 +60,7 @@ describe('recipe suggestions', () => {
     await act(async () => { setup() })
     expect(api.current.kits).toHaveBeenCalledWith([{ code: '021-8810-02', manufacturer: 'LEDFlex' }], '7900')
     expect(screen.getByTestId('suggestion-kit').textContent).toMatch(/Usually with this profile: end caps 021-8810-11 LED Flex - 8810 Cap ×2/)
-    expect(screen.getByTestId('suggestion-kind').textContent).toMatch(/usually also have diffuser \(96%\), 1 per m ET-LIN-DIFF-01/)
+    expect(screen.getByTestId('suggestion-kind').textContent).toMatch(/usually also have diffuser \(96%\), 1 per m — none here is known to fit 021-8810-02; pick one/)
     const addRow = vi.spyOn(useStore.getState(), 'addRecipeRow')
     const kit = screen.getByTestId('suggestion-kit')
     await act(async () => { fireEvent.click(kit.querySelector('button')) })
@@ -70,5 +70,38 @@ describe('recipe suggestions', () => {
     expect(api.current.shareOutcomes).toHaveBeenCalledWith('7900', [expect.objectContaining({ kind: 'kit', key: KIT.key, outcome: 'accepted' })])
     await act(async () => { fireEvent.click(screen.getByTestId('suggestion-kind').querySelector('[aria-label="Dismiss"]')) })
     expect(api.current.shareOutcomes).toHaveBeenLastCalledWith('7900', [expect.objectContaining({ kind: 'kind', key: '2|DIFFUSER', outcome: 'dismissed' })])
+  })
+
+  test('caps, diffusers and clips come from THIS profile: its range part is made as an ElementType', async () => {
+    const range = code => ({ key: `ledflex|FPS1709BG2000>range|${code}`, range: 'FPS1709', anchor: { code: 'FPS1709BG2000' },
+      part: { maker_key: 'ledflex', code, slot: 'CLIPS', name: 'FLEX PROFILE SURFACE 1709 MOUNTING CLIP' }, share: null, contract: true })
+    api.current = { kits: vi.fn(async () => [range('FPS1709MC')]), shareOutcomes: vi.fn(async () => ({ stored: 1 })) }
+    const CLIPS = { ...KIND, slots: [...KIND.slots, { slot: 'CLIPS', core: false, share: 0.92, section: 'lin_internal', dim: 3, contract: 1, integer: 0 }] }
+    await act(async () => { setup() })
+    await act(async () => useStore.setState({ library: { patterns: [], exemplars: [], kinds: [CLIPS] },
+      psRows: [{ ElementTypeRef: 'ET-LIN-PROF-01', Manufacturer: 'LEDFlex', ProductCode: '021-8810-02' },
+        { ElementTypeRef: 'ET-LIN-PROF-09', Manufacturer: 'LEDFlex', ProductCode: 'FPS1709BG2000' }],
+      elementTypes: [...useStore.getState().elementTypes, { ElementTypeRef: 'ET-LIN-PROF-09', Family: 'ET-LIN-PROF' }],
+      recipes: useStore.getState().recipes.map(r => (r.PositionTypeRef === 'C05r' && r.ElementTypeRef === 'ET-LIN-PROF-01' ? { ...r, ElementTypeRef: 'ET-LIN-PROF-09' } : r)) }))
+    const clips = [...screen.getAllByTestId('suggestion-kind')].find(l => /clips/.test(l.textContent))
+    expect(clips.textContent).toMatch(/clips \(92%\), 3 per m: FPS1709MC — made for FPS1709BG2000, as a new ElementType/)
+    expect(screen.queryByTestId('suggestion-same')).toBeNull()   // C01r's clip is for another profile
+    const addRow = vi.spyOn(useStore.getState(), 'addRecipeRow')
+    await act(async () => { fireEvent.click(clips.querySelector('button')) })
+    const made = useStore.getState().elementTypes.find(e => e.Name === 'LEDFlex - FPS1709MC')
+    expect(made).toMatchObject({ Family: 'ET-LIN-CLIP' })
+    expect(addRow).toHaveBeenCalledWith('C05r', 'lin_internal', expect.objectContaining({ elementTypeRef: made.ElementTypeRef, dimQtyMultiplier: 3 }), { asPosition: true })
+  })
+
+  test('with nothing known to fit the profile, no clip is pre-chosen', async () => {
+    api.current = { kits: vi.fn(async () => []), shareOutcomes: vi.fn(async () => ({ stored: 1 })) }
+    const CLIPS = { ...KIND, slots: [{ slot: 'CLIPS', core: false, share: 0.92, section: 'lin_internal' }] }
+    await act(async () => { setup() })
+    await act(async () => useStore.setState({ library: { patterns: [], exemplars: [], kinds: [CLIPS] },
+      recipes: useStore.getState().recipes.filter(r => r.ElementTypeRef !== 'ET-LIN-CLIP-01') }))
+    const line = screen.getByTestId('suggestion-kind')
+    expect(line.textContent).toMatch(/none here is known to fit 021-8810-02; pick one/)
+    expect(line.querySelector('select').value).toBe('')
+    expect([...line.querySelectorAll('button')].map(b => b.textContent)).not.toContain('Add')
   })
 })

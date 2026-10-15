@@ -9,6 +9,12 @@
  *   matchKind(makeup, kinds)       → the closest kind (kinds are served beside a companion only)
  *   usuallyMissing(makeup, kind)   → the kind's usual slots this recipe does not have
  *   elementTypesForJob(job, state) → this project's ElementTypes that do that job, most used first
+ *   anchorOf(makeup, idx)          → the profile / channel a recipe is built on
+ *   fitFor(job, anchor, state)     → the ElementType that fits THAT profile (end caps, diffuser, clips), and why
+ *
+ * End caps, diffusers and clips are made for one profile: a "same as" copies them only from a
+ * position on the same profile, and a suggestion names the part that fits it rather than the
+ * project's most used one.
  */
 import { jobOf, jobKey } from './codeJobs'
 
@@ -69,26 +75,87 @@ export function positionMakeup(posRef, state, idx = indexes(state)) {
 
 const sig = m => `${m.design}|${m.driver}|${m.secondary}|${m.defining.join('+')}`
 
+/** Jobs whose part is made for one profile: they only carry over between recipes on the same one. */
+export const FITS_PROFILE = new Set(['END_CAPS', 'DIFFUSER', 'CLIPS'])
+
+/** The range a profile code belongs to: its letters and first run of digits (FPS1709BG2000 → FPS1709). */
+export const rangeStem = code => (U(code).match(/^[A-Z]*\d{3,}/) || [''])[0]
+
+/** The profile (else mounting channel) a recipe is built on → { ref, code, maker } | null. */
+export function anchorOf(m, idx) {
+  for (const k of ['PROFILE', 'MOUNT_CHANNEL']) {
+    const r = (m.jobs.get(k) || [])[0]
+    if (!r) continue
+    const ps = idx.psByRef.get(U(refOf(r))) || {}
+    return { ref: refOf(r), code: U(ps.ProductCode || ps.productCode), maker: ps.Manufacturer || ps.manufacturer || '' }
+  }
+  return null
+}
+const sameAnchor = (a, b) => !!a && !!b && (U(a.ref) === U(b.ref) || (!!a.code && a.code === b.code))
+const codeOf = (ref, idx) => U(idx.psByRef.get(U(ref))?.ProductCode || idx.psByRef.get(U(ref))?.productCode)
+
 /**
  * The positions of this project with the same design, power and make-up whose recipe has jobs this
- * one lacks — "same as C01r" adds just those. Best first: the most positions sharing that recipe.
- * → [{ posRef, adds: [{ job, rows }] }]
+ * one lacks — "same as C01r" adds just those. A part made for a profile (FITS_PROFILE) is only
+ * taken from a position on the same profile. Best first: the same profile, then the most
+ * positions sharing that recipe.
+ * → [{ posRef, adds: [{ job, rows }], basis: 'profile' | 'makeup', anchor }]
  */
 export function sameKindAs(posRef, state, idx = indexes(state)) {
   const me = positionMakeup(posRef, state, idx)
   if (!me.rows || !me.design) return []
+  const mine = anchorOf(me, idx)
   const out = []
   const posRefs = [...new Set((state.recipes || []).filter(live).map(posOf))].filter(p => p && p !== posRef)
   for (const p of posRefs) {
     const other = positionMakeup(p, state, idx)
     if (sig(other) !== sig(me)) continue
-    const adds = [...other.jobs.entries()].filter(([k]) => !me.jobs.has(k)).map(([job, rows]) => ({ job, rows }))
-    if (adds.length) out.push({ posRef: p, adds })
+    const anchor = anchorOf(other, idx)
+    const basis = sameAnchor(mine, anchor) ? 'profile' : 'makeup'
+    const adds = [...other.jobs.entries()].filter(([k]) => !me.jobs.has(k))
+      .filter(([k]) => basis === 'profile' || !FITS_PROFILE.has(k)).map(([job, rows]) => ({ job, rows }))
+    if (adds.length) out.push({ posRef: p, adds, basis, anchor })
   }
   const key = o => o.adds.map(a => a.job).sort().join('+')
   const count = new Map()
   for (const o of out) count.set(key(o), (count.get(key(o)) || 0) + 1)
-  return out.sort((a, b) => count.get(key(b)) - count.get(key(a)) || a.posRef.localeCompare(b.posRef))
+  return out.sort((a, b) => (a.basis === 'profile' ? 0 : 1) - (b.basis === 'profile' ? 0 : 1)
+    || count.get(key(b)) - count.get(key(a)) || a.posRef.localeCompare(b.posRef))
+}
+
+/**
+ * The ElementType of this project that fits `anchor` for `job` (end caps, diffuser, clips):
+ *   1. one used with this profile on another position here ("used with ET-LIN-PROF-03 on C08r")
+ *   2. one from the same maker range as the profile ("FPS1709 range": FPS1709MC for FPS1709BG2000)
+ * → { etRef, why } | null. Nothing fits → null: the caller says so rather than offering any clip.
+ */
+export function fitFor(job, anchor, state, idx = indexes(state)) {
+  if (!anchor || !FITS_PROFILE.has(job)) return null
+  const posRefs = [...new Set((state.recipes || []).filter(live).map(posOf))].filter(Boolean).sort()
+  for (const p of posRefs) {
+    const m = positionMakeup(p, state, idx)
+    const r = (m.jobs.get(job) || [])[0]
+    if (r && sameAnchor(anchor, anchorOf(m, idx))) return { etRef: refOf(r), why: `used with ${anchor.ref} on ${p}` }
+  }
+  const stem = rangeStem(anchor.code)
+  if (stem.length < 5) return null
+  const fits = elementTypesForJob(job, state, idx).filter(e => rangeStem(codeOf(refOf(e), idx)) === stem)
+  return fits.length ? { etRef: refOf(fits[0]), why: `${stem} range` } : null
+}
+
+/**
+ * Of a profile range's catalogue parts for one job (kits served as `range`), the one to offer:
+ * the profile's own finish (…BG2000 → …ECG), else the variant this project already uses on
+ * another profile (…PCOPD2000, opal), else the first.
+ */
+export function pickRangePart(parts, anchor, job, state, idx = indexes(state)) {
+  if (!parts.length) return null
+  const stem = rangeStem(anchor?.code)
+  const tail = c => U(c).slice(rangeStem(c).length)
+  const finish = (tail(anchor?.code || '').match(/^B([A-Z])/) || [])[1]
+  const used = new Set(elementTypesForJob(job, state, idx).map(e => tail(codeOf(refOf(e), idx))).filter(Boolean))
+  const score = p => (used.has(tail(p.code)) ? 2 : 0) + (finish && /[A-Z]+/.exec(tail(p.code))?.[0].endsWith(finish) ? 1 : 0)
+  return [...parts].filter(p => !stem || rangeStem(p.code) === stem).sort((a, b) => score(b) - score(a))[0] || null
 }
 
 /** The closest served kind: same design and power, most of the same defining jobs. */

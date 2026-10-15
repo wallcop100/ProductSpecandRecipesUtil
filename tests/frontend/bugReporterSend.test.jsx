@@ -23,12 +23,18 @@ function setup() {
   return render(<><BugReporter screen="product-code-import" /><div data-code="ZZ-1"><button>ZZ-1 row</button></div></>)
 }
 
-describe('the ⚑ (served beside a companion with reports)', () => {
+describe('the bug reporter sends, beside a companion with reports', () => {
   beforeEach(() => { resetOutcomes(); api.current = null })
 
-  test('no companion: no flag', () => {
+  test('no companion: a note is saved here, never sent', () => {
     setup()
-    expect(screen.queryByTestId('report-flag')).toBeNull()
+    fireEvent.click(screen.getByLabelText('Bug report options')); fireEvent.click(screen.getByTestId('report-write'))
+    fireEvent.change(screen.getByLabelText('Bug note'), { target: { value: 'kept' } })
+    expect(screen.queryByRole('button', { name: 'Send' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Save as Feature Request' }))
+    expect(useStore.getState().bugReports).toMatchObject([{ note: 'kept', kind: 'feature' }])
+    fireEvent.click(screen.getByLabelText('Bug report options'))
+    expect(screen.queryByTestId('report-send-kept')).toBeNull()
   })
 
   test('sends a report with the project and the learned values in view', async () => {
@@ -46,14 +52,20 @@ describe('the ⚑ (served beside a companion with reports)', () => {
     expect(screen.getByRole('status').textContent).toMatch(/Sent/)
   })
 
-  test('the flag opens a note; a report that cannot go is kept here', async () => {
+  test('"Write a report…" opens a note; a feature request is sent as one; what cannot go is kept, then sent from the ▾', async () => {
     api.current = { report: vi.fn(async () => null) }
     setup()
-    fireEvent.click(screen.getByTestId('report-flag'))
-    expect(screen.getByText('Report a problem', { selector: 'div' })).toBeInTheDocument()
+    fireEvent.click(screen.getByLabelText('Bug report options')); fireEvent.click(screen.getByTestId('report-write'))
+    expect(screen.queryByRole('button', { name: 'Save' })).toBeNull()
     fireEvent.change(screen.getByLabelText('Bug note'), { target: { value: 'it froze' } })
-    await act(async () => { fireEvent.click(screen.getByTestId('report-send')) })
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Send as Feature Request' })) })
+    expect(api.current.report.mock.calls[0][0]).toMatchObject({ note: 'it froze', kind: 'feature' })
     expect(useStore.getState().bugReports.map(r => r.note)).toEqual(['it froze'])
     expect(screen.getByRole('status').textContent).toMatch(/Kept/)
+    api.current.report.mockResolvedValue({ received: true, id: 2 })
+    fireEvent.click(screen.getByLabelText('Bug report options'))
+    await act(async () => { fireEvent.click(screen.getByTestId('report-send-kept')) })
+    expect(useStore.getState().bugReports).toHaveLength(0)
+    expect(screen.getByRole('status').textContent).toMatch(/1 sent/)
   })
 })

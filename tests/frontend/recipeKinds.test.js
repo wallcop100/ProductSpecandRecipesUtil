@@ -78,3 +78,36 @@ describe('usual connectors, on this project\'s own connector ElementTypes', asyn
     expect(usualConnectors(positionMakeup('C05r', st), { ...kind, connectors: [{ set: ['2pin-plug@lin'], positions: 1 }] }, st)).toBeNull()
   })
 })
+
+describe('parts made for a profile', async () => {
+  const { sameKindAs, fitFor, anchorOf, positionMakeup, indexes, pickRangePart, rangeStem } = await import('../../src/utils/recipeKinds')
+  const st = {
+    ...state,
+    positionTypes: [...state.positionTypes, { PositionTypeRef: 'C10r', DriverLocation: 'Remote', SecondaryPowerType: 'CV' }],
+    elementTypes: [...state.elementTypes, { ElementTypeRef: 'ET-LIN-PROF-09', Family: 'ET-LIN-PROF' }, { ElementTypeRef: 'ET-LIN-CLIP-03', Family: 'ET-LIN-CLIP' },
+      { ElementTypeRef: 'ET-LIN-DIFF-02', Family: 'ET-LIN-PROF' }],
+    psRows: [...state.psRows, { ElementTypeRef: 'ET-LIN-PROF-09', Manufacturer: 'LEDFlex', ProductCode: 'FPS1709BG2000' },
+      { ElementTypeRef: 'ET-LIN-CLIP-03', Manufacturer: 'LEDFlex', ProductCode: 'FPS1709MC' },
+      { ElementTypeRef: 'ET-LIN-DIFF-02', Manufacturer: 'LEDFlex', ProductCode: 'FPS2021PCOPD2000' }],
+    recipes: [...state.recipes, row('C10r', 'ET-LIN-01', 'PositionType', { IsDesign: 'Y' }), row('C10r', 'ET-LIN-TAPE-01', 'ElementType'),
+      row('C10r', 'ET-LIN-PROF-09', 'ElementType')],
+  }
+  const idx = indexes(st)
+  it('"same as" on another profile is "built like" and never carries its caps', () => {
+    expect(sameKindAs('C10r', st)).toEqual([])
+    expect(sameKindAs('C05r', st)[0]).toMatchObject({ posRef: 'C01r', basis: 'profile', anchor: { ref: 'ET-LIN-PROF-01' } })
+  })
+  it('fits by use with the same profile, then by the maker range', () => {
+    expect(fitFor('END_CAPS', anchorOf(positionMakeup('C05r', st, idx), idx), st, idx)).toEqual({ etRef: 'ET-LIN-CAP-01', why: 'used with ET-LIN-PROF-01 on C01r' })
+    const a = anchorOf(positionMakeup('C10r', st, idx), idx)
+    expect(rangeStem(a.code)).toBe('FPS1709')
+    expect(fitFor('CLIPS', a, st, idx)).toEqual({ etRef: 'ET-LIN-CLIP-03', why: 'FPS1709 range' })
+    expect(fitFor('END_CAPS', a, st, idx)).toBeNull()
+  })
+  it('picks the range part in the profile\'s finish, or the variant the project already uses', () => {
+    const a = anchorOf(positionMakeup('C10r', st, idx), idx)
+    const part = c => ({ code: c })
+    expect(pickRangePart([part('FPS1709ECB'), part('FPS1709ECG')], a, 'END_CAPS', st, idx).code).toBe('FPS1709ECG')
+    expect(pickRangePart([part('FPS1709PCCD2000'), part('FPS1709PCOPD2000')], a, 'DIFFUSER', st, idx).code).toBe('FPS1709PCOPD2000')
+  })
+})
