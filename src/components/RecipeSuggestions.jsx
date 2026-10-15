@@ -8,7 +8,7 @@ import { familiesForJob, familyForJob, jobOf } from '../utils/codeJobs'
 import { nextRef } from '../utils/etSeed'
 import {
   indexes, positionMakeup, sameKindAs, matchKind, usuallyMissing, elementTypesForJob, sectionFor, rowFromSlot,
-  jobLabel, ruleText,
+  jobLabel, ruleText, usualConnectors,
 } from '../utils/recipeKinds'
 
 /**
@@ -21,6 +21,8 @@ import {
  *              and Product Spec row when the project has none yet.
  *   kind     — served beside a companion: what positions like this usually also have
  *              ("Positions like this usually also have end caps (96%)").
+ *   connector — the connector set positions like this usually carry, mapped onto this project's
+ *              own connector ElementTypes, each where the project puts it.
  *
  * Every Add and every dismiss is an outcome (platform/outcomes.js): it is what makes the next
  * suggestion better. A dismissed line stays dismissed for this project.
@@ -55,6 +57,7 @@ export default function RecipeSuggestions({ posRef }) {
   const same = useMemo(() => sameKindAs(posRef, state, idx).slice(0, 1), [posRef, idx])        // eslint-disable-line react-hooks/exhaustive-deps
   const kind = useMemo(() => matchKind(me, kinds || []), [me, kinds])
   const missing = useMemo(() => usuallyMissing(me, kind), [me, kind])
+  const connectors = useMemo(() => usualConnectors(me, kind, state, idx), [me, kind, idx])   // eslint-disable-line react-hooks/exhaustive-deps
 
   // The profile / channel this recipe is built on, by maker + code, for its kit.
   const anchor = useMemo(() => {
@@ -128,6 +131,13 @@ export default function RecipeSuggestions({ posRef }) {
       add: options.length ? () => useStore.getState().addRecipeRow(posRef, sectionFor(s, me.design), rowFromSlot(s, chosen), { asPosition: true }) : null,
       supplied: chosen })
   }
+  if (connectors) {
+    lines.push({ key: `connector|${kind.id}|${connectors.rows.map(r => r.etRef).join('+')}`, kind: 'connector', icon: 'cable',
+      text: <>Positions like this usually carry connectors: {connectors.rows.map((r, i) => (
+        <span key={i}>{i ? ', ' : ''}<span className="font-monospace">{r.etRef}</span></span>))}</>,
+      add: () => { for (const r of connectors.rows) useStore.getState().addRecipeRow(posRef, r.section, { elementTypeRef: r.etRef }, { asPosition: true }) },
+      supplied: connectors.rows.map(r => r.etRef).join('+') })
+  }
   const shown = lines.filter(l => !dismissed.has(l.key))
   if (!shown.length) return null
 
@@ -136,7 +146,7 @@ export default function RecipeSuggestions({ posRef }) {
     const next = new Set(dismissed); next.add(l.key)
     setDismissed(next); writeDismissed(projectNumber, next)
     shareOutcomes(companion, projectNumber, [{
-      kind: l.kind, key: l.key.replace(/^(same|kit|kind)\|/, ''), tier: l.kind, source: kind ? String(kind.id) : '',
+      kind: l.kind, key: l.key.replace(/^(same|kit|kind|connector)\|/, ''), tier: l.kind, source: kind ? String(kind.id) : '',
       supplied: l.supplied || null, final: outcome === 'accepted' ? (l.supplied || 'added') : null, outcome,
     }])
   }

@@ -153,3 +153,90 @@ export function ruleText(slot) {
   if (slot.integer >= 0.5) b.push('whole numbers')
   return b.join(', ')
 }
+
+const FORM_GAP_SLOTS = new Set(['TAPE:tape', 'TAPE:flex', 'PROFILE', 'MOUNT_CHANNEL', 'DIFFUSER', 'END_CAPS', 'CLIPS'])
+
+/**
+ * At the Form step: the Form positions whose codes leave out a part positions like them usually
+ * have. Only the linear make-up, which codes reliably say (a luminaire's code rarely names its job).
+ *   entries — the import's distinct codes ({ text, manufacturers, positionTypes, etRef, variants })
+ *   → [{ kind, positions: [ref], missing: [slot] }]  one line per kind + missing set
+ */
+export function formKindGaps(entries, { kinds = [], positionTypes = [], elementTypes = [], psRows = [], pageTypeFor = () => '' } = {}) {
+  if (!kinds.length) return []
+  const idx = indexes({ elementTypes, psRows, positionTypes })
+  const byPos = new Map()
+  for (const e of entries) {
+    const job = e.etRef
+      ? rowJob({ ElementTypeRef: e.etRef, ContextType: 'ElementType' }, idx)
+      : jobOf({ maker: e.manufacturers?.[0], code: e.text, name: e.variants?.[0]?.note || '' })
+    for (const pt of e.positionTypes || []) {
+      const p = String(pt ?? '').trim()
+      if (!p) continue
+      if (!byPos.has(p)) byPos.set(p, { jobs: new Set(), linear: false })
+      byPos.get(p).jobs.add(jobKey(job))
+      if (String(pageTypeFor(e) || '').toLowerCase().startsWith('linear')) byPos.get(p).linear = true
+    }
+  }
+  const lines = new Map()
+  for (const [pos, { jobs, linear }] of byPos) {
+    if (!linear) continue
+    const { driver, secondary } = powerOf(idx.ptByRef.get(U(pos)) || {})
+    const m = { design: 'LIN', driver: driver || 'remote', secondary: secondary || 'CV', jobs: new Map([...jobs].map(j => [j, []])),
+      defining: [...jobs].filter(j => DEFINING.has(j)).sort() }
+    const kind = matchKind(m, kinds)
+    const missing = usuallyMissing(m, kind, 0.8).filter(s => FORM_GAP_SLOTS.has(s.slot))
+    if (!missing.length) continue
+    const key = `${kind.id}|${missing.map(s => s.slot).join('+')}`
+    if (!lines.has(key)) lines.set(key, { key, kind, missing, positions: [] })
+    lines.get(key).positions.push(pos)
+  }
+  return [...lines.values()].sort((a, b) => b.positions.length - a.positions.length)
+}
+
+/**
+ * The connector set positions of this kind usually carry (when one is usual: on 30%+ of them),
+ * mapped onto this project's own connector ElementTypes, each where the project puts it.
+ * → { set: [descriptor], rows: [{ descriptor, etRef, section }], share } | null
+ */
+export function usualConnectors(m, kind, state, idx = indexes(state), min = 0.3) {
+  const top = (kind?.connectors || []).find(c => c.set.length)
+  if (!top || top.positions / Math.max(1, kind.positions) < min) return null
+  const have = new Map()
+  for (const r of (state.recipes || []).filter(r => posOf(r) === m.posRef && live(r))) {
+    const j = rowJob(r, idx)
+    if (j.slot === 'CONNECTOR') have.set(j.variant, (have.get(j.variant) || 0) + 1)
+  }
+  const need = new Map()
+  for (const d of top.set) need.set(d, (need.get(d) || 0) + 1)
+  const byJob = new Map(), where = new Map()
+  for (const r of (state.recipes || []).filter(live)) {
+    const j = rowJob(r, idx)
+    if (j.slot !== 'CONNECTOR') continue
+    const ref = refOf(r)
+    if (!byJob.has(j.variant)) byJob.set(j.variant, new Map())
+    byJob.get(j.variant).set(ref, (byJob.get(j.variant).get(ref) || 0) + 1)
+    const w = (r.ContextType || r.contextType) === 'PositionType' ? 'position' : 'internal'
+    const k = `${U(ref)}|${w}`
+    where.set(k, (where.get(k) || 0) + 1)
+  }
+  for (const e of (state.elementTypes || []).filter(live)) {
+    const j = rowJob({ ElementTypeRef: refOf(e), ContextType: 'PositionType' }, idx)
+    if (j.slot === 'CONNECTOR' && !byJob.get(j.variant)?.has(refOf(e))) {
+      if (!byJob.has(j.variant)) byJob.set(j.variant, new Map())
+      byJob.get(j.variant).set(refOf(e), 0)
+    }
+  }
+  const rows = []
+  for (const [d, n] of need) {
+    const missing = n - (have.get(d) || 0)
+    if (missing <= 0) continue
+    const cands = [...(byJob.get(d) || new Map()).entries()].sort((a, b) => b[1] - a[1])
+    if (!cands.length) continue
+    const etRef = cands[0][0]
+    const pos = where.get(`${U(etRef)}|position`) || 0, inside = where.get(`${U(etRef)}|internal`) || 0
+    const section = inside > pos && (m.design === 'LIN' || m.design === 'DL') ? (m.design === 'LIN' ? 'lin_internal' : 'dl_internal') : 'position'
+    for (let i = 0; i < missing; i++) rows.push({ descriptor: d, etRef, section })
+  }
+  return rows.length ? { set: top.set, rows, share: top.positions / Math.max(1, kind.positions) } : null
+}
