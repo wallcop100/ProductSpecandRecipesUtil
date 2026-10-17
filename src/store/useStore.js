@@ -2037,6 +2037,9 @@ const useStore = create((set, get) => ({
   consumeSpecIntent() { set({ specIntent: null }) },
   // Find → "report a bug": the bug reporter opens its note.
   bugNoteRequest: null,
+  // The Find button in the Recipes | Product Spec switch opens the palette (Ctrl+K does too).
+  findRequest: null,
+  requestFind() { set({ findRequest: Date.now() }) },
   requestBugNote() { set({ bugNoteRequest: Date.now() }) },
 
   /**

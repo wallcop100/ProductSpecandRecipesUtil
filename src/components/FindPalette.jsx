@@ -13,7 +13,7 @@ import ForkPositionModal from './ForkPositionModal'
 import NewETWizardModal from './NewETWizardModal'
 
 /**
- * FindPalette — Ctrl+K (or the Find button): say what you want to do, in your own words, and go
+ * FindPalette — Ctrl+K (or Find beside Recipes | Product Spec): say what you want to do, in your own words, and go
  * straight there. "rename ET-PS-MINI-TINI" opens the Product Spec on it with the ref field open and
  * ET-PS-MINI-TINI-01 typed in. Actions, the project's ElementTypes / positions / templates, and the
  * tutorials, in one list (help/actions.js, help/search.js).
@@ -44,6 +44,9 @@ export default function FindPalette({ screen }) {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
+  // The Find button (SurfaceSwitch) asks through the store.
+  const findRequest = useStore(st => st.findRequest)
+  useEffect(() => { if (findRequest) setShow(true) }, [findRequest])
   useEffect(() => { if (show) { setQ(''); setAt(0); picked.current = false; setTimeout(() => input.current?.focus(), 0) } }, [show])
 
   // The store as it is when you type: read on demand, so a closed palette never re-renders with it.
@@ -93,11 +96,6 @@ export default function FindPalette({ screen }) {
 
   return (
     <>
-      <button type="button" data-testid="find-open" onClick={() => setShow(true)} title="Find a function, an ElementType or a position (Ctrl+K)"
-        className="btn btn-light btn-sm d-inline-flex align-items-center gap-1"
-        style={{ position: 'fixed', top: 4, right: 'calc(50% + 52px)', zIndex: 2000, padding: '1px 8px', fontSize: 12, boxShadow: '0 1px 4px rgba(0,0,0,.25)' }}>
-        <MaterialIcon name="search" size={15} /> Find <kbd style={{ fontSize: 9, padding: '0 3px' }}>Ctrl K</kbd>
-      </button>
       <Modal show={show} onHide={close} size="lg" data-testid="find" contentClassName="border-0"
         dialogClassName="mt-5" style={{ zIndex: 2100 }}>
         <div className="p-2">

@@ -38,7 +38,7 @@ describe('Find (Ctrl+K)', () => {
 
   test('a search closed with nothing picked is noted, so missing words show up', () => {
     setup()
-    fireEvent.click(screen.getByTestId('find-open'))
+    act(() => { useStore.getState().requestFind() })
     fireEvent.change(screen.getByLabelText('Find'), { target: { value: 'zzqx frobnicate' } })
     expect(screen.getByText(/Nothing matches/)).toBeTruthy()
     fireEvent.keyDown(screen.getByLabelText('Find'), { key: 'Escape' })

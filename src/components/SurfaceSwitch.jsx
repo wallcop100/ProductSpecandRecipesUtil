@@ -1,15 +1,18 @@
 import React from 'react'
+import useStore from '../store/useStore'
 import { Button, ButtonGroup } from 'react-bootstrap'
 import MaterialIcon from './MaterialIcon'
 
 /**
  * SurfaceSwitch: Recipes | Product Spec, the two surfaces you move between (96KPJ5,
  * XZ3UBB). The same pair sits in the builder's toolbar and in the Product Spec's header
- * (98GPK7), so the way back is where the way in was.
+ * (98GPK7), so the way back is where the way in was. Find (Ctrl+K) sits beside them: the
+ * way to anything else.
  */
 export default function SurfaceSwitch({ active, onRecipes, onProductSpec, className = 'ms-2' }) {
   return (
-    <ButtonGroup size="sm" className={className}>
+    <span className={`d-inline-flex align-items-center gap-2 ${className}`}>
+    <ButtonGroup size="sm">
       <Button variant={active === 'recipes' ? 'primary' : 'outline-primary'}
         onClick={onRecipes}
         className="d-inline-flex align-items-center gap-1"
@@ -23,5 +26,10 @@ export default function SurfaceSwitch({ active, onRecipes, onProductSpec, classN
         <MaterialIcon name="inventory_2" size={15} /> Product Spec
       </Button>
     </ButtonGroup>
+    <Button size="sm" variant="outline-secondary" data-testid="find-open" onClick={() => useStore.getState().requestFind()}
+      className="d-inline-flex align-items-center gap-1" title="Find a function, an ElementType or a position (Ctrl+K)">
+      <MaterialIcon name="search" size={15} /> Find <kbd style={{ fontSize: 9, padding: '0 3px' }}>Ctrl K</kbd>
+    </Button>
+    </span>
   )
 }
