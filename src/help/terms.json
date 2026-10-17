@@ -1,0 +1,1257 @@
+{
+ "version": 1,
+ "synonyms": {
+  "amend": [
+   "rename",
+   "change",
+   "edit"
+  ],
+  "modify": [
+   "change",
+   "edit"
+  ],
+  "alter": [
+   "change",
+   "edit"
+  ],
+  "fix": [
+   "correct",
+   "fix"
+  ],
+  "rename": [
+   "rename",
+   "ref"
+  ],
+  "renumber": [
+   "rename"
+  ],
+  "retitle": [
+   "rename"
+  ],
+  "number": [
+   "rename",
+   "renumber"
+  ],
+  "et": [
+   "elementtype"
+  ],
+  "ets": [
+   "elementtypes"
+  ],
+  "element": [
+   "elementtype"
+  ],
+  "elementtype": [
+   "elementtype"
+  ],
+  "component": [
+   "part",
+   "elementtype"
+  ],
+  "part": [
+   "part",
+   "elementtype"
+  ],
+  "product": [
+   "product",
+   "code"
+  ],
+  "sku": [
+   "code"
+  ],
+  "pn": [
+   "code"
+  ],
+  "ref": [
+   "ref",
+   "reference"
+  ],
+  "reference": [
+   "ref"
+  ],
+  "name": [
+   "name",
+   "rename"
+  ],
+  "remove": [
+   "remove",
+   "delete"
+  ],
+  "delete": [
+   "delete",
+   "remove"
+  ],
+  "bin": [
+   "delete"
+  ],
+  "erase": [
+   "delete"
+  ],
+  "copy": [
+   "copy",
+   "duplicate",
+   "fork"
+  ],
+  "duplicate": [
+   "duplicate",
+   "fork",
+   "copy"
+  ],
+  "clone": [
+   "fork",
+   "copy"
+  ],
+  "replace": [
+   "swap",
+   "replace"
+  ],
+  "swap": [
+   "swap"
+  ],
+  "substitute": [
+   "swap"
+  ],
+  "change": [
+   "change",
+   "swap",
+   "edit"
+  ],
+  "save": [
+   "save",
+   "export"
+  ],
+  "push": [
+   "export"
+  ],
+  "upload": [
+   "export"
+  ],
+  "publish": [
+   "export"
+  ],
+  "excel": [
+   "export",
+   "workbook",
+   "form"
+  ],
+  "reload": [
+   "check",
+   "sync"
+  ],
+  "refresh": [
+   "check",
+   "sync"
+  ],
+  "sync": [
+   "check",
+   "sync"
+  ],
+  "position": [
+   "position"
+  ],
+  "pos": [
+   "position"
+  ],
+  "fitting": [
+   "position",
+   "part"
+  ],
+  "recipe": [
+   "recipe"
+  ],
+  "family": [
+   "family"
+  ],
+  "families": [
+   "family"
+  ],
+  "parent": [
+   "family",
+   "parentref"
+  ],
+  "tbc": [
+   "tbc"
+  ],
+  "unknown": [
+   "tbc"
+  ],
+  "spec": [
+   "spec",
+   "product"
+  ],
+  "help": [
+   "how",
+   "help"
+  ]
+ },
+ "actions": {
+  "et.rename": {
+   "area": "et",
+   "needs": "et",
+   "title": "Rename {ref}",
+   "titleNoRef": "Rename an ElementType",
+   "how": "Product Spec → pick the ElementType → Change family or ref. It cascades through the Product Spec, recipes and DesignDB.",
+   "words": [
+    "rename",
+    "amend",
+    "change ref",
+    "edit ref",
+    "renumber",
+    "add -01",
+    "add a number",
+    "new name",
+    "reference",
+    "retitle",
+    "correct the ref",
+    "typo in ref",
+    "amend elementtype"
+   ]
+  },
+  "et.family": {
+   "area": "et",
+   "needs": "et",
+   "title": "Move {ref} to another family",
+   "titleNoRef": "Move an ElementType to another family",
+   "how": "Product Spec → pick the ElementType → Change family or ref → Family.",
+   "words": [
+    "family",
+    "change family",
+    "move family",
+    "refile",
+    "parentref",
+    "parent",
+    "reclassify",
+    "category",
+    "wrong family",
+    "et-lin-caps",
+    "et-lin-components"
+   ]
+  },
+  "et.create": {
+   "area": "et",
+   "title": "Create an ElementType",
+   "how": "Builder: + New ElementType in a recipe section, or Product Spec → New.",
+   "words": [
+    "new elementtype",
+    "new et",
+    "add et",
+    "create et",
+    "make elementtype",
+    "add product",
+    "new part",
+    "new component"
+   ]
+  },
+  "et.fork": {
+   "area": "et",
+   "needs": "et",
+   "title": "Fork {ref} (a copy to change on its own)",
+   "titleNoRef": "Fork an ElementType (a copy to change on its own)",
+   "how": "Product Spec → pick it → Fork: a new ElementType in the same family with a copy of its Product Spec row.",
+   "words": [
+    "fork",
+    "duplicate",
+    "copy et",
+    "clone",
+    "variant",
+    "same but different",
+    "another version",
+    "copy elementtype"
+   ]
+  },
+  "et.delete": {
+   "area": "et",
+   "needs": "et",
+   "title": "Delete {ref}",
+   "titleNoRef": "Delete an ElementType",
+   "how": "ElementTypes window → Existing, or clean up the unused ones. A used ElementType is swapped out first.",
+   "words": [
+    "delete",
+    "remove",
+    "get rid of",
+    "soft delete",
+    "isdeleted",
+    "drop elementtype",
+    "bin"
+   ]
+  },
+  "et.retire": {
+   "area": "et",
+   "title": "Clean up unused ElementTypes",
+   "how": "Builder ⋯ → Clean up unused ElementTypes.",
+   "words": [
+    "unused",
+    "clean up",
+    "tidy",
+    "retire",
+    "dead",
+    "orphan",
+    "not used",
+    "purge",
+    "housekeeping"
+   ]
+  },
+  "et.window": {
+   "area": "et",
+   "title": "Edit ElementTypes (name, description, family)",
+   "how": "Builder ⋯ → ElementTypes…",
+   "words": [
+    "elementtypes",
+    "list of ets",
+    "edit names",
+    "descriptions",
+    "bulk edit",
+    "all elementtypes",
+    "catalogue"
+   ]
+  },
+  "et.browse": {
+   "area": "et",
+   "title": "Browse ElementTypes as a tree",
+   "how": "Builder ⋯ → Browse ElementTypes.",
+   "words": [
+    "browse",
+    "tree",
+    "elementtype tree",
+    "by family",
+    "hierarchy"
+   ]
+  },
+  "et.swap": {
+   "area": "et",
+   "needs": "et",
+   "title": "Swap {ref} everywhere for another",
+   "titleNoRef": "Swap an ElementType everywhere for another",
+   "how": "A recipe row → Replace → Swap everywhere…",
+   "words": [
+    "swap",
+    "replace",
+    "substitute",
+    "change product everywhere",
+    "replace all",
+    "switch",
+    "exchange",
+    "replace in all positions"
+   ]
+  },
+  "et.merge": {
+   "area": "et",
+   "needs": "et",
+   "title": "Merge {ref} into another (same product twice)",
+   "titleNoRef": "Merge an ElementType into another (same product twice)",
+   "how": "Swap the duplicate everywhere for the one to keep, then clean up the unused one.",
+   "words": [
+    "merge",
+    "duplicate ets",
+    "same product twice",
+    "combine",
+    "two elementtypes for one product",
+    "dedupe"
+   ]
+  },
+  "et.wrapper": {
+   "area": "et",
+   "needs": "et",
+   "title": "Open {ref}'s contents (inside the wrapper)",
+   "titleNoRef": "Open an ElementType's contents (inside the wrapper)",
+   "how": "Builder: a wrapper row → its contents, or the ElementType tree.",
+   "words": [
+    "wrapper",
+    "inside",
+    "internals",
+    "contents",
+    "assembly",
+    "what is in",
+    "open wrapper",
+    "edit wrapper"
+   ]
+  },
+  "et.usedin": {
+   "area": "et",
+   "needs": "et",
+   "title": "Where is {ref} used?",
+   "titleNoRef": "Where is an ElementType used?",
+   "how": "Product Spec → the ElementType → Used in (click a position to open it).",
+   "words": [
+    "used in",
+    "where used",
+    "which positions",
+    "usage",
+    "who uses",
+    "references to"
+   ]
+  },
+  "et.families": {
+   "area": "et",
+   "title": "Create missing family rows",
+   "how": "Export → Resolve → families.",
+   "words": [
+    "missing families",
+    "family rows",
+    "create family",
+    "parentref missing"
+   ]
+  },
+  "et.master": {
+   "area": "et",
+   "title": "Add ElementTypes the DesignDB does not have",
+   "how": "Export → Resolve → DesignDB rows.",
+   "words": [
+    "not in designdb",
+    "missing from designdb",
+    "master list",
+    "element type not in db",
+    "add to designdb"
+   ]
+  },
+  "et.styleguide": {
+   "area": "et",
+   "title": "File linear ElementTypes by the style guide",
+   "how": "Product Spec: \"→ move to …\" beside a family that is not where the guide files it.",
+   "words": [
+    "style guide",
+    "et-lin-caps",
+    "et-lin-diff",
+    "et-lin-tp",
+    "encapsulated",
+    "catch-all",
+    "family per guide",
+    "linear families"
+   ]
+  },
+  "et.linwizard": {
+   "area": "et",
+   "title": "Build a linear wrapper (tape + profile)",
+   "how": "Builder: a linear position → Linear wizard.",
+   "words": [
+    "linear wizard",
+    "tape and profile",
+    "build linear",
+    "new linear",
+    "lin wrapper",
+    "et-lin"
+   ]
+  },
+  "et.dup": {
+   "area": "et",
+   "title": "Duplicate an ElementType with its spec",
+   "how": "Builder: Duplicate.",
+   "words": [
+    "duplicate et",
+    "copy with spec",
+    "dup"
+   ]
+  },
+  "spec.code": {
+   "area": "spec",
+   "needs": "et",
+   "title": "Set the maker and code for {ref}",
+   "titleNoRef": "Set the maker and code for an ElementType",
+   "how": "Product Spec → the ElementType → Manufacturer, Product Code.",
+   "words": [
+    "product code",
+    "code",
+    "manufacturer",
+    "maker",
+    "part number",
+    "sku",
+    "set code",
+    "supplier",
+    "brand"
+   ]
+  },
+  "spec.tbc": {
+   "area": "spec",
+   "needs": "et",
+   "title": "Mark {ref} TBC",
+   "titleNoRef": "Mark an ElementType TBC",
+   "how": "Product Spec → TBC.",
+   "words": [
+    "tbc",
+    "to be confirmed",
+    "unknown code",
+    "not known yet",
+    "placeholder"
+   ]
+  },
+  "spec.na": {
+   "area": "spec",
+   "needs": "et",
+   "title": "Set {ref} to Ideaworks / N/A",
+   "titleNoRef": "Set an ElementType to Ideaworks / N/A",
+   "how": "Product Spec → N/A.",
+   "words": [
+    "n/a",
+    "na",
+    "ideaworks",
+    "no code",
+    "assembly code",
+    "wrapper spec"
+   ]
+  },
+  "spec.wrappers": {
+   "area": "spec",
+   "title": "Fill the wrappers’ Product Spec rows",
+   "how": "Export → Resolve → wrappers.",
+   "words": [
+    "wrapper spec rows",
+    "missing wrapper spec",
+    "fill wrappers"
+   ]
+  },
+  "spec.elsewhere": {
+   "area": "spec",
+   "needs": "et",
+   "title": "Use the code another project has for {ref}",
+   "titleNoRef": "Use the code another project has for an ElementType",
+   "how": "Product Spec: the blue \"Elsewhere … is …\" line on an ElementType with no code.",
+   "words": [
+    "code from elsewhere",
+    "other projects",
+    "suggest a code",
+    "what code",
+    "known code",
+    "same part elsewhere"
+   ]
+  },
+  "spec.missing": {
+   "area": "spec",
+   "title": "Show ElementTypes with no maker or code",
+   "how": "Product Spec: the Missing / Partial filters.",
+   "words": [
+    "missing spec",
+    "incomplete",
+    "partial",
+    "needed",
+    "no code",
+    "what is left",
+    "gaps in spec"
+   ]
+  },
+  "spec.duplicates": {
+   "area": "spec",
+   "title": "Show duplicate product codes",
+   "how": "Product Spec: Duplicate product code section.",
+   "words": [
+    "duplicate code",
+    "same code twice",
+    "duplicates"
+   ]
+  },
+  "spec.retired": {
+   "area": "spec",
+   "title": "Find replaced (retired) product codes",
+   "how": "Product Spec: the \"replaced by\" line on an ElementType.",
+   "words": [
+    "retired",
+    "superseded",
+    "discontinued",
+    "replaced code",
+    "obsolete",
+    "end of life"
+   ]
+  },
+  "spec.bulkmaker": {
+   "area": "spec",
+   "title": "Set the manufacturer on many at once",
+   "how": "Product Spec: tick rows → Set manufacturer.",
+   "words": [
+    "bulk manufacturer",
+    "many at once",
+    "select all",
+    "mass edit"
+   ]
+  },
+  "spec.skip": {
+   "area": "spec",
+   "title": "Leave a family out of the checks (cables…)",
+   "how": "Product Spec ⋯ → Checks skip.",
+   "words": [
+    "skip checks",
+    "ignore family",
+    "cables",
+    "checks skip",
+    "exclude family"
+   ]
+  },
+  "spec.open": {
+   "area": "spec",
+   "title": "Open the Product Spec",
+   "how": "The Product Spec switch at the top.",
+   "words": [
+    "product spec",
+    "spec",
+    "ps",
+    "spec sheet",
+    "components list"
+   ]
+  },
+  "pos.open": {
+   "area": "recipe",
+   "needs": "position",
+   "title": "Open {ref}",
+   "titleNoRef": "Open a position",
+   "how": "Builder: the project tree.",
+   "words": [
+    "open position",
+    "go to",
+    "find position",
+    "recipe of",
+    "positiontype"
+   ]
+  },
+  "pos.add": {
+   "area": "recipe",
+   "needs": "position",
+   "title": "Add a part to {ref}",
+   "titleNoRef": "Add a part to a position",
+   "how": "Builder: the palette drawer, or + in a recipe section.",
+   "words": [
+    "add part",
+    "add ingredient",
+    "add row",
+    "add et to position",
+    "add to recipe",
+    "insert",
+    "add component"
+   ]
+  },
+  "pos.copy": {
+   "area": "recipe",
+   "needs": "position",
+   "title": "Copy a recipe into {ref}",
+   "titleNoRef": "Copy a recipe into a position",
+   "how": "Builder: Copy from… on the position, or the \"Same profile as\" suggestion.",
+   "words": [
+    "copy recipe",
+    "same as",
+    "clone recipe",
+    "copy from",
+    "reuse recipe",
+    "duplicate recipe"
+   ]
+  },
+  "pos.fork": {
+   "area": "recipe",
+   "needs": "position",
+   "title": "Fork {ref} (a variant position)",
+   "titleNoRef": "Fork a position (a variant position)",
+   "how": "Builder: the position ⋯ → Fork.",
+   "words": [
+    "fork position",
+    "variant",
+    "-r version",
+    "duplicate position",
+    "copy position",
+    "new position like"
+   ]
+  },
+  "pos.ignore": {
+   "area": "recipe",
+   "needs": "position",
+   "title": "Ignore {ref} (no recipe needed)",
+   "titleNoRef": "Ignore a position (no recipe needed)",
+   "how": "Builder: the position ⋯ → Ignore. It leaves every count.",
+   "words": [
+    "ignore",
+    "out of scope",
+    "no recipe needed",
+    "provision",
+    "parent position",
+    "skip position",
+    "hide position",
+    "not ours"
+   ]
+  },
+  "pos.suggest": {
+   "area": "recipe",
+   "needs": "position",
+   "title": "Suggestions for {ref}",
+   "titleNoRef": "Suggestions for a position",
+   "how": "Builder: the blue suggestions box above the recipe.",
+   "words": [
+    "suggestions",
+    "usually also",
+    "what is missing",
+    "kits",
+    "clips",
+    "end caps",
+    "diffuser",
+    "same profile as"
+   ]
+  },
+  "pos.qty": {
+   "area": "recipe",
+   "needs": "position",
+   "title": "Change quantities in {ref}",
+   "titleNoRef": "Change quantities in a position",
+   "how": "Builder: the row’s Qty / per m fields.",
+   "words": [
+    "quantity",
+    "qty",
+    "how many",
+    "per metre",
+    "per meter",
+    "dim",
+    "multiplier",
+    "×2",
+    "length based"
+   ]
+  },
+  "pos.flags": {
+   "area": "recipe",
+   "needs": "position",
+   "title": "Set contract item / design flags in {ref}",
+   "titleNoRef": "Set contract item / design flags in a position",
+   "how": "Builder: the row’s flags.",
+   "words": [
+    "contract item",
+    "iscontractitem",
+    "isdesign",
+    "design element",
+    "whole numbers",
+    "isinteger",
+    "tr item",
+    "flags"
+   ]
+  },
+  "pos.remove": {
+   "area": "recipe",
+   "needs": "position",
+   "title": "Remove a row from {ref}",
+   "titleNoRef": "Remove a row from a position",
+   "how": "Builder: the row → remove.",
+   "words": [
+    "remove row",
+    "delete row",
+    "take out",
+    "remove ingredient"
+   ]
+  },
+  "pos.deleted": {
+   "area": "recipe",
+   "title": "Show removed rows (to restore one)",
+   "how": "Builder: Recipe actions → Show deleted.",
+   "words": [
+    "show deleted",
+    "restore row",
+    "undelete",
+    "removed rows",
+    "bring back a row"
+   ]
+  },
+  "pos.shared": {
+   "area": "recipe",
+   "title": "Show \"shared with\" on every row",
+   "how": "Builder: the shared toggle.",
+   "words": [
+    "shared",
+    "shared everywhere",
+    "which positions share",
+    "shared rows"
+   ]
+  },
+  "pos.wrapper": {
+   "area": "recipe",
+   "needs": "position",
+   "title": "Add a wrapper to {ref}",
+   "titleNoRef": "Add a wrapper to a position",
+   "how": "Builder: an empty position → wrapper.",
+   "words": [
+    "add wrapper",
+    "new et-lin",
+    "new et-dl",
+    "assembly",
+    "downlight wrapper"
+   ]
+  },
+  "pos.empty": {
+   "area": "recipe",
+   "title": "Show positions with no recipe",
+   "how": "Builder: position list ⋯ → Empty only.",
+   "words": [
+    "empty",
+    "no recipe",
+    "not started",
+    "unbuilt",
+    "what is left"
+   ]
+  },
+  "pos.formonly": {
+   "area": "recipe",
+   "title": "Show only the positions on the Form",
+   "how": "Builder: position list ⋯ → Form only.",
+   "words": [
+    "form positions",
+    "from the form",
+    "form only"
+   ]
+  },
+  "pos.ignored": {
+   "area": "recipe",
+   "title": "Show ignored positions",
+   "how": "Builder: position list ⋯ → Show ignored.",
+   "words": [
+    "ignored positions",
+    "show ignored",
+    "hidden positions"
+   ]
+  },
+  "pos.similar": {
+   "area": "recipe",
+   "needs": "position",
+   "title": "Positions like {ref}",
+   "titleNoRef": "Positions like a position",
+   "how": "Builder drawer → Similar.",
+   "words": [
+    "similar",
+    "like this",
+    "same make-up",
+    "comparable"
+   ]
+  },
+  "pos.formpane": {
+   "area": "recipe",
+   "needs": "position",
+   "title": "What the Form asks for {ref}",
+   "titleNoRef": "What the Form asks for a position",
+   "how": "Builder drawer → Form.",
+   "words": [
+    "form pane",
+    "form spec",
+    "what the form says",
+    "form asks"
+   ]
+  },
+  "pos.review": {
+   "area": "recipe",
+   "title": "Review recipes one by one",
+   "how": "Builder ⋯ → Review recipes…",
+   "words": [
+    "review",
+    "step through",
+    "check recipes",
+    "walk through"
+   ]
+  },
+  "tpl.apply": {
+   "area": "template",
+   "needs": "position",
+   "title": "Apply a template to {ref}",
+   "titleNoRef": "Apply a template to a position",
+   "how": "Builder: the position → Apply template.",
+   "words": [
+    "apply template",
+    "slot template",
+    "standard recipe",
+    "use template"
+   ]
+  },
+  "tpl.save": {
+   "area": "template",
+   "title": "Save this position as a template",
+   "how": "Builder ⋯ → Save this position as a template.",
+   "words": [
+    "save template",
+    "make template",
+    "reuse this recipe",
+    "template from position"
+   ]
+  },
+  "tpl.manage": {
+   "area": "template",
+   "title": "Manage templates",
+   "how": "Builder ⋯ → Manage templates.",
+   "words": [
+    "templates",
+    "edit template",
+    "delete template",
+    "template editor",
+    "fork template"
+   ]
+  },
+  "tpl.collection": {
+   "area": "template",
+   "title": "Project templates (collections)",
+   "how": "Builder: a position → project templates.",
+   "words": [
+    "collection",
+    "project template",
+    "pin",
+    "unpin",
+    "apply collection"
+   ]
+  },
+  "tpl.styles": {
+   "area": "template",
+   "title": "Recipe styles",
+   "how": "Builder ⋯ → Recipe styles…",
+   "words": [
+    "styles",
+    "recipe styles",
+    "style rules",
+    "how recipes are built"
+   ]
+  },
+  "tpl.formbuild": {
+   "area": "template",
+   "title": "Build recipes from the Form",
+   "how": "Builder ⋯ → Build recipes from the Form…",
+   "words": [
+    "build from form",
+    "bulk build",
+    "build all",
+    "form recipes"
+   ]
+  },
+  "conn.open": {
+   "area": "connector",
+   "title": "Connectors and the coverage matrix",
+   "how": "Builder ⋯ → Connectors.",
+   "words": [
+    "connectors",
+    "plugs",
+    "sockets",
+    "coverage",
+    "matrix",
+    "wago",
+    "strain relief",
+    "pins"
+   ]
+  },
+  "conn.position": {
+   "area": "connector",
+   "needs": "position",
+   "title": "Connectors of {ref}",
+   "titleNoRef": "Connectors of a position",
+   "how": "Builder drawer → Connectors.",
+   "words": [
+    "connectors for",
+    "plug for",
+    "socket for"
+   ]
+  },
+  "conn.global": {
+   "area": "connector",
+   "title": "Apply a global connector template",
+   "how": "Connectors → global templates.",
+   "words": [
+    "global connector",
+    "connector template",
+    "apply connectors"
+   ]
+  },
+  "conn.wago": {
+   "area": "connector",
+   "title": "Upgrade superseded WAGO parts",
+   "how": "Connectors → superseded parts.",
+   "words": [
+    "superseded wago",
+    "old wago",
+    "wago upgrade",
+    "221",
+    "replace wago"
+   ]
+  },
+  "tag.edit": {
+   "area": "tag",
+   "title": "Tags, tag rules and colours",
+   "how": "Builder ⋯ → Tags.",
+   "words": [
+    "tags",
+    "tag rules",
+    "auto tags",
+    "local",
+    "remote",
+    "remote-cc",
+    "tag colours",
+    "label positions",
+    "tag drift"
+   ]
+  },
+  "tag.recompute": {
+   "area": "tag",
+   "title": "Recompute all tags",
+   "how": "Tags → recompute.",
+   "words": [
+    "recompute tags",
+    "refresh tags",
+    "retag"
+   ]
+  },
+  "imp.form": {
+   "area": "import",
+   "title": "Import product codes from a Form",
+   "how": "Builder ⋯ → Import product codes from a Form template.",
+   "words": [
+    "import",
+    "form",
+    "schedule",
+    "spreadsheet",
+    "product codes",
+    "load form",
+    "bring in codes",
+    "excel form"
+   ]
+  },
+  "imp.compare": {
+   "area": "import",
+   "title": "What changed in the Form",
+   "how": "Import → compare codes.",
+   "words": [
+    "compare",
+    "form changed",
+    "diff",
+    "re-import",
+    "new revision of the form",
+    "form update"
+   ]
+  },
+  "imp.columns": {
+   "area": "import",
+   "title": "Map the Form’s columns",
+   "how": "Import → map columns.",
+   "words": [
+    "columns",
+    "map columns",
+    "wrong column",
+    "header"
+   ]
+  },
+  "imp.refs": {
+   "area": "import",
+   "title": "Resolve position refs (missing PositionTypes)",
+   "how": "Import → resolve refs.",
+   "words": [
+    "resolve refs",
+    "missing positiontype",
+    "position not found",
+    "unmatched position",
+    "position add"
+   ]
+  },
+  "exp.export": {
+   "area": "export",
+   "title": "Export changes (the patch scripts)",
+   "how": "Builder: Export changes → Patches → copy each, run it in Excel (Automate → New Script).",
+   "words": [
+    "export",
+    "patch",
+    "office script",
+    "save to excel",
+    "push",
+    "write back",
+    "publish",
+    "automate",
+    "update the workbook"
+   ]
+  },
+  "exp.check": {
+   "area": "export",
+   "title": "Check the workbooks now (did my patch go in?)",
+   "how": "The sync panel at the top → Check now. It also checks by itself when a workbook changes.",
+   "words": [
+    "check",
+    "did my patch work",
+    "sync",
+    "reload",
+    "refresh",
+    "patched",
+    "in sync",
+    "out of sync",
+    "why didn’t my patch apply"
+   ]
+  },
+  "exp.order": {
+   "area": "export",
+   "title": "Which order to run the patches",
+   "how": "DesignDB → Product Spec → Recipes, as the Patches tab numbers them.",
+   "words": [
+    "order",
+    "which patch first",
+    "designdb first",
+    "sequence"
+   ]
+  },
+  "exp.pending": {
+   "area": "export",
+   "title": "See unexported changes",
+   "how": "Export changes → Changes.",
+   "words": [
+    "unexported",
+    "pending",
+    "unsaved",
+    "what changed",
+    "my changes",
+    "changes list"
+   ]
+  },
+  "exp.discard": {
+   "area": "export",
+   "title": "Discard all unexported changes",
+   "how": "The restored-changes notice → Discard them…",
+   "words": [
+    "discard",
+    "throw away",
+    "start again",
+    "reset changes",
+    "abandon"
+   ]
+  },
+  "exp.undo": {
+   "area": "export",
+   "title": "Undo",
+   "how": "Ctrl+Z",
+   "words": [
+    "undo",
+    "ctrl+z",
+    "go back",
+    "revert last",
+    "oops"
+   ]
+  },
+  "exp.redo": {
+   "area": "export",
+   "title": "Redo",
+   "how": "Ctrl+Y",
+   "words": [
+    "redo",
+    "ctrl+y"
+   ]
+  },
+  "exp.save": {
+   "area": "export",
+   "title": "Save now (in this browser)",
+   "how": "Ctrl+S. Work is also saved as you go, until the workbooks hold it.",
+   "words": [
+    "save",
+    "ctrl+s",
+    "save work",
+    "keep my work"
+   ]
+  },
+  "chk.validation": {
+   "area": "check",
+   "title": "Validation: what is wrong",
+   "how": "Builder: Status → Validation.",
+   "words": [
+    "validation",
+    "errors",
+    "warnings",
+    "problems",
+    "issues",
+    "findings",
+    "missing isdesign",
+    "not in db"
+   ]
+  },
+  "chk.done": {
+   "area": "check",
+   "title": "Am I done? (where the project stands)",
+   "how": "Builder: Status → Am I done?",
+   "words": [
+    "am i done",
+    "progress",
+    "readiness",
+    "status",
+    "how far",
+    "complete",
+    "finished"
+   ]
+  },
+  "chk.fix": {
+   "area": "check",
+   "title": "Fix validation findings in bulk",
+   "how": "Status → Validation → Fix.",
+   "words": [
+    "fix all",
+    "bulk fix",
+    "fix validation",
+    "auto fix"
+   ]
+  },
+  "chk.align": {
+   "area": "check",
+   "title": "Do the three documents agree?",
+   "how": "Export → Resolve.",
+   "words": [
+    "agree",
+    "alignment",
+    "gaps",
+    "resolve",
+    "overwrites",
+    "mismatch"
+   ]
+  },
+  "prj.open": {
+   "area": "project",
+   "title": "Open another project",
+   "how": "Back to the project picker.",
+   "words": [
+    "open project",
+    "switch project",
+    "change project",
+    "another project",
+    "folder"
+   ]
+  },
+  "prj.backup": {
+   "area": "project",
+   "title": "Save project settings (.config.yaml)",
+   "how": "Builder ⋯ → Save project settings.",
+   "words": [
+    "backup",
+    "config",
+    "yaml",
+    "save settings",
+    "export settings"
+   ]
+  },
+  "prj.tree": {
+   "area": "project",
+   "title": "The project tree (positions)",
+   "how": "Builder: Recipes.",
+   "words": [
+    "project tree",
+    "positions list",
+    "tree",
+    "back to positions"
+   ]
+  },
+  "help.bug": {
+   "area": "help",
+   "title": "Report a bug or ask for a feature",
+   "how": "The bug beside ALPHA → ▾ → Write a report…",
+   "words": [
+    "bug",
+    "report",
+    "feature request",
+    "problem",
+    "broken",
+    "feedback",
+    "suggest a feature",
+    "complain"
+   ]
+  },
+  "help.bugmode": {
+   "area": "help",
+   "title": "Bug report mode (right-click anything)",
+   "how": "Click the bug beside ALPHA.",
+   "words": [
+    "bug mode",
+    "right click report"
+   ]
+  },
+  "help.shortcuts": {
+   "area": "help",
+   "title": "Keyboard shortcuts",
+   "how": "Ctrl+K find · Ctrl+Z undo · Ctrl+Y redo · Ctrl+S save · Ctrl+C / Ctrl+V rows · ↑ ↓ positions.",
+   "words": [
+    "shortcuts",
+    "keyboard",
+    "hotkeys",
+    "keys"
+   ]
+  }
+ }
+}
