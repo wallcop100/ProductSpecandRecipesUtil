@@ -226,22 +226,29 @@ export async function pickXlsxFile() {
 let watchTimer = null
 
 /**
- * Poll `lastModified` on the PS/RS files. Not fs events — a ~3s latency, and
- * renames/deletes are not distinguished. Emits the same `{ file, path }` payload
- * the Electron watcher sent, so `FileWatchBanner` is unchanged.
+ * Poll `lastModified` on all three workbooks — the DesignDB(s) too: a DB patch is a patch.
+ * A change is reported once the file has STOPPED changing (two quiet polls), so a file
+ * OneDrive is still syncing down, or Excel is still saving, is not read half-written.
+ * Emits `{ file, path }` per settled file; the app then checks every workbook's content
+ * (useStore.checkFiles), so which file fired never decides anything.
  */
-export function startWatcher(dirHandle, { psFilename, rsFilename }, onChange) {
+export function startWatcher(dirHandle, { psFilename, rsFilename, dbFilenames = [] }, onChange) {
   stopWatcher()
-  const seen = new Map()
+  const seen = new Map()      // name → last lastModified
+  const moving = new Map()    // name → quiet polls since it last changed
+  const files = [['ps', psFilename], ['rs', rsFilename], ...dbFilenames.map(n => ['db', n])].filter(([, n]) => n)
 
   const tick = async () => {
-    for (const [file, name] of [['ps', psFilename], ['rs', rsFilename]]) {
-      if (!name) continue
+    for (const [file, name] of files) {
       const t = await lastModified(dirHandle, name)
       if (t === null) continue
       const prev = seen.get(name)
       seen.set(name, t)
-      if (prev !== undefined && t !== prev) onChange({ file, path: name })
+      if (prev !== undefined && t !== prev) { moving.set(name, 0); continue }
+      if (moving.has(name)) {
+        const quiet = moving.get(name) + 1
+        if (quiet >= 2) { moving.delete(name); onChange({ file, path: name }) } else moving.set(name, quiet)
+      }
     }
   }
   tick()                                   // prime, so the first poll never fires

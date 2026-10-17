@@ -201,9 +201,9 @@ export function installPlatform() {
     isFolderAccessSupported: () => fsx.isSupported(),
 
     // --- watcher (polling)
-    startWatcher: async ({ folderPath, psFilename, rsFilename }) => {
+    startWatcher: async ({ folderPath, psFilename, rsFilename, dbFilenames = [] }) => {
       const dir = await backend.setActiveDirectory(folderPath)
-      if (dir) fsx.startWatcher(dir, { psFilename, rsFilename }, payload => fileChangedCb?.(payload))
+      if (dir) fsx.startWatcher(dir, { psFilename, rsFilename, dbFilenames }, payload => fileChangedCb?.(payload))
     },
     stopWatcher: async () => fsx.stopWatcher(),
     suppressWatcher: () => fsx.suppressWatcher(),

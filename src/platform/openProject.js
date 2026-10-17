@@ -242,15 +242,20 @@ export async function openProject({
   // 8b. Unexported changes from a previous session come back on their own: they were
   // saved as you worked (GS9LXJ). A one-click Cancel used to throw them away for good;
   // discarding is now a deliberate act on the notice the builder shows.
+  // They meet the workbooks as they are now (reconcile.js): whatever a patch put in while the app
+  // was closed leaves the queue here instead of being pushed back in.
+  let restored = 0
+  try {
+    const raw = projectId != null ? await window.electronAPI.db.getPref(projectId, 'patch_batch') : null
+    const batch = raw ? JSON.parse(raw) : null
+    if (batch?.n) useStore.setState({ patchBatch: batch })
+  } catch { /* no batch */ }
   if (pendingChanges) {
-    const n = (pendingChanges.ps?.length || 0) + (pendingChanges.rs?.length || 0) + (pendingChanges.db?.length || 0)
-    useStore.getState().restorePendingChanges(pendingChanges)
-    useStore.setState({ restoredNotice: { n, at: Date.now() } })
+    const counts = useStore.getState().restorePendingChanges(pendingChanges)
+    const sum = k => Object.values(counts).reduce((n, c) => n + c[k], 0)
+    restored = sum('pending') + sum('conflicts')
+    if (restored || sum('applied')) useStore.setState({ restoredNotice: { n: restored, applied: sum('applied'), at: Date.now() } })
   }
 
-  return {
-    projectId, project,
-    restored: pendingChanges
-      ? (pendingChanges.ps?.length || 0) + (pendingChanges.rs?.length || 0) + (pendingChanges.db?.length || 0) : 0,
-  }
+  return { projectId, project, restored }
 }

@@ -12,6 +12,7 @@ import { findBestTemplate, recipeTemplateFromRows, isRecipeTemplate, isFormTempl
 import { proposeRecipe, proposalFromTemplate, proposalContext } from '../utils/recipeProposal.js'
 import { roleOf } from '../utils/recipePatterns.js'
 import { planFamilyMove } from '../utils/etSeed.js'
+import { reconcileAll, stampExported, hasUnexported } from '../utils/reconcile.js'
 import { jobOf, linearWrapperFamily } from '../utils/codeJobs.js'
 import { loadReports, saveReports } from '../utils/bugReports.js'
 import { connectorSignature, templateParts, partsToIngredients, diffParts, isConnectorPart, DEFAULT_CONNECTOR_FAMILIES, sortParts, signatureKey } from '../utils/connectorGroups.js'
@@ -163,11 +164,12 @@ function mergeRsChanges(prevChanges, newChanges, prevRecipes) {
     const existing = byId.get(change._id)
     const row = change.row || {}
     const rowNum = row._row_num ?? null
+    const stamp = existing?.exported ? { exported: existing.exported, batch: existing.batch } : {}
 
     if (change.action === 'delete') {
       byId.set(change._id, {
         _id: change._id, positionTypeRef: change.positionTypeRef,
-        action: 'delete', row, before: existing?.before,
+        action: 'delete', row, before: existing?.before, ...stamp,
       })
       continue
     }
@@ -176,7 +178,7 @@ function mergeRsChanges(prevChanges, newChanges, prevRecipes) {
       // Never exported — full-row append.
       byId.set(change._id, {
         _id: change._id, positionTypeRef: change.positionTypeRef,
-        action: 'upsert', row,
+        action: 'upsert', row, ...stamp,
       })
       continue
     }
@@ -197,9 +199,10 @@ function mergeRsChanges(prevChanges, newChanges, prevRecipes) {
       byId.delete(change._id)   // reverted to base — no longer dirty
       continue
     }
+    const conflict = (existing?.conflict || []).filter(c => !(c.field in changedFields) || looseEqual(changedFields[c.field], c.mine))
     byId.set(change._id, {
       _id: change._id, positionTypeRef: change.positionTypeRef,
-      action: 'upsert', row, changedFields, before,
+      action: 'upsert', row, changedFields, before, ...stamp, ...(conflict.length ? { conflict } : {}),
     })
   }
   return [...byId.values()]
@@ -226,6 +229,11 @@ function mergePsChanges(prevChanges, change) {
     before: { ...(change.before || {}), ...(existing.before || {}) },
   }
   if (existing._isNew || change._isNew) merged._isNew = true
+  // What an export carried (reconcile.js) survives later edits; a conflict on a field you edit
+  // again is settled by that edit.
+  if (existing.exported) { merged.exported = existing.exported; merged.batch = existing.batch }
+  const conflict = (existing.conflict || []).filter(c => !(c.field in (change.updates || {})))
+  if (conflict.length) merged.conflict = conflict
   const next = [...prevChanges]
   next[idx] = merged
   return next
@@ -254,16 +262,6 @@ function applyPsPending(psRows, psChanges) {
   return rows
 }
 
-/**
- * Re-apply a pending RS registry onto freshly parsed rows.
- *
- * Modified rows are addressed by _row_num (every position copy of a shared
- * ET-internal row gets the pending values); never-exported rows are
- * re-injected whole.
- * ponytail: registry entry _ids are left pointing at the pre-reload rows —
- * export addresses rows by _row_num so this is harmless; re-key if a
- * post-reload edit of the same row ever needs to coalesce with its entry.
- */
 /** ElementTypes, one per ref (case-blind): a row the workbook has wins over a local copy. */
 function oneEachRef(ets) {
   const best = new Map()
@@ -275,6 +273,16 @@ function oneEachRef(ets) {
   return ets.filter(e => best.get(String(e.ElementTypeRef || e.elementTypeRef || '').toLowerCase()) === e)
 }
 
+/**
+ * Re-apply a pending RS registry onto freshly parsed rows.
+ *
+ * Modified rows are addressed by _row_num (every position copy of a shared
+ * ET-internal row gets the pending values); never-exported rows are
+ * re-injected whole.
+ * ponytail: registry entry _ids are left pointing at the pre-reload rows —
+ * export addresses rows by _row_num so this is harmless; re-key if a
+ * post-reload edit of the same row ever needs to coalesce with its entry.
+ */
 function applyRsPending(recipes, rsChanges) {
   if (!rsChanges || rsChanges.length === 0) return recipes
   const byRowNum = new Map()
@@ -3650,16 +3658,131 @@ const useStore = create((set, get) => ({
    * freshly imported rows (EXPORT_PLAN §3.1).
    */
   restorePendingChanges({ ps = [], rs = [], db = [] } = {}) {
-    set(s => ({
-      psChanges: ps,
-      rsChanges: rs,
-      dbChanges: db,
-      psRows: applyPsPending(s.psRows, ps),
-      recipes: applyRsPending(s.recipes, rs),
-      // A renamed ElementType's local copy already carries the new ref; re-applying the rename to the
-      // workbook's row gives it the same one. Keep one: the workbook's (it knows its Excel row).
-      elementTypes: oneEachRef(applyPsPending(s.elementTypes, db)),
-    }))
+    // Reopening: the saved changes meet the workbooks as they are NOW. A patch run while the
+    // app was closed has put some of them in already; those leave the queue instead of being
+    // pushed back in (reconcile.js).
+    const { psRows, recipes, elementTypes, dbCollectionRefs } = get()
+    const fresh = { psRows, recipes, elementTypes, collectionRefs: dbCollectionRefs || [] }
+    return get()._settle(fresh, reconcileAll({ ps, rs, db }, fresh))
+  },
+
+  // ---- patch sync (reconcile.js) -------------------------------------------------------------
+  // The last export's batch: { n, at, counts }. Changes it carried are stamped `exported`.
+  patchBatch: null,
+  // After the workbooks were last checked: { at, counts: { ps|rs|db: { applied, pending, conflicts } },
+  // conflicts: [{ file, key, ref, fields }], checking, error }
+  syncStatus: null,
+
+  /** The export of the current changes: stamp them as batch N (a new N only when something is new). */
+  markExported() {
+    const { psChanges, rsChanges, dbChanges, patchBatch, projectId } = get()
+    const fresh = [...psChanges, ...dbChanges, ...rsChanges].some(hasUnexported)
+    if (!fresh && patchBatch) return patchBatch
+    const n = (patchBatch?.n || 0) + 1
+    const st = stampExported({ ps: psChanges, rs: rsChanges, db: dbChanges }, n)
+    const batch = { n, at: Date.now(), counts: { ps: psChanges.length, rs: rsChanges.length, db: dbChanges.length } }
+    set({ psChanges: st.ps, rsChanges: st.rs, dbChanges: st.db, patchBatch: batch })
+    try { if (projectId != null) window.electronAPI?.db?.setPref?.(projectId, 'patch_batch', JSON.stringify(batch)) } catch { /* best-effort */ }
+    return batch
+  },
+
+  /**
+   * Read the three workbooks again and settle every pending change against them: what they hold
+   * leaves the queue, what they do not stays, a hand edit in between is flagged. Never discards.
+   * → counts, or null when the files could not be read (a half-synced file: try again).
+   */
+  async checkFiles() {
+    const { paths, localElementTypes = [] } = get()
+    if (!paths?.ps && !paths?.rs && !paths?.db) return null
+    set(s => ({ syncStatus: { ...(s.syncStatus || {}), checking: true, error: null } }))
+    let data
+    try {
+      data = await importFiles({ db: paths.dbs || (paths.db ? [paths.db] : []), ps: paths.ps, rs: paths.rs })
+    } catch (err) {
+      set(s => ({ syncStatus: { ...(s.syncStatus || {}), checking: false, error: err?.message || String(err) } }))
+      return null
+    }
+    const dbEts = data.db?.element_types ?? []
+    const dbRefs = new Set(dbEts.map(e => String(e.ElementTypeRef || '').toLowerCase()))
+    const fresh = {
+      psRows: stampIds(data.ps ?? []), recipes: stampIds(data.rs ?? []),
+      elementTypes: [...dbEts, ...localElementTypes.filter(e => !dbRefs.has(String(e.ElementTypeRef || '').toLowerCase()))],
+      collectionRefs: data.db?.collection_refs ?? [],
+    }
+    const { psChanges, rsChanges, dbChanges } = get()
+    const r = reconcileAll({ ps: psChanges, rs: rsChanges, db: dbChanges }, fresh)
+    if (data.db?.position_types) set({ positionTypes: data.db.position_types })
+    set({ dbCollectionRefs: fresh.collectionRefs })
+    get()._settle(fresh, r)
+    return r.counts
+  },
+
+  /** Put the reconciled queues and the fresh rows (with what is still pending on top) in place. */
+  _settle(fresh, r) {
+    const { containerETManualRefs, containerETExcludeRefs, patchBatch, projectId } = get()
+    // Recipe entries follow their rows: re-key to the fresh row ids, by Excel row.
+    const idByRow = new Map(fresh.recipes.filter(x => x._row_num != null).map(x => [x._row_num, x._id]))
+    const rs = r.rs.keep.map(e => { const id = e.row?._row_num != null ? idByRow.get(e.row._row_num) : null; return id ? { ...e, _id: id } : e })
+    const psRows = applyPsPending(fresh.psRows, r.ps.keep)
+    const recipes = applyRsPending(fresh.recipes, rs)
+    const elementTypes = oneEachRef(applyPsPending(fresh.elementTypes, r.db.keep))
+    const containerInfo = computeContainerInfo({ elementTypes, psRows, recipes,
+      manualInclude: containerETManualRefs, manualExclude: containerETExcludeRefs })
+    const conflicts = ['ps', 'db', 'rs'].flatMap(file => r[file].conflicts.map(c => ({
+      file, key: file === 'rs' ? c.entry._id : c.entry.elementTypeRef,
+      ref: file === 'rs' ? `${c.entry.row?.ContextRef || c.entry.positionTypeRef || ''} · ${c.entry.row?.ElementTypeRef || c.entry.row?.elementTypeRef || ''}` : c.entry.elementTypeRef,
+      fields: c.fields,
+    })))
+    // The batch is done when nothing it carried is still waiting.
+    const waiting = [...r.ps.keep, ...r.db.keep, ...rs].some(e => e.batch)
+    const batch = waiting ? patchBatch : null
+    set({
+      psChanges: r.ps.keep, rsChanges: rs, dbChanges: r.db.keep,
+      psRows, recipes, elementTypes,
+      containerETRefs: containerInfo.refs, containerReasons: containerInfo.reasons,
+      past: [], future: [], fileWatchAlert: null, patchBatch: batch,
+      syncStatus: { at: Date.now(), counts: r.counts, conflicts, checking: false, error: null },
+    })
+    if (!batch && patchBatch) { try { window.electronAPI?.db?.setPref?.(projectId, 'patch_batch', 'null') } catch { /* best-effort */ } }
+    return r.counts
+  },
+
+  /**
+   * A conflict settled by a person: 'mine' keeps the change (exported again next time, over the
+   * file's value); 'file' takes the workbook's value and drops that field from the queue.
+   */
+  resolveConflict(file, key, choice) {
+    const listKey = { ps: 'psChanges', rs: 'rsChanges', db: 'dbChanges' }[file]
+    const list = get()[listKey]
+    const at = list.findIndex(e => (file === 'rs' ? e._id : e.elementTypeRef) === key)
+    if (at < 0) return
+    const e = list[at]
+    const fields = e.conflict || []
+    let next = { ...e }
+    delete next.conflict
+    if (choice === 'mine') {
+      // The file's value is the base now: the next check sees this as simply not yet applied.
+      next.before = { ...(e.before || {}), ...Object.fromEntries(fields.map(c => [c.field, c.file])) }
+    } else if (file === 'rs') {
+      const cf = { ...(e.changedFields || {}) }
+      for (const c of fields) delete cf[c.field]
+      next = Object.keys(cf).length ? { ...next, changedFields: cf } : null
+    } else {
+      const up = { ...(e.updates || {}) }
+      for (const c of fields) delete up[c.field]
+      next = Object.keys(up).length ? { ...next, updates: up } : null
+    }
+    const updated = next ? list.map((x, i) => (i === at ? next : x)) : list.filter((_, i) => i !== at)
+    // On screen: taking the file's value shows it.
+    const patchRows = {}
+    if (choice === 'file') {
+      const vals = Object.fromEntries(fields.map(c => [c.field, c.file]))
+      if (file === 'ps') patchRows.psRows = get().psRows.map(r => ((r.ElementTypeRef || '').toLowerCase() === String(key).toLowerCase() ? { ...r, ...vals } : r))
+      if (file === 'db') patchRows.elementTypes = get().elementTypes.map(r => ((r.ElementTypeRef || '').toLowerCase() === String(key).toLowerCase() ? { ...r, ...vals } : r))
+      if (file === 'rs') patchRows.recipes = get().recipes.map(r => (r._row_num != null && r._row_num === e.row?._row_num ? { ...r, ...vals } : r))
+    }
+    set(s => ({ [listKey]: updated, ...patchRows,
+      syncStatus: s.syncStatus ? { ...s.syncStatus, conflicts: (s.syncStatus.conflicts || []).filter(c => !(c.file === file && c.key === key)) } : s.syncStatus }))
   },
 
   /**
@@ -3710,39 +3833,6 @@ const useStore = create((set, get) => ({
     set({ ignoredPositionFamilies: next })
     if (projectId != null) {
       await window.electronAPI.db.setPref(projectId, 'ignored_position_families', JSON.stringify(next))
-    }
-  },
-
-  /**
-   * reloadFileFromDisk(file)
-   * file: 'ps' | 'rs' | 'db'
-   * Re-reads the workbooks, replaces that file's rows, and discards its dirty
-   * registry + undo stacks (EXPORT_PLAN §3.7): nothing stale can be re-exported
-   * or undone.
-   */
-  async reloadFileFromDisk(file) {
-    const { paths } = get()
-    set({ isLoading: true })
-
-    try {
-      const response = { data: await importFiles(paths) }
-
-      if (file === 'ps') {
-        const psRows = stampIds(response.data.ps ?? [])
-        set({ psRows, psChanges: [], past: [], future: [], isLoading: false, fileWatchAlert: null })
-      } else if (file === 'db') {
-        const dbEts = response.data.db?.element_types ?? []
-        const { localElementTypes = [] } = get()
-        const dbRefSet = new Set(dbEts.map(e => (e.ElementTypeRef || '').toLowerCase()))
-        const merged = [...dbEts, ...localElementTypes.filter(e => !dbRefSet.has((e.ElementTypeRef || '').toLowerCase()))]
-        set({ elementTypes: merged, dbChanges: [], past: [], future: [], isLoading: false, fileWatchAlert: null })
-      } else {
-        const recipes = stampIds(response.data.rs ?? [])
-        set({ recipes, rsChanges: [], past: [], future: [], isLoading: false, fileWatchAlert: null })
-      }
-    } catch (err) {
-      set({ isLoading: false, loadError: err.message ?? String(err) })
-      throw err
     }
   },
 

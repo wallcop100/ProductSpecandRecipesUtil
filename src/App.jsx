@@ -11,7 +11,7 @@ import TemplateEditorScreen from './screens/TemplateEditorScreen'
 import ProductSpecScreen from './screens/ProductSpecScreen'
 import ProductCodeImportScreen from './screens/ProductCodeImportScreen'
 import ConnectorsScreen from './screens/ConnectorsScreen'
-import FileWatchBanner from './components/FileWatchBanner'
+import PatchSyncPanel from './components/PatchSyncPanel'
 import ErrorBoundary from './components/ErrorBoundary'
 
 /**
@@ -42,8 +42,13 @@ export default function App() {
   useEffect(() => {
     // The file watcher polls the project folder and reports external edits.
     if (window.electronAPI?.onFileChanged) {
+      // A workbook changed and settled: check all three against the pending changes. Several
+      // files settling together (a run of patches) is one check.
+      let timer = null
       window.electronAPI.onFileChanged((data) => {
         setFileWatchAlert(data)
+        clearTimeout(timer)
+        timer = setTimeout(() => { useStore.getState().checkFiles() }, 1500)
       })
     }
 
@@ -89,7 +94,7 @@ export default function App() {
         ALPHA
       </Badge>
       <BugReporter screen={activeScreen} />
-      <FileWatchBanner />
+      <PatchSyncPanel />
       <DesignPickerModal />
       <SaveShortcut />
       <UndoShortcut screen={activeScreen} />

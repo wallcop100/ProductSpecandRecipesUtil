@@ -609,51 +609,67 @@ describe('fileWatchAlert', () => {
   })
 })
 
-describe('reloadFileFromDisk', () => {
+describe('checkFiles: the workbooks decide which pending changes are done', () => {
   beforeEach(() => {
     resetStore()
     vi.clearAllMocks()
   })
 
-  test('reloadFileFromDisk re-parses the workbooks and merges a single file (ps)', async () => {
-    const freshPsRows = [
-      { ElementTypeRef: 'ET-DL-SPOT-01', ProductCode: 'PC-001', _id: 'existing' },
-    ]
-    importFiles.mockResolvedValueOnce({ ps: freshPsRows })
-
-    useStore.setState({ fileWatchAlert: { file: 'ps', path: '/ps.xlsx' } })
-
-    await useStore.getState().reloadFileFromDisk('ps')
-
-    // paths are filenames inside the project folder handle
-    expect(importFiles).toHaveBeenCalledWith(expect.objectContaining({ ps: '/ps.xlsx' }))
-
-    const { psRows, fileWatchAlert } = useStore.getState()
-    // rows get re-stamped with new _ids, so just check content
-    expect(psRows).toHaveLength(1)
-    expect(psRows[0].ElementTypeRef).toBe('ET-DL-SPOT-01')
-    expect(fileWatchAlert).toBeNull()
+  test('a change the workbook holds leaves the queue; one it does not stays, shown on the row', async () => {
+    useStore.setState({
+      paths: { ps: '/ps.xlsx', rs: '/rs.xlsx', db: '/db.xlsx' },
+      psChanges: [
+        { elementTypeRef: 'ET-A', updates: { ProductCode: 'NEW' }, before: { ProductCode: 'OLD' } },
+        { elementTypeRef: 'ET-B', updates: { ProductCode: 'NEW' }, before: { ProductCode: 'OLD' } },
+      ],
+      rsChanges: [], dbChanges: [],
+    })
+    importFiles.mockResolvedValueOnce({
+      ps: [{ ElementTypeRef: 'ET-A', ProductCode: 'NEW', _row_num: 2 }, { ElementTypeRef: 'ET-B', ProductCode: 'OLD', _row_num: 3 }],
+      rs: [], db: { element_types: [], position_types: [], collection_refs: [] },
+    })
+    const counts = await useStore.getState().checkFiles()
+    expect(importFiles).toHaveBeenCalledWith(expect.objectContaining({ ps: '/ps.xlsx', db: ['/db.xlsx'] }))
+    expect(counts.ps).toEqual({ applied: 1, pending: 1, conflicts: 0 })
+    const s = useStore.getState()
+    expect(s.psChanges.map(c => c.elementTypeRef)).toEqual(['ET-B'])
+    expect(s.psRows.find(r => r.ElementTypeRef === 'ET-B').ProductCode).toBe('NEW')   // still pending, still shown
+    expect(s.psRows.find(r => r.ElementTypeRef === 'ET-A').ProductCode).toBe('NEW')
   })
 
-  test('reloadFileFromDisk re-parses the workbooks and merges a single file (rs)', async () => {
-    const freshRsRows = [
-      {
-        PositionTypeRef: POS_REF,
-        ElementTypeRef: 'ET-DL-SPOT-01',
-        ContextType: 'PositionType',
-        RecipeIndex: 1,
-      },
-    ]
-    importFiles.mockResolvedValueOnce({ rs: freshRsRows })
+  test('an export is a batch; edits after it are the next one, and survive the check', async () => {
+    useStore.setState({
+      paths: { ps: '/ps.xlsx', rs: '/rs.xlsx', db: '/db.xlsx' }, patchBatch: null,
+      psChanges: [{ elementTypeRef: 'ET-A', updates: { ProductCode: 'V1' }, before: { ProductCode: 'OLD' } }], rsChanges: [], dbChanges: [],
+    })
+    expect(useStore.getState().markExported()).toMatchObject({ n: 1 })
+    expect(useStore.getState().markExported()).toMatchObject({ n: 1 })     // nothing new: the same batch
+    useStore.getState().updatePSRow('ET-A', { ProductCode: 'V2' })
+    importFiles.mockResolvedValueOnce({ ps: [{ ElementTypeRef: 'ET-A', ProductCode: 'V1', _row_num: 2 }], rs: [],
+      db: { element_types: [], position_types: [], collection_refs: [] } })
+    await useStore.getState().checkFiles()
+    const s = useStore.getState()
+    expect(s.psChanges).toEqual([expect.objectContaining({ elementTypeRef: 'ET-A', updates: expect.objectContaining({ ProductCode: 'V2' }), before: expect.objectContaining({ ProductCode: 'V1' }) })])
+    expect(s.syncStatus.conflicts).toEqual([])
+    expect(s.patchBatch).toBeNull()     // batch 1 is in; V2 waits for the next export
+  })
 
-    useStore.setState({ fileWatchAlert: { file: 'rs', path: '/rs.xlsx' } })
-
-    await useStore.getState().reloadFileFromDisk('rs')
-
-    const { recipes, fileWatchAlert } = useStore.getState()
-    expect(recipes).toHaveLength(1)
-    expect(recipes[0].PositionTypeRef).toBe(POS_REF)
-    expect(fileWatchAlert).toBeNull()
+  test('a hand edit in the workbook is a conflict, settled by a person', async () => {
+    useStore.setState({ paths: { ps: '/ps.xlsx', rs: '/rs.xlsx', db: '/db.xlsx' },
+      psChanges: [{ elementTypeRef: 'ET-A', updates: { ProductCode: 'MINE' }, before: { ProductCode: 'OLD' } }], rsChanges: [], dbChanges: [] })
+    importFiles.mockResolvedValue({ ps: [{ ElementTypeRef: 'ET-A', ProductCode: 'HAND', _row_num: 2 }], rs: [],
+      db: { element_types: [], position_types: [], collection_refs: [] } })
+    await useStore.getState().checkFiles()
+    expect(useStore.getState().syncStatus.conflicts).toMatchObject([{ file: 'ps', key: 'ET-A', fields: [{ field: 'ProductCode', mine: 'MINE', file: 'HAND' }] }])
+    useStore.getState().resolveConflict('ps', 'ET-A', 'mine')
+    expect(useStore.getState().psChanges[0]).toMatchObject({ updates: { ProductCode: 'MINE' }, before: { ProductCode: 'HAND' } })
+    await useStore.getState().checkFiles()        // mine is now simply not yet applied
+    expect(useStore.getState().syncStatus.conflicts).toEqual([])
+    useStore.setState({ psChanges: [{ elementTypeRef: 'ET-A', updates: { ProductCode: 'MINE' }, before: { ProductCode: 'OLD' } }] })
+    await useStore.getState().checkFiles()
+    useStore.getState().resolveConflict('ps', 'ET-A', 'file')
+    expect(useStore.getState().psChanges).toEqual([])
+    expect(useStore.getState().psRows[0].ProductCode).toBe('HAND')
   })
 })
 

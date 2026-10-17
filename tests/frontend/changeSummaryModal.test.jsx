@@ -42,7 +42,7 @@ describe('the change review is tabbed, and the patch is one click away', () => {
   test('the Patches tab is one click and shows a copyable script per file', () => {
     render(<ChangeSummaryModal show onHide={() => {}} />)
     fireEvent.click(screen.getByText('Patches'))
-    expect(screen.getByText('Product Spec')).toBeTruthy()
+    expect(screen.getByText(/^\d\. Product Spec$/)).toBeTruthy()
     expect(screen.getByText(/paste into ProductSpec.xlsx/)).toBeTruthy()
     // a real Copy button, not buried below a wall of warnings
     expect(screen.getAllByText('Copy').length).toBeGreaterThan(0)
