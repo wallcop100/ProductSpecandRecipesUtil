@@ -181,7 +181,9 @@ export function findThings(needle, state = {}) {
     if (!best) continue
     const code = [ps.Manufacturer, ps.ProductCode].filter(Boolean).join(' ')
     out.push({ kind: 'et', ref: e.ElementTypeRef, title: e.ElementTypeRef,
-      sub: [code, e.Name && e.Name !== code ? e.Name : '', e.Family ? `in ${e.Family}` : ''].filter(Boolean).join(' · '), score: best / 2 })
+      // The name is often just maker - code: said once.
+      sub: [code, e.Name && norm(e.Name).replace(/[^a-z0-9]/g, '') !== norm(code).replace(/[^a-z0-9]/g, '') ? e.Name : '',
+        e.Family ? `in ${e.Family}` : ''].filter(Boolean).join(' · '), score: best / 2 })
   }
   for (const p of state.positionTypes || []) {
     const best = Math.max(fit(p.PositionTypeRef, needle), fit(p.ExtRef, needle) * 0.9, fit(p.Description, needle) * 0.45, fit(p.Name, needle) * 0.45)
