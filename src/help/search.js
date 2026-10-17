@@ -71,7 +71,9 @@ export function refsIn(query, state = {}) {
     const k = norm(t)
     if (!out.et && ets.has(k)) { out.et = ets.get(k); continue }
     if (!out.pos && pts.has(k)) { out.pos = pts.get(k); continue }
-    if (!out.et && /^et-[a-z0-9-]+$/i.test(t)) { out.et = t.toUpperCase(); continue }
+    // An ET-… the workspace does not have binds nothing (no "Rename ET-NOPE"); with no workspace at
+    // all (psr help) the shape is enough.
+    if (!out.et && !ets.size && /^et-[a-z0-9-]+$/i.test(t)) { out.et = t.toUpperCase(); continue }
     out.rest.push(t)
   }
   return out
@@ -154,7 +156,10 @@ const fit = (field, needle) => {
   if (f.includes(needle)) return 4
   // A code typed without its punctuation still finds it: 770503 → 770-503.
   const bare = x => x.replace(/[^a-z0-9]/g, '')
-  return needle.length >= 4 && bare(f).includes(bare(needle)) ? 3 : 0
+  if (needle.length >= 4 && bare(f).includes(bare(needle))) return 3
+  // Several words, each somewhere in it: "dali plug" → ET-2Pin-DALI-Plug.
+  const words = needle.split(/\s+/).filter(w => w.length >= 2)
+  return words.length > 1 && words.every(w => f.includes(w)) ? 6 : 0
 }
 
 /**

@@ -71,4 +71,9 @@ describe('Find', () => {
     expect(find('Orluna', { actions: ACTIONS, state: ws }).some(r => r.kind === 'et' && r.ref === 'ET-PS-04')).toBe(true)
     expect(find('ZH-INFD-27-D-W', { actions: ACTIONS, state: ws })[0].sub).toMatch(/Orluna ZH-INFD-27-D-W-NA-AWB-54 · in ET-PS/)
   })
+  it('an ET-… the workspace does not have binds no action; several words find a ref holding them all', () => {
+    expect(find('ET-NOPE-01', { actions: ACTIONS, state }).some(r => r.kind === 'action' && r.ref === 'ET-NOPE-01')).toBe(false)
+    const ws = { ...state, elementTypes: [...state.elementTypes, { ElementTypeRef: 'ET-2Pin-DALI-Plug' }] }
+    expect(find('dali plug', { actions: ACTIONS, state: ws }).slice(0, 3).map(r => r.ref)).toContain('ET-2Pin-DALI-Plug')
+  })
 })
