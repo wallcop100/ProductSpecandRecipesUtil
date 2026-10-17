@@ -1,36 +1,21 @@
 /**
  * search.js — Find's matching. Pure: the app's palette and `psr help <query>` both use it.
  *
- *   find(query, { actions, state, screen, limit }) → [result]
+ *   find(query, { actions, state, screen, limit, synonyms }) → [result]
  *     result: { kind: 'action', action, ref, pos, title, score }
  *           | { kind: 'et' | 'position' | 'template', ref, title, sub, score }
  *
  * The query is read for refs first: an ElementType or position ref named in it binds the actions
  * that take one ("rename ET-PS-MINI-TINI" → Rename ET-PS-MINI-TINI), and the rest of the words
  * pick the action. Words match an action's title and its `words` (whole, by prefix, or one typo
- * off); a few synonyms widen them (amend → rename). Without a ref, the current position stands in.
+ * off); synonyms from the terms widen them (amend → rename). Without a ref, the current position stands in.
  */
 
 const STOP = new Set(['a', 'an', 'the', 'to', 'of', 'in', 'on', 'for', 'and', 'or', 'is', 'it', 'i', 'my', 'me', 'do',
   'does', 'how', 'can', 'what', 'where', 'which', 'this', 'that', 'with', 'want', 'just', 'please', 'there', 'way',
   'rather', 'than', 'one', 'some', 'be', 'get', 'onto', 'into', 'from', 'at', 'by', 'are', 'was', 'had', 'have', 'so', 'as', 'if'])
 
-// What people type → words the actions use.
-const SYNONYMS = {
-  amend: ['rename', 'change', 'edit'], modify: ['change', 'edit'], alter: ['change', 'edit'], fix: ['correct', 'fix'],
-  rename: ['rename', 'ref'], renumber: ['rename'], retitle: ['rename'], number: ['rename', 'renumber'],
-  et: ['elementtype'], ets: ['elementtypes'], element: ['elementtype'], elementtype: ['elementtype'], component: ['part', 'elementtype'],
-  part: ['part', 'elementtype'], product: ['product', 'code'], sku: ['code'], pn: ['code'],
-  ref: ['ref', 'reference'], reference: ['ref'], name: ['name', 'rename'],
-  remove: ['remove', 'delete'], delete: ['delete', 'remove'], bin: ['delete'], erase: ['delete'],
-  copy: ['copy', 'duplicate', 'fork'], duplicate: ['duplicate', 'fork', 'copy'], clone: ['fork', 'copy'],
-  replace: ['swap', 'replace'], swap: ['swap'], substitute: ['swap'], change: ['change', 'swap', 'edit'],
-  save: ['save', 'export'], push: ['export'], upload: ['export'], publish: ['export'], excel: ['export', 'workbook', 'form'],
-  reload: ['check', 'sync'], refresh: ['check', 'sync'], sync: ['check', 'sync'],
-  position: ['position'], pos: ['position'], fitting: ['position', 'part'], recipe: ['recipe'],
-  family: ['family'], families: ['family'], parent: ['family', 'parentref'],
-  tbc: ['tbc'], unknown: ['tbc'], spec: ['spec', 'product'], help: ['how', 'help'],
-}
+// Synonyms (what people type → words the actions use) come with the terms: help/terms.json, edited on Orion.
 
 const norm = s => String(s ?? '').toLowerCase()
 const tokens = s => norm(s).split(/[^a-z0-9+/×#.-]+/).map(t => t.replace(/^[-.]+|[-.]+$/g, '')).filter(t => t && !STOP.has(t))
@@ -79,13 +64,13 @@ export function refsIn(query, state = {}) {
   return out
 }
 
-function scoreAction(a, qTokens, phrase, bound, state) {
+function scoreAction(a, qTokens, phrase, bound, state, synonyms) {
   const title = norm(a.title(bound.ref, state))
   const titleBag = tokens(title)
   const wordBag = [...new Set(a.words.flatMap(w => tokens(w)))]
   let score = 0, hits = 0
   for (const t of qTokens) {
-    const alts = [t, ...(SYNONYMS[t] || [])]
+    const alts = [t, ...(synonyms[t] || [])]
     let best = 0
     for (const x of alts) {
       const inTitle = wordScore(x, titleBag)
@@ -105,7 +90,7 @@ function scoreAction(a, qTokens, phrase, bound, state) {
   return score
 }
 
-export function find(query, { actions = [], state = {}, screen = '', limit = 14 } = {}) {
+export function find(query, { actions = [], state = {}, screen = '', limit = 14, synonyms = {} } = {}) {
   const q = String(query || '').trim()
   if (!q) return []
   const refs = refsIn(q, state)
@@ -119,7 +104,7 @@ export function find(query, { actions = [], state = {}, screen = '', limit = 14 
       ref: a.needs === 'et' ? refs.et : null,
       pos: a.needs === 'position' ? (refs.pos || (qTokens.length ? state.activePositionRef || null : null)) : null,
     }
-    let score = qTokens.length ? scoreAction(a, qTokens, phrase, bound, state) : 0
+    let score = qTokens.length ? scoreAction(a, qTokens, phrase, bound, state, synonyms) : 0
     // A ref and nothing else: every action that takes that kind of ref, a little apart.
     if (!qTokens.length) {
       if ((a.needs === 'et' && refs.et) || (a.needs === 'position' && refs.pos)) score = 1 + (a.id.endsWith('.open') || a.id === 'et.usedin' ? 1 : 0)

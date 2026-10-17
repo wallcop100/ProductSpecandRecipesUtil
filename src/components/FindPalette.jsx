@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Modal, Form } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
-import { ACTIONS, AREAS } from '../help/actions'
+import { AREAS, buildActions } from '../help/actions'
 import { find } from '../help/search'
 import { contextFor } from '../help/run'
 import { useCompanion } from '../platform/companion'
@@ -52,7 +52,18 @@ export default function FindPalette({ screen }) {
 
   // The store as it is when you type: read on demand, so a closed palette never re-renders with it.
   const state = show ? useStore.getState() : null
-  const results = useMemo(() => (show ? find(q, { actions: ACTIONS, state: useStore.getState(), screen }) : []), [q, show, screen])
+  // The words people use, as Orion /psr → Find has them now: the built-in terms with its live changes
+  // laid over (beside a companion; fetched when Find opens, cached a minute).
+  const [overrides, setOverrides] = useState(null)
+  useEffect(() => {
+    if (!show || !companion?.findTerms) return
+    let live = true
+    companion.findTerms().then(o => { if (live && o) setOverrides(o) })
+    return () => { live = false }
+  }, [show, companion])
+  const terms = useMemo(() => buildActions(overrides), [overrides])
+  const results = useMemo(() => (show ? find(q, { actions: terms.actions, synonyms: terms.synonyms, state: useStore.getState(), screen }) : []),
+    [q, show, screen, terms])
   useEffect(() => setAt(0), [q])
 
   function record(outcome, final = null) {
