@@ -378,7 +378,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
       if (restoring) setRestore(null)
 
       // 9. Start file watcher
-      await window.electronAPI.startWatcher({ folderPath: folder, psFilename: absPs, rsFilename: absRs })
+      await window.electronAPI.startWatcher({ folderPath: folder, psFilename: absPs, rsFilename: absRs, dbFilenames: absDbs })
 
       onProjectLoaded()
     } catch (err) {

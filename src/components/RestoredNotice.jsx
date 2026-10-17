@@ -17,13 +17,14 @@ export default function RestoredNotice() {
       style={{ background: '#d1e7dd', border: '1px solid #a3cfbb', fontSize: 12, color: '#0f5132', flexShrink: 0 }}>
       <MaterialIcon name="restore" size={16} />
       <span>
-        <strong>{notice.n} unexported change{notice.n === 1 ? '' : 's'} restored</strong> from your last session.
-        Your work is saved in this browser as you go, until you Export it to the workbooks.
+        {notice.n > 0 && <><strong>{notice.n} unexported change{notice.n === 1 ? '' : 's'} restored</strong> from your last session. </>}
+        {notice.applied > 0 && <>{notice.applied} saved change{notice.applied === 1 ? ' is' : 's are'} in the workbooks now (a patch ran), so {notice.applied === 1 ? 'it' : 'they'} left the queue. </>}
+        {notice.n > 0 && 'Your work is saved in this browser as you go, until the workbooks hold it.'}
       </span>
-      <Button size="sm" variant="link" className="ms-auto p-0 text-danger" style={{ fontSize: 11 }}
+      {notice.n > 0 && <Button size="sm" variant="link" className="ms-auto p-0 text-danger" style={{ fontSize: 11 }}
         onClick={() => { if (window.confirm(`Discard all ${notice.n} unexported changes? This cannot be undone.`)) discard() }}>
         Discard them…
-      </Button>
+      </Button>}
       <Button size="sm" variant="success" style={{ fontSize: 11 }} onClick={() => useStore.setState({ restoredNotice: null })}>OK</Button>
     </div>
   )

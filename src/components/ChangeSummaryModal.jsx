@@ -194,11 +194,14 @@ export function summaryMarkdown(sections) {
  * changes (a non-empty script) are returned. The master learns about new ElementTypes
  * here or nowhere, so the DesignDB script always travels with the other two.
  */
-function patchFilesFor({ psChanges, rsChanges, dbChanges }) {
+function patchFilesFor({ psChanges, rsChanges, dbChanges, projectNumber }) {
+  // In the order to run them: the DesignDB first — the Product Spec and recipes name its ElementTypes.
+  // Each refuses to run on a workbook whose name lacks the project number.
+  const o = { project: projectNumber || '' }
   return [
-    { key: 'ps', label: 'Product Spec', file: 'ProductSpec.xlsx', script: buildPsScript(psChanges) },
-    { key: 'rs', label: 'Recipe Spec', file: 'RecipesSpec.xlsx', script: buildRsScript(rsChanges) },
-    { key: 'db', label: 'DesignDB ElementTypes', file: 'DesignDB.xlsx', script: buildDbScript(dbChanges) },
+    { key: 'db', label: 'DesignDB ElementTypes', file: 'DesignDB.xlsx', script: buildDbScript(dbChanges, undefined, o) },
+    { key: 'ps', label: 'Product Spec', file: 'ProductSpec.xlsx', script: buildPsScript(psChanges, undefined, o) },
+    { key: 'rs', label: 'Recipe Spec', file: 'RecipesSpec.xlsx', script: buildRsScript(rsChanges, undefined, o) },
   ].filter(f => f.script)
 }
 
@@ -287,15 +290,16 @@ function PatchesTab({ files, copiedKey, previewKey, onCopy, onPreview }) {
   return (
     <>
       <div className="text-muted mb-2" style={{ fontSize: 11 }}>
-        One script per file. Open it → <strong>Automate</strong> → <strong>New Script</strong> → paste → <strong>Run</strong>.
-        Each is safe to run twice.
+        One script per file, in this order. Open it → <strong>Automate</strong> → <strong>New Script</strong> → paste → <strong>Run</strong>.
+        Each is safe to run twice. Afterwards the app checks the workbooks by itself: a change leaves the queue
+        only once its workbook holds it, so nothing is lost and nothing is pushed in twice.
       </div>
-      {files.map(f => (
+      {files.map((f, i) => (
         <div key={f.key} className="mb-2 rounded" style={{ border: '1px solid #e9ecef' }}>
           <div className="d-flex align-items-center gap-2 px-2 py-2">
             <MaterialIcon name="description" size={15} className="text-muted" style={{ flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 600 }}>{f.label}</div>
+              <div style={{ fontSize: 12, fontWeight: 600 }}>{i + 1}. {f.label}</div>
               <div className="text-muted" style={{ fontSize: 10 }}>paste into {f.file}</div>
             </div>
             <Button size="sm" variant="link" className="p-0" style={{ fontSize: 11 }}
@@ -459,7 +463,8 @@ export default function ChangeSummaryModal({ show, onHide }) {
   )
   const overwrites = useMemo(() => dbOverwrites(dbChanges), [dbChanges])
   const sections = useMemo(() => buildSummary({ psChanges, rsChanges, dbChanges }), [psChanges, rsChanges, dbChanges])
-  const patchFiles = useMemo(() => patchFilesFor({ psChanges, rsChanges, dbChanges }), [psChanges, rsChanges, dbChanges])
+  const projectNumber = useStore(s => s.projectNumber)
+  const patchFiles = useMemo(() => patchFilesFor({ psChanges, rsChanges, dbChanges, projectNumber }), [psChanges, rsChanges, dbChanges, projectNumber])
 
   // A master gap whose fix already sits in the ElementTypes patch is queued, not open —
   // it should not keep the "Resolve first" tab lit. (The panel itself shows the queued
@@ -474,6 +479,9 @@ export default function ChangeSummaryModal({ show, onHide }) {
   async function copy(text, key) {
     try {
       await navigator.clipboard.writeText(text)
+      // Copying a patch is exporting it: the changes it carries become a batch (reconcile.js),
+      // so the workbooks can be checked against exactly what was sent.
+      if (['ps', 'rs', 'db'].includes(key)) useStore.getState().markExported()
       setCopiedKey(key)
       setTimeout(() => setCopiedKey(k => (k === key ? null : k)), 2000)
     } catch { /* clipboard unavailable */ }
