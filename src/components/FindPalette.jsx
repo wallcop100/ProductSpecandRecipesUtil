@@ -21,7 +21,8 @@ import NewETWizardModal from './NewETWizardModal'
  * Every search ends as an outcome (beside a companion): the result picked, or nothing — which is how
  * the missing words and the features nobody can find show up on Orion. Nothing here says so.
  */
-const KIND_ICON = { et: 'category', position: 'place', template: 'dashboard_customize' }
+const KIND_ICON = { et: 'category', position: 'place', template: 'dashboard_customize', family: 'folder', formcode: 'description' }
+const KIND_LABEL = { et: 'ElementType', position: 'position', template: 'template', family: 'family', formcode: 'Form code' }
 const SHORTCUTS = [['Ctrl+K', 'Find'], ['Ctrl+Z', 'Undo'], ['Ctrl+Y', 'Redo'], ['Ctrl+S', 'Save now'],
   ['Ctrl+C / Ctrl+V', 'Copy / paste selected recipe rows'], ['↑ / ↓', 'Previous / next position (in the list)'], ['Esc', 'Close a window']]
 
@@ -75,6 +76,8 @@ export default function FindPalette({ screen }) {
     if (r.kind === 'et') return ctx.spec(r.ref)
     if (r.kind === 'position') return ctx.openPosition(r.ref)
     if (r.kind === 'template') return ctx.go('template-editor')
+    if (r.kind === 'formcode') return ctx.openPosition(r.ref)
+    if (r.kind === 'family') { const st = useStore.getState(); const first = st.elementTypes.find(e => String(e.Family || '').toUpperCase() === r.ref); return ctx.spec(first?.ElementTypeRef || null) }
   }
   const onKeyDown = e => {
     if (e.key === 'ArrowDown') { e.preventDefault(); setAt(i => Math.min(results.length - 1, i + 1)) }
@@ -100,7 +103,7 @@ export default function FindPalette({ screen }) {
         dialogClassName="mt-5" style={{ zIndex: 2100 }}>
         <div className="p-2">
           <Form.Control ref={input} value={q} onChange={e => setQ(e.target.value)} onKeyDown={onKeyDown} aria-label="Find"
-            placeholder='What do you want to do? e.g. "rename ET-PS-MINI-TINI", "change family", "did my patch work"'
+            placeholder='What to do, or what to find: "rename ET-PS-MINI-TINI", "change family", a ref, a product code, a maker…'
             style={{ fontSize: 14 }} />
           {q.trim() && (
             <div className="mt-2" style={{ maxHeight: 440, overflowY: 'auto' }} role="listbox">
@@ -121,9 +124,9 @@ export default function FindPalette({ screen }) {
                     <div>
                       {r.title}
                       {r.kind === 'action' && <span className="text-muted ms-2" style={{ fontSize: 10 }}>{AREAS[r.action.area]}</span>}
-                      {r.kind !== 'action' && <span className="text-muted ms-2" style={{ fontSize: 10 }}>{r.kind === 'et' ? 'ElementType' : r.kind}</span>}
+                      {r.kind !== 'action' && <span className="text-muted ms-2" style={{ fontSize: 10 }}>{KIND_LABEL[r.kind] || r.kind}</span>}
                     </div>
-                    {i === at && (r.kind === 'action' ? r.action.how : r.sub) && (
+                    {(r.kind === 'action' ? i === at && r.action.how : r.sub) && (
                       <div className="text-muted" style={{ fontSize: 11 }}>{r.kind === 'action' ? r.action.how : r.sub}</div>
                     )}
                   </div>

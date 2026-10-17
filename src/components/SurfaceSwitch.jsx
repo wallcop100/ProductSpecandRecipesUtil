@@ -28,7 +28,7 @@ export default function SurfaceSwitch({ active, onRecipes, onProductSpec, classN
     </ButtonGroup>
     <Button size="sm" variant="outline-secondary" data-testid="find-open" onClick={() => useStore.getState().requestFind()}
       className="d-inline-flex align-items-center gap-1" title="Find a function, an ElementType or a position (Ctrl+K)">
-      <MaterialIcon name="search" size={15} /> Find <kbd style={{ fontSize: 9, padding: '0 3px' }}>Ctrl K</kbd>
+      <MaterialIcon name="search" size={15} /> Find
     </Button>
     </span>
   )

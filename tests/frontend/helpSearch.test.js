@@ -50,4 +50,25 @@ describe('Find', () => {
     expect(new Set(ids).size).toBe(ids.length)
     expect(ACTIONS.length).toBeGreaterThan(90)
   })
+  it('finds the workspace’s things: refs, codes (with or without punctuation), makers, Form refs, families, Form codes', () => {
+    const ws = {
+      elementTypes: [{ ElementTypeRef: 'ET-3Pin-Mains-SR', Family: 'ET-CONNECTORS', Name: 'WAGO - 770-503' }, { ElementTypeRef: 'ET-LIN-CAP-07', Family: 'ET-LIN-CAPS' },
+        { ElementTypeRef: 'ET-PS-04', Family: 'ET-PS' }],
+      psRows: [{ ElementTypeRef: 'ET-3Pin-Mains-SR', Manufacturer: 'WAGO', ProductCode: '770-503' }, { ElementTypeRef: 'ET-LIN-CAP-07', Manufacturer: 'LEDFlex', ProductCode: 'FPS1709ECG' },
+        { ElementTypeRef: 'ET-PS-04', Manufacturer: 'Orluna', ProductCode: 'ZH-INFD-27-D-W-NA-AWB-54' }],
+      positionTypes: [{ PositionTypeRef: 'C10r', ExtRef: 'C10', Description: 'Linear LED in Opal 1709 profile' }, { PositionTypeRef: 'A02w' }],
+      formCaptures: { byPosition: { A07w: [{ code: 'NL-INFDT-27-X-M', manufacturer: 'Orluna' }] } },
+      psChanges: [], rsChanges: [], dbChanges: [],
+    }
+    const first = q => { const [r] = find(q, { actions: ACTIONS, state: ws }); return `${r.kind}:${r.ref}` }
+    expect(first('770-503')).toBe('et:ET-3Pin-Mains-SR')
+    expect(first('770503')).toBe('et:ET-3Pin-Mains-SR')
+    expect(first('FPS1709')).toBe('et:ET-LIN-CAP-07')
+    expect(first('LIN-CAP')).toBe('et:ET-LIN-CAP-07')
+    expect(first('C10')).toBe('position:C10r')
+    expect(first('ET-LIN-CAPS')).toBe('family:ET-LIN-CAPS')
+    expect(first('NL-INFDT')).toBe('formcode:A07w')
+    expect(find('Orluna', { actions: ACTIONS, state: ws }).some(r => r.kind === 'et' && r.ref === 'ET-PS-04')).toBe(true)
+    expect(find('ZH-INFD-27-D-W', { actions: ACTIONS, state: ws })[0].sub).toMatch(/Orluna ZH-INFD-27-D-W-NA-AWB-54 · in ET-PS/)
+  })
 })

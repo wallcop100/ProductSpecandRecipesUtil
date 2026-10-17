@@ -131,39 +131,78 @@ export function find(query, { actions = [], state = {}, screen = '', limit = 14 
     results.push({ kind: 'action', action: a, ref: bound.ref, pos: bound.pos, title: a.title(bound.ref || bound.pos, state), score })
   }
 
-  // The project's own things, by ref, name, maker or code.
-  const needle = norm(refs.rest.join(' ') || q)
-  if (needle.length >= 2) {
-    const psBy = new Map((state.psRows || []).map(r => [norm(r.ElementTypeRef), r]))
-    for (const e of state.elementTypes || []) {
-      const ps = psBy.get(norm(e.ElementTypeRef)) || {}
-      const hay = [e.ElementTypeRef, e.Name, e.Description, ps.Manufacturer, ps.ProductCode].map(norm)
-      const at = hay.findIndex(h => h.includes(needle))
-      if (at < 0) continue
-      results.push({ kind: 'et', ref: e.ElementTypeRef, title: e.ElementTypeRef,
-        sub: [e.Name, [ps.Manufacturer, ps.ProductCode].filter(Boolean).join(' ')].filter(Boolean).join(' · '),
-        score: (at === 0 ? (hay[0] === needle ? 6 : 3) : 2) - 0.01 * results.length })
-    }
-    for (const p of state.positionTypes || []) {
-      const hay = [p.PositionTypeRef, p.Description, p.Name].map(norm)
-      const at = hay.findIndex(h => h.includes(needle))
-      if (at < 0) continue
-      results.push({ kind: 'position', ref: p.PositionTypeRef, title: p.PositionTypeRef, sub: p.Description || p.Name || '',
-        score: (at === 0 ? (hay[0] === needle ? 6 : 3) : 1.5) - 0.01 * results.length })
-    }
-    for (const t of state.templates || []) {
-      if (!norm(t.name).includes(needle)) continue
-      results.push({ kind: 'template', ref: t.id, title: t.name, sub: 'template', score: 1.5 })
-    }
-  }
-  // A named ref is itself a result, at the top.
-  if (refs.et && !results.some(r => r.kind === 'et' && norm(r.ref) === norm(refs.et)) && (state.elementTypes || []).some(e => norm(e.ElementTypeRef) === norm(refs.et))) {
-    results.push({ kind: 'et', ref: refs.et, title: refs.et, sub: '', score: 2 })
-  }
+  // The workspace's own things: refs, product codes, makers, names, families, the Form's codes.
+  const needle = norm(refs.rest.join(' ') || q).trim()
+  const things = findThings(refs.et || refs.pos ? norm(refs.et || refs.pos) : needle, state)
+  // A query that looks like a ref or a code (one word, a digit or a hyphen) is after a thing first.
+  const refLike = !/\s/.test(q.trim()) && /[\d-]/.test(q)
+  for (const t of things) results.push({ ...t, score: t.score * (refLike ? 1.6 : 0.8) })
 
   results.sort((x, y) => y.score - x.score)
-  // Entities after the best actions, but never crowding them out.
-  const acts = results.filter(r => r.kind === 'action').slice(0, Math.max(6, limit - 6))
-  const things = results.filter(r => r.kind !== 'action').slice(0, 6)
-  return [...acts, ...things].sort((x, y) => y.score - x.score).slice(0, limit)
+  // Neither kind crowds the other out: up to 10 things, and room for the best actions.
+  const acts = results.filter(r => r.kind === 'action').slice(0, Math.max(5, limit - 10))
+  const found = results.filter(r => r.kind !== 'action').slice(0, refLike ? 12 : 8)
+  return [...acts, ...found].sort((x, y) => y.score - x.score).slice(0, limit + 4)
 }
+
+/** How well a field holds the needle: the whole of it 10, its start 7, inside it 4. */
+const fit = (field, needle) => {
+  const f = norm(field).trim()
+  if (!f || !needle) return 0
+  if (f === needle) return 10
+  if (f.startsWith(needle)) return 7
+  if (f.includes(needle)) return 4
+  // A code typed without its punctuation still finds it: 770503 → 770-503.
+  const bare = x => x.replace(/[^a-z0-9]/g, '')
+  return needle.length >= 4 && bare(f).includes(bare(needle)) ? 3 : 0
+}
+
+/**
+ * The workspace's things matching a needle (case-blind, by whole / start / inside):
+ *   ElementTypes by ref, product code, maker, name, description · positions by ref, ExtRef,
+ *   description · families · the Form's codes (each opens the position that has it) · templates.
+ */
+export function findThings(needle, state = {}) {
+  if (!needle || needle.length < 2) return []
+  const out = []
+  const psBy = new Map((state.psRows || []).filter(r => norm(r.IsDeleted) !== 'y').map(r => [norm(r.ElementTypeRef), r]))
+  const families = new Map()
+  for (const e of state.elementTypes || []) {
+    const ps = psBy.get(norm(e.ElementTypeRef)) || {}
+    const f = U(e.Family)
+    if (f) families.set(f, (families.get(f) || 0) + 1)
+    const best = Math.max(fit(e.ElementTypeRef, needle), fit(ps.ProductCode, needle) * 0.95,
+      fit(e.Name, needle) * 0.5, fit(ps.ComponentDescription, needle) * 0.45, fit(e.Description, needle) * 0.4, fit(ps.Manufacturer, needle) * 0.35)
+    if (!best) continue
+    const code = [ps.Manufacturer, ps.ProductCode].filter(Boolean).join(' ')
+    out.push({ kind: 'et', ref: e.ElementTypeRef, title: e.ElementTypeRef,
+      sub: [code, e.Name && e.Name !== code ? e.Name : '', e.Family ? `in ${e.Family}` : ''].filter(Boolean).join(' · '), score: best / 2 })
+  }
+  for (const p of state.positionTypes || []) {
+    const best = Math.max(fit(p.PositionTypeRef, needle), fit(p.ExtRef, needle) * 0.9, fit(p.Description, needle) * 0.45, fit(p.Name, needle) * 0.45)
+    if (!best) continue
+    out.push({ kind: 'position', ref: p.PositionTypeRef, title: p.PositionTypeRef,
+      sub: [p.Description || p.Name, p.ExtRef && p.ExtRef !== p.PositionTypeRef ? `Form ref ${p.ExtRef}` : ''].filter(Boolean).join(' · '), score: best / 2 })
+  }
+  for (const [f, n] of families) {
+    const best = fit(f, needle)
+    if (best) out.push({ kind: 'family', ref: f, title: f, sub: `family · ${n} ElementType${n === 1 ? '' : 's'}`, score: best / 2.2 })
+  }
+  // The Form's codes: what a position asked for, even before it has an ElementType.
+  const seen = new Set()
+  for (const [pos, caps] of Object.entries(state.formCaptures?.byPosition || {})) {
+    for (const c of caps || []) {
+      const best = fit(c.code, needle)
+      if (!best || seen.has(`${pos}|${c.code}`)) continue
+      seen.add(`${pos}|${c.code}`)
+      out.push({ kind: 'formcode', ref: pos, title: `${c.code}`, sub: `on the Form for ${pos}${c.elementTypeRef ? ` · ${c.elementTypeRef}` : ' · no ElementType yet'}`, score: best / 2.3 })
+    }
+  }
+  for (const t of state.templates || []) {
+    const best = fit(t.name, needle)
+    if (best) out.push({ kind: 'template', ref: t.id, title: t.name, sub: 'template', score: best / 2.5 })
+  }
+  return out.sort((a, b) => b.score - a.score)
+}
+
+const U = s => String(s ?? '').trim().toUpperCase()
