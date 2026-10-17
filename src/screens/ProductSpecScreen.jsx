@@ -446,6 +446,7 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
             onOpenPosition={onOpenPosition}
             focusToken={fillFocus}
             onRenamed={setSelectedRef}
+            onSelectRef={setSelectedRef}
           />
         </div>
       </div>

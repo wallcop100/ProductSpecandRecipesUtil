@@ -24,7 +24,9 @@ export const CANON_FAMILIES = [
   { ref: 'ET-LIN-TP', parent: 'ET-LIN', description: 'Assembled Tape and Profile family' },
   { ref: 'ET-LIN-ENCAPSULATED', parent: 'ET-LIN', description: 'Assembled Encapsulated family' },
   { ref: 'ET-LIN-INGREDIENTS', parent: null, description: 'Linear Ingredients' },
-  { ref: 'ET-LIN-PROF', parent: 'ET-LIN-INGREDIENTS', description: 'Linear profile, diffuser and end cap Family' },
+  { ref: 'ET-LIN-PROF', parent: 'ET-LIN-INGREDIENTS', description: 'Linear Profile Family' },
+  { ref: 'ET-LIN-DIFF', parent: 'ET-LIN-INGREDIENTS', description: 'Linear Diffuser Family' },
+  { ref: 'ET-LIN-CAPS', parent: 'ET-LIN-INGREDIENTS', description: 'Linear End Cap Family' },
   { ref: 'ET-LIN-CLIP', parent: 'ET-LIN-INGREDIENTS', description: 'Metal clips for profile mounting' },
   { ref: 'ET-LIN-MOUNT', parent: 'ET-LIN-INGREDIENTS', description: 'Mounting profile for Encapsulated Linear' },
   { ref: 'ET-LIN-TAPE', parent: 'ET-LIN-INGREDIENTS', description: 'Linear LED Tape Family' },
@@ -39,12 +41,14 @@ export const CANON_FAMILIES = [
  * What a product IS, from words in its description, most specific first — the order matters:
  * "FLEX PROFILE … END CAP" is a cap, "AQUA NEON 16 … PROFILE" is a neon mounting profile.
  *
- * `head` is the ref prefix: linear ingredient refs must carry their keyword (page 140959), so a
- * diffuser is `ET-LIN-DIFF-NN` though it files under the profile family.
+ * `head` is the ref prefix: linear ingredient refs must carry their keyword (page 140959). Each
+ * linear ingredient has its own family (Erik, 2026-10-15): tape ET-LIN-TAPE, profile ET-LIN-PROF,
+ * diffuser ET-LIN-DIFF, end caps ET-LIN-CAPS (refs ET-LIN-CAP-NN), clips ET-LIN-CLIP; plugs stay
+ * with the connectors.
  */
 export const CANON_KEYWORDS = [
-  { test: /\bEND\s*-?CAPS?\b|\bENDCAPS?\b/, family: 'ET-LIN-PROF', head: 'ET-LIN-CAP' },
-  { test: /\bDIFFUSERS?\b|\bCOVERS?\b|\bLENS\b/, family: 'ET-LIN-PROF', head: 'ET-LIN-DIFF' },
+  { test: /\bEND\s*-?CAPS?\b|\bENDCAPS?\b/, family: 'ET-LIN-CAPS', head: 'ET-LIN-CAP' },
+  { test: /\bDIFFUSERS?\b|\bCOVERS?\b|\bLENS\b/, family: 'ET-LIN-DIFF', head: 'ET-LIN-DIFF' },
   { test: /\bCLIPS?\b/, family: 'ET-LIN-CLIP', head: 'ET-LIN-CLIP' },
   { test: /\bBRACKETS?\b|\bRAILS?\b|\bSUSPENSION\s+KIT\b|\bMOUNT(ING|ED)?\s+KIT\b/, family: 'ET-LIN-MOUNT', head: 'ET-LIN-MOUNT' },
   { test: /\bMOUNTING\s+(PROFILE|CHANNEL|TRACK)\b|\bNEON\b.*\bPROFILE\b|\bPROFILE\b.*\bNEON\b/, family: 'ET-LIN-MOUNT', head: 'ET-LIN-MOUNT' },

@@ -13,7 +13,7 @@
  *   projects       a project's decisions and configuration, by project number
  *   contributions  evidence for the catalogue, reviewed before it is relied on
  *   outcomes       what became of each learned default (kept / changed / cleared), to read
- *   reports        a problem someone flagged (the ⚑ beside the bug), with what was on screen
+ *   reports        bug reports and feature requests, sent from the bug reporter, with what was on screen
  *   jobs           what job a product does in a recipe (tape, profile, clips …), by maker + code
  *   patterns       recipe patterns from other projects, below this browser's own (recipeProposal.js)
  *   kinds / kits   what positions like this one usually have, and the parts used with a profile:

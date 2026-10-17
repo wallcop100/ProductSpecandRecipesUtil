@@ -12,6 +12,7 @@ import { familyOf } from '../utils/etRef'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { CANON_FAMILIES } from '../data/etCanon'
 import { planFamilyMove } from '../utils/etSeed'
+import { familyFix, codeElsewhere } from '../utils/specSuggest'
 
 /**
  * ETSpecEditor — right-panel form for editing a single ET's product spec.
@@ -21,8 +22,14 @@ import { planFamilyMove } from '../utils/etSeed'
  *   etUsedIn: { [etRefLower]: { positions: Set, elements: Set } }
  *   missingETs: string[]
  *   onNavigate: ('prev'|'next') => void
+ *   onSelectRef: (ref) => void   — "Used in" ElementTypes open here; PositionTypes via onOpenPosition
+ *
+ * Two inline hints (specSuggest.js): a family its job says it belongs in, and — when it has no
+ * code yet — the code the same part has elsewhere (this browser's library, and beside a companion
+ * the other projects').
  */
-export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = [], onNavigate, focusToken = 0, onRenamed, onOpenPosition }) {
+let elsewhereAsked = null      // makers → exemplars from other projects, asked once per session
+export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = [], onNavigate, focusToken = 0, onRenamed, onOpenPosition, onSelectRef }) {
   const psRows      = useStore(s => s.psRows)
   const recipes     = useStore(s => s.recipes)
   const updatePSRow = useStore(s => s.updatePSRow)
@@ -75,6 +82,24 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
       return rFamily === etFamily && (r.ProductCode || r.productCode) && (r.Manufacturer || r.manufacturer)
     }) || null
   }, [psRow, selectedRef, etFamily, psRows, elementTypes])
+
+  const moveElementTypesToFamily = useStore(s => s.moveElementTypesToFamily)
+  const localExemplars = useStore(s => s.library?.exemplars)
+  const projectNumber = useStore(s => s.projectNumber)
+  const [others, setOthers] = useState([])
+  const needsCode = !!psRow && /^(tbc|n\/?a|-)?$/i.test(String(psRow.ProductCode || psRow.productCode || '').trim())
+  useEffect(() => {
+    if (!needsCode || elsewhereAsked) { if (elsewhereAsked) elsewhereAsked.then(setOthers); return }
+    const makers = [...new Set(psRows.map(r => String(r.Manufacturer || r.manufacturer || '').trim()).filter(Boolean))]
+    elsewhereAsked = getCompanion().then(api => (api?.library ? api.library(makers, { exclude: projectNumber || '' }) : [])).catch(() => [])
+    elsewhereAsked.then(setOthers)
+  }, [needsCode])   // eslint-disable-line react-hooks/exhaustive-deps
+  const fix = useMemo(() => (etObj ? familyFix(etObj, psRow, elementTypes, { recipes, psRows }) : null), [etObj, psRow, elementTypes, recipes, psRows])
+  const elsewhere = useMemo(() => (etObj && needsCode
+    ? codeElsewhere(etObj, psRow, { elementTypes, psRows, exemplars: [...(localExemplars || []), ...others] }) : null),
+  [etObj, psRow, needsCode, elementTypes, psRows, localExemplars, others])
+  const [dismissedElsewhere, setDismissedElsewhere] = useState(false)
+  useEffect(() => setDismissedElsewhere(false), [selectedRef])
 
   const [dismissedSimilar, setDismissedSimilar] = useState(false)
   const [showNotes, setShowNotes] = useState(false)
@@ -163,7 +188,14 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
         <div className="d-flex align-items-start gap-2 mb-3">
           <div style={{ flex: 1, minWidth: 0 }}>
             <div className="fw-semibold" style={{ fontSize: 14, wordBreak: 'break-all' }}>{selectedRef}</div>
-            {etFamily && <div className="text-muted" style={{ fontSize: 11 }}>{etFamily}</div>}
+            {etFamily && <div className="text-muted" style={{ fontSize: 11 }}>{etFamily}
+              {fix && (
+                <Button variant="link" size="sm" className="p-0 ms-2 align-baseline" style={{ fontSize: 11 }} data-testid="family-fix"
+                  title={`What it does is filed in ${fix.family}`}
+                  onClick={() => moveElementTypesToFamily([selectedRef], fix.family, { renumber: false })}>
+                  → move to {fix.family}
+                </Button>
+              )}</div>}
           </div>
           {onNavigate && (
             <div className="d-flex gap-1">
@@ -196,8 +228,21 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
           </div>
         )}
 
+        {/* The code the same part has elsewhere */}
+        {elsewhere && !dismissedElsewhere && (
+          <div className="alert alert-info py-2 px-3 mb-3 d-flex align-items-center gap-2" style={{ fontSize: 12 }} data-testid="code-elsewhere">
+            <div className="flex-grow-1">
+              Elsewhere <span className="font-monospace">{elsewhere.ref}</span> is <strong>{elsewhere.maker} {elsewhere.code}</strong>
+              {elsewhere.description && <span className="text-muted"> — {elsewhere.description}</span>}
+            </div>
+            <Button variant="info" size="sm" style={{ fontSize: 11, padding: '1px 8px' }}
+              onClick={() => { updatePSRow(selectedRef, { Manufacturer: elsewhere.maker, ProductCode: elsewhere.code, IsTBC: null }); setDismissedElsewhere(true) }}>Use</Button>
+            <button className="btn-close" style={{ fontSize: 10 }} aria-label="Not this" onClick={() => setDismissedElsewhere(true)} />
+          </div>
+        )}
+
         {/* Copy-from-similar */}
-        {similar && !dismissedSimilar && (
+        {similar && !dismissedSimilar && !(elsewhere && !dismissedElsewhere) && (
           <div className="alert alert-warning py-2 px-3 mb-3 d-flex align-items-center gap-2" style={{ fontSize: 12 }}>
             <div className="flex-grow-1">
               <strong>{similar.ElementTypeRef || similar.elementTypeRef}</strong>{' '}
@@ -326,7 +371,10 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
               <div className="mb-2">
                 <div className="text-muted" style={{ fontSize: 11 }}>In PositionTypes</div>
                 <div className="d-flex flex-wrap gap-1 mt-1">
-                  {[...usage.positions].map(r => <EntityPill key={r} type="PositionType" label={r} style={{ fontSize: 10 }} />)}
+                  {[...usage.positions].map(r => (
+                    <button key={r} type="button" className="btn p-0 border-0" title={`Open ${r}`} disabled={!onOpenPosition}
+                      onClick={() => onOpenPosition?.(r)}><EntityPill type="PositionType" label={r} style={{ fontSize: 10, cursor: onOpenPosition ? 'pointer' : undefined }} /></button>
+                  ))}
                 </div>
               </div>
             )}
@@ -334,7 +382,10 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
               <div>
                 <div className="text-muted" style={{ fontSize: 11 }}>In ElementTypes</div>
                 <div className="d-flex flex-wrap gap-1 mt-1">
-                  {[...usage.elements].map(r => <EntityPill key={r} type="ElementType" label={r} style={{ fontSize: 10 }} />)}
+                  {[...usage.elements].map(r => (
+                    <button key={r} type="button" className="btn p-0 border-0" title={`Open ${r}`} disabled={!onSelectRef}
+                      onClick={() => onSelectRef?.(r)}><EntityPill type="ElementType" label={r} style={{ fontSize: 10, cursor: onSelectRef ? 'pointer' : undefined }} /></button>
+                  ))}
                 </div>
               </div>
             )}

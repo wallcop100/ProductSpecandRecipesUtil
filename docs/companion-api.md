@@ -13,7 +13,7 @@ speaks this protocol, it adds three optional features:
 | `projects`      | Keeps what a project's users decided, by project number, and offers it back to the next person as suggestions. |
 | `contribution-status` | Shows contributors whether what they offered was accepted. |
 | `outcomes`      | Says what became of each default the app filled in from `projects` or `library`: kept, changed or cleared. Sent in the background at staging and at ElementType creation; nothing is shown. |
-| `reports`       | Shows a ⚑ beside the bug-report button. A report written there is sent straight away, with what was on screen; one that cannot be sent is kept with the browser's own bug reports. |
+| `reports`       | The bug reporter sends instead of saving: a bug or feature request goes straight away, with what was on screen; one that cannot be sent is kept with the browser's own bug reports, and the ▾ sends what is kept. Without it, reports are saved in the browser and copied as Markdown. |
 | `jobs`          | Knows what job a product does in a recipe (tape, profile, clips …), by maker + code; it settles the ElementType family over the words. |
 | `patterns`      | Recipe patterns from other projects, in `recipePatterns.js` shape, used as precedent below this browser's own. |
 | `kinds`         | What positions like this one usually have (design, power, slots with their shares and rules). Shown as inline suggestions in the recipe editor and at the Form step; never applied unasked. |

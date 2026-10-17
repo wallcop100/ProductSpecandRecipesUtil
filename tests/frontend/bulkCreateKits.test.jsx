@@ -30,7 +30,7 @@ describe('kits in the ElementType review (beside a companion)', () => {
     expect(screen.queryByTestId('kit-suggestions')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Apply 2' }))
     const items = onApply.mock.calls[0][0].items
-    expect(items[1]).toMatchObject({ code: '021-8810-11', family: 'ET-LIN-PROF', ref: 'ET-LIN-CAP-01', why: 'kit' })
+    expect(items[1]).toMatchObject({ code: '021-8810-11', family: 'ET-LIN-CAPS', ref: 'ET-LIN-CAP-01', why: 'kit' })
     expect(api.current.shareOutcomes).toHaveBeenCalledWith('7900', [expect.objectContaining({ kind: 'kit', key: KIT.key, outcome: 'accepted' })])
   })
 

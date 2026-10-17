@@ -274,6 +274,10 @@ function buildUniqueKeyScript(changes, map, sheet, keyHeader, filename, { withEn
     if (isNew && updates.IsDeleted === 'Y') continue   // created then deleted -> no-op
 
     const fields = Object.entries(updates).filter(([f]) => f !== 'ElementTypeRef' && map[f])
+    // A rename (renameElementType) is an update of the key itself: the row found by the old ref
+    // gets the new one. Dropping it left the Recipes patch naming a ref no sheet had.
+    const renamed = updates.ElementTypeRef && String(updates.ElementTypeRef).trim() !== ref
+      ? String(updates.ElementTypeRef).trim() : null
 
     // Look the row up in the in-memory key index (one bounded column read at the top),
     // never a live find. `rowOf` maps every key value in the sheet to its row.
@@ -292,9 +296,10 @@ function buildUniqueKeyScript(changes, map, sheet, keyHeader, filename, { withEn
         }
         return l
       }
-      const add = [`        writeCell(S, apR, col[${q(keyHeader)}], ${q(ref)});`]
+      const key = renamed || ref
+      const add = [`        writeCell(S, apR, col[${q(keyHeader)}], ${q(key)});`]
       if (withEntityType) { used.add('EntityType'); add.push('        writeCell(S, apR, col["EntityType"], "ElementType");') }
-      add.push(...write('apR'), `        rowOf[${q(ref)}] = apR; apR++;`)
+      add.push(...write('apR'), `        rowOf[${q(key)}] = apR; apR++;`)
 
       blocks.push([
         `    // add ${ref} (idempotent: updates in place if it is already there)`,
@@ -305,12 +310,13 @@ function buildUniqueKeyScript(changes, map, sheet, keyHeader, filename, { withEn
         '      } else {',
         `        console.log(${q('NOTE: ' + ref + ' already present - updated in place, not duplicated.')});`,
         write('r').join('\n'),
+        renamed ? `        writeCell(S, r, col[${q(keyHeader)}], ${q(renamed)}); rowOf[${q(renamed)}] = r;` : '',
         '      }',
         '    }',
       ].filter(Boolean).join('\n'))
     } else {
-      if (fields.length === 0) continue
-      const l = [`    // update ${ref}`, '    {',
+      if (fields.length === 0 && !renamed) continue
+      const l = [`    // update ${ref}${renamed ? ` → ${renamed}` : ''}`, '    {',
         lookup,
         `      if (r < 0) { console.log(${q('WARNING: ' + ref + ' not found - skipped.')}); }`,
         '      else {']
@@ -318,6 +324,7 @@ function buildUniqueKeyScript(changes, map, sheet, keyHeader, filename, { withEn
         used.add(map[f])
         l.push(`        writeCell(S, r, col[${q(map[f])}], ${literal(f, v)});`)
       }
+      if (renamed) l.push(`        writeCell(S, r, col[${q(keyHeader)}], ${q(renamed)}); rowOf[${q(renamed)}] = r;`)
       l.push('      }\n    }')
       blocks.push(l.join('\n'))
     }

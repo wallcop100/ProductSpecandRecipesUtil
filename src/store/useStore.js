@@ -12,6 +12,7 @@ import { findBestTemplate, recipeTemplateFromRows, isRecipeTemplate, isFormTempl
 import { proposeRecipe, proposalFromTemplate, proposalContext } from '../utils/recipeProposal.js'
 import { roleOf } from '../utils/recipePatterns.js'
 import { planFamilyMove } from '../utils/etSeed.js'
+import { jobOf, linearWrapperFamily } from '../utils/codeJobs.js'
 import { loadReports, saveReports } from '../utils/bugReports.js'
 import { connectorSignature, templateParts, partsToIngredients, diffParts, isConnectorPart, DEFAULT_CONNECTOR_FAMILIES, sortParts, signatureKey } from '../utils/connectorGroups.js'
 import { globalConnector, suggestRef, partName, sectionOf, supersededBy, WAGO } from '../data/globalConnectors.js'
@@ -263,6 +264,17 @@ function applyPsPending(psRows, psChanges) {
  * export addresses rows by _row_num so this is harmless; re-key if a
  * post-reload edit of the same row ever needs to coalesce with its entry.
  */
+/** ElementTypes, one per ref (case-blind): a row the workbook has wins over a local copy. */
+function oneEachRef(ets) {
+  const best = new Map()
+  for (const e of ets) {
+    const k = String(e.ElementTypeRef || e.elementTypeRef || '').toLowerCase()
+    const had = best.get(k)
+    if (!had || (had._row_num == null && e._row_num != null)) best.set(k, e)
+  }
+  return ets.filter(e => best.get(String(e.ElementTypeRef || e.elementTypeRef || '').toLowerCase()) === e)
+}
+
 function applyRsPending(recipes, rsChanges) {
   if (!rsChanges || rsChanges.length === 0) return recipes
   const byRowNum = new Map()
@@ -1184,7 +1196,10 @@ const useStore = create((set, get) => ({
     if (p.wrapper?.isNew) {
       const k = p.wrapper.family === 'ET-LIN' ? 'LIN' : 'DL'
       wrapperRef = getNextAvailableRef(`ET-${k}-01`, get().elementTypes)
-      get().createElementType({ ref: wrapperRef, family: `ET-${k}`, isCollection: true })
+      // A linear wrapper is filed by what is inside it (etCanon / page 1409596): ET-LIN-TP, -ENCAPSULATED, -FIXED.
+      const family = k === 'LIN' ? linearWrapperFamily(p.rows.filter(r => r.section === 'internal').map(r => jobOf({
+        ref: r.ref || '', maker: r.exemplar?.maker, code: r.exemplar?.code, name: r.exemplar?.name, family: r.exemplar?.family }))) : 'ET-DL'
+      get().createElementType({ ref: wrapperRef, family, isCollection: true })
       set(s => ({ containerETRefs: new Set([...s.containerETRefs, wrapperRef.toLowerCase()]) }))
     }
     const data = r => ({
@@ -1288,7 +1303,12 @@ const useStore = create((set, get) => ({
       if (ing.newWrapper) {
         const k = ing.newWrapper === 'LIN' ? 'LIN' : 'DL'
         const ref = getNextAvailableRef(`ET-${k}-01`, get().elementTypes)
-        get().createElementType({ ref, family: `ET-${k}`, isCollection: true })
+        const tape = ings.find(i => i.slotKey === 'TAPE')
+        const family = k === 'LIN'
+          ? linearWrapperFamily(tape ? [/FLEX|NEON|ENCAPS/i.test(tape.slotLabel) ? 'TAPE:flex' : /FIXED|RIGID/i.test(tape.slotLabel) ? 'TAPE:fixed' : 'TAPE:tape']
+            : ings.some(i => i.slotKey === 'MOUNT_CHANNEL') ? ['TAPE:flex'] : [])
+          : 'ET-DL'
+        get().createElementType({ ref, family, isCollection: true })
         set(s => ({ containerETRefs: new Set([...s.containerETRefs, ref.toLowerCase()]) }))
         get().addRecipeRow(posRef, 'position', { ...data(ing), elementTypeRef: ref, isDesign: 'Y' },
           { recordHistory: false, asPosition: true })
@@ -3636,7 +3656,9 @@ const useStore = create((set, get) => ({
       dbChanges: db,
       psRows: applyPsPending(s.psRows, ps),
       recipes: applyRsPending(s.recipes, rs),
-      elementTypes: applyPsPending(s.elementTypes, db),
+      // A renamed ElementType's local copy already carries the new ref; re-applying the rename to the
+      // workbook's row gives it the same one. Keep one: the workbook's (it knows its Excel row).
+      elementTypes: oneEachRef(applyPsPending(s.elementTypes, db)),
     }))
   },
 
