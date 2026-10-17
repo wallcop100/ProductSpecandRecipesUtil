@@ -129,7 +129,7 @@ export default function FindPalette({ screen }) {
                       <div className="text-muted" style={{ fontSize: 11 }}>{r.kind === 'action' ? r.action.how : r.sub}</div>
                     )}
                   </div>
-                  {r.kind === 'action' && r.action.inPlace && <span className="text-muted" style={{ fontSize: 10 }}>runs now</span>}
+                  {r.kind === 'action' && r.action.inPlace && <span className="text-muted" style={{ fontSize: 10 }}>{r.action.tutorial ? 'guide' : 'runs now'}</span>}
                 </div>
               ))}
             </div>
