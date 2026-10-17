@@ -12,7 +12,7 @@ import { familyOf } from '../utils/etRef'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { CANON_FAMILIES } from '../data/etCanon'
 import { planFamilyMove } from '../utils/etSeed'
-import { familyFix, codeElsewhere } from '../utils/specSuggest'
+import { familyFix, codeElsewhere, refNumberFix } from '../utils/specSuggest'
 
 /**
  * ETSpecEditor — right-panel form for editing a single ET's product spec.
@@ -95,6 +95,7 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
     elsewhereAsked.then(setOthers)
   }, [needsCode])   // eslint-disable-line react-hooks/exhaustive-deps
   const fix = useMemo(() => (etObj ? familyFix(etObj, psRow, elementTypes, { recipes, psRows }) : null), [etObj, psRow, elementTypes, recipes, psRows])
+  const numberFix = useMemo(() => (etObj ? refNumberFix(etObj, elementTypes) : null), [etObj, elementTypes])
   const elsewhere = useMemo(() => (etObj && needsCode
     ? codeElsewhere(etObj, psRow, { elementTypes, psRows, exemplars: [...(localExemplars || []), ...others] }) : null),
   [etObj, psRow, needsCode, elementTypes, psRows, localExemplars, others])
@@ -217,8 +218,17 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
           )}
         </div>
 
-        {etObj && (etObj.IsCollection || etObj.isCollection) !== 'Y' && (
+        {/* Any ElementType but a family row (one others name as their ParentRef) can be renamed or
+            refiled — wrappers too. */}
+        {etObj && !elementTypes.some(e => String(e.Family || e.family || '').toLowerCase() === String(selectedRef).toLowerCase()) && (
           <FamilyAndRef key={selectedRef} et={etObj} onRenamed={onRenamed} />
+        )}
+        {numberFix && (
+          <div className="alert alert-info py-1 px-2 mb-3 d-flex align-items-center gap-2" style={{ fontSize: 12 }} data-testid="number-fix">
+            <span className="flex-grow-1">{selectedRef} has no number, unlike the other {numberFix.head} ElementTypes here.</span>
+            <Button size="sm" variant="info" style={{ fontSize: 11, padding: '1px 8px' }}
+              onClick={() => useStore.getState().openSpec(selectedRef, 'rename', numberFix.ref)}>Rename to {numberFix.ref}</Button>
+          </div>
         )}
 
         {isDeleted && (
@@ -408,9 +418,18 @@ function FamilyAndRef({ et, onRenamed }) {
   const forkElementType = useStore(s => s.forkElementType)
   const ref = et.ElementTypeRef || et.elementTypeRef
   const family = et.Family || et.family || ''
-  const [open, setOpen] = useState(false)
+  // Opened from Find or a hint: already open, with the suggested ref typed in.
+  const intent = useStore(s => s.specIntent)
+  const asked = intent && String(intent.ref).toLowerCase() === String(ref).toLowerCase() && intent.open ? intent : null
+  const [open, setOpen] = useState(!!asked)
   const [fam, setFam] = useState(family)
-  const [newRef, setNewRef] = useState(ref)
+  const [newRef, setNewRef] = useState(asked?.suggest || ref)
+  useEffect(() => {
+    if (!asked) return
+    setOpen(true)
+    if (asked.suggest) setNewRef(asked.suggest)
+    useStore.getState().consumeSpecIntent()
+  }, [asked?.at])   // eslint-disable-line react-hooks/exhaustive-deps
   const families = useMemo(() => [...new Set([
     ...elementTypes.map(e => e.Family || e.family).filter(Boolean),
     ...elementTypes.filter(e => (e.IsCollection || e.isCollection) === 'Y').map(e => e.ElementTypeRef),

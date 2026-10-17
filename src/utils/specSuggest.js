@@ -90,3 +90,24 @@ export function codeElsewhere(et, ps, { elementTypes = [], psRows = [], exemplar
   const { ex } = best
   return { maker: ex.maker, code: ex.code, ref: ex.ref, description: ex.description || ex.name || '', source: ex.source || '' }
 }
+
+/**
+ * A ref with no number where its siblings have one: ET-PS-MINI-TINI among ET-PS-01, ET-PS-02 …
+ * → { ref: 'ET-PS-MINI-TINI-01', head: 'ET-PS' }. Only where most refs sharing its head are
+ * numbered (connector refs such as ET-2Pin-LIN-Socket carry none, and none is asked for).
+ */
+export function refNumberFix(et, elementTypes = []) {
+  const ref = String(et?.ElementTypeRef || '').trim()
+  if (!ref || /-\d+[A-Z]?$/i.test(ref)) return null
+  if (elementTypes.some(e => U(e.Family) === U(ref))) return null          // a family row
+  const head = ref.split('-').slice(0, 2).join('-')
+  const sibs = elementTypes.map(e => String(e.ElementTypeRef || '')).filter(r => U(r).startsWith(U(head) + '-') && U(r) !== U(ref))
+  const numbered = sibs.filter(r => /-\d+[A-Z]?$/i.test(r))
+  if (sibs.length < 2 || numbered.length / sibs.length < 0.6) return null
+  const taken = new Set(elementTypes.map(e => U(e.ElementTypeRef)))
+  for (let n = 1; n < 100; n++) {
+    const cand = `${ref}-${String(n).padStart(2, '0')}`
+    if (!taken.has(U(cand))) return { ref: cand, head }
+  }
+  return null
+}

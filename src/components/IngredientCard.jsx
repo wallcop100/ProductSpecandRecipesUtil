@@ -405,6 +405,12 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                     title={`Replace ${etRef} with another ElementType across this project`}>
                     Swap everywhere…
                   </Button>
+                  {/* Not another ElementType: this one, under a new ref or family (asked for, 2026-10-17). */}
+                  <Button size="sm" variant="outline-secondary" style={{ fontSize: 10, padding: '0 6px' }} data-testid="rename-et"
+                    onClick={() => { setReplacing(false); useStore.getState().openSpec(etRef, 'rename') }}
+                    title={`Keep ${etRef}, change its ref or family (cascades through the spec, recipes and DesignDB)`}>
+                    Rename…
+                  </Button>
                   <Form.Check
                     type="switch"
                     id={`replace-keep-${rowId}`}

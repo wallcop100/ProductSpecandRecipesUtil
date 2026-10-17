@@ -12,6 +12,7 @@ import ProductSpecScreen from './screens/ProductSpecScreen'
 import ProductCodeImportScreen from './screens/ProductCodeImportScreen'
 import ConnectorsScreen from './screens/ConnectorsScreen'
 import PatchSyncPanel from './components/PatchSyncPanel'
+import FindPalette from './components/FindPalette'
 import ErrorBoundary from './components/ErrorBoundary'
 
 /**
@@ -94,6 +95,7 @@ export default function App() {
         ALPHA
       </Badge>
       <BugReporter screen={activeScreen} />
+      <FindPalette screen={activeScreen} />
       <PatchSyncPanel />
       <DesignPickerModal />
       <SaveShortcut />
