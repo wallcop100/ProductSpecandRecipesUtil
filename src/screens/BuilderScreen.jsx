@@ -192,6 +192,33 @@ export default function BuilderScreen({
     consumePendingPaletteTab()
   }, [pendingPaletteTab, consumePendingPaletteTab])
 
+  // Find (src/help) asks for a window by name (uiRequest); the kinds are listed in help/uiRequests.js.
+  const uiRequest = useStore(s => s.uiRequest)
+  useEffect(() => {
+    if (!uiRequest) return
+    const { kind, args = {} } = uiRequest
+    useStore.getState().consumeUiRequest()
+    const open = {
+      export: () => setChangeSummary(true),
+      status: () => { runValidation(); setStatusTab(args.tab || 'done'); setShowStatus(true) },
+      review: () => setShowReview(true),
+      formBuild: () => setFormBuild({ refs: [], thenReview: false }),
+      styles: () => setShowStyles(true),
+      saveTemplate: () => setShowSaveTemplate(true),
+      tags: () => setShowTags(true),
+      etWindow: () => setShowRetire('existing'),
+      retireUnused: () => setShowRetire('unused'),
+      linWizard: () => setShowLinWizard(true),
+      dupET: () => setShowDupModal(true),
+      backup: () => saveBackup(),
+      fixer: () => setShowFixer(true),
+      elementsView: () => setRootView('elements'),
+      positionsView: () => setRootView('positions'),
+      drawer: () => { setRightOpen(true); setRightTab(args.tab || 'palette') },
+    }[kind]
+    open?.()
+  }, [uiRequest])   // eslint-disable-line react-hooks/exhaustive-deps
+
   const canUndo = past.length > 0
   const canRedo = future.length > 0
 

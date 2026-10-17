@@ -67,6 +67,9 @@ export default function BugReporter({ screen }) {
   }, [bugMode])
 
   useEffect(() => { if (draft) setTimeout(() => noteRef.current?.focus(), 0) }, [!!draft])
+  // Find (Ctrl+K) → "report a bug" opens the note.
+  const bugNoteRequest = useStore(s => s.bugNoteRequest)
+  useEffect(() => { if (bugNoteRequest) openNote() }, [bugNoteRequest])   // eslint-disable-line react-hooks/exhaustive-deps
 
   function build(kind) {
     return buildReport({

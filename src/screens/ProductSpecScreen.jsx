@@ -64,6 +64,9 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
 
   // Sync selectedRef when scrollToRef prop changes (e.g. opening from "Add to spec" link)
   useEffect(() => { if (scrollToRef) setSelectedRef(scrollToRef) }, [scrollToRef])
+  // Find (src/help) opens the Product Spec on an ElementType; the editor opens the part asked for.
+  const specIntent = useStore(s => s.specIntent)
+  useEffect(() => { if (specIntent?.ref) setSelectedRef(specIntent.ref) }, [specIntent])
 
   // Usage map: ET ref (lower) → { positions: Set, elements: Set }
   const etUsedIn = useMemo(() => {

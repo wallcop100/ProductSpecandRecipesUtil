@@ -2021,6 +2021,27 @@ const useStore = create((set, get) => ({
   requestScreen(name) { set({ pendingScreen: name }) },
   consumePendingScreen() { set({ pendingScreen: null }) },
 
+  // Find (src/help): a window to open on the builder ({ kind, args, at }), and the ElementType the
+  // Product Spec should open on, with a part of it already open ({ ref, open: 'rename'|'family', suggest, at }).
+  // One-shot, like pendingScreen: the screen consumes it.
+  uiRequest: null,
+  requestUi(kind, args = {}) {
+    set({ uiRequest: { kind, args, at: Date.now() } })
+    if (get().pendingScreen == null) set({ pendingScreen: 'builder' })
+  },
+  consumeUiRequest() { set({ uiRequest: null }) },
+  specIntent: null,
+  openSpec(ref, open = null, suggest = null) {
+    set({ specIntent: { ref, open, suggest, at: Date.now() }, pendingScreen: 'product-spec' })
+  },
+  consumeSpecIntent() { set({ specIntent: null }) },
+  // Find → "report a bug": the bug reporter opens its note.
+  bugNoteRequest: null,
+  // The Find button in the Recipes | Product Spec switch opens the palette (Ctrl+K does too).
+  findRequest: null,
+  requestFind() { set({ findRequest: Date.now() }) },
+  requestBugNote() { set({ bugNoteRequest: Date.now() }) },
+
   /**
    * The Form pane sits four deep (tree → focused editor → recipe editor → pane), so it
    * cannot reach BuilderScreen's drawer state. Same one-shot hand-off as pendingScreen.

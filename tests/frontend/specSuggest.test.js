@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { familyFix, codeElsewhere } from '../../src/utils/specSuggest'
+import { familyFix, codeElsewhere, refNumberFix } from '../../src/utils/specSuggest'
 
 const ets = [
   { ElementTypeRef: 'ET-LIN-COMPONENTS', IsCollection: 'Y' },
@@ -41,5 +41,13 @@ describe('Product Spec hints', () => {
     expect(familyFix(w[0], null, w, { recipes })).toMatchObject({ family: 'ET-LIN-TP' })
     expect(familyFix(w[1], null, w, { recipes })).toBeNull()
     expect(familyFix(w[2], null, w, { recipes })).toMatchObject({ family: 'ET-LIN-ENCAPSULATED' })
+  })
+  it('a ref with no number among numbered siblings is offered the next free number; connector refs are not', () => {
+    const ets = ['ET-PS-01', 'ET-PS-02', 'ET-PS-03', 'ET-PS-MINI-TINI', 'ET-2Pin-LIN-Socket', 'ET-2Pin-LIN-Plug', 'ET-2Pin-DALI-Plug']
+      .map(r => ({ ElementTypeRef: r }))
+    expect(refNumberFix({ ElementTypeRef: 'ET-PS-MINI-TINI' }, ets)).toEqual({ ref: 'ET-PS-MINI-TINI-01', head: 'ET-PS' })
+    expect(refNumberFix({ ElementTypeRef: 'ET-PS-MINI-TINI' }, [...ets, { ElementTypeRef: 'ET-PS-MINI-TINI-01' }]).ref).toBe('ET-PS-MINI-TINI-02')
+    expect(refNumberFix({ ElementTypeRef: 'ET-2Pin-LIN-Socket' }, ets)).toBeNull()
+    expect(refNumberFix({ ElementTypeRef: 'ET-PS-02' }, ets)).toBeNull()
   })
 })
