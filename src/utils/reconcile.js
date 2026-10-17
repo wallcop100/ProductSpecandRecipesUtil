@@ -94,6 +94,7 @@ function reconcileKeyed(entries = [], rows = [], { familyRefs = [], reads = null
       else if (f in exported && same(file, exported[f])) { states[f] = 'pending'; moved[f] = exported[f] }   // the batch landed; a newer edit stays
       else if (same(file, base)) states[f] = 'pending'
       else states[f] = 'conflict'
+      if (states[f] === 'pending' && stillConflict(e, f, file)) states[f] = 'conflict'
     }
     const vals = Object.values(states)
     if (renameState === 'applied' && vals.every(s => s === 'applied')) { out.applied.push(e); continue }
@@ -123,6 +124,9 @@ function restamp(kept, fieldsKey, exported, moved) {
   if (Object.keys(still).length) kept.exported = still
   else { delete kept.exported; delete kept.batch }
 }
+
+/** A conflict stays one until a person settles it (resolveConflict), while the file still says what it said. */
+const stillConflict = (e, f, file) => (e.conflict || []).some(c => c.field === f && same(c.file, file))
 
 const stripConflict = e => { const { conflict, ...rest } = e; return rest }   // eslint-disable-line no-unused-vars
 
@@ -182,6 +186,7 @@ function reconcileRs(entries = [], recipes = []) {
       else if (f in exported && same(file, exported[f])) { states[f] = 'pending'; moved[f] = exported[f] }
       else if (same(file, before[f])) states[f] = 'pending'
       else states[f] = 'conflict'
+      if (states[f] === 'pending' && stillConflict(e, f, file)) states[f] = 'conflict'
     }
     if (Object.values(states).every(s => s === 'applied')) { out.applied.push(e); continue }
     const left = Object.fromEntries(Object.entries(changed).filter(([f]) => states[f] !== 'applied'))

@@ -69,4 +69,16 @@ describe('reconcile: the file decides', () => {
     expect(r.conflicts[0].fields).toEqual([{ field: 'Quantity', mine: 2, file: 4, base: 1 }])
     expect(r.keep).toHaveLength(1)
   })
+
+  it('a conflict stays a conflict on the next check, until a person settles it', () => {
+    const add = { _id: 'a', action: 'upsert', row: { ...rsRow('C10r', 'ET-LIN-08'), _row_num: null, Quantity: 1, IsContractItem: 'Y' } }
+    const file = { recipes: [rsRow('C10r', 'ET-LIN-08', 1, { Quantity: '' })] }
+    const first = reconcileAll({ rs: [add] }, file).rs
+    expect(first.conflicts).toHaveLength(1)
+    const again = reconcileAll({ rs: first.keep }, file).rs
+    expect(again.conflicts).toHaveLength(1)
+    const pe = { elementTypeRef: 'ET-A', updates: { ProductCode: 'MINE' }, before: { ProductCode: 'OLD' } }
+    const k1 = reconcileAll({ ps: [pe] }, { psRows: [ps('ET-A', { ProductCode: 'HAND' })] }).ps
+    expect(reconcileAll({ ps: k1.keep }, { psRows: [ps('ET-A', { ProductCode: 'HAND' })] }).ps.conflicts).toHaveLength(1)
+  })
 })
