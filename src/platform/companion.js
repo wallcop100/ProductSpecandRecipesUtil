@@ -16,6 +16,7 @@
  *   reports        bug reports and feature requests, sent from the bug reporter, with what was on screen
  *   jobs           what job a product does in a recipe (tape, profile, clips …), by maker + code
  *   patterns       recipe patterns from other projects, below this browser's own (recipeProposal.js)
+ *   find           Find's words, titles and how-to text as changed on Orion /psr → Find, live
  *   kinds / kits   what positions like this one usually have, and the parts used with a profile:
  *                  inline suggestions in the recipe editor (RecipeSuggestions.jsx), never applied unasked
  *
@@ -78,6 +79,17 @@ function build(features) {
     /** The parts used with these profiles / channels on other projects → [{ key, anchor, part, share, qty, dim, … }]. */
     kits: has('kits') ? async (codes, project = '') =>
       (await quiet(post('./api/recipes/kits', { codes: codes.slice(0, 200), project: String(project || '') })))?.kits || [] : null,
+
+    /** Find's live term changes from Orion /psr → Find (help/terms.js overrides shape), cached a minute → object | null. */
+    findTerms: has('find') ? (() => {
+      let at = 0, last = null
+      return async () => {
+        if (last && Date.now() - at < 60_000) return last
+        const o = await quiet(getJson('./api/find/terms'))
+        if (o) { last = o.overrides || o; at = Date.now() }
+        return last
+      }
+    })() : null,
 
     /** Recipe patterns from other projects, in recipePatterns.js shape → [pattern] | null. */
     patterns: has('patterns') ? async () => (await quiet(getJson('./api/recipes/patterns')))?.patterns || null : null,
