@@ -3,8 +3,8 @@
   "connectors": {
     "source": {
       "system": "Kaizen",
-      "pageId": 101097,
-      "title": "Lighting Manufacturing - Wago plugs",
+      "pageId": 141527,
+      "title": "Global Templates - PSR Tool",
       "syncedAt": "2026-10-03"
     },
     "manufacturer": "WAGO",
@@ -18,6 +18,7 @@
           {
             "code": "770-105",
             "role": "socket",
+            "ref": "ET-5PIN-SOCKET",
             "label": "5-pin socket"
           }
         ],
@@ -25,11 +26,13 @@
           {
             "code": "770-215",
             "role": "plug",
+            "ref": "ET-5PIN-PLUG",
             "label": "5-pin plug"
           },
           {
             "code": "770-505/023-000",
             "role": "sr",
+            "ref": "ET-5PIN-PLUG-SR",
             "label": "5-pin plug strain relief"
           }
         ]
@@ -43,11 +46,13 @@
           {
             "code": "770-244",
             "role": "socket",
+            "ref": "ET-4PIN-SOCKET",
             "label": "4-pin socket"
           },
           {
             "code": "770-504",
             "role": "sr",
+            "ref": "ET-4PIN-SOCKET-SR",
             "label": "4-pin socket strain relief"
           }
         ],
@@ -55,11 +60,13 @@
           {
             "code": "770-254",
             "role": "plug",
+            "ref": "ET-4PIN-PLUG",
             "label": "4-pin plug"
           },
           {
             "code": "770-504/023-000",
             "role": "sr",
+            "ref": "ET-4PIN-PLUG-SR",
             "label": "4-pin plug strain relief"
           }
         ]
@@ -73,11 +80,13 @@
           {
             "code": "770-203",
             "role": "socket",
+            "ref": "ET-3PIN-SOCKET",
             "label": "3-pin socket"
           },
           {
             "code": "770-503",
             "role": "sr",
+            "ref": "ET-3PIN-SOCKET-SR",
             "label": "3-pin socket strain relief"
           }
         ],
@@ -85,11 +94,13 @@
           {
             "code": "770-213",
             "role": "plug",
+            "ref": "ET-3PIN-PLUG",
             "label": "3-pin plug"
           },
           {
             "code": "770-503/023-000",
             "role": "sr",
+            "ref": "ET-3PIN-PLUG-SR",
             "label": "3-pin plug strain relief"
           }
         ]
@@ -104,11 +115,13 @@
           {
             "code": "770-1102",
             "role": "socket",
+            "ref": "ET-2PIN-DALI-SOCKET",
             "label": "2-pin DALI socket"
           },
           {
             "code": "770-502/041-000",
             "role": "sr",
+            "ref": "ET-2PIN-DALI-SOCKET-SR",
             "label": "2-pin DALI socket strain relief"
           }
         ],
@@ -116,11 +129,13 @@
           {
             "code": "770-1112",
             "role": "plug",
+            "ref": "ET-2PIN-DALI-PLUG",
             "label": "2-pin DALI plug"
           },
           {
             "code": "770-502/042-000",
             "role": "sr",
+            "ref": "ET-2PIN-DALI-PLUG-SR",
             "label": "2-pin DALI plug strain relief"
           }
         ]
