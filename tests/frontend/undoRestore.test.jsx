@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, act } from '@testing-library/react'
 
 const db = { setPref: vi.fn().mockResolvedValue(undefined), upsertLocalET: vi.fn().mockResolvedValue(undefined), deleteLocalET: vi.fn().mockResolvedValue(undefined), clearPendingChanges: vi.fn().mockResolvedValue(undefined) }
 window.electronAPI = { db }
@@ -8,13 +8,13 @@ vi.mock('../../src/utils/backend.js', () => ({
   registerFile: vi.fn(), setActiveDirectory: vi.fn(), getActiveDirectory: vi.fn(), fileMeta: vi.fn(),
 }))
 const { default: useStore } = await import('../../src/store/useStore.js')
-const { default: RestoredNotice } = await import('../../src/components/RestoredNotice.jsx')
+const { SaveShortcut } = await import('../../src/components/SaveStatus.jsx')
 
 beforeEach(() => {
   vi.clearAllMocks()
   useStore.setState({
     projectId: 1, past: [], future: [], psChanges: [], rsChanges: [], dbChanges: [], recipes: [],
-    elementTypes: [], localElementTypes: [], restoredNotice: null,
+    elementTypes: [], localElementTypes: [], toastMsg: null,
     psRows: [{ ElementTypeRef: 'ET-A', Manufacturer: 'Wago', ProductCode: '1' }],
   })
 })
@@ -48,14 +48,13 @@ describe('WJ8TEG: undo / redo of a new ElementType', () => {
 })
 
 describe('GS9LXJ: unexported changes come back by themselves', () => {
-  test('the notice says how many, and Discard clears them', async () => {
-    useStore.setState({ psChanges: [{ elementTypeRef: 'ET-A', updates: { ProductCode: '2' } }], restoredNotice: { n: 1, at: 0 } })
-    render(<RestoredNotice />)
-    expect(screen.getByTestId('restored-notice').textContent).toMatch(/1 unexported change restored/)
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
-    fireEvent.click(screen.getByText('Discard them…'))
-    await waitFor(() => expect(s().psChanges).toEqual([]))
+  test('the restore is said in a toast, and Discard clears the changes', async () => {
+    useStore.setState({ psChanges: [{ elementTypeRef: 'ET-A', updates: { ProductCode: '2' } }] })
+    render(<SaveShortcut />)
+    act(() => s().toast('1 unexported change restored from your last session.'))
+    expect((await screen.findByTestId('save-toast')).textContent).toMatch(/1 unexported change restored/)
+    await s().discardPendingChanges()
+    expect(s().psChanges).toEqual([])
     expect(db.clearPendingChanges).toHaveBeenCalledWith(1)
-    expect(s().restoredNotice).toBe(null)
   })
 })

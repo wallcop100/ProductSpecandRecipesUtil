@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Button } from 'react-bootstrap'
+import { Dropdown } from 'react-bootstrap'
 import MaterialIcon from './MaterialIcon'
-import InfoTip from './InfoTip'
 import { savePendingNow } from '../store/useStore'
 import { download } from '../platform/fs'
 import { makeBackup, restoreBackup, checkBackup, hasSavedWork, describeBackup } from '../platform/backup'
@@ -11,8 +10,11 @@ import { makeBackup, restoreBackup, checkBackup, hasSavedWork, describeBackup } 
  * (every project, its unexported changes, templates, tags, captures, settings) and restore
  * one. A restore replaces what this browser holds, so it says what the file contains and
  * asks first when there is something here already.
+ *
+ * One quiet menu: `children` are the page's other backup items (one project's settings, the
+ * library), so every way of saving or bringing back work lives in the same place.
  */
-export default function BackupPanel() {
+export default function BackupPanel({ children }) {
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState(null)       // { ok, text }
   const [empty, setEmpty] = useState(false)
@@ -53,21 +55,25 @@ export default function BackupPanel() {
   }
 
   return (
-    <div className="mb-3" data-testid="backup-panel">
-      <div className="d-flex align-items-center gap-2 text-muted" style={{ fontSize: 11 }}>
-        <Button variant="outline-primary" size="sm" style={{ fontSize: 12 }} onClick={backUp} disabled={busy} data-testid="backup-btn">
-          <MaterialIcon name="save" size={14} /> Back up all my work
-        </Button>
-        <Button variant="outline-primary" size="sm" style={{ fontSize: 12 }} onClick={() => fileRef.current?.click()} disabled={busy}>
-          <MaterialIcon name="restore" size={14} /> Restore all my work…
-        </Button>
-        <InfoTip size={11}>
-          Everything this browser holds for the app: every project you have opened, its changes not yet
-          exported to the workbooks, templates, connector templates, tags, Form captures and settings.
-          After a restore, pick each project&apos;s folder once more. The workbooks themselves are not in the file.
-        </InfoTip>
-        <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={fromFile} data-testid="restore-input" />
-      </div>
+    <div data-testid="backup-panel">
+      <Dropdown>
+        <Dropdown.Toggle variant="link" size="sm" className="p-0 text-muted" style={{ fontSize: 11 }} disabled={busy}>
+          <MaterialIcon name="save" size={13} /> Backup &amp; restore
+        </Dropdown.Toggle>
+        <Dropdown.Menu style={{ fontSize: 12 }}>
+          <Dropdown.Item onClick={backUp} data-testid="backup-btn"
+            title="Everything this browser holds for the app: every project, its changes not yet exported, templates, connector templates, tags, Form captures and settings. The workbooks themselves are not in the file.">
+            <MaterialIcon name="save" size={14} /> Back up all my work
+          </Dropdown.Item>
+          <Dropdown.Item onClick={() => fileRef.current?.click()}
+            title="Replaces what this browser holds. After a restore, pick each project's folder once more.">
+            <MaterialIcon name="restore" size={14} /> Restore all my work…
+          </Dropdown.Item>
+          {children && <Dropdown.Divider />}
+          {children}
+        </Dropdown.Menu>
+      </Dropdown>
+      <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={fromFile} data-testid="restore-input" />
       {msg && <div className={`mt-1 ${msg.ok ? 'text-success' : 'text-danger'}`} style={{ fontSize: 11 }} data-testid="backup-msg">{msg.text}</div>}
     </div>
   )

@@ -18,6 +18,8 @@ import FormSpecPane from './FormSpecPane'
 import ForkPositionModal from './ForkPositionModal'
 import TemplatePicker from './TemplatePicker'
 import { colorsForType, ICONS, ACTION_ICONS } from '../utils/entityStyle'
+import { CONCEPTS } from './ConceptCard'
+import { C } from '../styles/tokens'
 
 // Group container-internal rows by ContextRef so each container gets a section
 // titled by its ElementTypeRef.
@@ -57,6 +59,7 @@ export default function PositionRecipeEditor({
   const recipes = useStore(s => s.recipes)
   const selectedRowIds = useStore(s => s.selectedRowIds)
   const clearRowSelection = useStore(s => s.clearRowSelection)
+  const setSelectMode = useStore(s => s.setSelectMode)
   const copySelectedRows = useStore(s => s.copySelectedRows)
   const copyPositionRecipe = useStore(s => s.copyPositionRecipe)
   const requestPaste = useStore(s => s.requestPaste)
@@ -126,24 +129,23 @@ export default function PositionRecipeEditor({
         {name && name !== ref && <span className="text-muted" style={{ fontSize: 12 }}>{name}</span>}
         <PositionTagEditor posRef={ref} />
         <SameRecipePill posRef={ref} />
-        <TutorialHint id="recipe-editor" />
+        <TutorialHint id="recipe-editor" concept={CONCEPTS.WRAPPER} />
         <div className="flex-grow-1" />
-        {/* Paste is visible only when there is something to paste; the rare acts (copy the
-            whole recipe, fork, save as template) live in the ⋮ menu. */}
-        {rowClipboard && (
-          <IconButton
-            variant="outline-secondary" bsSize="sm" style={{ fontSize: 11 }}
-            icon={ACTION_ICONS.paste}
-            badge={rowClipboard.count}
-            onClick={doPaste}
-            title={`Paste ${rowClipboard.label} (Ctrl+V)`}
-          />
-        )}
+        {/* Paste and the rare acts (copy the whole recipe, fork, save as template) live
+            in the ⋮ menu; Ctrl+V still pastes. */}
         <SharedToggle />
         <Dropdown align="end">
           <Dropdown.Toggle as={IconButton} bsSize="sm" variant="outline-secondary"
             icon={ACTION_ICONS.more} title="Recipe actions" aria-label="Recipe actions" />
           <Dropdown.Menu style={{ fontSize: 12 }}>
+            {rowClipboard && (
+              <Dropdown.Item onClick={doPaste} title={`Paste ${rowClipboard.label} (Ctrl+V)`} data-testid="paste-rows">
+                <MaterialIcon name={ACTION_ICONS.paste} size={14} /> Paste {rowClipboard.count} row{rowClipboard.count === 1 ? '' : 's'}
+              </Dropdown.Item>
+            )}
+            <Dropdown.Item disabled={count === 0} onClick={() => setSelectMode(true)}>
+              <MaterialIcon name="checklist" size={14} /> Select multiple
+            </Dropdown.Item>
             <Dropdown.Item disabled={count === 0}
               onClick={() => { const c = copyPositionRecipe(ref); if (c) flashPaste(`Copied ${c.count} row${c.count === 1 ? '' : 's'}`) }}>
               <MaterialIcon name={ACTION_ICONS.copy} size={14} /> Copy whole recipe
@@ -174,7 +176,7 @@ export default function PositionRecipeEditor({
       {/* Selection bar */}
       {selectedRowIds.length > 0 && (
         <div className="d-flex align-items-center gap-2 px-3 py-1"
-          style={{ flexShrink: 0, background: '#e7f1ff', borderBottom: '1px solid #b6d4fe', fontSize: 12 }}>
+          style={{ flexShrink: 0, background: C.accentTint, borderBottom: `1px solid ${C.accentEdge}`, fontSize: 12 }}>
           <span className="fw-semibold text-primary">{selectedRowIds.length} row{selectedRowIds.length === 1 ? '' : 's'} selected</span>
           <IconButton variant="primary" bsSize="sm" style={{ fontSize: 11 }} icon={ACTION_ICONS.copy}
             title="Copy selection (Ctrl+C)" onClick={doCopySelection} />
@@ -183,7 +185,7 @@ export default function PositionRecipeEditor({
         </div>
       )}
       {pasteMsg && (
-        <div className="px-3 py-1 text-success d-flex align-items-center gap-1" style={{ flexShrink: 0, background: '#d1e7dd', fontSize: 12 }}>
+        <div className="px-3 py-1 text-success d-flex align-items-center gap-1" style={{ flexShrink: 0, background: C.subtle, fontSize: 12 }}>
           <MaterialIcon name="check" size={14} /> {pasteMsg}
         </div>
       )}
@@ -229,8 +231,8 @@ export default function PositionRecipeEditor({
           </>
         ) : (
           <div className="text-muted mb-3" style={{ fontSize: 11 }}>
-            Element internals are shown read-only on each container row above — use
-            <span className="fw-semibold"> Edit internals → </span> to change them.
+            Element internals are shown read-only on each container row above — use the
+            row's ⋮ <span className="fw-semibold">Edit internals →</span> to change them.
           </div>
         )}
       </div>

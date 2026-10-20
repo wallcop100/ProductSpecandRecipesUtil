@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { Form, Button } from 'react-bootstrap'
 import useStore from '../store/useStore'
+import { useScrollMemory } from './useScreenView'
 import { getUsedIn } from '../utils/containerUtils'
 import FlagPill from './FlagPill'
 import { getCompanion } from '../platform/companion'
@@ -13,6 +14,7 @@ import { ACTION_ICONS } from '../utils/entityStyle'
 import { CANON_FAMILIES } from '../data/etCanon'
 import { planFamilyMove } from '../utils/etSeed'
 import { familyFix, codeElsewhere, refNumberFix } from '../utils/specSuggest'
+import { C } from '../styles/tokens'
 
 /**
  * ETSpecEditor — right-panel form for editing a single ET's product spec.
@@ -30,6 +32,7 @@ import { familyFix, codeElsewhere, refNumberFix } from '../utils/specSuggest'
  */
 let elsewhereAsked = null      // makers → exemplars from other projects, asked once per session
 export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = [], onNavigate, focusToken = 0, onRenamed, onOpenPosition, onSelectRef }) {
+  const scrollRef = useScrollMemory('product-spec', 'editorScroll')
   const psRows      = useStore(s => s.psRows)
   const recipes     = useStore(s => s.recipes)
   const updatePSRow = useStore(s => s.updatePSRow)
@@ -183,7 +186,7 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
   const retired       = retiredFor(retiredCodes, productCode)
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflowY: 'auto' }}>
+    <div ref={scrollRef} style={{ display: 'flex', flexDirection: 'column', height: '100%', overflowY: 'auto' }}>
       <div className="p-4" style={{ maxWidth: 600 }}>
         {/* Header row */}
         <div className="d-flex align-items-start gap-2 mb-3">
@@ -285,7 +288,7 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
             defaultValue={manufacturer}
             onBlur={e => { const v = e.target.value.trim(); if (v !== manufacturer) updatePSRow(selectedRef, { Manufacturer: v }) }}
             onKeyDown={e => { if (e.key === 'Enter') e.target.blur() }}
-            style={{ fontSize: 12, ...(!manufacturer && !isDeleted ? { borderColor: '#f5c2c7', background: '#fff8f8' } : null) }}
+            style={{ fontSize: 12, ...(!manufacturer && !isDeleted ? { borderColor: C.dangerTint, background: C.dangerTint } : null) }}
             disabled={isDeleted}
           />
           <datalist id="etspec-mfr-list">
@@ -313,13 +316,13 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
               }
             }}
             onKeyDown={e => { if (e.key === 'Enter') e.target.blur() }}
-            style={{ fontSize: 12, ...(!productCode && !isDeleted ? { borderColor: '#f5c2c7', background: '#fff8f8' } : null) }}
+            style={{ fontSize: 12, ...(!productCode && !isDeleted ? { borderColor: C.dangerTint, background: C.dangerTint } : null) }}
             disabled={isDeleted}
           />
         </Form.Group>
 
         {retired && !isDeleted && (
-          <div className="mb-3" style={{ fontSize: 11, color: '#842029', marginTop: -8 }} data-testid="retired">
+          <div className="mb-3" style={{ fontSize: 11, color: C.dangerInk, marginTop: -8 }} data-testid="retired">
             <MaterialIcon name="history" size={11} /> replaced by{' '}
             <span style={{ fontFamily: 'monospace' }}>{retired.replacement}</span> — check the current code
           </div>
@@ -355,7 +358,7 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
         <div className="mb-3">
           <button
             className="btn btn-link btn-sm p-0 d-inline-flex align-items-center gap-1"
-            style={{ fontSize: 11, textDecoration: 'none', color: '#6c757d' }}
+            style={{ fontSize: 11, textDecoration: 'none', color: C.muted }}
             onClick={() => setShowNotes(v => !v)}
           >
             <MaterialIcon name={showNotes ? ACTION_ICONS.expand : ACTION_ICONS.collapse} size={14} /> Internal notes
@@ -466,7 +469,7 @@ function FamilyAndRef({ et, onRenamed }) {
   }
   const bad = !newRef.trim() ? 'needs a ref' : taken(newRef.trim()) ? 'already used' : null
   return (
-    <div className="mb-3 p-2 rounded" style={{ background: '#f8f9fa', border: '1px solid #dee2e6', fontSize: 12 }} data-testid="family-ref">
+    <div className="mb-3 p-2 rounded" style={{ background: C.subtle, border: `1px solid ${C.border}`, fontSize: 12 }} data-testid="family-ref">
       <div className="d-flex gap-2 align-items-end flex-wrap">
         <Form.Group>
           <Form.Label className="mb-0" style={{ fontSize: 11 }}>Family</Form.Label>

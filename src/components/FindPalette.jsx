@@ -11,6 +11,7 @@ import TutorialCard from '../tutorial/TutorialCard'
 import SwapEverywhereModal from './SwapEverywhereModal'
 import ForkPositionModal from './ForkPositionModal'
 import NewETWizardModal from './NewETWizardModal'
+import { C } from '../styles/tokens'
 
 /**
  * FindPalette — Ctrl+K (or Find beside Recipes | Product Spec): say what you want to do, in your own words, and go
@@ -128,9 +129,9 @@ export default function FindPalette({ screen }) {
                   data-testid={`find-${r.kind === 'action' ? r.action.id : r.kind}`}
                   onMouseEnter={() => setAt(i)} onClick={() => go(r)}
                   className="d-flex align-items-start gap-2 px-2 py-1 rounded"
-                  style={{ cursor: 'pointer', background: i === at ? '#e8f0fe' : 'transparent', fontSize: 13 }}>
+                  style={{ cursor: 'pointer', background: i === at ? C.accentTint : 'transparent', fontSize: 13 }}>
                   <MaterialIcon name={r.kind === 'action' ? (r.action.tutorial ? 'school' : 'bolt') : KIND_ICON[r.kind]} size={16}
-                    style={{ color: '#1c5cab', marginTop: 2, flexShrink: 0 }} />
+                    style={{ color: C.accent, marginTop: 2, flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div>
                       {r.title}

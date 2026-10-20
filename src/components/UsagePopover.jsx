@@ -3,6 +3,7 @@ import { Overlay, Popover } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { elementTypeUsage } from '../utils/usage'
+import { C } from '../styles/tokens'
 
 /**
  * UsagePopover — "where else is this used?"
@@ -68,7 +69,7 @@ export default function UsagePopover({ etRef, children, placement = 'right', div
         onMouseEnter={() => setShow(true)}
         onMouseLeave={() => setShow(false)}
         onClick={e => { e.stopPropagation(); setShow(v => !v) }}
-        style={{ cursor: 'help', borderBottom: `1px dotted ${diverges ? '#856404' : '#adb5bd'}` }}
+        style={{ cursor: 'help', borderBottom: `1px dotted ${diverges ? C.attnInk : C.faint}` }}
       >
         {children}
         {/* MaterialIcon is aria-hidden, so an icon on its own has no accessible name. */}
@@ -76,7 +77,7 @@ export default function UsagePopover({ etRef, children, placement = 'right', div
           <span role="img" aria-label="the Form and the recipe disagree about where this is used">
             <MaterialIcon name="warning" size={11}
               title="The Form and the recipe disagree about where this is used — hover for the detail"
-              style={{ color: '#856404', marginLeft: 3, verticalAlign: 'text-top' }} />
+              style={{ color: C.attnInk, marginLeft: 3, verticalAlign: 'text-top' }} />
           </span>
         )}
       </span>
@@ -87,7 +88,7 @@ export default function UsagePopover({ etRef, children, placement = 'right', div
             <Popover.Header style={{ fontSize: 11, fontFamily: 'monospace' }}>{etRef}</Popover.Header>
             <Popover.Body style={{ fontSize: 11 }}>
               {usage.differs && (
-                <div className="mb-2 px-2 py-1 rounded" style={{ background: '#fff3cd', color: '#856404', fontSize: 10 }}>
+                <div className="mb-2 px-2 py-1 rounded" style={{ background: C.attnTint, color: C.attnInk, fontSize: 10 }}>
                   <MaterialIcon name="warning" size={11} />{' '}
                   {usage.onlyInForm.length > 0 && (
                     <>The <u>Form</u> asks for it in <Refs items={usage.onlyInForm} />, where the recipe does not have it.</>
@@ -130,7 +131,7 @@ export default function UsagePopover({ etRef, children, placement = 'right', div
                     ? <Refs items={usage.recipe.contains.map(c => c.ref)} />
                     : <span className="text-muted fst-italic">nothing yet</span>}
                   {usage.recipe.positions.length > 1 && (
-                    <div style={{ color: '#856404', fontSize: 10 }}>
+                    <div style={{ color: C.attnInk, fontSize: 10 }}>
                       shared — editing its contents changes all {usage.recipe.positions.length} positions
                     </div>
                   )}

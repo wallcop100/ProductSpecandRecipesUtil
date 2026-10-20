@@ -4,6 +4,7 @@ import useStore, { collectAllETRefs } from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import LinWrapperDiagram from './LinWrapperDiagram'
 import { LIN_ARCHETYPES } from '../data/linArchetypes'
+import { C } from '../styles/tokens'
 
 const LENGTH_CHIPS = [0.5, 1, 1.5, 2, 3]
 const COUNT_CHIPS  = [1, 2, 3, 4, 5]
@@ -238,8 +239,8 @@ export default function LinWrapperWizardModal({ show, onHide, etRef, posRef, etM
                 <button key={arch.key} onClick={() => pickArchetype(arch)}
                   className="text-start"
                   style={{
-                    flex: '1 1 140px', border: '1.5px solid #c7d7f5', borderRadius: 7,
-                    padding: '10px 12px', background: '#f0f4ff', cursor: 'pointer',
+                    flex: '1 1 140px', border: `1.5px solid ${C.accentEdge}`, borderRadius: 7,
+                    padding: '10px 12px', background: C.accentTint, cursor: 'pointer',
                   }}
                 >
                   <div className="fw-semibold" style={{ fontSize: 12 }}>{arch.label}</div>
@@ -277,7 +278,7 @@ export default function LinWrapperWizardModal({ show, onHide, etRef, posRef, etM
             </div>
 
             {/* Diagram */}
-            <div className="mb-3 p-2 rounded" style={{ background: '#f8f9fa', border: '1px solid #e9ecef' }}>
+            <div className="mb-3 p-2 rounded" style={{ background: C.subtle, border: `1px solid ${C.border}` }}>
               <LinWrapperDiagram
                 archetype={archetype}
                 slotValues={slotValues}
@@ -289,44 +290,44 @@ export default function LinWrapperWizardModal({ show, onHide, etRef, posRef, etM
             {/* Length / count chips (preview only) */}
             {!archetype.isFixedLength ? (
               <div className="d-flex align-items-center gap-2 mb-3 flex-wrap">
-                <span style={{ fontSize: 11, color: '#666' }}>Preview at:</span>
+                <span style={{ fontSize: 11, color: C.muted }}>Preview at:</span>
                 {LENGTH_CHIPS.map(l => (
                   <button key={l}
                     onClick={() => { setPreviewLen(l); setUseCustomLen(false) }}
                     style={{
-                      border: `1.5px solid ${!useCustomLen && previewLength === l ? '#0d6efd' : '#dee2e6'}`,
+                      border: `1.5px solid ${!useCustomLen && previewLength === l ? C.accent : C.border}`,
                       borderRadius: 20, padding: '2px 10px', fontSize: 11, cursor: 'pointer',
-                      background: !useCustomLen && previewLength === l ? '#e8f0fe' : '#fff',
-                      color: !useCustomLen && previewLength === l ? '#0d6efd' : '#333',
+                      background: !useCustomLen && previewLength === l ? C.accentTint : C.surface,
+                      color: !useCustomLen && previewLength === l ? C.accent : C.ink,
                     }}
                   >{l}m</button>
                 ))}
                 <button
                   onClick={() => setUseCustomLen(true)}
                   style={{
-                    border: `1.5px solid ${useCustomLen ? '#0d6efd' : '#dee2e6'}`,
+                    border: `1.5px solid ${useCustomLen ? C.accent : C.border}`,
                     borderRadius: 20, padding: '2px 10px', fontSize: 11, cursor: 'pointer',
-                    background: useCustomLen ? '#e8f0fe' : '#fff',
+                    background: useCustomLen ? C.accentTint : C.surface,
                   }}
                 >Custom</button>
                 {useCustomLen && (
                   <input type="number" min={0.1} step={0.1}
                     value={customLen} onChange={e => setCustomLen(e.target.value)}
                     autoFocus placeholder="m"
-                    style={{ width: 60, fontSize: 11, border: '1px solid #dee2e6', borderRadius: 4, padding: '2px 6px' }}
+                    style={{ width: 60, fontSize: 11, border: `1px solid ${C.border}`, borderRadius: 4, padding: '2px 6px' }}
                   />
                 )}
               </div>
             ) : (
               <div className="d-flex align-items-center gap-2 mb-3 flex-wrap">
-                <span style={{ fontSize: 11, color: '#666' }}>Fixture count:</span>
+                <span style={{ fontSize: 11, color: C.muted }}>Fixture count:</span>
                 {COUNT_CHIPS.map(n => (
                   <button key={n} onClick={() => setPreviewCount(n)}
                     style={{
-                      border: `1.5px solid ${previewCount === n ? '#0d6efd' : '#dee2e6'}`,
+                      border: `1.5px solid ${previewCount === n ? C.accent : C.border}`,
                       borderRadius: 20, padding: '2px 10px', fontSize: 11, cursor: 'pointer',
-                      background: previewCount === n ? '#e8f0fe' : '#fff',
-                      color: previewCount === n ? '#0d6efd' : '#333',
+                      background: previewCount === n ? C.accentTint : C.surface,
+                      color: previewCount === n ? C.accent : C.ink,
                     }}
                   >{n}×</button>
                 ))}
@@ -356,7 +357,7 @@ export default function LinWrapperWizardModal({ show, onHide, etRef, posRef, etM
                   const isChanged = isPresent && v.etRef !== v.originalRef
 
                   return (
-                    <tr key={step.role} style={{ background: isChanged ? '#fff9e6' : undefined }}>
+                    <tr key={step.role} style={{ background: isChanged ? C.attnTint : undefined }}>
                       <td style={{ verticalAlign: 'middle' }}>
                         <span style={{ fontWeight: 600, fontSize: 11 }}>{step.label}</span>
                         {step.optional && (
@@ -364,7 +365,7 @@ export default function LinWrapperWizardModal({ show, onHide, etRef, posRef, etM
                         )}
                         {isPresent && !isChanged && (
                           <MaterialIcon name="check_circle" size={12}
-                            style={{ color: '#198754', marginLeft: 4, verticalAlign: 'middle' }}
+                            style={{ color: C.success, marginLeft: 4, verticalAlign: 'middle' }}
                             title="Already in recipe" />
                         )}
                         {isChanged && (
@@ -386,7 +387,7 @@ export default function LinWrapperWizardModal({ show, onHide, etRef, posRef, etM
                           {suggestions.map(r => <option key={r} value={r} />)}
                         </datalist>
                       </td>
-                      <td style={{ verticalAlign: 'middle', fontSize: 11, color: '#555' }}>
+                      <td style={{ verticalAlign: 'middle', fontSize: 11, color: C.muted }}>
                         {specLabel
                           ? <span title={specLabel}>{specLabel}</span>
                           : v.etRef
@@ -454,7 +455,7 @@ export default function LinWrapperWizardModal({ show, onHide, etRef, posRef, etM
         <Button variant="secondary" size="sm" onClick={onHide} style={{ fontSize: 12 }}>Close</Button>
         {archetype && (
           <Button
-            variant="success" size="sm" style={{ fontSize: 12 }}
+            variant="primary" size="sm" style={{ fontSize: 12 }}
             onClick={handleSave}
             disabled={saving || dirtyCount === 0}
             title={

@@ -12,7 +12,7 @@ export default function ProjectIdPill({ number, configName, size = 'md', classNa
   const fontSize = size === 'sm' ? 10 : 12
   return (
     <span className={`d-inline-flex align-items-center gap-1 ${className}`} title={title}>
-      <Badge bg="success" pill style={{ fontSize, fontWeight: 600 }}>
+      <Badge bg="secondary" pill style={{ fontSize, fontWeight: 600 }}>
         {number || '—'}
       </Badge>
       {configName && (

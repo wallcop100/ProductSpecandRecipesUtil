@@ -254,7 +254,11 @@ export async function openProject({
     const counts = useStore.getState().restorePendingChanges(pendingChanges)
     const sum = k => Object.values(counts).reduce((n, c) => n + c[k], 0)
     restored = sum('pending') + sum('conflicts')
-    if (restored || sum('applied')) useStore.setState({ restoredNotice: { n: restored, applied: sum('applied'), at: Date.now() } })
+    const applied = sum('applied')
+    if (restored || applied) useStore.getState().toast([
+      restored && `${restored} unexported change${restored === 1 ? '' : 's'} restored from your last session.`,
+      applied && `${applied} saved change${applied === 1 ? ' is' : 's are'} in the workbooks now, so ${applied === 1 ? 'it' : 'they'} left the queue.`,
+    ].filter(Boolean).join(' '))
   }
 
   return { projectId, project, restored }

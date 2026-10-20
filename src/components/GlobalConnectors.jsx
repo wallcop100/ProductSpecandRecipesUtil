@@ -5,8 +5,9 @@ import MaterialIcon from './MaterialIcon'
 import useConnectorGroups from './useConnectorGroups'
 import { globalConnectors, suggestConnectors, recogniseCodes, SUGGESTIONS, WAGO_PAGE } from '../data/globalConnectors'
 import { templateParts } from '../utils/connectorGroups'
+import { C } from '../styles/tokens'
 
-const pill = { fontSize: 10, lineHeight: '18px', background: '#fff', border: '1px solid #dee2e6', fontFamily: 'monospace' }
+const pill = { fontSize: 10, lineHeight: '18px', background: C.surface, border: `1px solid ${C.border}`, fontFamily: 'monospace' }
 const ruleFor = key => SUGGESTIONS.find(s => s.keys.includes(key))?.rule || null
 
 /** A library entry's parts: site codes, then (dashed) the driver-side codes in the wrapper. */
@@ -125,9 +126,9 @@ export function WagoSuggestion({ posRef }) {
   }
 
   return (
-    <div className="p-2 rounded mb-2" style={{ background: '#eef6ff', border: '1px solid #b6d4fe' }} data-testid="wago-suggestion">
+    <div className="p-2 rounded mb-2" style={{ background: C.accentTint, border: `1px solid ${C.accentEdge}` }} data-testid="wago-suggestion">
       <div className="d-flex align-items-center gap-1">
-        <MaterialIcon name="auto_awesome" size={13} style={{ color: '#0d6efd' }} />
+        <MaterialIcon name="auto_awesome" size={13} style={{ color: C.accent }} />
         <span style={{ flex: 1 }}>Suggested: <strong>{plan.collection?.Name || s.name}</strong></span>
         <Button size="sm" variant="primary" className="py-0" style={{ fontSize: 10 }} disabled={busy} onClick={use} data-testid="wago-use">Use</Button>
       </div>
@@ -173,7 +174,7 @@ export function WagoUpgradeBanner() {
   const items = useMemo(() => supersededWagoParts(), [psRows])
   if (!items.length) return null
   return (
-    <div className="px-3 py-1 border-bottom" style={{ fontSize: 12, background: '#fff3cd', color: '#664d03' }} data-testid="wago-upgrade">
+    <div className="px-3 py-1 border-bottom" style={{ fontSize: 12, background: C.attnTint, color: C.attnInk }} data-testid="wago-upgrade">
       <div className="d-flex align-items-center gap-2">
         <MaterialIcon name="update" size={14} />
         <span style={{ flex: 1 }}>{items.length} ElementType{items.length === 1 ? ' uses a' : 's use'} superseded Wago part{items.length === 1 ? '' : 's'}</span>

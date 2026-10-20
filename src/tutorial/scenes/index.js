@@ -12,7 +12,6 @@ import SpecScene from './SpecScene'
 import ExportScene from './ExportScene'
 import MatrixScene from './MatrixScene'
 import TemplateScene from './TemplateScene'
-import StatusScene from './StatusScene'
 
 export const SCENES = {
   tree: TreeScene,
@@ -25,5 +24,4 @@ export const SCENES = {
   export: ExportScene,
   matrix: MatrixScene,
   template: TemplateScene,
-  status: StatusScene,
 }

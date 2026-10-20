@@ -88,10 +88,10 @@ export default function App() {
 
   return (
     <div className={debugIds ? 'debug-ids' : ''} data-screen={activeScreen} style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* This is an alpha: said on every page, over the header, never in the way of a click. */}
-      <Badge bg="info" data-testid="alpha-badge"
-        style={{ position: 'fixed', top: 6, left: '50%', transform: 'translateX(-50%)', zIndex: 2000,
-          pointerEvents: 'none', fontSize: 12, letterSpacing: 2, padding: '5px 12px', boxShadow: '0 1px 4px rgba(0,0,0,.25)' }}>
+      {/* This is an alpha: said on every page, bottom-left, beside the bug button, never in the way of a click. */}
+      <Badge bg="secondary" data-testid="alpha-badge"
+        style={{ position: 'fixed', bottom: 6, left: 6, zIndex: 2000,
+          pointerEvents: 'none', fontSize: 9, letterSpacing: 1, padding: '3px 6px', opacity: 0.85 }}>
         ALPHA
       </Badge>
       <BugReporter screen={activeScreen} />
@@ -112,10 +112,13 @@ export default function App() {
           <BuilderScreen
             onOpenTemplateEditor={() => navigateTo('template-editor')}
             onOpenProductSpec={(etRef) => {
+              // An explicit target opens a fresh view on it; no target returns to the remembered one.
+              if (etRef) useStore.getState().clearScreenView('product-spec')
               setPsScrollToRef(etRef || null)
               navigateTo('product-spec')
             }}
             onOpenConnectors={(posRef) => {
+              if (posRef) useStore.getState().clearScreenView('connectors')
               setConnectorsFocusRef(posRef || null)
               navigateTo('connectors')
             }}
@@ -134,7 +137,7 @@ export default function App() {
         {activeScreen === 'product-spec' && (
           <ProductSpecScreen
             scrollToRef={psScrollToRef}
-            onOpenCodeImport={() => openCodeImport('product-spec')}
+            onOpenCodeImport={() => { setPsScrollToRef(null); openCodeImport('product-spec') }}
             onOpenPosition={ref => {
               setPsScrollToRef(null)
               useStore.getState().setActivePosition(ref)

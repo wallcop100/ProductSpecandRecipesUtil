@@ -10,6 +10,7 @@ import TagColorControl from './TagColorControl'
 import TagDriftWizard from './TagDriftWizard'
 import MaterialIcon from './MaterialIcon'
 import RuleBuilder from './RuleBuilder'
+import { C } from '../styles/tokens'
 
 const TAG_RULE_COLUMNS = [
   { label: 'PositionType (DesignDB)', options: TAG_COLUMNS.map(c => ({ key: c, label: c })) },
@@ -30,27 +31,27 @@ function RuleCard({ rule, matchCount, onChange, onRemove, isNew = false }) {
   const tagRef = React.useRef(null)
   useEffect(() => { if (isNew) { tagRef.current?.scrollIntoView?.({ block: 'nearest' }); tagRef.current?.focus() } }, [isNew])
   const conds = ruleConditions(rule)
-  const accent = useStore(s => (rule.tag ? s.tagColors?.[rule.tag] : null)) || '#cbd5e1'
+  const accent = useStore(s => (rule.tag ? s.tagColors?.[rule.tag] : null)) || C.faint
   const disabled = rule.enabled === false
 
 
   return (
     <div className="mb-3" style={{
-      border: '1px solid #e5e7eb', borderLeft: `4px solid ${accent}`, borderRadius: 10,
-      background: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', opacity: disabled ? 0.6 : 1,
+      border: `1px solid ${C.border}`, borderLeft: `4px solid ${accent}`, borderRadius: 10,
+      background: C.surface, boxShadow: '0 1px 2px rgba(0,0,0,0.05)', opacity: disabled ? 0.6 : 1,
     }}>
       {/* Header: the tag this rule produces, its live colour, and how many positions it hits. */}
-      <div className="d-flex align-items-center gap-2 px-3 py-2" style={{ borderBottom: '1px solid #f1f3f5' }}>
+      <div className="d-flex align-items-center gap-2 px-3 py-2" style={{ borderBottom: `1px solid ${C.subtle}` }}>
         {rule.tag
           ? <TagBadge tag={rule.tag} />
-          : <span className="rounded px-2" style={{ fontSize: 10, background: '#f1f3f5', color: '#9aa0a6', fontStyle: 'italic' }}>unnamed</span>}
+          : <span className="rounded px-2" style={{ fontSize: 10, background: C.subtle, color: C.faint, fontStyle: 'italic' }}>unnamed</span>}
         <Form.Control size="sm" ref={tagRef} list="tagrules-palette" value={rule.tag ?? ''} placeholder="tag name…"
           aria-label="Tag name"
           style={{ maxWidth: 180, fontSize: 12, fontWeight: 600 }}
           onChange={e => onChange({ tag: e.target.value })} />
 
         <span className="rounded-pill px-2 ms-auto" title="Positions this rule currently matches"
-          style={{ fontSize: 10, fontWeight: 600, background: matchCount > 0 ? '#d1e7dd' : '#f1f3f5', color: matchCount > 0 ? '#0f5132' : '#6c757d' }}>
+          style={{ fontSize: 10, fontWeight: 600, background: matchCount > 0 ? C.subtle : C.subtle, color: matchCount > 0 ? C.ink : C.muted }}>
           {matchCount} match{matchCount === 1 ? '' : 'es'}
         </span>
         <Form.Check type="switch" checked={rule.enabled !== false} title="Enable / disable this rule"
@@ -110,7 +111,7 @@ function RulesSection({ positionTypes, draft, setDraft, dirty }) {
       </div>
 
       {draft.length === 0 && (
-        <div className="text-center py-5" style={{ color: '#9aa0a6' }}>
+        <div className="text-center py-5" style={{ color: C.faint }}>
           <MaterialIcon name="sell" size={28} />
           <div className="mt-2" style={{ fontSize: 12 }}>No rules yet.</div>
           <Button size="sm" variant="outline-primary" className="mt-2" onClick={addRule}>Add your first rule</Button>
@@ -190,14 +191,14 @@ export default function TagRulesModal({ show, onHide }) {
           </Modal.Title>
         </Modal.Header>
 
-        <div className="d-flex gap-1 px-3 pt-2" style={{ borderBottom: '1px solid #dee2e6' }}>
+        <div className="d-flex gap-1 px-3 pt-2" style={{ borderBottom: `1px solid ${C.border}` }}>
           {['rules', 'tags'].map(t => (
             <button key={t} type="button" onClick={() => setTab(t)}
               className="btn btn-sm border-0 rounded-0 px-2"
               style={{
                 fontSize: 12, fontWeight: tab === t ? 600 : 400,
-                color: tab === t ? '#0d6efd' : '#6c757d',
-                borderBottom: tab === t ? '2px solid #0d6efd' : '2px solid transparent',
+                color: tab === t ? C.accent : C.muted,
+                borderBottom: tab === t ? `2px solid ${C.accent}` : '2px solid transparent',
               }}>
               {t === 'rules' ? 'Rules' : 'Tags & colours'}
             </button>
@@ -221,7 +222,7 @@ export default function TagRulesModal({ show, onHide }) {
         <Modal.Footer className="d-flex align-items-center">
           {confirmClose ? (
             <div className="d-flex align-items-center gap-2 w-100" data-testid="unapplied-warning">
-              <MaterialIcon name="warning" size={16} style={{ color: '#b45309' }} />
+              <MaterialIcon name="warning" size={16} style={{ color: C.attnInk }} />
               <span style={{ fontSize: 12 }}>Your rule changes are not applied yet.</span>
               <Button size="sm" variant="link" className="ms-auto text-muted" onClick={() => setConfirmClose(false)}>Keep editing</Button>
               <Button size="sm" variant="outline-danger" onClick={() => { setDirty(false); setConfirmClose(false); onHide() }}>Discard</Button>

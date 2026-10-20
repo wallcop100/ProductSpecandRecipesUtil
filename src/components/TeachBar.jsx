@@ -4,6 +4,7 @@ import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { positionRecipeWithWrapperInternals } from '../utils/collectionStatus'
 import { roleOf, QTY_CONFIRM_ROLES } from '../utils/recipePatterns'
+import { C } from '../styles/tokens'
 
 const pretty = role => role.toLowerCase().replace(/-/g, ' ')
 
@@ -57,7 +58,7 @@ export default function TeachBar({ onReturn }) {
 
   return (
     <div className="d-flex align-items-center gap-2 flex-wrap mx-3 mt-2 px-3 py-2 rounded" data-testid="teach-bar"
-      style={{ background: '#fff3cd', border: '1px solid #ffe69c', fontSize: 12, color: '#664d03', flexShrink: 0 }}>
+      style={{ background: C.attnTint, border: `1px solid ${C.attnTint}`, fontSize: 12, color: C.attnInk, flexShrink: 0 }}>
       <MaterialIcon name="school" size={16} />
       <span>
         <strong>Setting up “{teaching.label}”</strong> on <span style={{ fontFamily: 'monospace' }}>{teaching.posRef}</span>.{' '}

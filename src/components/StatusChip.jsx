@@ -1,6 +1,7 @@
 import React from 'react'
 import { OverlayTrigger, Popover } from 'react-bootstrap'
 import MaterialIcon from './MaterialIcon'
+import { C } from '../styles/tokens'
 
 /**
  * StatusChip — the one way a status is shown: an icon, a short word, a colour by TONE, and
@@ -8,11 +9,11 @@ import MaterialIcon from './MaterialIcon'
  * and the coverage badge all use it, so "amber" means the same thing everywhere.
  */
 export const TONES = {
-  ok:      { bg: '#d1e7dd', fg: '#0f5132' },   // done, in spec, saved
-  warn:    { bg: '#fff3cd', fg: '#856404' },   // needs a look, a variant, work left
-  error:   { bg: '#f8d7da', fg: '#842029' },   // wrong, not saved
-  info:    { bg: '#cfe2ff', fg: '#084298' },   // worth knowing (repeated, in progress)
-  neutral: { bg: '#f1f3f5', fg: '#495057' },   // new, nothing to say
+  ok:      { bg: C.subtle,     fg: C.ink },        // done, in spec, saved
+  warn:    { bg: C.attnTint,   fg: C.attnInk },    // needs a look, a variant, work left
+  error:   { bg: C.dangerTint, fg: C.dangerInk },  // wrong, not saved
+  info:    { bg: C.accentTint, fg: C.accentInk },  // worth knowing (repeated, in progress)
+  neutral: { bg: C.subtle,     fg: C.muted },      // new, nothing to say
 }
 
 export default function StatusChip({ tone = 'neutral', icon, label, tip, children, size = 'sm', style, ...rest }) {

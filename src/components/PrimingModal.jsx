@@ -5,6 +5,7 @@ import CodeChips from './CodeChips'
 import PaintPalette from './PaintPalette'
 import CaptureLines from './CaptureLines'
 import { deriveCaptures } from '../utils/productCodes'
+import { C } from '../styles/tokens'
 
 /**
  * PrimingModal — teach the tool this project's dialect before reviewing.
@@ -69,7 +70,7 @@ export default function PrimingModal({
           {examples.map((_, i) => (
             <div key={i} onClick={() => setStep(i)} style={{
               flex: 1, height: 4, borderRadius: 2, cursor: 'pointer',
-              background: i < step ? '#198754' : i === step ? '#0d6efd' : '#e9ecef',
+              background: i < step ? C.muted : i === step ? C.accent : C.border,
             }} />
           ))}
         </div>
@@ -86,7 +87,7 @@ export default function PrimingModal({
           onAcceptSuggestions={() => onAcceptSuggestions(row.id)}
         />
 
-        <div className="border rounded" style={{ background: '#fff' }}>
+        <div className="border rounded" style={{ background: C.surface }}>
           <div className="p-3" style={{ minHeight: 100, display: 'flex', alignItems: 'center' }}>
             <CodeChips
               row={row}
@@ -95,7 +96,7 @@ export default function PrimingModal({
               suggested={suggested}
             />
           </div>
-          <div className="px-3 pb-2 pt-1" style={{ background: '#fcfcfd', borderTop: '1px solid #e9ecef' }}>
+          <div className="px-3 pb-2 pt-1" style={{ background: C.subtle, borderTop: `1px solid ${C.border}` }}>
             <CaptureLines
               captures={readout.captures}
               discarded={readout.discarded}
@@ -108,11 +109,11 @@ export default function PrimingModal({
 
         <div className="mt-2 d-flex align-items-center gap-2" style={{ fontSize: 11 }}>
           <span className="text-muted">learned so far:</span>
-          <span className="rounded px-2" style={{ background: '#d1e7dd', color: '#0f5132' }}>
+          <span className="rounded px-2" style={{ background: C.subtle, color: C.ink }}>
             {codesSoFar} code {codesSoFar === 1 ? 'pattern' : 'patterns'}
           </span>
           {signals.delimiters.size > 0 && (
-            <span className="rounded px-2" style={{ background: '#e7f1ff', color: '#084298' }}>
+            <span className="rounded px-2" style={{ background: C.accentTint, color: C.accentInk }}>
               separators {[...signals.delimiters].join(' ')}
             </span>
           )}
@@ -132,7 +133,7 @@ export default function PrimingModal({
           <Button variant="outline-secondary" size="sm" disabled={step === 0}
             onClick={() => setStep(s => s - 1)}>Back</Button>
           {last
-            ? <Button variant="success" size="sm" onClick={() => onDone(examples.map(e => e.id))}>
+            ? <Button variant="primary" size="sm" onClick={() => onDone(examples.map(e => e.id))}>
                 Done — start reviewing
               </Button>
             : <Button variant="primary" size="sm" onClick={() => setStep(s => s + 1)}>Next example →</Button>}

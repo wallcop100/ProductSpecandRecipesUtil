@@ -163,7 +163,7 @@ describe('TutorialHint — a quiet ? that never opens by itself', () => {
     expect(hasSeen('builder-tree')).toBe(true)
   })
 
-  test('Next/Back step through; the last step offers Got it; reopen resets to step 0', async () => {
+  test('Next/Back step through; the last step offers Got it; then the ? is gone for good', async () => {
     render(<TutorialHint id="builder-tree" />)
     openChip()
     await screen.findByText('The project tree')
@@ -178,9 +178,13 @@ describe('TutorialHint — a quiet ? that never opens by itself', () => {
     for (let i = 1; i < nSteps; i++) fireEvent.click(screen.getByRole('button', { name: 'Next →' }))
     fireEvent.click(screen.getByRole('button', { name: 'Got it' }))
     await waitFor(() => expect(screen.queryByText('The project tree')).toBeNull())
+    expect(screen.queryByRole('button', { name: /How this pane works/ })).toBeNull()
+  })
 
-    openChip()
-    expect(await screen.findByText(`step 1 of ${nSteps}`)).toBeInTheDocument()
+  test('a card already seen shows no ? at all', () => {
+    markSeen('builder-tree')
+    const { container } = render(<TutorialHint id="builder-tree" />)
+    expect(container.innerHTML).toBe('')
   })
 
   test('Skip all tutorials marks every card seen', async () => {

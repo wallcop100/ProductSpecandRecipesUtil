@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import MaterialIcon from './MaterialIcon'
+import { C } from '../styles/tokens'
 
 /**
  * The Form's other columns for this row, one click from being shown. Only columns this
@@ -26,8 +27,8 @@ export default function ContextColumnChips({ context = {}, available = [], shown
                 className="btn btn-sm py-0 px-1"
                 style={{
                   fontSize: 10, borderRadius: 10,
-                  background: on ? '#cfe2ff' : '#fff', color: on ? '#084298' : '#6c757d',
-                  border: `1px solid ${on ? '#9ec5fe' : '#dee2e6'}`,
+                  background: on ? C.accentTint : C.surface, color: on ? C.accentInk : C.muted,
+                  border: `1px solid ${on ? C.accentEdge : C.border}`,
                 }}
                 onClick={() => onChange(on ? shown.filter(x => x !== c) : available.filter(x => x === c || shown.includes(x)))}>
                 {on ? '✓ ' : '+ '}{c}

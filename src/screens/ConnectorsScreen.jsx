@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Button, Badge, Modal, Form } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import CoverageMatrix from '../components/CoverageMatrix'
+import { useScreenView, useScrollMemory } from '../components/useScreenView'
 import CollectionEditor from '../components/CollectionEditor'
 import CellDetailPanel from '../components/CellDetailPanel'
 import IconButton from '../components/IconButton'
@@ -15,6 +16,7 @@ import MaterialIcon from '../components/MaterialIcon'
 import { describeParts, suggestName, isConnectorPart } from '../utils/connectorGroups'
 import { ruleFor, templateRule, describeRule, ruleIsEmpty } from '../utils/templateRules'
 import { WagoLibrary, WagoUpgradeBanner, wagoNameOf } from '../components/GlobalConnectors'
+import { C } from '../styles/tokens'
 
 /**
  * ConnectorsScreen — dedicated screen for managing virtual ElementType Collections
@@ -51,8 +53,11 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
     if (saved) { setSelectedCell(null); setSelectedCollectionId(saved.CollectionId) }
   }
 
-  const [selectedCollectionId, setSelectedCollectionId] = useState(null)
-  const [selectedCell, setSelectedCell] = useState(null) // { posRef, collectionId }
+  // Remembered across visits (useScreenView); a focusPosRef hand-off still wins below.
+  const [selectedCollectionId, setSelectedCollectionId] = useScreenView('connectors', 'selectedCollectionId', null)
+  const [selectedCell, setSelectedCell] = useScreenView('connectors', 'selectedCell', null) // { posRef, collectionId }
+  const listScrollRef = useScrollMemory('connectors', 'listScroll')
+  const matrixScrollRef = useScrollMemory('connectors', 'matrixScroll')
   const [editorOpen, setEditorOpen] = useState(false)
   const [editingCollection, setEditingCollection] = useState(null)
   const [editorInitialTags, setEditorInitialTags] = useState([])
@@ -162,12 +167,13 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
 
         {/* Collection list (left) */}
         <div
+          ref={listScrollRef}
           style={{
             width: 240,
             flexShrink: 0,
-            borderRight: '1px solid #dee2e6',
+            borderRight: `1px solid ${C.border}`,
             overflowY: 'auto',
-            background: '#f8f9fa',
+            background: C.subtle,
           }}
           className="p-2"
         >
@@ -188,7 +194,7 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
                   padding: '6px 8px',
                   borderRadius: 6,
                   cursor: 'pointer',
-                  background: isSelected ? '#e0f0ff' : 'transparent',
+                  background: isSelected ? C.accentTint : 'transparent',
                   marginBottom: 2,
                 }}
               >
@@ -196,7 +202,7 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
                   {c.Name}
                   {(() => { const w = wagoNameOf(c, psRows); return w && w !== c.Name ? <span className="badge rounded-pill text-bg-light border ms-1 fw-normal" style={{ fontSize: 9 }} data-testid="wago-pill" title="Its parts are this Wago template">{w}</span> : null })()}
                 </div>
-                <div style={{ fontSize: 11, color: '#6c757d' }}>
+                <div style={{ fontSize: 11, color: C.muted }}>
                   {groups.membersOf(c.CollectionId).length} position{groups.membersOf(c.CollectionId).length !== 1 ? 's' : ''} · {ings.length} part{ings.length !== 1 ? 's' : ''}
                   {!ruleIsEmpty(rule) && (
                     <div className="text-truncate" title={describeRule(rule)} data-testid="template-rule-summary">
@@ -246,7 +252,7 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
         </div>
 
         {/* Matrix panel (centre) */}
-        <div style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
+        <div ref={matrixScrollRef} style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
           <CoverageMatrix
             selectedCell={selectedCell}
             onCellClick={handleCellClick}
@@ -257,7 +263,7 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
 
         {/* Template as a group (right) — when a template is selected and no cell */}
         {!selectedCell && selectedCollectionId && (
-          <div style={{ width: 380, flexShrink: 0, borderLeft: '1px solid #dee2e6', background: '#fff', overflow: 'hidden' }}>
+          <div style={{ width: 380, flexShrink: 0, borderLeft: `1px solid ${C.border}`, background: C.surface, overflow: 'hidden' }}>
             <TemplateGroupPanel key={selectedCollectionId} collectionId={selectedCollectionId} groups={groups}
               onEdit={handleEdit} onSelect={id => setSelectedCollectionId(id)} onOpenPosition={onOpenPosition} />
           </div>
@@ -269,8 +275,8 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
             style={{
               width: 320,
               flexShrink: 0,
-              borderLeft: '1px solid #dee2e6',
-              background: '#fff',
+              borderLeft: `1px solid ${C.border}`,
+              background: C.surface,
               overflow: 'hidden',
             }}
           >

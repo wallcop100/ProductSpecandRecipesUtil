@@ -11,6 +11,7 @@ import SlotCard from './SlotCard'
 import ETRefSelect from './ETRefSelect'
 import MaterialIcon from './MaterialIcon'
 import { TYPE_COLORS } from '../utils/entityStyle'
+import { C } from '../styles/tokens'
 
 const SECTION_COLOR = {
   position:    TYPE_COLORS.PositionType.accent,  // blue
@@ -59,7 +60,7 @@ export default function RecipeSection({
     <div className="mb-4" data-debug-id={`RecipeSection:${sectionKey}`}>
       <div
         className="d-flex align-items-center gap-2 mb-2"
-        style={{ borderBottom: `2px solid ${SECTION_COLOR[sectionKey] || '#dee2e6'}`, paddingBottom: 4 }}
+        style={{ borderBottom: `2px solid ${SECTION_COLOR[sectionKey] || C.border}`, paddingBottom: 4 }}
       >
         <h6 className="mb-0 text-uppercase text-muted small fw-bold">{title}</h6>
         {adding ? (
@@ -84,7 +85,7 @@ export default function RecipeSection({
               Existing
             </Button>
             <Button
-              variant="outline-success" size="sm"
+              variant="outline-secondary" size="sm"
               style={{ padding: '1px 8px', fontSize: 11 }}
               onClick={() => {
                 setChoosing(false)
@@ -129,7 +130,7 @@ export default function RecipeSection({
             minHeight: 48,
             borderRadius: 4,
             transition: 'background 0.15s',
-            background: isSectionOver ? '#eef3ff' : undefined,
+            background: isSectionOver ? C.accentTint : undefined,
           }}
         >
           {rows.length === 0 && (

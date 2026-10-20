@@ -4,6 +4,7 @@ import useStore from '../../store/useStore'
 import MaterialIcon from '../MaterialIcon'
 import CellTokens from './CellTokens'
 import { positionRecipeWithWrapperInternals } from '../../utils/collectionStatus'
+import { C } from '../../styles/tokens'
 
 const mono = { fontFamily: 'monospace' }
 const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`
@@ -47,7 +48,7 @@ export default function CompactPositionPainter({ posRef, rows, info, onSetRole, 
   return (
     <div style={{ fontSize: 11 }} data-testid="compact-painter">
       {needEt > 0 && (
-        <div className="fw-semibold mb-1" style={{ color: '#664d03' }} data-testid="compact-summary">
+        <div className="fw-semibold mb-1" style={{ color: C.attnInk }} data-testid="compact-summary">
           <MaterialIcon name="warning" size={13} /> {plural(needEt, 'code')} need{needEt === 1 ? 's' : ''} an ElementType
         </div>
       )}
@@ -75,7 +76,7 @@ export default function CompactPositionPainter({ posRef, rows, info, onSetRole, 
               {inf.codes.filter(c => c.etRef).map(c => (
                 <div key={c.code} className="d-flex align-items-center gap-1" style={{ fontSize: 10 }} data-testid="known-code">
                   {inf.codes.length > 1 && <MainStar c={c} onMakeMain={() => onMakeMain(row.id, c.code)} />}
-                  <MaterialIcon name="check_circle" size={12} style={{ color: '#198754' }} />
+                  <MaterialIcon name="check_circle" size={12} style={{ color: C.success }} />
                   <span style={{ ...mono, fontWeight: 600 }}>{c.code}</span> → <span style={mono}>{c.etRef}</span>
                   <span className="text-muted">· {inRecipe(c.etRef) ? 'in the recipe' : 'not in the recipe yet'}</span>
                 </div>
@@ -101,7 +102,7 @@ export default function CompactPositionPainter({ posRef, rows, info, onSetRole, 
 function MainStar({ c, onMakeMain }) {
   return (
     <span role={c.main ? undefined : 'button'} title={c.main ? 'Main product' : 'Extra: click to make it the main product'}
-      style={{ color: c.main ? '#0d6efd' : '#adb5bd', cursor: c.main ? 'default' : 'pointer' }}
+      style={{ color: c.main ? C.accent : C.faint, cursor: c.main ? 'default' : 'pointer' }}
       onClick={c.main ? undefined : onMakeMain}>
       <MaterialIcon name={c.main ? 'star' : 'star_border'} size={11} />
     </span>

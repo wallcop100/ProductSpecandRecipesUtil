@@ -4,6 +4,7 @@ import useStore from '../store/useStore'
 import TagBadge from './TagBadge'
 import MaterialIcon from './MaterialIcon'
 import { ACTION_ICONS } from '../utils/entityStyle'
+import { C } from '../styles/tokens'
 
 /**
  * TagDriftWizard — steps through positions whose rule-derived tags changed since
@@ -58,18 +59,18 @@ export default function TagDriftWizard({ show, onHide, onOpenPosition }) {
       <Modal.Body>
         {queue.length === 0 ? (
           <div className="text-center py-4">
-            <MaterialIcon name={ACTION_ICONS.complete} size={36} style={{ color: '#198754' }} />
+            <MaterialIcon name={ACTION_ICONS.complete} size={36} style={{ color: C.success }} />
             <div className="fw-semibold mt-2">No tag changes to review.</div>
             <div className="text-muted small mt-1">Rule tags match the accepted baseline for every position.</div>
           </div>
         ) : done ? (
           <div className="text-center py-4">
-            <MaterialIcon name={ACTION_ICONS.complete} size={36} style={{ color: '#198754' }} />
+            <MaterialIcon name={ACTION_ICONS.complete} size={36} style={{ color: C.success }} />
             <div className="fw-semibold mt-2">Review complete</div>
           </div>
         ) : (
           <>
-            <ProgressBar now={Math.round((index / queue.length) * 100)} style={{ height: 4, marginBottom: 20 }} variant="warning" />
+            <ProgressBar now={Math.round((index / queue.length) * 100)} style={{ height: 4, marginBottom: 20 }} />
             <div className="mb-2">
               <span className="fw-semibold" style={{ fontSize: 14, fontFamily: 'monospace' }}>{ref}</span>
               {name && name !== ref && <span className="text-muted ms-2" style={{ fontSize: 12 }}>{name}</span>}
@@ -96,7 +97,7 @@ export default function TagDriftWizard({ show, onHide, onOpenPosition }) {
                   {(info?.tagsBefore || []).length === 0
                     ? <span className="text-muted fst-italic small">none</span>
                     : info.tagsBefore.map(t => (
-                      <Badge key={t} bg="light" text="dark" style={{ textDecoration: 'line-through', border: '1px solid #dee2e6' }}>{t}</Badge>
+                      <Badge key={t} bg="light" text="dark" style={{ textDecoration: 'line-through', border: `1px solid ${C.border}` }}>{t}</Badge>
                     ))}
                 </div>
                 <span>→</span>

@@ -4,6 +4,7 @@ import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import EntityPill from './EntityPill'
 import { similarPositions, similarityReason } from '../utils/similarPositions'
+import { C } from '../styles/tokens'
 
 /**
  * SimilarPositionsPanel — "what do positions like this one do?"
@@ -54,7 +55,7 @@ export default function SimilarPositionsPanel({ posRef, query }) {
   if (!posRef) {
     return (
       <div className="text-muted text-center px-3 py-4" style={{ fontSize: 11 }}>
-        <MaterialIcon name="group" size={26} style={{ color: '#adb5bd' }} />
+        <MaterialIcon name="group" size={26} style={{ color: C.faint }} />
         <div className="mt-2">Open a position to see what comparable ones do.</div>
       </div>
     )
@@ -94,9 +95,9 @@ export default function SimilarPositionsPanel({ posRef, query }) {
         const isOpen = open === s.ref
         const reason = similarityReason(s)
         return (
-          <div key={s.ref} className="mb-1 rounded" style={{ border: '1px solid #e9ecef' }}>
+          <div key={s.ref} className="mb-1 rounded" style={{ border: `1px solid ${C.border}` }}>
             <div className="d-flex align-items-center gap-1 px-2 py-1">
-              <button className="btn btn-link p-0" style={{ color: '#adb5bd', lineHeight: 1 }}
+              <button className="btn btn-link p-0" style={{ color: C.faint, lineHeight: 1 }}
                 onClick={() => setOpen(isOpen ? null : s.ref)}
                 title={isOpen ? 'Hide its rows' : 'Show its rows'}
                 aria-label={isOpen ? 'Hide its rows' : 'Show its rows'}>
@@ -115,7 +116,7 @@ export default function SimilarPositionsPanel({ posRef, query }) {
                   </div>
                 )}
               </div>
-              <button className="btn btn-link p-0" style={{ color: '#adb5bd', lineHeight: 1 }}
+              <button className="btn btn-link p-0" style={{ color: C.faint, lineHeight: 1 }}
                 onClick={() => setActivePosition(s.ref)}
                 title={`Open ${s.ref}`} aria-label={`Open ${s.ref}`}>
                 <MaterialIcon name="open_in_new" size={14} />
@@ -123,7 +124,7 @@ export default function SimilarPositionsPanel({ posRef, query }) {
             </div>
 
             {isOpen && (
-              <div className="px-2 pb-2" style={{ borderTop: '1px solid #f1f3f5' }}>
+              <div className="px-2 pb-2" style={{ borderTop: `1px solid ${C.subtle}` }}>
                 {rows.length === 0 ? (
                   <div className="text-muted fst-italic pt-1" style={{ fontSize: 10 }}>
                     No recipe of its own.
@@ -137,14 +138,14 @@ export default function SimilarPositionsPanel({ posRef, query }) {
                           {r.et}
                           {r.internal && <span className="text-muted"> · inside</span>}
                         </span>
-                        <button className="btn btn-link p-0" style={{ color: '#198754', lineHeight: 1 }}
+                        <button className="btn btn-link p-0" style={{ color: C.accent, lineHeight: 1 }}
                           onClick={() => copyRecipeFrom(s.ref, posRef, { etRefs: [r.et] })}
                           title={`Add ${r.et} to ${posRef}`} aria-label={`Add ${r.et} to ${posRef}`}>
                           <MaterialIcon name="add" size={15} />
                         </button>
                       </div>
                     ))}
-                    <Button size="sm" variant="outline-success" className="w-100 mt-2"
+                    <Button size="sm" variant="outline-secondary" className="w-100 mt-2"
                       style={{ fontSize: 10 }}
                       onClick={() => copyRecipeFrom(s.ref, posRef)}
                       title={`Add every row of ${s.ref} to ${posRef} (quantities merge; nothing is removed)`}>

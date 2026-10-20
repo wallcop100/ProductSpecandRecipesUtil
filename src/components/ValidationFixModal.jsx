@@ -5,6 +5,7 @@ import MaterialIcon from './MaterialIcon'
 import IconButton from './IconButton'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { positionFamilyOf } from '../utils/positionFamily'
+import { C } from '../styles/tokens'
 
 /**
  * ValidationFixModal — step through validation issues one at a time (errors
@@ -49,7 +50,7 @@ export default function ValidationFixModal({ show, onHide, onOpenProductSpec }) 
   }
 
   const isError = issue?.severity === 'error'
-  const color = isError ? '#dc3545' : '#997404'
+  const color = isError ? C.danger : C.attnInk
 
   // Recipe issues carry a PositionTypeRef; those are the ones a position/family
   // "no recipe needed" flag can silence. Spec issues carry an ET ref instead.
@@ -81,7 +82,7 @@ export default function ValidationFixModal({ show, onHide, onOpenProductSpec }) 
       <Modal.Body style={{ minHeight: 220 }}>
         {issues.length === 0 ? (
           <div className="text-center py-4">
-            <MaterialIcon name={ACTION_ICONS.complete} size={36} style={{ color: '#198754' }} />
+            <MaterialIcon name={ACTION_ICONS.complete} size={36} style={{ color: C.success }} />
             <div className="fw-semibold mt-2">Nothing to fix.</div>
             <div className="text-muted small mt-1">Run validation to check for issues.</div>
             <Button variant="outline-primary" size="sm" className="mt-3" onClick={() => runValidation()}>Run validation</Button>
@@ -124,8 +125,8 @@ export default function ValidationFixModal({ show, onHide, onOpenProductSpec }) 
                     )}
                   </div>
                 ) : (
-                  <div className="px-2 py-2 rounded" style={{ background: '#fff3cd', border: '1px solid #f0e0a8' }}>
-                    <div className="mb-2" style={{ fontSize: 12, color: '#856404' }}>
+                  <div className="px-2 py-2 rounded" style={{ background: C.attnTint, border: `1px solid ${C.attnTint}` }}>
+                    <div className="mb-2" style={{ fontSize: 12, color: C.attnInk }}>
                       Ignore the whole <strong>{family}</strong> family? Every position in it drops out of
                       validation and totals, not just <span style={{ fontFamily: 'monospace' }}>{issue.ref}</span>.
                     </div>

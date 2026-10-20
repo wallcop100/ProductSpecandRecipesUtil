@@ -1,5 +1,6 @@
 import React from 'react'
 import MaterialIcon from './MaterialIcon'
+import { C } from '../styles/tokens'
 
 /**
  * StageBar — the 1-2-3 the whole workflow is built around.
@@ -31,15 +32,15 @@ export default function StageBar({ current = 1, progress = {}, done = [] }) {
       {STAGES.map((s, i) => {
         const isDone = done.includes(s.n)
         const isCurrent = s.n === current
-        const bg = isCurrent ? '#e7f1ff' : isDone ? '#d1e7dd' : '#f8f9fa'
-        const fg = isCurrent ? '#084298' : isDone ? '#0f5132' : '#adb5bd'
+        const bg = isCurrent ? C.accentTint : isDone ? C.subtle : C.subtle
+        const fg = isCurrent ? C.accentInk : isDone ? C.ink : C.faint
         return (
           <div key={s.n} className="d-flex align-items-center px-2 py-1"
             style={{
               background: bg, color: fg, flex: 1, minWidth: 0,
-              borderTop: '1px solid #e9ecef', borderBottom: '1px solid #e9ecef',
-              borderLeft: i === 0 ? '1px solid #e9ecef' : 'none',
-              borderRight: i === STAGES.length - 1 ? '1px solid #e9ecef' : '1px solid #e9ecef',
+              borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`,
+              borderLeft: i === 0 ? `1px solid ${C.border}` : 'none',
+              borderRight: i === STAGES.length - 1 ? `1px solid ${C.border}` : `1px solid ${C.border}`,
               borderTopLeftRadius: i === 0 ? 4 : 0, borderBottomLeftRadius: i === 0 ? 4 : 0,
               borderTopRightRadius: i === STAGES.length - 1 ? 4 : 0,
               borderBottomRightRadius: i === STAGES.length - 1 ? 4 : 0,
@@ -49,8 +50,8 @@ export default function StageBar({ current = 1, progress = {}, done = [] }) {
             <span className="d-inline-flex align-items-center justify-content-center me-2"
               style={{
                 width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
-                background: isCurrent ? '#084298' : isDone ? '#0f5132' : '#dee2e6',
-                color: '#fff', fontSize: 10, fontWeight: 700,
+                background: isCurrent ? C.accentInk : isDone ? C.ink : C.border,
+                color: C.surface, fontSize: 10, fontWeight: 700,
               }}>
               {isDone ? <MaterialIcon name="check" size={11} /> : s.n}
             </span>

@@ -2,6 +2,7 @@ import React, { useMemo } from 'react'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { sameRecipeGroups } from '../utils/recipeSignature'
+import { C } from '../styles/tokens'
 
 /**
  * SameRecipePill — "= A05E, A07" when another position's WHOLE recipe is identical to this
@@ -18,11 +19,11 @@ export default function SameRecipePill({ posRef }) {
   const shown = same.slice(0, 4)
   return (
     <span className="rounded px-2 d-inline-flex align-items-center gap-1" data-testid="same-recipe-pill"
-      style={{ fontSize: 11, background: '#e7f1ff', color: '#084298' }}
+      style={{ fontSize: 11, background: C.accentTint, color: C.accentInk }}
       title={`The whole recipe is identical in ${same.join(', ')}`}>
       <MaterialIcon name="drag_handle" size={13} /> same recipe as
       {shown.map(p => (
-        <button key={p} type="button" className="btn btn-link p-0" style={{ fontSize: 11, color: '#084298' }}
+        <button key={p} type="button" className="btn btn-link p-0" style={{ fontSize: 11, color: C.accentInk }}
           onClick={() => setActivePosition(p)}>{p}</button>
       ))}
       {same.length > shown.length && <span>+{same.length - shown.length}</span>}

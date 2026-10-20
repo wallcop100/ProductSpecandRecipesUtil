@@ -4,6 +4,7 @@ import MaterialIcon from '../MaterialIcon'
 import StatusChip from '../StatusChip'
 import CellTokens from './CellTokens'
 import { wordDiff } from '../../utils/formDiff'
+import { C } from '../../styles/tokens'
 
 const CHUNK = 200
 
@@ -36,7 +37,7 @@ export function WordDiff({ before, after }) {
         <React.Fragment key={i}>
           {i > 0 && ' '}
           <span style={{
-            background: w.kind === 'added' ? '#d1e7dd' : w.kind === 'removed' ? '#f8d7da' : undefined,
+            background: w.kind === 'added' ? C.subtle : w.kind === 'removed' ? C.dangerTint : undefined,
             textDecoration: w.kind === 'removed' ? 'line-through' : undefined,
           }}>{w.text}</span>
         </React.Fragment>
@@ -100,7 +101,7 @@ export default function FormTable({
   return (
     <div>
       <table className="table table-sm mb-0" style={{ fontSize: 12 }} data-testid="form-table">
-        <thead style={{ position: 'sticky', top: 0, background: '#fff', zIndex: 1 }}>
+        <thead style={{ position: 'sticky', top: 0, background: C.surface, zIndex: 1 }}>
           <tr>
             <th style={{ width: 24 }} />
             {columns.map(c => <th key={c.key} className="text-muted fw-semibold" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>{c.label}</th>)}
@@ -120,7 +121,7 @@ export default function FormTable({
               <React.Fragment key={row.id}>
                 <tr data-row-id={row.id} onClick={() => onFocus?.(row.id)}
                   style={{
-                    background: focusId === row.id ? '#f1f6ff' : row.confirmed ? '#fafafa' : undefined,
+                    background: focusId === row.id ? C.accentTint : row.confirmed ? C.subtle : undefined,
                     opacity: row.confirmed && !open ? 0.75 : 1,
                   }}>
                   <td>
@@ -170,7 +171,7 @@ export default function FormTable({
                 </tr>
                 {open && (
                   <tr>
-                    <td colSpan={columns.length + (change ? 5 : 4)} style={{ background: '#fcfcfd' }}>
+                    <td colSpan={columns.length + (change ? 5 : 4)} style={{ background: C.subtle }}>
                       {change?.(row)?.state === 'changed' && (
                         <div className="px-3 pt-2" style={{ fontSize: 11 }} data-testid="row-was">
                           <span className="text-muted me-2">Older Form:</span>{' '}
@@ -194,7 +195,7 @@ export default function FormTable({
       {rows.length === 0 && !removed?.length && <div className="text-muted fst-italic p-2">No rows match.</div>}
       {removed?.length > 0 && (
         <div className="mt-2" data-testid="removed-rows">
-          <div className="fw-semibold px-2" style={{ fontSize: 11, color: '#842029' }}>
+          <div className="fw-semibold px-2" style={{ fontSize: 11, color: C.dangerInk }}>
             <MaterialIcon name="remove_circle_outline" size={13} /> Not in this Form any more ({removed.length})
           </div>
           <table className="table table-sm mb-0" style={{ fontSize: 12, opacity: 0.7 }}>

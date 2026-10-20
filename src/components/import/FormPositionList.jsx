@@ -1,11 +1,12 @@
 import React, { useMemo, useRef, useState } from 'react'
 import { Button, ButtonGroup, Form } from 'react-bootstrap'
 import MaterialIcon from '../MaterialIcon'
+import { C } from '../../styles/tokens'
 
 const DOT = {
-  todo:  { color: '#adb5bd', label: 'to do' },
-  ready: { color: '#0d6efd', label: 'ready to add' },
-  done:  { color: '#198754', label: 'done' },
+  todo:  { color: C.faint, label: 'to do' },
+  ready: { color: C.accent, label: 'ready to add' },
+  done:  { color: C.success, label: 'done' },
 }
 
 /**
@@ -47,7 +48,7 @@ export default function FormPositionList({ positions, selected, onSelect }) {
         <span className="text-muted ms-1" style={{ fontSize: 11 }}>{done}/{positions.length} done</span>
       </div>
       <div className="progress mb-2" style={{ height: 4 }}>
-        <div className="progress-bar bg-success" style={{ width: `${positions.length ? (100 * done) / positions.length : 0}%` }} />
+        <div className="progress-bar" style={{ width: `${positions.length ? (100 * done) / positions.length : 0}%` }} />
       </div>
       <Form.Control size="sm" value={q} onChange={e => setQ(e.target.value)} placeholder="Find a position…"
         aria-label="Find a position" style={{ fontSize: 12 }} className="mb-1" />
@@ -70,7 +71,7 @@ export default function FormPositionList({ positions, selected, onSelect }) {
             <div key={p.formRef} role="option" aria-selected={on} data-status={p.status} data-ref={p.formRef}
               onClick={e => click(e, p)} title={`${p.formRef}: ${DOT[p.status].label} · ${p.rows.length} row${p.rows.length === 1 ? '' : 's'}`}
               className="d-flex align-items-center gap-2 px-2 py-1 rounded"
-              style={{ cursor: 'pointer', background: on ? '#cfe2ff' : undefined, userSelect: 'none' }}>
+              style={{ cursor: 'pointer', background: on ? C.accentTint : undefined, userSelect: 'none' }}>
               <span style={{ width: 8, height: 8, borderRadius: 4, background: DOT[p.status].color, flexShrink: 0 }} />
               <span style={{ fontFamily: 'monospace' }}>{p.formRef || '(no ref)'}</span>
               {p.target && p.target !== p.formRef && <span className="text-muted" style={{ fontSize: 10 }}>→ {p.target}</span>}

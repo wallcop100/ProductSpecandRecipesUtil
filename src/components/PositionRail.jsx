@@ -10,17 +10,19 @@ import { ACTION_ICONS } from '../utils/entityStyle'
 import { formDiffStates } from '../utils/formImpact'
 import { buildMaster } from '../utils/productCodes'
 import { buildRefMap, targetFor } from '../utils/ptResolve'
+import { C } from '../styles/tokens'
 
+// Status is a shape, not a colour: grey throughout, amber only on the one needing a decision.
 export const STATUS_DOT = {
-  empty: { color: '#dc3545', label: 'No recipe yet' },
-  form: { color: '#fd7e14', label: 'The Form asks for something it lacks, or a code needs an ElementType' },
-  done: { color: '#198754', label: 'Has a recipe' },
-  notInForm: { color: '#adb5bd', label: 'No recipe — the Form asks for nothing here' },
-  ignored: { color: '#ced4da', label: 'Ignored' },
+  empty: { symbol: '○', label: 'No recipe yet' },
+  form: { symbol: '◐', color: C.attn, label: 'The Form asks for something it lacks, or a code needs an ElementType' },
+  done: { symbol: '●', label: 'Has a recipe' },
+  notInForm: { symbol: '–', label: 'No recipe — the Form asks for nothing here' },
+  ignored: { symbol: '⊘', label: 'Ignored' },
 }
 
 /** The Form compared with an older one (862MB6): what moved for each position. */
-const DIFF_COLOR = { add: '#198754', omit: '#dc3545', mixed: '#e0a800' }
+export const DIFF_SYMBOL = { add: '+', omit: '−', mixed: '±' }
 const diffLabel = d => [d.added.length && `Form adds ${d.added.join(', ')}`, d.dropped.length && `Form drops ${d.dropped.join(', ')}`].filter(Boolean).join(' · ')
 
 const LS_KEY = 'positionRail'
@@ -107,7 +109,7 @@ export default function PositionRail({ onReviewEmpty, onReviewDrift }) {
     return (
       <div key={fam}>
         <div role="button" onClick={() => toggleFam(fam)} className="d-flex align-items-center gap-1 px-2 py-1 text-uppercase"
-          style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, color: '#6c757d', userSelect: 'none', cursor: 'pointer' }}>
+          style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, color: C.muted, userSelect: 'none', cursor: 'pointer' }}>
           <MaterialIcon name={collapsed ? ACTION_ICONS.collapse : ACTION_ICONS.expand} size={14} />
           <span className="text-truncate" title={fam}>{fam}</span>
           <span className="ms-auto fw-normal" title={`${built} of ${pts.length} have a recipe with nothing outstanding`}>{built}/{pts.length}</span>
@@ -123,15 +125,17 @@ export default function PositionRail({ onReviewEmpty, onReviewDrift }) {
               className="d-flex align-items-center gap-2 ps-4 pe-2"
               style={{
                 fontSize: 12, lineHeight: '22px', cursor: 'pointer', fontFamily: 'monospace',
-                background: on ? '#e7f1ff' : undefined, borderLeft: `3px solid ${on ? '#0d6efd' : 'transparent'}`,
+                background: on ? C.accentTint : undefined, borderLeft: `3px solid ${on ? C.accent : 'transparent'}`,
                 fontWeight: on ? 700 : 400, opacity: st === 'ignored' ? 0.6 : 1,
               }}>
-              <span aria-label={STATUS_DOT[st].label} style={{ width: 7, height: 7, borderRadius: '50%', background: STATUS_DOT[st].color, flexShrink: 0 }} />
+              <span aria-label={STATUS_DOT[st].label}
+                style={{ width: 10, textAlign: 'center', color: STATUS_DOT[st].color || C.muted, flexShrink: 0 }}>{STATUS_DOT[st].symbol}</span>
               <span className="text-truncate">{ref}</span>
-              {tagDrift?.[ref] && <MaterialIcon name="warning" size={12} style={{ color: '#e0a800' }} title="Tags changed" />}
+              {tagDrift?.[ref] && <MaterialIcon name="warning" size={12} style={{ color: C.attn }} title="Tags changed" />}
               {diffStates.has(ref) && (
-                <span className="ms-auto d-inline-flex" data-testid={`rail-diff-${ref}`} aria-label={diffLabel(diffStates.get(ref))}>
-                  <MaterialIcon name="difference" size={13} style={{ color: DIFF_COLOR[diffStates.get(ref).state] }} title={diffLabel(diffStates.get(ref))} />
+                <span className="ms-auto" data-testid={`rail-diff-${ref}`} aria-label={diffLabel(diffStates.get(ref))}
+                  title={diffLabel(diffStates.get(ref))} style={{ color: C.muted }}>
+                  {DIFF_SYMBOL[diffStates.get(ref).state]}
                 </span>
               )}
             </div>
@@ -148,7 +152,7 @@ export default function PositionRail({ onReviewEmpty, onReviewDrift }) {
         <Form.Control size="sm" placeholder="Filter…" value={view.text} aria-label="Filter positions"
           onChange={e => setView({ text: e.target.value })} style={{ fontSize: 12, minWidth: 0 }} />
         {availableTags.length > 0 && (
-          <IconButton icon="filter_list" size={16} title="Filter by tag" iconStyle={{ color: view.tags.length ? '#0d6efd' : undefined }}
+          <IconButton icon="filter_list" size={16} title="Filter by tag" iconStyle={{ color: view.tags.length ? C.accent : undefined }}
             onClick={() => setShowTags(v => !v)} />
         )}
         <PositionListMenu families={families}

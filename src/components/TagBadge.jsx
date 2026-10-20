@@ -1,14 +1,15 @@
 import React from 'react'
 import { Badge } from 'react-bootstrap'
 import useStore from '../store/useStore'
+import { C } from '../styles/tokens'
 
 /** Readable text colour (black/white) for a given hex background. */
 function textOn(hex) {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex || '')
-  if (!m) return '#fff'
+  if (!m) return C.surface
   const n = parseInt(m[1], 16)
   const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255
-  return (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? '#111' : '#fff'
+  return (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? C.ink : C.surface
 }
 
 /**

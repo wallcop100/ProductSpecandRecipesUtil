@@ -1,6 +1,7 @@
 import React from 'react'
 import { OverlayTrigger, Popover } from 'react-bootstrap'
 import MaterialIcon from './MaterialIcon'
+import { C } from '../styles/tokens'
 
 /**
  * InfoTip — the explanation behind an ⓘ, not on the page. Hover, focus or tap shows it;
@@ -16,7 +17,7 @@ export default function InfoTip({ children, label = 'More info', size = 13, plac
   return (
     <OverlayTrigger placement={placement} trigger={['hover', 'focus', 'click']} rootClose overlay={pop}>
       <span role="button" tabIndex={0} aria-label={label}
-        style={{ cursor: 'help', color: '#adb5bd', display: 'inline-flex', verticalAlign: 'middle', lineHeight: 1, ...style }}>
+        style={{ cursor: 'help', color: C.faint, display: 'inline-flex', verticalAlign: 'middle', lineHeight: 1, ...style }}>
         <MaterialIcon name="info" size={size} />
       </span>
     </OverlayTrigger>

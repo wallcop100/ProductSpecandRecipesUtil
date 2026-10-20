@@ -1,6 +1,7 @@
 import React from 'react'
 import { Modal, Button, Form } from 'react-bootstrap'
 import MaterialIcon from './MaterialIcon'
+import { C } from '../styles/tokens'
 
 /**
  * BulkApplyModal — confirm what a bulk apply will actually do, before it does it.
@@ -17,11 +18,11 @@ import MaterialIcon from './MaterialIcon'
  */
 
 const ACTION = {
-  add:     { icon: 'add_circle',       colour: '#0f5132', verb: 'add' },
-  topUp:   { icon: 'exposure_plus_1',  colour: '#856404', verb: 'top up' },
-  move:    { icon: 'move_down',        colour: '#856404', verb: 'move' },
-  skip:    { icon: 'check',            colour: '#6c757d', verb: 'skip' },
-  blocked: { icon: 'block',            colour: '#842029', verb: 'blocked' },
+  add:     { icon: 'add_circle',       colour: C.ink, verb: 'add' },
+  topUp:   { icon: 'exposure_plus_1',  colour: C.attnInk, verb: 'top up' },
+  move:    { icon: 'move_down',        colour: C.attnInk, verb: 'move' },
+  skip:    { icon: 'check',            colour: C.muted, verb: 'skip' },
+  blocked: { icon: 'block',            colour: C.dangerInk, verb: 'blocked' },
 }
 
 function describe(a) {
@@ -65,19 +66,19 @@ export default function BulkApplyModal({ show, onHide, plan, collectionName, onC
 
       <Modal.Body style={{ fontSize: 12 }}>
         {changing === 0 && !(nExtras > 0) && (
-          <div className="px-2 py-1 rounded mb-2" style={{ background: '#d1e7dd', color: '#0f5132' }}>
+          <div className="px-2 py-1 rounded mb-2" style={{ background: C.subtle, color: C.ink }}>
             <MaterialIcon name="check_circle" size={13} /> Nothing to do — every position already satisfies this template.
           </div>
         )}
         {counts.blocked > 0 && (
-          <div className="px-2 py-1 rounded mb-2" style={{ background: '#f8d7da', color: '#842029', fontSize: 11 }}>
+          <div className="px-2 py-1 rounded mb-2" style={{ background: C.dangerTint, color: C.dangerInk, fontSize: 11 }}>
             <MaterialIcon name="block" size={12} /> {counts.blocked} ingredient{counts.blocked === 1 ? '' : 's'} cannot
             be placed: they belong inside a wrapper, and those positions have no design element. They are skipped.
           </div>
         )}
 
         {nExtras > 0 && (
-          <div className="px-2 py-1 rounded mb-2" style={{ background: '#fff3cd', color: '#664d03', fontSize: 11 }} data-testid="bulk-extras">
+          <div className="px-2 py-1 rounded mb-2" style={{ background: C.attnTint, color: C.attnInk, fontSize: 11 }} data-testid="bulk-extras">
             <MaterialIcon name="warning" size={12} /> {extras.size} position{extras.size === 1 ? '' : 's'} also
             {extras.size === 1 ? ' has' : ' have'} {nExtras} connector{nExtras === 1 ? '' : 's'} this template doesn’t ask for (listed below).
             <Form.Check type="checkbox" id="bulk-remove-extras" className="mt-1" checked={removeExtras}
@@ -111,7 +112,7 @@ export default function BulkApplyModal({ show, onHide, plan, collectionName, onC
                 )
               })}
               {(extras.get(posRef) || []).map((x, i) => (
-                <div key={`x${i}`} className="d-flex align-items-center gap-2 ps-3 py-1" style={{ color: removeExtras ? '#842029' : '#664d03' }}>
+                <div key={`x${i}`} className="d-flex align-items-center gap-2 ps-3 py-1" style={{ color: removeExtras ? C.dangerInk : C.attnInk }}>
                   <MaterialIcon name={removeExtras ? 'remove_circle' : 'warning'} size={12} style={{ flexShrink: 0 }} />
                   <span>{removeExtras ? 'remove' : 'not in this template:'} <Ref r={x.ref} />{' '}
                     <Dim>({x.section === 'position' ? 'position level' : `inside ${x.container}`})</Dim></span>

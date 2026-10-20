@@ -2,6 +2,7 @@ import React from 'react'
 import { Button, Form } from 'react-bootstrap'
 import MaterialIcon from './MaterialIcon'
 import { BRUSH } from './CodeChips'
+import { C } from '../styles/tokens'
 
 /**
  * PaintPalette — pick a colour, drag over the text. That's the whole instruction.
@@ -28,7 +29,7 @@ export default function PaintPalette({
   return (
     <div className="mb-2">
       <div className="d-flex align-items-center flex-wrap gap-2">
-        <div className="d-flex rounded overflow-hidden" style={{ border: '1px solid #dee2e6' }}>
+        <div className="d-flex rounded overflow-hidden" style={{ border: `1px solid ${C.border}` }}>
           {ORDER.map((r, i) => {
             const b = BRUSH[r]
             const active = brush === r
@@ -37,16 +38,16 @@ export default function PaintPalette({
                 title={`Paint ${b.label.toLowerCase()} — ${HINT[r]}  (${i + 1})`}
                 className="d-inline-flex align-items-center gap-2 px-3 py-1 border-0"
                 style={{
-                  background: active ? b.swatch : '#fff',
-                  color: active ? '#fff' : '#495057',
+                  background: active ? b.swatch : C.surface,
+                  color: active ? C.surface : C.ink,
                   fontWeight: active ? 600 : 400,
                   fontSize: 12,
-                  borderRight: i < 2 ? '1px solid #dee2e6' : 'none',
+                  borderRight: i < 2 ? `1px solid ${C.border}` : 'none',
                 }}>
                 <span style={{
                   width: 11, height: 11, borderRadius: 3, flexShrink: 0,
-                  background: active ? '#fff' : b.swatch,
-                  border: r === 'note' ? '1px solid #ced4da' : 'none',
+                  background: active ? C.surface : b.swatch,
+                  border: r === 'note' ? `1px solid ${C.faint}` : 'none',
                 }} />
                 {b.label}
                 <kbd style={{ fontSize: 9, opacity: 0.7 }}>{i + 1}</kbd>
@@ -70,7 +71,7 @@ export default function PaintPalette({
         )}
 
         {suggestedCount > 0 && (
-          <Button size="sm" variant="outline-success" style={{ fontSize: 11 }} onClick={onAcceptSuggestions}
+          <Button size="sm" variant="outline-secondary" style={{ fontSize: 11 }} onClick={onAcceptSuggestions}
             title="Tokens underlined green look like codes you already marked">
             Accept {suggestedCount} suggested {suggestedCount === 1 ? 'code' : 'codes'} <kbd>A</kbd>
           </Button>
@@ -85,7 +86,7 @@ export default function PaintPalette({
 
       {undo && (
         <div className="d-flex align-items-center gap-2 mt-2 px-2 py-1 rounded"
-          style={{ background: '#fff3cd', border: '1px solid #ffe69c', fontSize: 11 }}>
+          style={{ background: C.attnTint, border: `1px solid ${C.attnTint}`, fontSize: 11 }}>
           <MaterialIcon name="history" size={13} />
           <span>
             Painted <strong style={{ fontFamily: 'monospace' }}>{undo.label}</strong> as{' '}

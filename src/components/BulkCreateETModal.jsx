@@ -13,6 +13,7 @@ import { familyForJob } from '../utils/codeJobs'
 import { jobLabel, ruleText } from '../utils/recipeKinds'
 import useStore from '../store/useStore'
 import { CANON_FAMILIES } from '../data/etCanon'
+import { C } from '../styles/tokens'
 
 /**
  * BulkCreateETModal — every code that still needs an ElementType, proposed at once.
@@ -228,10 +229,10 @@ export default function BulkCreateETModal({
       <Modal.Body style={{ fontSize: 12 }}>
         {header}
         {kitLines.length > 0 && (
-          <div className="mb-2 px-2 py-1 rounded" data-testid="kit-suggestions" style={{ background: '#eef5ff', border: '1px solid #c9dcf5' }}>
+          <div className="mb-2 px-2 py-1 rounded" data-testid="kit-suggestions" style={{ background: C.accentTint, border: `1px solid ${C.accentEdge}` }}>
             {kitLines.map(k => (
               <div key={k.key} className="d-flex align-items-center gap-2 py-1">
-                <MaterialIcon name="extension" size={13} style={{ color: '#1c5cab' }} />
+                <MaterialIcon name="extension" size={13} style={{ color: C.accent }} />
                 <span style={{ flex: 1 }}>Usually with <span className="font-monospace">{k.anchor.code}</span>: <b>{jobLabel(k.part.slot)}</b>{' '}
                   <span className="font-monospace">{k.part.code}</span>{k.part.name ? <span className="text-muted"> {k.part.name}</span> : null}
                   {ruleText({ qty: k.qty, dim: k.dim, integer: k.integer ? 1 : 0 }) ? `, ${ruleText({ qty: k.qty, dim: k.dim, integer: k.integer ? 1 : 0 })}` : ''}</span>
@@ -247,7 +248,7 @@ export default function BulkCreateETModal({
           <div className="text-muted d-flex align-items-center gap-2" style={{ fontSize: 11 }}>
             <span><MaterialIcon name="check_box" size={12} /> untick what is wrong</span>
             <span><MaterialIcon name="drag_indicator" size={12} /> drag to another family</span>
-            <span><MaterialIcon name="verified" size={12} style={{ color: '#198754' }} /> firm rule</span>
+            <span><MaterialIcon name="verified" size={12} style={{ color: C.success }} /> firm rule</span>
             <InfoTip>
               Drag a code by its grip onto another family, or move a whole group from its header;
               refs renumber as you go. Edit any ref, name or description in place. A green tick means
@@ -263,7 +264,7 @@ export default function BulkCreateETModal({
         </div>
 
         {adding && (
-          <div className="d-flex align-items-center gap-2 mb-3 p-2 border rounded flex-wrap" style={{ background: '#f8f9fa' }}
+          <div className="d-flex align-items-center gap-2 mb-3 p-2 border rounded flex-wrap" style={{ background: C.subtle }}
             data-testid="new-family-form">
             <span className="fw-semibold" style={{ fontSize: 11 }}>
               New family{adding.moveIndex != null ? ` for ${rows[adding.moveIndex]?.code}` : ''}
@@ -295,9 +296,9 @@ export default function BulkCreateETModal({
           const allOn = idxs.every(i => rows[i].include)
           return (
             <FamilyDrop key={key} family={special || key === NONE ? null : key} testid={`group-${key}`}
-              style={key === NONE ? { borderColor: '#f1aeb5' } : undefined}>
+              style={key === NONE ? { borderColor: C.dangerTint } : undefined}>
               <div className="d-flex align-items-center gap-2 px-2 py-1 flex-wrap"
-                style={{ background: key === NONE ? '#f8d7da' : '#f8f9fa' }}>
+                style={{ background: key === NONE ? C.dangerTint : C.subtle }}>
                 {key !== SKIP && (
                   <Form.Check type="checkbox" checked={allOn} aria-label={allOn ? 'Untick the group' : 'Tick the group'}
                     onChange={() => setRows(rs => rs.map((r, k) => (idxs.includes(k) ? { ...r, include: !allOn } : r)))} />
@@ -307,13 +308,13 @@ export default function BulkCreateETModal({
                 ) : key === SKIP ? (
                   <span className="text-muted">Not product codes (N/A, TBC) — nothing to create</span>
                 ) : key === NONE ? (
-                  <span className="fw-semibold" style={{ color: '#842029' }}>
+                  <span className="fw-semibold" style={{ color: C.dangerInk }}>
                     <MaterialIcon name="help" size={13} /> Needs a family — no rule could place these
                     (usually a PositionType missing from the DesignDB)
                   </span>
                 ) : isNew ? (
                   <>
-                    <span className="rounded px-1" style={{ background: '#cfe2ff', color: '#084298', fontSize: 10 }}>new family</span>
+                    <span className="rounded px-1" style={{ background: C.accentTint, color: C.accentInk, fontSize: 10 }}>new family</span>
                     <Form.Check type="checkbox" checked={fams[fi].include} label="create"
                       aria-label={`Create family ${key}`} className="small"
                       onChange={() => setFams(fs => fs.map((f, k) => (k === fi ? { ...f, include: !f.include } : f)))} />
@@ -347,7 +348,7 @@ export default function BulkCreateETModal({
                     return (
                       <tr key={i} data-testid="bulk-et-row" data-code={r.code}
                         style={{ opacity: r.include ? (dragging === i ? 0.35 : 1) : 0.45,
-                          background: focusCode && r.code === focusCode ? '#fff3cd' : undefined }}>
+                          background: focusCode && r.code === focusCode ? C.attnTint : undefined }}>
                         <td style={{ width: 44, whiteSpace: 'nowrap' }}>
                           {r.action === 'create' ? <Grip index={i} code={r.code} /> : <span style={{ display: 'inline-block', width: 16 }} />}
                           {r.action !== 'skip' && (
@@ -362,7 +363,7 @@ export default function BulkCreateETModal({
                           {!r.include && r.action === 'create' && (
                             <div className="mt-1" data-testid="unticked-note" style={{ fontSize: 10 }}>
                               {r.notCode ? (
-                                <span style={{ color: '#b02a37' }}>
+                                <span style={{ color: C.danger }}>
                                   Not a code: its words become a note on every row.{' '}
                                   <Button variant="link" size="sm" className="p-0" style={{ fontSize: 10 }}
                                     onClick={() => patch(i, { notCode: false })}>undo</Button>
@@ -401,12 +402,12 @@ export default function BulkCreateETModal({
                                   onChange={e => patch(i, { ref: e.target.value })} />
                                 {verified(r) && (
                                   <span title={whyText(r)} aria-label={`Placed by rule: ${whyText(r)}`} data-testid="verified">
-                                    <MaterialIcon name="verified" size={14} style={{ color: '#198754' }} />
+                                    <MaterialIcon name="verified" size={14} style={{ color: C.success }} />
                                   </span>
                                 )}
                                 <Dropdown align="end">
                                   <Dropdown.Toggle as={IconButton} icon="swap_horiz" size={14} title={`Move ${r.code} to another family`}
-                                    style={{ padding: 0, color: '#6c757d' }} />
+                                    style={{ padding: 0, color: C.muted }} />
                                   <Dropdown.Menu style={{ fontSize: 11, maxHeight: 280, overflowY: 'auto' }}>
                                     <Dropdown.Item onClick={() => setAdding({ ref: 'ET-', description: '', parent: '', moveIndex: i })}>
                                       <MaterialIcon name="add" size={12} /> New family…
@@ -420,13 +421,13 @@ export default function BulkCreateETModal({
                               </div>
                               {bad && r.include && <div className="text-danger" style={{ fontSize: 10 }}>{bad}</div>}
                               {r.superseded && (
-                                <div style={{ fontSize: 10, color: '#842029' }}
+                                <div style={{ fontSize: 10, color: C.dangerInk }}
                                   title={`Codes shaped like ${r.superseded.example} are ${r.manufacturer}'s old numbering`}>
                                   <MaterialIcon name="history" size={10} /> old {r.manufacturer} numbering — check the current code
                                 </div>
                               )}
                               {!bad && r.checkRef && (
-                                <div style={{ fontSize: 10, color: '#856404' }}
+                                <div style={{ fontSize: 10, color: C.attnInk }}
                                   title="A guess worth checking: part of an example's ref could not be confirmed, examples disagree, or no rule placed it firmly">
                                   <MaterialIcon name="warning" size={10} /> check ref
                                   {r.alternatives?.length > 0 && <> — or {r.alternatives.join(', ')}</>}
@@ -493,7 +494,7 @@ function FamilyDrop({ family, testid, style, children }) {
   const { setNodeRef, isOver } = useDroppable({ id: `fam:${family || testid}`, data: { family }, disabled: !family })
   return (
     <div ref={setNodeRef} className="mb-3 border rounded" data-testid={testid}
-      style={{ ...style, ...(isOver ? { borderColor: '#0d6efd', boxShadow: '0 0 0 2px #cfe2ff' } : {}) }}>
+      style={{ ...style, ...(isOver ? { borderColor: C.accent, boxShadow: `0 0 0 2px ${C.accentTint}` } : {}) }}>
       {children}
     </div>
   )
@@ -504,7 +505,7 @@ function Grip({ index, code }) {
   const { attributes, listeners, setNodeRef } = useDraggable({ id: `row:${index}`, data: { index } })
   return (
     <span ref={setNodeRef} {...listeners} {...attributes} role="button" aria-label={`Drag ${code} to another family`}
-      style={{ cursor: 'grab', color: '#adb5bd', display: 'inline-block', width: 16, touchAction: 'none' }}>
+      style={{ cursor: 'grab', color: C.faint, display: 'inline-block', width: 16, touchAction: 'none' }}>
       <MaterialIcon name="drag_indicator" size={14} />
     </span>
   )

@@ -1,19 +1,21 @@
-import React, { useState, useMemo } from 'react'
+import React, { useMemo } from 'react'
 import { ButtonGroup, Button } from 'react-bootstrap'
+import { useScreenView, useScrollMemory } from './useScreenView'
 import useStore from '../store/useStore'
 import { skippedRefs as skippedRefsFor } from '../utils/specChecks'
 import MaterialIcon from './MaterialIcon'
 import { familyOf } from '../utils/etRef'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { productKey, duplicateProductKeys, hasProductIdentity } from '../utils/productCodes'
+import { C } from '../styles/tokens'
 
 const STATUS_COLOR = {
-  complete:  '#22c55e',
-  partial:   '#f59e0b',
-  missing:   '#ef4444',
-  deleted:   '#9ca3af',
-  duplicate: '#dc3545',
-  skipped:   '#cbd5e1',
+  complete:  C.success,
+  partial:   C.attn,
+  missing:   C.danger,
+  deleted:   C.faint,
+  duplicate: C.danger,
+  skipped:   C.faint,
 }
 
 function completenessOf(ref, psRowMap, missingSet, duplicateKeys, skipped = null) {
@@ -64,13 +66,15 @@ export default function ETSpecBrowser({
     return s
   }, [psChanges])
 
-  const [search, setSearch]               = useState('')
-  const [groupFilter, setGroupFilter]     = useState('')
-  const [usageFilters, setUsageFilters]   = useState([])
-  const [expanded, setExpanded]           = useState({})
-  const [missingOpen, setMissingOpen]     = useState(true)
-  const [partialOpen, setPartialOpen]     = useState(false)
-  const [dupOpen, setDupOpen]             = useState(false)
+  const [search, setSearch]               = useScreenView('product-spec', 'search', '')
+  const [groupFilter, setGroupFilter]     = useScreenView('product-spec', 'groupFilter', '')
+  const [usageFilters, setUsageFilters]   = useScreenView('product-spec', 'usageFilters', [])
+  const [expanded, setExpanded]           = useScreenView('product-spec', 'expanded', {})
+  const [missingOpen, setMissingOpen]     = useScreenView('product-spec', 'missingOpen', true)
+  const [partialOpen, setPartialOpen]     = useScreenView('product-spec', 'partialOpen', false)
+  const [dupOpen, setDupOpen]             = useScreenView('product-spec', 'dupOpen', false)
+
+  const listRef = useScrollMemory('product-spec', 'browserScroll')
 
   const missingSet = useMemo(() => new Set(missingETs.map(r => r.toLowerCase())), [missingETs])
 
@@ -234,7 +238,7 @@ export default function ETSpecBrowser({
               <button
                 type="button"
                 className="btn btn-sm p-0 position-absolute"
-                style={{ right: 6, top: '50%', transform: 'translateY(-50%)', lineHeight: 1, color: '#888' }}
+                style={{ right: 6, top: '50%', transform: 'translateY(-50%)', lineHeight: 1, color: C.muted }}
                 onClick={() => setSearch('')}
                 title="Clear search" aria-label="Clear search"
               ><MaterialIcon name="close" size={15} /></button>
@@ -277,7 +281,7 @@ export default function ETSpecBrowser({
           <button
             type="button"
             className="btn btn-link btn-sm p-0"
-            style={{ fontSize: 10, color: '#6c757d', textDecoration: 'none' }}
+            style={{ fontSize: 10, color: C.muted, textDecoration: 'none' }}
             onClick={() => onSelectAll(allVisibleRefs)}
           >
             Select all visible ({allVisibleRefs.length})
@@ -286,20 +290,20 @@ export default function ETSpecBrowser({
       </div>
 
       {/* List */}
-      <div style={{ flex: 1, overflowY: 'auto' }}>
+      <div ref={listRef} style={{ flex: 1, overflowY: 'auto' }}>
         {/* Missing ETs section */}
         {missingETs.length > 0 && (
-          <div style={{ borderBottom: '1px solid #fde68a' }}>
+          <div style={{ borderBottom: `1px solid ${C.attnTint}` }}>
             <div
               className="d-flex align-items-center gap-1 px-2 py-1"
-              style={{ background: '#fff8e1', cursor: 'pointer', userSelect: 'none' }}
+              style={{ background: C.attnTint, cursor: 'pointer', userSelect: 'none' }}
               onClick={() => setMissingOpen(v => !v)}
             >
               <MaterialIcon name={missingOpen ? ACTION_ICONS.expand : ACTION_ICONS.collapse} size={13} style={{ width: 13 }} />
-              <span style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700, color: '#92400e' }}>
+              <span style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700, color: C.attnInk }}>
                 Missing spec
               </span>
-              <span style={{ marginLeft: 4, background: '#f59e0b', color: '#fff', borderRadius: 10, padding: '0 6px', fontSize: 10 }}>
+              <span style={{ marginLeft: 4, background: C.attn, color: C.surface, borderRadius: 10, padding: '0 6px', fontSize: 10 }}>
                 {missingETs.length}
               </span>
             </div>
@@ -313,7 +317,7 @@ export default function ETSpecBrowser({
                 isChecked={bulkSelected.has(ref.toLowerCase())}
                 onSelect={() => onSelect(ref)}
                 onCheck={() => onBulkToggle(ref.toLowerCase())}
-                rowBg="#fffbeb"
+                rowBg={C.attnTint}
               />
             ))}
           </div>
@@ -322,7 +326,7 @@ export default function ETSpecBrowser({
         {/* Partial Spec section */}
         <ProblemSection
           title="Partial spec" refs={partialRefs} open={partialOpen} setOpen={setPartialOpen}
-          headBg="#fff8e1" border="#fde68a" textColor="#92400e" badgeBg="#f59e0b"
+          headBg={C.attnTint} border={C.attnTint} textColor={C.attnInk} badgeBg={C.attn}
           selectedRef={selectedRef} bulkSelected={bulkSelected}
           onSelect={onSelect} onBulkToggle={onBulkToggle}
           statusFor={r => completenessOf(r, psRowMap, missingSet, duplicateCodes, skippedRefs)}
@@ -332,7 +336,7 @@ export default function ETSpecBrowser({
         {/* Duplicate section */}
         <ProblemSection
           title="Duplicate product code" refs={duplicateRefs} open={dupOpen} setOpen={setDupOpen}
-          headBg="#fdecec" border="#f5c2c7" textColor="#842029" badgeBg="#dc3545"
+          headBg={C.dangerTint} border={C.dangerTint} textColor={C.dangerInk} badgeBg={C.danger}
           selectedRef={selectedRef} bulkSelected={bulkSelected}
           onSelect={onSelect} onBulkToggle={onBulkToggle}
           statusFor={r => completenessOf(r, psRowMap, missingSet, duplicateCodes, skippedRefs)}
@@ -346,8 +350,8 @@ export default function ETSpecBrowser({
               className="d-flex align-items-center gap-1 px-2 py-1"
               style={{
                 cursor: 'pointer', userSelect: 'none', fontSize: 10,
-                textTransform: 'uppercase', letterSpacing: 0.5, color: '#6c757d', fontWeight: 700,
-                borderBottom: '1px solid #f0f0f0', background: '#fafafa',
+                textTransform: 'uppercase', letterSpacing: 0.5, color: C.muted, fontWeight: 700,
+                borderBottom: `1px solid ${C.subtle}`, background: C.subtle,
               }}
               onClick={() => toggleGroup(group)}
             >
@@ -401,7 +405,7 @@ function ProblemSection({ title, refs, open, setOpen, headBg, border, textColor,
         <span style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700, color: textColor }}>
           {title}
         </span>
-        <span style={{ marginLeft: 4, background: badgeBg, color: '#fff', borderRadius: 10, padding: '0 6px', fontSize: 10 }}>
+        <span style={{ marginLeft: 4, background: badgeBg, color: C.surface, borderRadius: 10, padding: '0 6px', fontSize: 10 }}>
           {refs.length}
         </span>
       </div>
@@ -433,8 +437,8 @@ function BrowserRow({ ref_, status, productCode, manufacturer, isTBC, isSelected
       className="d-flex align-items-center gap-1 px-2"
       style={{
         cursor: 'pointer',
-        background: isSelected ? '#e8f0fe' : isDirty ? '#fffdf5' : rowBg,
-        borderLeft: isSelected ? '3px solid #4285f4' : isDirty ? '3px solid #f0ad4e' : '3px solid transparent',
+        background: isSelected ? C.accentTint : isDirty ? C.attnTint : rowBg,
+        borderLeft: isSelected ? `3px solid ${C.accent}` : isDirty ? `3px solid ${C.attn}` : '3px solid transparent',
         minHeight: 28,
         fontSize: 11,
       }}
@@ -450,22 +454,22 @@ function BrowserRow({ ref_, status, productCode, manufacturer, isTBC, isSelected
       <span
         style={{
           width: 8, height: 8, borderRadius: '50%',
-          background: STATUS_COLOR[status] || '#ccc',
+          background: STATUS_COLOR[status] || C.faint,
           flexShrink: 0, display: 'inline-block',
         }}
         title={status}
       />
       <span style={{ flex: 1, fontWeight: 500, wordBreak: 'break-all' }}>{ref_}</span>
       {isNew && (
-        <span className="badge" style={{ background: '#d1e7dd', color: '#0a3622', border: '1px solid #a3cfbb', fontSize: 9, flexShrink: 0 }}
+        <span className="badge" style={{ background: C.subtle, color: C.ink, border: `1px solid ${C.border}`, fontSize: 9, flexShrink: 0 }}
           title="New — added this session, not yet exported">New</span>
       )}
       {isTBC && (
-        <span className="badge" style={{ background: '#fff4e5', color: '#b45309', border: '1px solid #f59e0b', fontSize: 9, flexShrink: 0 }}
+        <span className="badge" style={{ background: C.attnTint, color: C.attnInk, border: `1px solid ${C.attn}`, fontSize: 9, flexShrink: 0 }}
           title="Marked TBC — spec to be confirmed">TBC</span>
       )}
       {specLabel && (
-        <span style={{ fontSize: 10, color: '#888', flexShrink: 0, maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+        <span style={{ fontSize: 10, color: C.muted, flexShrink: 0, maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
           title={specLabel}>
           {specLabel}
         </span>

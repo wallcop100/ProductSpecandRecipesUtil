@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import IconButton from './IconButton'
+import { C } from '../styles/tokens'
 
 /**
  * CopyButton — copy a value (a product code, usually) to the clipboard, and say so.
@@ -18,6 +19,6 @@ export default function CopyButton({ text, what = 'code', size = 12, style }) {
   return (
     <IconButton icon={done ? 'check' : 'content_copy'} size={size}
       title={done ? 'Copied' : `Copy ${what}`} onClick={copy}
-      style={{ padding: 0, color: done ? '#198754' : '#adb5bd', ...style }} />
+      style={{ padding: 0, color: done ? C.success : C.faint, ...style }} />
   )
 }

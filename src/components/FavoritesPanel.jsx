@@ -4,6 +4,7 @@ import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import EntityPill from './EntityPill'
 import TagBadge from './TagBadge'
+import { C } from '../styles/tokens'
 
 /**
  * FavoritesPanel — the user's cross-project "pot": favourite templates
@@ -123,9 +124,9 @@ function Empty({ children }) {
 function Row({ children, onDraw, onRemove, drawTitle, noTarget }) {
   return (
     <div className="d-flex align-items-center gap-2 mb-1 px-1 py-1 rounded"
-      style={{ border: '1px solid #eee', background: '#fff' }}>
+      style={{ border: `1px solid ${C.border}`, background: C.surface }}>
       <div className="d-flex align-items-center gap-2 flex-grow-1" style={{ minWidth: 0 }}>{children}</div>
-      <button className="btn btn-link p-0" style={{ color: noTarget ? '#ccc' : '#0d6efd', lineHeight: 1 }}
+      <button className="btn btn-link p-0" style={{ color: noTarget ? C.faint : C.accent, lineHeight: 1 }}
         title={drawTitle} disabled={noTarget} onClick={onDraw}>
         <MaterialIcon name="add_circle" size={16} />
       </button>

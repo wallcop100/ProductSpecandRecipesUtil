@@ -10,6 +10,7 @@ import {
   indexes, positionMakeup, sameKindAs, matchKind, usuallyMissing, elementTypesForJob, sectionFor, rowFromSlot,
   jobLabel, ruleText, usualConnectors, anchorOf, fitFor, pickRangePart, rangeStem, codeIsTbc, FITS_PROFILE,
 } from '../utils/recipeKinds'
+import { C } from '../styles/tokens'
 
 /**
  * RecipeSuggestions — inline, one line each, never applied unasked:
@@ -238,10 +239,10 @@ export default function RecipeSuggestions({ posRef }) {
   }
 
   return (
-    <div className="mb-3 px-3 py-2 rounded" data-testid="recipe-suggestions" style={{ background: '#eef5ff', border: '1px solid #c9dcf5', fontSize: 12 }}>
+    <div className="mb-3 px-3 py-2 rounded" data-testid="recipe-suggestions" style={{ background: C.accentTint, border: `1px solid ${C.accentEdge}`, fontSize: 12 }}>
       {shown.map(l => (
         <div key={l.key} className="d-flex align-items-center gap-2 py-1" data-testid={`suggestion-${l.kind}`}>
-          <MaterialIcon name={l.icon} size={13} style={{ color: '#1c5cab', flexShrink: 0 }} />
+          <MaterialIcon name={l.icon} size={13} style={{ color: C.accent, flexShrink: 0 }} />
           <span style={{ flex: 1 }}>{l.text}</span>
           {l.add && (
             <Button size="sm" variant="outline-primary" style={{ fontSize: 11, padding: '0px 8px' }} onClick={() => answer(l, 'accepted')}>{l.addLabel || 'Add'}</Button>

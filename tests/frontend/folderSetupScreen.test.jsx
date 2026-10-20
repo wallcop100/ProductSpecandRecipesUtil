@@ -9,6 +9,7 @@ vi.mock('../../src/utils/backend.js', () => ({
 }))
 
 const { default: FolderSetupScreen } = await import('../../src/screens/FolderSetupScreen.jsx')
+const { CHANGELOG } = await import('../../src/changelog.js')
 
 const PROJECTS = [
   { id: 1, folder_path: 'key-a', project_number: '5642', project_label: 'LIGHTING', config_name: 'Base', db_filename: 'db.xlsx', last_opened: new Date(Date.now() - 7200e3).toISOString(), unexported: 3, taggedPositions: 12, overlayRows: 0 },
@@ -225,12 +226,18 @@ describe('someone who has never used this', () => {
     expect(screen.getByText('Build recipes')).toBeTruthy()
   })
 
-  test('can read how it works, in the app (not a link away to GitHub)', async () => {
+  test('never links away to GitHub', async () => {
     render(<FolderSetupScreen onProjectLoaded={() => {}} />)
-    const labels = await screen.findAllByText(/How this works/)
-    expect(labels.every(el => el.closest('a') === null)).toBe(true)
-    expect(screen.getAllByLabelText('How this works').length).toBeGreaterThan(0)
+    await screen.findByText('Open the folder with your DesignDB →')
     expect(document.querySelector('a[href*="github.com"]')).toBeNull()
+  })
+
+  test('the latest changelog note is hidden until what’s new is opened', async () => {
+    render(<FolderSetupScreen onProjectLoaded={() => {}} />)
+    await screen.findByText('Open the folder with your DesignDB →')
+    expect(screen.queryByText(CHANGELOG[0].note, { exact: false })).toBeNull()
+    fireEvent.click(screen.getByTitle('What changed recently'))
+    expect(screen.getAllByText(CHANGELOG[0].note, { exact: false }).length).toBeGreaterThan(0)
   })
 })
 
@@ -349,6 +356,7 @@ describe('several DesignDBs in one folder', () => {
     }
     window.electronAPI.db.readConfigYAML = vi.fn().mockResolvedValue({ ok: true, data: yaml, path: 'houses.config.yaml' })
     render(<FolderSetupScreen onProjectLoaded={vi.fn()} />)
+    fireEvent.click(await screen.findByRole('button', { name: /Backup & restore/ }))
     fireEvent.click(await screen.findByRole('button', { name: /Restore one project’s settings/ }))
     const banner = await screen.findByTestId('pending-restore')
     expect(banner.textContent).toMatch(/Backup of 5452 · Houses read/)
@@ -382,5 +390,20 @@ describe('opening a project feeds the style library', () => {
     render(<FolderSetupScreen onProjectLoaded={onLoaded} />)
     fireEvent.click((await screen.findAllByRole('button', { name: 'Open' }))[0])
     await waitFor(() => expect(onLoaded).toHaveBeenCalled())
+  })
+})
+
+describe('a project card keeps Backup and Wipe behind its ⋮', () => {
+  test('the menu items reach the same handlers', async () => {
+    const { default: ProjectCard } = await import('../../src/components/ProjectCard.jsx')
+    const onExport = vi.fn(), onWipe = vi.fn()
+    render(<ProjectCard project={PROJECTS[0]} onOpen={vi.fn()} onExport={onExport} onWipe={onWipe} />)
+    expect(screen.queryByText('Backup this setup')).toBeNull()
+    fireEvent.click(screen.getByTitle('Backup or wipe this setup'))
+    fireEvent.click(await screen.findByText('Backup this setup'))
+    expect(onExport).toHaveBeenCalledWith(PROJECTS[0])
+    fireEvent.click(screen.getByTitle('Backup or wipe this setup'))
+    fireEvent.click(await screen.findByText('Wipe from this browser'))
+    expect(onWipe).toHaveBeenCalledWith(PROJECTS[0])
   })
 })

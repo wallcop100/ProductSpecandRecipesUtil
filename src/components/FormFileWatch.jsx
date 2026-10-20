@@ -4,6 +4,7 @@ import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import ProductCodeImportScreen from '../screens/ProductCodeImportScreen'
 import { fileMeta } from '../utils/backend'
+import { C } from '../styles/tokens'
 
 const POLL_MS = 4000
 
@@ -57,7 +58,7 @@ export default function FormFileWatch() {
   }
 
   if (!loaded) return null
-  const bar = { fontSize: 11, background: '#fff3cd', border: '1px solid #ffe69c', color: '#664d03' }
+  const bar = { fontSize: 11, background: C.attnTint, border: `1px solid ${C.attnTint}`, color: C.attnInk }
   return (
     <>
       {hit && !refreshing && (

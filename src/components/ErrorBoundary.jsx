@@ -1,4 +1,5 @@
 import React from 'react'
+import { C } from '../styles/tokens'
 
 /**
  * ErrorBoundary — a thrown render error unmounts the whole tree and leaves a white
@@ -34,7 +35,7 @@ export default class ErrorBoundary extends React.Component {
         </p>
 
         <pre className="p-2 rounded" style={{
-          background: '#f8f9fa', border: '1px solid #e9ecef',
+          background: C.subtle, border: `1px solid ${C.border}`,
           fontSize: 11, maxHeight: 320, overflow: 'auto', whiteSpace: 'pre-wrap',
         }}>{details}</pre>
 

@@ -2,6 +2,7 @@ import React from 'react'
 import MaterialIcon from '../../components/MaterialIcon'
 import { Stage, Click, Pulse, Appear, Caption } from './atoms'
 import { DEMO_PS } from '../demo-data'
+import { C } from '../../styles/tokens'
 
 /**
  * SpecScene — the Product Spec, as it actually is: a SPLIT PANEL.
@@ -11,8 +12,8 @@ import { DEMO_PS } from '../demo-data'
  * STATUS DOT + the ref), a DRAGGABLE SPLITTER, and an EDITOR FORM on the right — which is
  * where you actually type the manufacturer and the product code.
  *
- * The dot colours are the real ones from ETSpecBrowser: complete #22c55e, partial #f59e0b,
- * missing #ef4444.
+ * The dot colours are the real ones from ETSpecBrowser: complete C.success, partial C.attn,
+ * missing C.danger.
  *
  * beats: 0 the split panel, and what a row's dot means
  *        1 the status pills in the header are FILTERS
@@ -20,7 +21,7 @@ import { DEMO_PS } from '../demo-data'
  *        3 filled — the dot goes green, the counts move
  *        4 a wrapper reads Ideaworks / N-A on purpose
  */
-const DOT = { complete: '#22c55e', partial: '#f59e0b', missing: '#ef4444', wrapper: '#22c55e' }
+const DOT = { complete: C.success, partial: C.attn, missing: C.danger, wrapper: C.success }
 
 export default function SpecScene({ beat }) {
   const filled = beat >= 3
@@ -44,10 +45,10 @@ export default function SpecScene({ beat }) {
       <Stage height={250}>
         {/* header: completeness · status-pill filters · Fill next */}
         <div className="d-flex align-items-center gap-2 mb-2 pb-1"
-          style={{ borderBottom: '1px solid #e9ecef', fontSize: 9 }}>
+          style={{ borderBottom: `1px solid ${C.border}`, fontSize: 9 }}>
           <span className="fw-semibold">Product Spec</span>
-          <span style={{ width: 50, height: 5, borderRadius: 3, background: '#e9ecef', overflow: 'hidden', display: 'inline-block' }}>
-            <span style={{ display: 'block', height: '100%', width: filled ? '100%' : '67%', background: '#22c55e', transition: 'width .4s ease' }} />
+          <span style={{ width: 50, height: 5, borderRadius: 3, background: C.border, overflow: 'hidden', display: 'inline-block' }}>
+            <span style={{ display: 'block', height: '100%', width: filled ? '100%' : '67%', background: C.accent, transition: 'width .4s ease' }} />
           </span>
           <span className="text-muted" style={{ fontSize: 8 }}>{3 - missingCount} / 3 complete</span>
 
@@ -55,19 +56,19 @@ export default function SpecScene({ beat }) {
             <Pulse on={beat === 1}>
               <span className="rounded-pill px-2" style={{
                 fontSize: 8,
-                background: missingCount ? '#fee2e2' : '#e9ecef',
-                color: missingCount ? '#991b1b' : '#adb5bd',
-                border: filtering ? '1px solid #ef4444' : '1px solid transparent',
+                background: missingCount ? C.dangerTint : C.border,
+                color: missingCount ? C.dangerInk : C.faint,
+                border: filtering ? `1px solid ${C.danger}` : '1px solid transparent',
                 transition: 'background .3s ease',
               }}>● Missing {missingCount}</span>
             </Pulse>
           </Click>
-          <span className="rounded-pill px-2" style={{ fontSize: 8, background: '#fef3c7', color: '#92400e' }}>● TBC 0</span>
+          <span className="rounded-pill px-2" style={{ fontSize: 8, background: C.attnTint, color: C.attnInk }}>● TBC 0</span>
 
           <span className="ms-auto">
             <Click on={beat === 2}>
               <Pulse on={beat === 2}>
-                <span className="rounded px-2 py-1" style={{ background: '#fff', border: '1px solid #0d6efd', color: '#0d6efd', fontSize: 8 }}>
+                <span className="rounded px-2 py-1" style={{ background: C.surface, border: `1px solid ${C.accent}`, color: C.accent, fontSize: 8 }}>
                   Fill next ({missingCount})
                 </span>
               </Pulse>
@@ -79,10 +80,10 @@ export default function SpecScene({ beat }) {
         <div className="d-flex" style={{ height: 152 }}>
           <div style={{ width: 148, flexShrink: 0 }}>
             <div className="d-flex mb-1" style={{ fontSize: 7 }}>
-              <span className="px-1 py-1" style={{ background: '#0d6efd', color: '#fff', flex: 1, textAlign: 'center', borderRadius: '3px 0 0 3px' }}>By Family</span>
-              <span className="px-1 py-1" style={{ background: '#fff', color: '#6c757d', border: '1px solid #dee2e6', flex: 1, textAlign: 'center', borderRadius: '0 3px 3px 0' }}>By Mfr</span>
+              <span className="px-1 py-1" style={{ background: C.accent, color: C.surface, flex: 1, textAlign: 'center', borderRadius: '3px 0 0 3px' }}>By Family</span>
+              <span className="px-1 py-1" style={{ background: C.surface, color: C.muted, border: `1px solid ${C.border}`, flex: 1, textAlign: 'center', borderRadius: '0 3px 3px 0' }}>By Mfr</span>
             </div>
-            <div className="rounded px-1 py-1 mb-1" style={{ background: '#fff', border: '1px solid #dee2e6', fontSize: 7, color: '#adb5bd' }}>
+            <div className="rounded px-1 py-1 mb-1" style={{ background: C.surface, border: `1px solid ${C.border}`, fontSize: 7, color: C.faint }}>
               Search…
             </div>
 
@@ -92,14 +93,14 @@ export default function SpecScene({ beat }) {
               return (
                 <div key={r.ref} className="d-flex align-items-center gap-1 px-1" style={{
                   minHeight: 20, fontSize: 8,
-                  background: isSel ? '#e8f0fe' : 'transparent',
-                  borderLeft: `3px solid ${isSel ? '#4285f4' : 'transparent'}`,
+                  background: isSel ? C.accentTint : 'transparent',
+                  borderLeft: `3px solid ${isSel ? C.accent : 'transparent'}`,
                   transition: 'background .3s ease',
                 }}>
-                  <MaterialIcon name="check_box_outline_blank" size={9} style={{ color: '#ccc' }} />
+                  <MaterialIcon name="check_box_outline_blank" size={9} style={{ color: C.faint }} />
                   <span style={{
                     width: 7, height: 7, borderRadius: '50%', display: 'inline-block', flexShrink: 0,
-                    background: DOT[st] || '#ccc', transition: 'background .4s ease',
+                    background: DOT[st] || C.faint, transition: 'background .4s ease',
                   }} />
                   <span className="text-truncate" style={{ flex: 1, fontWeight: 500, minWidth: 0 }}>{r.ref}</span>
                 </div>
@@ -108,7 +109,7 @@ export default function SpecScene({ beat }) {
           </div>
 
           {/* the draggable splitter */}
-          <div style={{ width: 4, flexShrink: 0, background: '#dee2e6', cursor: 'col-resize' }} title="Drag to resize" />
+          <div style={{ width: 4, flexShrink: 0, background: C.border, cursor: 'col-resize' }} title="Drag to resize" />
 
           {/* the editor — where you actually type */}
           <div className="ps-2" style={{ flex: 1, minWidth: 0 }}>
@@ -116,25 +117,25 @@ export default function SpecScene({ beat }) {
 
             <div className="text-muted" style={{ fontSize: 7 }}>Manufacturer</div>
             <div className="rounded px-1 py-1 mb-1" style={{
-              background: '#fff', border: `1px solid ${editMfr ? '#dee2e6' : '#ef4444'}`,
+              background: C.surface, border: `1px solid ${editMfr ? C.border : C.danger}`,
               fontSize: 8, minHeight: 16, transition: 'border-color .3s ease',
             }}>
-              {editMfr || <span style={{ color: '#ef4444' }}>needed</span>}
+              {editMfr || <span style={{ color: C.danger }}>needed</span>}
             </div>
 
             <div className="text-muted" style={{ fontSize: 7 }}>Product code</div>
             <Pulse on={beat === 2 || beat === 3}>
               <div className="rounded px-1 py-1 mb-1" style={{
-                background: '#fff', border: `1px solid ${editCode ? '#dee2e6' : '#ef4444'}`,
+                background: C.surface, border: `1px solid ${editCode ? C.border : C.danger}`,
                 fontSize: 8, minHeight: 16, fontFamily: 'monospace', transition: 'border-color .3s ease',
               }}>
-                {editCode || <span style={{ color: '#ef4444', fontFamily: 'inherit' }}>needed</span>}
+                {editCode || <span style={{ color: C.danger, fontFamily: 'inherit' }}>needed</span>}
               </div>
             </Pulse>
 
             {showWrapper && (
               <Appear when>
-                <div className="rounded px-1 py-1" style={{ background: '#fff3cd', border: '1px solid #f0e0a8', fontSize: 7, color: '#856404' }}>
+                <div className="rounded px-1 py-1" style={{ background: C.attnTint, border: `1px solid ${C.attnTint}`, fontSize: 7, color: C.attnInk }}>
                   A wrapper is an assembly, not a product. <strong>Ideaworks / N-A</strong> is its mark —
                   writing a real code here can un-wrapper the assembly.
                 </div>

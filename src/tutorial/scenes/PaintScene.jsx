@@ -3,6 +3,7 @@ import StageBar from '../../components/StageBar'
 import EntityPill from '../../components/EntityPill'
 import { Stage, Click, Pulse, Appear, Caption } from './atoms'
 import { DEMO_PAINT, DEMO_FORM } from '../demo-data'
+import { C } from '../../styles/tokens'
 
 /**
  * PaintScene — the import review, and painting in particular.
@@ -35,12 +36,12 @@ import { DEMO_PAINT, DEMO_FORM } from '../demo-data'
 
 /** The real BRUSH values from CodeChips. */
 const ROLE_STYLE = {
-  code: { background: '#d1e7dd', color: '#0f5132', fontWeight: 700, borderRadius: 2 },
-  note: { color: '#212529' },
-  discard: { color: '#c7ccd1', textDecoration: 'line-through' },
+  code: { background: C.subtle, color: C.ink, fontWeight: 700, borderRadius: 2 },
+  note: { color: C.ink },
+  discard: { color: C.faint, textDecoration: 'line-through' },
 }
 
-const BRUSHES = [['Code', '#198754', 'code'], ['Note', '#adb5bd', 'note'], ['Discard', '#dc3545', 'discard']]
+const BRUSHES = [['Code', C.accent, 'code'], ['Note', C.faint, 'note'], ['Discard', C.danger, 'discard']]
 
 export default function PaintScene({ beat }) {
   // The paint phase: beat 2 is the untouched cell, and each beat after advances it.
@@ -61,7 +62,7 @@ export default function PaintScene({ beat }) {
 
         {beat === 1 ? (
           <Appear when>
-            <div className="rounded px-2 py-2" style={{ background: '#e7f1ff', border: '1px solid #b6d4fe', fontSize: 10 }}>
+            <div className="rounded px-2 py-2" style={{ background: C.accentTint, border: `1px solid ${C.accentEdge}`, fontSize: 10 }}>
               The Form says <strong>{DEMO_FORM.formRef}</strong>. The DesignDB row whose{' '}
               <strong>ExtRef</strong> claims that name is <strong>{DEMO_FORM.target}</strong> — and that is
               where the recipe lives. Never inferred from the spelling.
@@ -72,17 +73,17 @@ export default function PaintScene({ beat }) {
             {/* LEFT — the queue, and what the tool has learned from what you painted */}
             <div style={{ width: 78, flexShrink: 0 }}>
               <div className="text-muted text-uppercase fw-semibold" style={{ fontSize: 7 }}>Queue</div>
-              <div className="rounded px-1 mb-1" style={{ background: '#cfe2ff', fontFamily: 'monospace', fontSize: 7 }}>
+              <div className="rounded px-1 mb-1" style={{ background: C.accentTint, fontFamily: 'monospace', fontSize: 7 }}>
                 C01r · Tape…
               </div>
               <div className="text-muted px-1" style={{ fontFamily: 'monospace', fontSize: 7 }}>C03r · Tape…</div>
 
               <div className="text-muted text-uppercase fw-semibold mt-2" style={{ fontSize: 7 }}>Learned</div>
               <Pulse on={beat === 5 || beat === 6}>
-                <div className="rounded px-1 py-1" style={{ background: '#f8f9fa', fontSize: 7, lineHeight: 1.5 }}>
+                <div className="rounded px-1 py-1" style={{ background: C.subtle, fontSize: 7, lineHeight: 1.5 }}>
                   {phase < 1 && <span className="fst-italic text-muted">Nothing yet.</span>}
-                  {phase >= 1 && <div>shape <strong style={{ color: '#0f5132' }}>LL#########</strong></div>}
-                  {phase >= 2 && <div>shape <strong style={{ color: '#0f5132' }}>FPS########…</strong></div>}
+                  {phase >= 1 && <div>shape <strong style={{ color: C.ink }}>LL#########</strong></div>}
+                  {phase >= 2 && <div>shape <strong style={{ color: C.ink }}>FPS########…</strong></div>}
                   {phase >= 3 && <div>delimiter <strong>+</strong></div>}
                   {phase >= 3 && <div>after <strong>“new code”</strong> → a code</div>}
                 </div>
@@ -104,8 +105,8 @@ export default function PaintScene({ beat }) {
                       return (
                         <span key={role} className="rounded px-1" style={{
                           fontSize: 7,
-                          background: on ? colour : '#fff',
-                          color: on ? '#fff' : '#6c757d',
+                          background: on ? colour : C.surface,
+                          color: on ? C.surface : C.muted,
                           border: `1px solid ${colour}`,
                           transition: 'background .3s ease, color .3s ease',
                         }}>
@@ -118,7 +119,7 @@ export default function PaintScene({ beat }) {
               </Click>
 
               {/* the field: continuous text you drag over — never chips */}
-              <div className="border rounded" style={{ background: '#fff' }}>
+              <div className="border rounded" style={{ background: C.surface }}>
                 <div className="px-2 py-2" style={{ fontSize: 9.5, lineHeight: 1.7 }}>
                   {DEMO_PAINT.tokens.map((t, i) => {
                     const role = roleAt(t)
@@ -127,7 +128,7 @@ export default function PaintScene({ beat }) {
                       <span key={i} style={{
                         transition: 'background .35s ease, color .35s ease',
                         ...ROLE_STYLE[role],
-                        ...(isNew ? { outline: '1px dashed #198754', outlineOffset: 1 } : null),
+                        ...(isNew ? { outline: `1px dashed ${C.accent}`, outlineOffset: 1 } : null),
                       }}>
                         {t.tight ? '' : ' '}{t.text}
                       </span>
@@ -136,14 +137,14 @@ export default function PaintScene({ beat }) {
                 </div>
 
                 {/* CaptureLines — each code promotes onto its own line, carrying its note */}
-                <div className="px-2 py-1" style={{ background: '#fcfcfd', borderTop: '1px solid #e9ecef', minHeight: 58 }}>
+                <div className="px-2 py-1" style={{ background: C.subtle, borderTop: `1px solid ${C.border}`, minHeight: 58 }}>
                   {lines.length === 0 ? (
                     <div className="text-muted fst-italic" style={{ fontSize: 8 }}>nothing captured yet</div>
                   ) : lines.map(c => (
                     <Appear key={c.code} when>
                       <div className="d-flex align-items-center gap-1" style={{ fontSize: 7.5, marginBottom: 1 }}>
                         <span className="rounded px-1" style={{
-                          background: '#d1e7dd', color: '#0f5132', fontFamily: 'monospace', fontWeight: 700,
+                          background: C.subtle, color: C.ink, fontFamily: 'monospace', fontWeight: 700,
                         }}>{c.code}</span>
                         <span className="text-muted text-truncate" style={{ minWidth: 0 }}>{c.note}</span>
                         {beat >= 7 && (
@@ -167,13 +168,13 @@ export default function PaintScene({ beat }) {
             </div>
 
             {/* RIGHT — codes and stage */}
-            <div style={{ width: 70, flexShrink: 0, borderLeft: '1px solid #dee2e6', paddingLeft: 6 }}>
+            <div style={{ width: 70, flexShrink: 0, borderLeft: `1px solid ${C.border}`, paddingLeft: 6 }}>
               <div className="text-muted text-uppercase fw-semibold" style={{ fontSize: 7 }}>Codes</div>
               <div style={{ fontSize: 7 }}>{lines.length ? `${lines.length} distinct` : '—'}</div>
               {beat >= 8 && (
                 <Appear when>
                   <Click on>
-                    <span className="rounded px-1 mt-1 d-inline-block" style={{ background: '#198754', color: '#fff', fontSize: 7 }}>
+                    <span className="rounded px-1 mt-1 d-inline-block" style={{ background: C.muted, color: C.surface, fontSize: 7 }}>
                       Stage {lines.length}
                     </span>
                   </Click>
@@ -185,7 +186,7 @@ export default function PaintScene({ beat }) {
 
         {beat >= 8 && (
           <Appear when>
-            <div className="rounded px-2 py-1 mt-1" style={{ background: '#d1e7dd', border: '1px solid #a3cfbb', fontSize: 8, color: '#0f5132' }}>
+            <div className="rounded px-2 py-1 mt-1" style={{ background: C.subtle, border: `1px solid ${C.border}`, fontSize: 8, color: C.ink }}>
               Staged: the Form template + the Product Spec rows. <strong>No recipe row is written.</strong>
             </div>
           </Appear>

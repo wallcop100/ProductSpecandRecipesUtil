@@ -492,6 +492,7 @@ const useStore = create((set, get) => ({
 
   // Copy / paste of recipe rows (in-app clipboard, not the OS clipboard)
   selectedRowIds: [],                // recipe row _ids currently selected for copy
+  selectMode: false,                 // "Select multiple": row checkboxes stay shown until the selection is cleared
   rowClipboard: null,                // { parts: [{section, elementTypeRef, quantity}], label, count }
   pendingPaste: null,                // { posRef, forceSection } while the merge-vs-separate prompt is open
   favorites: [],                     // cross-project user library: [{ id, kind, ref, label, data }]
@@ -513,6 +514,16 @@ const useStore = create((set, get) => ({
   clearBugReports() { saveReports([]); set({ bugReports: [] }) },
   positionList: { text: '', tags: [], formOnly: false, emptyOnly: false, showIgnored: false, showTags: false, sort: 'ref', collapsed: [] },
   setPositionList(patch) { set(s => ({ positionList: { ...s.positionList, ...(typeof patch === 'function' ? patch(s.positionList) : patch) } })) },
+  // What each screen was last showing (filters, selection, scroll) so leaving and coming back
+  // returns you to it: { [screen]: { ... } } — components/useScreenView. Session only.
+  screenView: {},
+  setScreenView(screen, patch) {
+    set(s => {
+      const cur = s.screenView[screen] || {}
+      return { screenView: { ...s.screenView, [screen]: { ...cur, ...(typeof patch === 'function' ? patch(cur) : patch) } } }
+    })
+  },
+  clearScreenView(screen) { set(s => ({ screenView: { ...s.screenView, [screen]: {} } })) },
   designPrompt: null,                 // { posRef, then } — see leavePosition
   positionHistory: [],                // positions left behind, newest last — goBackPosition
   activeContextType: 'PositionType',  // 'PositionType' | 'ElementType'
@@ -542,8 +553,9 @@ const useStore = create((set, get) => ({
   // it). Surfaced as a banner; a refusal is always better than a blank ContextRef.
   recipeError: null,
 
-  // Unexported changes brought back from the last session on open: { n } (builder notice).
-  restoredNotice: null,
+  // One app-wide toast (SaveShortcut renders it): { text, ok, at }. `at` re-shows a repeat.
+  toastMsg: null,
+  toast(text, { ok = true } = {}) { set({ toastMsg: { text, ok, at: Date.now() } }) },
   /** Builder: "shared with" on every row, not only wrappers (5GLMMQ). Remembered in this browser. */
   // The builder's right drawer (K3LGUL): open unless closed (remembered), and its tab. A
   // banner elsewhere can open it at a tab (the Connector suggestions' "details →").
@@ -567,7 +579,7 @@ const useStore = create((set, get) => ({
       await window.electronAPI?.db?.clearPendingChanges?.(projectId)
       await window.electronAPI?.db?.setPref?.(projectId, 'pending_db_changes', '[]')
     } catch { /* best-effort */ }
-    set({ psChanges: [], rsChanges: [], dbChanges: [], restoredNotice: null })
+    set({ psChanges: [], rsChanges: [], dbChanges: [] })
     // The rows on screen still carry them: reopen from the workbooks.
     if (typeof window !== 'undefined' && window.location && import.meta.env?.MODE !== 'test') window.location.reload()
   },
@@ -708,6 +720,7 @@ const useStore = create((set, get) => ({
       validationResults: [],
       fileWatchAlert: null,
       activePositionRef: null, positionHistory: [],
+      screenView: {},
       activeContextType: 'PositionType',
       activeETRef: null,
       showContextTree: false,
@@ -2059,7 +2072,8 @@ const useStore = create((set, get) => ({
   consumeUiRequest() { set({ uiRequest: null }) },
   specIntent: null,
   openSpec(ref, open = null, suggest = null) {
-    set({ specIntent: { ref, open, suggest, at: Date.now() }, pendingScreen: 'product-spec' })
+    // An explicit target opens a fresh Product Spec view on it, not the remembered filters.
+    set(s => ({ specIntent: { ref, open, suggest, at: Date.now() }, pendingScreen: 'product-spec', screenView: { ...s.screenView, 'product-spec': { selectedRef: ref } } }))
   },
   consumeSpecIntent() { set({ specIntent: null }) },
   // Find → "report a bug": the bug reporter opens its note.
@@ -2319,7 +2333,8 @@ const useStore = create((set, get) => ({
     }))
   },
 
-  clearRowSelection() { set({ selectedRowIds: [] }) },
+  clearRowSelection() { set({ selectedRowIds: [], selectMode: false }) },
+  setSelectMode(on) { set({ selectMode: !!on }) },
 
   /**
    * Build clipboard parts from a set of recipe rows.

@@ -1,6 +1,7 @@
 import React from 'react'
 import MaterialIcon from '../../components/MaterialIcon'
 import { Stage, Click, Pulse, Appear, MiniRow, Caption } from './atoms'
+import { C } from '../../styles/tokens'
 
 /**
  * ExportScene — the way out: three patch scripts you paste into Excel yourself.
@@ -22,9 +23,9 @@ export default function ExportScene({ beat }) {
             <Click key={t} on={beat === 4 && i === 2}>
             <Pulse on={beat === 4 && i === 2}>
               <span className="rounded-top px-2 py-1" style={{
-                background: (beat === 1 && i === 0) || ((beat === 2 || beat === 3) && i === 1) || (beat === 4 && i === 2) ? '#fff' : '#f8f9fa',
-                border: '1px solid #dee2e6', borderBottom: 'none',
-                color: i === 2 ? '#997404' : '#212529',
+                background: (beat === 1 && i === 0) || ((beat === 2 || beat === 3) && i === 1) || (beat === 4 && i === 2) ? C.surface : C.subtle,
+                border: `1px solid ${C.border}`, borderBottom: 'none',
+                color: i === 2 ? C.attnInk : C.ink,
               }}>{t}{i === 2 ? ' (1)' : ''}</span>
             </Pulse>
             </Click>
@@ -32,7 +33,7 @@ export default function ExportScene({ beat }) {
         </div>
 
         {beat === 0 && (
-          <div className="rounded px-2 py-2" style={{ background: '#e7f1ff', border: '1px solid #b6d4fe', fontSize: 10 }}>
+          <div className="rounded px-2 py-2" style={{ background: C.accentTint, border: `1px solid ${C.accentEdge}`, fontSize: 10 }}>
             <MaterialIcon name="lock" size={12} /> The workbooks are opened <strong>read-only</strong> —
             there is no code that can write them. Your edits leave as <strong>Office Script patches</strong>
             that you run in Excel yourself. So there is no Save button, and nothing to lose.
@@ -44,9 +45,9 @@ export default function ExportScene({ beat }) {
             <MiniRow>
               <span style={{ fontFamily: 'monospace', fontSize: 9, fontWeight: 600 }}>ET-LIN-TAPE-01</span>
               <span className="text-muted" style={{ fontSize: 9 }}>ProductCode:</span>
-              <span style={{ fontSize: 9, color: '#842029', textDecoration: 'line-through' }}>—</span>
-              <MaterialIcon name="arrow_forward" size={10} style={{ color: '#ccc' }} />
-              <span style={{ fontSize: 9, color: '#0f5132', fontFamily: 'monospace' }}>LL240272024</span>
+              <span style={{ fontSize: 9, color: C.dangerInk, textDecoration: 'line-through' }}>—</span>
+              <MaterialIcon name="arrow_forward" size={10} style={{ color: C.faint }} />
+              <span style={{ fontSize: 9, color: C.ink, fontFamily: 'monospace' }}>LL240272024</span>
             </MiniRow>
           </Appear>
         )}
@@ -55,12 +56,12 @@ export default function ExportScene({ beat }) {
           <Appear when>
             {['Product Spec', 'Recipe Spec', 'ElementTypes (DB)'].map((f, i) => (
               <MiniRow key={f} active={i === 0 && beat === 2}>
-                <MaterialIcon name="description" size={12} style={{ color: '#6c757d' }} />
+                <MaterialIcon name="description" size={12} style={{ color: C.muted }} />
                 <span style={{ fontSize: 10 }}>{f} patch</span>
                 <span className="ms-auto">
                   <Click on={i === 0 && beat === 2}>
                     <Pulse on={i === 0 && beat === 2}>
-                      <span className="rounded px-1" style={{ background: beat >= 3 && i === 0 ? '#d1e7dd' : '#fff', border: '1px solid #dee2e6', fontSize: 9 }}>
+                      <span className="rounded px-1" style={{ background: beat >= 3 && i === 0 ? C.subtle : C.surface, border: `1px solid ${C.border}`, fontSize: 9 }}>
                         {beat >= 3 && i === 0 ? 'copied ✓' : 'Copy'}
                       </span>
                     </Pulse>
@@ -72,7 +73,7 @@ export default function ExportScene({ beat }) {
         )}
         {beat === 3 && (
           <Appear when>
-            <div className="rounded px-2 py-1 mt-1" style={{ background: '#f0fff4', border: '1px solid #c3e6cb', fontSize: 9 }}>
+            <div className="rounded px-2 py-1 mt-1" style={{ background: C.subtle, border: `1px solid ${C.border}`, fontSize: 9 }}>
               <strong>In Excel:</strong> Automate → New Script → paste → <strong>Run</strong>.
               Safe to run twice — a patch updates in place, never duplicates.
             </div>
@@ -81,7 +82,7 @@ export default function ExportScene({ beat }) {
 
         {beat === 4 && (
           <Appear when>
-            <div className="rounded px-2 py-2" style={{ background: '#fff3cd', border: '1px solid #f0e0a8', fontSize: 10, color: '#856404' }}>
+            <div className="rounded px-2 py-2" style={{ background: C.attnTint, border: `1px solid ${C.attnTint}`, fontSize: 10, color: C.attnInk }}>
               <MaterialIcon name="warning" size={12} /> <strong>Resolve first</strong> lists what would make a
               patch wrong — an ElementType missing from the DesignDB master, a recipe with no spec row.
               Each has a one-click fix. Empty this tab, then export.

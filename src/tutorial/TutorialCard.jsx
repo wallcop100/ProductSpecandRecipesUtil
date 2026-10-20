@@ -6,6 +6,7 @@ import { SCENES } from './scenes'
 import { markSeen, markAllSeen } from './seen'
 import { ConceptBody } from '../components/ConceptCard'
 import './tutorial.css'
+import { C } from '../styles/tokens'
 
 
 /**
@@ -84,7 +85,7 @@ export default function TutorialCard({ id, show, onHide, concept = null }) {
               onClick={() => setStep(i)}
               style={{
                 width: 18, height: 5, borderRadius: 3, cursor: 'pointer',
-                background: i < step ? '#198754' : i === step ? '#0d6efd' : '#e9ecef',
+                background: i < step ? C.muted : i === step ? C.accent : C.border,
                 transition: 'background .2s ease',
               }} />
           ))}

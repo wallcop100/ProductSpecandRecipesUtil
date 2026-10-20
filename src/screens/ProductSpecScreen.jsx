@@ -3,6 +3,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { Button, Form, Popover, Overlay, Dropdown } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import ETSpecBrowser from '../components/ETSpecBrowser'
+import { useScreenView } from '../components/useScreenView'
 import { skippedRefs } from '../utils/specChecks'
 import ETSpecEditor  from '../components/ETSpecEditor'
 import ChangeSummaryModal from '../components/ChangeSummaryModal'
@@ -12,6 +13,7 @@ import MaterialIcon from '../components/MaterialIcon'
 import SurfaceSwitch from '../components/SurfaceSwitch'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { duplicateProductKeys } from '../utils/productCodes'
+import { C } from '../styles/tokens'
 
 /**
  * ProductSpecScreen — split-panel product spec editor.
@@ -36,9 +38,10 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
   const canRedo = useStore(s => s.future.length > 0)
   const [newEtOpen, setNewEtOpen] = useState(false)
   const addPSRowForNew = useStore(s => s.addPSRow)
-  const [selectedRef,  setSelectedRef]  = useState(scrollToRef || null)
+  // Remembered across visits (useScreenView); an explicit scrollToRef still wins below.
+  const [selectedRef,  setSelectedRef]  = useScreenView('product-spec', 'selectedRef', scrollToRef || null)
   const [bulkSelected, setBulkSelected] = useState(new Set())
-  const [leftWidth,    setLeftWidth]    = useState(320)   // resizable browser panel
+  const [leftWidth,    setLeftWidth]    = useScreenView('product-spec', 'leftWidth', 320)   // resizable browser panel
   const draggingRef = useRef(false)
 
   useEffect(() => {
@@ -52,8 +55,8 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
     window.addEventListener('mouseup', onUp)
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
   }, [])
-  const [viewMode,     setViewMode]     = useState('family')
-  const [statusFilters, setStatusFilters] = useState([])   // shared by header pills + browser chips
+  const [viewMode,     setViewMode]     = useScreenView('product-spec', 'viewMode', 'family')
+  const [statusFilters, setStatusFilters] = useScreenView('product-spec', 'statusFilters', [])   // shared by header pills + browser chips
   const [fillFocus,    setFillFocus]    = useState(0)      // bump to focus the editor on 'Fill next'
   const [showChangelog, setShowChangelog] = useState(false)
 
@@ -278,7 +281,7 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
           title="Undo (Ctrl+Z)" disabled={!canUndo} onClick={undo} />
         <IconButton variant="outline-secondary" bsSize="sm" icon="redo"
           title="Redo (Ctrl+Shift+Z)" disabled={!canRedo} onClick={redo} />
-        <Button variant="outline-success" size="sm" className="d-inline-flex align-items-center gap-1 ms-2"
+        <Button variant="outline-secondary" size="sm" className="d-inline-flex align-items-center gap-1 ms-2"
           style={{ fontSize: 11 }} onClick={() => setNewEtOpen(true)} data-testid="spec-new-et"
           title="Create a new ElementType and its Product Spec row">
           <MaterialIcon name="add" size={14} /> New ElementType
@@ -293,27 +296,27 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
 
         {/* Completeness bar */}
         <div className="d-flex align-items-center gap-2 ms-3" style={{ flexShrink: 0 }}>
-          <div style={{ width: 120, height: 6, borderRadius: 3, background: '#e9ecef', overflow: 'hidden' }}>
-            <div style={{ width: `${pctComplete}%`, height: '100%', background: '#22c55e', transition: 'width 0.3s' }} />
+          <div style={{ width: 120, height: 6, borderRadius: 3, background: C.border, overflow: 'hidden' }}>
+            <div style={{ width: `${pctComplete}%`, height: '100%', background: C.accent, transition: 'width 0.3s' }} />
           </div>
-          <span style={{ fontSize: 11, color: '#6c757d', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 11, color: C.muted, whiteSpace: 'nowrap' }}>
             {stats.complete} / {total - stats.deleted} complete
           </span>
           {/* Bigger, discoverable status pills */}
           {stats.missing > 0 && (
-            <StatPill color="#ef4444" bg="#fdecec" icon={ACTION_ICONS.missing}
+            <StatPill color={C.danger} bg={C.dangerTint} icon={ACTION_ICONS.missing}
               count={stats.missing} label="Missing spec"
               hint="ElementTypes referenced in recipes with no Product Spec row"
               active={statusFilters.includes('Missing')} onClick={() => toggleStatus('Missing')} />
           )}
           {stats.partial > 0 && (
-            <StatPill color="#b45309" bg="#fff4e5" icon={ACTION_ICONS.partial}
+            <StatPill color={C.attnInk} bg={C.attnTint} icon={ACTION_ICONS.partial}
               count={stats.partial} label="Partial / TBC"
               hint="Rows missing a manufacturer or product code, or marked TBC"
               active={statusFilters.includes('Partial/TBC')} onClick={() => toggleStatus('Partial/TBC')} />
           )}
           {stats.duplicates > 0 && (
-            <StatPill color="#dc3545" bg="#fdecec" icon="warning"
+            <StatPill color={C.danger} bg={C.dangerTint} icon="warning"
               count={stats.duplicates} label="Duplicate codes"
               hint="Product codes shared by more than one ElementType"
               active={statusFilters.includes('Duplicate')} onClick={() => toggleStatus('Duplicate')} />
@@ -336,7 +339,7 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
         {/* Step through the incomplete specs, inline in this editor — no separate modal. */}
         {incompleteRefs.length > 0 && (
           <Button
-            variant="outline-success" size="sm"
+            variant="outline-secondary" size="sm"
             className="d-inline-flex align-items-center gap-1"
             style={{ fontSize: 11, padding: '2px 10px', whiteSpace: 'nowrap' }}
             title="Jump to the next ElementType whose spec still needs a manufacturer and code"
@@ -357,7 +360,7 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
       {bulkSelected.size > 0 && (
         <div
           className="d-flex align-items-center gap-2 px-3 py-1 border-bottom"
-          style={{ background: '#e8f0fe', flexShrink: 0, fontSize: 12 }}
+          style={{ background: C.accentTint, flexShrink: 0, fontSize: 12 }}
         >
           <span className="fw-semibold">{bulkSelected.size} selected</span>
           <Button variant="outline-secondary" size="sm" style={{ fontSize: 11 }} onClick={bulkSetNA}>
@@ -404,7 +407,7 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
           <Button variant="outline-danger" size="sm" style={{ fontSize: 11 }} onClick={bulkDelete}>
             Mark IsDeleted
           </Button>
-          <button className="btn btn-link btn-sm p-0 ms-auto" style={{ fontSize: 11, color: '#6c757d' }} onClick={clearBulk}>
+          <button className="btn btn-link btn-sm p-0 ms-auto" style={{ fontSize: 11, color: C.muted }} onClick={clearBulk}>
             Clear
           </button>
         </div>
@@ -435,7 +438,7 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
           title="Drag to resize"
           style={{
             width: 5, flexShrink: 0, cursor: 'col-resize',
-            background: '#dee2e6', borderLeft: '1px solid #cfd4da', borderRight: '1px solid #cfd4da',
+            background: C.border, borderLeft: `1px solid ${C.faint}`, borderRight: `1px solid ${C.faint}`,
           }}
         />
 
@@ -491,7 +494,7 @@ function StatPill({ color, bg, icon, count, label, hint, active, onClick }) {
         className="d-inline-flex align-items-center gap-1 border-0"
         style={{
           fontSize: 12, fontWeight: 600,
-          color: active ? '#fff' : color, background: active ? color : bg,
+          color: active ? C.surface : color, background: active ? color : bg,
           border: `1px solid ${color}${active ? '' : '33'}`, borderRadius: 12, padding: '2px 9px',
           cursor: onClick ? 'pointer' : 'default', whiteSpace: 'nowrap',
         }}

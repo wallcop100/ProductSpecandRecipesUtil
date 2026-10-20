@@ -3,6 +3,7 @@ import { OverlayTrigger, Popover } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { ACTION_ICONS } from '../utils/entityStyle'
+import { C } from '../styles/tokens'
 
 /**
  * PositionValidationBadge — per-position validation status icon with a sticky
@@ -41,11 +42,11 @@ export default function PositionValidationBadge({ posRef, size = 14, showOk = fa
 
   if (!hasError && !hasWarning) {
     return showOk
-      ? <MaterialIcon name={ACTION_ICONS.complete} size={size} style={{ color: '#198754' }} title="Validation OK" />
+      ? <MaterialIcon name={ACTION_ICONS.complete} size={size} style={{ color: C.success }} title="Validation OK" />
       : null
   }
 
-  const color = hasError ? '#dc3545' : '#ffc107'
+  const color = hasError ? C.danger : C.attn
   const icon  = hasError ? 'error' : 'warning'
 
   const popover = (
@@ -63,18 +64,18 @@ export default function PositionValidationBadge({ posRef, size = 14, showOk = fa
           return (
             <div key={i}
               className="d-flex align-items-start gap-1 mb-1 p-1 rounded"
-              style={{ fontSize: 11, cursor: 'pointer', background: isErr ? '#fff5f5' : '#fffbe6' }}
+              style={{ fontSize: 11, cursor: 'pointer', background: isErr ? C.dangerTint : C.attnTint }}
               onClick={() => { setShow(false); focusPosition(posRef) }}
               title="Go to this position to fix"
             >
-              <MaterialIcon name={isErr ? 'error' : 'warning'} size={13} style={{ color: isErr ? '#dc3545' : '#997404', flexShrink: 0 }} />
+              <MaterialIcon name={isErr ? 'error' : 'warning'} size={13} style={{ color: isErr ? C.danger : C.attnInk, flexShrink: 0 }} />
               <span>{issue.message}</span>
             </div>
           )
         })}
         <button
           className="btn btn-link btn-sm p-0 d-flex align-items-center gap-1 mt-1"
-          style={{ fontSize: 11, color: '#0d6efd', textDecoration: 'none' }}
+          style={{ fontSize: 11, color: C.accent, textDecoration: 'none' }}
           onClick={() => { setShow(false); focusPosition(posRef) }}
         >
           <MaterialIcon name="open_in_new" size={13} /> Open {posRef} to fix

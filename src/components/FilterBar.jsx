@@ -1,5 +1,6 @@
 import React from 'react'
 import MaterialIcon from './MaterialIcon'
+import { C } from '../styles/tokens'
 
 /**
  * FilterBar — reusable filter row: text + optional tag chips + optional family select.
@@ -43,7 +44,7 @@ export default function FilterBar({
             <button
               type="button"
               className="btn btn-sm p-0 position-absolute"
-              style={{ right: 6, top: '50%', transform: 'translateY(-50%)', lineHeight: 1, color: '#888' }}
+              style={{ right: 6, top: '50%', transform: 'translateY(-50%)', lineHeight: 1, color: C.muted }}
               onClick={() => onText('')}
               title="Clear filter"
               aria-label="Clear filter"
@@ -73,7 +74,7 @@ export default function FilterBar({
             <button
               key={c.key}
               type="button"
-              className={`btn btn-sm ${c.active ? (c.variant || 'btn-warning') : 'btn-outline-secondary'}`}
+              className={`btn btn-sm ${c.active ? (c.variant || 'btn-primary') : 'btn-outline-secondary'}`}
               style={{ fontSize: 10, padding: '0px 6px', borderRadius: 10 }}
               onClick={c.onToggle}
               title={c.title}

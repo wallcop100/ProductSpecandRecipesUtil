@@ -7,6 +7,7 @@ import useStore from '../store/useStore'
 import { VIA } from '../utils/ptResolve'
 import { unmatchedFormPositions } from '../utils/usage'
 import { buildPtAddScript } from '../utils/patchScript'
+import { C } from '../styles/tokens'
 
 /**
  * ResolveRefsStep — where a Form ref becomes a project PositionType.
@@ -22,9 +23,9 @@ import { buildPtAddScript } from '../utils/patchScript'
  */
 
 const STYLE = {
-  [VIA.EXT_REF]: { bg: '#cfe2ff', fg: '#084298', icon: 'alt_route', label: 'via ExtRef' },
-  [VIA.DIRECT]: { bg: '#d1e7dd', fg: '#0f5132', icon: 'check', label: 'direct' },
-  [VIA.MISSING]: { bg: '#f8d7da', fg: '#842029', icon: 'help', label: 'not in DB' },
+  [VIA.EXT_REF]: { bg: C.accentTint, fg: C.accentInk, icon: 'alt_route', label: 'via ExtRef' },
+  [VIA.DIRECT]: { bg: C.subtle, fg: C.ink, icon: 'check', label: 'direct' },
+  [VIA.MISSING]: { bg: C.dangerTint, fg: C.dangerInk, icon: 'help', label: 'not in DB' },
 }
 
 export default function ResolveRefsStep({ resolutions, overrides, onOverride, positionTypes, onBack, onConfirm, confirmLabel = 'Start review →' }) {
@@ -78,7 +79,7 @@ export default function ResolveRefsStep({ resolutions, overrides, onOverride, po
       </div>
 
       {redirects.length > 0 && (
-        <div className="px-2 py-1 mb-2 rounded" style={{ background: '#cfe2ff', color: '#084298', fontSize: 11 }}>
+        <div className="px-2 py-1 mb-2 rounded" style={{ background: C.accentTint, color: C.accentInk, fontSize: 11 }}>
           <MaterialIcon name="alt_route" size={12} />{' '}
           {redirects.length} ref{redirects.length === 1 ? '' : 's'} redirect to a different PositionType, because the
           DesignDB says so:{' '}
@@ -91,7 +92,7 @@ export default function ResolveRefsStep({ resolutions, overrides, onOverride, po
 
       {/* The Form names positions this project does not have. They need adding. */}
       {(notInDb.length > 0 || noRecipe.length > 0) && (
-        <div className="px-2 py-2 mb-2 rounded" style={{ background: '#f8d7da', color: '#842029', fontSize: 11 }}>
+        <div className="px-2 py-2 mb-2 rounded" style={{ background: C.dangerTint, color: C.dangerInk, fontSize: 11 }}>
           {notInDb.length > 0 && (
             <div className="mb-1">
               <MaterialIcon name="report" size={13} /> <strong>{notInDb.length} PositionType
@@ -100,7 +101,7 @@ export default function ResolveRefsStep({ resolutions, overrides, onOverride, po
               <span style={{ fontFamily: 'monospace' }}>{notInDb.map(u => u.formRef).join(', ')}</span>
               {toAdd.length > 0 && (
                 <div className="mt-1 d-flex align-items-start gap-2">
-                  <Button size="sm" variant="outline-danger" style={{ fontSize: 10, padding: '0 6px', flexShrink: 0 }}
+                  <Button size="sm" variant="outline-secondary" style={{ fontSize: 10, padding: '0 6px', flexShrink: 0 }}
                     onClick={copyPtPatch} data-testid="copy-pt-patch">
                     <MaterialIcon name="content_copy" size={11} /> Copy DesignDB patch ({toAdd.length})
                   </Button>
@@ -118,7 +119,7 @@ export default function ResolveRefsStep({ resolutions, overrides, onOverride, po
             </div>
           )}
           {noRecipe.length > 0 && (
-            <div style={{ color: '#856404' }}>
+            <div style={{ color: C.attnInk }}>
               <MaterialIcon name="warning" size={12} /> {noRecipe.length} resolve to a PositionType with{' '}
               <strong>no recipe yet</strong>:{' '}
               <span style={{ fontFamily: 'monospace' }}>{noRecipe.map(u => `${u.formRef}→${u.target}`).join(', ')}</span>
@@ -131,7 +132,7 @@ export default function ResolveRefsStep({ resolutions, overrides, onOverride, po
       )}
 
       {ambiguous.length > 0 && (
-        <div className="px-2 py-1 mb-2 rounded" style={{ background: '#fff3cd', color: '#856404', fontSize: 11 }}>
+        <div className="px-2 py-1 mb-2 rounded" style={{ background: C.attnTint, color: C.attnInk, fontSize: 11 }}>
           <MaterialIcon name="warning" size={12} /> More than one PositionType claims the same ExtRef — pick the right
           one: {ambiguous.map(r => r.formRef).join(', ')}
         </div>
@@ -139,7 +140,7 @@ export default function ResolveRefsStep({ resolutions, overrides, onOverride, po
 
       <div className="border rounded" style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
         <table className="table table-sm mb-0" style={{ fontSize: 11 }}>
-          <thead style={{ position: 'sticky', top: 0, background: '#f8f9fa', zIndex: 1 }}>
+          <thead style={{ position: 'sticky', top: 0, background: C.subtle, zIndex: 1 }}>
             <tr>
               <th style={{ width: 120 }}>Form ref</th>
               <th style={{ width: 55 }}>Rows</th>

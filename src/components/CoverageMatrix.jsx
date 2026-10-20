@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { Badge, Button, Form } from 'react-bootstrap'
 import useStore from '../store/useStore'
+import { useScreenView } from './useScreenView'
 import MaterialIcon from './MaterialIcon'
 import { collectionStatusForPosition, positionRecipeWithWrapperInternals, extraConnectorRows } from '../utils/collectionStatus'
 import { positionFamilyOf } from '../utils/positionFamily'
@@ -8,13 +9,14 @@ import { ACTION_ICONS } from '../utils/entityStyle'
 import BulkApplyModal from './BulkApplyModal'
 import { membership, isConnectorPart } from '../utils/connectorGroups'
 import { templateRule, describeRule } from '../utils/templateRules'
+import { C } from '../styles/tokens'
 
 const STATUS_SYMBOL = {
-  complete: { icon: ACTION_ICONS.complete,   color: '#198754', bg: '#d1e7dd', title: 'All template refs present, nothing else' },
-  extra:    { icon: 'remove_circle_outline', color: '#b35c00', bg: '#ffe5cc', title: 'Has connectors the template doesn’t ask for' },
-  partial:  { icon: ACTION_ICONS.partial,    color: '#856404', bg: '#fff3cd', title: 'Some refs present, some missing' },
-  missing:  { icon: ACTION_ICONS.missing,    color: '#842029', bg: '#f8d7da', title: 'Applies here, but none of its refs are present' },
-  na:       { icon: ACTION_ICONS.na,         color: '#adb5bd', bg: '#f8f9fa', title: "Doesn't apply here (N/A)" },
+  complete: { icon: ACTION_ICONS.complete,   color: C.success, bg: C.subtle, title: 'All template refs present, nothing else' },
+  extra:    { icon: 'remove_circle_outline', color: C.attnInk, bg: C.attnTint, title: 'Has connectors the template doesn’t ask for' },
+  partial:  { icon: ACTION_ICONS.partial,    color: C.attnInk, bg: C.attnTint, title: 'Some refs present, some missing' },
+  missing:  { icon: ACTION_ICONS.missing,    color: C.dangerInk, bg: C.dangerTint, title: 'Applies here, but none of its refs are present' },
+  na:       { icon: ACTION_ICONS.na,         color: C.faint, bg: C.subtle, title: "Doesn't apply here (N/A)" },
 }
 
 function StatusCell({ posRef, collection, status, extras = [], isSelected, onClick }) {
@@ -28,16 +30,16 @@ function StatusCell({ posRef, collection, status, extras = [], isSelected, onCli
       title={`${meta.title} — click to manage${extraNote}`}
       style={{
         textAlign: 'center',
-        background: isSelected ? '#cfe2ff' : meta.bg,
+        background: isSelected ? C.accentTint : meta.bg,
         cursor: 'pointer',
-        outline: isSelected ? '2px solid #0d6efd' : undefined,
+        outline: isSelected ? `2px solid ${C.accent}` : undefined,
         outlineOffset: -2,
       }}
     >
       <MaterialIcon name={meta.icon} size={16} style={{ color: meta.color }} />
       {extras.length > 0 && (
         <span className="ms-1 rounded-pill px-1" data-testid="cell-extras"
-          style={{ fontSize: 9, fontWeight: 700, background: '#ffc107', color: '#3d2c00' }}>+{extras.length}</span>
+          style={{ fontSize: 9, fontWeight: 700, background: C.attn, color: C.attnInk }}>+{extras.length}</span>
       )}
     </td>
   )
@@ -65,7 +67,7 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
 
   const ignoredPositionFamilies = useStore(s => s.ignoredPositionFamilies)
 
-  const [incompleteOnly, setIncompleteOnly] = useState(false)
+  const [incompleteOnly, setIncompleteOnly] = useScreenView('connectors', 'incompleteOnly', false)
   // A bulk apply is previewed before it touches anything — see BulkApplyModal.
   const [pendingBulk, setPendingBulk] = useState(null)   // { collectionId, name, targets, plan }
 
@@ -199,13 +201,13 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
                 <th key={c.CollectionId}
                   style={{
                     textAlign: 'center', minWidth: 110,
-                    background: selected ? '#e0f0ff' : undefined,
+                    background: selected ? C.accentTint : undefined,
                   }}
                   title={`Applies to: ${describeRule(templateRule(c))}`}
                 >
                   <div>{c.Name}</div>
                   <div className="d-flex gap-1 justify-content-center mt-1">
-                    <Button size="sm" variant="outline-danger" className="d-inline-flex align-items-center gap-1" style={{ fontSize: 9, padding: '0px 5px' }}
+                    <Button size="sm" variant="outline-secondary" className="d-inline-flex align-items-center gap-1" style={{ fontSize: 9, padding: '0px 5px' }}
                       disabled={!nMissing}
                       onClick={() => handleBulkApply(c.CollectionId, 'missing')}
                       title="Positions this template covers that have NONE of its parts: add the whole template to them">
@@ -218,7 +220,7 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
                       <MaterialIcon name={ACTION_ICONS.partial} size={12} /> Complete {nPartial} partial
                     </Button>
                     {nExtra > 0 && (
-                      <Button size="sm" variant="outline-secondary" className="d-inline-flex align-items-center gap-1" style={{ fontSize: 9, padding: '0px 5px', color: '#b35c00', borderColor: '#b35c00' }}
+                      <Button size="sm" variant="outline-secondary" className="d-inline-flex align-items-center gap-1" style={{ fontSize: 9, padding: '0px 5px', color: C.attnInk, borderColor: C.attnInk }}
                         onClick={() => handleBulkApply(c.CollectionId, 'extra')} data-testid="remove-extras"
                         title="Positions with connectors this template doesn’t ask for: remove them (previewed first)">
                         <MaterialIcon name="remove_circle_outline" size={12} /> Remove extras from {nExtra}
@@ -241,18 +243,18 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
                     onClick={() => onOpenPosition?.(posRef)}
                     title="Open this PositionType in the builder"
                     className="d-inline-flex align-items-center gap-1"
-                    style={{ color: '#0d6efd', cursor: 'pointer' }}
+                    style={{ color: C.accent, cursor: 'pointer' }}
                   >
                     {posRef} <MaterialIcon name={ACTION_ICONS.external} size={13} />
                   </span>
                   {members.get(posRef)?.clash && (
-                    <span className="ms-1" data-testid={`clash-${posRef}`} style={{ color: '#b45309' }}
+                    <span className="ms-1" data-testid={`clash-${posRef}`} style={{ color: C.attnInk }}
                       title={`Matched by ${members.get(posRef).templates.length} templates: ${members.get(posRef).templates.map(id => collections.find(c => c.CollectionId === id)?.Name).join(', ')}. Pin it to one (template panel → Keep it here).`}>
                       <MaterialIcon name="warning" size={13} />
                     </span>
                   )}
                   {members.get(posRef)?.pinnedTo && (
-                    <MaterialIcon name="push_pin" size={11} className="ms-1" style={{ color: '#adb5bd' }}
+                    <MaterialIcon name="push_pin" size={11} className="ms-1" style={{ color: C.faint }}
                       title={`Pinned to ${collections.find(c => c.CollectionId === members.get(posRef).pinnedTo)?.Name}`} />
                   )}
                 </td>

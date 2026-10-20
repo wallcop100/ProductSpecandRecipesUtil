@@ -48,7 +48,7 @@ describe('Find', () => {
     }
     const ids = ACTIONS.map(a => a.id)
     expect(new Set(ids).size).toBe(ids.length)
-    expect(ACTIONS.length).toBeGreaterThan(90)
+    expect(ACTIONS.length).toBeGreaterThan(89)
   })
   it('finds the workspace’s things: refs, codes (with or without punctuation), makers, Form refs, families, Form codes', () => {
     const ws = {

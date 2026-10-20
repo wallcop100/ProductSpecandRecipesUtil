@@ -3,6 +3,7 @@ import MaterialIcon from '../../components/MaterialIcon'
 import EntityPill from '../../components/EntityPill'
 import { Stage, Click, Pulse, Appear, MiniRow, Caption } from './atoms'
 import { DEMO_FORM } from '../demo-data'
+import { C } from '../../styles/tokens'
 
 /**
  * FormPaneScene — the Side-by-Side.
@@ -30,8 +31,8 @@ export default function FormPaneScene({ beat }) {
           <div className="text-muted fw-semibold text-uppercase mb-2" style={{ fontSize: 8, letterSpacing: '.05em' }}>
             Form spec
           </div>
-          <div className="px-3 py-4 rounded text-center" style={{ background: '#fff', border: '1px dashed #ced4da' }}>
-            <MaterialIcon name="auto_fix_high" size={26} style={{ color: '#adb5bd' }} />
+          <div className="px-3 py-4 rounded text-center" style={{ background: C.surface, border: `1px dashed ${C.faint}` }}>
+            <MaterialIcon name="auto_fix_high" size={26} style={{ color: C.faint }} />
             <div className="fw-semibold mt-2" style={{ fontSize: 11 }}>No Form template yet</div>
             <div className="text-muted mt-1 mb-2" style={{ fontSize: 10, lineHeight: 1.5 }}>
               Import the Form and this panel shows, for every position, exactly which products it
@@ -39,7 +40,7 @@ export default function FormPaneScene({ beat }) {
             </div>
             <Click on>
               <Pulse on>
-                <span className="rounded px-2 py-1" style={{ background: '#0d6efd', color: '#fff', fontSize: 10 }}>
+                <span className="rounded px-2 py-1" style={{ background: C.accent, color: C.surface, fontSize: 10 }}>
                   Import the Form template →
                 </span>
               </Pulse>
@@ -73,13 +74,13 @@ export default function FormPaneScene({ beat }) {
           <div style={{ flex: 1 }}>
             <div className="text-muted mb-1" style={{ fontSize: 8, textTransform: 'uppercase' }}>{DEMO_FORM.target} recipe has</div>
             <MiniRow>
-              <MaterialIcon name="check_circle" size={11} style={{ color: '#198754' }} />
+              <MaterialIcon name="check_circle" size={11} style={{ color: C.success }} />
               <EntityPill type="ElementType" label={tape.ref} />
             </MiniRow>
             <Appear when={added}>
-              <MiniRow active style={{ borderColor: '#198754' }}>
+              <MiniRow active style={{ borderColor: C.border }}>
                 <EntityPill type="ElementType" label={profile.ref} />
-                <span className="badge ms-auto" style={{ background: '#198754', fontSize: 7 }}>inside ET-LIN-01</span>
+                <span className="badge ms-auto" style={{ background: C.muted, fontSize: 7 }}>inside ET-LIN-01</span>
               </MiniRow>
             </Appear>
             <Appear when={beat >= 4}>
@@ -91,10 +92,10 @@ export default function FormPaneScene({ beat }) {
           </div>
 
           {/* what the Form asks for */}
-          <div style={{ width: 186, borderLeft: '1px solid #dee2e6', paddingLeft: 8 }}>
+          <div style={{ width: 186, borderLeft: `1px solid ${C.border}`, paddingLeft: 8 }}>
             <div className="text-muted mb-1" style={{ fontSize: 8, textTransform: 'uppercase' }}>the Form asks for</div>
             <MiniRow>
-              <MaterialIcon name="check_circle" size={11} style={{ color: '#198754' }} />
+              <MaterialIcon name="check_circle" size={11} style={{ color: C.success }} />
               <span style={{ fontFamily: 'monospace', fontSize: 8 }}>{tape.code}</span>
             </MiniRow>
             <MiniRow active={beat === 2 || beat === 3}>
@@ -102,32 +103,32 @@ export default function FormPaneScene({ beat }) {
                 <MaterialIcon
                   name={added ? 'check_circle' : beat === 2 ? 'check_box' : 'check_box_outline_blank'}
                   size={11}
-                  style={{ color: added ? '#198754' : '#0d6efd', transition: 'color .3s ease' }} />
+                  style={{ color: added ? C.success : C.accent, transition: 'color .3s ease' }} />
               </Click>
               <span style={{ fontFamily: 'monospace', fontSize: 8 }}>{profile.code}</span>
             </MiniRow>
 
             {beat === 3 && (
               <Appear when>
-                <div className="rounded px-1 py-1 mb-1" style={{ background: '#f0f4ff', border: '1px solid #c7d7f5', fontSize: 8 }}>
+                <div className="rounded px-1 py-1 mb-1" style={{ background: C.accentTint, border: `1px solid ${C.accentEdge}`, fontSize: 8 }}>
                   add to: <strong>inside ET-LIN-01</strong> · at position level
                 </div>
               </Appear>
             )}
 
             {/* the pending product — the Form asked, nobody named it */}
-            <div className="rounded px-1 py-1 mt-2" style={{ background: '#fdecec', border: '1px solid #f5c2c7' }}>
-              <div style={{ fontSize: 7, color: '#842029', fontWeight: 600 }}>
+            <div className="rounded px-1 py-1 mt-2" style={{ background: C.dangerTint, border: `1px solid ${C.dangerTint}` }}>
+              <div style={{ fontSize: 7, color: C.dangerInk, fontWeight: 600 }}>
                 <MaterialIcon name="help" size={9} /> 1 product with no ElementType
               </div>
               <div style={{ fontFamily: 'monospace', fontSize: 8 }}>{DEMO_FORM.pending.code}</div>
               <div className="text-muted" style={{ fontSize: 7 }}>{DEMO_FORM.pending.mfr}</div>
               {beat >= 4 && (
                 <Appear when>
-                  <div className="d-flex align-items-center gap-1 rounded px-1 mt-1" style={{ background: '#fff', fontSize: 7 }}>
+                  <div className="d-flex align-items-center gap-1 rounded px-1 mt-1" style={{ background: C.surface, fontSize: 7 }}>
                     <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{DEMO_FORM.pending.matches}</span>
                     <Click on>
-                      <span className="rounded px-1" style={{ background: '#198754', color: '#fff' }}>That&apos;s it</span>
+                      <span className="rounded px-1" style={{ background: C.muted, color: C.surface }}>That&apos;s it</span>
                     </Click>
                   </div>
                 </Appear>

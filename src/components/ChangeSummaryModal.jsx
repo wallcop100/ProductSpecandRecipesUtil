@@ -9,6 +9,11 @@ import MasterGapPanel from './MasterGapPanel'
 import TutorialHint from '../tutorial/TutorialHint'
 import { reportsToMarkdown, reportId } from '../utils/bugReports'
 import { download } from '../platform/fs'
+import { exportChecklist } from '../utils/readiness'
+import { formWorklist } from '../utils/formSpec'
+import { ignoredPositionRefs } from '../utils/positionFamily'
+import { BLOCKING_RULES } from '../utils/validationTasks'
+import { C } from '../styles/tokens'
 
 /**
  * ChangeSummaryModal — review every pending change, then copy the patch scripts.
@@ -206,28 +211,28 @@ function patchFilesFor({ psChanges, rsChanges, dbChanges, projectNumber }) {
 }
 
 const KIND = {
-  add:    { icon: 'add_circle', color: '#0f5132', label: 'new' },
-  update: { icon: 'edit',       color: '#856404', label: 'edit' },
-  delete: { icon: 'delete',     color: '#842029', label: 'removed' },
-  recipe: { icon: 'tune',       color: '#495057', label: '' },
+  add:    { icon: 'add_circle', color: C.ink, label: 'new' },
+  update: { icon: 'edit',       color: C.attnInk, label: 'edit' },
+  delete: { icon: 'delete',     color: C.dangerInk, label: 'removed' },
+  recipe: { icon: 'tune',       color: C.ink, label: '' },
 }
 
 function TabBtn({ id, tab, onClick, count, warn, children }) {
   const active = tab === id
-  const accent = warn ? '#842029' : '#0d6efd'
+  const accent = warn ? C.dangerInk : C.accent
   return (
     <button type="button" onClick={() => onClick(id)}
       className="btn btn-sm border-0 rounded-0 d-inline-flex align-items-center gap-1 px-2"
       style={{
         fontSize: 12, fontWeight: active ? 600 : 400,
-        color: active ? accent : '#6c757d',
+        color: active ? accent : C.muted,
         borderBottom: active ? `2px solid ${accent}` : '2px solid transparent',
       }}>
       {warn && <MaterialIcon name="warning" size={12} />}
       {children}
       {count > 0 && (
         <span className="rounded-pill px-1" style={{
-          fontSize: 9, background: warn ? '#f8d7da' : '#e7f1ff', color: warn ? '#842029' : '#084298',
+          fontSize: 9, background: warn ? C.dangerTint : C.accentTint, color: warn ? C.dangerInk : C.accentInk,
         }}>{count}</span>
       )}
     </button>
@@ -243,7 +248,7 @@ function ChangeLine({ line, isRecipe }) {
         <MaterialIcon name={k.icon} size={14} style={{ color: k.color, flexShrink: 0 }} />
         <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{line.ref}</span>
         {k.label && (
-          <span className="rounded px-1" style={{ fontSize: 9, background: '#f1f3f5', color: k.color }}>{k.label}</span>
+          <span className="rounded px-1" style={{ fontSize: 9, background: C.subtle, color: k.color }}>{k.label}</span>
         )}
         <span className="text-muted ms-auto text-end" style={{ fontSize: 11 }}>{line.detail}</span>
       </div>
@@ -254,11 +259,11 @@ function ChangeLine({ line, isRecipe }) {
               <span className="text-muted" style={{ minWidth: 92, flexShrink: 0 }}>{f.label}</span>
               {f.from && (
                 <>
-                  <span style={{ textDecoration: 'line-through', color: '#b02a37' }}>{f.from}</span>
+                  <span style={{ textDecoration: 'line-through', color: C.danger }}>{f.from}</span>
                   <MaterialIcon name="arrow_right_alt" size={12} className="text-muted" />
                 </>
               )}
-              <span style={{ color: f.to ? '#0f5132' : '#6c757d', fontStyle: f.to ? 'normal' : 'italic' }}>
+              <span style={{ color: f.to ? C.ink : C.muted, fontStyle: f.to ? 'normal' : 'italic' }}>
                 {f.to || '(cleared)'}
               </span>
             </div>
@@ -295,7 +300,7 @@ function PatchesTab({ files, copiedKey, previewKey, onCopy, onPreview }) {
         only once its workbook holds it, so nothing is lost and nothing is pushed in twice.
       </div>
       {files.map((f, i) => (
-        <div key={f.key} className="mb-2 rounded" style={{ border: '1px solid #e9ecef' }}>
+        <div key={f.key} className="mb-2 rounded" style={{ border: `1px solid ${C.border}` }}>
           <div className="d-flex align-items-center gap-2 px-2 py-2">
             <MaterialIcon name="description" size={15} className="text-muted" style={{ flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -306,7 +311,7 @@ function PatchesTab({ files, copiedKey, previewKey, onCopy, onPreview }) {
               onClick={() => onPreview(previewKey === f.key ? null : f.key)}>
               {previewKey === f.key ? 'Hide' : 'Preview'}
             </Button>
-            <Button size="sm" variant={copiedKey === f.key ? 'success' : 'outline-primary'}
+            <Button size="sm" variant={copiedKey === f.key ? 'primary' : 'outline-primary'}
               className="d-inline-flex align-items-center gap-1" style={{ fontSize: 11 }}
               onClick={() => onCopy(f.script, f.key)}>
               <MaterialIcon name="content_paste" size={13} /> {copiedKey === f.key ? 'Copied!' : 'Copy'}
@@ -314,7 +319,7 @@ function PatchesTab({ files, copiedKey, previewKey, onCopy, onPreview }) {
           </div>
           {previewKey === f.key && (
             <pre className="m-0 px-2 py-2" style={{
-              fontSize: 10, maxHeight: 220, overflow: 'auto', background: '#f8f9fa', borderTop: '1px solid #e9ecef',
+              fontSize: 10, maxHeight: 220, overflow: 'auto', background: C.subtle, borderTop: `1px solid ${C.border}`,
             }}>{f.script}</pre>
           )}
         </div>
@@ -337,8 +342,8 @@ function ResolveTab({ gaps, overwrites, onFillWrappers }) {
     <>
       {/* This patch will replace something the master already says. Never silent. */}
       {overwrites.length > 0 && (
-        <div className="mb-3 px-2 py-2 rounded" style={{ background: '#f8d7da', border: '1px solid #f1aeb5' }}>
-          <div className="fw-semibold d-flex align-items-center gap-1" style={{ fontSize: 11, color: '#842029' }}>
+        <div className="mb-3 px-2 py-2 rounded" style={{ background: C.dangerTint, border: `1px solid ${C.dangerTint}` }}>
+          <div className="fw-semibold d-flex align-items-center gap-1" style={{ fontSize: 11, color: C.dangerInk }}>
             <MaterialIcon name="warning" size={13} />
             {overwrites.length} DesignDB value{overwrites.length === 1 ? '' : 's'} will be overwritten{' '}
             <InfoTip>The master already holds a value here. Running the ElementTypes patch replaces it.</InfoTip>
@@ -348,7 +353,7 @@ function ResolveTab({ gaps, overwrites, onFillWrappers }) {
               <div key={`${o.ref}.${o.field}`}>
                 <span style={{ fontFamily: 'monospace' }}>{o.ref}</span>
                 <span className="text-muted"> · {o.field}: </span>
-                <span style={{ textDecoration: 'line-through', color: '#842029' }}>{o.from}</span>
+                <span style={{ textDecoration: 'line-through', color: C.dangerInk }}>{o.from}</span>
                 <span className="text-muted"> → </span>
                 <span>{o.to}</span>
               </div>
@@ -359,13 +364,13 @@ function ResolveTab({ gaps, overwrites, onFillWrappers }) {
 
       {/* A wrapper's spec is fully determined, so one click is safe. */}
       {gaps.specRows.wrappers.length > 0 && (
-        <div className="mb-3 px-2 py-2 rounded" style={{ background: '#fff3cd', border: '1px solid #f0e0a8' }}>
-          <div className="fw-semibold d-flex align-items-center gap-1" style={{ fontSize: 11, color: '#856404' }}>
+        <div className="mb-3 px-2 py-2 rounded" style={{ background: C.attnTint, border: `1px solid ${C.attnTint}` }}>
+          <div className="fw-semibold d-flex align-items-center gap-1" style={{ fontSize: 11, color: C.attnInk }}>
             <MaterialIcon name="inventory_2" size={13} />
             {gaps.specRows.wrappers.length} wrapper{gaps.specRows.wrappers.length === 1 ? '' : 's'} with no Product Spec row{' '}
             <InfoTip>A wrapper is a virtual assembly; its contents are what you buy. It takes <span style={{ fontFamily: 'monospace' }}>Ideaworks / N/A</span>, so nothing needs deciding.</InfoTip>
           </div>
-          <div style={{ fontFamily: 'monospace', fontSize: 10, color: '#6c757d', maxHeight: 60, overflowY: 'auto' }}>
+          <div style={{ fontFamily: 'monospace', fontSize: 10, color: C.muted, maxHeight: 60, overflowY: 'auto' }}>
             {gaps.specRows.wrappers.map(w => w.ref).join(', ')}
           </div>
           <Button size="sm" variant="outline-warning" className="mt-2" style={{ fontSize: 11 }}
@@ -378,8 +383,8 @@ function ResolveTab({ gaps, overwrites, onFillWrappers }) {
 
       {/* A real product needs a manufacturer and a code. A blank row is not progress. */}
       {gaps.specRows.products.length > 0 && (
-        <div className="mb-3 px-2 py-2 rounded" style={{ background: '#fdecec', border: '1px solid #f5c2c7' }}>
-          <div className="fw-semibold d-flex align-items-center gap-1" style={{ fontSize: 11, color: '#842029' }}>
+        <div className="mb-3 px-2 py-2 rounded" style={{ background: C.dangerTint, border: `1px solid ${C.dangerTint}` }}>
+          <div className="fw-semibold d-flex align-items-center gap-1" style={{ fontSize: 11, color: C.dangerInk }}>
             <MaterialIcon name="error" size={13} />
             {gaps.specRows.products.length} product{gaps.specRows.products.length === 1 ? '' : 's'} used in a recipe with no Product Spec row{' '}
             <InfoTip>Each needs a manufacturer and a product code, which only you know. Open it in the Product Spec; a blank row would only trade one warning for another.</InfoTip>
@@ -396,6 +401,45 @@ function ResolveTab({ gaps, overwrites, onFillWrappers }) {
       {/* The DesignDB is the master list. Each gap needs a family, guessed from siblings. */}
       <MasterGapPanel gaps={gaps} />
     </>
+  )
+}
+
+/**
+ * What is still open before export, one short line each; a line jumps to the first position
+ * it is about. Red only for what would make the patch wrong. It informs — export is not gated.
+ */
+function PreExportChecklist({ show, onHide }) {
+  const positionTypes = useStore(s => s.positionTypes)
+  const recipes = useStore(s => s.recipes)
+  const positionUI = useStore(s => s.positionUI)
+  const ignoredPositionFamilies = useStore(s => s.ignoredPositionFamilies)
+  const formCaptures = useStore(s => s.formCaptures)
+  const containerETRefs = useStore(s => s.containerETRefs)
+  const validationResults = useStore(s => s.validationResults)
+  const dbChanges = useStore(s => s.dbChanges)
+  useEffect(() => { if (show) useStore.getState().runValidation() }, [show])
+  const items = useMemo(() => exportChecklist({
+    positionTypes, recipes,
+    ignoredPosRefs: ignoredPositionRefs({ positionTypes, positionUI, ignoredPositionFamilies }),
+    worklist: formWorklist(recipes, formCaptures, containerETRefs),
+    issues: validationResults,
+    dbQueued: new Set(dbChanges.map(c => (c.elementTypeRef || '').toLowerCase())),
+    blockingRules: BLOCKING_RULES,
+  }), [positionTypes, recipes, positionUI, ignoredPositionFamilies, formCaptures, containerETRefs, validationResults, dbChanges])
+
+  if (items.length === 0) {
+    return <div className="px-3 pt-2 text-muted" style={{ fontSize: 12 }} data-testid="export-checklist">Ready to export ✓</div>
+  }
+  return (
+    <div className="px-3 pt-2 d-flex flex-column align-items-start" data-testid="export-checklist">
+      {items.map(it => (
+        <Button key={it.key} variant="link" size="sm" className="p-0 text-start text-decoration-none"
+          style={{ fontSize: 12, color: it.blocking ? C.danger : C.ink }} disabled={!it.posRef}
+          onClick={() => { onHide(); useStore.getState().focusPosition(it.posRef) }}>
+          {it.label}{it.posRef && ' →'}
+        </Button>
+      ))}
+    </div>
   )
 }
 
@@ -422,8 +466,8 @@ function BugReportsTab({ reports, copied, onCopy }) {
       {reports.map(r => (
         <div key={r.id} className="border rounded p-2 mb-2" style={{ fontSize: 12 }}>
           <div className="d-flex align-items-center gap-2 text-muted mb-1" style={{ fontSize: 11 }}>
-            <span className="fw-semibold" style={{ fontFamily: 'monospace', color: r.kind === 'feature' ? '#6f42c1' : '#b02a37' }}>{reportId(r)}</span>
-            {r.kind === 'feature' && <span className="badge" style={{ background: '#6f42c1' }}>Feature request</span>}
+            <span className="fw-semibold" style={{ fontFamily: 'monospace', color: r.kind === 'feature' ? C.accent : C.danger }}>{reportId(r)}</span>
+            {r.kind === 'feature' && <span className="badge" style={{ background: C.accent }}>Feature request</span>}
             <span>{r.at?.replace('T', ' ').slice(0, 16)}</span>
             {r.app?.project && <span>· {r.app.project}</span>}
             {r.app?.screen && <span>· {r.app.screen}</span>}
@@ -499,8 +543,10 @@ export default function ChangeSummaryModal({ show, onHide }) {
         </Modal.Title>
       </Modal.Header>
 
+      <PreExportChecklist show={show} onHide={onHide} />
+
       {/* The patch is one click away on its own tab, never a long scroll past warnings. */}
-      <div className="d-flex gap-1 px-3 pt-2" style={{ borderBottom: '1px solid #dee2e6' }}>
+      <div className="d-flex gap-1 px-3 pt-2" style={{ borderBottom: `1px solid ${C.border}` }}>
         <TabBtn id="changes" tab={tab} onClick={setTab} count={changeCount}>Changes</TabBtn>
         <TabBtn id="patches" tab={tab} onClick={setTab} count={patchFiles.length}>Patches</TabBtn>
         {resolveCount > 0 && (

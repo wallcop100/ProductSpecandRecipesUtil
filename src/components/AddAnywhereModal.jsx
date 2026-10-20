@@ -11,6 +11,7 @@ import EntityPill from './EntityPill'
 import { positionFamilyOf } from '../utils/positionFamily'
 import { familyOf } from '../utils/etRef'
 import { ICONS } from '../utils/entityStyle'
+import { C } from '../styles/tokens'
 
 const EMPTY_FILTERS = { family: '', tag: '', manufacturer: '', containsET: '' }
 
@@ -333,9 +334,9 @@ export default function AddAnywhereModal({ show, onHide, etRef, sectionKey, excl
           {/* Primed ET chip */}
           <div
             className="d-inline-flex align-items-center gap-2 px-2 py-1 rounded"
-            style={{ background: '#f0faf4', border: '1px solid #c3e6cb', fontSize: 12 }}
+            style={{ background: C.subtle, border: `1px solid ${C.border}`, fontSize: 12 }}
           >
-            <MaterialIcon name="add_circle" size={13} style={{ color: '#198754' }} />
+            <MaterialIcon name="add_circle" size={13} style={{ color: C.success }} />
             <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>{etRef}</span>
             {specLabel && <span className="text-muted">{specLabel}</span>}
           </div>
@@ -348,7 +349,7 @@ export default function AddAnywhereModal({ show, onHide, etRef, sectionKey, excl
           {phase === 'cycle' && (
             <button
               className="btn btn-link p-0 ms-auto d-inline-flex align-items-center gap-1"
-              style={{ fontSize: 11, color: activeFilterCount > 0 ? '#0d6efd' : '#6c757d' }}
+              style={{ fontSize: 11, color: activeFilterCount > 0 ? C.accent : C.muted }}
               onClick={() => setPhase('filter')}
             >
               <MaterialIcon name="filter_list" size={14} />
@@ -365,9 +366,9 @@ export default function AddAnywhereModal({ show, onHide, etRef, sectionKey, excl
             <div className="text-center mb-4 pb-3 border-bottom">
               <div
                 className="d-inline-flex align-items-center justify-content-center mb-2"
-                style={{ width: 64, height: 64, borderRadius: '50%', background: '#e8f0fe' }}
+                style={{ width: 64, height: 64, borderRadius: '50%', background: C.accentTint }}
               >
-                <MaterialIcon name="filter_alt" size={38} style={{ color: '#0d6efd' }} />
+                <MaterialIcon name="filter_alt" size={38} style={{ color: C.accent }} />
               </div>
               <h5 className="mb-1" style={{ fontSize: 16, fontWeight: 600 }}>
                 Which {unitNounPl}?
@@ -433,8 +434,8 @@ export default function AddAnywhereModal({ show, onHide, etRef, sectionKey, excl
                   className="d-inline-flex align-items-center justify-content-center fw-bold"
                   style={{
                     minWidth: 34, height: 34, padding: '0 8px', borderRadius: 17,
-                    background: targets.length === 0 ? '#f8d7da' : '#d1e7dd',
-                    color: targets.length === 0 ? '#842029' : '#0a3622',
+                    background: targets.length === 0 ? C.dangerTint : C.subtle,
+                    color: targets.length === 0 ? C.dangerInk : C.ink,
                     fontSize: 15,
                   }}
                 >
@@ -482,7 +483,7 @@ export default function AddAnywhereModal({ show, onHide, etRef, sectionKey, excl
                   const done = sessionAdded.has(t.ref)
                   const pre  = !done && hasPrimed(t)
                   const isCur = i === index
-                  const bg = done ? '#198754' : pre ? '#adb5bd' : isCur ? '#0d6efd' : '#dee2e6'
+                  const bg = done ? C.muted : pre ? C.faint : isCur ? C.accent : C.border
                   return (
                     <button key={t.ref} onClick={() => setIndex(i)}
                       title={t.ref + (done ? ' ✓ added' : pre ? ' (already present)' : '')}
@@ -498,7 +499,7 @@ export default function AddAnywhereModal({ show, onHide, etRef, sectionKey, excl
             {/* Current target header */}
             {current && (
               <div className="d-flex align-items-center gap-2 mb-3 px-3 py-2 rounded"
-                style={{ background: '#f8f9fa', border: '1px solid #dee2e6' }}>
+                style={{ background: C.subtle, border: `1px solid ${C.border}` }}>
                 <EntityPill type={isPos ? 'PositionType' : 'ElementType'} label={current.ref} />
                 {current.tags.map(t => (
                   <Badge key={t} bg="secondary" style={{ fontSize: 10 }}>{t}</Badge>
@@ -562,7 +563,7 @@ export default function AddAnywhereModal({ show, onHide, etRef, sectionKey, excl
           </Button>
         )}
         {phase === 'cycle' && current && !isHandled && (
-          <Button variant="success" size="sm" style={{ fontSize: 12 }} onClick={handleAdd}>
+          <Button variant="primary" size="sm" style={{ fontSize: 12 }} onClick={handleAdd}>
             {isLast ? 'Add + Done' : 'Add + Next →'}
           </Button>
         )}

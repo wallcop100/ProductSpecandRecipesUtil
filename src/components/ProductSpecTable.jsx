@@ -4,6 +4,7 @@ import useStore from '../store/useStore'
 import FlagPill from './FlagPill'
 import { productKey, duplicateProductKeys, hasProductIdentity } from '../utils/productCodes'
 import UsagePopover from './UsagePopover'
+import { C } from '../styles/tokens'
 
 /**
  * ProductSpecTable — table of PS rows with inline editing.
@@ -51,7 +52,7 @@ export default function ProductSpecTable({ showDeleted = false, etUsedIn = {}, s
     const el = rowRefs.current[key]
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      el.style.outline = '2px solid #0d6efd'
+      el.style.outline = `2px solid ${C.accent}`
       setTimeout(() => {
         if (el) el.style.outline = ''
         setLocalScrollToRef(null)
@@ -111,15 +112,15 @@ export default function ProductSpecTable({ showDeleted = false, etUsedIn = {}, s
             {/* Ghost rows: ETs in recipes with no PS entry.
                 Editing any cell creates the spec row with that value. */}
             {missingETs.map(ref => (
-              <tr key={`missing-${ref}`} style={{ background: '#fff8e1' }}>
+              <tr key={`missing-${ref}`} style={{ background: C.attnTint }}>
                 <td style={{ fontWeight: 500, fontSize: 11 }}>
-                  <span style={{ color: '#b45309' }}>{ref}</span>
+                  <span style={{ color: C.attnInk }}>{ref}</span>
                   <span
                     className="ms-2"
                     style={{
                       fontSize: 10,
-                      background: '#fde68a',
-                      color: '#92400e',
+                      background: C.attnTint,
+                      color: C.attnInk,
                       borderRadius: 3,
                       padding: '1px 5px',
                       fontWeight: 600,
@@ -145,7 +146,7 @@ export default function ProductSpecTable({ showDeleted = false, etUsedIn = {}, s
                       variant="link"
                       size="sm"
                       className="p-0"
-                      style={{ fontSize: 11, color: '#6c757d', textDecoration: 'none' }}
+                      style={{ fontSize: 11, color: C.muted, textDecoration: 'none' }}
                       onClick={() => addPSRow(ref, { Manufacturer: 'Ideaworks', ProductCode: 'N/A' })}
                       title="Set Manufacturer=Ideaworks, ProductCode=N/A"
                     >
@@ -155,7 +156,7 @@ export default function ProductSpecTable({ showDeleted = false, etUsedIn = {}, s
                       variant="link"
                       size="sm"
                       className="p-0"
-                      style={{ fontSize: 11, color: '#b45309' }}
+                      style={{ fontSize: 11, color: C.attnInk }}
                       onClick={() => handleGhostCreate(ref)}
                       title="Add to product spec"
                     >
@@ -186,7 +187,7 @@ export default function ProductSpecTable({ showDeleted = false, etUsedIn = {}, s
                   <tr
                     ref={el => { rowRefs.current[usageKey] = el }}
                     style={{
-                      background: isDeleted ? '#fdf0f0' : dup ? '#fff5f5' : undefined,
+                      background: isDeleted ? C.dangerTint : dup ? C.dangerTint : undefined,
                       opacity: isDeleted ? 0.6 : 1,
                     }}
                   >
@@ -200,7 +201,7 @@ export default function ProductSpecTable({ showDeleted = false, etUsedIn = {}, s
                     <EditableCell
                       value={productCode}
                       onChange={val => updatePSRow(ref, { ProductCode: val })}
-                      style={{ color: dup ? '#dc3545' : undefined, fontWeight: dup ? 600 : undefined }}
+                      style={{ color: dup ? C.danger : undefined, fontWeight: dup ? 600 : undefined }}
                     />
                     <EditableCell
                       value={row.ComponentDescription || row.componentDescription || ''}
@@ -221,7 +222,7 @@ export default function ProductSpecTable({ showDeleted = false, etUsedIn = {}, s
                             variant="link"
                             size="sm"
                             className="p-0"
-                            style={{ fontSize: 11, color: '#6c757d', textDecoration: 'none' }}
+                            style={{ fontSize: 11, color: C.muted, textDecoration: 'none' }}
                             onClick={() => updatePSRow(ref, { Manufacturer: 'Ideaworks', ProductCode: 'N/A' })}
                             title="Set Manufacturer=Ideaworks, ProductCode=N/A"
                           >
@@ -257,7 +258,7 @@ export default function ProductSpecTable({ showDeleted = false, etUsedIn = {}, s
                   {/* Used In row — only shown when used in more than one context */}
                   {usage && (usage.positions?.size > 1 || usage.elements?.size > 1 ||
                     (usage.positions?.size >= 1 && usage.elements?.size >= 1)) && (
-                    <tr style={{ background: '#fafafa' }}>
+                    <tr style={{ background: C.subtle }}>
                       <td colSpan={6} style={{ paddingTop: 2, paddingBottom: 4, paddingLeft: 12, fontSize: 11 }}>
                         {usage.positions?.size > 0 && (
                           <span className="text-muted me-3">

@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
-import { Button, Form, Badge } from 'react-bootstrap'
+import { Button, Form, Badge, Dropdown } from 'react-bootstrap'
 import MaterialIcon from './MaterialIcon'
 import IconButton from './IconButton'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { ago } from '../utils/ago'
 import { dbFilesOf } from '../utils/projectIdentity'
+import { C } from '../styles/tokens'
 
 /**
  * ProjectCard — one config of one project, and what it actually HOLDS.
@@ -54,7 +55,7 @@ export default function ProjectCard({ project, onOpen, onRename, onRenameConfig,
 
   return (
     <div className="d-flex align-items-center gap-2 px-2 py-2 rounded"
-      style={{ border: '1px solid #e9ecef', background: '#fff' }}
+      style={{ border: `1px solid ${C.border}`, background: C.surface }}
       data-debug-id="ProjectCard">
 
       <MaterialIcon name="folder_open" size={16} className="text-muted" />
@@ -66,11 +67,11 @@ export default function ProjectCard({ project, onOpen, onRename, onRenameConfig,
             onChange={e => setDraft(e.target.value)} onKeyDown={key} onBlur={commit} />
         ) : (
           <button className="btn btn-link p-0 text-start d-inline-flex align-items-center gap-1"
-            style={{ fontSize: 13, fontWeight: 600, color: '#212529', textDecoration: 'none' }}
+            style={{ fontSize: 13, fontWeight: 600, color: C.ink, textDecoration: 'none' }}
             onClick={() => start('name', project.project_label)}
             title="Rename this project">
             <span className="text-truncate">{name}</span>
-            <MaterialIcon name="edit" size={12} style={{ color: '#ced4da' }} />
+            <MaterialIcon name="edit" size={12} style={{ color: C.faint }} />
           </button>
         )}
 
@@ -80,7 +81,7 @@ export default function ProjectCard({ project, onOpen, onRename, onRenameConfig,
             <Form.Control size="sm" autoFocus value={draft} style={{ fontSize: 10, width: 120 }}
               onChange={e => setDraft(e.target.value)} onKeyDown={key} onBlur={commit} />
           ) : (
-            <Badge bg="light" text="dark" style={{ cursor: 'pointer', border: '1px solid #dee2e6' }}
+            <Badge bg="light" text="dark" style={{ cursor: 'pointer', border: `1px solid ${C.border}` }}
               onClick={() => start('config', project.config_name)}
               title="Rename this setup — its own workbooks, tags and unexported work over the same folder">
               {project.config_name}
@@ -91,7 +92,7 @@ export default function ProjectCard({ project, onOpen, onRename, onRenameConfig,
 
           {/* the trust signal */}
           {unexported > 0 ? (
-            <span className="rounded px-1" style={{ background: '#fff3cd', color: '#856404' }}
+            <span style={{ color: C.attnInk }}
               title="Changes made here that have not been exported to Excel yet">
               {unexported} unexported
             </span>
@@ -110,12 +111,19 @@ export default function ProjectCard({ project, onOpen, onRename, onRenameConfig,
         {err && <div className="text-danger mt-1" style={{ fontSize: 10 }}>{err}</div>}
       </div>
 
-      <Button size="sm" variant="link" className="p-0 text-muted d-inline-flex align-items-center gap-1" style={{ fontSize: 11, flexShrink: 0 }}
-        title="Save a backup file of this setup: its files, tags, templates and unexported work" onClick={() => onExport(project)}>
-        <MaterialIcon name="save_alt" size={14} /> Backup
-      </Button>
-      <IconButton icon={ACTION_ICONS.delete} size={15} style={{ color: '#adb5bd', padding: 0 }}
-        title="Wipe this setup from this browser — the Excel files are never touched" onClick={() => onWipe(project)} />
+      <Dropdown align="end">
+        <Dropdown.Toggle as={IconButton} icon={ACTION_ICONS.more} size={15} style={{ color: C.muted, padding: 0 }} title="Backup or wipe this setup" />
+        <Dropdown.Menu style={{ fontSize: 12 }}>
+          <Dropdown.Item onClick={() => onExport(project)}
+            title="Save a backup file of this setup: its files, tags, templates and unexported work">
+            <MaterialIcon name="save_alt" size={14} /> Backup this setup
+          </Dropdown.Item>
+          <Dropdown.Item className="text-danger" onClick={() => onWipe(project)}
+            title="Wipe this setup from this browser — the Excel files are never touched">
+            <MaterialIcon name={ACTION_ICONS.delete} size={14} /> Wipe from this browser
+          </Dropdown.Item>
+        </Dropdown.Menu>
+      </Dropdown>
 
       <Button size="sm" variant="primary" style={{ fontSize: 11, flexShrink: 0 }}
         disabled={busy} onClick={() => onOpen(project)}>

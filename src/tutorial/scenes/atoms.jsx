@@ -1,5 +1,6 @@
 import React from 'react'
 import MaterialIcon from '../../components/MaterialIcon'
+import { C } from '../../styles/tokens'
 
 /**
  * atoms.jsx — the moving parts every tutorial scene shares.
@@ -41,7 +42,7 @@ export const SCENE_KEYFRAMES = `
 export function Stage({ children, height = 230 }) {
   return (
     <div className="tut-scene position-relative rounded px-3 py-3"
-      style={{ height, background: '#f8f9fa', border: '1px solid #e9ecef', overflow: 'hidden' }}>
+      style={{ height, background: C.subtle, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
       <style>{SCENE_KEYFRAMES}</style>
       {children}
     </div>
@@ -66,7 +67,7 @@ export function Click({ on, children, style }) {
             pointerEvents: 'none', zIndex: 4,
           }} />
           <MaterialIcon name="near_me" size={16} aria-hidden style={{
-            position: 'absolute', right: -11, bottom: -11, zIndex: 5, color: '#212529',
+            position: 'absolute', right: -11, bottom: -11, zIndex: 5, color: C.ink,
             transform: 'scaleX(-1)', filter: 'drop-shadow(0 1px 1px rgba(0,0,0,.35))',
             pointerEvents: 'none',
           }} />
@@ -104,7 +105,7 @@ export function Appear({ when, children }) {
 export function FamilyHeader({ family, count }) {
   return (
     <div className="d-flex align-items-center gap-1 px-1 py-1" style={{ fontSize: 9 }}>
-      <MaterialIcon name="expand_more" size={12} style={{ color: '#6c757d' }} />
+      <MaterialIcon name="expand_more" size={12} style={{ color: C.muted }} />
       <span className="fw-bold text-uppercase" style={{ fontSize: 8, letterSpacing: '.04em' }}>{family}</span>
       <span className="text-muted" style={{ fontSize: 8 }}>({count})</span>
       <div className="flex-grow-1" />
@@ -128,18 +129,18 @@ export function PositionRow({ posRef, rows, ignored, active, clickIgnore, clickR
     <Click on={clickRow} style={{ width: '100%' }}>
       <div className="d-flex align-items-center gap-2 px-2 py-1 mb-1" style={{
         width: '100%',
-        border: '1px solid #e5e7eb',
-        borderLeft: '3px solid #6f42c1',
+        border: `1px solid ${C.border}`,
+        borderLeft: `3px solid ${C.accent}`,
         borderRadius: 6,
-        background: active ? '#e7f1ff' : '#fff',
+        background: active ? C.accentTint : C.surface,
         opacity: ignored ? 0.55 : 1,
         transition: 'opacity .3s ease, background .3s ease',
         fontSize: 11,
       }}>
-        <MaterialIcon name="tab_unselected" size={14} style={{ color: '#6f42c1' }} />
+        <MaterialIcon name="tab_unselected" size={14} style={{ color: C.accent }} />
         <span className="fw-semibold" style={{ fontSize: 11 }}>{posRef}</span>
         {ignored && (
-          <span className="badge" style={{ background: '#fff3cd', color: '#856404', fontSize: 8, border: '1px solid #ffc107' }}>
+          <span className="badge" style={{ background: C.attnTint, color: C.attnInk, fontSize: 8, border: `1px solid ${C.attn}` }}>
             Ignore
           </span>
         )}
@@ -149,7 +150,7 @@ export function PositionRow({ posRef, rows, ignored, active, clickIgnore, clickR
           : <span className="text-muted fst-italic" style={{ fontSize: 9 }}>empty</span>}
         <Click on={clickIgnore}>
           <MaterialIcon name={ignored ? 'do_not_disturb_on' : 'do_not_disturb_off'} size={14}
-            style={{ color: ignored ? '#ffc107' : '#ccc', transition: 'color .3s ease' }} />
+            style={{ color: ignored ? C.attn : C.faint, transition: 'color .3s ease' }} />
         </Click>
         <MaterialIcon name="chevron_right" size={14} className="text-muted" />
       </div>
@@ -162,8 +163,8 @@ export function MiniRow({ active, dim, children, style }) {
   return (
     <div className="d-flex align-items-center gap-2 px-2 py-1 rounded mb-1"
       style={{
-        background: active ? '#e7f1ff' : '#fff',
-        border: `1px solid ${active ? '#b6d4fe' : '#e9ecef'}`,
+        background: active ? C.accentTint : C.surface,
+        border: `1px solid ${active ? C.accentEdge : C.border}`,
         opacity: dim ? 0.45 : 1,
         fontSize: 10,
         transition: 'background .3s ease, opacity .3s ease, border-color .3s ease',
@@ -176,9 +177,9 @@ export function MiniRow({ active, dim, children, style }) {
 
 /** A coverage-matrix status cell. */
 export function MiniCell({ status }) {
-  const bg = { complete: '#d1e7dd', partial: '#fff3cd', missing: '#f8d7da', na: '#f8f9fa' }[status] || '#f8f9fa'
+  const bg = { complete: C.subtle, partial: C.attnTint, missing: C.dangerTint, na: C.subtle }[status] || C.subtle
   const icon = { complete: 'check_circle', partial: 'warning', missing: 'cancel', na: 'remove' }[status] || 'remove'
-  const fg = { complete: '#198754', partial: '#856404', missing: '#842029', na: '#adb5bd' }[status] || '#adb5bd'
+  const fg = { complete: C.success, partial: C.attnInk, missing: C.dangerInk, na: C.faint }[status] || C.faint
   return (
     <div className="d-flex align-items-center justify-content-center rounded"
       style={{ width: 34, height: 24, background: bg, transition: 'background .3s ease' }}>

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { C } from '../styles/tokens'
 
 /**
  * CodeChips — the paint surface.
@@ -24,9 +25,9 @@ import React, { useEffect, useRef, useState } from 'react'
  */
 
 export const BRUSH = {
-  code:    { label: 'Code',    bg: '#d1e7dd', fg: '#0f5132', swatch: '#198754' },
-  note:    { label: 'Note',    bg: 'transparent', fg: '#212529', swatch: '#adb5bd' },
-  discard: { label: 'Discard', bg: 'transparent', fg: '#c7ccd1', swatch: '#dc3545' },
+  code:    { label: 'Code',    bg: C.subtle, fg: C.ink, swatch: C.accent },
+  note:    { label: 'Note',    bg: 'transparent', fg: C.ink, swatch: C.faint },
+  discard: { label: 'Discard', bg: 'transparent', fg: C.faint, swatch: C.danger },
 }
 
 /** Tint and weight, never borders — the sentence has to stay readable. */
@@ -66,7 +67,7 @@ export default function CodeChips({ row, brush = 'code', onSweep, suggested = []
   let cursor = 0
   row.tokens.forEach((tok, i) => {
     if (tok.start > cursor) {
-      parts.push(<span key={`g${i}`} style={{ color: '#868e96' }}>{row.rawText.slice(cursor, tok.start)}</span>)
+      parts.push(<span key={`g${i}`} style={{ color: C.muted }}>{row.rawText.slice(cursor, tok.start)}</span>)
     }
     const role = row.roles[i]
     const sweeping = inSweep(i)
@@ -91,20 +92,20 @@ export default function CodeChips({ row, brush = 'code', onSweep, suggested = []
           cursor: 'pointer',
           padding: showBoundaries ? '1px 2px' : '1px 0',
           margin: showBoundaries ? '0 1px' : 0,
-          outline: showBoundaries ? '1px dotted #ced4da' : 'none',
+          outline: showBoundaries ? `1px dotted ${C.faint}` : 'none',
           // A suggestion looks like a faint version of the Code colour — "this could
           // be a code" — rather than an unexplained blue underline.
           // amber under a variant ("known code + more"), a solid rule under a code
           // that came from the spec, a faint rule under a mere suggestion.
-          ...(variant ? { background: '#fff3cd', color: '#856404', fontWeight: 700, borderRadius: 2 } : null),
+          ...(variant ? { background: C.attnTint, color: C.attnInk, fontWeight: 700, borderRadius: 2 } : null),
           boxShadow: variant
-            ? 'inset 0 -2px 0 #e0a800'
+            ? `inset 0 -2px 0 ${C.attn}`
             : isKnown
-              ? 'inset 0 -2px 0 #0f5132'
+              ? `inset 0 -2px 0 ${C.ink}`
               : isSuggested
                 ? `inset 0 -2px 0 ${BRUSH.code.swatch}`
                 : hover === i && !drag && !sweeping
-                  ? 'inset 0 -2px 0 #adb5bd'
+                  ? `inset 0 -2px 0 ${C.faint}`
                   : 'none',
           opacity: isSuggested ? 0.9 : 1,
         }}
@@ -116,7 +117,7 @@ export default function CodeChips({ row, brush = 'code', onSweep, suggested = []
     cursor = tok.end
   })
   if (cursor < row.rawText.length) {
-    parts.push(<span key="tail" style={{ color: '#868e96' }}>{row.rawText.slice(cursor)}</span>)
+    parts.push(<span key="tail" style={{ color: C.muted }}>{row.rawText.slice(cursor)}</span>)
   }
 
   return (

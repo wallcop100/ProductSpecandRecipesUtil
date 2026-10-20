@@ -3,6 +3,7 @@ import { Button } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { hasUnexported } from '../utils/reconcile'
+import { C } from '../styles/tokens'
 
 /**
  * PatchSyncPanel — where an export stands against the workbooks (reconcile.js). Replaces the old
@@ -42,8 +43,8 @@ export default function PatchSyncPanel() {
   const time = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
   return (
-    <div data-testid="patch-sync" style={{ position: 'sticky', top: 0, zIndex: 1050, background: allIn ? '#d1e7dd' : '#fff8e1',
-      borderBottom: `1px solid ${allIn ? '#a3cfbb' : '#f0d58a'}`, fontSize: 12, padding: '6px 12px' }}>
+    <div data-testid="patch-sync" style={{ position: 'sticky', top: 0, zIndex: 1050, background: allIn ? C.subtle : C.attnTint,
+      borderBottom: `1px solid ${allIn ? C.border : C.attnTint}`, fontSize: 12, padding: '6px 12px' }}>
       <div className="d-flex align-items-center gap-3 flex-wrap">
         <span className="fw-semibold d-inline-flex align-items-center gap-1">
           <MaterialIcon name={allIn ? 'task_alt' : 'sync'} size={15} />
@@ -58,8 +59,8 @@ export default function PatchSyncPanel() {
             <span key={f.key} className="d-inline-flex align-items-center gap-1" data-testid={`sync-${f.key}`} title={f.note}>
               <span className="text-muted">{i + 1}.</span> {f.label}
               {n === 0
-                ? <span style={{ color: '#0f5132' }}><MaterialIcon name="check" size={13} /> in</span>
-                : <span style={{ color: '#856404' }}>{n} waiting</span>}
+                ? <span style={{ color: C.ink }}><MaterialIcon name="check" size={13} /> in</span>
+                : <span style={{ color: C.attnInk }}>{n} waiting</span>}
             </span>
           )
         })}
@@ -73,7 +74,7 @@ export default function PatchSyncPanel() {
         </span>
       </div>
       {batch && dbWaiting > 0 && laterIn && (
-        <div className="mt-1" style={{ color: '#842029' }}>
+        <div className="mt-1" style={{ color: C.dangerInk }}>
           <MaterialIcon name="warning" size={13} /> The DesignDB patch isn't in yet, but a later one is: the Product Spec and
           recipes now name ElementTypes the DesignDB does not have. Run the DesignDB patch.
         </div>
@@ -84,7 +85,7 @@ export default function PatchSyncPanel() {
       )}
       {conflicts.length > 0 && (
         <div className="mt-2" data-testid="sync-conflicts">
-          <div className="fw-semibold" style={{ color: '#842029' }}>
+          <div className="fw-semibold" style={{ color: C.dangerInk }}>
             {conflicts.length} change{conflicts.length === 1 ? '' : 's'} where the workbook now says something else (edited there by hand?)
           </div>
           {conflicts.map(c => (

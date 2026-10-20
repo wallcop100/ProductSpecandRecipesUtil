@@ -1,7 +1,7 @@
 import InfoTip from '../components/InfoTip'
 import React, { useState, useEffect, useCallback } from 'react'
 import {
-  Container, Card, Button, Alert, Spinner, Badge, Form, Row, Col,
+  Container, Card, Button, Alert, Spinner, Badge, Form, Row, Col, Dropdown,
 } from 'react-bootstrap'
 import { extractProjectId } from '../utils/projectId'
 import { detectFiles as detectProjectFiles, importFiles } from '../utils/backend'
@@ -10,11 +10,11 @@ import { groupProjects, adoptPlan, pickCanonical, UNASSIGNED, dbFilesOf, pickDbs
 import ProjectCard from '../components/ProjectCard'
 import ProjectIdPill from '../components/ProjectIdPill'
 import StageBar from '../components/StageBar'
-import { ConceptHint, CONCEPTS } from '../components/ConceptCard'
 import MaterialIcon from '../components/MaterialIcon'
 import { ACTION_ICONS } from '../utils/entityStyle'
-import { CHANGELOG, LATEST } from '../changelog'
+import { CHANGELOG } from '../changelog'
 import BackupPanel from '../components/BackupPanel'
+import { C } from '../styles/tokens'
 
 const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev'
 
@@ -391,16 +391,16 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
   /** `optional` files are absent on a new project. That is a fact, not an error. */
   function FileStatus({ label, filename, found, badge, optional }) {
     return (
-      <div className="d-flex align-items-center gap-2 mb-2">
-        <span style={{ width: 140, fontWeight: 500 }}>{label}</span>
+      <div className="d-flex align-items-center gap-2 mb-2" style={{ whiteSpace: 'nowrap' }}>
+        <span style={{ width: 140, minWidth: 140, fontWeight: 500 }}>{label}</span>
         {found ? (
           <>
             <MaterialIcon name={ACTION_ICONS.complete} size={16} className="text-success" title="Found" />
-            <span className="text-muted small">{filename}</span>
-            {badge && <Badge bg="secondary">{badge}</Badge>}
+            <span className="text-muted small text-truncate" style={{ minWidth: 0 }} title={filename}>{filename}</span>
+            {badge && <Badge bg="secondary" style={{ flexShrink: 0 }}>{badge}</Badge>}
           </>
         ) : optional ? (
-          <span className="small" style={{ color: '#856404' }}>
+          <span className="small text-truncate" style={{ color: C.attnInk, minWidth: 0 }}>
             <MaterialIcon name="add_circle" size={14} /> not found — starts empty, and your export
             patches it in
           </span>
@@ -419,17 +419,15 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
       <Card style={{ width: 640, boxShadow: '0 4px 24px rgba(0,0,0,0.10)' }}>
         <Card.Body className="p-4">
 
-          <div className="d-flex align-items-baseline gap-2">
+          <div className="d-flex align-items-baseline gap-2 mb-2">
             <h4 className="mb-1">Recipe Builder</h4>
             <button className="btn btn-link p-0 ms-auto text-muted" style={{ fontSize: 11 }}
               onClick={() => setShowChangelog(v => !v)} title="What changed recently">
               v{APP_VERSION} · what’s new {showChangelog ? '▴' : '▾'}
             </button>
           </div>
-          {/* One line proves at a glance whether a new build has loaded past a stale cache. */}
-          <div className="text-muted mb-2" style={{ fontSize: 11 }}>{LATEST.date} · {LATEST.note}</div>
           {showChangelog && (
-            <div className="mb-3 px-2 py-2 rounded" style={{ background: '#f8f9fa', border: '1px solid #e9ecef', maxHeight: 180, overflowY: 'auto' }}>
+            <div className="mb-3 px-2 py-2 rounded" style={{ background: C.subtle, border: `1px solid ${C.border}`, maxHeight: 180, overflowY: 'auto' }}>
               {CHANGELOG.map((c, i) => (
                 <div key={i} className="text-muted" style={{ fontSize: 10, lineHeight: 1.6 }}>
                   <span className="fw-semibold">{c.date}</span> · {c.note}
@@ -437,8 +435,6 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
               ))}
             </div>
           )}
-
-          <BackupPanel />
 
           {unsupported && <Alert variant="danger" className="py-2"><strong>Unsupported browser:</strong> {unsupported}</Alert>}
 
@@ -500,9 +496,9 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
           {/* ── First run. State-aware, not a tour. ─────────────────────────── */}
           {!hasProjects && !picking && (
             <div className="mb-3">
-              <div className="px-3 py-3 rounded" style={{ background: '#f8f9fa', border: '1px dashed #ced4da' }}>
+              <div className="px-3 py-3 rounded" style={{ background: C.subtle, border: `1px dashed ${C.faint}` }}>
                 <div className="text-center">
-                  <MaterialIcon name="menu_book" size={28} style={{ color: '#adb5bd' }} />
+                  <MaterialIcon name="menu_book" size={28} style={{ color: C.faint }} />
                   <div className="fw-semibold mt-2" style={{ fontSize: 13 }}>
                     You build the recipes. Excel keeps the files.{' '}
                     <InfoTip label="How it works">
@@ -523,21 +519,6 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
                 <StageBar current={1} />
               </div>
 
-              <div className="d-flex align-items-center gap-2 mt-3 text-muted" style={{ fontSize: 11 }}>
-                <span>The ideas that bite:</span>
-                <span className="d-inline-flex align-items-center gap-1">
-                  nothing is saved <ConceptHint concept={CONCEPTS.READONLY} size={12} title="Why is there no Save button?" />
-                </span>
-                <span className="d-inline-flex align-items-center gap-1">
-                  ExtRef <ConceptHint concept={CONCEPTS.EXTREF} size={12} title="Why does the Form say C01 when the recipe lives on C01r?" />
-                </span>
-                <span className="d-inline-flex align-items-center gap-1">
-                  wrappers <ConceptHint concept={CONCEPTS.WRAPPER} size={12} title="What is a wrapper, and why is it shared?" />
-                </span>
-                <span className="d-inline-flex align-items-center gap-1">
-                  intent vs fact <ConceptHint concept={CONCEPTS.INTENT} size={12} title="The Form asks. The recipe has." />
-                </span>
-              </div>
             </div>
           )}
 
@@ -550,21 +531,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
                 <MaterialIcon name="folder_open" size={15} />{' '}
                 {hasProjects ? 'Open a folder…' : 'Open the folder with your DesignDB →'}
               </Button>
-              <Button variant="link" size="sm" className="px-1" style={{ fontSize: 12 }}
-                disabled={detecting || opening || !!unsupported} onClick={handleRestoreFirst}
-                title="A .config.yaml saved from one project: its file choice, tags, templates and unexported work. To bring back everything, use Restore all my work">
-                <MaterialIcon name="settings_backup_restore" size={14} /> Restore one project’s settings (.config.yaml)…
-              </Button>
               {detecting && <Spinner size="sm" animation="border" />}
-              <span className="ms-auto text-muted d-inline-flex align-items-center gap-1" style={{ fontSize: 11 }}>
-                How this works
-                <InfoTip label="How this works">
-                  <strong>1.</strong> Open the folder holding the project&apos;s DesignDB, Product Spec and Recipes workbooks.{' '}
-                  <strong>2.</strong> Import the Form&apos;s product codes, then build recipes from it in the builder.{' '}
-                  <strong>3.</strong> Your work is kept in this browser until you <em>Export changes</em>: that gives
-                  patch scripts to run on the workbooks. Nothing here ever writes to them directly.
-                </InfoTip>
-              </span>
             </div>
           )}
 
@@ -612,10 +579,10 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
               <Card.Body className="py-3">
                 {detectedDbs.length > 1 ? (
                   <div className="mb-2">
-                    <div className="d-flex align-items-center gap-2">
-                      <span style={{ width: 140, fontWeight: 500 }}>Database (DB)</span>
-                      <span className="text-muted small">{detectedDbs.length} found — tick each one this config covers</span>
-                      <Badge bg="secondary">DB — read only</Badge>
+                    <div className="d-flex align-items-center gap-2" style={{ whiteSpace: 'nowrap' }}>
+                      <span style={{ width: 140, minWidth: 140, fontWeight: 500 }}>Database (DB)</span>
+                      <span className="text-muted small text-truncate" style={{ minWidth: 0 }}>{detectedDbs.length} found — tick each one this config covers</span>
+                      <Badge bg="secondary" style={{ flexShrink: 0 }}>DB — read only</Badge>
                     </div>
                     <div className="ms-1 mt-1" data-testid="db-picker">
                       {detectedDbs.map(f => (
@@ -791,28 +758,35 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
             </div>
           )}
 
-          {/* Library — favourites + global templates, shared across every project. */}
-          <div className="d-flex align-items-center gap-3 mt-3 pt-2 border-top">
-            <Button variant="link" size="sm" className="p-0" style={{ fontSize: 11 }}
-              title="Export your favourites + global templates to a YAML file"
-              onClick={async () => {
-                const r = await window.electronAPI.libraryExportYaml?.()
-                if (r?.ok) setLibraryMsg(`Library exported to ${r.path}`)
-              }}>
-              Export my library
-            </Button>
-            <Button variant="link" size="sm" className="p-0" style={{ fontSize: 11 }}
-              title="Merge a library YAML into your favourites + global templates"
-              onClick={async () => {
-                const r = await window.electronAPI.libraryImportYaml?.()
-                if (r?.ok) {
-                  setLibraryMsg(`Imported: ${r.favAdded} favourite(s) added, ${r.favSkipped} already present, ${r.tplUpserted} template(s), ${r.stylesAdded ?? 0} style example(s)`)
-                  refresh()
-                }
-                else if (r?.error) setLibraryMsg(`Import failed: ${r.error}`)
-              }}>
-              Import library
-            </Button>
+          {/* Every way to save or bring back work, in one quiet menu. */}
+          <div className="mt-3 pt-2 border-top">
+            <BackupPanel>
+              {!picking && (
+                <Dropdown.Item disabled={detecting || opening || !!unsupported} onClick={handleRestoreFirst}
+                  title="A .config.yaml saved from one project: its file choice, tags, templates and unexported work. To bring back everything, use Restore all my work">
+                  <MaterialIcon name="settings_backup_restore" size={14} /> Restore one project’s settings (.config.yaml)…
+                </Dropdown.Item>
+              )}
+              {/* Library — favourites + global templates, shared across every project. */}
+              <Dropdown.Item title="Export your favourites + global templates to a YAML file"
+                onClick={async () => {
+                  const r = await window.electronAPI.libraryExportYaml?.()
+                  if (r?.ok) setLibraryMsg(`Library exported to ${r.path}`)
+                }}>
+                <MaterialIcon name="upload" size={14} /> Export my library
+              </Dropdown.Item>
+              <Dropdown.Item title="Merge a library YAML into your favourites + global templates"
+                onClick={async () => {
+                  const r = await window.electronAPI.libraryImportYaml?.()
+                  if (r?.ok) {
+                    setLibraryMsg(`Imported: ${r.favAdded} favourite(s) added, ${r.favSkipped} already present, ${r.tplUpserted} template(s), ${r.stylesAdded ?? 0} style example(s)`)
+                    refresh()
+                  }
+                  else if (r?.error) setLibraryMsg(`Import failed: ${r.error}`)
+                }}>
+                <MaterialIcon name="download" size={14} /> Import library
+              </Dropdown.Item>
+            </BackupPanel>
           </div>
           {libraryMsg && <div className="text-muted small mt-1">{libraryMsg}</div>}
         </Card.Body>

@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest'
-import { readiness, CLAUSE } from '../../src/utils/readiness.js'
-import { buildTasks } from '../../src/utils/validationTasks.js'
+import { readiness, CLAUSE, exportChecklist } from '../../src/utils/readiness.js'
+import { buildTasks, BLOCKING_RULES } from '../../src/utils/validationTasks.js'
 
 /**
  * The end state was fully computable and never stated. "Done" means nothing is left for
@@ -149,5 +149,31 @@ describe('an empty project is not a finished one', () => {
     const r = readiness({ positionTypes: [], recipes: [], tasks: [], gaps: noGaps })
     expect(clause(r, CLAUSE.RECIPES).done).toBe(false)
     expect(r.done).toBe(false)
+  })
+})
+
+describe('the pre-export checklist', () => {
+  test('everything clear is an empty list', () => {
+    expect(exportChecklist({ positionTypes: [pt('C01r')], recipes: [row('C01r')] })).toEqual([])
+  })
+
+  test('short counted lines, each pointing at the first position; warnings and queued fixes left out', () => {
+    const items = exportChecklist({
+      positionTypes: [pt('C01r'), pt('D07'), pt('D08')],
+      recipes: [row('C01r')],
+      worklist: [{ posRef: 'C01r', missing: 2, pending: 0 }, { posRef: 'D07', missing: 0, pending: 0, orphans: 1 }],
+      issues: [
+        { severity: 'error', rule: 'ELEMENT_TYPE_NOT_IN_DB', ref: 'ET-X' },
+        { severity: 'error', rule: 'ELEMENT_TYPE_NOT_IN_DB', ref: 'ET-Q' },
+        { severity: 'warning', rule: 'MISSING_PRODUCT_CODE', ref: 'ET-X' },
+      ],
+      dbQueued: new Set(['et-q']),
+      blockingRules: BLOCKING_RULES,
+    })
+    expect(items.map(i => [i.label, i.posRef, i.blocking])).toEqual([
+      ['2 positions have no recipe', 'D07', false],
+      ['2 Form products not placed', 'C01r', false],
+      ['1 ElementType missing from the DesignDB', 'C01r', true],   // ET-X is used by C01r
+    ])
   })
 })

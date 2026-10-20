@@ -7,6 +7,7 @@ import MaterialIcon from './MaterialIcon'
 import IconButton from './IconButton'
 import { familyOf } from '../utils/etRef'
 import { colorsForType, iconForEntity, ACTION_ICONS } from '../utils/entityStyle'
+import { C } from '../styles/tokens'
 
 const FLAGGED_FAMILY = '⚠ Recipe-only (not in DB or Spec)'
 
@@ -144,19 +145,19 @@ export default function ElementPalette({ pickTarget, onPickET, onPickETMulti, on
       {justAdded && !pickTarget && (
         <div
           className="px-3 py-2 border-bottom"
-          style={{ background: '#d1e7dd', fontSize: 12, flexShrink: 0 }}
+          style={{ background: C.subtle, fontSize: 12, flexShrink: 0 }}
         >
           <div className="d-flex align-items-center gap-2">
-            <MaterialIcon name="check_circle" size={14} style={{ color: '#198754' }} />
-            <span className="fw-semibold" style={{ color: '#0a3622' }}>
+            <MaterialIcon name="check_circle" size={14} style={{ color: C.success }} />
+            <span className="fw-semibold" style={{ color: C.ink }}>
               🎉 {justAdded.etRef} added to {justAdded.posRef}
             </span>
           </div>
           {onAddToMultiple && (
-            <div className="mt-1" style={{ fontSize: 11, color: '#198754' }}>
+            <div className="mt-1" style={{ fontSize: 11, color: C.muted }}>
               <button
                 className="btn btn-link p-0"
-                style={{ fontSize: 11, color: '#0a3622', textDecoration: 'underline' }}
+                style={{ fontSize: 11, color: C.ink, textDecoration: 'underline' }}
                 onClick={onAddToMultiple}
               >
                 Add to multiple recipes?
@@ -171,9 +172,9 @@ export default function ElementPalette({ pickTarget, onPickET, onPickETMulti, on
       {pickTarget && (
         <div
           className="d-flex align-items-center gap-2 px-3 py-2 border-bottom flex-wrap"
-          style={{ background: '#e8f0fe', fontSize: 12, flexShrink: 0 }}
+          style={{ background: C.accentTint, fontSize: 12, flexShrink: 0 }}
         >
-          <MaterialIcon name={pickTarget.mode === 'replace' ? 'swap_horiz' : 'add_circle'} size={14} style={{ color: '#0d6efd' }} />
+          <MaterialIcon name={pickTarget.mode === 'replace' ? 'swap_horiz' : 'add_circle'} size={14} style={{ color: C.accent }} />
           <span>
             {pickTarget.mode === 'replace'
               ? <>Pick the ElementType to <strong>replace with</strong></>
@@ -190,7 +191,7 @@ export default function ElementPalette({ pickTarget, onPickET, onPickETMulti, on
           />
           <button
             className="btn btn-link btn-sm p-0"
-            style={{ fontSize: 11, color: '#0d6efd' }}
+            style={{ fontSize: 11, color: C.accent }}
             onClick={onCancelPick}
           >
             Cancel
@@ -234,7 +235,7 @@ export default function ElementPalette({ pickTarget, onPickET, onPickETMulti, on
           {onNewET && (
             <button
               className="btn btn-link btn-sm p-0 ms-auto d-inline-flex align-items-center gap-1"
-              style={{ fontSize: 11, color: '#198754', whiteSpace: 'nowrap' }}
+              style={{ fontSize: 11, color: C.accent, whiteSpace: 'nowrap' }}
               title="Create a brand-new ElementType"
               onClick={() => onNewET(pickTarget?.posRef ?? null, pickTarget?.sectionKey ?? 'position')}
             >
@@ -315,10 +316,10 @@ function DraggableETCard({ et, mode, onPickET }) {
         padding: '4px 8px',
         marginBottom: 3,
         marginLeft: 10,
-        border: et._undefinedRef ? '1px solid #f59e0b' : '1px solid #dee2e6',
-        borderLeft: et._undefinedRef ? '1px solid #f59e0b' : `3px solid ${accent}`,
+        border: et._undefinedRef ? `1px solid ${C.attn}` : `1px solid ${C.border}`,
+        borderLeft: et._undefinedRef ? `1px solid ${C.attn}` : `3px solid ${accent}`,
         borderRadius: 4,
-        background: et._undefinedRef ? '#fffbeb' : '#fff',
+        background: et._undefinedRef ? C.attnTint : C.surface,
         userSelect: 'none',
         fontSize: 12,
       }}
@@ -344,7 +345,7 @@ function DraggableETCard({ et, mode, onPickET }) {
         {onPickET && (
           <button
             className="btn btn-link p-0"
-            style={{ lineHeight: 1, color: '#0d6efd', flexShrink: 0 }}
+            style={{ lineHeight: 1, color: C.accent, flexShrink: 0 }}
             title="Add to recipe"
             onPointerDown={e => e.stopPropagation()}
             onClick={e => { e.stopPropagation(); onPickET(ref) }}
@@ -355,7 +356,7 @@ function DraggableETCard({ et, mode, onPickET }) {
         {/* Favourite toggle (kept out of the drag stream via stopPropagation) */}
         <button
           className="btn btn-link p-0"
-          style={{ lineHeight: 1, color: isFav ? '#f5a623' : '#ccc', flexShrink: 0 }}
+          style={{ lineHeight: 1, color: isFav ? C.attn : C.faint, flexShrink: 0 }}
           title={isFav ? 'Remove from favourites' : 'Save to my favourites'}
           onPointerDown={e => e.stopPropagation()}
           onClick={e => { e.stopPropagation(); favoriteElement(ref) }}
@@ -367,10 +368,10 @@ function DraggableETCard({ et, mode, onPickET }) {
         <div className="text-muted" style={{ fontSize: 11, marginLeft: 26 }}>{secondaryLabel}</div>
       )}
       {mode === 'mfr-code' && manufacturer && productCode && (
-        <div style={{ fontSize: 10, color: '#888', marginLeft: 26 }}>{manufacturer}</div>
+        <div style={{ fontSize: 10, color: C.muted, marginLeft: 26 }}>{manufacturer}</div>
       )}
       {et._undefinedRef && (
-        <div style={{ fontSize: 10, color: '#b45309', marginLeft: 26 }}>not in DB or spec</div>
+        <div style={{ fontSize: 10, color: C.attnInk, marginLeft: 26 }}>not in DB or spec</div>
       )}
     </div>
   )
