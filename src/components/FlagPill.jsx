@@ -30,7 +30,6 @@ export default function FlagPill({ label, value, onChange, readOnly = false, act
         fontSize: 10,
         padding: '3px 7px',
         fontWeight: isActive ? 600 : 400,
-        transition: 'background 0.15s',
       }}
       title={readOnly ? `${label}: ${value ?? 'null'}` : `Click to toggle ${label}`}
     >
