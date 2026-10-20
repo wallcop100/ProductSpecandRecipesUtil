@@ -88,10 +88,10 @@ export default function App() {
 
   return (
     <div className={debugIds ? 'debug-ids' : ''} data-screen={activeScreen} style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* This is an alpha: said on every page, over the header, never in the way of a click. */}
+      {/* This is an alpha: said on every page, top-right, beside the bug button, never in the way of a click. */}
       <Badge bg="info" data-testid="alpha-badge"
-        style={{ position: 'fixed', top: 6, left: '50%', transform: 'translateX(-50%)', zIndex: 2000,
-          pointerEvents: 'none', fontSize: 12, letterSpacing: 2, padding: '5px 12px', boxShadow: '0 1px 4px rgba(0,0,0,.25)' }}>
+        style={{ position: 'fixed', top: 5, right: 4, zIndex: 2000,
+          pointerEvents: 'none', fontSize: 9, letterSpacing: 1, padding: '3px 6px', opacity: 0.85 }}>
         ALPHA
       </Badge>
       <BugReporter screen={activeScreen} />

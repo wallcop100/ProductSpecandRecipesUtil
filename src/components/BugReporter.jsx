@@ -128,17 +128,17 @@ export default function BugReporter({ screen }) {
 
   return (
     <>
-      <div data-bug-reporter style={{ position: 'fixed', top: 4, left: 'calc(50% + 48px)', zIndex: 2000 }}>
+      <div data-bug-reporter style={{ position: 'fixed', top: 2, right: 48, zIndex: 2000 }}>
         <ButtonGroup size="sm">
           <Button ref={bugRef} variant={bugMode ? 'danger' : 'light'} onClick={() => setBugMode(!bugMode)} data-testid="bug-toggle"
             aria-pressed={bugMode} title={bugMode ? 'Bug reports on: right-click anything to report it (Shift + right-click for the normal menu). Click to turn off.' : 'Report bugs: turn on, then right-click anything'}
-            style={{ padding: '1px 6px', lineHeight: 1, boxShadow: '0 1px 4px rgba(0,0,0,.25)' }}>
-            <MaterialIcon name="bug_report" size={16} />
+            style={{ padding: '0 4px', lineHeight: 1, boxShadow: '0 1px 3px rgba(0,0,0,.2)' }}>
+            <MaterialIcon name="bug_report" size={14} />
             {reports.length > 0 && <span className="ms-1" style={{ fontSize: 11 }}>{reports.length}</span>}
           </Button>
           <Dropdown as={ButtonGroup} align="end">
             <Dropdown.Toggle split variant={bugMode ? 'danger' : 'light'} aria-label="Bug report options"
-              style={{ padding: '1px 4px', boxShadow: '0 1px 4px rgba(0,0,0,.25)' }} />
+              style={{ padding: '0 3px', boxShadow: '0 1px 3px rgba(0,0,0,.2)' }} />
             <Dropdown.Menu style={{ fontSize: 12 }}>
               <Dropdown.Item onClick={openNote} data-testid="report-write">
                 <MaterialIcon name="edit_note" size={14} /> Write a report…
