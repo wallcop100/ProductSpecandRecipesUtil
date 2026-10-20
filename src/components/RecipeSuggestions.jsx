@@ -47,10 +47,10 @@ const Dots = React.forwardRef(({ onClick }, ref) => (
 ))
 let libraryAsked = false
 const DISMISSED = n => `psr-suggestions-dismissed:${n || '-'}`
-function readDismissed(n) {
+export function readDismissed(n) {
   try { return new Set(JSON.parse(localStorage.getItem(DISMISSED(n)) || '[]')) } catch { return new Set() }
 }
-function writeDismissed(n, set) {
+export function writeDismissed(n, set) {
   try { localStorage.setItem(DISMISSED(n), JSON.stringify([...set].slice(-500))) } catch { /* a convenience only */ }
 }
 

@@ -34,13 +34,13 @@ describe('the Add panel', () => {
     onBackToSetup={vi.fn()} onOpenProductSpec={vi.fn()} onOpenTemplateEditor={vi.fn()}
     onOpenCodeImport={vi.fn()} onOpenConnectors={vi.fn()} />)
 
-  test('K3LGUL: the drawer opens on the Form spec; no All, Templates or Favourites', () => {
+  test('K3LGUL: the drawer opens on the Form spec; no All or Favourites; Templates is a tab', () => {
     localStorage.removeItem('builderDrawer')
     draw()
     const tabs = within(screen.getByRole('group', { name: 'Show' }))
     for (const l of ['Form spec', 'ElementTypes', 'Positions like this one']) expect(tabs.getByRole('button', { name: l })).toBeInTheDocument()
     expect(tabs.queryByRole('button', { name: 'All' })).toBeNull()
-    expect(tabs.queryByRole('button', { name: 'Templates' })).toBeNull()
+    expect(tabs.getByRole('button', { name: 'Templates' })).toBeInTheDocument()
     expect(tabs.queryByRole('button', { name: 'Favourites' })).toBeNull()
     expect(screen.getByTestId('drawer-form-hint')).toBeInTheDocument()        // no position open
     expect(screen.queryByLabelText('Search to add')).toBeNull()                // search is for the add tabs
@@ -196,7 +196,7 @@ describe('toolbars (96KPJ5, XZ3UBB, M7DYP4, A8GNSJ, DD66AT, B3DGQT, AFEHZM)', ()
     expect(useStore.getState().showDeleted).toBe(true)
     fireEvent.click(screen.getByLabelText('Recipe actions'))
     fireEvent.click(await screen.findByTestId('apply-template'))
-    expect(await screen.findByText('Apply a template to C01r')).toBeInTheDocument()
+    expect(useStore.getState().drawerTab).toBe('templates')   // the drawer's Templates tab, not a modal
   })
 })
 

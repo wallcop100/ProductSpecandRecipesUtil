@@ -11,6 +11,7 @@ import IconButton from './IconButton'
 import ConnectorSuggestions from './ConnectorSuggestions'
 import CollectionBadge from './CollectionBadge'
 import FormCoverageBadge from './FormCoverageBadge'
+import useTemplateMatches, { useHintsOff, hintOff, openTemplates } from './useTemplateMatches'
 import EmptyPositionWizard from './EmptyPositionWizard'
 import TagDriftWizard from './TagDriftWizard'
 import { colorsForType, ICONS, ACTION_ICONS } from '../utils/entityStyle'
@@ -71,6 +72,11 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
     }
     return map
   }, [validationResults])
+
+  // Empty positions a template fits: one matching pass for the list, not one per row.
+  const hintsOff = useHintsOff()
+  const emptyRefs = useMemo(() => positionTypes.filter(pt => !countByRef[pt.PositionTypeRef]).map(pt => pt.PositionTypeRef), [positionTypes, countByRef])
+  const fits = useTemplateMatches(emptyRefs)
 
   // Positions with no recipe rows and not ignored (individually or by family)
   const emptyCount = positionTypes.reduce((n, pt) => (!countByRef[pt.PositionTypeRef] && !isIgnoredPt(pt)) ? n + 1 : n, 0)
@@ -194,6 +200,13 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
         {/* Silent unless a Form template is attached and mentions this position. */}
         <FormCoverageBadge posRef={ref} />
         <div className="flex-grow-1" />
+        {count === 0 && !hintOff(hintsOff, ref) && fits.get(ref)?.matches[0] && (
+          <span data-testid={`template-hint-${ref}`} role="button" style={{ color: C.muted, cursor: 'pointer', flexShrink: 0, lineHeight: 1 }}
+            title={`${fits.get(ref).matches[0].name} fits — apply from the Templates tab`}
+            onClick={e => { e.stopPropagation(); openTemplates(ref) }}>
+            <MaterialIcon name="dashboard_customize" size={14} />
+          </span>
+        )}
         {count > 0
           ? <span className="badge bg-light text-dark border" style={{ fontSize: 10 }}>{count} {count === 1 ? 'row' : 'rows'}</span>
           : <span className="text-muted fst-italic" style={{ fontSize: 11 }}>empty</span>}

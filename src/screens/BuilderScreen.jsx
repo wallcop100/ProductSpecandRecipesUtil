@@ -29,6 +29,8 @@ import SurfaceSwitch from '../components/SurfaceSwitch'
 import ConnectorsPane from '../components/ConnectorsPane'
 import ConnectorAutoJoin from '../components/ConnectorAutoJoin'
 import { connectorGapsForPosition } from '../utils/collectionStatus'
+import TemplatesPane from '../components/TemplatesPane'
+import useTemplateMatches, { useHintsOff, hintOff } from '../components/useTemplateMatches'
 import PasteMergeModal from '../components/PasteMergeModal'
 import ReviewModal from '../components/ReviewModal'
 import FormRecipesModal from '../components/FormRecipesModal'
@@ -386,6 +388,11 @@ export default function BuilderScreen({
   const connectorGaps = useMemo(() => (drawerPos
     ? connectorGapsForPosition(recipes, drawerPos, useStore.getState()._templateRecOf()(drawerPos), etCollections, containerETRefs).length : 0),
   [drawerPos, recipes, etCollections, containerETRefs])
+  // Dot on the Templates tab: the open position is empty and a template fits it (unless its hint was dismissed).
+  const hintsOff = useHintsOff()
+  const drawerMatches = useTemplateMatches(drawerPos ? [drawerPos] : [])
+  const templateHint = !!drawerPos && !hintOff(hintsOff, drawerPos) && !recipes.some(r => (r.PositionTypeRef || r.positionTypeRef) === drawerPos && (r.IsDeleted || r.isDeleted) !== 'Y')
+    && (drawerMatches.get(drawerPos)?.matches.length || 0) > 0
   const activeGrouped = activePositionRef ? getRecipeForPosition(recipes, activePositionRef) : null
   const hasRecipeRows = !!activeGrouped && (
     activeGrouped.position.length > 0 ||
@@ -754,10 +761,14 @@ export default function BuilderScreen({
                   ['connectors', 'cable', 'Connectors'],
                   ['palette', 'category', 'ElementTypes'],
                   ['similar', 'compare_arrows', 'Positions like this one'],
+                  ['templates', 'dashboard_customize', 'Templates'],
                 ].map(([k, icon, label]) => (
                   <Button key={k} variant={rightTab === k ? 'primary' : 'outline-secondary'} title={label} aria-label={label}
                     data-testid={`drawer-tab-${k}`} onClick={() => setRightTab(k)} style={{ padding: '1px 4px', position: 'relative' }}>
                     <MaterialIcon name={icon} size={15} />
+                    {k === 'templates' && templateHint && (
+                      <span data-testid="template-hint-dot" style={{ position: 'absolute', top: 2, right: 6, width: 7, height: 7, borderRadius: '50%', background: C.attn }} />
+                    )}
                     {k === 'connectors' && connectorGaps > 0 && (
                       <span data-testid="connector-gap-dot" style={{ position: 'absolute', top: 2, right: 6, width: 7, height: 7, borderRadius: '50%', background: C.attn }} />
                     )}
@@ -767,7 +778,7 @@ export default function BuilderScreen({
               <TutorialHint id="palette" />
               <button className="btn btn-link p-0" style={{ color: C.muted, lineHeight: 1 }} onClick={() => setRightOpen(false)} title="Close palette" aria-label="Close palette"><MaterialIcon name="close" size={18} /></button>
             </div>
-            {!['form', 'connectors'].includes(rightTab) && (
+            {!['form', 'connectors', 'templates'].includes(rightTab) && (
               <Form.Control size="sm" className="mt-1" value={addQuery} onChange={e => setAddQuery(e.target.value)}
                 placeholder="Search to add…" aria-label="Search to add" style={{ fontSize: 12 }} />
             )}
@@ -796,6 +807,9 @@ export default function BuilderScreen({
               />
             )}
             {rightTab === 'similar' && <SimilarPositionsPanel posRef={activePositionRef} query={addQuery} />}
+            {rightTab === 'templates' && (drawerPos
+              ? <TemplatesPane posRef={drawerPos} />
+              : <div className="text-muted fst-italic p-3" style={{ fontSize: 11 }}>Open a position to see the templates that fit it.</div>)}
           </div>
         </div>
       </div>

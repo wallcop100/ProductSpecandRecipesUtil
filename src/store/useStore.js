@@ -563,6 +563,15 @@ const useStore = create((set, get) => ({
   setDrawerOpen(open) { try { localStorage.setItem('builderDrawer', open ? '1' : '0') } catch { /* session only */ } set({ drawerOpen: !!open }) },
   drawerTab: 'form',
   setDrawerTab(tab) { get().setDrawerOpen(true); set({ drawerTab: tab }) },
+  // Templates tab: positions a template was applied to that still have rows to check, { posRef: ['why', …] },
+  // remembered with the project like the connector pins. templateHintVersion re-reads the dismissed hints.
+  templateChecks: {},
+  async setTemplateChecks(next) {
+    set({ templateChecks: next })
+    const { projectId } = get()
+    if (projectId != null) await window.electronAPI?.db?.setPref?.(projectId, 'template_checks', JSON.stringify(next))
+  },
+  templateHintVersion: 0,
   // Show IsDeleted rows in recipes (DD66AT: toggled from the Recipe actions menu).
   showDeleted: false,
   toggleShowDeleted() { set({ showDeleted: !get().showDeleted }) },
@@ -697,6 +706,7 @@ const useStore = create((set, get) => ({
       tagDrift: tagDrift ?? {},
       etCollections: etCollections ?? [],
       connectorPins: data.connectorPins ?? {},
+      templateChecks: data.templateChecks ?? {},
       connectorExcludes: data.connectorExcludes ?? {},
       specCheckSkip: data.specCheckSkip ?? ['ET-CABLES', 'ET-CABLE'],
       connectorFamilies: data.connectorFamilies ?? [...DEFAULT_CONNECTOR_FAMILIES],

@@ -341,11 +341,11 @@ export const explainRule = (rule, rec) => ruleConditionsOf(rule).map(cond => ({ 
  * name the failing conditions; a template with no rule is in others.
  */
 export function templatesFor(posRef, state = {}) {
-  const records = templateRecords(state)
+  const records = state.records || templateRecords(state)   // callers matching many positions pass `records` / `scope` once
   const rec = records.get(posRef) || {}
   const withRule = (state.templates || []).map(t => ({ ...t, rule: templateRule({ Rule: t.rule }) }))
   const hit = withRule.filter(t => ruleMatchesRecord(t.rule, rec))
-  const { winners, beaten } = mostSpecific(hit, specificityScope(records.values()))
+  const { winners, beaten } = mostSpecific(hit, state.scope || specificityScope(records.values()))
   const byId = new Map(hit.map(t => [t.id, t]))
   return {
     matches: [...winners, ...beaten].map(id => byId.get(id)),
