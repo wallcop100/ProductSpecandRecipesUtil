@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 
 const store = new Map()
 vi.mock('../../src/platform/idb.js', () => ({
@@ -60,6 +60,7 @@ describe('what a backup holds', () => {
 describe('start page', () => {
   test('offers Back up and Restore', () => {
     render(<BackupPanel />)
+    fireEvent.click(screen.getByRole('button', { name: /Backup & restore/ }))
     expect(screen.getByTestId('backup-btn')).toBeInTheDocument()
     expect(screen.getByText('Restore all my work…')).toBeInTheDocument()
   })

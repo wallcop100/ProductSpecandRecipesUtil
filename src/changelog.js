@@ -1,10 +1,10 @@
 /**
  * changelog.js — the one-line "what changed" shown on the start page.
  *
- * It exists so a fresh deploy is visibly distinguishable: if the top line's date/note
+ * It exists so a fresh deploy is visibly distinguishable: if the version or the top note
  * moved, you are looking at a new build (past a stale cache). Newest first; add ONE line
- * whenever you ship something user-facing. Keep each note short — it renders on a single
- * line under the title.
+ * whenever you ship something user-facing. Keep each note short — it is listed under the
+ * start page's "what's new" link.
  */
 export const CHANGELOG = [
   { date: '2026-10-20', note: 'No more phantom recipe rows: an add that has lost its position is refused (it used to land in the Recipes sheet with a blank ContextRef, as a contract item no position shows), the Recipes patch never writes a row missing part of its key, and such rows already queued leave the queue. Renaming an ElementType now carries the Form\'s captures, its import choices, slot mappings, wrapper overrides and the open ElementType with it, so the Form pane no longer offers a delete and an add for a rename' },
