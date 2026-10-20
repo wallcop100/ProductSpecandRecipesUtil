@@ -1149,7 +1149,7 @@ describe('dirty registry — coalescing + field-level entries', () => {
         { _id: 'old-id', positionTypeRef: POS_REF, action: 'upsert',
           row: { ...syncedRow, _id: 'old-id' }, changedFields: { Quantity: 42 }, before: { Quantity: 1 } },
         { _id: 'new-id', positionTypeRef: POS_REF, action: 'upsert',
-          row: { _id: 'new-id', PositionTypeRef: POS_REF, ElementTypeRef: 'ET-NEW', _row_num: null } },
+          row: { _id: 'new-id', PositionTypeRef: POS_REF, ContextType: 'PositionType', ContextRef: POS_REF, RecipeIndex: 2, ElementTypeRef: 'ET-NEW', _row_num: null } },
       ],
     })
     const { recipes, rsChanges } = useStore.getState()
@@ -1250,6 +1250,43 @@ describe('catalogue — createElementType / rename / delete', () => {
     expect(s.recipes.find(r => r._id === 'r2').ContextRef).toBe('ET-NEW')  // container ref cascaded
     expect(s.dbChanges.some(c => c.updates.ElementTypeRef === 'ET-NEW')).toBe(true)
     expect(s.psChanges.some(c => c.updates.ElementTypeRef === 'ET-NEW')).toBe(true)
+  })
+
+  test('renameElementType carries the Form, wrappers, slot mappings and the open ElementType with it', () => {
+    resetStore({
+      dbWriteEnabled: true, dbChanges: [], psChanges: [], rsChanges: [],
+      elementTypes: [{ ElementTypeRef: 'ET-OLD', _row_num: 5 }],
+      psRows: [], recipes: [],
+      activeContextType: 'ElementType', activeETRef: 'ET-OLD',
+      containerETManualRefs: ['ET-OLD'], containerETExcludeRefs: [],
+      formCaptures: { byPosition: { [POS_REF]: [{ code: 'TINI', elementTypeRef: 'ET-OLD', merged: [{ code: 'TINI2', elementTypeRef: 'et-old' }] }] },
+        orphansByPosition: { [POS_REF]: ['ET-OLD'] }, pendingByPosition: { [POS_REF]: [{ code: 'ET-OLDISH' }] } },
+      importDraft: { rows: [{ rawText: 'ET-OLD' }], assignments: { tini: 'ET-OLD', other: 'ET-X' } },
+      slotMappings: { t1: { lead: 'ET-OLD', extra: 'ET-X' } },
+    })
+    useStore.getState().renameElementType('ET-OLD', 'ET-NEW')
+    const s = useStore.getState()
+    expect(s.activeETRef).toBe('ET-NEW')
+    expect(s.containerETManualRefs).toEqual(['ET-NEW'])
+    expect(s.containerETRefs.has('et-new')).toBe(true)
+    expect(s.formCaptures.byPosition[POS_REF][0].elementTypeRef).toBe('ET-NEW')
+    expect(s.formCaptures.byPosition[POS_REF][0].merged[0].elementTypeRef).toBe('ET-NEW')
+    expect(s.formCaptures.orphansByPosition[POS_REF]).toEqual(['ET-NEW'])
+    expect(s.formCaptures.pendingByPosition[POS_REF][0].code).toBe('ET-OLDISH')   // only whole values
+    expect(s.importDraft.assignments).toEqual({ tini: 'ET-NEW', other: 'ET-X' })
+    expect(s.importDraft.rows[0].rawText).toBe('ET-OLD')                          // the Form's own text stays
+    expect(s.slotMappings).toEqual({ t1: { lead: 'ET-NEW', extra: 'ET-X' } })
+  })
+
+  test('addRecipeRow refuses a position row with no position (it would land with a blank ContextRef)', () => {
+    resetStore({ recipes: [], rsChanges: [], activeContextType: 'PositionType', activeETRef: null })
+    for (const p of [undefined, null, '', '  ']) {
+      expect(useStore.getState().addRecipeRow(p, 'position', { elementTypeRef: 'ET-A' })).toBeNull()
+    }
+    const s = useStore.getState()
+    expect(s.recipes).toHaveLength(0)
+    expect(s.rsChanges).toHaveLength(0)
+    expect(s.recipeError).toMatch(/no position/)
   })
 
   test('deleteElementType soft-deletes (IsDeleted=Y), queues a DB change', () => {

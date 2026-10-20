@@ -262,6 +262,23 @@ function applyPsPending(psRows, psChanges) {
   return rows
 }
 
+/**
+ * Every string in `value` that IS `from` (case-blind, whole value) becomes `to`; anything
+ * else is left as it is. For the app's own records keyed by ElementType ref (the Form's
+ * captures, slot mappings): a rename that misses them leaves them naming a ref that no
+ * longer exists, and the Form pane then reads the rename as "old one gone, new one added".
+ */
+function renameRefDeep(value, from, to) {
+  const lc = from.toLowerCase()
+  const walk = v => {
+    if (typeof v === 'string') return v.trim().toLowerCase() === lc ? to : v
+    if (Array.isArray(v)) return v.map(walk)
+    if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, walk(x)]))
+    return v
+  }
+  return walk(value)
+}
+
 /** ElementTypes, one per ref (case-blind): a row the workbook has wins over a local copy. */
 function oneEachRef(ets) {
   const best = new Map()
@@ -1665,6 +1682,16 @@ const useStore = create((set, get) => ({
     // passes asPosition so a stale open editor can never redirect its row elsewhere.
     const etMode = !asPosition && get().activeContextType === 'ElementType' && !!get().activeETRef
     const activeETRef = etMode ? get().activeETRef : null
+
+    // A position row with no position must not be written either: its ContextRef is the
+    // position, so it lands in the sheet blank — a row no position shows and nobody can
+    // delete. An add whose target was lost (a pick started where no position was open) is
+    // refused here, whichever button started it.
+    if (!etMode && !String(posRef ?? '').trim()) {
+      const ref = ingredientData?.elementTypeRef || ingredientData?.ElementTypeRef || 'this element'
+      set({ recipeError: `Cannot add ${ref}: no position is open to add it to.` })
+      return null
+    }
 
     // An internal row that cannot name its container must not be written: the patch
     // script skips blank cells, so it would land in the sheet with an empty
@@ -4307,12 +4334,45 @@ const useStore = create((set, get) => ({
     })
     const rsChanges = mergeRsChanges(state.rsChanges, rsNew, state.recipes)
 
-    set({ elementTypes, dbChanges, psRows, psChanges, recipes, rsChanges })
+    // 5. What the app keeps by ref: a wrapper keeps being a wrapper, the open ElementType stays
+    //    open, and the Form still names what each position uses (else its pane offers
+    //    "remove the old one, add the new one" — a delete and an add for a rename).
+    const sameRef = r => String(r || '').trim().toLowerCase() === lc
+    const swapRef = list => (list || []).map(r => (sameRef(r) ? to : r))
+    const containerETManualRefs = swapRef(state.containerETManualRefs)
+    const containerETExcludeRefs = swapRef(state.containerETExcludeRefs)
+    const containerInfo = computeContainerInfo({
+      elementTypes, psRows, recipes, manualInclude: containerETManualRefs, manualExclude: containerETExcludeRefs,
+    })
+    const formCaptures = state.formCaptures ? renameRefDeep(state.formCaptures, from, to) : state.formCaptures
+    const importDraft = state.importDraft?.assignments
+      ? { ...state.importDraft, assignments: renameRefDeep(state.importDraft.assignments, from, to) }
+      : state.importDraft
+    const slotMappings = renameRefDeep(state.slotMappings || {}, from, to)
 
-    // Staging table rename
+    set({
+      elementTypes, dbChanges, psRows, psChanges, recipes, rsChanges,
+      containerETManualRefs, containerETExcludeRefs,
+      containerETRefs: containerInfo.refs, containerReasons: containerInfo.reasons,
+      formCaptures, importDraft, slotMappings,
+      ...(sameRef(state.activeETRef) ? { activeETRef: to } : {}),
+    })
+
+    // Staging table rename, and the same records where they are kept
     const { projectId } = state
-    if (projectId != null && window.electronAPI?.db?.renameLocalET) {
-      window.electronAPI.db.renameLocalET(projectId, from, to)?.catch?.(() => {})
+    const db = typeof window !== 'undefined' ? window.electronAPI?.db : null
+    if (projectId != null && db) {
+      db.renameLocalET?.(projectId, from, to)?.catch?.(() => {})
+      const pref = (key, v) => db.setPref?.(projectId, key, JSON.stringify(v))?.catch?.(() => {})
+      if (containerETManualRefs.some((r, i) => r !== state.containerETManualRefs[i])) pref('container_ets', containerETManualRefs)
+      if (containerETExcludeRefs.some((r, i) => r !== state.containerETExcludeRefs[i])) pref('container_ets_exclude', containerETExcludeRefs)
+      if (formCaptures !== state.formCaptures) pref('form_captures', formCaptures)
+      if (importDraft !== state.importDraft) pref('form_import_draft', importDraft)
+      for (const [templateId, slots] of Object.entries(slotMappings)) {
+        for (const [slotKey, ref] of Object.entries(slots || {})) {
+          if (ref !== state.slotMappings?.[templateId]?.[slotKey]) db.upsertSlotMapping?.(projectId, templateId, slotKey, ref)?.catch?.(() => {})
+        }
+      }
     }
   },
 
