@@ -11,16 +11,17 @@ import { formDiffStates } from '../utils/formImpact'
 import { buildMaster } from '../utils/productCodes'
 import { buildRefMap, targetFor } from '../utils/ptResolve'
 
+// Status is a shape, not a colour: grey throughout, amber only on the one needing a decision.
 export const STATUS_DOT = {
-  empty: { color: '#dc3545', label: 'No recipe yet' },
-  form: { color: '#fd7e14', label: 'The Form asks for something it lacks, or a code needs an ElementType' },
-  done: { color: '#198754', label: 'Has a recipe' },
-  notInForm: { color: '#adb5bd', label: 'No recipe — the Form asks for nothing here' },
-  ignored: { color: '#ced4da', label: 'Ignored' },
+  empty: { symbol: '○', label: 'No recipe yet' },
+  form: { symbol: '◐', color: '#ffc107', label: 'The Form asks for something it lacks, or a code needs an ElementType' },
+  done: { symbol: '●', label: 'Has a recipe' },
+  notInForm: { symbol: '–', label: 'No recipe — the Form asks for nothing here' },
+  ignored: { symbol: '⊘', label: 'Ignored' },
 }
 
 /** The Form compared with an older one (862MB6): what moved for each position. */
-const DIFF_COLOR = { add: '#198754', omit: '#dc3545', mixed: '#e0a800' }
+export const DIFF_SYMBOL = { add: '+', omit: '−', mixed: '±' }
 const diffLabel = d => [d.added.length && `Form adds ${d.added.join(', ')}`, d.dropped.length && `Form drops ${d.dropped.join(', ')}`].filter(Boolean).join(' · ')
 
 const LS_KEY = 'positionRail'
@@ -126,12 +127,14 @@ export default function PositionRail({ onReviewEmpty, onReviewDrift }) {
                 background: on ? '#e7f1ff' : undefined, borderLeft: `3px solid ${on ? '#0d6efd' : 'transparent'}`,
                 fontWeight: on ? 700 : 400, opacity: st === 'ignored' ? 0.6 : 1,
               }}>
-              <span aria-label={STATUS_DOT[st].label} style={{ width: 7, height: 7, borderRadius: '50%', background: STATUS_DOT[st].color, flexShrink: 0 }} />
+              <span aria-label={STATUS_DOT[st].label}
+                style={{ width: 10, textAlign: 'center', color: STATUS_DOT[st].color || '#6c757d', flexShrink: 0 }}>{STATUS_DOT[st].symbol}</span>
               <span className="text-truncate">{ref}</span>
               {tagDrift?.[ref] && <MaterialIcon name="warning" size={12} style={{ color: '#e0a800' }} title="Tags changed" />}
               {diffStates.has(ref) && (
-                <span className="ms-auto d-inline-flex" data-testid={`rail-diff-${ref}`} aria-label={diffLabel(diffStates.get(ref))}>
-                  <MaterialIcon name="difference" size={13} style={{ color: DIFF_COLOR[diffStates.get(ref).state] }} title={diffLabel(diffStates.get(ref))} />
+                <span className="ms-auto" data-testid={`rail-diff-${ref}`} aria-label={diffLabel(diffStates.get(ref))}
+                  title={diffLabel(diffStates.get(ref))} style={{ color: '#6c757d' }}>
+                  {DIFF_SYMBOL[diffStates.get(ref).state]}
                 </span>
               )}
             </div>
