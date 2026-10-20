@@ -112,10 +112,13 @@ export default function App() {
           <BuilderScreen
             onOpenTemplateEditor={() => navigateTo('template-editor')}
             onOpenProductSpec={(etRef) => {
+              // An explicit target opens a fresh view on it; no target returns to the remembered one.
+              if (etRef) useStore.getState().clearScreenView('product-spec')
               setPsScrollToRef(etRef || null)
               navigateTo('product-spec')
             }}
             onOpenConnectors={(posRef) => {
+              if (posRef) useStore.getState().clearScreenView('connectors')
               setConnectorsFocusRef(posRef || null)
               navigateTo('connectors')
             }}
@@ -134,7 +137,7 @@ export default function App() {
         {activeScreen === 'product-spec' && (
           <ProductSpecScreen
             scrollToRef={psScrollToRef}
-            onOpenCodeImport={() => openCodeImport('product-spec')}
+            onOpenCodeImport={() => { setPsScrollToRef(null); openCodeImport('product-spec') }}
             onOpenPosition={ref => {
               setPsScrollToRef(null)
               useStore.getState().setActivePosition(ref)

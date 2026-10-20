@@ -25,6 +25,7 @@ beforeEach(() => {
       { ElementTypeRef: 'ET-A' }, { ElementTypeRef: 'ET-B' }, { ElementTypeRef: 'ET-C' },
     ],
     psChanges: [],
+    screenView: {},
     containerETRefs: new Set(),
     dbCollectionRefs: [],
     positionTypes: [], positionUI: {}, ignoredPositionFamilies: [],
@@ -117,5 +118,35 @@ describe('Checks skip cable families (K7N6MT)', () => {
     fireEvent.click(screen.getByLabelText('Product Spec options'))
     fireEvent.click(screen.getByTestId('skip-ET-CABLES'))
     expect(screen.getByText(/Partial spec/)).toBeInTheDocument()
+  })
+})
+
+describe('the page is sticky across visits', () => {
+  const editorShows = ref => within(document.querySelector('[data-debug-id="ProductSpecScreen"]')).queryAllByText(ref).length > 0
+
+  test('leaving and coming back keeps the search, filter and selection', () => {
+    const first = render1()
+    fireEvent.click(screen.getByRole('button', { name: 'Partial / TBC' }))
+    fireEvent.change(screen.getByPlaceholderText('Search…'), { target: { value: 'ET-B' } })
+    fireEvent.click(screen.getByText(/Fill next/))
+    first.unmount()
+
+    render1()
+    expect(screen.getByRole('button', { name: 'Partial / TBC' }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByPlaceholderText('Search…').value).toBe('ET-B')
+    expect(useStore.getState().screenView['product-spec'].selectedRef).toBe('ET-A')
+    expect(editorShows('ET-A')).toBe(true)
+  })
+
+  test('an explicit scrollToRef wins over the remembered selection', () => {
+    useStore.getState().setScreenView('product-spec', { selectedRef: 'ET-A' })
+    render(<ProductSpecScreen onBack={() => {}} scrollToRef="ET-C" />)
+    expect(useStore.getState().screenView['product-spec'].selectedRef).toBe('ET-C')
+  })
+
+  test('opening another project forgets it', () => {
+    useStore.getState().setScreenView('product-spec', { search: 'x' })
+    useStore.getState().loadProject({})
+    expect(useStore.getState().screenView).toEqual({})
   })
 })

@@ -3,6 +3,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { Button, Form, Popover, Overlay, Dropdown } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import ETSpecBrowser from '../components/ETSpecBrowser'
+import { useScreenView } from '../components/useScreenView'
 import { skippedRefs } from '../utils/specChecks'
 import ETSpecEditor  from '../components/ETSpecEditor'
 import ChangeSummaryModal from '../components/ChangeSummaryModal'
@@ -36,9 +37,10 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
   const canRedo = useStore(s => s.future.length > 0)
   const [newEtOpen, setNewEtOpen] = useState(false)
   const addPSRowForNew = useStore(s => s.addPSRow)
-  const [selectedRef,  setSelectedRef]  = useState(scrollToRef || null)
+  // Remembered across visits (useScreenView); an explicit scrollToRef still wins below.
+  const [selectedRef,  setSelectedRef]  = useScreenView('product-spec', 'selectedRef', scrollToRef || null)
   const [bulkSelected, setBulkSelected] = useState(new Set())
-  const [leftWidth,    setLeftWidth]    = useState(320)   // resizable browser panel
+  const [leftWidth,    setLeftWidth]    = useScreenView('product-spec', 'leftWidth', 320)   // resizable browser panel
   const draggingRef = useRef(false)
 
   useEffect(() => {
@@ -52,8 +54,8 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
     window.addEventListener('mouseup', onUp)
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
   }, [])
-  const [viewMode,     setViewMode]     = useState('family')
-  const [statusFilters, setStatusFilters] = useState([])   // shared by header pills + browser chips
+  const [viewMode,     setViewMode]     = useScreenView('product-spec', 'viewMode', 'family')
+  const [statusFilters, setStatusFilters] = useScreenView('product-spec', 'statusFilters', [])   // shared by header pills + browser chips
   const [fillFocus,    setFillFocus]    = useState(0)      // bump to focus the editor on 'Fill next'
   const [showChangelog, setShowChangelog] = useState(false)
 

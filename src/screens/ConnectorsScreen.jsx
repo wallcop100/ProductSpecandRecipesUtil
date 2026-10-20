@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Button, Badge, Modal, Form } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import CoverageMatrix from '../components/CoverageMatrix'
+import { useScreenView, useScrollMemory } from '../components/useScreenView'
 import CollectionEditor from '../components/CollectionEditor'
 import CellDetailPanel from '../components/CellDetailPanel'
 import IconButton from '../components/IconButton'
@@ -51,8 +52,11 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
     if (saved) { setSelectedCell(null); setSelectedCollectionId(saved.CollectionId) }
   }
 
-  const [selectedCollectionId, setSelectedCollectionId] = useState(null)
-  const [selectedCell, setSelectedCell] = useState(null) // { posRef, collectionId }
+  // Remembered across visits (useScreenView); a focusPosRef hand-off still wins below.
+  const [selectedCollectionId, setSelectedCollectionId] = useScreenView('connectors', 'selectedCollectionId', null)
+  const [selectedCell, setSelectedCell] = useScreenView('connectors', 'selectedCell', null) // { posRef, collectionId }
+  const listScrollRef = useScrollMemory('connectors', 'listScroll')
+  const matrixScrollRef = useScrollMemory('connectors', 'matrixScroll')
   const [editorOpen, setEditorOpen] = useState(false)
   const [editingCollection, setEditingCollection] = useState(null)
   const [editorInitialTags, setEditorInitialTags] = useState([])
@@ -162,6 +166,7 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
 
         {/* Collection list (left) */}
         <div
+          ref={listScrollRef}
           style={{
             width: 240,
             flexShrink: 0,
@@ -246,7 +251,7 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
         </div>
 
         {/* Matrix panel (centre) */}
-        <div style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
+        <div ref={matrixScrollRef} style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
           <CoverageMatrix
             selectedCell={selectedCell}
             onCellClick={handleCellClick}

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { Button } from 'react-bootstrap'
 import useStore, { getRecipeForPosition } from '../store/useStore'
+import { useScrollMemory } from './useScreenView'
 import TagBadge from './TagBadge'
 import FilterBar from './FilterBar'
 import TutorialHint from '../tutorial/TutorialHint'
@@ -35,6 +36,7 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
   const positionUI = useStore(s => s.positionUI)
   const validationResults = useStore(s => s.validationResults)
   const activePositionRef = useStore(s => s.activePositionRef)
+  const overviewScrollRef = useScrollMemory('builder', 'overviewScroll')
   const setActivePosition = useStore(s => s.setActivePosition)
   const toggleIgnorePosition = useStore(s => s.toggleIgnorePosition)
   const ignoredPositionFamilies = useStore(s => s.ignoredPositionFamilies)
@@ -282,7 +284,7 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
 
       {wizards}
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem 0.75rem' }}>
+      <div ref={overviewScrollRef} style={{ flex: 1, overflowY: 'auto', padding: '0.5rem 0.75rem' }}>
         {activeVisible.length === 0 && ignoredVisible.length === 0 && (
           <div className="text-muted text-center mt-4 small">No PositionTypes match the filter.</div>
         )}

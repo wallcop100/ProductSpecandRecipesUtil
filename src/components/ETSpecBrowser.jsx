@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react'
+import React, { useMemo } from 'react'
 import { ButtonGroup, Button } from 'react-bootstrap'
+import { useScreenView, useScrollMemory } from './useScreenView'
 import useStore from '../store/useStore'
 import { skippedRefs as skippedRefsFor } from '../utils/specChecks'
 import MaterialIcon from './MaterialIcon'
@@ -64,13 +65,15 @@ export default function ETSpecBrowser({
     return s
   }, [psChanges])
 
-  const [search, setSearch]               = useState('')
-  const [groupFilter, setGroupFilter]     = useState('')
-  const [usageFilters, setUsageFilters]   = useState([])
-  const [expanded, setExpanded]           = useState({})
-  const [missingOpen, setMissingOpen]     = useState(true)
-  const [partialOpen, setPartialOpen]     = useState(false)
-  const [dupOpen, setDupOpen]             = useState(false)
+  const [search, setSearch]               = useScreenView('product-spec', 'search', '')
+  const [groupFilter, setGroupFilter]     = useScreenView('product-spec', 'groupFilter', '')
+  const [usageFilters, setUsageFilters]   = useScreenView('product-spec', 'usageFilters', [])
+  const [expanded, setExpanded]           = useScreenView('product-spec', 'expanded', {})
+  const [missingOpen, setMissingOpen]     = useScreenView('product-spec', 'missingOpen', true)
+  const [partialOpen, setPartialOpen]     = useScreenView('product-spec', 'partialOpen', false)
+  const [dupOpen, setDupOpen]             = useScreenView('product-spec', 'dupOpen', false)
+
+  const listRef = useScrollMemory('product-spec', 'browserScroll')
 
   const missingSet = useMemo(() => new Set(missingETs.map(r => r.toLowerCase())), [missingETs])
 
@@ -286,7 +289,7 @@ export default function ETSpecBrowser({
       </div>
 
       {/* List */}
-      <div style={{ flex: 1, overflowY: 'auto' }}>
+      <div ref={listRef} style={{ flex: 1, overflowY: 'auto' }}>
         {/* Missing ETs section */}
         {missingETs.length > 0 && (
           <div style={{ borderBottom: '1px solid #fde68a' }}>

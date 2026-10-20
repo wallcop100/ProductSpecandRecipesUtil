@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { Form, Button } from 'react-bootstrap'
 import useStore from '../store/useStore'
+import { useScrollMemory } from './useScreenView'
 import { getUsedIn } from '../utils/containerUtils'
 import FlagPill from './FlagPill'
 import { getCompanion } from '../platform/companion'
@@ -30,6 +31,7 @@ import { familyFix, codeElsewhere, refNumberFix } from '../utils/specSuggest'
  */
 let elsewhereAsked = null      // makers → exemplars from other projects, asked once per session
 export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = [], onNavigate, focusToken = 0, onRenamed, onOpenPosition, onSelectRef }) {
+  const scrollRef = useScrollMemory('product-spec', 'editorScroll')
   const psRows      = useStore(s => s.psRows)
   const recipes     = useStore(s => s.recipes)
   const updatePSRow = useStore(s => s.updatePSRow)
@@ -183,7 +185,7 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
   const retired       = retiredFor(retiredCodes, productCode)
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflowY: 'auto' }}>
+    <div ref={scrollRef} style={{ display: 'flex', flexDirection: 'column', height: '100%', overflowY: 'auto' }}>
       <div className="p-4" style={{ maxWidth: 600 }}>
         {/* Header row */}
         <div className="d-flex align-items-start gap-2 mb-3">
