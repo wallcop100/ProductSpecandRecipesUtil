@@ -213,7 +213,7 @@ describe('someone who has never used this', () => {
     expect(screen.getByTitle(/What exists/)).toHaveTextContent('DesignDB')
     // the longer "how" is one hover away, not on the page
     fireEvent.mouseOver(screen.getByLabelText('How it works'))
-    expect(await screen.findByText(/never writes/)).toBeTruthy()
+    expect(await screen.findByText(/never writes\s+to them/)).toBeTruthy()   // not the changelog's "never writes"
     expect(screen.getByText('Open the folder with your DesignDB →')).toBeTruthy()
     expect(screen.queryByText('Open a folder…')).toBeNull()       // no second, identical button
   })
