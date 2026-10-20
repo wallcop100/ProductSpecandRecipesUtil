@@ -392,3 +392,18 @@ describe('opening a project feeds the style library', () => {
     await waitFor(() => expect(onLoaded).toHaveBeenCalled())
   })
 })
+
+describe('a project card keeps Backup and Wipe behind its ⋮', () => {
+  test('the menu items reach the same handlers', async () => {
+    const { default: ProjectCard } = await import('../../src/components/ProjectCard.jsx')
+    const onExport = vi.fn(), onWipe = vi.fn()
+    render(<ProjectCard project={PROJECTS[0]} onOpen={vi.fn()} onExport={onExport} onWipe={onWipe} />)
+    expect(screen.queryByText('Backup this setup')).toBeNull()
+    fireEvent.click(screen.getByTitle('Backup or wipe this setup'))
+    fireEvent.click(await screen.findByText('Backup this setup'))
+    expect(onExport).toHaveBeenCalledWith(PROJECTS[0])
+    fireEvent.click(screen.getByTitle('Backup or wipe this setup'))
+    fireEvent.click(await screen.findByText('Wipe from this browser'))
+    expect(onWipe).toHaveBeenCalledWith(PROJECTS[0])
+  })
+})
