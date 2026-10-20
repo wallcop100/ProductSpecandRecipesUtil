@@ -17,6 +17,7 @@ import { formWorklist } from '../utils/formSpec'
 import { TAG_OPS } from '../utils/tagRules'
 import { fieldsFor, recordsFor, filterMatches, cellText, legacyFilters, DEFAULT_COLUMNS, DEFAULT_FILTER_FIELDS, FIELD_SOURCES } from '../utils/reviewFields'
 import usePositionList, { byRef } from './usePositionList'
+import { C } from '../styles/tokens'
 
 const EMPTY_FILTER = { match: 'all', conditions: [] }
 const api = () => (typeof window !== 'undefined' && window.electronAPI?.db) || null
@@ -296,8 +297,8 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
             {/* Big, unmistakable filter header (matches the Add-Anywhere first page) */}
             <div className="text-center mb-4 pb-3 border-bottom">
               <div className="d-inline-flex align-items-center justify-content-center mb-2"
-                style={{ width: 64, height: 64, borderRadius: '50%', background: '#e8f0fe' }}>
-                <MaterialIcon name="filter_alt" size={38} style={{ color: '#0d6efd' }} />
+                style={{ width: 64, height: 64, borderRadius: '50%', background: C.accentTint }}>
+                <MaterialIcon name="filter_alt" size={38} style={{ color: C.accent }} />
               </div>
               <h5 className="mb-1" style={{ fontSize: 16, fontWeight: 600 }}>What do you want to review?</h5>
               <p className="text-muted mb-0" style={{ fontSize: 12 }}>
@@ -395,14 +396,14 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
                 onClick={() => setSortBy(sb => ({ ...sb, dir: -sb.dir }))}>{sortBy.dir > 0 ? 'A → Z' : 'Z → A'}</Button>
             </div>
             <div style={{ maxHeight: 360, overflow: 'auto' }}>
-              <style>{'.review-result:hover{background:#f1f5f9}'}</style>
+              <style>{`.review-result:hover{background:${C.subtle}}`}</style>
               <ul className="list-unstyled mb-0" style={{ fontSize: 12 }} data-testid="review-results">
                 {matches.slice(0, 500).map((m, i) => {
                   const parts = cols.filter(k => k !== 'Ref' && k !== 'Name')
                     .map(k => [k, cellText(m.rec?.[k])]).filter(([, v]) => v !== '')
                   return (
                     <li key={m.ref} role="button" className="review-result px-2 py-1" title="Start the review here"
-                      style={{ cursor: 'pointer', borderBottom: '1px solid #f1f3f5' }} onClick={() => start(i)}>
+                      style={{ cursor: 'pointer', borderBottom: `1px solid ${C.subtle}` }} onClick={() => start(i)}>
                       <span data-testid="result-ref" style={{ fontFamily: 'monospace', fontWeight: 600 }}>{m.ref}</span>
                       {cols.includes('Name') && m.rec?.Name ? <span className="ms-2">{m.rec.Name}</span> : null}
                       {parts.length > 0 && (
@@ -425,12 +426,12 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
               <IconButton variant="outline-secondary" bsSize="sm" icon="tune" title="Edit filters"
                 onClick={() => { setUseInitialRefs(false); setPhase('build') }} />
               {useInitialRefs && (
-                <span className="badge" style={{ fontSize: 11, background: '#e7f1ff', color: '#084298' }}>
+                <span className="badge" style={{ fontSize: 11, background: C.accentTint, color: C.accentInk }}>
                   Positions the Form named
                 </span>
               )}
               {!useInitialRefs && setName && (
-                <span className="badge" style={{ fontSize: 11, background: '#e7f1ff', color: '#084298' }}>{setName}</span>
+                <span className="badge" style={{ fontSize: 11, background: C.accentTint, color: C.accentInk }}>{setName}</span>
               )}
               {!useInitialRefs && conds.map((c, i) => (
                 <span key={i} className="badge bg-light text-dark border" style={{ fontSize: 11, fontWeight: 400 }}>
@@ -449,7 +450,7 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
             {/* Element unit keeps its own pill header; the position unit gets its
                 header from the shared PositionRecipeEditor below. */}
             {current && current.kind === 'element' && (
-              <div className="d-flex align-items-center gap-2 mb-3 px-2 py-1 rounded" style={{ background: '#f8f9fa' }}>
+              <div className="d-flex align-items-center gap-2 mb-3 px-2 py-1 rounded" style={{ background: C.subtle }}>
                 <EntityPill
                   type="ElementType"
                   label={current.ref}
@@ -480,9 +481,9 @@ export default function ReviewModal({ show, onHide, onOpenProductSpec, onAddEnti
                 <>
                   {etUsedIn.length > 1 && (
                     <div className="d-flex align-items-start gap-2 mb-2 px-2 py-1 rounded"
-                      style={{ background: '#fff3cd', border: '1px solid #ffc107', fontSize: 11 }}>
-                      <MaterialIcon name="warning" size={14} style={{ color: '#856404', flexShrink: 0, marginTop: 1 }} />
-                      <span style={{ color: '#856404' }}>
+                      style={{ background: C.attnTint, border: `1px solid ${C.attn}`, fontSize: 11 }}>
+                      <MaterialIcon name="warning" size={14} style={{ color: C.attnInk, flexShrink: 0, marginTop: 1 }} />
+                      <span style={{ color: C.attnInk }}>
                         Shared assembly — edits here apply to all {etUsedIn.length} PositionTypes that use{' '}
                         <span style={{ fontFamily: 'monospace' }}>{current.ref}</span>: {etUsedIn.join(', ')}
                       </span>

@@ -23,6 +23,7 @@ import { readOlderForm } from '../utils/olderForm'
 import { readSheet, fileMeta } from '../utils/backend'
 import { positionPaintStatus } from '../utils/formPositions'
 import { buildRefMap, targetFor } from '../utils/ptResolve'
+import { C } from '../styles/tokens'
 
 /**
  * FormSpecPane — the Form's spec beside the recipe it produced.
@@ -90,10 +91,10 @@ function FormStrip({ formCaptures }) {
  * and the tool cannot even offer to add it. Different icons, different colours, on purpose.
  */
 const ROW_STATUS = {
-  present:  { icon: ACTION_ICONS.complete, color: '#198754', title: 'in the recipe' },
-  addable:  { icon: 'add_circle', color: '#0d6efd', title: 'already an ElementType — add it' },
-  missing:  { icon: 'error', color: '#dc3545', title: 'missing from the recipe' },
-  question: { icon: 'help', color: '#997404', title: 'no ElementType yet — nothing can be added until it has one' },
+  present:  { icon: ACTION_ICONS.complete, color: C.success, title: 'in the recipe' },
+  addable:  { icon: 'add_circle', color: C.accent, title: 'already an ElementType — add it' },
+  missing:  { icon: 'error', color: C.danger, title: 'missing from the recipe' },
+  question: { icon: 'help', color: C.attnInk, title: 'no ElementType yet — nothing can be added until it has one' },
 }
 function RowStatus({ status, note = null }) {
   const s = ROW_STATUS[status]
@@ -121,9 +122,9 @@ function RailToggle({ id, icon, count, open, onToggle, title, tone }) {
       className="btn btn-sm d-inline-flex align-items-center gap-1"
       style={{
         fontSize: 10, padding: '1px 6px', borderRadius: 10, lineHeight: 1.4,
-        background: on ? '#e7f1ff' : 'transparent',
-        border: `1px solid ${on ? '#b6d4fe' : '#e9ecef'}`,
-        color: empty ? '#ced4da' : tone || '#6c757d',
+        background: on ? C.accentTint : 'transparent',
+        border: `1px solid ${on ? C.accentEdge : C.border}`,
+        color: empty ? C.faint : tone || C.muted,
         opacity: empty ? 0.7 : 1,
       }}>
       <MaterialIcon name={icon} size={12} />
@@ -452,8 +453,8 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
         {diffBlock}
         {paintBar}
         <div className="px-3 py-4 rounded text-center"
-          style={{ background: '#f8f9fa', border: '1px dashed #ced4da' }}>
-          <MaterialIcon name="auto_fix_high" size={28} style={{ color: '#adb5bd' }} />
+          style={{ background: C.subtle, border: `1px dashed ${C.faint}` }}>
+          <MaterialIcon name="auto_fix_high" size={28} style={{ color: C.faint }} />
           <div className="fw-semibold mt-2 mb-3" style={{ fontSize: 12 }}>
             No Form template yet{' '}
             <InfoTip>Import the Form and this panel shows, for every position, which products it asks for and which are already in the recipe.</InfoTip>
@@ -585,13 +586,13 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
         <RailToggle id="extra" icon={ACTION_ICONS.suggest} count={extra.length} open={open} onToggle={toggleSection}
           title="In the recipe, not specified by the Form — derived detail, not a problem" />
         <RailToggle id="orphaned" icon="history" count={orphaned.length} open={open} onToggle={toggleSection}
-          title="No longer in the Form" tone={orphaned.length ? '#856404' : null} />
+          title="No longer in the Form" tone={orphaned.length ? C.attnInk : null} />
       </div>
 
       {/* A changed product inside a SHARED wrapper: one wrapper cannot hold both
           states. Computed at import, persisted, and actionable here. */}
       {divergence && (
-        <div className="mb-2 px-2 py-1 rounded" style={{ background: '#fff3cd', border: '1px solid #f0e0a8', fontSize: 10, color: '#856404' }}>
+        <div className="mb-2 px-2 py-1 rounded" style={{ background: C.attnTint, border: `1px solid ${C.attnTint}`, fontSize: 10, color: C.attnInk }}>
           <div className="fw-semibold">
             <MaterialIcon name="warning" size={11} /> <span style={{ fontFamily: 'monospace' }}>{divergence.wrapper}</span> is
             shared by {divergence.sharers.join(', ')}
@@ -623,8 +624,8 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
           added to a recipe until they have an ElementType, so they are not a tick —
           they are a question, asked where it matters. */}
       {pending.length > 0 && (
-        <div className="mb-2 px-2 py-2 rounded" style={{ background: '#fdecec', border: '1px solid #f5c2c7' }}>
-          <div className="fw-semibold" style={{ fontSize: 10, color: '#842029' }}>
+        <div className="mb-2 px-2 py-2 rounded" style={{ background: C.dangerTint, border: `1px solid ${C.dangerTint}` }}>
+          <div className="fw-semibold" style={{ fontSize: 10, color: C.dangerInk }}>
             <MaterialIcon name="help" size={11} /> {pending.length} product
             {pending.length === 1 ? '' : 's'} with no ElementType{' '}
             <InfoTip size={11}>The Form asks for {pending.length === 1 ? 'it' : 'them'} here. Nothing can be added to the recipe until {pending.length === 1 ? 'it has' : 'they have'} one.</InfoTip>
@@ -645,7 +646,7 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
                       {p.manufacturer || <em>no manufacturer</em>}{p.note ? ` · ${p.note}` : ''}
                     </div>
                   </div>
-                  <Button size="sm" variant="outline-danger" style={{ fontSize: 9, padding: '0 5px', flexShrink: 0 }}
+                  <Button size="sm" variant="outline-secondary" style={{ fontSize: 9, padding: '0 5px', flexShrink: 0 }}
                     onClick={() => setCreating(p)}
                     title={`Create a NEW ElementType for ${p.manufacturer ? `${p.manufacturer} ` : ''}${p.code}`}>
                     Create
@@ -661,13 +662,13 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
                     be a duplicate of a product already sitting in this very recipe. */}
                 {top && picking !== p.code && (
                   <div className="d-flex align-items-center gap-1 mt-1 px-1 py-1 rounded"
-                    style={{ background: '#fff', border: '1px solid #f5c2c7' }}>
+                    style={{ background: C.surface, border: `1px solid ${C.dangerTint}` }}>
                     <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{top.ref}</span>
                     <span className="text-muted text-truncate" style={{ flex: 1, minWidth: 0 }}
                       title={top.description || WHY[top.why]}>
                       {WHY[top.why]}
                     </span>
-                    <Button size="sm" variant="success" style={{ fontSize: 9, padding: '0 5px', flexShrink: 0 }}
+                    <Button size="sm" variant="primary" style={{ fontSize: 9, padding: '0 5px', flexShrink: 0 }}
                       onClick={() => mergePending(p, top.ref)}
                       title={`"${p.code}" IS ${top.ref} — link them`}>
                       That&apos;s it
@@ -716,7 +717,7 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
       {/* Done: say so at the top, with the next thing to do as the obvious button. */}
       {allPresent && (
         <div className="mb-2 d-flex align-items-center gap-1" data-testid="form-all-present"
-          style={{ color: '#0f5132', fontSize: 11 }}>
+          style={{ color: C.ink, fontSize: 11 }}>
           <MaterialIcon name="check_circle" size={13} /> All Form products present
           {nextUnreconciled && (
             <Button size="sm" variant="link" className="p-0 ms-auto" style={{ fontSize: 11 }}
@@ -730,7 +731,7 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
       {/* Nothing missing from the recipe, but a Form code still has no ElementType: not done. */}
       {!allPresent && missing.length === 0 && waitingEt > 0 && !painting && (
         <div className="mb-2 px-2 py-2 rounded d-flex align-items-center gap-2" data-testid="form-waiting-et"
-          style={{ background: '#fff3cd', border: '1px solid #ffe69c', color: '#664d03', fontSize: 11 }}>
+          style={{ background: C.attnTint, border: `1px solid ${C.attnTint}`, color: C.attnInk, fontSize: 11 }}>
           <MaterialIcon name="warning" size={14} /> {waitingEt} code{waitingEt === 1 ? '' : 's'} still need{waitingEt === 1 ? 's' : ''} an ElementType
         </div>
       )}
@@ -738,7 +739,7 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
       {/* The last one-click add, with its way back. */}
       {added && (
         <div className="mb-2 px-2 py-1 rounded d-flex align-items-center gap-2" data-testid="form-added"
-          style={{ background: '#e7f1ff', fontSize: 10, color: '#084298' }}>
+          style={{ background: C.accentTint, fontSize: 10, color: C.accentInk }}>
           <MaterialIcon name="done" size={12} />
           <span className="text-truncate">
             Added {added.refs.length === 1 ? added.refs[0] : `${added.refs.length} products`}
@@ -780,13 +781,13 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
                 <Ref>{e.code || e.elementTypeRef}</Ref>
                 {e.formRef && <span className="text-muted" style={{ fontSize: 9 }}>{e.formRef}</span>}
               </div>
-              <div className="text-truncate" style={{ fontSize: 10, color: e.manufacturer ? '#495057' : '#adb5bd' }}>
+              <div className="text-truncate" style={{ fontSize: 10, color: e.manufacturer ? C.ink : C.faint }}>
                 {e.manufacturer || 'no manufacturer'}
               </div>
               <div className="d-flex align-items-baseline gap-1 text-truncate">
                 {/* No "in the spec" badge (VCYTLE): an ElementType shown here is in the spec. */}
                 <UsagePopover etRef={e.elementTypeRef} placement="left">
-                  <span style={{ fontFamily: 'monospace', fontSize: 10, color: '#6c757d' }}>{e.elementTypeRef}</span>
+                  <span style={{ fontFamily: 'monospace', fontSize: 10, color: C.muted }}>{e.elementTypeRef}</span>
                 </UsagePopover>
               </div>
               {e.note && <div className="text-muted" style={{ fontSize: 10 }}>{e.note}</div>}
@@ -871,7 +872,7 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
             return (
               <div key={o.elementTypeRef} className="py-1 border-bottom" style={{ fontSize: 11 }}>
                 <div className="d-flex align-items-center gap-1">
-                  <MaterialIcon name="warning" size={12} style={{ color: '#856404', flexShrink: 0 }} />
+                  <MaterialIcon name="warning" size={12} style={{ color: C.attnInk, flexShrink: 0 }} />
                   <Ref>{o.elementTypeRef}</Ref>
                   <Button size="sm" variant="outline-danger" className="ms-auto" style={{ fontSize: 9, padding: '0 5px' }}
                     onClick={() => o.rows.forEach(r => removeRecipeRow(posRef, r._id))}>
@@ -901,7 +902,7 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
           {extra.map(x => (
             <div key={x.elementTypeRef} className="d-flex align-items-baseline gap-2 py-1" style={{ fontSize: 11 }}>
               <UsagePopover etRef={x.elementTypeRef} placement="left" diverges={diverges(x.elementTypeRef)}>
-                <span style={{ fontFamily: 'monospace', color: '#6c757d' }}>{x.elementTypeRef}</span>
+                <span style={{ fontFamily: 'monospace', color: C.muted }}>{x.elementTypeRef}</span>
               </UsagePopover>
               <span className="ms-auto text-muted" style={{ fontSize: 9 }}>{KIND_LABEL[x.kind]}</span>
             </div>

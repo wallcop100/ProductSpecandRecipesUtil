@@ -4,6 +4,7 @@ import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import EntityPill from './EntityPill'
 import { positionRecipeWithWrapperInternals } from '../utils/collectionStatus'
+import { C } from '../styles/tokens'
 
 /**
  * ForkPositionModal — make one or more independent copies of a position's recipe.
@@ -136,7 +137,7 @@ export default function ForkPositionModal({ show, sourceRef, onHide }) {
           {/* Targets */}
           <div style={{ width: 220, flexShrink: 0 }}>
             <div className="fw-semibold mb-1">Into which position(s)?</div>
-            <div style={{ maxHeight: 300, overflowY: 'auto', border: '1px solid #e9ecef', borderRadius: 6, padding: 8 }}>
+            <div style={{ maxHeight: 300, overflowY: 'auto', border: `1px solid ${C.border}`, borderRadius: 6, padding: 8 }}>
               {targetOptions.length === 0 && (
                 <div className="text-muted fst-italic">No other position types.</div>
               )}
@@ -205,7 +206,7 @@ export default function ForkPositionModal({ show, sourceRef, onHide }) {
       <Modal.Footer className="d-flex align-items-center">
         <span className="text-muted me-auto" style={{ fontSize: 11 }}>
           {targets.size} position{targets.size === 1 ? '' : 's'} · {includedCount} row{includedCount === 1 ? '' : 's'} each
-          {overwrites.length > 0 && <span style={{ color: '#997404' }}> · {overwrites.length} will be overwritten</span>}
+          {overwrites.length > 0 && <span style={{ color: C.attnInk }}> · {overwrites.length} will be overwritten</span>}
         </span>
         <Button size="sm" variant="secondary" onClick={onHide}>Cancel</Button>
         <Button size="sm" variant="primary" disabled={targets.size === 0 || includedCount === 0} onClick={confirm}>

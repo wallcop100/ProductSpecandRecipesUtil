@@ -17,6 +17,7 @@ import SwapEverywhereModal from './SwapEverywhereModal'
 import { familyOf } from '../utils/etRef'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { roleOf, QTY_CONFIRM_ROLES } from '../utils/recipePatterns'
+import { C } from '../styles/tokens'
 
 /**
  * IngredientCard — a resolved recipe row with drag-to-reorder support.
@@ -216,8 +217,8 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
 
   // Left border = element type colour; context colour lives on the section header line.
   // New rows read green; other unsynced edits read amber.
-  const leftColor = isSelected ? '#0d6efd' : isDeleted ? '#adb5bd' : isNewRow ? '#198754' : isDirty ? '#f0ad4e' : ((etRef && !isUnresolved) ? '#bf6018' : '#ffc107')
-  const background = isSelected ? '#e7f1ff' : isDeleted ? '#f8f9fa' : isNewRow ? '#f2fbf5' : isDirty ? '#fffdf5' : undefined
+  const leftColor = isSelected ? C.accent : isDeleted ? C.faint : isNewRow ? C.muted : isDirty ? C.attn : ((etRef && !isUnresolved) ? '#bf6018' : C.attn)
+  const background = isSelected ? C.accentTint : isDeleted ? C.subtle : isNewRow ? C.subtle : isDirty ? C.attnTint : undefined
 
   return (
     <div ref={composedRef} style={style} data-debug-id="IngredientCard">
@@ -234,7 +235,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
           borderLeft: `3px solid ${leftColor}`,
           borderRadius: 6,
           background,
-          boxShadow: isSelected ? '0 0 0 1px #0d6efd' : undefined,
+          boxShadow: isSelected ? `0 0 0 1px ${C.accent}` : undefined,
           opacity: isDeleted ? 0.65 : 1,
           position: 'relative',
         }}
@@ -243,7 +244,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
         {isNewRow && (
           <span
             data-testid="new-dot"
-            style={{ ...CORNER_DOT, left: -4, background: '#6c757d' }}
+            style={{ ...CORNER_DOT, left: -4, background: C.muted }}
             title="New — added here and not yet in the source file (unsaved until you export)"
           />
         )}
@@ -251,13 +252,13 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
         {row._origin === 'form' && (
           <span
             data-testid="form-dot"
-            style={{ ...CORNER_DOT, right: -4, background: '#0d6efd' }}
+            style={{ ...CORNER_DOT, right: -4, background: C.accent }}
             title={`From the imported form${row._formCode ? ` — code "${row._formCode}"` : ''}. Move it into structure (a DL/wrapper) when ready.`}
           />
         )}
         <Card.Body className="py-2 px-3">
           {isDeleted && (
-            <div className="d-flex align-items-center gap-1 mb-1" style={{ fontSize: 10, color: '#6c757d' }}>
+            <div className="d-flex align-items-center gap-1 mb-1" style={{ fontSize: 10, color: C.muted }}>
               <MaterialIcon name="delete" size={12} /> IsDeleted — will sync to the source file
             </div>
           )}
@@ -276,7 +277,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
             {/* The row's rarer acts. The right-hand stack keeps the per-row edits. */}
             <Dropdown>
               <Dropdown.Toggle as={IconButton} icon="more_vert" size={16} title="Row actions" aria-label="Row actions"
-                style={{ color: '#aaa', padding: 0, paddingTop: 2 }} bsPrefix="row-actions-toggle" /* no caret */ />
+                style={{ color: C.faint, padding: 0, paddingTop: 2 }} bsPrefix="row-actions-toggle" /* no caret */ />
               <Dropdown.Menu style={{ fontSize: 12 }}>
                 <Dropdown.Item onClick={() => copyRows([rowId])}>
                   <MaterialIcon name={ACTION_ICONS.copy} size={14} /> Copy this row
@@ -304,7 +305,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
               {...listeners}
               style={{
                 cursor: 'grab',
-                color: '#aaa',
+                color: C.faint,
                 lineHeight: 1,
                 paddingTop: 2,
                 userSelect: 'none',
@@ -326,7 +327,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                       stack
                       title={isContainer ? 'Container / wrapper element' : 'Element type'}
                     />
-                    <MaterialIcon name="arrow_forward" size={14} style={{ color: '#ccc', flexShrink: 0 }} />
+                    <MaterialIcon name="arrow_forward" size={14} style={{ color: C.faint, flexShrink: 0 }} />
                     {productCode ? (
                       <ProductInline etRef={etRef} manufacturer={manufacturer} productCode={productCode}
                         onOpenProductSpec={onOpenProductSpec} />
@@ -356,12 +357,12 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                 {isContainer && etRef && insidePending.length > 0 && (
                   <button
                     className="btn btn-link btn-sm p-0"
-                    style={{ fontSize: 11, color: '#0d6efd', textDecoration: 'none' }}
+                    style={{ fontSize: 11, color: C.accent, textDecoration: 'none' }}
                     onClick={() => openETRecipe(etRef)}
                     data-testid="qty-inside"
                     title={`Quantities to confirm inside: ${insidePending.join(', ')}`}
                   >
-                    <span className="rounded px-1" style={{ animation: 'qtyPulse 1.4s ease-out infinite', background: '#fff3cd', color: '#664d03' }}>
+                    <span className="rounded px-1" style={{ animation: 'qtyPulse 1.4s ease-out infinite', background: C.attnTint, color: C.attnInk }}>
                       <style>{'@keyframes qtyPulse{0%{box-shadow:0 0 0 0 rgba(255,193,7,.9)}70%{box-shadow:0 0 0 6px rgba(255,193,7,0)}100%{box-shadow:0 0 0 0 rgba(255,193,7,0)}}'}</style>
                       Edit internals → confirm {insidePending.length} quantit{insidePending.length === 1 ? 'y' : 'ies'}
                     </span>
@@ -391,7 +392,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                     overlay={<Popover id={`shared-${rowId}`}><Popover.Body className="p-1"><SharedPill etRef={etRef} refs={etSharedWith} /></Popover.Body></Popover>}>
                     <span tabIndex={0} data-testid="shared-icon" style={{ display: 'inline-flex', flexShrink: 0 }}
                       aria-label={`Also used by ${etSharedWith.length} other position${etSharedWith.length === 1 ? '' : 's'}: ${etSharedWith.join(', ')}`}>
-                      <MaterialIcon name="group" size={13} style={{ color: '#adb5bd' }} />
+                      <MaterialIcon name="group" size={13} style={{ color: C.faint }} />
                     </span>
                   </OverlayTrigger>
                 )}
@@ -400,13 +401,13 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
               {/* Replace-entity fork (Existing / New) with a keep-fields toggle */}
               {replacing && onReplace && (
                 <div className="d-flex align-items-center gap-2 mb-2 px-2 py-1 rounded flex-wrap"
-                  style={{ background: '#f0f4ff', border: '1px solid #c7d7f5', fontSize: 11 }}>
+                  style={{ background: C.accentTint, border: `1px solid ${C.accentEdge}`, fontSize: 11 }}>
                   <span className="text-muted">Replace with:</span>
                   <Button variant="outline-primary" size="sm" style={{ padding: '1px 8px', fontSize: 11 }}
                     onClick={guarded('replace', () => { setReplacing(false); onReplace(posRef, rowId, { mode: 'existing', keepFields }) })}>
                     Existing
                   </Button>
-                  <Button variant="outline-success" size="sm" style={{ padding: '1px 8px', fontSize: 11 }}
+                  <Button variant="outline-secondary" size="sm" style={{ padding: '1px 8px', fontSize: 11 }}
                     onClick={guarded('replace', () => { setReplacing(false); onReplace(posRef, rowId, { mode: 'new', keepFields }) })}>
                     New ↗
                   </Button>
@@ -438,7 +439,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
 
               {/* Container ET info: Used in */}
               {isContainer && usedIn.length > 0 && (
-                <div className="mb-1" style={{ fontSize: 11, color: '#555', lineHeight: 1.4 }}>
+                <div className="mb-1" style={{ fontSize: 11, color: C.muted, lineHeight: 1.4 }}>
                   <span className="text-muted">Used in: </span>
                   {usedIn.join(', ')}
                 </div>
@@ -456,7 +457,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                     internalItems.length > 0 ? (
                       <div
                         className="mt-1 ps-3"
-                        style={{ borderLeft: '2px solid #e9ecef', color: '#555' }}
+                        style={{ borderLeft: `2px solid ${C.border}`, color: C.muted }}
                       >
                         {internalItems.map(item => {
                           // Each part's product, as the card itself shows it (PZJYJT).
@@ -519,7 +520,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
 
                 {/* Qty field with category icon */}
                 <span className="d-inline-flex align-items-center gap-1 rounded px-1" data-testid={qtyToConfirm ? 'qty-confirm' : undefined}
-                  style={qtyToConfirm ? { animation: 'qtyPulse 1.4s ease-out infinite', background: '#fff3cd' } : undefined}>
+                  style={qtyToConfirm ? { animation: 'qtyPulse 1.4s ease-out infinite', background: C.attnTint } : undefined}>
                   {qtyToConfirm && <style>{'@keyframes qtyPulse{0%{box-shadow:0 0 0 0 rgba(255,193,7,.9)}70%{box-shadow:0 0 0 6px rgba(255,193,7,0)}100%{box-shadow:0 0 0 0 rgba(255,193,7,0)}}'}</style>}
                   <QtyField
                     value={row.quantity ?? row.Quantity ?? ''}
@@ -581,7 +582,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                   <HoverIconButton
                     icon="swap_horiz"
                     size={16}
-                    hoverColor="#495057"
+                    hoverColor={C.ink}
                     onClick={() => setReplacing(v => !v)}
                     title="Replace this element type with another"
                   />
@@ -592,7 +593,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                   <HoverIconButton
                     icon={ACTION_ICONS.fork}
                     size={16}
-                    hoverColor="#b45309"
+                    hoverColor={C.attnInk}
                     onClick={() => setForking(true)}
                     title={`Fork ${etRef} for ${posRef} — give it its own copy, so changing it stops affecting ${forkSharers.join(', ')}`}
                   />
@@ -600,7 +601,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                 <HoverIconButton
                   icon={ACTION_ICONS.delete}
                   size={16}
-                  hoverColor="#dc3545"
+                  hoverColor={C.danger}
                   onClick={guarded('delete', () => removeRecipeRow(posRef, rowId))}
                   title={containerSharedWith.length > 0
                     ? `Mark IsDeleted — inside ${ownContainer}, shared with ${containerSharedWith.join(', ')}`
@@ -657,7 +658,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   )
 }
 
-const SHARED_PILL = { fontSize: 10, background: '#f8f9fa', color: '#6c757d', border: '1px solid #dee2e6' }
+const SHARED_PILL = { fontSize: 10, background: C.subtle, color: C.muted, border: `1px solid ${C.border}` }
 const CORNER_DOT = { position: 'absolute', top: -4, zIndex: 1, width: 8, height: 8, borderRadius: '50%' }
 
 /** "shared with …" — one pill, shown inline or in the group icon's hover. */
@@ -693,7 +694,7 @@ function useShiftHeld() {
 // Right-side action icons read as clutter when always coloured. Keep them grey at rest
 // and reveal the semantic colour (danger red, fork amber) only on hover — the container
 // toggle is exempt because it carries its own active (orange) state.
-const ICON_GREY = '#adb5bd'
+const ICON_GREY = C.faint
 function HoverIconButton({ icon, size = 16, onClick, title, disabled, restColor = ICON_GREY, hoverColor }) {
   const [hover, setHover] = useState(false)
   return (
@@ -722,15 +723,15 @@ function QtyField({ value, onChange }) {
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        border: '1px solid #dee2e6',
+        border: `1px solid ${C.border}`,
         borderRadius: 6,
         padding: '2px 6px',
-        background: '#fff',
+        background: C.surface,
       }}
     >
       <button
         className="btn btn-link p-0 d-inline-flex align-items-center gap-1"
-        style={{ lineHeight: 1, color: '#6c757d', textDecoration: 'none' }}
+        style={{ lineHeight: 1, color: C.muted, textDecoration: 'none' }}
         onClick={() => setOpen(v => !v)}
         title={`Quantity: ${num} — click to change`}
         aria-label="Quantity"
@@ -738,7 +739,7 @@ function QtyField({ value, onChange }) {
       >
         <MaterialIcon name="category" size={16} />
         {!open && num > 1 && (
-          <span style={{ fontSize: 12, fontWeight: 600, color: '#212529' }}>{num}</span>
+          <span style={{ fontSize: 12, fontWeight: 600, color: C.ink }}>{num}</span>
         )}
       </button>
       {/* Opens to the right */}
@@ -830,13 +831,13 @@ function ProductInline({ etRef, manufacturer, productCode, onOpenProductSpec }) 
   }
   return (
     <span className="d-inline-flex align-items-center gap-1">
-      <button type="button" className="btn btn-link p-0" style={{ fontSize: 11, color: '#666', textDecoration: 'none', fontWeight: 500 }}
+      <button type="button" className="btn btn-link p-0" style={{ fontSize: 11, color: C.muted, textDecoration: 'none', fontWeight: 500 }}
         onClick={start} title="Click to edit the maker and code here">
         {manufacturer ? `${manufacturer} – ` : ''}{productCode}
       </button>
       <button type="button" className="btn btn-link p-0" style={{ lineHeight: 1 }}
         onClick={() => onOpenProductSpec && onOpenProductSpec(etRef)} title="Open in Product Spec" aria-label="Open in Product Spec">
-        <MaterialIcon name="edit" size={12} style={{ color: '#aaa' }} />
+        <MaterialIcon name="edit" size={12} style={{ color: C.faint }} />
       </button>
     </span>
   )

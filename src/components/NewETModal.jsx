@@ -5,6 +5,7 @@ import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { getNextAvailableRef } from '../utils/containerUtils'
 import { CANON_FAMILIES } from '../data/etCanon'
+import { C } from '../styles/tokens'
 
 /**
  * NewETModal — the one place a brand-new element type is created.
@@ -201,7 +202,7 @@ export default function NewETModal({
     <Modal show={show} onHide={onHide} size="md" centered>
       <Modal.Header closeButton>
         <Modal.Title style={{ fontSize: 14 }}>
-          <MaterialIcon name="add_circle" size={16} style={{ verticalAlign: 'middle', marginRight: 6, color: '#198754' }} />
+          <MaterialIcon name="add_circle" size={16} style={{ verticalAlign: 'middle', marginRight: 6, color: C.success }} />
           New Element Type
           {contextLabel && <span className="text-muted fw-normal ms-2" style={{ fontSize: 12 }}>{contextLabel}</span>}
         </Modal.Title>
@@ -210,7 +211,7 @@ export default function NewETModal({
       <Modal.Body>
         {/* What the Form actually said. Read-only: it is evidence, not a field. */}
         {importContext && (
-          <div className="mb-3 px-2 py-2 rounded" style={{ background: '#f8f9fa', border: '1px solid #e9ecef', fontSize: 11 }}>
+          <div className="mb-3 px-2 py-2 rounded" style={{ background: C.subtle, border: `1px solid ${C.border}`, fontSize: 11 }}>
             <div className="fw-semibold text-muted mb-1" style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '.05em' }}>
               From the Form
             </div>
@@ -234,7 +235,7 @@ export default function NewETModal({
               </div>
             )}
             {importContext.mergedCodes?.length > 1 && (
-              <div className="mt-1" style={{ color: '#856404' }}>
+              <div className="mt-1" style={{ color: C.attnInk }}>
                 <MaterialIcon name="merge" size={11} /> merging {importContext.mergedCodes.length} codes onto one
                 ElementType: <span style={{ fontFamily: 'monospace' }}>{importContext.mergedCodes.join(', ')}</span>
               </div>
@@ -263,7 +264,7 @@ export default function NewETModal({
             </Form.Text>
           )}
           {!alreadyExists && suggested && suggested !== ref.trim() && (
-            <div style={{ fontSize: 11, marginTop: 4, color: '#0d6efd' }}>
+            <div style={{ fontSize: 11, marginTop: 4, color: C.accent }}>
               <MaterialIcon name="lightbulb" size={12} style={{ verticalAlign: 'middle', marginRight: 3 }} />
               {notCapitalised ? 'Suggested (capitalised):' : 'Next available:'}{' '}
               <button
@@ -325,7 +326,7 @@ export default function NewETModal({
           </datalist>
           {familyIsNew && (
             <div className="d-flex align-items-center gap-2 mt-1" style={{ fontSize: 11 }} data-testid="new-family">
-              <MaterialIcon name="create_new_folder" size={13} style={{ color: '#0d6efd' }} />
+              <MaterialIcon name="create_new_folder" size={13} style={{ color: C.accent }} />
               <span>New family <strong style={{ fontFamily: 'monospace' }}>{family.trim()}</strong>: its row is created too, under</span>
               <Form.Control size="sm" list={`${familyListId}-parent`} value={familyParent} onChange={e => setFamilyParent(e.target.value)}
                 placeholder="(top level)" aria-label="Parent family" style={{ fontSize: 11, width: 170 }} />
@@ -335,7 +336,7 @@ export default function NewETModal({
         </Form.Group>
 
         {/* The DesignDB is the master list, so this is not a choice. Say so once. */}
-        <div className="rounded p-2 mb-3" style={{ background: '#f0f4ff', border: '1px solid #c7d7f5' }}>
+        <div className="rounded p-2 mb-3" style={{ background: C.accentTint, border: `1px solid ${C.accentEdge}` }}>
           <div style={{ fontSize: 12, fontWeight: 600 }}>
             <MaterialIcon name="hub" size={13} /> Added to the DesignDB ElementTypes table{' '}
             <InfoTip>The DesignDB is the master list of ElementTypes: anything in the Product Spec or a recipe has to exist there too. This lands in the ElementTypes patch script at export.</InfoTip>
@@ -343,10 +344,10 @@ export default function NewETModal({
         </div>
 
         {/* Product Spec (collapsible) */}
-        <div className="border rounded p-2" style={{ background: '#f8f9fa' }}>
+        <div className="border rounded p-2" style={{ background: C.subtle }}>
           <button
             className="btn btn-link p-0 d-flex align-items-center gap-1 w-100 text-start"
-            style={{ fontSize: 12, color: '#555', textDecoration: 'none' }}
+            style={{ fontSize: 12, color: C.muted, textDecoration: 'none' }}
             onClick={() => setShowSpec(v => !v)}
           >
             <MaterialIcon name={showSpec ? 'expand_more' : 'chevron_right'} size={16} />
@@ -366,7 +367,7 @@ export default function NewETModal({
             <div className="mt-2">
               <div className="row g-2">
                 <div className="col-6">
-                  <Form.Label style={{ fontSize: 11, color: '#666' }}>Manufacturer</Form.Label>
+                  <Form.Label style={{ fontSize: 11, color: C.muted }}>Manufacturer</Form.Label>
                   <Form.Control size="sm" value={manufacturer} onChange={e => setMfr(e.target.value)}
                     placeholder="e.g. Osram" list={mfrListId} style={{ fontSize: 11 }} />
                   <datalist id={mfrListId}>
@@ -374,12 +375,12 @@ export default function NewETModal({
                   </datalist>
                 </div>
                 <div className="col-6">
-                  <Form.Label style={{ fontSize: 11, color: '#666' }}>Product Code</Form.Label>
+                  <Form.Label style={{ fontSize: 11, color: C.muted }}>Product Code</Form.Label>
                   <Form.Control size="sm" value={productCode} onChange={e => setCode(e.target.value)}
                     placeholder="e.g. LEDTAPE-3000K" style={{ fontSize: 11 }} />
                 </div>
                 <div className="col-12">
-                  <Form.Label style={{ fontSize: 11, color: '#666' }}>PS Description</Form.Label>
+                  <Form.Label style={{ fontSize: 11, color: C.muted }}>PS Description</Form.Label>
                   <Form.Control size="sm" value={psDesc} onChange={e => setPsDesc(e.target.value)}
                     placeholder="Component description…" style={{ fontSize: 11 }} />
                 </div>
@@ -387,8 +388,8 @@ export default function NewETModal({
 
               {/* Duplicate Manufacturer + Product Code guard */}
               {dupSpec && (
-                <div className="mt-2 p-2 rounded" style={{ background: '#fff3cd', border: '1px solid #ffc107', fontSize: 11 }}>
-                  <div className="d-flex align-items-start gap-1" style={{ color: '#856404' }}>
+                <div className="mt-2 p-2 rounded" style={{ background: C.attnTint, border: `1px solid ${C.attn}`, fontSize: 11 }}>
+                  <div className="d-flex align-items-start gap-1" style={{ color: C.attnInk }}>
                     <MaterialIcon name="warning" size={14} style={{ flexShrink: 0, marginTop: 1 }} />
                     <span>
                       <strong style={{ fontFamily: 'monospace' }}>{dupSpec.ref}</strong> already uses this
@@ -415,7 +416,7 @@ export default function NewETModal({
       <Modal.Footer>
         <Button variant="link" size="sm" onClick={onHide} style={{ fontSize: 12 }}>Cancel</Button>
         <Button
-          variant="success" size="sm" style={{ fontSize: 12 }}
+          variant="primary" size="sm" style={{ fontSize: 12 }}
           onClick={handleSave}
           disabled={!canSave}
           title={alreadyExists ? 'Ref already exists' : !ref.trim() ? 'Enter a ref first' : ''}

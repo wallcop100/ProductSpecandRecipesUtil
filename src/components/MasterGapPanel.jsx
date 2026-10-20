@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react'
 import { Button, Form } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
+import { C } from '../styles/tokens'
 
 /**
  * MasterGapPanel — the ElementTypes the DesignDB has never heard of, and where each one
@@ -20,10 +21,10 @@ import MaterialIcon from './MaterialIcon'
  * quiet "queued" line, or the whole panel collapses to "all queued" once nothing is left.
  */
 const CONF = {
-  confident: { bg: '#d1e7dd', fg: '#0f5132', label: 'confident' },
-  house:     { bg: '#cfe2ff', fg: '#084298', label: 'house style' },
-  guess:     { bg: '#fff3cd', fg: '#856404', label: 'guess' },
-  none:      { bg: '#f1f3f5', fg: '#6c757d', label: 'no family' },
+  confident: { bg: C.subtle, fg: C.ink, label: 'confident' },
+  house:     { bg: C.accentTint, fg: C.accentInk, label: 'house style' },
+  guess:     { bg: C.attnTint, fg: C.attnInk, label: 'guess' },
+  none:      { bg: C.subtle, fg: C.muted, label: 'no family' },
 }
 
 const lc = s => String(s ?? '').toLowerCase()
@@ -106,15 +107,15 @@ export default function MasterGapPanel({ gaps }) {
   const editable = expanded ? open : []
 
   return (
-    <div className="mb-3 px-2 py-2 rounded" style={{ background: '#cfe2ff', border: '1px solid #b6d4fe' }}>
+    <div className="mb-3 px-2 py-2 rounded" style={{ background: C.accentTint, border: `1px solid ${C.accentEdge}` }}>
       {open.length === 0 ? (
-        <div className="d-flex align-items-center gap-1" style={{ fontSize: 11, color: '#0f5132' }}>
+        <div className="d-flex align-items-center gap-1" style={{ fontSize: 11, color: C.ink }}>
           <MaterialIcon name="schedule" size={13} />
           {queuedN} ElementType{queuedN === 1 ? '' : 's'} queued for the ElementTypes patch — paste it in Excel.
         </div>
       ) : (
         <>
-          <div className="fw-semibold d-flex align-items-center gap-1" style={{ fontSize: 11, color: '#084298' }}>
+          <div className="fw-semibold d-flex align-items-center gap-1" style={{ fontSize: 11, color: C.accentInk }}>
             <MaterialIcon name="hub" size={13} />
             {open.length} ElementType{open.length === 1 ? '' : 's'} missing from the DesignDB master
             {queuedN > 0 && <span className="fw-normal text-muted">· {queuedN} already queued</span>}
@@ -122,8 +123,8 @@ export default function MasterGapPanel({ gaps }) {
 
           {/* The house style would add the families this workbook never had. */}
           {families.length > 0 && (
-            <div className="px-2 py-1 rounded mb-2" style={{ background: '#fff', border: '1px solid #b6d4fe' }}>
-              <div className="fw-semibold" style={{ fontSize: 10, color: '#084298' }}>
+            <div className="px-2 py-1 rounded mb-2" style={{ background: C.surface, border: `1px solid ${C.accentEdge}` }}>
+              <div className="fw-semibold" style={{ fontSize: 10, color: C.accentInk }}>
                 <MaterialIcon name="account_tree" size={11} /> {families.length} house-style famil
                 {families.length === 1 ? 'y' : 'ies'} will be created to file the ones with no sibling:
               </div>

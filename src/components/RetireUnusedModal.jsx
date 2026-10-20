@@ -3,10 +3,11 @@ import React, { useMemo } from 'react'
 import { Modal, Button } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
+import { C } from '../styles/tokens'
 
 /** Which workbook a retire touches. */
 const Tag = ({ children }) => (
-  <span className="rounded px-1" style={{ fontSize: 9, background: '#f1f3f5', color: '#495057', border: '1px solid #e0e0e0' }}>
+  <span className="rounded px-1" style={{ fontSize: 9, background: C.subtle, color: C.ink, border: `1px solid ${C.border}` }}>
     {children}
   </span>
 )
@@ -45,7 +46,7 @@ export default function RetireUnusedModal({ show, onHide, tabs = null, animation
       <Modal.Body style={{ fontSize: 12 }}>
         {plan.length === 0 ? (
           <div className="px-2 py-2 rounded d-flex align-items-center gap-2"
-            style={{ background: '#d1e7dd', color: '#0f5132' }}>
+            style={{ background: C.subtle, color: C.ink }}>
             <MaterialIcon name="check_circle" size={16} /> Nothing to clean up
           </div>
         ) : (
@@ -61,7 +62,7 @@ export default function RetireUnusedModal({ show, onHide, tabs = null, animation
             </div>
             {plan.map(p => (
               <div key={p.ref} className="d-flex align-items-baseline gap-2 py-1 border-bottom" style={{ minWidth: 0 }}>
-                <MaterialIcon name="do_not_disturb_on" size={13} style={{ color: '#842029', flexShrink: 0 }} />
+                <MaterialIcon name="do_not_disturb_on" size={13} style={{ color: C.dangerInk, flexShrink: 0 }} />
                 <span style={{ fontFamily: 'monospace', fontWeight: 600, flexShrink: 0 }}>{p.ref}</span>
                 <span className="text-muted text-truncate" style={{ minWidth: 0, flex: 1 }}>
                   {p.onlyIn.length ? `only in ${p.onlyIn.join(', ')}` : 'not used by any recipe'}

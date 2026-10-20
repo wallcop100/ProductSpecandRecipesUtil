@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { Modal, Button, Form } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
+import { C } from '../styles/tokens'
 
 const lc = s => String(s ?? '').trim().toLowerCase()
 
@@ -108,7 +109,7 @@ export default function SaveTemplateModal({ show, onHide, posRef, name: posName 
           <Form.Control size="sm" value={tags} onChange={e => setTags(e.target.value)} placeholder="e.g. DL, Local" aria-label="Template tags" />
         </Form.Group>
         <div className="small fw-semibold mb-1">What it adds <span className="text-muted fw-normal">— untick what should not travel</span></div>
-        <div className="px-2 py-1 rounded" style={{ background: '#f8f9fa', maxHeight: 260, overflowY: 'auto' }}>
+        <div className="px-2 py-1 rounded" style={{ background: C.subtle, maxHeight: 260, overflowY: 'auto' }}>
           {pos.map(line)}
           {inside.map(line)}
           {rows.length === 0 && <div className="text-muted fst-italic">This position has no recipe yet.</div>}

@@ -4,11 +4,12 @@ import MaterialIcon from './MaterialIcon'
 import { collectionStatusForPosition, overallCollectionStatus, positionRecipeWithWrapperInternals } from '../utils/collectionStatus'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { membership, isConnectorPart } from '../utils/connectorGroups'
+import { C } from '../styles/tokens'
 
 const STATUS_STYLE = {
-  complete: { bg: '#d1e7dd', color: '#0a3622', border: '#a3cfbb' },
-  partial:  { bg: '#fff3cd', color: '#664d03', border: '#ffe69c' },
-  missing:  { bg: '#f8d7da', color: '#58151c', border: '#f1aeb5' },
+  complete: { bg: C.subtle, color: C.ink, border: C.border },
+  partial:  { bg: C.attnTint, color: C.attnInk, border: C.attnTint },
+  missing:  { bg: C.dangerTint, color: C.dangerInk, border: C.dangerTint },
 }
 
 /**

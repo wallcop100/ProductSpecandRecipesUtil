@@ -18,6 +18,7 @@ import { positionFamilyOf } from '../utils/positionFamily'
 import usePositionList, { NO_FAMILY } from './usePositionList'
 import PositionRail from './PositionRail'
 import PositionListMenu from './PositionListMenu'
+import { C } from '../styles/tokens'
 
 /**
  * ProjectTreeView — the PositionTypes surface.
@@ -88,7 +89,7 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
   if (positionTypes.length === 0) {
     return (
       <div className="text-center mt-5 mx-auto" style={{ maxWidth: 380 }}>
-        <MaterialIcon name="table_chart" size={32} style={{ color: '#adb5bd' }} />
+        <MaterialIcon name="table_chart" size={32} style={{ color: C.faint }} />
         <div className="fw-semibold mt-2">No positions in this project</div>
         <div className="text-muted mt-1" style={{ fontSize: 12, lineHeight: 1.6 }}>
           PositionTypes are read from the DesignDB workbook. If you expected some here,
@@ -156,24 +157,24 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
         className="ptv-row d-flex align-items-center gap-2 px-2 py-2 mb-1"
         style={{
           cursor: 'pointer',
-          border: '1px solid #e5e7eb',
+          border: `1px solid ${C.border}`,
           borderLeft: `3px solid ${colorsForType('PositionType').accent}`,
           borderRadius: 6,
-          background: '#fff',
+          background: C.surface,
           opacity: isIgnored ? 0.55 : 1,
-          color: isIgnored ? '#adb5bd' : undefined,
+          color: isIgnored ? C.faint : undefined,
         }}
       >
         <MaterialIcon name={ICONS.position} size={18} style={{ color: colorsForType('PositionType').accent }} title="Position" />
         <span className="fw-semibold" style={{ fontSize: 13 }}>{ref}</span>
         {name && name !== ref && <span className="text-muted" style={{ fontSize: 11 }}>{name}</span>}
         {ownIgnored && (
-          <span className="badge" style={{ background: '#f8f9fa', color: '#6c757d', fontSize: 10, border: '1px solid #dee2e6' }}>
+          <span className="badge" style={{ background: C.subtle, color: C.muted, fontSize: 10, border: `1px solid ${C.border}` }}>
             Ignore
           </span>
         )}
         {familyIgnored && (
-          <span className="badge" style={{ background: '#f8f9fa', color: '#6c757d', fontSize: 10, border: '1px solid #dee2e6' }}
+          <span className="badge" style={{ background: C.subtle, color: C.muted, fontSize: 10, border: `1px solid ${C.border}` }}
             title={`Family “${family}” is ignored`}>
             family ignored
           </span>
@@ -184,7 +185,7 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
         {drifted && (
           <MaterialIcon
             name="warning" size={14}
-            style={{ color: '#e0a800', cursor: 'pointer', flexShrink: 0 }}
+            style={{ color: C.attn, cursor: 'pointer', flexShrink: 0 }}
             title="Rule-derived tags changed since last accepted — click to review"
             onClick={e => { e.stopPropagation(); setShowDriftWizard(true) }}
           />
@@ -199,7 +200,7 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
         {/* Ignore toggle — shown on row hover or focus; stop propagation so it doesn't open the position */}
         <button
           className="ptv-ignore btn btn-link p-0"
-          style={{ fontSize: 14, color: isIgnored ? '#6c757d' : '#adb5bd', lineHeight: 1 }}
+          style={{ fontSize: 14, color: isIgnored ? C.muted : C.faint, lineHeight: 1 }}
           title={isIgnored ? 'Remove Ignore flag' : 'Flag as no recipe needed'}
           onClick={e => { e.stopPropagation(); toggleIgnorePosition(ref) }}
         >
@@ -224,13 +225,13 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
         {scopedTotal > 0 && (
           <span className="d-inline-flex align-items-center gap-2"
             title={`${reciped} of ${scopedTotal} in-scope positions have at least one recipe row (ignored ones don't count)`}>
-            <span style={{ fontSize: 11, color: '#555', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 11, color: C.muted, whiteSpace: 'nowrap' }}>
               <strong>{reciped}</strong>/{scopedTotal} reciped
             </span>
-            <span style={{ width: 64, height: 4, background: '#e9ecef', borderRadius: 2, overflow: 'hidden' }}>
+            <span style={{ width: 64, height: 4, background: C.border, borderRadius: 2, overflow: 'hidden' }}>
               <span style={{
                 display: 'block', width: `${pct}%`, height: '100%',
-                background: pct === 100 ? '#198754' : '#0d6efd', transition: 'width .2s ease',
+                background: C.accent, transition: 'width .2s ease',
               }} />
             </span>
           </span>
@@ -302,10 +303,10 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
             <div key={fam} className="mb-2">
               <div
                 className="d-flex align-items-center gap-2 px-2 py-1 mb-1"
-                style={{ borderBottom: '2px solid #e5e7eb', cursor: 'pointer', userSelect: 'none' }}
+                style={{ borderBottom: `2px solid ${C.border}`, cursor: 'pointer', userSelect: 'none' }}
                 onClick={() => toggleFamilyCollapse(fam)}
               >
-                <MaterialIcon name={collapsed ? ACTION_ICONS.collapse : ACTION_ICONS.expand} size={16} style={{ color: '#888' }} />
+                <MaterialIcon name={collapsed ? ACTION_ICONS.collapse : ACTION_ICONS.expand} size={16} style={{ color: C.muted }} />
                 <span className="fw-bold text-uppercase" style={{ fontSize: 11, letterSpacing: 0.5 }}>{fam}</span>
                 <span className="text-muted" style={{ fontSize: 11 }}>({pts.length})</span>
                 <div className="flex-grow-1" />
@@ -313,9 +314,9 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
                   <Button
                     variant="link" size="sm"
                     className="p-0 d-inline-flex align-items-center gap-1"
-                    style={{ fontSize: 11, textDecoration: 'none', color: '#adb5bd' }}
-                    onMouseEnter={e => { e.currentTarget.style.color = '#e0a800' }}
-                    onMouseLeave={e => { e.currentTarget.style.color = '#adb5bd' }}
+                    style={{ fontSize: 11, textDecoration: 'none', color: C.faint }}
+                    onMouseEnter={e => { e.currentTarget.style.color = C.attn }}
+                    onMouseLeave={e => { e.currentTarget.style.color = C.faint }}
                     onClick={e => { e.stopPropagation(); toggleIgnorePositionFamily(fam) }}
                     title={`Ignore every PositionType in the “${fam}” family — they move to the Ignored section below`}
                   >
@@ -345,7 +346,7 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
                   return (
                     <div key={fam} className="mb-2">
                       <div className="d-flex align-items-center gap-2 px-2 py-1 mb-1"
-                        style={{ borderBottom: '1px solid #eee' }}>
+                        style={{ borderBottom: `1px solid ${C.border}` }}>
                         <span className="fw-bold text-uppercase text-muted" style={{ fontSize: 11, letterSpacing: 0.5 }}>{fam}</span>
                         <span className="text-muted" style={{ fontSize: 11 }}>({pts.length})</span>
                         <div className="flex-grow-1" />

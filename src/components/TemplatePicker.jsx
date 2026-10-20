@@ -3,6 +3,7 @@ import { Form, Alert, Button, Badge } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { ACTION_ICONS } from '../utils/entityStyle'
+import { C } from '../styles/tokens'
 
 /**
  * TemplatePicker — browsable list of templates. Applying one replaces the full recipe,
@@ -92,7 +93,7 @@ export default function TemplatePicker({ posRef, activeTags, hasRows, onApply, q
       )}
 
       {doneMsg && (
-        <Alert variant="success" className="mx-2 mt-2 mb-0 py-1 px-2" style={{ fontSize: 12 }} dismissible onClose={() => setDoneMsg(null)}>
+        <Alert variant="primary" className="mx-2 mt-2 mb-0 py-1 px-2" style={{ fontSize: 12 }} dismissible onClose={() => setDoneMsg(null)}>
           {doneMsg}
         </Alert>
       )}
@@ -106,7 +107,7 @@ export default function TemplatePicker({ posRef, activeTags, hasRows, onApply, q
         const sorted = [...refs].sort((a, b) => (matches(b) - matches(a)) || a.localeCompare(b))
         const replacing = [...picked].filter(hasRecipe).length
         return (
-          <div className="mx-2 mt-2 p-2 rounded" style={{ background: '#e7f1ff', border: '1px solid #b6d4fe', fontSize: 12 }} data-testid="apply-to">
+          <div className="mx-2 mt-2 p-2 rounded" style={{ background: C.accentTint, border: `1px solid ${C.accentEdge}`, fontSize: 12 }} data-testid="apply-to">
             <div className="fw-semibold mb-1">Apply “{applyingTo.name}” to…</div>
             {tplTags.length > 0 && (
               <Button variant="link" size="sm" className="p-0 mb-1" style={{ fontSize: 11 }}
@@ -114,7 +115,7 @@ export default function TemplatePicker({ posRef, activeTags, hasRows, onApply, q
                 Tick every position tagged {tplTags.join(' + ')}
               </Button>
             )}
-            <div style={{ maxHeight: 220, overflowY: 'auto', background: '#fff' }} className="rounded px-2 py-1 mb-1">
+            <div style={{ maxHeight: 220, overflowY: 'auto', background: C.surface }} className="rounded px-2 py-1 mb-1">
               {sorted.map(r => (
                 <Form.Check key={r} type="checkbox" id={`apply-${r}`} checked={picked.has(r)}
                   onChange={() => setPicked(p => { const n = new Set(p); n.has(r) ? n.delete(r) : n.add(r); return n })}
@@ -204,16 +205,16 @@ function TemplateCard({ tpl, onApply, onApplyTo }) {
       style={{
         padding: '6px 8px',
         marginBottom: 4,
-        border: '1px solid #dee2e6',
+        border: `1px solid ${C.border}`,
         borderRadius: 4,
-        background: '#fff',
+        background: C.surface,
         fontSize: 12,
       }}
     >
       <div className="d-flex align-items-center justify-content-between mb-1">
         <span className="fw-semibold" style={{ fontSize: 12 }}>{tpl.name}</span>
         {tpl._isMatch && (
-          <span className="d-inline-flex align-items-center gap-1" style={{ fontSize: 11, color: '#198754', fontWeight: 600 }}><MaterialIcon name={ACTION_ICONS.complete} size={13} /> match</span>
+          <span className="d-inline-flex align-items-center gap-1" style={{ fontSize: 11, color: C.success, fontWeight: 600 }}><MaterialIcon name={ACTION_ICONS.complete} size={13} /> match</span>
         )}
       </div>
       {tpl._tags?.length > 0 && (

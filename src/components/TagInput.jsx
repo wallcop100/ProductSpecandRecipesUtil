@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Form, Badge } from 'react-bootstrap'
 import MaterialIcon from './MaterialIcon'
+import { C } from '../styles/tokens'
 
 /**
  * TagInput — free-form tag editor. Type a tag and press Enter to add; click a
@@ -58,7 +59,7 @@ export default function TagInput({ value = [], onChange, palette = [], placehold
           {suggestions.length > 0 && (
             <div className="d-flex flex-wrap gap-1 mt-2">
               {suggestions.slice(0, 12).map(p => (
-                <Badge key={p} bg="light" text="dark" style={{ cursor: 'pointer', border: '1px solid #dee2e6', fontWeight: 400 }}
+                <Badge key={p} bg="light" text="dark" style={{ cursor: 'pointer', border: `1px solid ${C.border}`, fontWeight: 400 }}
                   onClick={() => add(p)} title="Add">
                   + {p}
                 </Badge>

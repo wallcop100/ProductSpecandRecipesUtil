@@ -6,6 +6,7 @@ import UsagePopover from './UsagePopover'
 import CopyButton from './CopyButton'
 import StatusChip from './StatusChip'
 import { codeDiff } from '../utils/etRefSuggest'
+import { C } from '../styles/tokens'
 
 /**
  * CompareCodesPanel — the distinct codes, and where each one is going.
@@ -42,9 +43,9 @@ function CodeDiff({ code, other }) {
   const label = { display: 'inline-block', width: 44, fontFamily: 'system-ui, sans-serif', fontSize: 9 }
   return (
     <div className="ms-3 mt-1 px-1 rounded" data-testid="code-diff"
-      style={{ fontFamily: 'monospace', fontSize: 11, lineHeight: 1.45, background: '#f8f9fa' }}>
-      <div><span className="text-muted" style={label}>this</span>{line('del', '#842029', '#f5c2c7')}</div>
-      <div><span className="text-muted" style={label}>existing</span>{line('add', '#0f5132', '#a3cfbb')}</div>
+      style={{ fontFamily: 'monospace', fontSize: 11, lineHeight: 1.45, background: C.subtle }}>
+      <div><span className="text-muted" style={label}>this</span>{line('del', C.dangerInk, C.dangerTint)}</div>
+      <div><span className="text-muted" style={label}>existing</span>{line('add', C.ink, C.border)}</div>
     </div>
   )
 }
@@ -86,9 +87,9 @@ function PositionTypes({ pts, knownPTs, ptTarget }) {
           <span key={pt}
             title={!known ? 'Not a PositionType in this project — the Form names it but nothing here does'
               : redirected ? `Recipe goes to ${target} (the DesignDB's ExtRef says so)` : ''}
-            style={{ fontFamily: 'monospace', color: known ? '#6c757d' : '#b45309' }}>
+            style={{ fontFamily: 'monospace', color: known ? C.muted : C.attnInk }}>
             {pt}{known ? '' : '?'}
-            {redirected && <span style={{ color: '#084298' }}>→{target}</span>}
+            {redirected && <span style={{ color: C.accentInk }}>→{target}</span>}
             {i < pts.length - 1 ? ', ' : ''}
           </span>
         )
@@ -132,14 +133,14 @@ export default function CompareCodesPanel({ entries, knownPTs, ptTarget, onCreat
 
             {/* The spec already has this code, but under a different maker: a different product. */}
             {e.otherMaker && (
-              <div style={{ fontSize: 10, color: '#b45309' }}>
+              <div style={{ fontSize: 10, color: C.attnInk }}>
                 <MaterialIcon name="call_split" size={10} /> {e.otherMaker.manufacturer || 'another maker'} uses this
                 code for <span style={{ fontFamily: 'monospace' }}>{e.otherMaker.ref}</span> — not the same product.
               </div>
             )}
 
             {e.retired && (
-              <div style={{ fontSize: 10, color: '#842029' }} data-testid="retired"
+              <div style={{ fontSize: 10, color: C.dangerInk }} data-testid="retired"
                 title={e.retired.retired ? `Replaced by the manufacturer (${e.retired.retired})` : 'Replaced by the manufacturer'}>
                 <MaterialIcon name="history" size={10} /> replaced by{' '}
                 <span style={{ fontFamily: 'monospace' }}>{e.retired.replacement}</span> — check the current code
@@ -147,7 +148,7 @@ export default function CompareCodesPanel({ entries, knownPTs, ptTarget, onCreat
             )}
 
             {!e.retired && e.superseded && (
-              <div style={{ fontSize: 10, color: '#842029' }} data-testid="superseded"
+              <div style={{ fontSize: 10, color: C.dangerInk }} data-testid="superseded"
                 title={`Codes shaped like ${e.superseded.example} are ${e.manufacturers[0] || 'the maker'}'s old numbering`}>
                 <MaterialIcon name="history" size={10} /> old {e.manufacturers[0] || ''} numbering — check the current code
               </div>
@@ -163,14 +164,14 @@ export default function CompareCodesPanel({ entries, knownPTs, ptTarget, onCreat
                   <div key={c.ref} className="py-1" style={{ fontSize: 10 }}>
                   <div className="d-flex align-items-center gap-1">
                     <MaterialIcon name={c.kind === 'same' ? 'link' : 'call_split'} size={12}
-                      style={{ color: c.kind === 'same' ? '#198754' : '#b45309' }} />
+                      style={{ color: c.kind === 'same' ? C.success : C.attnInk }} />
                     <span style={{ fontFamily: 'monospace' }}>{c.ref}</span>
                     <span className="text-muted">
                       {c.kind === 'same'
                         ? (c.matchedCode ? 'same code' : 'code appears in its name')
                         : c.matchedCode ? 'similar code' : 'similar name'}
                     </span>
-                    <Button size="sm" variant="outline-success" className="ms-auto"
+                    <Button size="sm" variant="outline-secondary" className="ms-auto"
                       style={{ fontSize: 9, padding: '0 5px' }}
                       title={`Reuse ${c.ref}${c.matchedCode ? ` (${c.matchedCode})` : ''} instead of creating a new ElementType`}
                       onClick={() => onReuse(e, c.ref)}>

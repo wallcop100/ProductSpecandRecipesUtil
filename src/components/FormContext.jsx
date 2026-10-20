@@ -1,4 +1,5 @@
 import React from 'react'
+import { C } from '../styles/tokens'
 
 /**
  * FormContext — the Form's own columns for one row, as a readable list.
@@ -23,11 +24,11 @@ export default function FormContext({ context = {}, columns = null, style }) {
   if (keys.length === 0) return null
 
   return (
-    <div className="px-2 py-1 rounded" style={{ background: '#f8f9fa', fontSize: 11, ...style }}>
+    <div className="px-2 py-1 rounded" style={{ background: C.subtle, fontSize: 11, ...style }}>
       {keys.map(k => (
         <div key={k} className="d-flex align-items-baseline gap-2" style={{ lineHeight: 1.5 }}>
           <span className="fw-semibold flex-shrink-0" style={{ minWidth: 84 }}>{k}</span>
-          <span className="text-truncate" style={{ minWidth: 0, color: '#495057' }}
+          <span className="text-truncate" style={{ minWidth: 0, color: C.ink }}
             title={`${k}: ${String(context[k])}`}>
             {String(context[k])}
           </span>

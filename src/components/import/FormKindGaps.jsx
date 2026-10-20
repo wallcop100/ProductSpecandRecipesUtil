@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Button } from 'react-bootstrap'
 import MaterialIcon from '../MaterialIcon'
 import { jobLabel } from '../../utils/recipeKinds'
+import { C } from '../../styles/tokens'
 
 /**
  * FormKindGaps — at the Form step, the positions whose codes leave out a part positions like them
@@ -13,10 +14,10 @@ export default function FormKindGaps({ gaps = [], onAnswer = () => {} }) {
   const shown = gaps.filter(g => !gone.has(g.key))
   if (!shown.length) return null
   return (
-    <div className="mb-2 px-2 py-1 rounded" data-testid="form-kind-gaps" style={{ background: '#eef5ff', border: '1px solid #c9dcf5', fontSize: 12 }}>
+    <div className="mb-2 px-2 py-1 rounded" data-testid="form-kind-gaps" style={{ background: C.accentTint, border: `1px solid ${C.accentEdge}`, fontSize: 12 }}>
       {shown.map(g => (
         <div key={g.key} className="d-flex align-items-center gap-2 py-1">
-          <MaterialIcon name="lightbulb" size={13} style={{ color: '#1c5cab' }} />
+          <MaterialIcon name="lightbulb" size={13} style={{ color: C.accent }} />
           <span style={{ flex: 1 }}>
             <span className="font-monospace">{g.positions.slice(0, 6).join(', ')}{g.positions.length > 6 ? ` +${g.positions.length - 6}` : ''}</span>
             : positions like {g.positions.length === 1 ? 'this' : 'these'} usually also have{' '}

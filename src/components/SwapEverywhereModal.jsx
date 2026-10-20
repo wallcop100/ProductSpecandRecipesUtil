@@ -3,6 +3,7 @@ import { Modal, Button, Form } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { planSwap, alreadySwapped, SCOPE } from '../utils/swapPlan'
+import { C } from '../styles/tokens'
 
 /**
  * SwapEverywhereModal — substitute one product for another, everywhere it appears.
@@ -101,7 +102,7 @@ export default function SwapEverywhereModal({ show, onHide, fromRef, posRef = nu
         )}
 
         {toRef && plan.rows.length === 0 && (
-          <div className="px-2 py-2 rounded" style={{ background: '#f8f9fa', border: '1px solid #e9ecef', fontSize: 12 }}>
+          <div className="px-2 py-2 rounded" style={{ background: C.subtle, border: `1px solid ${C.border}`, fontSize: 12 }}>
             Nothing to swap{noop > 0 && <> — {noop} row{noop === 1 ? '' : 's'} already {noop === 1 ? 'uses' : 'use'} it</>}.
           </div>
         )}
@@ -114,7 +115,7 @@ export default function SwapEverywhereModal({ show, onHide, fromRef, posRef = nu
             </div>
 
             {plan.sharedWrappers.length > 0 && (
-              <div className="px-2 py-2 rounded mb-2" style={{ background: '#fff3cd', border: '1px solid #f0e0a8', fontSize: 11, color: '#856404' }}>
+              <div className="px-2 py-2 rounded mb-2" style={{ background: C.attnTint, border: `1px solid ${C.attnTint}`, fontSize: 11, color: C.attnInk }}>
                 <MaterialIcon name="warning" size={12} />{' '}
                 {plan.sharedWrappers.map(w => (
                   <div key={w.container}>
@@ -132,7 +133,7 @@ export default function SwapEverywhereModal({ show, onHide, fromRef, posRef = nu
                   {r.container ? <>inside <span style={{ fontFamily: 'monospace' }}>{r.container}</span></> : 'position level'}
                 </span>
                 {r.isDesign && (
-                  <span className="rounded px-1" style={{ fontSize: 9, background: '#cfe2ff', color: '#084298' }}>design</span>
+                  <span className="rounded px-1" style={{ fontSize: 9, background: C.accentTint, color: C.accentInk }}>design</span>
                 )}
                 {r.sharedWith.length > 0 && (
                   <span className="text-muted ms-auto" style={{ fontSize: 9 }}>

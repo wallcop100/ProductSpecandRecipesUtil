@@ -1,5 +1,6 @@
 import React from 'react'
 import { colorsForType } from '../utils/entityStyle'
+import { C } from '../styles/tokens'
 
 /**
  * EntityPill — two side-by-side pills for an entity reference.
@@ -31,7 +32,7 @@ export default function EntityPill({
   const pillBase = {
     display: 'inline-block',
     background: fill,
-    color: '#1a1a1a',
+    color: C.ink,
     borderRadius: 4,
     padding: '2px 8px',
     fontSize: 12,
@@ -54,7 +55,7 @@ export default function EntityPill({
       }}
     >
       {sublabel != null && (
-        <span style={{ ...pillBase, fontSize: stack ? 10 : 11, padding: stack ? '1px 6px' : '2px 8px', color: '#555' }}>
+        <span style={{ ...pillBase, fontSize: stack ? 10 : 11, padding: stack ? '1px 6px' : '2px 8px', color: C.muted }}>
           {sublabel}
         </span>
       )}

@@ -1,5 +1,6 @@
 import React from 'react'
 import { Badge } from 'react-bootstrap'
+import { C } from '../styles/tokens'
 
 /**
  * FlagPill — a small toggle pill for flag values ('Y' | null).
@@ -10,7 +11,7 @@ import { Badge } from 'react-bootstrap'
  *   onChange?: (newValue: 'Y'|null) => void
  *   readOnly?: bool
  */
-export default function FlagPill({ label, value, onChange, readOnly = false, activeVariant = 'success' }) {
+export default function FlagPill({ label, value, onChange, readOnly = false, activeVariant = 'primary' }) {
   const isActive = value === 'Y'
 
   function handleClick() {
@@ -25,7 +26,7 @@ export default function FlagPill({ label, value, onChange, readOnly = false, act
       onClick={handleClick}
       style={{
         cursor: readOnly ? 'default' : 'pointer',
-        border: isActive ? 'none' : '1px solid #dee2e6',
+        border: isActive ? 'none' : `1px solid ${C.border}`,
         userSelect: 'none',
         fontSize: 10,
         padding: '3px 7px',

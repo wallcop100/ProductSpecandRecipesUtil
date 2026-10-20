@@ -2,6 +2,7 @@ import React from 'react'
 import { Form } from 'react-bootstrap'
 import { TAG_OPS } from '../utils/tagRules'
 import MaterialIcon from './MaterialIcon'
+import { C } from '../styles/tokens'
 
 /**
  * RuleBuilder — a rule's conditions joined by AND / OR, the tag-rule editor's pattern.
@@ -25,7 +26,7 @@ function ConditionRow({ cond, columns, valueOptions, onChange, onRemove, canRemo
 
   return (
     <div className="tag-cond d-flex align-items-center gap-2 px-2 py-1 rounded"
-      style={{ background: '#f8f9fb', border: '1px solid #edeff2' }}>
+      style={{ background: C.subtle, border: `1px solid ${C.subtle}` }}>
       <Form.Select size="sm" value={cond.column} style={{ flex: '1 1 150px', minWidth: 130, fontSize: 12 }}
         onChange={e => onChange({ column: e.target.value })} aria-label="Column">
         {columns.map(g => (
@@ -75,11 +76,11 @@ function ConditionRow({ cond, columns, valueOptions, onChange, onRemove, canRemo
 function Connector({ match, interactive, onToggle }) {
   const any = match === 'any'
   const word = any ? 'OR' : 'AND'
-  const fg = any ? '#b45309' : '#0d6efd'
-  const bg = any ? '#fff4e5' : '#e7f1ff'
+  const fg = any ? C.attnInk : C.accent
+  const bg = any ? C.attnTint : C.accentTint
   return (
     <div className="d-flex align-items-center" style={{ paddingLeft: 6, height: 22 }}>
-      <div style={{ width: 2, background: '#e5e7eb', alignSelf: 'stretch', marginRight: 8 }} />
+      <div style={{ width: 2, background: C.border, alignSelf: 'stretch', marginRight: 8 }} />
       {interactive ? (
         <button type="button" onClick={onToggle}
           title={any ? 'OR — any condition matches. Click for AND.' : 'AND — every condition matches. Click for OR.'}
@@ -113,7 +114,7 @@ export default function RuleBuilder({ rule, columns, valueOptions = {}, onChange
       ))}
       <button type="button" onClick={addCond}
         className="btn btn-sm w-100 mt-2 d-inline-flex align-items-center justify-content-center gap-1"
-        style={{ fontSize: 11, color: '#6c757d', border: '1px dashed #cbd5e1', borderRadius: 8, background: 'transparent' }}>
+        style={{ fontSize: 11, color: C.muted, border: `1px dashed ${C.faint}`, borderRadius: 8, background: 'transparent' }}>
         <MaterialIcon name="add" size={13} /> Add condition
       </button>
     </>
@@ -128,7 +129,7 @@ export function RulePills({ rule, ...rest }) {
   const conds = (rule?.conditions || []).filter(c => c && c.column && c.op)
   if (!conds.length) return null
   const any = rule.match === 'any'
-  const join = { color: any ? '#b45309' : '#0d6efd', background: any ? '#fff4e5' : '#e7f1ff' }
+  const join = { color: any ? C.attnInk : C.accent, background: any ? C.attnTint : C.accentTint }
   const col = c => String(c.column).replace(/^Recipe\./, '')
   return (
     <span className="d-inline-flex flex-wrap align-items-center gap-1" data-testid="rule-pills" {...rest}>
@@ -138,7 +139,7 @@ export function RulePills({ rule, ...rest }) {
             <span className="rounded-pill px-2" data-testid="rule-join"
               style={{ fontSize: 9, fontWeight: 700, letterSpacing: 0.5, lineHeight: '16px', ...join }}>{any ? 'OR' : 'AND'}</span>
           )}
-          <span className="rounded-pill px-2" style={{ fontSize: 10, lineHeight: '18px', background: '#f1f3f5', border: '1px solid #dee2e6' }}>
+          <span className="rounded-pill px-2" style={{ fontSize: 10, lineHeight: '18px', background: C.subtle, border: `1px solid ${C.border}` }}>
             <span className="text-muted">{col(c)}</span> {OP.get(c.op)?.label || c.op}{OP.get(c.op)?.needsValue === false ? '' : <> <strong>{String(c.value ?? '')}</strong></>}
           </span>
         </React.Fragment>

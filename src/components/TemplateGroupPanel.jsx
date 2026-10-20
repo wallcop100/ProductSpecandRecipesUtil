@@ -6,6 +6,7 @@ import IconButton from './IconButton'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { templateParts, diffParts, diffSize, describeParts, nearMisses, suggestName, filterMatches } from '../utils/connectorGroups'
 import { templateRule, ruleIsEmpty } from '../utils/templateRules'
+import { C } from '../styles/tokens'
 
 const diffText = d => [
   ...d.add.map(p => `+ ${p.ref}${p.quantity > 1 ? ` ×${p.quantity}` : ''}${p.section === 'internal' ? ' (wrapper)' : ''}`),
@@ -87,7 +88,7 @@ export default function TemplateGroupPanel({ collectionId, groups, onEdit, onSel
       </div>
       <div className="text-muted mb-2">{describeParts(parts)}</div>
 
-      {done && <div className="alert alert-success py-1 px-2" data-testid="apply-done">{done}</div>}
+      {done && <div className="alert alert-secondary py-1 px-2" data-testid="apply-done">{done}</div>}
 
       <div className="d-flex align-items-center gap-2 mb-1">
         <strong>Positions ({members.length})</strong>
@@ -107,7 +108,7 @@ export default function TemplateGroupPanel({ collectionId, groups, onEdit, onSel
             <div key={r} className="d-flex align-items-center gap-2 py-1 border-bottom" data-testid={`member-${r}`}>
               <Form.Check type="checkbox" checked={picked.has(r)} onChange={() => toggle(r)} aria-label={`Select ${r}`} />
               <button type="button" className="btn btn-link p-0" style={{ fontSize: 12, fontFamily: 'monospace' }} onClick={() => onOpenPosition?.(r)}>{r}</button>
-              {pinned.has(r) && <MaterialIcon name="push_pin" size={12} style={{ color: '#6c757d' }} title="Pinned to this template" />}
+              {pinned.has(r) && <MaterialIcon name="push_pin" size={12} style={{ color: C.muted }} title="Pinned to this template" />}
               {diffSize(d) === 0
                 ? <span className="text-success ms-auto"><MaterialIcon name="check" size={12} /> matches</span>
                 : <span className="text-warning ms-auto text-truncate" style={{ maxWidth: 220 }} title={diffText(d)}>{diffText(d)}</span>}
@@ -165,7 +166,7 @@ export default function TemplateGroupPanel({ collectionId, groups, onEdit, onSel
         const byTpl = new Map()
         for (const [r, m] of held) { if (!byTpl.has(m.pinnedTo)) byTpl.set(m.pinnedTo, []); byTpl.get(m.pinnedTo).push(r) }
         return (
-          <div className="mb-3 p-2 rounded" style={{ background: '#e7f1ff' }} data-testid="held-elsewhere">
+          <div className="mb-3 p-2 rounded" style={{ background: C.accentTint }} data-testid="held-elsewhere">
             <strong><MaterialIcon name="info" size={12} /> Matched by this rule, but held by another template</strong>
             {[...byTpl.entries()].map(([id, refs]) => (
               <div key={id} className="d-flex align-items-center gap-2 mt-1">
@@ -178,7 +179,7 @@ export default function TemplateGroupPanel({ collectionId, groups, onEdit, onSel
       })()}
 
       {clashes.length > 0 && (
-        <div className="mb-3 p-2 rounded" style={{ background: '#fff3cd' }} data-testid="clashes">
+        <div className="mb-3 p-2 rounded" style={{ background: C.attnTint }} data-testid="clashes">
           <strong><MaterialIcon name="warning" size={12} /> Also matched by another template</strong>
           {clashes.map(r => (
             <div key={r} className="d-flex align-items-center gap-2 mt-1">

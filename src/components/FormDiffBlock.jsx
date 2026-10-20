@@ -7,6 +7,7 @@ import { WordDiff } from './import/FormTable'
 import { formImpact } from '../utils/formImpact'
 import { buildMaster } from '../utils/productCodes'
 import { buildRefMap, targetFor } from '../utils/ptResolve'
+import { C } from '../styles/tokens'
 
 const mono = { fontFamily: 'monospace' }
 const list = refs => refs.join(', ')
@@ -64,8 +65,8 @@ export default function FormDiffBlock({ posRef }) {
 
   const who = c => [posRef, ...c.changing]
   return (
-    <div className="mb-2 p-2 rounded" style={{ background: '#fff8e1', border: '1px solid #ffe08a', fontSize: 11 }} data-testid="form-diff-block">
-      <div className="d-flex align-items-center gap-1 mb-1" style={{ color: '#5c4400' }}>
+    <div className="mb-2 p-2 rounded" style={{ background: C.attnTint, border: `1px solid ${C.attnTint}`, fontSize: 11 }} data-testid="form-diff-block">
+      <div className="d-flex align-items-center gap-1 mb-1" style={{ color: C.attnInk }}>
         <span role="button" onClick={toggleShown} aria-expanded={shown} data-testid="diff-toggle" className="d-inline-flex align-items-center"
           title={shown ? 'Hide the changes' : 'Show the changes'}>
           <MaterialIcon name={shown ? 'expand_more' : 'chevron_right'} size={14} />
@@ -77,7 +78,7 @@ export default function FormDiffBlock({ posRef }) {
       </div>
       {!shown && <div className="text-muted" style={{ fontSize: 10 }} data-testid="diff-hidden">{changes.length} change{changes.length === 1 ? '' : 's'} hidden</div>}
       {shown && changes.map((c, i) => (
-        <div key={i} className={sameRow(i) ? 'pb-1' : 'py-1 border-top'} style={{ borderColor: '#ffe08a' }} data-testid="form-diff-line">
+        <div key={i} className={sameRow(i) ? 'pb-1' : 'py-1 border-top'} style={{ borderColor: C.attnTint }} data-testid="form-diff-line">
           {!sameRow(i) && (c.oldText != null || c.newText != null) && (
             <div className="mb-1" data-testid="row-text">
               {/* + added, − omitted, ± changed: the same marks as the PositionRail. */}
@@ -116,7 +117,7 @@ export default function FormDiffBlock({ posRef }) {
                     {c.changing.length ? `Every position in the Form using it changes the same way (${list([posRef, ...c.changing])})` : `In the Form, only ${posRef} uses it`}, and the old code is gone from the Form.
                   </div>
                   {c.outsideForm.length > 0 && (
-                    <div style={{ color: '#856404' }} data-testid="diff-outside">
+                    <div style={{ color: C.attnInk }} data-testid="diff-outside">
                       <MaterialIcon name="warning" size={11} /> Also changes {list(c.outsideForm)} (not in the Form), which use{c.outsideForm.length === 1 ? 's' : ''} {c.fromEt} too.
                     </div>
                   )}

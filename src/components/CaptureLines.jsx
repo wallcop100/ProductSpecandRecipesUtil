@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Form } from 'react-bootstrap'
 import MaterialIcon from './MaterialIcon'
+import { C } from '../styles/tokens'
 
 /**
  * CaptureLines — codes promoted out of the field.
@@ -30,10 +31,10 @@ const KEYFRAMES = `
   to   { opacity: 1; transform: none; }
 }
 .pc-line { animation: pc-promote 220ms cubic-bezier(.2,.8,.2,1); }
-.pc-line.pc-drop-target { background: #e7f1ff; outline: 2px dashed #0d6efd; }
-.pc-note:hover { background: #f1f3f5; }
+.pc-line.pc-drop-target { background: ${C.accentTint}; outline: 2px dashed ${C.accent}; }
+.pc-note:hover { background: ${C.subtle}; }
 .pc-word { cursor: grab; border-radius: 3px; padding: 0 2px; }
-.pc-word:hover { background: #e7f1ff; outline: 1px solid #b6d4fe; }
+.pc-word:hover { background: ${C.accentTint}; outline: 1px solid ${C.accentEdge}; }
 .pc-word.pc-dragging { opacity: .4; }
 `
 
@@ -85,10 +86,10 @@ export default function CaptureLines({ captures, discarded = [], onEditNote, onM
             setDrag(null); setOverCode(null)
           }}
         >
-          <MaterialIcon name="subdirectory_arrow_right" size={14} style={{ color: '#adb5bd', flexShrink: 0 }} />
+          <MaterialIcon name="subdirectory_arrow_right" size={14} style={{ color: C.faint, flexShrink: 0 }} />
           <span style={{
             fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 13, fontWeight: 700,
-            color: '#0f5132', background: '#d1e7dd', borderRadius: 3, padding: '1px 6px', flexShrink: 0,
+            color: C.ink, background: C.subtle, borderRadius: 3, padding: '1px 6px', flexShrink: 0,
           }}>
             {c.code}
           </span>
@@ -113,7 +114,7 @@ export default function CaptureLines({ captures, discarded = [], onEditNote, onM
                   onDragStart={() => setDrag({ code: c.code, word: null })}
                   onDragEnd={() => { setDrag(null); setOverCode(null) }}
                   title="Drag onto another code to move the whole note"
-                  style={{ cursor: 'grab', color: '#ced4da', flexShrink: 0 }}
+                  style={{ cursor: 'grab', color: C.faint, flexShrink: 0 }}
                 >
                   <MaterialIcon name="drag_indicator" size={14} />
                 </span>
@@ -121,7 +122,7 @@ export default function CaptureLines({ captures, discarded = [], onEditNote, onM
               {/* Tokens drag; the block edits. Each word is its own handle, so half a
                   note can go to the code it actually belongs to. */}
               <span className="pc-note rounded px-1"
-                style={{ fontSize: 11, color: c.note ? '#495057' : '#adb5bd', flex: 1, minWidth: 0 }}>
+                style={{ fontSize: 11, color: c.note ? C.ink : C.faint, flex: 1, minWidth: 0 }}>
                 {c.note
                   ? wordsOf(c.note).map((w, wi) => (
                       <span key={`${w}-${wi}`}
@@ -138,7 +139,7 @@ export default function CaptureLines({ captures, discarded = [], onEditNote, onM
               </span>
               {c.noteEdited && (
                 <span onClick={() => onEditNote(c.code, null)} title="Reset to the words from the field"
-                  style={{ cursor: 'pointer', color: '#adb5bd', flexShrink: 0 }}>
+                  style={{ cursor: 'pointer', color: C.faint, flexShrink: 0 }}>
                   <MaterialIcon name="undo" size={13} />
                 </span>
               )}
@@ -155,7 +156,7 @@ function Discarded({ discarded }) {
   return (
     <div className="d-flex align-items-center gap-2 pt-1 mt-1 border-top" style={{ fontSize: 11 }}>
       <span className="text-muted" style={{ flexShrink: 0 }}>discarded</span>
-      <span style={{ fontFamily: 'monospace', color: '#c7ccd1', textDecoration: 'line-through' }}>
+      <span style={{ fontFamily: 'monospace', color: C.faint, textDecoration: 'line-through' }}>
         {[...new Set(discarded)].join(' ')}
       </span>
     </div>

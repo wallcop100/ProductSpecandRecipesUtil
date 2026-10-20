@@ -3,6 +3,7 @@ import { Overlay, Popover, Form } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import TagBadge from './TagBadge'
 import MaterialIcon from './MaterialIcon'
+import { C } from '../styles/tokens'
 
 /**
  * PositionTagEditor — per-position tags, edited where the position is.
@@ -43,7 +44,7 @@ export default function PositionTagEditor({ posRef }) {
 
       <span ref={ref} className="d-inline-flex">
         <button type="button" className="btn btn-sm btn-link p-0 d-inline-flex align-items-center"
-          style={{ color: '#6c757d', lineHeight: 1 }} title="Edit tags for this position"
+          style={{ color: C.muted, lineHeight: 1 }} title="Edit tags for this position"
           onClick={() => setShow(v => !v)}>
           <MaterialIcon name="add_circle" size={16} />
         </button>
@@ -77,7 +78,7 @@ export default function PositionTagEditor({ posRef }) {
                 <div className="d-flex flex-wrap gap-1">
                   {excluded.map(tag => (
                     <span key={tag} className="badge bg-light text-dark" role="button"
-                      style={{ border: '1px dashed #adb5bd', cursor: 'pointer', fontWeight: 400 }}
+                      style={{ border: `1px dashed ${C.faint}`, cursor: 'pointer', fontWeight: 400 }}
                       onClick={() => toggle(posRef, tag)}>
                       + {tag}
                     </span>

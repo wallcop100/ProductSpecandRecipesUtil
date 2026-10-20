@@ -19,6 +19,7 @@ import ForkPositionModal from './ForkPositionModal'
 import TemplatePicker from './TemplatePicker'
 import { colorsForType, ICONS, ACTION_ICONS } from '../utils/entityStyle'
 import { CONCEPTS } from './ConceptCard'
+import { C } from '../styles/tokens'
 
 // Group container-internal rows by ContextRef so each container gets a section
 // titled by its ElementTypeRef.
@@ -175,7 +176,7 @@ export default function PositionRecipeEditor({
       {/* Selection bar */}
       {selectedRowIds.length > 0 && (
         <div className="d-flex align-items-center gap-2 px-3 py-1"
-          style={{ flexShrink: 0, background: '#e7f1ff', borderBottom: '1px solid #b6d4fe', fontSize: 12 }}>
+          style={{ flexShrink: 0, background: C.accentTint, borderBottom: `1px solid ${C.accentEdge}`, fontSize: 12 }}>
           <span className="fw-semibold text-primary">{selectedRowIds.length} row{selectedRowIds.length === 1 ? '' : 's'} selected</span>
           <IconButton variant="primary" bsSize="sm" style={{ fontSize: 11 }} icon={ACTION_ICONS.copy}
             title="Copy selection (Ctrl+C)" onClick={doCopySelection} />
@@ -184,7 +185,7 @@ export default function PositionRecipeEditor({
         </div>
       )}
       {pasteMsg && (
-        <div className="px-3 py-1 text-success d-flex align-items-center gap-1" style={{ flexShrink: 0, background: '#d1e7dd', fontSize: 12 }}>
+        <div className="px-3 py-1 text-success d-flex align-items-center gap-1" style={{ flexShrink: 0, background: C.subtle, fontSize: 12 }}>
           <MaterialIcon name="check" size={14} /> {pasteMsg}
         </div>
       )}

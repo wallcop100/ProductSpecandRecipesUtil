@@ -9,6 +9,7 @@ import useConnectorGroups from './useConnectorGroups'
 import { templateParts, partsToIngredients, diffParts, diffSize, describeParts, findGroups, suggestName } from '../utils/connectorGroups'
 import { templateRule, ruleIsEmpty, describeRule, ruleFor, ruleMatchesRecord, TEMPLATE_RULE_COLUMNS } from '../utils/templateRules'
 import { TAG_OPS } from '../utils/tagRules'
+import { C } from '../styles/tokens'
 
 const mono = { fontFamily: 'monospace' }
 const lc = s => String(s || '').toLowerCase()
@@ -129,7 +130,7 @@ export default function ConnectorsPane({ posRef, onOpenConnectors }) {
 
       {/* 1. Which template */}
       {m.clash ? (
-        <div className="mb-2 p-2 rounded" style={{ background: '#fff3cd', color: '#664d03' }} data-testid="connector-clash">
+        <div className="mb-2 p-2 rounded" style={{ background: C.attnTint, color: C.attnInk }} data-testid="connector-clash">
           <MaterialIcon name="call_split" size={13} /> Two templates fit {posRef} equally: pick one
           <div className="d-flex gap-1 flex-wrap mt-1">
             {m.templates.map(id => (
@@ -140,7 +141,7 @@ export default function ConnectorsPane({ posRef, onOpenConnectors }) {
         </div>
       ) : current ? (
         <div className="mb-1" data-testid="connector-template">
-          <MaterialIcon name={isComplete ? 'check_circle' : 'error'} size={13} style={{ color: isComplete ? '#198754' : '#dc3545' }} />{' '}
+          <MaterialIcon name={isComplete ? 'check_circle' : 'error'} size={13} style={{ color: isComplete ? C.success : C.danger }} />{' '}
           <strong>{current.Name}</strong> <span className="text-muted">· {how}</span>
         </div>
       ) : null}
@@ -174,7 +175,7 @@ export default function ConnectorsPane({ posRef, onOpenConnectors }) {
             </div>
           )}
           {suggestion && (
-            <div className="p-2 rounded mb-2" style={{ background: '#f8f9fa', border: '1px solid #dee2e6' }} data-testid="suggested-template">
+            <div className="p-2 rounded mb-2" style={{ background: C.subtle, border: `1px solid ${C.border}` }} data-testid="suggested-template">
               <div className="fw-semibold mb-1" style={{ fontSize: 10 }}>New template from {posRef}</div>
               <Form.Control size="sm" value={tplName ?? suggestion.name} onChange={e => setTplName(e.target.value)}
                 aria-label="Template name" style={{ fontSize: 11 }} />
@@ -186,10 +187,10 @@ export default function ConnectorsPane({ posRef, onOpenConnectors }) {
                   <InlineRule rule={withRule.rule} onChange={rule => setWithRule(w => ({ ...w, rule }))} tagOptions={tagOptions} />
                   <div className="mt-1" data-testid="rule-preview">
                     <span className="d-flex flex-wrap align-items-center gap-1">
-                      <MaterialIcon name="arrow_forward" size={12} style={{ color: '#6c757d' }} />
+                      <MaterialIcon name="arrow_forward" size={12} style={{ color: C.muted }} />
                       {(ruleIsEmpty(withRule.rule) ? suggestion.positions : ruleMatches).slice(0, 16).map(r => (
                         <span key={r} className="rounded-pill px-2" style={{ ...pill, fontFamily: 'monospace', fontWeight: r === posRef ? 700 : 400 }}>
-                          {ruleIsEmpty(withRule.rule) && <MaterialIcon name="push_pin" size={10} style={{ marginRight: 2, verticalAlign: '-1px', color: '#6c757d' }} />}{r}
+                          {ruleIsEmpty(withRule.rule) && <MaterialIcon name="push_pin" size={10} style={{ marginRight: 2, verticalAlign: '-1px', color: C.muted }} />}{r}
                         </span>
                       ))}
                       {!ruleIsEmpty(withRule.rule) && ruleMatches.length === 0 && <span className="text-muted">no position</span>}
@@ -247,8 +248,8 @@ function Section({ title, children }) {
   return (
     <div className="mt-2" data-testid={`section-${title.toLowerCase()}`}>
       <div className="d-flex align-items-center gap-2 mb-1">
-        <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.06em', color: '#6c757d' }}>{title.toUpperCase()}</span>
-        <span style={{ flex: 1, borderTop: '1px solid #dee2e6' }} />
+        <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.06em', color: C.muted }}>{title.toUpperCase()}</span>
+        <span style={{ flex: 1, borderTop: `1px solid ${C.border}` }} />
       </div>
       <div className="ps-1">{children}</div>
     </div>
@@ -256,7 +257,7 @@ function Section({ title, children }) {
 }
 
 const short = ref => String(ref).replace(/^ET-/i, '')
-const pill = { fontSize: 10, lineHeight: '18px', background: '#fff', border: '1px solid #dee2e6' }
+const pill = { fontSize: 10, lineHeight: '18px', background: C.surface, border: `1px solid ${C.border}` }
 
 /** This position's connectors: on site, then (dashed) inside the wrapper. */
 function PartPills({ have }) {
@@ -292,7 +293,7 @@ function InlineRule({ rule, onChange, tagOptions = [] }) {
   const set = (i, patch) => onChange({ ...rule, conditions: conds.map((c, k) => (k === i ? { ...c, ...patch } : c)) })
   const remove = i => { onChange({ ...rule, conditions: conds.filter((_, k) => k !== i) }); setEditing(null) }
   const add = () => { onChange({ ...rule, match: rule?.match || 'all', conditions: [...conds, { column: 'Tags', op: 'equals', value: '' }] }); setEditing(conds.length) }
-  const join = { color: any ? '#b45309' : '#0d6efd', background: any ? '#fff4e5' : '#e7f1ff' }
+  const join = { color: any ? C.attnInk : C.accent, background: any ? C.attnTint : C.accentTint }
   const opOf = op => TAG_OPS.find(o => o.op === op) || TAG_OPS[0]
   const sel = { fontSize: 10, padding: '0 18px 0 4px', height: 22, width: 'auto', minWidth: 0, backgroundPosition: 'right 3px center', backgroundSize: '9px 7px' }
   return (
@@ -306,7 +307,7 @@ function InlineRule({ rule, onChange, tagOptions = [] }) {
               style={{ fontSize: 9, fontWeight: 700, letterSpacing: 0.5, lineHeight: '16px', cursor: 'pointer', ...join }}>{any ? 'OR' : 'AND'}</button>
           )}
           {editing === i ? (
-            <span className="d-inline-flex flex-wrap align-items-center gap-1 rounded px-1 py-1" style={{ background: '#fff', border: '1px solid #86b7fe' }} data-testid="cond-editing">
+            <span className="d-inline-flex flex-wrap align-items-center gap-1 rounded px-1 py-1" style={{ background: C.surface, border: `1px solid ${C.accentEdge}` }} data-testid="cond-editing">
               <Form.Select size="sm" value={c.column} aria-label="Column" style={sel} onChange={e => set(i, { column: e.target.value })}>
                 {TEMPLATE_RULE_COLUMNS.map(g => (
                   <optgroup key={g.label} label={g.label}>{g.options.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}</optgroup>
@@ -329,7 +330,7 @@ function InlineRule({ rule, onChange, tagOptions = [] }) {
             </span>
           ) : (
             <button type="button" className="rounded-pill px-2" data-testid="cond-pill" title="Tap to change"
-              onClick={() => setEditing(i)} style={{ ...pill, background: '#f1f3f5', cursor: 'pointer' }}>
+              onClick={() => setEditing(i)} style={{ ...pill, background: C.subtle, cursor: 'pointer' }}>
               <span className="text-muted">{String(c.column).replace(/^Recipe\./, '')}</span> {opOf(c.op).label}
               {opOf(c.op).needsValue && <> <strong>{String(c.value ?? '') || '…'}</strong></>}
             </button>
@@ -337,7 +338,7 @@ function InlineRule({ rule, onChange, tagOptions = [] }) {
         </React.Fragment>
       ))}
       <button type="button" className="rounded-pill px-2" data-testid="add-cond" onClick={add}
-        style={{ ...pill, borderStyle: 'dashed', color: '#6c757d', cursor: 'pointer' }}>+ condition</button>
+        style={{ ...pill, borderStyle: 'dashed', color: C.muted, cursor: 'pointer' }}>+ condition</button>
       <datalist id="inline-rule-tags">{tagOptions.map(t => <option key={t} value={t} />)}</datalist>
     </div>
   )

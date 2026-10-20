@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Modal, Button } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
+import { C } from '../styles/tokens'
 
 /**
  * ConceptCard — the four ideas this tool cannot be used without, explained where each
@@ -61,7 +62,7 @@ const CARDS = {
           why the import asks you to confirm each redirect.
         </p>
         {redirects.length > 0 ? (
-          <div className="px-2 py-2 rounded" style={{ background: '#f8f9fa', border: '1px solid #e9ecef', fontSize: 12 }}>
+          <div className="px-2 py-2 rounded" style={{ background: C.subtle, border: `1px solid ${C.border}`, fontSize: 12 }}>
             <div className="text-muted mb-1" style={{ fontSize: 10 }}>In this project:</div>
             {redirects.slice(0, 6).map(r => (
               <div key={r.from} style={{ fontFamily: 'monospace' }}>
@@ -100,8 +101,8 @@ const CARDS = {
           position gets its own copy.
         </p>
         {sharedWrappers.length > 0 && (
-          <div className="px-2 py-2 rounded" style={{ background: '#fff3cd', border: '1px solid #f0e0a8', fontSize: 12 }}>
-            <div className="mb-1" style={{ fontSize: 10, color: '#856404' }}>Shared in this project:</div>
+          <div className="px-2 py-2 rounded" style={{ background: C.attnTint, border: `1px solid ${C.attnTint}`, fontSize: 12 }}>
+            <div className="mb-1" style={{ fontSize: 10, color: C.attnInk }}>Shared in this project:</div>
             {sharedWrappers.slice(0, 5).map(w => (
               <div key={w.ref} style={{ fontFamily: 'monospace' }}>
                 {w.ref} <span className="text-muted">used by</span> {w.usedBy.join(', ')}
@@ -196,7 +197,7 @@ export function ConceptBody({ concept }) {
   const card = CARDS[concept]
   if (!card) return null
   return (
-    <div className="mb-3 px-3 py-2 rounded" style={{ background: '#f8f9fa', border: '1px solid #e9ecef', fontSize: 12 }} data-testid="concept-body">
+    <div className="mb-3 px-3 py-2 rounded" style={{ background: C.subtle, border: `1px solid ${C.border}`, fontSize: 12 }} data-testid="concept-body">
       <div className="fw-semibold mb-1 d-flex align-items-center gap-1"><MaterialIcon name={card.icon} size={14} /> {card.title}</div>
       {card.body(example)}
     </div>
@@ -215,7 +216,7 @@ export function ConceptHint({ concept, title, size = 12, style = {} }) {
         onClick={e => { e.stopPropagation(); setShow(true) }}
         onKeyDown={e => { if (e.key === 'Enter') setShow(true) }}
         title={title || 'What does this mean?'}
-        style={{ cursor: 'help', color: '#6c757d', lineHeight: 1, ...style }}>
+        style={{ cursor: 'help', color: C.muted, lineHeight: 1, ...style }}>
         <MaterialIcon name="help" size={size} />
       </span>
       {show && <ConceptCard concept={concept} show onHide={() => setShow(false)} />}

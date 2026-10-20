@@ -12,6 +12,7 @@ import {
   TEMPLATE_RULE_COLUMNS, templateRule, ruleFromTags, ruleIsEmpty, ruleConditionsOf, ruleMatchesRecord,
   ruleSpecificity, specificityText, ruleFor, compareRule, EMPTY_RULE,
 } from '../utils/templateRules'
+import { C } from '../styles/tokens'
 
 const COMMON_TAGS = ['Local', 'Remote-CC', 'Remote-CV', 'LIN', 'IP']
 const cleanRule = r => ({ match: r.match === 'any' ? 'any' : 'all', conditions: ruleConditionsOf(r) })
@@ -37,7 +38,7 @@ function CheckPosition({ refs, value, onChange, rule, rec, inScope, verdict }) {
         <datalist id="rule-check-refs">{refs.map(r => <option key={r} value={r} />)}</datalist>
       </div>
       {value && rec && (
-        <div className="mt-1 ps-2" style={{ borderLeft: '2px solid #e5e7eb' }}>
+        <div className="mt-1 ps-2" style={{ borderLeft: `2px solid ${C.border}` }}>
           {!inScope && <div className="text-warning-emphasis">Not in scope (ignored, or its family is ignored): no template applies to it.</div>}
           {conds.map((c, i) => {
             const ok = conditionMatches(c, rec)
@@ -236,7 +237,7 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
             onChange={patch => { setRule(r => ({ ...r, ...patch })); setSuggested(null) }} />
 
           {suggested && (
-            <div className={`mt-2 p-2 rounded ${suggested.exact ? 'bg-success-subtle' : 'bg-warning-subtle'}`} style={{ fontSize: 12 }} data-testid="suggest-result">
+            <div className={`mt-2 p-2 rounded ${suggested.exact ? 'bg-light' : 'bg-warning-subtle'}`} style={{ fontSize: 12 }} data-testid="suggest-result">
               {suggested.none
                 ? 'Nothing these positions share picks them out; pin them instead.'
                 : suggested.exact
@@ -308,7 +309,7 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
             <strong>Inside wrapper</strong> (ships inside the DL or LIN assembly each position has).
           </div>
           {ingredients.filter(p => p.ref?.trim()).length === 0 && (
-            <div className="mb-2 px-2 py-1 rounded" style={{ background: '#ffe5cc', color: '#7a3e00', fontSize: 12 }} data-testid="no-parts-note">
+            <div className="mb-2 px-2 py-1 rounded" style={{ background: C.attnTint, color: C.attnInk, fontSize: 12 }} data-testid="no-parts-note">
               No parts: the positions this template applies to should have <strong>no connectors</strong>. Any they
               have are flagged, and “Remove extras” takes them out.
             </div>

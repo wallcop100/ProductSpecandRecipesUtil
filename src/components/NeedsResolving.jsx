@@ -2,6 +2,7 @@ import React from 'react'
 import { Button } from 'react-bootstrap'
 import MaterialIcon from './MaterialIcon'
 import { norm } from '../utils/productCodes'
+import { C } from '../styles/tokens'
 
 /**
  * NeedsResolving — everything blocking the batch, pinned above the code list.
@@ -20,7 +21,7 @@ import { norm } from '../utils/productCodes'
  * answer really is "it depends" — that is the whole reason this step exists.
  */
 
-const box = { background: '#fff8e1', border: '1px solid #f0e0a8' }
+const box = { background: C.attnTint, border: `1px solid ${C.attnTint}` }
 
 function Codes({ entries }) {
   return (
@@ -41,7 +42,7 @@ function Collision({ entry, onPromote, onUnify, onJump }) {
   return (
     <div className="py-2 border-bottom">
       <div className="d-flex align-items-center gap-1" style={{ fontSize: 11 }}>
-        <MaterialIcon name="content_copy" size={12} style={{ color: '#856404' }} />
+        <MaterialIcon name="content_copy" size={12} style={{ color: C.attnInk }} />
         <span onClick={() => onJump?.(entry)} className="pc-jump"
           title="Jump back to the row this came from"
           style={{ fontFamily: 'monospace', fontWeight: 600, cursor: 'pointer' }}>
@@ -52,7 +53,7 @@ function Collision({ entry, onPromote, onUnify, onJump }) {
 
       {entry.variants.map((v, vi) => (
         <div key={vi} className="d-flex align-items-center gap-1 py-1 ps-3" style={{ fontSize: 10 }}>
-          <span style={{ color: '#adb5bd' }}>{vi === entry.variants.length - 1 ? '└' : '├'}</span>
+          <span style={{ color: C.faint }}>{vi === entry.variants.length - 1 ? '└' : '├'}</span>
           <span style={{ fontStyle: v.note ? 'normal' : 'italic' }}>{v.note || '(no note)'}</span>
           <span className="text-muted" style={{ fontFamily: 'monospace', fontSize: 9 }}>
             {v.positionTypes.join(', ')}
@@ -87,7 +88,7 @@ function Similar({ group, onMerge, onKeepSeparate, onJump }) {
   return (
     <div className="py-2 border-bottom">
       <div className="d-flex align-items-center gap-1 mb-1" style={{ fontSize: 11 }}>
-        <MaterialIcon name="call_split" size={12} style={{ color: '#856404' }} />
+        <MaterialIcon name="call_split" size={12} style={{ color: C.attnInk }} />
         <Codes entries={group} />
       </div>
       <div className="text-muted ps-3" style={{ fontSize: 10 }}>
@@ -129,7 +130,7 @@ export default function NeedsResolving({ collisions, similar, resolvedCount, onP
   if (total === 0) {
     return resolvedCount > 0 ? (
       <div className="px-2 py-1 mb-2 rounded d-flex align-items-center gap-1"
-        style={{ background: '#d1e7dd', color: '#0f5132', fontSize: 10 }}>
+        style={{ background: C.subtle, color: C.ink, fontSize: 10 }}>
         <MaterialIcon name="check_circle" size={12} /> Nothing to resolve — {resolvedCount} code
         {resolvedCount === 1 ? '' : 's'} settled.
       </div>
@@ -138,7 +139,7 @@ export default function NeedsResolving({ collisions, similar, resolvedCount, onP
 
   return (
     <div className="mb-2 px-2 py-1 rounded" style={box}>
-      <div className="fw-semibold d-flex align-items-center gap-1" style={{ color: '#92400e', fontSize: 10, textTransform: 'uppercase', letterSpacing: '.05em' }}>
+      <div className="fw-semibold d-flex align-items-center gap-1" style={{ color: C.attnInk, fontSize: 10, textTransform: 'uppercase', letterSpacing: '.05em' }}>
         <MaterialIcon name="warning" size={12} /> Needs resolving ({total})
       </div>
       {collisions.map(e => (

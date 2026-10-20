@@ -9,6 +9,7 @@ import {
 } from '../utils/recipeStyles'
 import { ruleConditionsOf, ruleSpecificity, specificityText, specificityScope, compareRule, ruleMatchesRecord } from '../utils/templateRules'
 import { conditionMatches } from '../utils/tagRules'
+import { C } from '../styles/tokens'
 
 const EMPTY = { match: 'all', conditions: [] }
 const up = s => String(s ?? '').trim().toUpperCase()
@@ -127,7 +128,7 @@ export default function RecipeStylesWindow({ show, onHide, focusId = null, recor
             {styles.length === 0 && <div className="text-muted fst-italic mb-2">None yet. Make one from the recipes below, or from Build recipes.</div>}
             {styles.map(t => (
               <div key={t.id} role="button" onClick={() => setSel(t.id)} data-testid="style-item"
-                className="px-2 py-1 rounded mb-1" style={{ background: sel === t.id ? '#cfe2ff' : '#f8f9fa', cursor: 'pointer' }}>
+                className="px-2 py-1 rounded mb-1" style={{ background: sel === t.id ? C.accentTint : C.subtle, cursor: 'pointer' }}>
                 <div className="fw-semibold">{t.name}</div>
                 <div className="text-muted text-truncate" style={{ fontSize: 10 }}>
                   {scope.filter(p => matchStyle(recOf(p), styles, specScope)?.id === t.id).length} positions · specificity {ruleSpecificity(styleRuleOf(t), specScope)}
@@ -159,7 +160,7 @@ export default function RecipeStylesWindow({ show, onHide, focusId = null, recor
                     <MaterialIcon name="auto_fix_high" size={13} /> Suggest from the positions built like it
                   </Button>
                 </div>
-                {note && <div className="mb-2 px-2 py-1 rounded" style={{ background: '#e7f1ff' }}>{note}</div>}
+                {note && <div className="mb-2 px-2 py-1 rounded" style={{ background: C.accentTint }}>{note}</div>}
                 <div className="text-muted mb-1" style={{ fontSize: 10, textTransform: 'uppercase' }}>Used for positions that match</div>
                 <RuleBuilder rule={rule} columns={STYLE_RULE_COLUMNS} valueOptions={valueOptions} minConditions={0}
                   newCondition={{ column: 'Form.MainFamily', op: 'equals', value: '' }}
@@ -178,7 +179,7 @@ export default function RecipeStylesWindow({ show, onHide, focusId = null, recor
                   <datalist id="style-check-refs">{scope.map(r => <option key={r} value={r} />)}</datalist>
                 </div>
                 {checkRec && (
-                  <div className="mt-1 ps-2" style={{ borderLeft: '2px solid #e5e7eb' }} data-testid="style-check">
+                  <div className="mt-1 ps-2" style={{ borderLeft: `2px solid ${C.border}` }} data-testid="style-check">
                     {ruleConditionsOf(rule).map((c, i) => {
                       const ok = conditionMatches(c, checkRec)
                       return <div key={i} className={ok ? 'text-success' : 'text-danger'}>{ok ? '✓' : '✗'} {FIELD_LABEL[c.column] || c.column} {OP_WORD[c.op] || c.op} {c.op === 'isEmpty' || c.op === 'isNotEmpty' ? '' : `“${c.value}”`}<span className="text-muted"> — it has {shown(checkRec[c.column])}</span></div>

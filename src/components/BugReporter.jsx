@@ -7,6 +7,7 @@ import { buildReport, describeElement, domContext, reportsToMarkdown } from '../
 import { download } from '../platform/fs'
 import { useCompanion } from '../platform/companion'
 import { learnedInView } from '../platform/outcomes'
+import { C } from '../styles/tokens'
 
 /**
  * BugReporter — the alpha's bug-report mode. The bug beside ALPHA turns it on; then a
@@ -165,7 +166,7 @@ export default function BugReporter({ screen }) {
             </Dropdown.Menu>
           </Dropdown>
         </ButtonGroup>
-        {sent && <span className="ms-1 small" role="status" style={{ background: '#fff', borderRadius: 4, padding: '1px 6px', boxShadow: '0 1px 4px rgba(0,0,0,.25)' }}>
+        {sent && <span className="ms-1 small" role="status" style={{ background: C.surface, borderRadius: 4, padding: '1px 6px', boxShadow: '0 1px 4px rgba(0,0,0,.25)' }}>
           {sent === 'sent' ? 'Sent, thank you' : sent === 'kept' ? 'Kept with your bug reports' : `${sent}, thank you`}</span>}
       </div>
 
@@ -174,9 +175,9 @@ export default function BugReporter({ screen }) {
           onKeyDown={e => {
             if (e.key === 'Escape') { e.stopPropagation(); setDraft(null) }
           }}
-          style={{ position: 'fixed', left, top, width: W, zIndex: 2100, background: '#fff', border: '1px solid #dc3545',
+          style={{ position: 'fixed', left, top, width: W, zIndex: 2100, background: C.surface, border: `1px solid ${C.danger}`,
             borderRadius: 6, boxShadow: '0 4px 16px rgba(0,0,0,.25)', padding: 10, fontSize: 12 }}>
-          <div className="d-flex align-items-center gap-1 mb-1 fw-semibold" style={{ color: '#b02a37' }}>
+          <div className="d-flex align-items-center gap-1 mb-1 fw-semibold" style={{ color: C.danger }}>
             <MaterialIcon name="bug_report" size={14} /> What went wrong, or what would help?
           </div>
           <Form.Control as="textarea" rows={4} ref={noteRef} value={draft.note} aria-label="Bug note" style={{ fontSize: 12 }}
@@ -187,7 +188,7 @@ export default function BugReporter({ screen }) {
           <div className="d-flex justify-content-end gap-2 mt-2">
             <Button size="sm" variant="link" className="text-muted p-0" onClick={() => setDraft(null)}>Cancel</Button>
             <Button size="sm" disabled={!draft.note.trim()} onClick={() => (canSend ? send('feature') : save('feature'))}
-              style={{ background: '#6f42c1', borderColor: '#6f42c1', color: '#fff' }}>{canSend ? 'Send' : 'Save'} as Feature Request</Button>
+              style={{ background: C.accent, borderColor: C.accent, color: C.surface }}>{canSend ? 'Send' : 'Save'} as Feature Request</Button>
             <Button size="sm" variant="danger" disabled={!draft.note.trim()} onClick={() => (canSend ? send() : save())}
               data-testid="report-send">{canSend ? 'Send' : 'Save'}</Button>
           </div>

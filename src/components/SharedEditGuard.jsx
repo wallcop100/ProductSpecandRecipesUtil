@@ -1,6 +1,7 @@
 import React from 'react'
 import { Modal, Button } from 'react-bootstrap'
 import MaterialIcon from './MaterialIcon'
+import { C } from '../styles/tokens'
 
 /**
  * SharedEditGuard — a wrapper's internals belong to every position that uses it.
@@ -40,7 +41,7 @@ export default function SharedEditGuard({
     <Modal show={show} onHide={onCancel} centered>
       <Modal.Header closeButton>
         <Modal.Title style={{ fontSize: 15 }} className="d-flex align-items-center gap-2">
-          <MaterialIcon name="warning" size={18} style={{ color: '#b45309' }} />
+          <MaterialIcon name="warning" size={18} style={{ color: C.attnInk }} />
           {v.title}
         </Modal.Title>
       </Modal.Header>
@@ -51,7 +52,7 @@ export default function SharedEditGuard({
           <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{container}</span>, which is shared
           by {all} positions.
         </p>
-        <div className="px-2 py-2 rounded mb-3" style={{ background: '#fff3cd', border: '1px solid #f0e0a8', fontSize: 12 }}>
+        <div className="px-2 py-2 rounded mb-3" style={{ background: C.attnTint, border: `1px solid ${C.attnTint}`, fontSize: 12 }}>
           {v.act} it here also changes{' '}
           <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{others}</span>.
         </div>

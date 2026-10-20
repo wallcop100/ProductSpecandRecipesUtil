@@ -3,6 +3,7 @@ import React, { useMemo } from 'react'
 import { isPlaceholder } from '../utils/accessories'
 import { Button, Form } from 'react-bootstrap'
 import MaterialIcon from './MaterialIcon'
+import { C } from '../styles/tokens'
 
 /**
  * MapColumnsStep — tell the tool which columns matter.
@@ -103,11 +104,11 @@ export default function MapColumnsStep({
           return (
             <div key={f.key} className="px-2 py-2 rounded d-flex align-items-start gap-2"
               style={{
-                background: missing ? '#fff5f5' : value ? '#f8f9fa' : '#fff',
-                border: `1px solid ${missing ? '#f5c2c7' : '#e9ecef'}`,
+                background: missing ? C.dangerTint : value ? C.subtle : C.surface,
+                border: `1px solid ${missing ? C.dangerTint : C.border}`,
               }}>
               <MaterialIcon name={f.icon} size={16}
-                style={{ color: value ? '#0d6efd' : '#adb5bd', flexShrink: 0, marginTop: 2 }} />
+                style={{ color: value ? C.accent : C.faint, flexShrink: 0, marginTop: 2 }} />
 
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="d-flex align-items-center gap-2">
@@ -121,7 +122,7 @@ export default function MapColumnsStep({
                     </span>
                   )}
                   {isAuto && (
-                    <span className="rounded px-1" style={{ fontSize: 9, background: '#cfe2ff', color: '#084298' }}>
+                    <span className="rounded px-1" style={{ fontSize: 9, background: C.accentTint, color: C.accentInk }}>
                       auto
                     </span>
                   )}
@@ -132,10 +133,10 @@ export default function MapColumnsStep({
                     background — anything input-shaped invites a click. */}
                 {value && (
                   <div className="mt-1 d-flex align-items-baseline gap-1" style={{ cursor: 'default' }}>
-                    <MaterialIcon name="visibility" size={11} style={{ color: '#adb5bd', flexShrink: 0 }} />
+                    <MaterialIcon name="visibility" size={11} style={{ color: C.faint, flexShrink: 0 }} />
                     <span className="text-muted" style={{ fontSize: 9, flexShrink: 0 }}>this column holds</span>
                     <span className="text-truncate" title={sample || '(every row is blank)'}
-                      style={{ fontSize: 11, fontFamily: 'ui-monospace, Menlo, monospace', color: '#6c757d', minWidth: 0 }}>
+                      style={{ fontSize: 11, fontFamily: 'ui-monospace, Menlo, monospace', color: C.muted, minWidth: 0 }}>
                       {sample === '' || sample === null
                         ? <span className="fst-italic" style={{ fontFamily: 'inherit' }}>every row is blank</span>
                         : `“${sample}”`}
@@ -175,12 +176,12 @@ export default function MapColumnsStep({
 
       {/* What one row will look like when you review it. */}
       {preview && (
-        <div className="px-2 py-2 mb-3 rounded" style={{ background: '#f8f9fa', border: '1px solid #e9ecef' }}>
+        <div className="px-2 py-2 mb-3 rounded" style={{ background: C.subtle, border: `1px solid ${C.border}` }}>
           <div className="fw-semibold text-muted mb-1" style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.05em' }}>
             First row, as you will see it
           </div>
           <div className="d-flex align-items-baseline gap-2 flex-wrap" style={{ fontSize: 11 }}>
-            {map.pt && <span className="rounded px-1" style={{ background: '#e7f1ff', fontFamily: 'monospace' }}>{String(preview[map.pt] ?? '—')}</span>}
+            {map.pt && <span className="rounded px-1" style={{ background: C.accentTint, fontFamily: 'monospace' }}>{String(preview[map.pt] ?? '—')}</span>}
             {map.mfr && <span className="text-muted">{String(preview[map.mfr] ?? '—')}</span>}
           </div>
           <div className="mt-1" style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 12 }}>
@@ -208,7 +209,7 @@ export default function MapColumnsStep({
           {rawRows.length} rows in “{sheet}”{skipped > 0 && <> · {skipped} excluded</>}
         </span>
         {!map.pt && (
-          <span style={{ fontSize: 10, color: '#856404' }}>
+          <span style={{ fontSize: 10, color: C.attnInk }}>
             <MaterialIcon name="warning" size={11} /> Without a PositionType column nothing can be reconciled later.
           </span>
         )}

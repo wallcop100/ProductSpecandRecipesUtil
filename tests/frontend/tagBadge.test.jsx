@@ -38,6 +38,6 @@ describe('TagBadge applies the chosen colour', () => {
   test('text flips to dark on a light background for contrast', () => {
     useStore.setState({ tagColors: { Pale: '#f59e0b' } })   // light amber
     render(<TagBadge tag="Pale" />)
-    expect(screen.getByText('Pale').style.color).toBe('rgb(17, 17, 17)')
+    expect(screen.getByText('Pale').style.color).toBe('rgb(33, 37, 41)')
   })
 })

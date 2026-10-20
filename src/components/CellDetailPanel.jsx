@@ -6,6 +6,7 @@ import MaterialIcon from './MaterialIcon'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { positionRecipeWithWrapperInternals, wrapperUsedBy, extraConnectorRows } from '../utils/collectionStatus'
 import { buildPresence, ingredientPresence, wantedSlots, containerForPosition } from '../utils/recipePresence'
+import { C } from '../styles/tokens'
 
 const SECTION_LABEL = {
   position: 'free issue',
@@ -104,7 +105,7 @@ export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap,
             onClick={() => onOpenPosition?.(posRef)}
             title="Open this position type in the builder"
             className="d-inline-flex align-items-center gap-1"
-            style={{ fontFamily: 'monospace', fontSize: 11, color: '#0d6efd', cursor: 'pointer' }}
+            style={{ fontFamily: 'monospace', fontSize: 11, color: C.accent, cursor: 'pointer' }}
           >
             {posRef} <MaterialIcon name={ACTION_ICONS.external} size={13} />
           </div>
@@ -131,7 +132,7 @@ export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap,
         {/* Only warn about shared wrappers when this template actually places
             something inside the wrapper — otherwise it's not relevant here. */}
         {internalIngs.length > 0 && sharedWrappers.length > 0 && (
-          <div className="mt-1 mb-2 px-2 py-1 rounded" style={{ background: '#fff3cd', border: '1px solid #ffc107', fontSize: 11, color: '#856404' }}>
+          <div className="mt-1 mb-2 px-2 py-1 rounded" style={{ background: C.attnTint, border: `1px solid ${C.attn}`, fontSize: 11, color: C.attnInk }}>
             <MaterialIcon name="warning" size={13} style={{ verticalAlign: 'text-bottom' }} />{' '}
             {sharedWrappers.map(w => (
               <div key={w.ref}>
@@ -168,7 +169,7 @@ export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap,
                 >
                   <span
                     title={present ? 'Present, in this place' : st.status === 'misplaced' ? `Present, but ${where}` : st.status === 'short' ? `Only ${st.have} of ${st.need}` : 'Not in recipe'}
-                    style={{ color: present ? '#198754' : st.status === 'missing' ? '#dc3545' : '#b35c00', width: 16, textAlign: 'center' }}
+                    style={{ color: present ? C.success : st.status === 'missing' ? C.danger : C.attnInk, width: 16, textAlign: 'center' }}
                   >
                     <MaterialIcon name={present ? ACTION_ICONS.complete : st.status === 'missing' ? ACTION_ICONS.incomplete : 'warning'} size={14} />
                   </span>
@@ -177,8 +178,8 @@ export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap,
                       {ref}
                     </div>
                     <Badge bg="light" text="dark" style={{ fontSize: 9 }}>{SECTION_LABEL[section] || section}</Badge>
-                    {st.status === 'misplaced' && <span className="ms-1" style={{ fontSize: 10, color: '#b35c00' }} data-testid="misplaced">found {where}</span>}
-                    {st.status === 'short' && <span className="ms-1" style={{ fontSize: 10, color: '#b35c00' }}>×{st.have} of ×{st.need}</span>}
+                    {st.status === 'misplaced' && <span className="ms-1" style={{ fontSize: 10, color: C.attnInk }} data-testid="misplaced">found {where}</span>}
+                    {st.status === 'short' && <span className="ms-1" style={{ fontSize: 10, color: C.attnInk }}>×{st.have} of ×{st.need}</span>}
                     {noWrapper && st.status === 'missing' && <span className="ms-1 text-muted" style={{ fontSize: 10 }}>no wrapper on this position</span>}
                   </div>
                   {onRemoveFromTemplate && (
@@ -204,7 +205,7 @@ export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap,
                       Raise to ×{st.need}
                     </Button>
                   ) : (
-                    <Button size="sm" variant="outline-success" style={{ fontSize: 10, padding: '1px 7px' }} disabled={noWrapper}
+                    <Button size="sm" variant="outline-secondary" style={{ fontSize: 10, padding: '1px 7px' }} disabled={noWrapper}
                       onClick={() => addRecipeRow(posRef, inside ? (section === 'lin_internal' ? 'lin_internal' : 'dl_internal') : 'position',
                         { elementTypeRef: ref, quantity: ing.quantity ?? 1 }, { asPosition: true })}
                       title={noWrapper ? 'Belongs inside a wrapper, and this position has no design element to hold it: add its wrapper in the builder first' : 'Add this ref to the recipe'}>
@@ -221,7 +222,7 @@ export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap,
       {/* Connectors here the template doesn't ask for: never kept silently. */}
       {extras.length > 0 && (
         <div className={compact ? 'pb-2 pt-1' : 'px-3 pb-2'} style={{ flexShrink: 0, fontSize: 12 }} data-testid="cell-extra-connectors">
-          <div className="fw-semibold mb-1" style={{ color: '#664d03' }}>
+          <div className="fw-semibold mb-1" style={{ color: C.attnInk }}>
             <MaterialIcon name="warning" size={13} /> Also has connectors not in this template
           </div>
           {extras.map(x => (
@@ -242,7 +243,7 @@ export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap,
       {/* Bulk actions */}
       <div className={`border-top ${compact ? 'py-2' : 'px-3 py-2'} d-flex flex-column gap-2`} style={{ flexShrink: 0 }}>
         <div className="d-flex gap-2">
-          <Button size="sm" variant="success" className="flex-grow-1" style={{ fontSize: 11 }}
+          <Button size="sm" variant="primary" className="flex-grow-1" style={{ fontSize: 11 }}
             disabled={missingCount === 0}
             onClick={() => applyCollectionBulk([posRef], collectionId)}>
             Apply all missing{missingCount > 0 ? ` (${missingCount})` : ''}

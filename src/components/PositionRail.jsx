@@ -10,11 +10,12 @@ import { ACTION_ICONS } from '../utils/entityStyle'
 import { formDiffStates } from '../utils/formImpact'
 import { buildMaster } from '../utils/productCodes'
 import { buildRefMap, targetFor } from '../utils/ptResolve'
+import { C } from '../styles/tokens'
 
 // Status is a shape, not a colour: grey throughout, amber only on the one needing a decision.
 export const STATUS_DOT = {
   empty: { symbol: '○', label: 'No recipe yet' },
-  form: { symbol: '◐', color: '#ffc107', label: 'The Form asks for something it lacks, or a code needs an ElementType' },
+  form: { symbol: '◐', color: C.attn, label: 'The Form asks for something it lacks, or a code needs an ElementType' },
   done: { symbol: '●', label: 'Has a recipe' },
   notInForm: { symbol: '–', label: 'No recipe — the Form asks for nothing here' },
   ignored: { symbol: '⊘', label: 'Ignored' },
@@ -108,7 +109,7 @@ export default function PositionRail({ onReviewEmpty, onReviewDrift }) {
     return (
       <div key={fam}>
         <div role="button" onClick={() => toggleFam(fam)} className="d-flex align-items-center gap-1 px-2 py-1 text-uppercase"
-          style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, color: '#6c757d', userSelect: 'none', cursor: 'pointer' }}>
+          style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, color: C.muted, userSelect: 'none', cursor: 'pointer' }}>
           <MaterialIcon name={collapsed ? ACTION_ICONS.collapse : ACTION_ICONS.expand} size={14} />
           <span className="text-truncate" title={fam}>{fam}</span>
           <span className="ms-auto fw-normal" title={`${built} of ${pts.length} have a recipe with nothing outstanding`}>{built}/{pts.length}</span>
@@ -124,16 +125,16 @@ export default function PositionRail({ onReviewEmpty, onReviewDrift }) {
               className="d-flex align-items-center gap-2 ps-4 pe-2"
               style={{
                 fontSize: 12, lineHeight: '22px', cursor: 'pointer', fontFamily: 'monospace',
-                background: on ? '#e7f1ff' : undefined, borderLeft: `3px solid ${on ? '#0d6efd' : 'transparent'}`,
+                background: on ? C.accentTint : undefined, borderLeft: `3px solid ${on ? C.accent : 'transparent'}`,
                 fontWeight: on ? 700 : 400, opacity: st === 'ignored' ? 0.6 : 1,
               }}>
               <span aria-label={STATUS_DOT[st].label}
-                style={{ width: 10, textAlign: 'center', color: STATUS_DOT[st].color || '#6c757d', flexShrink: 0 }}>{STATUS_DOT[st].symbol}</span>
+                style={{ width: 10, textAlign: 'center', color: STATUS_DOT[st].color || C.muted, flexShrink: 0 }}>{STATUS_DOT[st].symbol}</span>
               <span className="text-truncate">{ref}</span>
-              {tagDrift?.[ref] && <MaterialIcon name="warning" size={12} style={{ color: '#e0a800' }} title="Tags changed" />}
+              {tagDrift?.[ref] && <MaterialIcon name="warning" size={12} style={{ color: C.attn }} title="Tags changed" />}
               {diffStates.has(ref) && (
                 <span className="ms-auto" data-testid={`rail-diff-${ref}`} aria-label={diffLabel(diffStates.get(ref))}
-                  title={diffLabel(diffStates.get(ref))} style={{ color: '#6c757d' }}>
+                  title={diffLabel(diffStates.get(ref))} style={{ color: C.muted }}>
                   {DIFF_SYMBOL[diffStates.get(ref).state]}
                 </span>
               )}
@@ -151,7 +152,7 @@ export default function PositionRail({ onReviewEmpty, onReviewDrift }) {
         <Form.Control size="sm" placeholder="Filter…" value={view.text} aria-label="Filter positions"
           onChange={e => setView({ text: e.target.value })} style={{ fontSize: 12, minWidth: 0 }} />
         {availableTags.length > 0 && (
-          <IconButton icon="filter_list" size={16} title="Filter by tag" iconStyle={{ color: view.tags.length ? '#0d6efd' : undefined }}
+          <IconButton icon="filter_list" size={16} title="Filter by tag" iconStyle={{ color: view.tags.length ? C.accent : undefined }}
             onClick={() => setShowTags(v => !v)} />
         )}
         <PositionListMenu families={families}

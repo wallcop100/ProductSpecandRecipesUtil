@@ -3,9 +3,10 @@ import { Card, Badge, Button } from 'react-bootstrap'
 import { useDroppable } from '@dnd-kit/core'
 import ETRefSelect from './ETRefSelect'
 import FlagPill from './FlagPill'
+import { C } from '../styles/tokens'
 
 // Grey hatching — the visual signature of a primed, unfilled slot (T-R1)
-const HATCH = 'repeating-linear-gradient(45deg, #f1f3f5, #f1f3f5 8px, #e9ecef 8px, #e9ecef 16px)'
+const HATCH = `repeating-linear-gradient(45deg, ${C.subtle}, ${C.subtle} 8px, ${C.border} 8px, ${C.border} 16px)`
 
 /**
  * SlotCard — a primed template slot, shown in the recipe canvas.
@@ -40,10 +41,10 @@ export default function SlotCard({ slot, posRef, sectionKey, onResolve, onNewET 
         ref={setNodeRef}
         onClick={() => { if (!choosing && !picking) setChoosing(true) }}
         style={{
-          borderLeft: '4px solid #adb5bd',
+          borderLeft: `4px solid ${C.faint}`,
           borderRadius: 6,
-          border: isOver ? '2px dashed #6c757d' : '1px dashed #adb5bd',
-          background: isOver ? '#e9ecef' : HATCH,
+          border: isOver ? `2px dashed ${C.muted}` : `1px dashed ${C.faint}`,
+          background: isOver ? C.border : HATCH,
           cursor: choosing || picking ? 'default' : 'pointer',
         }}
         title="Primed slot — click to fill with an existing or new ElementType"
@@ -78,7 +79,7 @@ export default function SlotCard({ slot, posRef, sectionKey, onResolve, onNewET 
                 Existing
               </Button>
               {onNewET && (
-                <Button variant="outline-success" size="sm" style={{ padding: '1px 8px', fontSize: 11 }}
+                <Button variant="outline-secondary" size="sm" style={{ padding: '1px 8px', fontSize: 11 }}
                   onClick={() => { setChoosing(false); onNewET(slot) }}>
                   New ↗
                 </Button>

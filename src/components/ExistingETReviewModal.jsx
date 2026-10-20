@@ -4,6 +4,7 @@ import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { CANON_FAMILIES } from '../data/etCanon'
 import { planFamilyMove } from '../utils/etSeed'
+import { C } from '../styles/tokens'
 
 const lc = s => String(s ?? '').trim().toLowerCase()
 const refOf = e => e.ElementTypeRef || e.elementTypeRef || ''
@@ -121,7 +122,7 @@ export default function ExistingETReviewModal({ show, onHide, tabs = null, anima
         </div>
         {picked.size > 0 && (
           <div className="d-flex align-items-center gap-2 flex-wrap mb-2 px-2 py-2 rounded" data-testid="move-bar"
-            style={{ background: '#e7f1ff', border: '1px solid #b6d4fe', position: 'sticky', top: 0, zIndex: 2 }}>
+            style={{ background: C.accentTint, border: `1px solid ${C.accentEdge}`, position: 'sticky', top: 0, zIndex: 2 }}>
             <strong>Move {picked.size} to family</strong>
             <Form.Select size="sm" aria-label="Move to family" value={moveTo} onChange={e => setMoveTo(e.target.value)}
               style={{ fontSize: 11, width: 240 }}>
@@ -139,7 +140,7 @@ export default function ExistingETReviewModal({ show, onHide, tabs = null, anima
                 ))}
                 {plan.newFamilies.length > 0 && <div>Creates family {plan.newFamilies.map(f => f.ref).join(', ')}.</div>}
                 {renumber && inDb > 0 && (
-                  <div style={{ color: '#856404' }}>
+                  <div style={{ color: C.attnInk }}>
                     <MaterialIcon name="warning" size={12} /> {inDb} {inDb === 1 ? 'is' : 'are'} already in the DesignDB: the new ref is written to
                     the ElementTypes, Product Spec and Recipes sheets, not to other sheets that may use the old one.
                   </div>
@@ -149,14 +150,14 @@ export default function ExistingETReviewModal({ show, onHide, tabs = null, anima
           </div>
         )}
         {moved && picked.size === 0 && (
-          <div className="mb-2 px-2 py-1 rounded" data-testid="move-done" style={{ background: '#d1e7dd', color: '#0f5132', fontSize: 11 }}>
+          <div className="mb-2 px-2 py-1 rounded" data-testid="move-done" style={{ background: C.subtle, color: C.ink, fontSize: 11 }}>
             <MaterialIcon name="check_circle" size={12} /> Moved {moved.moves.length} to {moved.family}
             {moved.moves.some(m => m.to !== m.from) && <>: {moved.moves.filter(m => m.to !== m.from).map(m => `${m.from} → ${m.to}`).join(', ')}</>}. To reverse it, move them back.
           </div>
         )}
         {order.map(f => (
           <div key={f || 'none'} className="mb-3" data-testid={`existing-family-${f || 'none'}`}>
-            <div className="fw-semibold mb-1 d-flex align-items-center gap-2" style={{ fontSize: 11, color: f ? '#495057' : '#b45309' }}>
+            <div className="fw-semibold mb-1 d-flex align-items-center gap-2" style={{ fontSize: 11, color: f ? C.ink : C.attnInk }}>
               <Form.Check type="checkbox" aria-label={`Select all in ${f || 'no family'}`}
                 checked={groups.get(f).every(et => picked.has(lc(refOf(et))))}
                 onChange={e => setPicked(p => { const n = new Set(p); for (const et of groups.get(f)) { if (e.target.checked) n.add(lc(refOf(et))); else n.delete(lc(refOf(et))) } return n })} />

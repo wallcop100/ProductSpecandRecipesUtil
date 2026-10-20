@@ -4,6 +4,7 @@ import { DndContext, PointerSensor, useSensor, useSensors, useDraggable, useDrop
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { looksLikeConnector } from '../utils/connectorGroups'
+import { C } from '../styles/tokens'
 
 const LANES = [
   { id: 'position', label: 'Site', hint: 'Position level, first-fix: goes to site on its own' },
@@ -85,7 +86,7 @@ export default function ConnectorBoard({ parts, onChange }) {
             </Form.Select>
           </div>
           <Form.Control size="sm" placeholder="Search…" aria-label="Search parts" value={q} onChange={e => setQ(e.target.value)} className="mb-1" style={{ fontSize: 11 }} />
-          <div className="border rounded p-1" style={{ overflowY: 'auto', maxHeight: 320, background: '#f8f9fa' }} data-testid="connector-palette">
+          <div className="border rounded p-1" style={{ overflowY: 'auto', maxHeight: 320, background: C.subtle }} data-testid="connector-palette">
             {palette.length === 0 && <div className="text-muted small p-2">Nothing here. Pick another family.</div>}
             {palette.map(ref => <PaletteChip key={ref} refName={ref} spec={specOf.get(lc(ref))} onAdd={add} />)}
           </div>
@@ -106,7 +107,7 @@ function PaletteChip({ refName, spec, onAdd }) {
     <div ref={setNodeRef} className="d-flex align-items-center gap-1 px-1 py-1 mb-1 bg-white border rounded"
       style={{ fontSize: 11, opacity: isDragging ? 0.4 : 1 }} data-testid={`pal-${refName}`}>
       <span {...listeners} {...attributes} style={{ cursor: 'grab', display: 'inline-flex' }} title="Drag into a lane">
-        <MaterialIcon name="drag_indicator" size={14} style={{ color: '#adb5bd' }} />
+        <MaterialIcon name="drag_indicator" size={14} style={{ color: C.faint }} />
       </span>
       <span className="text-truncate" style={{ flex: 1, minWidth: 0 }} title={spec ? `${refName} · ${spec}` : refName}>
         <span style={{ fontFamily: 'monospace' }}>{refName}</span>
@@ -125,7 +126,7 @@ function Lane({ lane, parts, onQty }) {
   const mine = parts.map((p, i) => ({ p, i })).filter(x => x.p.section === lane.id)
   return (
     <div ref={setNodeRef} data-testid={`lane-${lane.id}`} className="rounded p-2 flex-grow-1"
-      style={{ border: `2px dashed ${isOver ? '#0d6efd' : '#dee2e6'}`, background: isOver ? '#e7f1ff' : '#fff', minHeight: 110 }}>
+      style={{ border: `2px dashed ${isOver ? C.accent : C.border}`, background: isOver ? C.accentTint : C.surface, minHeight: 110 }}>
       <div className="fw-semibold mb-1" style={{ fontSize: 12 }}>
         {lane.label} <span className="text-muted fw-normal" style={{ fontSize: 10 }}>{lane.hint}</span>
       </div>
@@ -143,7 +144,7 @@ function LaneChip({ part, index, onQty }) {
     <div ref={setNodeRef} className="d-inline-flex align-items-center gap-1 px-2 py-1 border rounded bg-light"
       style={{ fontSize: 11, opacity: isDragging ? 0.4 : 1 }} data-testid={`part-${part.section}-${part.ref}`}>
       <span {...listeners} {...attributes} style={{ cursor: 'grab', display: 'inline-flex' }} title="Drag to the other lane">
-        <MaterialIcon name="drag_indicator" size={13} style={{ color: '#adb5bd' }} />
+        <MaterialIcon name="drag_indicator" size={13} style={{ color: C.faint }} />
       </span>
       <span style={{ fontFamily: 'monospace' }}>{part.ref}</span>
       <Button size="sm" variant="link" className="p-0" aria-label={`Fewer ${part.ref}`} onClick={() => onQty(index, part.quantity - 1)}>−</Button>

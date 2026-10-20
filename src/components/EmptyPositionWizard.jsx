@@ -4,6 +4,7 @@ import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { positionFamilyOf } from '../utils/positionFamily'
 import { ACTION_ICONS } from '../utils/entityStyle'
+import { C } from '../styles/tokens'
 
 /**
  * EmptyPositionWizard — steps through position types that have no recipe rows so
@@ -94,13 +95,13 @@ export default function EmptyPositionWizard({ show, onHide, onOpenPosition }) {
       <Modal.Body>
         {queue.length === 0 ? (
           <div className="text-center py-4">
-            <MaterialIcon name={ACTION_ICONS.complete} size={36} style={{ color: '#198754' }} />
+            <MaterialIcon name={ACTION_ICONS.complete} size={36} style={{ color: C.success }} />
             <div className="fw-semibold mt-2">No empty positions to review.</div>
             <div className="text-muted small mt-1">Every position has a recipe or is already flagged as ignore.</div>
           </div>
         ) : done ? (
           <div className="text-center py-4">
-            <MaterialIcon name={ACTION_ICONS.complete} size={36} style={{ color: '#198754' }} />
+            <MaterialIcon name={ACTION_ICONS.complete} size={36} style={{ color: C.success }} />
             <div className="fw-semibold mt-2">Review complete</div>
             <div className="text-muted small mt-1">
               Flagged {ignoredCount} position{ignoredCount === 1 ? '' : 's'} as ignore
@@ -112,7 +113,7 @@ export default function EmptyPositionWizard({ show, onHide, onOpenPosition }) {
             <ProgressBar
               now={Math.round((index / queue.length) * 100)}
               style={{ height: 4, marginBottom: 20 }}
-              variant="warning"
+              variant="primary"
             />
             <div className="mb-2">
               <span className="fw-semibold" style={{ fontSize: 14, fontFamily: 'monospace' }}>{ref}</span>

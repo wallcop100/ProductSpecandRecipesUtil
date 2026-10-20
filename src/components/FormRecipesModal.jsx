@@ -6,6 +6,7 @@ import InfoTip from './InfoTip'
 import { formGroups, proposalContext, proposalFromTemplate, proposeRecipe, KIND_LABEL } from '../utils/recipeProposal'
 import { styleRecords, styleRuleOf, ruleForDims, GROUP_DIMS } from '../utils/recipeStyles'
 import RecipeStylesWindow from './RecipeStylesWindow'
+import { C } from '../styles/tokens'
 
 /**
  * FormRecipesModal — recipes for the imported positions, the way process.md builds them:
@@ -57,7 +58,7 @@ function ProposalTable({ proposal, onPlace, onInclude }) {
         <thead><tr><th title="Only ticked rows are added">Add</th><th>Ships</th><th>What</th><th>ElementType</th><th>Flags</th><th>From</th></tr></thead>
         <tbody>
           {proposal.rows.map((r, i) => (
-            <tr key={i} style={r.missing ? { background: '#fff5f5' } : r.include === false ? { opacity: 0.55 } : undefined}>
+            <tr key={i} style={r.missing ? { background: C.dangerTint } : r.include === false ? { opacity: 0.55 } : undefined}>
               <td>
                 {r.include !== undefined && (
                   <Form.Check type="checkbox" aria-label={`Add ${r.role.toLowerCase()}`} checked={r.include !== false}
@@ -81,7 +82,7 @@ function ProposalTable({ proposal, onPlace, onInclude }) {
                 {r.ref && familyRefs?.has(r.ref.toLowerCase()) && (
                   <div className="text-danger"><MaterialIcon name="error" size={11} /> {r.ref} is a family, not a product: give {r.code || 'this code'} its own ElementType in Import product codes</div>
                 )}
-                {r.check && <div style={{ color: '#856404' }}><MaterialIcon name="warning" size={11} /> {r.check}</div>}
+                {r.check && <div style={{ color: C.attnInk }}><MaterialIcon name="warning" size={11} /> {r.check}</div>}
               </td>
             </tr>
           ))}
@@ -240,14 +241,14 @@ export default function FormRecipesModal({ show, onHide, posRefs, onOpenPosition
           </Button>
         </div>
         {msg && (
-          <div className="mb-2 px-2 py-1 rounded" style={{ background: '#d1e7dd', color: '#0f5132' }}>
+          <div className="mb-2 px-2 py-1 rounded" style={{ background: C.subtle, color: C.ink }}>
             {typeof msg === 'string' ? msg : msg.text}
             {msg?.styleId && <Button size="sm" variant="link" className="p-0 ms-2 align-baseline" style={{ fontSize: 12 }}
               onClick={() => setStylesOpen({ focusId: msg.styleId })}>Edit its rule</Button>}
           </div>
         )}
         {phantoms.length > 0 && (
-          <div className="mb-2 px-2 py-1 rounded d-flex align-items-center gap-2" style={{ background: '#f8d7da', color: '#842029' }} data-testid="phantoms">
+          <div className="mb-2 px-2 py-1 rounded d-flex align-items-center gap-2" style={{ background: C.dangerTint, color: C.dangerInk }} data-testid="phantoms">
             <MaterialIcon name="report" size={14} />
             <span>{phantoms.length} part{phantoms.length === 1 ? ' was' : 's were'} wrongly made into wrappers (Ideaworks N/A):{' '}
               <span style={{ fontFamily: 'monospace' }}>{phantoms.slice(0, 4).map(p => p.ref).join(', ')}{phantoms.length > 4 ? '…' : ''}</span></span>
@@ -266,13 +267,13 @@ export default function FormRecipesModal({ show, onHide, posRefs, onOpenPosition
           const isOpen = open === g.key
           return (
             <div key={g.key} className="mb-2 rounded border" data-testid="form-group">
-              <div className="d-flex align-items-center gap-2 px-2 py-1" style={{ background: '#f8f9fa', cursor: 'pointer' }}
+              <div className="d-flex align-items-center gap-2 px-2 py-1" style={{ background: C.subtle, cursor: 'pointer' }}
                 onClick={() => setOpen(isOpen ? null : g.key)}>
                 <MaterialIcon name={isOpen ? 'expand_more' : 'chevron_right'} size={16} />
                 {g.style && <Badge bg="primary" style={{ fontWeight: 500 }}><MaterialIcon name="style" size={11} /> style</Badge>}
                 <strong>{g.label}</strong>
                 <span className="text-muted">{g.positions.length} position{g.positions.length === 1 ? '' : 's'}</span>
-                {g.gaps > 0 && <span style={{ color: '#856404' }} data-testid="group-gaps"><MaterialIcon name="warning" size={12} /> {g.gaps} to check</span>}
+                {g.gaps > 0 && <span style={{ color: C.attnInk }} data-testid="group-gaps"><MaterialIcon name="warning" size={12} /> {g.gaps} to check</span>}
                 <Badge bg={done === g.positions.length ? 'success' : taught ? 'info' : firstBuilt ? 'warning' : 'secondary'} className="ms-auto">
                   {done === g.positions.length ? 'all built' : taught ? `taught · ${done}/${g.positions.length}` : firstBuilt ? `check ${g.first}` : 'not started'}
                 </Badge>
@@ -352,7 +353,7 @@ export default function FormRecipesModal({ show, onHide, posRefs, onOpenPosition
                               label={<span><span style={{ fontFamily: 'monospace' }}>{p}</span>
                                 {built ? <span className="text-success"> · built</span>
                                   : <span className="text-muted"> · {prop?.products?.find(x => x.lead)?.code} {prop?.wrapper && !prop.wrapper.isNew ? `· shares ${prop.wrapper.ref}` : ''}
-                                    {checks > 0 && <span style={{ color: '#856404' }}> · {checks} to check</span>}</span>}</span>} />
+                                    {checks > 0 && <span style={{ color: C.attnInk }}> · {checks} to check</span>}</span>}</span>} />
                             {!built && styles.length > 1 && (
                               <Form.Select size="sm" className="ms-4 mb-1" style={{ width: 'auto', fontSize: 11 }} aria-label={`Style for ${p}`}
                                 value={tpl.id} onChange={e => setUseStyle(u => ({ ...u, [p]: e.target.value }))}>

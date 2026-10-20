@@ -7,6 +7,7 @@ import ContentsBadge from './ContentsBadge'
 import { getInternalItems, getUsedIn } from '../utils/containerUtils'
 import { familyOf } from '../utils/etRef'
 import { colorsForType, ICONS } from '../utils/entityStyle'
+import { C } from '../styles/tokens'
 
 /**
  * ElementTypeTreeView — the Elements root view.
@@ -153,7 +154,7 @@ export default function ElementTypeTreeView() {
               onChange={e => setNewWrapperRef(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') createBlankWrapper(); if (e.key === 'Escape') setNewWrapperRef(null) }}
             />
-            <Button variant="success" size="sm" style={{ fontSize: 11 }} onClick={createBlankWrapper}>Create</Button>
+            <Button variant="primary" size="sm" style={{ fontSize: 11 }} onClick={createBlankWrapper}>Create</Button>
             <Button variant="link" size="sm" style={{ fontSize: 11 }} onClick={() => setNewWrapperRef(null)}>Cancel</Button>
           </div>
         )}
@@ -192,10 +193,10 @@ export default function ElementTypeTreeView() {
               className="px-2 py-2 mb-1"
               style={{
                 cursor: 'pointer',
-                border: '1px solid #e5e7eb',
+                border: `1px solid ${C.border}`,
                 borderLeft: `3px solid ${accent}`,
                 borderRadius: 6,
-                background: active ? fill : '#fff',
+                background: active ? fill : C.surface,
               }}
             >
               <div className="d-flex align-items-center gap-2">

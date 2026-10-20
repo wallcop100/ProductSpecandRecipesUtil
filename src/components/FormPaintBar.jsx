@@ -8,6 +8,7 @@ import ProductCodeImportScreen from '../screens/ProductCodeImportScreen'
 import { positionPaintStatus } from '../utils/formPositions'
 import { buildRefMap, targetFor } from '../utils/ptResolve'
 import { findProductET } from '../utils/productCodes'
+import { C } from '../styles/tokens'
 
 const LABEL = {
   noForm: null,
@@ -57,7 +58,7 @@ export default function FormPaintBar({ posRef, open = false, onOpenChange = () =
       <div className="mb-2 text-muted d-flex align-items-center gap-1 flex-wrap" style={{ fontSize: 11 }} data-testid="form-paint-bar">
         <MaterialIcon name={state === 'nothing' ? 'block' : 'remove'} size={12} />
         {state === 'nothing'
-          ? <>Nothing to add. The Form says: <span style={{ fontFamily: 'monospace', color: '#495057' }} data-testid="form-says">{(st.texts || []).join(' · ') || 'n/a'}</span></>
+          ? <>Nothing to add. The Form says: <span style={{ fontFamily: 'monospace', color: C.ink }} data-testid="form-says">{(st.texts || []).join(' · ') || 'n/a'}</span></>
           : <span data-testid="paint-status">{posRef} is not in the Form</span>}
       </div>
     )
@@ -95,7 +96,7 @@ export default function FormPaintBar({ posRef, open = false, onOpenChange = () =
                   {row.map(({ col, value, more: m }) => (
                     <React.Fragment key={col}>
                       <span className="text-muted text-truncate" style={{ fontSize: 10, maxWidth: 120, fontStyle: m ? 'italic' : undefined }} title={col}>{col}</span>
-                      <span style={{ fontFamily: 'monospace', color: m ? '#6c757d' : '#495057', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{value}</span>
+                      <span style={{ fontFamily: 'monospace', color: m ? C.muted : C.ink, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{value}</span>
                     </React.Fragment>
                   ))}
                 </div>
@@ -117,7 +118,7 @@ export default function FormPaintBar({ posRef, open = false, onOpenChange = () =
         </div>
       )}
       {open && (
-        <div className="mt-1 ps-2" style={{ borderLeft: '2px solid #0d6efd' }} data-testid="paint-panel">
+        <div className="mt-1 ps-2" style={{ borderLeft: `2px solid ${C.accent}` }} data-testid="paint-panel">
           <ProductCodeImportScreen onBack={() => setOpen(false)}
             embedded={{ posRef, quiet: onLoaded.current, onStaged: targets => { setOpen(false); onStaged?.(targets) } }} />
         </div>

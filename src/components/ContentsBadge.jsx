@@ -25,7 +25,7 @@ export default function ContentsBadge({ count, onClick, title = 'Contents' }) {
       }}
     >
       <MaterialIcon name={ICONS.contents} size={20} className="text-secondary" />
-      <span className="badge bg-warning text-dark" style={{ fontSize: 10 }}>{count}</span>
+      <span className="badge bg-secondary" style={{ fontSize: 10 }}>{count}</span>
     </span>
   )
 }
