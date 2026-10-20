@@ -2818,13 +2818,13 @@ const useStore = create((set, get) => ({
    * built once per change of the data it reads.
    */
   _templateRecOf() {
-    const { positionTypes, recipes, psRows, elementTypes, positionUI, connectorFamilies } = get()
+    const { positionTypes, recipes, psRows, elementTypes, positionUI, connectorFamilies, formCaptures } = get()
     const c = templateRecCache
     if (!c || c.positionTypes !== positionTypes || c.recipes !== recipes || c.psRows !== psRows || c.elementTypes !== elementTypes
-      || c.positionUI !== positionUI || c.connectorFamilies !== connectorFamilies) {
+      || c.positionUI !== positionUI || c.connectorFamilies !== connectorFamilies || c.formCaptures !== formCaptures) {
       const opts = get()._connectorOpts()
-      const map = templateRecords({ positionTypes, recipes, psRows, elementTypes, positionUI, isConnector: ref => isConnectorPart(ref, opts) })
-      templateRecCache = { positionTypes, recipes, psRows, elementTypes, positionUI, connectorFamilies, map, scope: specificityScope(map.values()) }
+      const map = templateRecords({ positionTypes, recipes, psRows, elementTypes, positionUI, formCaptures, isConnector: ref => isConnectorPart(ref, opts) })
+      templateRecCache = { positionTypes, recipes, psRows, elementTypes, positionUI, connectorFamilies, formCaptures, map, scope: specificityScope(map.values()) }
     }
     const map = templateRecCache.map
     const recOf = ref => map.get(ref) || { Tags: positionUI[ref]?.tags || [] }
