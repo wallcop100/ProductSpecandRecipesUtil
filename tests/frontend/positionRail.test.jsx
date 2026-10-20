@@ -44,8 +44,8 @@ describe('PositionRail in the recipe view', () => {
     setup()
     const rail = screen.getByTestId('position-rail')
     expect(document.querySelector('[data-debug-id="PositionRecipeEditor"]')).toBeTruthy()
-    const refs = [...rail.querySelectorAll('[data-testid^="rail-"]')].map(n => n.textContent)
-    expect(refs).toEqual(['A2', 'A10', 'B1'])
+    const rows = [...rail.querySelectorAll('[data-testid^="rail-"]')].map(n => n.textContent)
+    expect(rows).toEqual(['●A2', '○A10', '○B1'])   // status is a symbol, not a coloured dot
     expect(screen.getByTestId('rail-A2').dataset.active).toBe('true')
     expect(screen.getByTestId('rail-A10').title).toMatch(/Ten · No recipe yet/)
   })

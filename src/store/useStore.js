@@ -553,8 +553,9 @@ const useStore = create((set, get) => ({
   // it). Surfaced as a banner; a refusal is always better than a blank ContextRef.
   recipeError: null,
 
-  // Unexported changes brought back from the last session on open: { n } (builder notice).
-  restoredNotice: null,
+  // One app-wide toast (SaveShortcut renders it): { text, ok, at }. `at` re-shows a repeat.
+  toastMsg: null,
+  toast(text, { ok = true } = {}) { set({ toastMsg: { text, ok, at: Date.now() } }) },
   /** Builder: "shared with" on every row, not only wrappers (5GLMMQ). Remembered in this browser. */
   // The builder's right drawer (K3LGUL): open unless closed (remembered), and its tab. A
   // banner elsewhere can open it at a tab (the Connector suggestions' "details →").
@@ -578,7 +579,7 @@ const useStore = create((set, get) => ({
       await window.electronAPI?.db?.clearPendingChanges?.(projectId)
       await window.electronAPI?.db?.setPref?.(projectId, 'pending_db_changes', '[]')
     } catch { /* best-effort */ }
-    set({ psChanges: [], rsChanges: [], dbChanges: [], restoredNotice: null })
+    set({ psChanges: [], rsChanges: [], dbChanges: [] })
     // The rows on screen still carry them: reopen from the workbooks.
     if (typeof window !== 'undefined' && window.location && import.meta.env?.MODE !== 'test') window.location.reload()
   },

@@ -80,9 +80,10 @@ export default function FormDiffBlock({ posRef }) {
         <div key={i} className={sameRow(i) ? 'pb-1' : 'py-1 border-top'} style={{ borderColor: '#ffe08a' }} data-testid="form-diff-line">
           {!sameRow(i) && (c.oldText != null || c.newText != null) && (
             <div className="mb-1" data-testid="row-text">
-              {c.oldText != null && c.newText != null ? <WordDiff before={c.oldText} after={c.newText} />
-                : c.newText != null ? <span style={{ ...mono, background: '#d1e7dd' }}>{c.newText}</span>
-                  : <span style={{ ...mono, background: '#f8d7da', textDecoration: 'line-through' }}>{c.oldText}</span>}
+              {/* + added, − omitted, ± changed: the same marks as the PositionRail. */}
+              {c.oldText != null && c.newText != null ? <><span className="text-muted" aria-label="Changed">± </span><WordDiff before={c.oldText} after={c.newText} /></>
+                : c.newText != null ? <span style={mono}><span className="text-muted" aria-label="Added">+ </span>{c.newText}</span>
+                  : <span style={mono}><span className="text-muted" aria-label="Omitted">− </span><span style={{ textDecoration: 'line-through' }}>{c.oldText}</span></span>}
             </div>
           )}
 
