@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { Badge, Button, Form } from 'react-bootstrap'
 import useStore from '../store/useStore'
+import { useScreenView } from './useScreenView'
 import MaterialIcon from './MaterialIcon'
 import { collectionStatusForPosition, positionRecipeWithWrapperInternals, extraConnectorRows } from '../utils/collectionStatus'
 import { positionFamilyOf } from '../utils/positionFamily'
@@ -65,7 +66,7 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
 
   const ignoredPositionFamilies = useStore(s => s.ignoredPositionFamilies)
 
-  const [incompleteOnly, setIncompleteOnly] = useState(false)
+  const [incompleteOnly, setIncompleteOnly] = useScreenView('connectors', 'incompleteOnly', false)
   // A bulk apply is previewed before it touches anything — see BulkApplyModal.
   const [pendingBulk, setPendingBulk] = useState(null)   // { collectionId, name, targets, plan }
 
