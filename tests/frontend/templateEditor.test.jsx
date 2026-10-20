@@ -56,12 +56,12 @@ describe('Template editor', () => {
     await waitFor(() => expect(screen.getByLabelText('Template name')).toBeEnabled())
   })
 
-  test('Suggest to Orion posts the template, only for editable ones with the feature', async () => {
+  test('Suggest as global posts the template, only for editable ones with the feature', async () => {
     render(<TemplateEditorScreen onBack={vi.fn()} />)
     fireEvent.click(screen.getByText('Orion one'))
-    expect(screen.queryByText('Suggest to Orion')).toBeNull()
+    expect(screen.queryByText('Suggest as global')).toBeNull()
     fireEvent.click(screen.getByText('Proj one'))
-    fireEvent.click(screen.getByText('Suggest to Orion'))
+    fireEvent.click(screen.getByText('Suggest as global'))
     await waitFor(() => expect(suggestTemplate).toHaveBeenCalledWith({ name: 'Proj one', rule, ingredients: ing, by: 'psr-app', project: '5499' }))
     await waitFor(() => expect(useStore.getState().toastMsg.text).toMatch(/Suggested/))
   })
@@ -70,18 +70,17 @@ describe('Template editor', () => {
     companion = {}
     render(<TemplateEditorScreen onBack={vi.fn()} />)
     fireEvent.click(screen.getByText('Proj one'))
-    expect(screen.queryByText('Suggest to Orion')).toBeNull()
+    expect(screen.queryByText('Suggest as global')).toBeNull()
   })
 })
 
 describe('Save as template seeds the rule', () => {
-  test("from the position's kind", async () => {
+  test('from schema columns only', async () => {
     useStore.setState({ templates: [] })
     render(<SaveTemplateModal show posRef="A1" name="Downlight" onHide={vi.fn()} />)
     fireEvent.click(screen.getByText(/Save template/))
     await waitFor(() => expect(useStore.getState().templates).toHaveLength(1))
     const r = useStore.getState().templates[0].rule
-    expect(r.conditions).toEqual(expect.arrayContaining([{ column: 'Design', op: 'equals', value: 'DL' }]))
-    expect(r.conditions.every(c => ['Design', 'DriverLocation', 'DriverType', 'Jobs'].includes(c.column))).toBe(true)
+    expect(r.conditions.every(c => ['DriverLocation', 'SecondaryPowerType'].includes(c.column))).toBe(true)
   })
 })

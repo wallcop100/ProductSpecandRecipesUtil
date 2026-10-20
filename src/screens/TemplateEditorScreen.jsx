@@ -5,17 +5,48 @@ import useStore from '../store/useStore'
 import IconButton from '../components/IconButton'
 import RuleBuilder from '../components/RuleBuilder'
 import JobBoard from '../components/JobBoard'
+import InfoTip from '../components/InfoTip'
 import TutorialHint from '../tutorial/TutorialHint'
 import MaterialIcon from '../components/MaterialIcon'
 import { useCompanion } from '../platform/companion'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import {
-  TEMPLATE_RULE_COLUMNS, templateRule, ruleConditionsOf, ruleIsEmpty, ruleMatchesRecord, explainRule, describeRule, EMPTY_RULE,
+  TEMPLATE_RULE_COLUMNS, KIND_RULE_COLUMNS, isDynamic, dynamicWords, templateRule, ruleConditionsOf, ruleIsEmpty, ruleMatchesRecord, explainRule, describeRule, EMPTY_RULE,
 } from '../utils/templateRules'
 import { C } from '../styles/tokens'
 
 // Tags are obsolete as a way to pick a template: the rule uses DesignDB and kind columns.
-const RULE_COLUMNS = TEMPLATE_RULE_COLUMNS.filter(g => g.label !== 'Tags')
+// Tags are obsolete, and Orion's kind columns are not schema: they show in the Dynamically Assessed Rule card.
+const RULE_COLUMNS = TEMPLATE_RULE_COLUMNS.filter(g => g.label !== 'Tags' && g !== KIND_RULE_COLUMNS)
+const LOST_ON_COPY = 'Your copy keeps the parts and any DesignDB conditions, but not the Dynamically Assessed Rule: that is '
+  + "worked out by this tool from what it has learnt across projects, and only global templates can have it. Give your copy "
+  + 'DesignDB conditions so it matches the positions you want.'
+
+/** Orion's taught conditions, read-only: a blue card above the editable rule. */
+function DynamicRule({ conditions }) {
+  if (!conditions.length) return null
+  return (
+    <div className="mb-2 p-2 rounded" style={{ border: `1px solid ${C.accent}`, background: C.accentTint }} data-testid="dynamic-rule">
+      <div className="d-flex align-items-center gap-1 mb-1" style={{ fontSize: 11, color: C.accent }}>
+        <MaterialIcon name="cloud" size={13} /> <span className="fw-semibold">Dynamically Assessed Rule</span>
+        <InfoTip icon="help" label="About the Dynamically Assessed Rule">
+          This tool works this part out for each position, from what it has been taught: every finished project's recipes,
+          which parts each product is (from its maker and code, its family and its name), and corrections people make
+          here. It is not a DesignDB or Product Spec column, so it can't be edited; it is checked alongside the conditions below.
+          <div className="mt-1">Copy to mine leaves it behind: your copy only has the conditions you can see and edit.</div>
+        </InfoTip>
+      </div>
+      <div className="d-flex flex-wrap align-items-center gap-1" style={{ fontSize: 12 }}>
+        {conditions.map((c, i) => (
+          <React.Fragment key={i}>
+            {i > 0 && <span className="text-muted" style={{ fontSize: 10 }}>and</span>}
+            <span className="px-2 py-0 rounded-pill bg-white" style={{ border: `1px solid ${C.accent}` }}>{dynamicWords(c)}</span>
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  )
+}
 const cleanRule = r => ({ match: r.match === 'any' ? 'any' : 'all', conditions: ruleConditionsOf(r) })
 const shown = v => (Array.isArray(v) ? (v.length ? v.join(', ') : '(none)') : (v == null || String(v).trim() === '' ? '(empty)' : String(v)))
 
@@ -100,10 +131,12 @@ export default function TemplateEditorScreen({ onBack }) {
   }
 
   async function copyToMine(tpl) {
+    const rule = cleanRule(templateRule({ Rule: tpl.rule }))
+    if (rule.conditions.some(isDynamic) && !window.confirm(`Copy “${tpl.name}” to your templates?\n\n${LOST_ON_COPY}`)) return
     const { _served, ...rest } = tpl
     const copy = {
       ...rest, id: uuidv4(), name: `${tpl.name} (copy)`, scope: 'global', project_id: null, projectId: null, base_template_id: null,
-      rule: cleanRule(templateRule({ Rule: tpl.rule })), ingredients: strip(withKeys(tpl.ingredients)),
+      rule: { ...rule, conditions: rule.conditions.filter(c => !isDynamic(c)) }, ingredients: strip(withKeys(tpl.ingredients)),
     }
     const saved = await updateTemplate(copy)
     selectTemplate(saved)
@@ -148,7 +181,7 @@ export default function TemplateEditorScreen({ onBack }) {
     const ok = await companion.suggestTemplate({
       name: p.name, rule: p.rule, ingredients: p.ingredients, by: 'psr-app', project: String(projectNumber ?? ''),
     })
-    toast(ok ? `Suggested “${p.name}” to Orion` : 'Orion did not take the suggestion', { ok })
+    toast(ok ? `Suggested “${p.name}” as global` : 'The suggestion was not taken', { ok })
   }
 
 
@@ -156,6 +189,8 @@ export default function TemplateEditorScreen({ onBack }) {
   const readOnly = !!editState?._served
   const refs = useMemo(() => positionTypes.map(p => p.PositionTypeRef), [positionTypes])
   const empty = editState ? ruleIsEmpty(editState.rule) : true
+  const dynamic = editState ? ruleConditionsOf(editState.rule).filter(isDynamic) : []
+  const schemaRule = { ...editState?.rule, conditions: ruleConditionsOf(editState?.rule).filter(c => !isDynamic(c)) }
   const matched = useMemo(() => (editState && !empty ? refs.filter(r => ruleMatchesRecord(editState.rule, recOf(r))) : []),
     [editState?.rule, refs, recOf])   // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -216,23 +251,27 @@ export default function TemplateEditorScreen({ onBack }) {
               <Badge bg={readOnly ? 'secondary' : 'primary'}>{readOnly ? 'Global ☁️' : editState.scope === 'project' ? 'Project' : 'Mine'}</Badge>
               {!readOnly && companion?.suggestTemplate && (
                 <Button variant="link" size="sm" className="p-0 text-muted ms-auto" style={{ fontSize: 11 }} onClick={suggest}
-                  title="Send this to Orion as a draft for review">Suggest to Orion</Button>
+                  title="Send this as a draft global template for review">Suggest as global</Button>
               )}
             </div>
             {readOnly && (
               <Alert variant="info" className="py-2 mb-3">
-                Global templates are read-only. <Button variant="link" size="sm" className="p-0 align-baseline" onClick={() => copyToMine(editState)}>Copy to mine</Button> makes an editable copy.
+                Global templates are read-only. <Button variant="link" size="sm" className="p-0 align-baseline" onClick={() => copyToMine(editState)}>Copy to mine</Button> makes
+                an editable copy{dynamic.length > 0 && <>, without the Dynamically Assessed Rule <InfoTip icon="help" label="What a copy loses">{LOST_ON_COPY}</InfoTip></>}.
               </Alert>
             )}
 
             <div className="mb-4" data-testid="template-rule">
               <div className="fw-semibold small mb-1">Applies to positions that match</div>
               {empty && <div className="text-muted fst-italic mb-1" style={{ fontSize: 11 }}>No conditions: it matches no position until it has a rule.</div>}
-              <fieldset disabled={readOnly}>
-                <RuleBuilder rule={editState.rule} columns={RULE_COLUMNS} minConditions={0}
-                  newCondition={{ column: 'Design', op: 'equals', value: '' }}
-                  onChange={patch => setEditState(s => ({ ...s, rule: { ...s.rule, ...patch } }))} />
-              </fieldset>
+              <DynamicRule conditions={dynamic} />
+              {!(readOnly && schemaRule.conditions.length === 0) && (
+                <fieldset disabled={readOnly}>
+                  <RuleBuilder rule={schemaRule} columns={RULE_COLUMNS} minConditions={0}
+                    newCondition={{ column: 'DriverLocation', op: 'equals', value: '' }}
+                    onChange={patch => setEditState(s => ({ ...s, rule: { ...s.rule, ...patch, conditions: [...(patch.conditions || ruleConditionsOf(s.rule).filter(c => !isDynamic(c))), ...ruleConditionsOf(s.rule).filter(isDynamic)] } }))} />
+                </fieldset>
+              )}
               <div className="mt-2" style={{ fontSize: 12 }} data-testid="matched-positions">
                 <MaterialIcon name="check_circle" size={13} className="text-success" /> {matched.length} position{matched.length === 1 ? '' : 's'} match
                 {matched.length > 0 && <>: <span style={{ fontFamily: 'monospace' }}>{matched.slice(0, 12).join(', ')}{matched.length > 12 ? ` +${matched.length - 12} more` : ''}</span></>}
@@ -242,7 +281,7 @@ export default function TemplateEditorScreen({ onBack }) {
 
             <div className="fw-semibold small mb-1">What it adds</div>
             <div className="text-muted mb-2" style={{ fontSize: 11 }}>
-              Jobs, not products: applying it fills each job from the position's Form, and flags any it can't.
+              Parts, not products: applying it fills each part from the position's Form, and flags any it can't.
             </div>
             <JobBoard ingredients={editState.ingredients} readOnly={readOnly}
               onChange={ingredients => setEditState(s => ({ ...s, ingredients }))} />

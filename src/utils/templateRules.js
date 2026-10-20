@@ -21,7 +21,7 @@
  */
 import { conditionMatches, TAG_COLUMNS, RECIPE_TAG_COLUMNS, recipeTagIndex, withRecipeFields } from './tagRules'
 import { positionFamilyOf } from './positionFamily'
-import { indexes, positionMakeup, rowJob, DEFINING } from './recipeKinds'
+import { indexes, positionMakeup, rowJob, DEFINING, jobLabel } from './recipeKinds'
 import { jobKey } from './codeJobs'
 
 const lc = s => String(s ?? '').trim().toLowerCase()
@@ -34,7 +34,7 @@ const parseList = raw => {
 export const EMPTY_RULE = { match: 'all', conditions: [] }
 
 /** The kind columns, as recipeKinds.js computes them: a template is a kind's recipe plus a rule over these. */
-export const KIND_RULE_COLUMNS = { label: 'Kind (Orion)', options: ['Design', 'DriverLocation', 'DriverType', 'Jobs'].map(key => ({ key, label: key })) }
+export const KIND_RULE_COLUMNS = { label: 'Kind (this tool)', options: ['Design', 'DriverLocation', 'DriverType', 'Jobs'].map(key => ({ key, label: key })) }
 
 /** The fields a template rule can use, grouped for a picker. */
 export const TEMPLATE_RULE_COLUMNS = [
@@ -208,10 +208,25 @@ function kindFields(ref, state, idx, formCaptures) {
 
 /** The rule a position's own kind gives: Design / DriverLocation / DriverType equal it, and it contains each defining job. */
 export function seedRule(rec) {
-  const conditions = ['Design', 'DriverLocation', 'DriverType']
+  const conditions = ['DriverLocation', 'SecondaryPowerType']
     .filter(column => String(rec?.[column] ?? '').trim() !== '').map(column => ({ column, op: 'equals', value: String(rec[column]).trim() }))
-  for (const job of rec?.Jobs || []) conditions.push({ column: 'Jobs', op: 'contains', value: job })
   return { match: 'all', conditions }
+}
+
+/**
+ * Orion's taught conditions: worked out per position (its parts and design), not a DesignDB or Product Spec
+ * column, so nobody edits them. Only global templates carry them; a copy leaves them behind.
+ */
+const DYNAMIC = new Set(['Design', 'DriverType', 'Jobs'])
+export const isDynamic = c => DYNAMIC.has(c?.column)
+const DESIGN_WORDS = { LIN: 'a linear', DL: 'a downlight', PS: 'a point source' }
+/** One dynamic condition in words: "a linear", "CV power", "has a profile". */
+export function dynamicWords(c) {
+  const v = String(c.value ?? '')
+  const not = ['notEquals', 'notContains'].includes(c.op)
+  if (c.column === 'Design') return `${not ? 'not ' : ''}${DESIGN_WORDS[v] || v}`
+  if (c.column === 'DriverType') return `${not ? 'not ' : ''}${v} power`
+  return `${not ? 'no' : 'has a'} ${jobLabel(v)}`
 }
 
 /** A rule in words: "Tags is Exterior and DriverLocation is REMOTE". */
@@ -220,7 +235,7 @@ export function describeRule(rule) {
   if (conds.length === 0) return 'no rule'
   const OPS = { equals: 'is', notEquals: 'is not', contains: 'contains', notContains: "doesn't contain", startsWith: 'starts with', matches: 'matches', isEmpty: 'is empty', isNotEmpty: 'is not empty', gt: '>', lt: '<', between: 'between' }
   const label = k => RECIPE_TAG_COLUMNS.find(c => c.key === k)?.label || k
-  return conds.map(c => `${label(c.column)} ${OPS[c.op] || c.op}${['isEmpty', 'isNotEmpty'].includes(c.op) ? '' : ` ${c.value}`}`)
+  return conds.map(c => isDynamic(c) ? dynamicWords(c) : `${label(c.column)} ${OPS[c.op] || c.op}${['isEmpty', 'isNotEmpty'].includes(c.op) ? '' : ` ${c.value}`}`)
     .join(rule.match === 'any' ? ' or ' : ' and ')
 }
 

@@ -46,7 +46,7 @@ describe('the drawer\'s Templates tab', () => {
     expect(screen.queryByText('LIN tape and profile')).toBeNull()
     fireEvent.click(screen.getByText('All templates', { selector: 'button' }))
     fireEvent.click(screen.getByText('Why not?'))
-    expect(screen.getAllByText(/Design is LIN/).length).toBe(2)   // the rule, and the failing condition
+    expect(screen.getAllByText(/a linear/).length).toBe(2)   // the rule, and the failing condition
   })
 
   test('Apply previews, needs the confirmation, then writes rows with one undo', async () => {
