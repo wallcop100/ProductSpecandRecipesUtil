@@ -553,6 +553,14 @@ export default function BuilderScreen({
             <Dropdown.Item onClick={saveBackup}>
               <MaterialIcon name="save_alt" size={14} /> Save project settings (.config.yaml)…
             </Dropdown.Item>
+            {psChanges.length + rsChanges.length > 0 && (
+              <Dropdown.Item className="text-danger" onClick={() => {
+                const n = psChanges.length + rsChanges.length
+                if (window.confirm(`Discard all ${n} unexported changes? This cannot be undone.`)) useStore.getState().discardPendingChanges()
+              }}>
+                <MaterialIcon name="delete_sweep" size={14} /> Discard unexported changes…
+              </Dropdown.Item>
+            )}
             {/* Not a "back": it closes the project. Says so, and asks first. */}
             <Dropdown.Item onClick={() => setConfirmClose(true)} title="Close project — back to choosing a project">
               <MaterialIcon name="logout" size={14} /> Close project…
