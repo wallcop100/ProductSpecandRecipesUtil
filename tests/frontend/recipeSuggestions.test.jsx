@@ -139,6 +139,18 @@ describe('recipe suggestions', () => {
     expect(upd).toHaveBeenCalledWith('ET-LIN-CAP-06', { Manufacturer: 'LEDFlex', ProductCode: 'FPSC0808ECG', IsTBC: null })
   })
 
+  test('a TBC-flagged part that already holds a code is left alone (no silent spec change)', async () => {
+    const cap = { key: 'r', range: 'FPSC0808', anchor: { code: 'FPSC0808BG2000' }, part: { maker_key: 'ledflex', code: 'FPSC0808ECG', slot: 'END_CAPS', name: 'FLEX PROFILE SURFACE CORNER 0808 END CAP SET GREY' } }
+    api.current = { kits: vi.fn(async () => [cap]), shareOutcomes: vi.fn(async () => ({ stored: 1 })) }
+    await act(async () => { setup() })
+    await act(async () => useStore.setState({ library: { patterns: [], exemplars: [], kinds: [] },
+      elementTypes: [...useStore.getState().elementTypes, { ElementTypeRef: 'ET-LIN-CAP-06', Family: 'ET-LIN-PROF', Name: 'LEDFlex - Half Moon 0808 end cap' }],
+      psRows: [{ ElementTypeRef: 'ET-LIN-PROF-01', Manufacturer: 'LEDFlex', ProductCode: 'FPSC0808BG2000' },
+        { ElementTypeRef: 'ET-LIN-CAP-06', Manufacturer: 'LEDFlex', ProductCode: 'FPSC0808PMCD2000', IsTBC: 'Y' }],
+      recipes: [...useStore.getState().recipes, row('C05r', 'ET-LIN-CAP-06', 'ElementType', { _id: 'cap6' })] }))
+    expect(screen.queryByTestId('suggestion-tbc')).toBeNull()
+  })
+
   test('a profile whose range has no clip gets no clip line', async () => {
     const cap = { key: 'r', range: 'FPS2020', anchor: { code: 'FPS2020BG2000' }, part: { maker_key: 'ledflex', code: 'FPS2020ECG', slot: 'END_CAPS', name: 'END CAP' } }
     api.current = { kits: vi.fn(async () => [cap]), shareOutcomes: vi.fn(async () => ({ stored: 1 })) }
