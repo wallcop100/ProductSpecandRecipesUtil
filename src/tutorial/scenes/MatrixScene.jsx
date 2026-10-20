@@ -2,6 +2,7 @@ import React from 'react'
 import MaterialIcon from '../../components/MaterialIcon'
 import { Stage, Click, Pulse, Appear, Caption } from './atoms'
 import { DEMO_COLLECTIONS, DEMO_MATRIX } from '../demo-data'
+import { C } from '../../styles/tokens'
 
 /**
  * MatrixScene — the Connectors screen, as it actually is.
@@ -35,14 +36,14 @@ import { DEMO_COLLECTIONS, DEMO_MATRIX } from '../demo-data'
 
 /** The real STATUS_SYMBOL values from CoverageMatrix. */
 const STATUS = {
-  complete: { icon: 'check_circle', color: '#198754', bg: '#d1e7dd' },
-  partial:  { icon: 'warning', color: '#856404', bg: '#fff3cd' },
-  missing:  { icon: 'cancel', color: '#842029', bg: '#f8d7da' },
-  na:       { icon: 'remove', color: '#adb5bd', bg: '#f8f9fa' },
+  complete: { icon: 'check_circle', color: C.success, bg: C.subtle },
+  partial:  { icon: 'warning', color: C.attnInk, bg: C.attnTint },
+  missing:  { icon: 'cancel', color: C.dangerInk, bg: C.dangerTint },
+  na:       { icon: 'remove', color: C.faint, bg: C.subtle },
 }
 
 const Tag = ({ children }) => (
-  <span className="rounded px-1" style={{ background: '#6c757d', color: '#fff', fontSize: 7, marginRight: 2 }}>
+  <span className="rounded px-1" style={{ background: C.muted, color: C.surface, fontSize: 7, marginRight: 2 }}>
     {children}
   </span>
 )
@@ -69,7 +70,7 @@ export default function MatrixScene({ beat }) {
               </div>
               <Click on>
                 <Pulse on>
-                  <span className="rounded px-2 py-1" style={{ background: '#0d6efd', color: '#fff', fontSize: 10 }}>
+                  <span className="rounded px-2 py-1" style={{ background: C.accent, color: C.surface, fontSize: 10 }}>
                     + New template
                   </span>
                 </Pulse>
@@ -81,19 +82,19 @@ export default function MatrixScene({ beat }) {
         {/* THE EDITOR — a name, the tags that gate it, and the ingredients table */}
         {beat === 1 && (
           <Appear when>
-            <div className="rounded" style={{ background: '#fff', border: '1px solid #dee2e6' }}>
+            <div className="rounded" style={{ background: C.surface, border: `1px solid ${C.border}` }}>
               <div className="px-2 py-1 border-bottom fw-semibold" style={{ fontSize: 10 }}>
                 New Connector Template
               </div>
               <div className="px-2 py-2" style={{ fontSize: 9 }}>
                 <div className="fw-semibold" style={{ fontSize: 8 }}>Name</div>
-                <div className="rounded px-1 mb-2" style={{ border: '1px solid #dee2e6', fontSize: 9 }}>
+                <div className="rounded px-1 mb-2" style={{ border: `1px solid ${C.border}`, fontSize: 9 }}>
                   {kit.name}
                 </div>
 
                 <div className="fw-semibold" style={{ fontSize: 8 }}>Applicable tags</div>
                 <Pulse on>
-                  <div className="rounded px-1 mb-2" style={{ border: '1px solid #0d6efd', background: '#f8f9ff' }}>
+                  <div className="rounded px-1 mb-2" style={{ border: `1px solid ${C.accent}`, background: C.subtle }}>
                     {kit.tags.map(t => <Tag key={t}>{t}</Tag>)}
                     <span className="text-muted" style={{ fontSize: 8 }}>Type tag and press Enter…</span>
                   </div>
@@ -102,7 +103,7 @@ export default function MatrixScene({ beat }) {
                 <div className="fw-semibold" style={{ fontSize: 8 }}>Ingredients</div>
                 <table style={{ width: '100%', fontSize: 8 }}>
                   <thead>
-                    <tr style={{ background: '#f8f9fa' }}>
+                    <tr style={{ background: C.subtle }}>
                       <th className="px-1 fw-normal text-muted">ElementTypeRef</th>
                       <th className="px-1 fw-normal text-muted">Section</th>
                       <th className="px-1 fw-normal text-muted">Qty</th>
@@ -132,14 +133,14 @@ export default function MatrixScene({ beat }) {
             <div style={{ flex: 1, minWidth: 0 }}>
               {/* the toolbar */}
               <div className="d-flex align-items-center gap-2 mb-1" style={{ fontSize: 8 }}>
-                <span className="rounded px-1" style={{ background: '#0d6efd', color: '#fff' }}>+ New template</span>
+                <span className="rounded px-1" style={{ background: C.accent, color: C.surface }}>+ New template</span>
                 <span className="text-muted">3 positions · click a cell to manage connectors</span>
                 <span className="ms-auto text-muted">Incomplete only</span>
               </div>
 
               <table style={{ width: '100%', fontSize: 8, borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ background: '#f8f9fa' }}>
+                  <tr style={{ background: C.subtle }}>
                     <th className="px-1 fw-normal text-muted border" style={{ textAlign: 'left' }}>PositionType</th>
                     <th className="px-1 fw-normal text-muted border" style={{ textAlign: 'left' }}>Tags</th>
                     {DEMO_COLLECTIONS.map(c => (
@@ -149,10 +150,10 @@ export default function MatrixScene({ beat }) {
                         <Click on={beat === 6 && c.name === collection}>
                           <Pulse on={beat === 6 && c.name === collection}>
                             <span className="d-inline-flex gap-1 mt-1">
-                              <span className="rounded px-1" style={{ fontSize: 7, border: '1px solid #dc3545', color: '#dc3545' }}>
+                              <span className="rounded px-1" style={{ fontSize: 7, border: `1px solid ${C.danger}`, color: C.danger }}>
                                 Apply all <MaterialIcon name="cancel" size={7} />
                               </span>
-                              <span className="rounded px-1" style={{ fontSize: 7, border: '1px solid #ffc107', color: '#856404' }}>
+                              <span className="rounded px-1" style={{ fontSize: 7, border: `1px solid ${C.attn}`, color: C.attnInk }}>
                                 Fill <MaterialIcon name="warning" size={7} />
                               </span>
                             </span>
@@ -165,7 +166,7 @@ export default function MatrixScene({ beat }) {
                 <tbody>
                   {DEMO_MATRIX.rows.map(row => (
                     <tr key={row.ref}>
-                      <td className="px-1 border" style={{ fontFamily: 'monospace', color: '#0d6efd' }}>
+                      <td className="px-1 border" style={{ fontFamily: 'monospace', color: C.accent }}>
                         {row.ref} <MaterialIcon name="open_in_new" size={8} />
                       </td>
                       <td className="px-1 border">{row.tags.map(t => <Tag key={t}>{t}</Tag>)}</td>
@@ -176,7 +177,7 @@ export default function MatrixScene({ beat }) {
                         return (
                           <td key={c.name} className="border" style={{
                             textAlign: 'center', background: st.bg,
-                            outline: selected && isCell ? '2px solid #0d6efd' : undefined,
+                            outline: selected && isCell ? `2px solid ${C.accent}` : undefined,
                             outlineOffset: -2,
                             transition: 'background .4s ease',
                           }}>
@@ -194,7 +195,7 @@ export default function MatrixScene({ beat }) {
               </table>
 
               {beat === 2 && (
-                <div className="rounded px-2 py-1 mt-2" style={{ background: '#f8f9fa', fontSize: 8, color: '#6c757d' }}>
+                <div className="rounded px-2 py-1 mt-2" style={{ background: C.subtle, fontSize: 8, color: C.muted }}>
                   <MaterialIcon name="remove" size={8} /> <strong>N/A</strong> is not a gap: the tags
                   don’t match, so this template was never expected here.
                 </div>
@@ -204,9 +205,9 @@ export default function MatrixScene({ beat }) {
             {/* THE CELL DETAIL PANEL — on the right, only once a cell is selected */}
             {beat >= 4 && (
               <Appear when>
-                <div className="ps-2" style={{ width: 118, flexShrink: 0, borderLeft: '1px solid #dee2e6' }}>
+                <div className="ps-2" style={{ width: 118, flexShrink: 0, borderLeft: `1px solid ${C.border}` }}>
                   <div className="fw-semibold" style={{ fontSize: 8 }}>{collection}</div>
-                  <div style={{ fontFamily: 'monospace', fontSize: 7, color: '#0d6efd' }}>
+                  <div style={{ fontFamily: 'monospace', fontSize: 7, color: C.accent }}>
                     {posRef} <MaterialIcon name="open_in_new" size={7} />
                   </div>
                   <div className="text-muted mb-1" style={{ fontSize: 7 }}>
@@ -222,13 +223,13 @@ export default function MatrixScene({ beat }) {
                     return (
                       <div key={i.ref} className="d-flex align-items-center gap-1 border-bottom py-1" style={{ fontSize: 7 }}>
                         <MaterialIcon name={present ? 'check_circle' : 'radio_button_unchecked'} size={9}
-                          style={{ color: present ? '#198754' : '#dc3545', flexShrink: 0, transition: 'color .4s ease' }} />
+                          style={{ color: present ? C.success : C.danger, flexShrink: 0, transition: 'color .4s ease' }} />
                         <span className="text-truncate" style={{ fontFamily: 'monospace', minWidth: 0, flex: 1 }}>
                           {i.ref}
                         </span>
                         {!present && (
                           <Click on={adding}>
-                            <span className="rounded px-1" style={{ fontSize: 6, border: '1px solid #198754', color: '#198754' }}>
+                            <span className="rounded px-1" style={{ fontSize: 6, border: `1px solid ${C.border}`, color: C.muted }}>
                               Add
                             </span>
                           </Click>

@@ -2,6 +2,7 @@ import React from 'react'
 import MaterialIcon from '../../components/MaterialIcon'
 import { Stage, Click, Pulse, PositionRow, FamilyHeader, Caption } from './atoms'
 import { DEMO_POSITIONS } from '../demo-data'
+import { C } from '../../styles/tokens'
 
 /**
  * TreeScene — a replica of ProjectTreeView's overview, built against its actual rendered DOM
@@ -40,35 +41,35 @@ export default function TreeScene({ beat }) {
   return (
     <>
       <Stage>
-        <div className="d-flex align-items-center gap-2 mb-2 pb-2" style={{ borderBottom: '1px solid #e9ecef' }}>
+        <div className="d-flex align-items-center gap-2 mb-2 pb-2" style={{ borderBottom: `1px solid ${C.border}` }}>
           <strong className="text-uppercase text-muted" style={{ fontSize: 9, letterSpacing: '.05em' }}>
             PositionTypes
           </strong>
-          <MaterialIcon name="help" size={10} style={{ color: '#adb5bd' }} />
+          <MaterialIcon name="help" size={10} style={{ color: C.faint }} />
 
           <Pulse on={beat === 2}>
-            <span className="d-inline-flex align-items-center gap-1" style={{ fontSize: 9, color: '#555' }}>
+            <span className="d-inline-flex align-items-center gap-1" style={{ fontSize: 9, color: C.muted }}>
               <strong>{reciped}</strong>/{scoped.length} reciped
-              <span style={{ width: 44, height: 4, background: '#e9ecef', borderRadius: 2, overflow: 'hidden', display: 'inline-block' }}>
-                <span style={{ display: 'block', height: '100%', width: `${pct}%`, background: '#0d6efd', transition: 'width .45s ease' }} />
+              <span style={{ width: 44, height: 4, background: C.border, borderRadius: 2, overflow: 'hidden', display: 'inline-block' }}>
+                <span style={{ display: 'block', height: '100%', width: `${pct}%`, background: C.accent, transition: 'width .45s ease' }} />
               </span>
             </span>
           </Pulse>
 
-          <span className="rounded px-1" style={{ fontSize: 8, border: '1px solid #ffc107', color: '#997404' }}>
+          <span className="rounded px-1" style={{ fontSize: 8, border: `1px solid ${C.attn}`, color: C.attnInk }}>
             Review empty ({empties})
           </span>
 
           {/* ms-auto — Tags, Status and the filter live on the RIGHT, as they really do */}
           <div className="ms-auto d-flex align-items-center gap-1">
-            <span className="rounded px-1" style={{ fontSize: 8, border: '1px solid #dee2e6', color: '#6c757d' }}>Tags</span>
-            <span className="rounded px-1" style={{ fontSize: 8, border: '1px solid #dee2e6', color: '#6c757d' }}>Status</span>
+            <span className="rounded px-1" style={{ fontSize: 8, border: `1px solid ${C.border}`, color: C.muted }}>Tags</span>
+            <span className="rounded px-1" style={{ fontSize: 8, border: `1px solid ${C.border}`, color: C.muted }}>Status</span>
             <Click on={beat === 1}>
               <Pulse on={beat === 1}>
                 <span className="rounded px-1 py-1 d-inline-flex align-items-center gap-1"
-                  style={{ background: '#fff', border: '1px solid #dee2e6', fontSize: 8, minWidth: 86 }}>
-                  <MaterialIcon name="search" size={9} style={{ color: '#adb5bd' }} />
-                  <span style={{ color: filtering ? '#212529' : '#adb5bd' }}>
+                  style={{ background: C.surface, border: `1px solid ${C.border}`, fontSize: 8, minWidth: 86 }}>
+                  <MaterialIcon name="search" size={9} style={{ color: C.faint }} />
+                  <span style={{ color: filtering ? C.ink : C.faint }}>
                     {filtering ? 'LIN' : 'Filter positions…'}
                   </span>
                 </span>

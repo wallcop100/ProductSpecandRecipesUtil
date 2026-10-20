@@ -3,6 +3,7 @@ import MaterialIcon from '../../components/MaterialIcon'
 import EntityPill from '../../components/EntityPill'
 import { Stage, Click, Pulse, Appear, MiniRow, Caption } from './atoms'
 import { DEMO_TEMPLATE } from '../demo-data'
+import { C } from '../../styles/tokens'
 
 /**
  * TemplateScene — templates: canned recipes with slots.
@@ -22,9 +23,9 @@ export default function TemplateScene({ beat }) {
           <div style={{ flex: 1 }}>
             <div className="text-muted text-uppercase" style={{ fontSize: 8 }}>Global (all projects)</div>
             <MiniRow dim={overridden}>
-              <MaterialIcon name="public" size={11} style={{ color: '#6c757d' }} />
+              <MaterialIcon name="public" size={11} style={{ color: C.muted }} />
               <span>{DEMO_TEMPLATE.name}</span>
-              <MaterialIcon name="lock" size={10} style={{ color: '#adb5bd' }} />
+              <MaterialIcon name="lock" size={10} style={{ color: C.faint }} />
             </MiniRow>
           </div>
           <div style={{ flex: 1 }}>
@@ -32,15 +33,15 @@ export default function TemplateScene({ beat }) {
             {overridden ? (
               <Appear when>
                 <MiniRow active>
-                  <MaterialIcon name="edit" size={11} style={{ color: '#0d6efd' }} />
+                  <MaterialIcon name="edit" size={11} style={{ color: C.accent }} />
                   <span>{DEMO_TEMPLATE.name}</span>
-                  <span className="badge ms-auto" style={{ background: '#0d6efd', fontSize: 7 }}>override</span>
+                  <span className="badge ms-auto" style={{ background: C.accent, fontSize: 7 }}>override</span>
                 </MiniRow>
               </Appear>
             ) : (
               <Click on={beat === 1}>
                 <Pulse on={beat === 1}>
-                  <div className="rounded px-2 py-1" style={{ border: '1px dashed #ced4da', color: '#adb5bd' }}>
+                  <div className="rounded px-2 py-1" style={{ border: `1px dashed ${C.faint}`, color: C.faint }}>
                     Override for this project
                   </div>
                 </Pulse>
@@ -56,8 +57,8 @@ export default function TemplateScene({ beat }) {
             <Pulse on={beat === 2 && s.kind === 'slot'}>
               {s.kind === 'slot' ? (
                 <span className="rounded px-1" style={{
-                  border: '1px dashed #adb5bd', color: '#6c757d', fontSize: 9,
-                  background: 'repeating-linear-gradient(45deg,#f8f9fa,#f8f9fa 4px,#f1f3f5 4px,#f1f3f5 8px)',
+                  border: `1px dashed ${C.faint}`, color: C.muted, fontSize: 9,
+                  background: `repeating-linear-gradient(45deg,${C.subtle},${C.subtle} 4px,${C.subtle} 4px,${C.subtle} 8px)`,
                 }}>{s.label} — slot, filled per position</span>
               ) : (
                 <span className="d-inline-flex align-items-center gap-1">
@@ -71,7 +72,7 @@ export default function TemplateScene({ beat }) {
 
         {beat === 3 && (
           <Appear when>
-            <div className="rounded px-2 py-1 mt-1" style={{ background: '#fff3cd', border: '1px solid #f0e0a8', fontSize: 9, color: '#856404' }}>
+            <div className="rounded px-2 py-1 mt-1" style={{ background: C.attnTint, border: `1px solid ${C.attnTint}`, fontSize: 9, color: C.attnInk }}>
               <MaterialIcon name="warning" size={10} /> Applying a template <strong>replaces</strong> the
               position's recipe — a confirm stands in the way when rows exist.
             </div>

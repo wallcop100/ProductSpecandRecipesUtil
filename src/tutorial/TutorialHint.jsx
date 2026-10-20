@@ -3,6 +3,7 @@ import MaterialIcon from '../components/MaterialIcon'
 import TutorialCard from './TutorialCard'
 import { TUTORIALS } from './tutorials'
 import { hasSeen, subscribeSeen } from './seen'
+import { C } from '../styles/tokens'
 
 /**
  * TutorialHint — one quiet `?` chip in a pane's header: <TutorialHint id="builder-tree" />.
@@ -24,7 +25,7 @@ export default function TutorialHint({ id, size = 14, concept = null }) {
         title={title} aria-label={title}
         onClick={() => setShow(true)}
         onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShow(true) } }}
-        style={{ cursor: 'help', color: '#adb5bd', lineHeight: 1, display: 'inline-flex' }}>
+        style={{ cursor: 'help', color: C.faint, lineHeight: 1, display: 'inline-flex' }}>
         <MaterialIcon name="help" size={size} />
       </span>
       <TutorialCard id={id} concept={concept} show={show} onHide={() => setShow(false)} />

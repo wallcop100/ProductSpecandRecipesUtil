@@ -2,6 +2,7 @@ import React from 'react'
 import MaterialIcon from '../../components/MaterialIcon'
 import { Stage, Click, Pulse, Appear, Caption } from './atoms'
 import { DEMO_WRAPPER, DEMO_RECIPE, DEMO_NEW_ROW } from '../demo-data'
+import { C } from '../../styles/tokens'
 
 /**
  * PaletteScene — the right-hand drawer, as it actually is.
@@ -30,8 +31,8 @@ import { DEMO_WRAPPER, DEMO_RECIPE, DEMO_NEW_ROW } from '../demo-data'
  */
 
 const TABS = ['ElementTypes', 'Templates', '★', 'Like this']
-const ACCENT = '#6f42c1'
-const FILL = '#f3effc'
+const ACCENT = C.accent
+const FILL = C.accentTint
 
 /** A DraggableETCard replica. */
 function Card({ etRef, name, flagged, starred, hot }) {
@@ -39,9 +40,9 @@ function Card({ etRef, name, flagged, starred, hot }) {
     <Click on={hot} style={{ width: '100%' }}>
       <div style={{
         width: '100%', marginLeft: 8, marginBottom: 3, padding: '3px 6px',
-        border: `1px solid ${flagged ? '#f59e0b' : '#dee2e6'}`,
-        borderLeft: flagged ? '1px solid #f59e0b' : `3px solid ${ACCENT}`,
-        borderRadius: 4, background: flagged ? '#fffbeb' : '#fff', fontSize: 9,
+        border: `1px solid ${flagged ? C.attn : C.border}`,
+        borderLeft: flagged ? `1px solid ${C.attn}` : `3px solid ${ACCENT}`,
+        borderRadius: 4, background: flagged ? C.attnTint : C.surface, fontSize: 9,
       }}>
         <div className="d-flex align-items-center gap-1">
           <span className="d-inline-flex" style={{ background: FILL, borderRadius: 3, padding: '1px 3px' }}>
@@ -49,10 +50,10 @@ function Card({ etRef, name, flagged, starred, hot }) {
           </span>
           <span className="fw-semibold flex-grow-1 text-truncate" style={{ minWidth: 0 }}>{etRef}</span>
           <MaterialIcon name={starred ? 'star' : 'star_border'} size={11}
-            style={{ color: starred ? '#f5a623' : '#ccc', transition: 'color .3s ease' }} />
+            style={{ color: starred ? C.attn : C.faint, transition: 'color .3s ease' }} />
         </div>
         {name && <div className="text-muted" style={{ fontSize: 8, marginLeft: 18 }}>{name}</div>}
-        {flagged && <div style={{ fontSize: 7, color: '#b45309', marginLeft: 18 }}>not in DB or spec</div>}
+        {flagged && <div style={{ fontSize: 7, color: C.attnInk, marginLeft: 18 }}>not in DB or spec</div>}
       </div>
     </Click>
   )
@@ -92,27 +93,27 @@ export default function PaletteScene({ beat }) {
           </div>
 
           <div style={{
-            width: 190, flexShrink: 0, background: '#fff',
-            borderLeft: '1px solid #dee2e6', display: 'flex', flexDirection: 'column',
+            width: 190, flexShrink: 0, background: C.surface,
+            borderLeft: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column',
           }}>
             {/* tabs */}
-            <div className="d-flex align-items-center px-1 pt-1" style={{ borderBottom: '1px solid #dee2e6' }}>
+            <div className="d-flex align-items-center px-1 pt-1" style={{ borderBottom: `1px solid ${C.border}` }}>
               {TABS.map(t => {
                 const on = t === tab
                 return (
                   <Click key={t} on={beat === 4 && t === 'Templates'}>
                     <span className="px-1 py-1" style={{
                       fontSize: 7, borderRadius: '4px 4px 0 0',
-                      border: on ? '1px solid #dee2e6' : '1px solid transparent',
-                      borderBottom: on ? '1px solid #fff' : 'none',
+                      border: on ? `1px solid ${C.border}` : '1px solid transparent',
+                      borderBottom: on ? `1px solid ${C.surface}` : 'none',
                       marginBottom: -1,
-                      color: on ? '#495057' : '#0d6efd',
-                      background: on ? '#fff' : 'transparent',
+                      color: on ? C.ink : C.accent,
+                      background: on ? C.surface : 'transparent',
                     }}>{t}</span>
                   </Click>
                 )
               })}
-              <MaterialIcon name="close" size={11} className="ms-auto me-1" style={{ color: '#888' }} />
+              <MaterialIcon name="close" size={11} className="ms-auto me-1" style={{ color: C.muted }} />
             </div>
 
             {tab === 'ElementTypes' ? (
@@ -123,16 +124,16 @@ export default function PaletteScene({ beat }) {
                     <div className="d-flex mb-1" style={{ width: '100%', fontSize: 7 }}>
                       <span className="px-1 py-1" style={{
                         flex: 1, textAlign: 'center', borderRadius: '3px 0 0 3px',
-                        background: byCode ? '#fff' : '#0d6efd',
-                        color: byCode ? '#6c757d' : '#fff',
-                        border: '1px solid #0d6efd',
+                        background: byCode ? C.surface : C.accent,
+                        color: byCode ? C.muted : C.surface,
+                        border: `1px solid ${C.accent}`,
                         transition: 'background .3s ease, color .3s ease',
                       }}>ET Ref</span>
                       <span className="px-1 py-1 d-inline-flex align-items-center justify-content-center gap-1" style={{
                         flex: 1, borderRadius: '0 3px 3px 0',
-                        background: byCode ? '#0d6efd' : '#fff',
-                        color: byCode ? '#fff' : '#6c757d',
-                        border: '1px solid #0d6efd',
+                        background: byCode ? C.accent : C.surface,
+                        color: byCode ? C.surface : C.muted,
+                        border: `1px solid ${C.accent}`,
                         transition: 'background .3s ease, color .3s ease',
                       }}>
                         <MaterialIcon name="category_search" size={9} /> Mfr + Code
@@ -145,20 +146,20 @@ export default function PaletteScene({ beat }) {
                 <Click on={filtering}>
                   <Pulse on={filtering} style={{ width: '100%' }}>
                     <div className="rounded px-1 mb-1" style={{
-                      width: '100%', border: `1px solid ${filtering ? '#0d6efd' : '#dee2e6'}`,
-                      fontSize: 7, color: filtering ? '#212529' : '#adb5bd',
+                      width: '100%', border: `1px solid ${filtering ? C.accent : C.border}`,
+                      fontSize: 7, color: filtering ? C.ink : C.faint,
                     }}>
                       {filtering ? 'TAPE' : 'Search elements…'}
                     </div>
                   </Pulse>
                 </Click>
                 <div className="d-flex align-items-center gap-1 mb-1" style={{ fontSize: 7 }}>
-                  <span className="rounded px-1" style={{ border: '1px solid #dee2e6', color: '#adb5bd' }}>
+                  <span className="rounded px-1" style={{ border: `1px solid ${C.border}`, color: C.faint }}>
                     All families
                   </span>
-                  <MaterialIcon name="unfold_more" size={10} style={{ color: '#6c757d' }} />
-                  <MaterialIcon name="unfold_less" size={10} style={{ color: '#6c757d' }} />
-                  <span className="ms-auto d-inline-flex align-items-center gap-1" style={{ color: '#198754' }}>
+                  <MaterialIcon name="unfold_more" size={10} style={{ color: C.muted }} />
+                  <MaterialIcon name="unfold_less" size={10} style={{ color: C.muted }} />
+                  <span className="ms-auto d-inline-flex align-items-center gap-1" style={{ color: C.success }}>
                     <MaterialIcon name="add_circle" size={9} /> Add ElementType
                   </span>
                 </div>
@@ -185,11 +186,11 @@ export default function PaletteScene({ beat }) {
             ) : (
               <Appear when>
                 <div className="px-1 pt-1" style={{ fontSize: 8 }}>
-                  <div className="rounded px-1 py-1 mb-1" style={{ border: '1px solid #dee2e6' }}>
+                  <div className="rounded px-1 py-1 mb-1" style={{ border: `1px solid ${C.border}` }}>
                     <div className="fw-semibold">Local Downlight</div>
                     <div className="text-muted" style={{ fontSize: 7 }}>2 ingredients</div>
                   </div>
-                  <div className="rounded px-1 py-1" style={{ background: '#fff3cd', border: '1px solid #f0e0a8', fontSize: 7, color: '#856404' }}>
+                  <div className="rounded px-1 py-1" style={{ background: C.attnTint, border: `1px solid ${C.attnTint}`, fontSize: 7, color: C.attnInk }}>
                     <MaterialIcon name="warning" size={9} /> Applying a template <strong>REPLACES</strong> the
                     recipe. With rows already there, it asks first.
                   </div>
