@@ -119,6 +119,7 @@ export default function BuilderScreen({
   const formCaptures = useStore(s => s.formCaptures)
   const [formBuild, setFormBuild] = useState(null)   // { refs, thenReview }
   const [showStyles, setShowStyles] = useState(false)
+  const wrappersOpen = useStore(s => s.screenView.recipes?.wrappers?.all) === true
   useEffect(() => {
     if (pendingReviewRefs && pendingReviewRefs.length > 0) {
       setReviewInitialRefs(pendingReviewRefs)
@@ -526,6 +527,11 @@ export default function BuilderScreen({
             )}
             <Dropdown.Item onClick={() => setShowStyles(true)}>
               <MaterialIcon name="style" size={14} /> Recipe styles…
+            </Dropdown.Item>
+            <Dropdown.Divider />
+            <Dropdown.Header>View</Dropdown.Header>
+            <Dropdown.Item onClick={() => useStore.getState().setScreenView('recipes', { wrappers: { all: !wrappersOpen } })}>
+              <MaterialIcon name={wrappersOpen ? 'unfold_less' : 'unfold_more'} size={14} /> {wrappersOpen ? 'Collapse' : 'Expand'} all wrappers
             </Dropdown.Item>
             <Dropdown.Divider />
             <Dropdown.Header>Templates and tags</Dropdown.Header>

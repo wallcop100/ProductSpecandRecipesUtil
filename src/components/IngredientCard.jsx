@@ -18,6 +18,7 @@ import { familyOf } from '../utils/etRef'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { roleOf, QTY_CONFIRM_ROLES } from '../utils/recipePatterns'
 import { C } from '../styles/tokens'
+import { useScreenView } from './useScreenView'
 
 /**
  * IngredientCard — a resolved recipe row with drag-to-reorder support.
@@ -163,7 +164,11 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   const usedElsewhere = (showSharedEverywhere && etRef && !isUnresolved && !isContainer)
     ? getUsedIn(etRef, recipes, posRef) : []
 
-  const [showContents, setShowContents] = useState(false)
+  // Sticky per wrapper across positions and screens; `all` is the toolbar's expand/collapse.
+  const [wrapView, setWrapView] = useScreenView('recipes', 'wrappers', {})
+  const wrapKey = (etRef || '').toLowerCase()
+  const showContents = wrapView[wrapKey] ?? wrapView.all ?? false
+  const setShowContents = f => setWrapView(v => ({ ...v, [wrapKey]: f(v[wrapKey] ?? v.all ?? false) }))
   const [forking, setForking] = useState(false)
   const [guard, setGuard] = useState(null)   // { verb, run } — a destructive edit inside a shared wrapper
   const [forkContainer, setForkContainer] = useState(false)
@@ -285,14 +290,6 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                 <Dropdown.Item onClick={() => { setSelectMode(true); if (!isSelected) toggleRowSelection(rowId) }}>
                   <MaterialIcon name="checklist" size={14} /> Select multiple
                 </Dropdown.Item>
-                {isContainer && etRef && (
-                  <Dropdown.Item onClick={() => openETRecipe(etRef)}
-                    title={sharedWith.length > 0
-                      ? `Edit this assembly's contents — it is shared, so this also changes ${sharedWith.join(', ')}`
-                      : "Edit this element's internal recipe"}>
-                    <MaterialIcon name="edit" size={14} /> Edit internals →
-                  </Dropdown.Item>
-                )}
                 <Dropdown.Item disabled={extraInUse || qtyToConfirm} onClick={() => setShowExtra(v => !v)}>
                   <MaterialIcon name={showExtraControls ? ACTION_ICONS.remove : ACTION_ICONS.more} size={14} />
                   {showExtraControls ? ' Hide DimMult, PackQty, TRItem' : ' Show DimMult, PackQty, TRItem'}
@@ -352,20 +349,23 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                   </div>
                 )}
 
-                {/* Container controls: plain "Edit internals" lives in the row ⋮; it shows
-                    here only while quantities inside wait to be confirmed. */}
-                {isContainer && etRef && insidePending.length > 0 && (
+                {/* Container controls */}
+                {isContainer && etRef && (
                   <button
                     className="btn btn-link btn-sm p-0"
                     style={{ fontSize: 11, color: C.accent, textDecoration: 'none' }}
                     onClick={() => openETRecipe(etRef)}
-                    data-testid="qty-inside"
-                    title={`Quantities to confirm inside: ${insidePending.join(', ')}`}
+                    data-testid={insidePending.length ? 'qty-inside' : undefined}
+                    title={insidePending.length ? `Quantities to confirm inside: ${insidePending.join(', ')}` : sharedWith.length > 0
+                      ? `Edit this assembly's contents — it is shared, so this also changes ${sharedWith.join(', ')}`
+                      : "Edit this element's internal recipe"}
                   >
-                    <span className="rounded px-1" style={{ animation: 'qtyPulse 1.4s ease-out infinite', background: C.attnTint, color: C.attnInk }}>
-                      <style>{'@keyframes qtyPulse{0%{box-shadow:0 0 0 0 rgba(255,193,7,.9)}70%{box-shadow:0 0 0 6px rgba(255,193,7,0)}100%{box-shadow:0 0 0 0 rgba(255,193,7,0)}}'}</style>
-                      Edit internals → confirm {insidePending.length} quantit{insidePending.length === 1 ? 'y' : 'ies'}
-                    </span>
+                    {insidePending.length > 0
+                      ? <span className="rounded px-1" style={{ animation: 'qtyPulse 1.4s ease-out infinite', background: C.attnTint, color: C.attnInk }}>
+                          <style>{'@keyframes qtyPulse{0%{box-shadow:0 0 0 0 rgba(255,193,7,.9)}70%{box-shadow:0 0 0 6px rgba(255,193,7,0)}100%{box-shadow:0 0 0 0 rgba(255,193,7,0)}}'}</style>
+                          Edit internals → confirm {insidePending.length} quantit{insidePending.length === 1 ? 'y' : 'ies'}
+                        </span>
+                      : 'Edit internals →'}
                   </button>
                 )}
 
@@ -455,17 +455,17 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                   />
                   {showContents && (
                     internalItems.length > 0 ? (
-                      <div
-                        className="mt-1 ps-3"
-                        style={{ borderLeft: `2px solid ${C.border}`, color: C.muted }}
-                      >
-                        {internalItems.map(item => {
+                      <div className="mt-1 ps-3" style={{ color: C.muted }}>
+                        {internalItems.map((item, i) => {
                           // Each part's product, as the card itself shows it (PZJYJT).
                           const spec = specRowFor(psRows, item.ref)
                           const code = spec?.ProductCode || spec?.productCode
                           const maker = spec?.Manufacturer || spec?.manufacturer
                           return (
-                            <div key={item.ref} className="d-flex align-items-center gap-1 mb-1" data-testid="contents-item">
+                            <div key={item.ref} className="d-flex align-items-center gap-1 pb-1 position-relative" data-testid="contents-item">
+                              {/* Tree branch: ├ for each part, └ on the last. */}
+                              <span aria-hidden style={{ position: 'absolute', left: -10, top: 0, bottom: i === internalItems.length - 1 ? '50%' : 0, borderLeft: `1px solid ${C.faint}` }} />
+                              <span aria-hidden style={{ position: 'absolute', left: -10, width: 8, top: 'calc(50% - 2px)', borderTop: `1px solid ${C.faint}` }} />
                               <EntityPill type="ElementType" label={item.ref} />
                               {code
                                 ? <ProductInline etRef={item.ref} manufacturer={maker} productCode={code} onOpenProductSpec={onOpenProductSpec} />

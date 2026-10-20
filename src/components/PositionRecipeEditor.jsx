@@ -232,7 +232,7 @@ export default function PositionRecipeEditor({
         ) : (
           <div className="text-muted mb-3" style={{ fontSize: 11 }}>
             Element internals are shown read-only on each container row above — use the
-            row's ⋮ <span className="fw-semibold">Edit internals →</span> to change them.
+            row's <span className="fw-semibold">Edit internals →</span> to change them.
           </div>
         )}
       </div>
