@@ -54,7 +54,7 @@ Rules:
    - open a pull request to `master` (`POST /pulls`).
 7. **Notify:** send the PR link to whoever approves it.
 
-The tests run only on pushes to `master` (`.github/workflows/pages.yml`), not on PRs. Review, then merge. If the JSON is malformed, the test fails, the deploy stops, and the live site keeps the old data.
+The PR runs the tests (`.github/workflows/ci.yml`), and `master` requires them to pass, so malformed JSON is caught before the merge and the live site keeps the old data. Review, then merge; `pages.yml` deploys it, and the self-hosted copy follows within about five minutes.
 
 GitHub credential: a fine-grained token limited to this repo with Contents and Pull requests write access, stored in n8n credentials.
 
