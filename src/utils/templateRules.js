@@ -206,6 +206,14 @@ function kindFields(ref, state, idx, formCaptures) {
   return { Design: design === 'none' ? '' : design, DriverLocation: m.driver, DriverType: m.secondary, Jobs: defining }
 }
 
+/** The rule a position's own kind gives: Design / DriverLocation / DriverType equal it, and it contains each defining job. */
+export function seedRule(rec) {
+  const conditions = ['Design', 'DriverLocation', 'DriverType']
+    .filter(column => String(rec?.[column] ?? '').trim() !== '').map(column => ({ column, op: 'equals', value: String(rec[column]).trim() }))
+  for (const job of rec?.Jobs || []) conditions.push({ column: 'Jobs', op: 'contains', value: job })
+  return { match: 'all', conditions }
+}
+
 /** A rule in words: "Tags is Exterior and DriverLocation is REMOTE". */
 export function describeRule(rule) {
   const conds = ruleConditionsOf(rule)
