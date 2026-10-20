@@ -1,0 +1,154 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:97bf6dc269686439f0138bc50494179e35727b7fa7465fc960685d9dc51cdc01",
+  "claims": [
+    {
+      "id": "claim_09ed612b3f2d458792891063e14ec69e",
+      "statement": "The dev server runs on Vite port 5173 with strict port configuration (strictPort: true), failing loudly rather than falling back to alternative ports if port is taken.",
+      "evidence": [
+        {
+          "resource": "repo://package.json#L8-L8",
+          "version": "repo-lines-v1:sha256:7ba434853022e0dede08cc4da5f66e73ee2e686637ff432edf2f028cf9cd4921:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiN2JhNDM0ODUzMDIyZTBkZWRlMDhjYzRkYTVmNjZlNzNlZTJlNjg2NjM3ZmY0MzJlZGYyZjAyOGNmOWNkNDkyMSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiN2JhNDM0ODUzMDIyZTBkZWRlMDhjYzRkYTVmNjZlNzNlZTJlNjg2NjM3ZmY0MzJlZGYyZjAyOGNmOWNkNDkyMSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYjRlNDk0ZDcyYWZjMjc4YjYwY2JjYTVmNDRmYjM5MzE1ZTBiNjg4NjI5MmQ5NjI1ZjgwNWRmMDNmNDBlYjI1NiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMWEzN2I1NzU5OTQyYjkwMjY0NmM5ZGQyNzc2ZWRlYzk4ODFhZjI5NmMyNjExNTI5NmEzODBiOTFmOWQ0NDEyOCJ9"
+        },
+        {
+          "resource": "repo://vite.config.js#L13-L16",
+          "version": "repo-lines-v1:sha256:11f231a0514183f510ac003653f91dd46b222bdd9417fe16e50742368c5fa053:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYjBlNjZhZmUzMTAyMzFkMmU2MDkxYTVkODlhNjNlNzQ5ODVmYzdjMDIzNjRhODk5YjRjYWNmN2Y1MjcyOTY1MSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZmU4OTM0NzNhZDdkZDgxYWQ3YjA3MTFlOTI3YjU1MjllODllNzg1MjE0OWMzMjJkMWU5MTZjZTUwZWYyNWNkNSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZjU5YTc5NDA0MDIwZTAxOTIzMmQxMjA0ZjhiMGQyM2JlNDMzZWY4NTEyMzM3ODI1MGMxNGUwZGIxZjc2N2VlNiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzIxMzFhMmYzM2I0OWM0NzEzZWYwZWJkOWFmZmY5ZDM1MDI3ZmEwNmYxZDY3Zjc1MDhlMjJhMzRiNzk4ZmM1YiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_90ce3480748a42b7841e5e67c5cbcf4f",
+      "statement": "Debug mode (toggled via window.electronAPI.onDebugToggle or Ctrl+Shift+D in Electron) adds the 'debug-ids' class to the root div, which causes every element with data-debug-id to be outlined in blue dashes and labeled with its code identifier via CSS ::after pseudo-element.",
+      "evidence": [
+        {
+          "resource": "repo://src/App.jsx#L36-L59",
+          "version": "repo-lines-v1:sha256:b70aa555ebcb17acd01d93b17aa45132e16b18265dadb0a95d1fd8e4f90be25f:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYwNTBkZTdlNjcwMjhjNzRjYjkzMTM4YzdlMzFlYjRiMTgxNGFmYmE5MjM2NmQ0MTkwNTJlZGQ5YjdkYWRkMDAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYwZGM1OGI4M2Q3NWQ1OWY2MDAzNzRlYmU4MTYwNDU1NDc4YTJlY2MwZDg4NmZlZDk3NWE4YzU2Y2VmNTJmZjIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjllYzJjNDQ1NzA0NjAzNmE2ZWRjNDU3OGVhZjRlNzY4OTc2Nzc3Y2UzY2MyNDNmYmJjYTkwYTRiMGE2MDQ1YjgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU4ZWUzYWE4Y2ZmMDEzN2ViOGFjYTFiYzIzYTJhMmNkYTBlMGFmNjAwNDk5Yjk4ZDI3ZWIzMjZlOTNmZmI5MGEifQ"
+        },
+        {
+          "resource": "repo://src/debug.css",
+          "version": "repo-file-v1:sha256:abe049ad0a035b935b3dca9f4bbadc391985acea3e83c0cc70b7e15f24930788"
+        }
+      ]
+    },
+    {
+      "id": "claim_6710d49a32524d86ae39981a763e2039",
+      "statement": "ErrorBoundary (React.Component class) catches render errors and displays a styled card with the error message, stack trace, component stack, and action buttons to try again or reload, without touching the store to avoid replicating the error.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ErrorBoundary.jsx",
+          "version": "repo-file-v1:sha256:3988ac95baae8988357445544b0c62d31ffdf2eff2bbfdd6c99ef7cd7678c93f"
+        }
+      ]
+    },
+    {
+      "id": "claim_e586ba62df764008ae5843593414a203",
+      "statement": "BugReporter captures bug reports via right-click context menu in bug mode, recording free-text notes, timestamp, version, active screen/position/element type, clicked element details from DOM, click trail (last 10 clicks), project size metrics, and viewport dimensions.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/BugReporter.jsx#L11-L99",
+          "version": "repo-lines-v1:sha256:1bb55f76485b2cb364af9686eae3b74969a6a2dabf04721211755877ff45effa:eyJzZWxlY3RlZExpbmVDb3VudCI6ODksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYzYTc2ZjlhYjczMjU3OGQwZDMyYzliZmVkMmRkYjg5MmQ0MjZjMDI5Y2MwNWNhY2E1ZTRmMzBhMDAxMjdiZGQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU1ZmVmZjBmM2UzOTM2NjAyODRhYjlkNDkxNDA1MWE5NDljZWE4YjJjOWQ3NTZhYjE0MjA4YjViYmMwMmEyNDYifQ"
+        },
+        {
+          "resource": "repo://src/utils/bugReports.js#L71-L106",
+          "version": "repo-lines-v1:sha256:8bb2320c50d57b3d7bb9f7902ea426568270bfead193648cb5eedcab1fee7b0e:eyJzZWxlY3RlZExpbmVDb3VudCI6MzYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJkYzg2MTJmOWRmNjBlODE3ZGYyMmE4NGM2Y2VjZTFjNzcxZDA0MGNjNjY1MzJkMTE0ODU2NWJmZDIxODJkZmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU1NTMxZGE5YjY4MTdjYTAxMWUxYjYyMTMzNmYyZDU4NzhjMWE1ZmUxNDhlOGIzNTAxZmYwZDc3NTM3M2I3M2QiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE3YWNhYjBhMGZhNGU4Y2NkOTFlMzc0YWJiNmY2OTJjOWJkYTczMTRmMzA5NTJiYTczNDFkM2FiOTEzNDI0YjkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_07806fc3832344a29c39f782b3574b30",
+      "statement": "Bug reports are stored in localStorage under key 'bugReports' as JSON, each report receives a 6-character random ID (e.g., K3F9QZ), and are persisted across sessions and projects.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/bugReports.js#L10-L35",
+          "version": "repo-lines-v1:sha256:e905e9dd842558f9a2644bae8bfe4a0575e7df18831a3d22442359a012fcf003:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJmYmRkMzYyODJiZDNlMzdmZDE2MThiM2MxM2UzZjRjYmMzZGE3ZmQyNjMyMDM4M2ZhNzgwZjExYmQyNmRjYmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJiNjhjZTE5MzQ4NTcwYmJiYjc3ZmQ4ZjFlMzU4MzQxYTllMDM3YjZhYmRlOGY4MTA0ZTA5OTlkYjA3YTY5ZTciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjlkZDYyZGIyM2YzNGViMjAwMWI2ZDBhYmVkOTAzNWY2ZWRhMWE1NGIwZjMxZjI4MTk2YzY3NjhmNDMyMzY4ZWMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBmYjExM2Y0Mzk0MGQwNzU0YzIzZjE0YWI1ZmVjN2FkOWE2ZDI4NWU0ZTYzZmIzNGI3ZGQwZTU5NTBjYmE0ZjkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_6e1cad1a0b264b8d81ba8ec3d2753b18",
+      "statement": "sql.js (SQLite WASM) is dynamically imported via 'import(sql.js)' rather than statically bundled, so it stays out of the initial page load and remains in a separate chunk.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/db.js#L57-L74",
+          "version": "repo-lines-v1:sha256:d922dfaa3cc678bf16fda008d8758f4d25d195298199fdf9cda659efcd8f496c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVkNWVkODRiOTRhYmU3ZmRkYzg2OTg4OTg5MDVkMTBjOThkM2Q3ZTZhMWVmMDJkYmU4ZjJhNzI2YzhmZjMwNTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZjYjU0MjIxNTFmOWU1MjMxOTc0ZTY5MjMzOTkwYmE5MTFmNWY1MGY3YWEyOTZmNDQ3NjkzY2ExMjYzMmEzMjUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY0MDRkOGU1NWI5MTUwZjUxOTIxY2NkMjcxOWRlNDI4M2JjNzljOWU1ZGFhNDE3NGM3MzU0ZjcwNWQwMzA0MjUifQ"
+        },
+        {
+          "resource": "repo://vite.config.js#L18-L26",
+          "version": "repo-lines-v1:sha256:cbd3432fc54149a1e33dbd87033406e30975fadd1f88ed5522b48ad2e70b6a89:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDZmYzkyYTYzMjA0ODlkM2Y0NTNhZDZlZmI0OGY3NGZjNjMwMGU4MmJhZDk0YjYzZjM0Mzk1YzhlZDZhNDk1ZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGQ1Y2QyZmI0ZjNkZjg4NDUxNTI1NWIzOTUyM2YyZjhiNTQ3MmJlZWE5ZjU2NmZmY2EyMDRkYjgwMjU2MTA0MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYzEyZmY1MTA3ZDYxZjRlZDAzYTY2MjczZDNlZGRjZWI3YjVlN2MwMWRjYzhiMTA3M2I0YThkZGQ0MzE3NjQ3OCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTc5NzQ5MDhmODNhMGM5ZjI4YWNkYzhkYTExNGZlM2JhMmYxYjY4YTZhNzdmMWY0ZDJiOTIyMzVmMTBjMjIzOCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_1502b40897de4dbf85b0e1d7652c29ae",
+      "statement": "sql.js keeps the entire database in memory; writes are debounced (300ms), serialized via conn.export(), and persisted to IndexedDB under key 'sqlite-db'; on next load, bytes are restored from IndexedDB and passed to new SQL.Database().",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/db.js#L18-L50",
+          "version": "repo-lines-v1:sha256:0bd76a1e48335f5220dd4877e9799cc6a4047dc1871f98007fdcbf207a9bdfe7:eyJzZWxlY3RlZExpbmVDb3VudCI6MzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU1ZDYwMjE5NWY0MDVmNDFlYmU5MTI5ZmUyZjBiNmJjZmYxM2VjZDExMWE5ZWQ0OTkwNzA5NTljNDY0ZjI3MjYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRhNzg1OWU4Y2M4NWJlMDhlN2Q0NTQxOWFlN2E4Y2U3ZTUwYmI2MzFhNjY4NTlkNzY0OTY4OWU2M2Y1NDU1Y2EiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImIxMjA4NzkyMGJkNWViOTA4YmEwZjlkNDcyODA1YzhiMzU1YzU5ZDRmODZhZjBkNjM0NzgxMjVhYzI3YmM0MWYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_246c49c018094ed79e0454acaa89c7f0",
+      "statement": "Vitest is configured with jsdom environment, setup file at tests/frontend/setup.js which auto-marks tutorial cards as seen to prevent auto-opening modals in tests, and globals: true for vitest functions.",
+      "evidence": [
+        {
+          "resource": "repo://tests/frontend/setup.js",
+          "version": "repo-file-v1:sha256:e3abd66fe412ae5015990a4050f2d8a9dd7f32e28533ba5ef2fe157ec5608e89"
+        },
+        {
+          "resource": "repo://vite.config.js#L35-L39",
+          "version": "repo-lines-v1:sha256:513bf882817ea756c57006525392d79bc6ed6fe42eb9f9d959b59fb14155baaf:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTkzNmRmN2E1YTNhYWYxODBjZmZkMWQ2NWM2NDZlZjZhZWEzNTJjYzI3Nzc0Njg2MTk5Y2Q4ZmIzZTg5OWM3YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGQ1Y2QyZmI0ZjNkZjg4NDUxNTI1NWIzOTUyM2YyZjhiNTQ3MmJlZWE5ZjU2NmZmY2EyMDRkYjgwMjU2MTA0MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiN2NlNzg1YmJmYWE0NTY5YTNhNjdlYTcyMzg5Y2MwZmM0MjhjMTA5YWVkMGMxMTE2MGZiNGMzN2IyNzE3ODhiYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjEsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODU4MGI3NjUxOGRhZTk3OWZhZWJkMDIzNjdhMjkyOTJhNTBkOTc2MDkyMjUxYTM4YTZjZTMwODgwYmE0MjgyNSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_d10fd4a50bb945c3ba3d0be657265d1f",
+      "statement": "api.js installs a window.electronAPI-compatible object before React mounts, supplying browser implementations (sql.js for SQLite, File System Access API for files, polling for file watching) so the entire app runs unchanged in browser or Electron.",
+      "evidence": [
+        {
+          "resource": "repo://src/main.jsx#L12-L14",
+          "version": "repo-lines-v1:sha256:4855ac082799e065fa7e015b9365b4d40bbf60b06c330476c2d45219a73d64d7:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWE1ODVkYWM3YjhlNmNjMjIxNTA2OWFhMmM3ODg4MTFjMWYwYWU4YTcyMTM2YmE4NmEwZmYxNTQ4NWI0YjNlMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjU5NTAxYzcxNWIzMjUzOTk4NzAwZmEyZTJlMDA1NGVmMTFlZDA0OTYyZTc1MzEwNzNiZmI3MmJiNGY4ODU3MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiY2RlMzJmY2Q3ZGE0YTM4OGJhYmU3NDJhNGFkNGY0ZmQ2ZmNkMjkzNjBiMTAyMTY5ZWZjMzI5ZWQzMjY0MWQxYyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTc0YzRkYzMwNzFiOTEzZmY4OWFhMjhhNDgzNzYxYjA0ZDA5MTIyMGRlYzIwZGMyOGI2MTZhZDYyMmY5ZjRhYyJ9"
+        },
+        {
+          "resource": "repo://src/platform/api.js#L1-L23",
+          "version": "repo-lines-v1:sha256:80e16f715f02d59e41752cc5ccd10ba17e075e724372af9454aa0abc2816bbfd:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQwOTFiZTEwNTE0NzVjM2MwNDIwZGY3NDVlNDg1M2I3NTM3NjFmMTJiNjA1ZjNhOWZmMGMxM2U3OTdmYmNkZWIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM1YWMyOWFlZTJkYWRmMmZhMmNhMDU1NWQzNTAwZWYxNTJkOWZlODcyNWI0Y2NjYWRjOTdkNGRkYTFkMjgwMjEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_26fbb3d8eab043cfa5699afff2514ac7",
+      "statement": "Vite build configuration sets chunkSizeWarningLimit to 800 KB to warn about large chunks; sql.js and SheetJS are kept in separate dynamic-import chunks and stay out of the initial bundle.",
+      "evidence": [
+        {
+          "resource": "repo://vite.config.js#L27-L34",
+          "version": "repo-lines-v1:sha256:9894413427c0658be299c1213c4f8824ae5164d43913ca6eb60d475dc8ea64f9:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMmRjZGQxNmZmY2JmMWQzMThiY2IyNDNiMTk0ZDE4MjMwY2U2MWQxYTY2MmEyMGEwZTYwYzljMjg0OTljMTNjMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGQ1Y2QyZmI0ZjNkZjg4NDUxNTI1NWIzOTUyM2YyZjhiNTQ3MmJlZWE5ZjU2NmZmY2EyMDRkYjgwMjU2MTA0MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODA2YzQ5MDFjNDJlYWM1YjE1MDJjNDIwZTRlZDZkYjNjMmUwYmM1ZDhlZDRiNTk1ZmE4NDgyODc1NzNmZWZhMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiY2RiZWI2MTgyNjllODEzZjg1MjcxYWVhZmQ4YWI2MWJjY2ExODAyMWU3NWY2MzVmOThlYzBmZGM1ZTg4NTdkOCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_ee267c83aca74416b37528fadd7813ff",
+      "statement": "The browser implementation of file watching polls lastModified (~3s intervals) rather than receiving fs events, as degradation documented in api.js.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/api.js#L8-L13",
+          "version": "repo-lines-v1:sha256:d52b55ac6959061cadcb55e8c89d4d1a750b01195bc966ef0908bc24faabf581:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjIzY2I0YzEzZDY3NzU5ZDU0Zjc2NzFkNDQwMzQ5NzJkMDkwM2EzOWQwOGFmYWU3M2JiOTgxZWI5YWIwZGNmMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTcyYTQyOTM4MmIyZTE0NzE4ZTBlMzdiMDU3MGE4YTE3MDI5OTFmY2Q4NDk4Y2Q4NDA2MGE4YmY0ZjA1MDE3YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYTM3NWE1MWUzOGE3NjA4MDE3YTUyYzQ0MjViNWRlYjEwZTU1Y2VjZDZkMTE0N2M1YTEwMzg2ZTYwZTNiNjNhMiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNzA1MTFlMTQ4NzMxNWIzY2QwMWY5NTFlYzQ1NGQ2ZWIzM2MxZDQ1YmU3YzY2MjJkMTE4MzBlMzM0MmMxN2I0NSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_ebe019f3d2af48239d693f03e5eeff34",
+      "statement": "Each screen in App.jsx is wrapped in an ErrorBoundary component keyed by activeScreen, so navigating away clears a caught error rather than stranding the user on the fallback.",
+      "evidence": [
+        {
+          "resource": "repo://src/App.jsx#L102-L172",
+          "version": "repo-lines-v1:sha256:c5b82cc0f8484b87c47ac42c9d574d65fa84e051de56830e9efa3519cc6b9471:eyJzZWxlY3RlZExpbmVDb3VudCI6NzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVmNDc3MzNiOWY5NjQwMDZlMTA5MGQxZTNmMzEyNDkxZGFiOTFiYWE5NmVmZmJkODhiY2ZkOWZhNjVkZDkxMmEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNhYzA4YTU4ZTZiMGUzYTg4NjFjYjNmZmQzYTgxNjBhODQxNzJhYThjNGUwYjQ1MmY5ZTgyN2VkYTQxYjZkZTIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA5ODNiMjg5ZTgwNTA2NzY3M2FkYjJlN2U0MDUwZWRiNzY3YWZmNTViZGQ3ZjgyMzc4MWVlZjZmMmRjM2Q4NDgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImYzYjhhNmIzMjdiNWVjZDUyMTM5ODIwZGQyOWJlYmViMjM4NWM1MGJmZTNlODMwNDU5ZDNlMTRkZGJhN2I5OGEifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-17T13:57:20.517Z"
+  }
+}

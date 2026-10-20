@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:862b7960ee45e0253bde9a50fc70ee9296b8d321792a63aeb25beef511c38391",
+  "claims": [
+    {
+      "id": "claim_c384a8b151c14bd0b59169e43fd7bc96",
+      "statement": "Vitest is configured with jsdom environment, setup file at tests/frontend/setup.js, and globals enabled; test configuration is in vite.config.js test block.",
+      "evidence": [
+        {
+          "resource": "repo://tests/frontend/setup.js#L1-L16",
+          "version": "repo-lines-v1:sha256:e3abd66fe412ae5015990a4050f2d8a9dd7f32e28533ba5ef2fe157ec5608e89:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3YjllMGY2OWQxNTZjNjgwZmY2MzU2MGU1OGExMmMwMWE0YWJlYzFiZGI0NzU2NTM0YzkzZTEzYzFmMjc4ZWEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://vite.config.js#L35-L39",
+          "version": "repo-lines-v1:sha256:513bf882817ea756c57006525392d79bc6ed6fe42eb9f9d959b59fb14155baaf:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTkzNmRmN2E1YTNhYWYxODBjZmZkMWQ2NWM2NDZlZjZhZWEzNTJjYzI3Nzc0Njg2MTk5Y2Q4ZmIzZTg5OWM3YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGQ1Y2QyZmI0ZjNkZjg4NDUxNTI1NWIzOTUyM2YyZjhiNTQ3MmJlZWE5ZjU2NmZmY2EyMDRkYjgwMjU2MTA0MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiN2NlNzg1YmJmYWE0NTY5YTNhNjdlYTcyMzg5Y2MwZmM0MjhjMTA5YWVkMGMxMTE2MGZiNGMzN2IyNzE3ODhiYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjEsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODU4MGI3NjUxOGRhZTk3OWZhZWJkMDIzNjdhMjkyOTJhNTBkOTc2MDkyMjUxYTM4YTZjZTMwODgwYmE0MjgyNSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_452d8dad591b48289866ff9f4bfa2677",
+      "statement": "The test suite contains approximately 140 test files in tests/frontend/, organized by subsystem: store mutations in store.test.js (93K lines), component tests for screens and modals, utility tests for pure functions, and workflow integration tests.",
+      "evidence": [
+        {
+          "resource": "repo://tests/frontend/importScreenFlow.test.jsx#L1-L10",
+          "version": "repo-lines-v1:sha256:b5468bb30689f39af55940516bc8ae58164d827c7e183f7edd429cf67a503178:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZjODhhZWI3NjY5YzJmZDRlNTdiOTIzM2ZjNjIwNDA4MjRlMjkyMDJkNDZjNmY3YmE2NGI1MDcxOGFmZTM2NzIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU0MWYzNjdlZmU5OWIxNjlhMTk4MDk4YTc1N2Q3OTY0MmI5ZmQyMjhiZGZiNjRjNWY2ODJlMTc0MDhiNTk5MzMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIyOTA3MDAyYTQzZGFjZTE0NzE2ZWU4NmZjMzZiZmZjMTBmZWYyNWEwYTYyY2NmY2U1NTNiYjAxNGU5NDk3NjAifQ"
+        },
+        {
+          "resource": "repo://tests/frontend/productCodes.test.js#L1-L10",
+          "version": "repo-lines-v1:sha256:8ee502155eaad52ae029dda63659c616db579921d23340d99ff5a8506454252b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM2ODBkOWM1ODkwNmY0OTIwMzI1Y2M1YjRmNTVkYzc1MzAyZmE0ZDM3NmI0MWY5ODMyYzI5MDBlNjE5MzQ0NzQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxMzY4MjZkNWViZmFhN2RiYTc5MTlmOThjZWVmMTc5ZjViNWEzZTQ2ZWViMDBjOGUzYzliNjAyNjVhYTE5NDUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM5ZmRmNmY0NGFiZTExMjdjMjA5MjI0OTkyNjNjNWIxNDMzYjUwMWRlM2IwYTBiMzczZGYzMGMyMmU4M2RlOTQifQ"
+        },
+        {
+          "resource": "repo://tests/frontend/store.test.js#L1-L10",
+          "version": "repo-lines-v1:sha256:14b7db9deb56e0f2ec56d112b8cd3da55236ac8ed9544e28408acba5121c746d:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjMwMTI3NWY5OGNlMWYyNGRkYzgyMDk3YTlhOTkyMWI0ZjBjNTkwYmExOTI2MWRhZGVkNGRhY2M3MGMzNGZlZjAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_85a7f6f0a33b4d7d87b1aed545665b92",
+      "statement": "Store tests use a resetStore() helper to initialize known fixture state before each test, then call store mutations via useStore.getState() and verify resulting state changes.",
+      "evidence": [
+        {
+          "resource": "repo://tests/frontend/store.test.js#L128-L171",
+          "version": "repo-lines-v1:sha256:62fa83a271ba1d7dda55ac6ddfba1f64cb480804425f3fd8d0a0a21cdf3c3880:eyJzZWxlY3RlZExpbmVDb3VudCI6NDQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc2MTJkODg4MGI5NTA2Yjc3NmM5MDFjNjg1MWYxOWNkOWJjM2M0YzA5MTA2ZmMyMTFhMDBjYWZmNmE1N2I3MDQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImMxNTBkOWUzMzgyNmI5M2U5Y2IyMDM2NjNkNDdlMjk0MTY4ZWFmZTUwN2UxOGMyMDJiMWFlMmQ1NGExYTI4Y2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM5MTgyNzhmNzVkYjAwMWJiMmQyYWFhNmRlYmU5ZmNjMzNjNDg4YmRmM2Q2MmQ0MDMwZDY1NTQxZWNlMzU5ZGMifQ"
+        },
+        {
+          "resource": "repo://tests/frontend/store.test.js#L177-L206",
+          "version": "repo-lines-v1:sha256:1d757f1fe6d971ebd1f17b61ded0d90f72c50f93bfaac03c201d56e239e5c4ae:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg2OGQxNzAyZWNhOTFkMWVkNzc4YWI2YTE2NmZhYTI2NzEwZTc4N2Y0ZDExMmFmMGIxMmE3NTI5NmM5MWJkNGEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIyMzUyNTg5YzM0ZDNjNjA2ODU5MzFiNmVjYzRkNTA5OTFhN2M1NmM4ZmJhMjg5NDExNDY1NzY5MDI3MmNhYzMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFhYzY2MThiYTA1ZjhjZDRkNmY3M2M2ZTIxODY3OTkyNTg1MDQ1OWZhZjI5NDUwMjgzNGI0ZDk5ZWQ5ZjI0ZjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZmNDRkMDMwZDQ2ZTgzNzAyZmU5ZDNiY2Y5NTliYTk1OGEwMjE5M2Q3NWVkNjUyYTcwYTRlNTI3MjJjYWYyYTQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_33b57c4fb0ed4d41a6b1516d9e09169b",
+      "statement": "Component tests set store state in beforeEach, render components with React Testing Library, and use screen queries and fireEvent for user interaction simulation.",
+      "evidence": [
+        {
+          "resource": "repo://tests/frontend/builderScreen.test.jsx#L6-L15",
+          "version": "repo-lines-v1:sha256:4f54052fa8d9567c4243da32418f302332954d5994c07e6736978e787ae42764:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRhNDFmM2M5ZTdlMTAwNTRiY2Y2YjAxYTE3NGRiMzUxMGI3NDJiZDZjZGQ0ZTcwOTExZjhkOTJiZWRmN2Q0ZjkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUxMjNjNGI5MDNlYmM0Y2JiNTUxMzgxMWU0NzVmNWNhMGFjMzU2ZWNkNmY2YzczZDM0YTM3N2E1MjQzYzZhM2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY0ZGExYjYxYTQzM2Y4NmYxMGViZmRhODM1MmJkZjNiNDFiMWE3ZDU5ODA4YjliNTllYWFiNjM3Y2FlODMzYTEifQ"
+        },
+        {
+          "resource": "repo://tests/frontend/formSpecPane.test.jsx#L44-L56",
+          "version": "repo-lines-v1:sha256:d31bf2b69e65b28ad5ffd90c80416f9a3913cf0c183d856272251bbb17da9d0b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJjYzg3OTM5OTA3MjQwNzE1MjE3OTA0N2IxZGFiZjY5NTIxZWIzMjc4MDg4MWUxNWY1ZGM1MDA3ODkyNWE4NjgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkyZTZhMzU0ZmQ4MDNmMzVjNjM2ZWRjMjlhNjc5NTdkMDUzMGFjYWJkZDZlZWUwMjdlNTczOGJkOWNhNjYyNjAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjI3NGZmZDQ2Mjc4MDg2YWIzYzA1ZjExZTI3ZTJkNjkzZjYzZDA5MjM5YTBiMzYzOTRkNjQ0OTZmMTNkNjU3YzkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_c3cb91e97a83428eba79ee46775a3898",
+      "statement": "Utility tests isolate pure functions and test them with fixture data; large utilities like productCodes.js, codeLearning.js, and validationRules.js contain comprehensive test suites with thousands of test cases each and real project data.",
+      "evidence": [
+        {
+          "resource": "repo://tests/frontend/codeLearning.test.js#L1-L50",
+          "version": "repo-lines-v1:sha256:717a4acb7cc2d392e95d5cc4b10305f6c4b2bfff637de95321419fd1fbf16650:eyJzZWxlY3RlZExpbmVDb3VudCI6NTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM2ODBkOWM1ODkwNmY0OTIwMzI1Y2M1YjRmNTVkYzc1MzAyZmE0ZDM3NmI0MWY5ODMyYzI5MDBlNjE5MzQ0NzQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImEyMTg5NjkyOWJkZGFkY2U1MmI5N2FhN2M3YjYyYWQ2MGIxZDFiZTk2MThjZmEwNmUxNjU3ZTNiMzUwMjZjMzAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRiMDIyZWFjOGUwZmIxYTUzYjE4ZTIxY2UxNDZhNTc0ODlkMGI2ZDVhY2M4NDIzZGYwNTFjNGRjOWYxM2NkMTMifQ"
+        },
+        {
+          "resource": "repo://tests/frontend/productCodes.test.js#L1-L50",
+          "version": "repo-lines-v1:sha256:1e72efa589697df0887185cfcf607642a4fc781be4664da4648020fb764eebb9:eyJzZWxlY3RlZExpbmVDb3VudCI6NTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM2ODBkOWM1ODkwNmY0OTIwMzI1Y2M1YjRmNTVkYzc1MzAyZmE0ZDM3NmI0MWY5ODMyYzI5MDBlNjE5MzQ0NzQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE3NzhjZDRhN2M5NWNmMjdmNjY3ODA4MzEwZjgxNTVlY2JlMGY2N2NhMzFmOGViNDQxYzVmYmFlNWZhYzMyMzIifQ"
+        },
+        {
+          "resource": "repo://tests/frontend/validationRules.test.js#L1-L80",
+          "version": "repo-lines-v1:sha256:8a2635c70f23084bce4e87669ded9013bff50f45846b790a57b971862b62a22b:eyJzZWxlY3RlZExpbmVDb3VudCI6ODAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM2ODBkOWM1ODkwNmY0OTIwMzI1Y2M1YjRmNTVkYzc1MzAyZmE0ZDM3NmI0MWY5ODMyYzI5MDBlNjE5MzQ0NzQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIxMTY2ZGFiYzBkOTk2NDQ0MDJkZGY0YWM2YjgwODBhZmNiOTY0Y2ExMjI4ODA2M2JmZGU1ZTQ5MmExNjg4MWYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNmODQ0MjFmN2Y5OTUxZTMwYjQzM2ZiZmViNTc2ZjU2MWMxYWJjM2YwYzZhM2I1N2JiYTc1Yzg2OTZkNTZmZTMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_0df6791c6613418a802f8425150bc2aa",
+      "statement": "The setup file marks all tutorials as seen in localStorage before each test to prevent auto-opening tutorial modals from shadowing components under test.",
+      "evidence": [
+        {
+          "resource": "repo://tests/frontend/setup.js#L1-L16",
+          "version": "repo-lines-v1:sha256:e3abd66fe412ae5015990a4050f2d8a9dd7f32e28533ba5ef2fe157ec5608e89:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3YjllMGY2OWQxNTZjNjgwZmY2MzU2MGU1OGExMmMwMWE0YWJlYzFiZGI0NzU2NTM0YzkzZTEzYzFmMjc4ZWEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_168d2e2e5322468c88698b59222c8a63",
+      "statement": "importScreenFlow.test.jsx traces a complete product-code import workflow from file selection through column detection to code confirmation, rendering the full ProductCodeImportScreen and simulating realistic user interactions.",
+      "evidence": [
+        {
+          "resource": "repo://tests/frontend/importScreenFlow.test.jsx#L1-L100",
+          "version": "repo-lines-v1:sha256:8d05b2cfdc1b0cabd9989572dc833c5f9d46af3bbcac28b87a129bb2b917b449:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAwLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI2Yzg4YWViNzY2OWMyZmQ0ZTU3YjkyMzNmYzYyMDQwODI0ZTI5MjAyZDQ2YzZmN2JhNjRiNTA3MThhZmUzNjcyIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJkYTAzODY1ODAxODJjOTZkZmE2MjlmYjA5ODNmNTVkN2YxZTk3NjI2NDhiMzAzYmE2YzBkYjlmM2Y2MTc5ZDRiIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiIzNzBjNjYxOWNiZThiY2EyODAxNjczYmU2ODRmYzcxYjY1ZWM1NjU5ZTA3YzJlZDMzYzJlMzA3ZDNkZjU3MTFkIn0"
+        }
+      ]
+    },
+    {
+      "id": "claim_a2848518fbae47c3adda1b094e386a8d",
+      "statement": "The main fixture file is fixtures/code-jobs.json (348 KB) containing real product-code samples; fixture data is typically inlined in test files as helper functions for clarity and test-specific customization.",
+      "evidence": [
+        {
+          "resource": "repo://tests/frontend/store.test.js#L46-L123",
+          "version": "repo-lines-v1:sha256:a473ff02df151db46cf63f716bccdb29e5508e6425420d2e1a1119dba907e105:eyJzZWxlY3RlZExpbmVDb3VudCI6NzgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA1MzkwNTRiOTE5NTI5YjgwY2EzNzM5Y2RmMzgyYzcwMWQwZDNiNWJlZWI3YWQ2Y2EzNzBhODRlZDA0YTM0Y2UiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc1N2RlNGIxNjEyYjJlY2FjN2M1OTE3NzgxMWNiYzdhM2EzMzAzYWUwY2NkMThiMzAwMGM3YjM1ODViOGI1ZjYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBjOThiYzY4ZmJmODZmYjRkZGFjMDE0ZGRkY2FhNGE1ODg1OGU4NzZjYTE4OGFjYmIyYjEzYjA0MmE1M2MyZDIifQ"
+        },
+        {
+          "resource": "repo://tests/frontend/validationRules.test.js#L20-L38",
+          "version": "repo-lines-v1:sha256:8da3230213021a105fa4ca95b342ee705d791c8afd6546195d6d52187f07b38d:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ2NDkxZjY1MTFlMTJhZGI2YTllNWRhZTk2ODhlNmMyNWZlYTA3NzFiYzIyOGIwYTA3YmM0OGM1NzQwMDY1NTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImVjMjVlMzZjN2MwZWM4NzdhMGM1MzgzMDA2N2YzYmIyZjI0MzkxZDUzZDNjYWFkMTA1N2ZmYWU3YWYzNTkwMDAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNhNzRlMjljMjgyZmU1YjNmZTI0NTcwMGQxOTEwNTNmZjcwNTE5NmUwY2UxNjc1NjU3M2IyN2UzOTcxODI5ZjIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_15473dac05b54675867811574a11d7d1",
+      "statement": "Tests are run with npm test (single run) or npm run test:watch (continuous watch mode); both execute vitest and are configured in package.json scripts.",
+      "evidence": [
+        {
+          "resource": "repo://package.json#L11-L12",
+          "version": "repo-lines-v1:sha256:5c09ceace2c33f79363592c5c46286e6894b0c0098b04d30cfb39483a3dba86a:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjQxZmMyNDllZmE3MWIwZTdhOTdmN2Y0ZWI4Yjg5NDk0YTU5Y2IzZjg3ZDcxYmU2YWFkNjNhYTNiYTVlM2QzYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYWJhMzI3ZTFmOTU0NTk5YmNmMGU5MWIzZWVkMzc1OGJjOTM1MjU3OTk2NzI1ZDFmZGIyYTczNjE0NmU3NTkwNyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOGM2YjI2MjBhY2E1ZDVkZjJiYWUxMDdmMWZmOGVlYzgzM2EzOGMyZGNkMmY2NWQ3MTYwNDBkZjA4ZDQzNGI5MCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDJhZTU2MjE1ZWJjYmIxMjFmZjU1YmVlMzM3M2RlZmFjNDc5ZmM4ZTIwYmU4YmYyZGY1MzMxZDA5YjFjZWE0MSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_e48884c58858400789fe236ea47b0e27",
+      "statement": "dbSchema.test.js validates the SQL schema using sql.js in-memory database, testing table creation, migrations, named and positional parameter binding, and transactions with the same schema code deployed to Electron.",
+      "evidence": [
+        {
+          "resource": "repo://tests/frontend/dbSchema.test.js#L1-L40",
+          "version": "repo-lines-v1:sha256:521abdad55a3c1666f86a3815e506ec9a6cb18ca02e1b57c82dfd12f874eb3cf:eyJzZWxlY3RlZExpbmVDb3VudCI6NDAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRjZTI4NzI0YmUwYWExNGUxNDg0ZmRmMzgyMDc5YTJiZmRmMTVlMDNlZDFkOTgxNDMyYjE4ZTcxMjI5YTJmMTIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhmMmUyZDNhMWI5NmUzNWYwNTM4ZDVhMTZiMTZiMDk2ODkyNTVlODM3MjE4ZjNlMjk4ZGJlZDcwN2MzODAxMWIifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-17T13:57:20.517Z"
+  }
+}

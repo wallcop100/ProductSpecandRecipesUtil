@@ -1,0 +1,332 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:95e02b636ad0e31888ca7d84fa88ed4d68be7efc2b98d72bd1764d9b7695c1ae",
+  "claims": [
+    {
+      "id": "claim_c4eb986a4acd41479de566189e182dc8",
+      "statement": "The app defines six mutually exclusive screens: FolderSetupScreen, BuilderScreen, TemplateEditorScreen, ProductSpecScreen, ProductCodeImportScreen, and ConnectorsScreen, managed by App.jsx with centralized navigateTo() routing.",
+      "evidence": [
+        {
+          "resource": "repo://src/App.jsx#L106-L170",
+          "version": "repo-lines-v1:sha256:91df85acef5212a70755fb77a456f9927c98c789f205b574ca1102a142cfce55:eyJzZWxlY3RlZExpbmVDb3VudCI6NjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRiYTVmM2I5MDM4YTZhOTRiODAwYmIwNzEyNzE5ZjIyOThmZGQ1MjY5Yjg0NzkyMWE3NjAxODY1ZGU3MjEzOGEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ3YjhjMTA4NWY5NWExYWZhYmU1ZDE1MmFkNThkYjlkYzI2MzM2YzEyMThlMmI4NDBhZTdhZDgyNmEwZDU3NDgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjMzMGJlNjcwODU0YTllYmE2NThiZGU1ZTZlNTEwZWMyNTYxY2UwYjJiYTY4NDBiMzk2NWRkOGUyNzQwNmVmY2QiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxZTJmZjg1MDM3ZjRjZWJlOTQxZDY5MWZkYjNhNjQzZjg0NjdmNjBkYmZmMWI1YjMwYzkwN2U3NGExMmNlODgifQ"
+        },
+        {
+          "resource": "repo://src/App.jsx#L17-L21",
+          "version": "repo-lines-v1:sha256:145bb379531d32d18201d00304356eb6bcd869bf5e0764ec9ada210570c4380e:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWFmMjJjZjA3MzI1OTJjMjQ3MTQxY2JlNjFlZmExMTAxMjYxMmY1YTMxMjJiOWFmOWJiYWY1MmY1NzI0ZDE5NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTcyYTQyOTM4MmIyZTE0NzE4ZTBlMzdiMDU3MGE4YTE3MDI5OTFmY2Q4NDk4Y2Q4NDA2MGE4YmY0ZjA1MDE3YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOWIyMGQ0OGIzOWRkNWY4ZmIzNTJiOTJkYmNmNmIwNmM4ZTZhMmNkM2EwMDA3YTJiNjRhNGJmZThkMDJkYWU0OCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOGU3ZjUzMWQzNzMyMDgxOTgzMmY3NDk2MjQwMTJhZjIyMzUxYjY3ZGI0ZWQ4MWMyNDA1ZTQ5MmNhMDNlN2NjZCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_b41e914ba9d94b2fa5afe6ad743d95a7",
+      "statement": "Project lifecycle begins at FolderSetupScreen (landing page), calls openProject() to parse Excel workbooks and load store state, then navigates to BuilderScreen for editing or ProductSpecScreen for viewing.",
+      "evidence": [
+        {
+          "resource": "repo://src/App.jsx#L106-L128",
+          "version": "repo-lines-v1:sha256:7c00899ddd39324d4cb318c80bc311d493a9b1fd8907f0ab01baca0670a1d280:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRiYTVmM2I5MDM4YTZhOTRiODAwYmIwNzEyNzE5ZjIyOThmZGQ1MjY5Yjg0NzkyMWE3NjAxODY1ZGU3MjEzOGEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ3YjhjMTA4NWY5NWExYWZhYmU1ZDE1MmFkNThkYjlkYzI2MzM2YzEyMThlMmI4NDBhZTdhZDgyNmEwZDU3NDgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjMzMGJlNjcwODU0YTllYmE2NThiZGU1ZTZlNTEwZWMyNTYxY2UwYjJiYTY4NDBiMzk2NWRkOGUyNzQwNmVmY2QiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdmN2E4NGQ3ZjlkOTQ0OTZmOTE4NGE2NWI4NTM0ODA0MTVjN2EwZjFmOTMwOWJmNmYxOTAxMThkMGI4NjA5N2YifQ"
+        },
+        {
+          "resource": "repo://src/platform/openProject.js#L1-L27",
+          "version": "repo-lines-v1:sha256:74f2756e8c5cd608461376a7b48cb7abd3efe45f44bdf7fd3fe26c7152ea0c98:eyJzZWxlY3RlZExpbmVDb3VudCI6MjcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZiMTdhYzRjZDU0YjMwNmMxZDc3NjFmZjRiODM4NTE3ZGYwNWU2YmJiZWQzM2RjM2RhNzI2YTk0ZWJkOWE5YzUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBjMDRmNGJjYzJhYWNjYjc0ZTg4ZmIwMWM5NDA3Y2IyNDhjNTkyYmMxNjJhNmY5MzI3Mzc0MTY2MmNiYTVjMDEifQ"
+        },
+        {
+          "resource": "repo://src/screens/FolderSetupScreen.jsx#L23-L32",
+          "version": "repo-lines-v1:sha256:3608da16ec2e4ea79ae13cdefe2500c094d34604bf587cee362751dc3b9372f6:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE0ZDEwZmZlYTEzNzY2YTNjMWE2Yzg5Y2QyMWNkYjczYmZmY2UyYzkzMTM1MGY0MThlYmYzNjBhYzhkY2U0MjAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJlNThiMDZkNmUzYzU5MmY0YTU2OWQ1NDMzYzc1ZmIzOTM3MjQ0MjhiZGI3MDY1ZDZiYzdkNTRjNDJhN2Y1ZWQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjlhMDJjZTcyNTQ5ODJjOWU0ZWJkZDcyYWMxM2QyMDAwMDU1Mzk5NzQyOTkxZmRlOTRjZmRjMTlmYThhZGI3NzkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_01acd2323a004700a0aef14f3f8997dd",
+      "statement": "openProject() is the one-shot initialization function that upserts project config, applies restore data, parses three Excel workbooks (DesignDB, Product Spec, Recipes Spec), recovers pending changes, and populates the Zustand store atomically.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/openProject.js#L1-L100",
+          "version": "repo-lines-v1:sha256:d8cee62154a1dabf903c2c20609c9581199b88e7a16bf9004232d5675f80e0b3:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAwLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJlYWYyMmNmMDczMjU5MmMyNDcxNDFjYmU2MWVmYTExMDEyNjEyZjVhMzEyMmI5YWY5YmJhZjUyZjU3MjRkMTk0IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIwY2ZlOWVjMzc1Y2RjZjc4YWU2ZTI0Zjc2NGQ0YjVmMDg4ODY3YWU2MTY4MWIzMDgxNzk1NmY0ZjIwOTBmZjVjIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI1YWFiMDExZTVmODQ0ODYwZmRhOTQ1OGFhMDJmYTAyMTUxODlmOTNhNWIxNzg1YTA4NzFkZTJhYzViMGQyZGZiIn0"
+        }
+      ]
+    },
+    {
+      "id": "claim_07d2a780ca26469f8611e44cdcba488c",
+      "statement": "BuilderScreen implements a three-column layout: left rail (navigation/filter state), centre (ProjectTreeView showing positions or ElementTypeTreeView showing elements), and right drawer (340px palette, forms, validation, templates, connectors).",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/BuilderScreen.jsx#L460-L600",
+          "version": "repo-lines-v1:sha256:99131c215cd8bbf0dd14c6734cf7fdad9b744513bb13985971c3d34d6c1807d8:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQxLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIwMWJhNDcxOWM4MGI2ZmU5MTFiMDkxYTdjMDUxMjRiNjRlZWVjZTk2NGUwOWMwNThlZjhmOTgwNWRhY2E1NDZiIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI2NTU3MWQxYmQzNzdhNWIyZmZlYTY1NjhlNmQyNGEzYTI0MGFjZGIzYTFjOWViNTgzYjEwMzMzMDNlMTNlOTA2IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJiYjRlYzQzZDI4YjA2ODhlZTRlOTM3OWVkZGVlYmJkNTc0NzZkNDdiNjRlZDY3OTg1YzdkNzFmZmQ3MThmY2ZmIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiIwYjY2ZGIyZDY4MjhkYWI2YTNhNzIwNDg0NjhkNmI5MTY1NGZkMTUyOGZkZjA4MjU5YTgzZTRiNjhlZDMxMDgzIn0"
+        },
+        {
+          "resource": "repo://src/screens/BuilderScreen.jsx#L53-L68",
+          "version": "repo-lines-v1:sha256:0d86b517772913fcf5a956defaa1ad7fc52ddc2f12b0f64f7e62a20f1ead02c5:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZiMTdhYzRjZDU0YjMwNmMxZDc3NjFmZjRiODM4NTE3ZGYwNWU2YmJiZWQzM2RjM2RhNzI2YTk0ZWJkOWE5YzUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU3NWJkMTZlMTI3NmI1YTNiZDVlYjQ4OGI1M2Q1Y2VlY2M4ZjQzNTk0NDkxNjg1NWIzOWFlZTI5MDUyNDNkMWYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk1M2JkMDFkYjFmYzIyYTMzZDhhZjUzNzE1MjY3OTIzNTkzMmFjNmJmYjNkNmFlZmY2MTY0ZDAyOTk2MjAwM2YifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_507b65da6fe44f2895fb03b61d03ba3d",
+      "statement": "BuilderScreen's centre column shows one of three views controlled by rootView: 'positions' (ProjectTreeView with scannable position list), 'elements' (ElementTypeTreeView), or 'et-mode' (internal recipe of a selected container ElementType).",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/BuilderScreen.jsx#L335-L361",
+          "version": "repo-lines-v1:sha256:5fe6c16fc5b3bd5ea147a92e4cd2f834b8f2704da3ff2cbedd5c384fd73a5f1e:eyJzZWxlY3RlZExpbmVDb3VudCI6MjcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJiMDFjMmE5NTk4Y2RjOTQzNTlhMDMzNDZiNzFjMWFiYzNhNDhkNTlhMTlhMGUxODdiMDE2NjdhMzRlOTYyYzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ0MmM4NTkyNDNlMTEwZTNhNmY3NjNiODk0MmRiMzc0ZWM0ZjIzZTRhMTQ3OTQ1ZGM4MDg0NzUzYzY1OTQzZWMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhmZDEyNjM5NDlkOTk5OGNiYTUxMzJhZGM4NDA4NWI4N2MxYTQ4NGY4NWUzMmNlMTRjMjEyMmY0MWNlZTBjMWMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI4YjkxOWI5MjRjYmE5NWRhNDllYTExYmJlZTliMTc5YzcwMTliZWRiMDlkOTM5ZjFmNzk4ZDUxNWUzZjRkYTUifQ"
+        },
+        {
+          "resource": "repo://src/screens/BuilderScreen.jsx#L69-L69",
+          "version": "repo-lines-v1:sha256:8738f8fb5d2d95bb821616493d21ae61ad0ca37ca05ae87e923419297bd0cb7b:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODczOGY4ZmI1ZDJkOTViYjgyMTYxNjQ5M2QyMWFlNjFhZDBjYTM3Y2EwNWFlODdlOTIzNDE5Mjk3YmQwY2I3YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiODczOGY4ZmI1ZDJkOTViYjgyMTYxNjQ5M2QyMWFlNjFhZDBjYTM3Y2EwNWFlODdlOTIzNDE5Mjk3YmQwY2I3YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMjE0MTRmNmY3NzE3ZWUwODU2YWExMTAzYTEzMzg1ZjhkN2E4YzI2MWZkZTM0MzVmMzEyMTc0YTJmNzZmYjhjMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzYzNGZiMWUzYjJjMmI1ZDcyODI2MTIxNGE4N2I5ZGUwZGJmOGUxYWQ2YTdjNTFhNGM3MGQ3ZDRlNGQ4NWE1ZiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_408bdad38d5e43afb16e064f60a8f271",
+      "statement": "Recipes are grouped into three sections per position: 'position' (ContextType=PositionType rows), 'dl_internal' (internal rows in non-LIN wrappers), and 'lin_internal' (internal rows in LIN-named wrappers), implemented by getRecipeForPosition().",
+      "evidence": [
+        {
+          "resource": "repo://src/components/RecipeSection.jsx#L21-L37",
+          "version": "repo-lines-v1:sha256:73bf05d3ee83a3e00e9f121df9a6197dbe452b56ceb49bb237aa26e83fd5c303:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZiMTdhYzRjZDU0YjMwNmMxZDc3NjFmZjRiODM4NTE3ZGYwNWU2YmJiZWQzM2RjM2RhNzI2YTk0ZWJkOWE5YzUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjAzMzY1MDk1YTdhNDMyN2Q0OTI1Y2M2MWQ5YTc1NGQ4OTMwODNmN2Y5YTJkNjg2YzQ4MjFkYjc2MGJmMDIxYWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE0ZTdlNDQyY2M4MWE1MjQ2NThmMjQ1MDY4YjA4MDEwNGRjMGY2NjVhMTBhZmY5MzI1NzEzYzU3NTU3YzZjNDgifQ"
+        },
+        {
+          "resource": "repo://src/store/useStore.js#L325-L342",
+          "version": "repo-lines-v1:sha256:276ccfd92eb44dfd2b8a9ba9a40eca775cd5cfefbd65d5c172e5fb2c00ec7b21:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc4NTJjZDUwMDg3OTRjYWU0YWExYjE0ZjczNzAwN2Q1ODJmYjE2ZGZjODM2NDY1MTE4MTY4NzA0ZjE4NzgyOGIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI4MGQ3OWFjYjZlYzMzYjYxZjNkY2RmYzgyYTkyMjRmZTgwYTJiNDA3OGI1OTE2NmE5ODdmZTliZDJiNjUzMWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFjNmY3YmY3NTcyZTUwMmRlNWIzOWM3ZTdkOTM5NjQ2YmRkNmY3NzU3MzdiYmUyNDQxMTA4MzUxZWE1NzBiMzYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_0db2fb899cad424ba4ffe6b7a691e2fe",
+      "statement": "useStore (Zustand) is the single source of truth for all project state, called from every screen for reads and mutations; no prop-drilling is used for state.",
+      "evidence": [
+        {
+          "resource": "repo://src/main.jsx#L10-L16",
+          "version": "repo-lines-v1:sha256:1d504d3c69e9e935402c5be0f592d1838fe5dcfb5eb9fd8092934943256f95b0:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiM2Q4NmY5ZWZlMzkwZTU1Nzk3N2I0YmQ4ZTNjOTg1ZTM0Zjk3NjU2ZjA2MjMzMDcwZjhkNTg4ZGMwYzMzMTE1YyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMGU5MGFjMWY0YWM3MjMxMmQ1YzU5ZTk0NGVmNDA2ZmUxNWQyYzZiOTQyNzE4NjIzODI5M2Q5MTYwNGVmZTVmMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZWU2Yjc2OTk2YWQ5NjI0YmQyYWEzMTQxNmFjMGYyYWU3NzQ0OWI1Y2UxNGY5MWNmY2M4NjljY2I0MGM4OTNkMiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOWMyOWUyMjI0YjVlZmNiNWJhMzU1MGMwZGYyNDVhYmU4NTYxNDhhNTA5MWI5MGM3MzgzNjg2NGYyNjQ3ZTU1YiJ9"
+        },
+        {
+          "resource": "repo://src/store/useStore.js#L1-L6",
+          "version": "repo-lines-v1:sha256:c858802d1841cc24a22c9e01aa869039a19128e6da7570618940bdec062bd6a2:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWFmMjJjZjA3MzI1OTJjMjQ3MTQxY2JlNjFlZmExMTAxMjYxMmY1YTMxMjJiOWFmOWJiYWY1MmY1NzI0ZDE5NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTcyYTQyOTM4MmIyZTE0NzE4ZTBlMzdiMDU3MGE4YTE3MDI5OTFmY2Q4NDk4Y2Q4NDA2MGE4YmY0ZjA1MDE3YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjA0MmRhNWMzMWQzNWE4MTE2Njc4NzVjMjAzYmY4YzM5NDAxMTc5MWQ0MDYzODcyNTAzZjY0MDE4Mzg2NjliMyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_dae7a271420e4dcc81e80678c1bb2361",
+      "statement": "The store owns three workbook datasets: elementTypes (DesignDB catalogue), psRows (Product Spec properties), recipes (Recipes Spec ingredient lists), and positionTypes (all position definitions).",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/openProject.js#L52-L61",
+          "version": "repo-lines-v1:sha256:f7a909563a57d74b8328876eb025efa9d7e83ece2ae2653dbc7b73bf06a3bb8c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEwM2Q3YTk0Yzg1Y2Y4OThmZDgzMmRiMTcwOWY0ZDVmY2NiMmI5YjY5Nzg2NGI4ZTY1Mzk0Njg2MGU0MDcxM2MiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE5NzNmOTMyZTNjYWYyYmMwZDkwYzU2Y2Y0MjkxODg3Yzg0YWE4OTRmZTUxYjRiMDNjZTQ5ZGQyZTUyNjMzOWYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM5OGE2MjBhNGI1NGM5ZDNjYzc2Mzk2MzMyYTc1ZGJkZGUzMzc4NzU4ZDU3YzYwYTc0MGY1YzYxZTQ4YmFkYmUifQ"
+        },
+        {
+          "resource": "repo://src/store/useStore.js#L1-L6",
+          "version": "repo-lines-v1:sha256:c858802d1841cc24a22c9e01aa869039a19128e6da7570618940bdec062bd6a2:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWFmMjJjZjA3MzI1OTJjMjQ3MTQxY2JlNjFlZmExMTAxMjYxMmY1YTMxMjJiOWFmOWJiYWY1MmY1NzI0ZDE5NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTcyYTQyOTM4MmIyZTE0NzE4ZTBlMzdiMDU3MGE4YTE3MDI5OTFmY2Q4NDk4Y2Q4NDA2MGE4YmY0ZjA1MDE3YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjA0MmRhNWMzMWQzNWE4MTE2Njc4NzVjMjAzYmY4YzM5NDAxMTc5MWQ0MDYzODcyNTAzZjY0MDE4Mzg2NjliMyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_eb78cdcad30b420d939b8d1b3b97699b",
+      "statement": "psChanges, rsChanges, and dbChanges are coalesced dirty registries (one entry per row/ref, not per edit event); earliest 'before' baseline is captured when row first becomes dirty, subsequent edits merge into changedFields.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L157-L209",
+          "version": "repo-lines-v1:sha256:59f2a7c62668096815bb19b40d25cce6e385c6d5c1f03201668e1daeb63e3d49:eyJzZWxlY3RlZExpbmVDb3VudCI6NTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUxMDljYzEyZDNiNDY4ZGU3MDFhZTQ4MWE3MDFjMDFjYjNkNDhmNzViMDMwYzYzNzJmMjVhODZlNTEwYjdhNGEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY5OTE5OWU4ZDdkNDU4NmJkM2NjZDJlOWRmY2ZiYTViNWU5MDM1NDc3NTQ5ZTZmNDNiZDE3MWYzYmNlYTRmYmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImMxZjg0ODcyYTA5ZTU5MzIyMWFlZjc3OGVkODEwZWE1MmM4YTAzN2Q5MzZmOTA2MWYxNWE1ODIzMTk0MGMxMTAifQ"
+        },
+        {
+          "resource": "repo://src/store/useStore.js#L80-L87",
+          "version": "repo-lines-v1:sha256:57b502f42f66b7258ff5e8daee5ef46339cea53a035f99e477d445e3a26e1b77:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjI0YzkyNDhjMzJkY2EzMDVmYzFmOTZjNmMyM2RjNjMyMmQ4ODU0Yjk4NWMwYWY4NWJkMWI4Y2U5ZGQ0ODQ1OCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNjZiYTJiNTk5NjczMmU3MTM5MGQzZTBjYzViOWJmZGZlNThhZTNkNmQzODNjZWFhMzI3NGIzNzU5NjU1ZGViZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYmEyYmY0ODAyNTUzZmZiZTZlM2NkOWE5ODFhN2RjZjQyMzY4MTU3NmU1M2U3NjUwMGMxODE3ZTgyZmVkMzMwZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZmQzMTY4NjdmY2I1NmE5NmMwMGI3MzNlODE4MTc0OTNjZmNhYTRmYThiMmYxNTc5ZTgxOTUyZTdhOGQ3MDlhNSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_6e22ee2fdb3d4723a91698dc6b4747f5",
+      "statement": "Undo/redo uses a history stack (past/future arrays) with a maximum of 50 snapshots retained; every store mutation that changes recipes, product spec, or element types records a history snapshot.",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/BuilderScreen.jsx#L80-L81",
+          "version": "repo-lines-v1:sha256:2e39e9d3d64a7257da26808a53dd337e2bce0559a784e821fc7e22900cec76b1:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNzQ3MjIwYTNmMDA2YmEyODFiMmEyODI4ZTUyMTlhY2NmNzIyN2FiYzk2MDliYTRkZWQ1ZWIzZGUyNDRmNDQwMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYWQ5MWE4YTEwZTViN2E5YTRjMTk2NmNiNjg3YzIxMzExMGYwZGMxY2Y3YWE1YjFmNGZjZDBmMjI3ZmIxOThjOCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiN2U4YWQxN2E3MTA1ZjhjYmY4YzQ3OTExNTc2ZjA5NjU0ZDlhNWQ1NTE0MTdjOTNjYWJmNDdlZDQ1MDczMDIwZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMWU3NzI1NTk4NDBhNWFkYTBjZTM2MjM4ZWQ5MTc2MmU5OWYwZjJhM2JjOGYyZjBhOWQ1MzVlM2QzOTJlZTMzNiJ9"
+        },
+        {
+          "resource": "repo://src/store/useStore.js#L53-L54",
+          "version": "repo-lines-v1:sha256:c2af4a314da04e03bdfc71240b2a37db1349debd5e59730e145d9b76e7a719c5:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZGExM2ZiYjJjZDViM2ZlNGVkN2VjMmZmNTZlMTIyMGVlNzkzZGYwYWUwZDhkMjgwYWRmNWY2MmU5OWU0NjU2YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZmJlYWM5OGQ1MmExZjUyNjExNWE3ZWJmY2I2OTllMjZmNWVjMzUzOGU2NjU5ZWEzODFiYjNiYTE3ODk4ZGRiZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYWVhODZkMWU2NjQ3MjA0YjlhMGM3ODE5OTk1YTVlMmY1YjhiNDdkZTFlODlhZTlkOTZkMzY2ZmZlZTg1YjRmMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMWJmYzkxYTQ5ODUwOWFjNjgzYzE0ODllOTIyZDllNTRlZDZmMmFhMDU4NjA1N2I4ZGZhZTUyY2Q2YWI2YmU1YSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_91d5cee5102b471cb90d8c6ff414c612",
+      "statement": "When leaving BuilderScreen, App.jsx calls useStore.getState().leavePosition() to settle the active recipe before transitioning, ensuring no half-edited state lingers across screens.",
+      "evidence": [
+        {
+          "resource": "repo://src/App.jsx#L61-L68",
+          "version": "repo-lines-v1:sha256:db2f0f5c79333c03014dc12c596723e51dd72b5eb2eb48e436bc230a892f1f8a:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYmRjNWM1Yjc0Y2IwNDNhZjk5NDU4Y2MyZTkwMGZhMTBjNDIyZWNkOGQ5YjRhMGU4ZjdjYWM4ZGU5YzFkZTE5ZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjdlNTc4OGQ1ZDlkNzNkMjRhODFkYmMwYTVhNzRiZmE4MmM5YzNiM2FmOTllNTJhZjc5NmU5MGI0NjhhOGEzZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzc4OGY1NzRiMzExOTJkZTQ3NjRlZDU3OWQwZDA5OTkxYjJmYWRkZTM2OGE3MjFkMDhhMGI3MGY0ZGQ4MTBmMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZmI1MjhiODBkZDQyNzJiN2RhNDJhZDZiYmFmMDAxNjZkNTcxOTc4NTQ5ZWU5MTkyNTczZTU4YzdiYTk1ZTllNCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_4ee101666e1344aca760d64ee196390b",
+      "statement": "Deep components (four levels or more, e.g., FormSpecPane) cannot prop-drill navigateTo; instead, they call requestPendingScreen(screen), and App.jsx watches pendingScreen and navigates, decoupling nested components from screen routing.",
+      "evidence": [
+        {
+          "resource": "repo://src/App.jsx#L70-L80",
+          "version": "repo-lines-v1:sha256:6d95d54266f8c233f5f490f1506632f8aed1ac9ec0e25003bad6255e62a4b3b3:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJjYzc5YzE0NjA3YjYzYzE1ZjVlNTA5NzMyZDg5YzkzZWExNWY3YWVkNGQyZjcyZGY4MzRhYmUxZTZhMGQ5OGYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE2ODQ4NTZhNWY3MzI5Y2M4NzdjOWUzMzQxNGJhNjdkOWRhYzY3YzdhNzg1YWVjOTk2MGI1OGEzYTg0ZmZlZWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjViM2ZjMDM5YWYwZDgzODQzN2Y3MmUwNDc1Zjk0YmY1ODFkYWVkOTdlMzE5NmYxNDQ3YmVkMDA3ODdiMWMzMmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU4NDI2YTM4ODEzMjE3YTg0NmEzZTFjYmM5YjdiYmRjZmNiZDhmZjE0NjFlNDc4YzQ3ODY1MGU0ZDExYjgzNjUifQ"
+        },
+        {
+          "resource": "repo://src/screens/BuilderScreen.jsx#L73-L74",
+          "version": "repo-lines-v1:sha256:d671127b17431aea2c189c771e4c43cb689b01da3e85a873c73717d38fc6e273:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYjA0NDYyNTNiNWU1OGU3OTYxM2U4ZTViMDExMWUxMjZhZTJlZWM3NDEzYjRhMjgwZTAyYjM4MWM4NzYxNTE5ZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZmQyMDFmZTkxNzczZjdhNDg5N2Q2OWI1NjczYjc3MjE5ZGY4N2FjZDVjNTc0ZDY4ODc3NTEwZTgxMjJlYzViOSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMzYzNGZiMWUzYjJjMmI1ZDcyODI2MTIxNGE4N2I5ZGUwZGJmOGUxYWQ2YTdjNTFhNGM3MGQ3ZDRlNGQ4NWE1ZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMDE0N2VkNmQ5ZGIwM2M1MTRiYzRkMmM3MDhjYjk5YmYzNjJlNTRkMGMyOTA1NmE0YTYwNWJlNzIwMTJkYTkwZiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_15ae81a0001f485f9e451d8e7d68fe47",
+      "statement": "Product Code Import can loop back to BuilderScreen for position-by-position review via importLoop state; stepping through positions calls onNextFromImport() to advance to the next unreviewed position.",
+      "evidence": [
+        {
+          "resource": "repo://src/App.jsx#L124-L126",
+          "version": "repo-lines-v1:sha256:df665aff9a2ca582b76e9a4fd6d145fdf1ee63a44a22b188361aa62a57904bca:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDQwOTg0ZDEzYWU1MTJlZGMwNDI5ZGI5MDk1NThlMWJmYmE4NDYxOGRmZTNmMzBjNDBkNmE4OTFhMjlkOWZhNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDYyMWQzMGQwZjkxNjE1ZjFlZjA5YzI2NTMwZTI1ZjVhMzc1N2E1ZjI4Nzg3YjA4NGY0ZWVmN2M1NjMwZWQ3MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOGRmYTU5M2RmOGFmYjZiNTMwODhiN2I0ZGEzNTQ4ZTdiODllMGVmMGZjNDIyNzIzMTY4MzFmYWIxOTdiZmYzZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOWY5Y2RlMzQ0ZjYyMjZhOTlmNzBmNjNjOTBhZjEzZjg4NGZjNTA1NWEzMDkzYWZkZmUyNTk2ZGJjMjNlYWViNiJ9"
+        },
+        {
+          "resource": "repo://src/App.jsx#L147-L155",
+          "version": "repo-lines-v1:sha256:9a8d4602c846763e5fadef111041ff8f6524c42507a30552a935024518e88ecb:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTdhYTViYjM5NDQ5NGNhNzZhYjI2NWI5MjQxNTMzYzEzMTNkOGMwNzlkMjJiMzhhMGVlMzFkNjUzZTAyMWQ1MCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDdiOGMxMDg1Zjk1YTFhZmFiZTVkMTUyYWQ1OGRiOWRjMjYzMzZjMTIxOGUyYjg0MGFlN2FkODI2YTBkNTc0OCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYzMzODM2ZjI5YTk1YWFkNjNhNGJkZjgwNWZkMDU5NGI1NjdlNWRlZTlhMDEwNDMwYWYzMjFiYjU1NTE4YzBjOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZmQ0MTgxNDY0MGM3MjQ5YmJmMWY3MjgyNzJjYzNiNGI0OTNmMDE4Y2Y4MWFlNDAwMDYxZWVlMTkwOGEzY2Y2NyJ9"
+        },
+        {
+          "resource": "repo://src/App.jsx#L31-L32",
+          "version": "repo-lines-v1:sha256:42076c654b76ce5897bf43f80ee1b71b42918c7dafcea8f5fad1bbb63495ef34:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZmJmNmIwZDhiZDcwN2IwMWRjNGJlYWQwOGE2YThjMTM5YmM2Y2I0NzFjMGU5NThkYzk4NmJkZGI4OGQwZDBlNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZDM2MjZlOTY4OThkYWJhMzM5YjE1ODc2Yzg5Y2FkNWRiYjhhNTNkN2NmZTM2NTc0NTdhYTk5ZDdmOTQyMDhlYSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMWZiYjRlZTViMzMyMTRjODEzN2Y0MjBiZTE2OTA4MjQxY2M2OGYzYWQyYjllNGQzYzRmYzZkNGVkM2E2MjhlMiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOWVjMmM0NDU3MDQ2MDM2YTZlZGM0NTc4ZWFmNGU3Njg5NzY3NzdjZTNjYzI0M2ZiYmNhOTBhNGIwYTYwNDViOCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_6c5b263d633a4ada9cf0d7d14737af67",
+      "statement": "Recipe mutations (addRecipeRow, updateRecipeRow, deleteRecipeRow, reorderIngredients, moveIngredientAcrossSections) automatically record history snapshots, coalesce changes into rsChanges, and trigger subscriptions for SQLite persistence.",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/BuilderScreen.jsx#L84-L90",
+          "version": "repo-lines-v1:sha256:19bc68279e7db323d5574319e643ac940704e2fcd9f927173b9a819591a68bed:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNWQxNzM3Y2FiMDgxZjk2NTZjZmRkZDk5OTBkODBmNzQyNzQwZDBmODFlM2QxN2Y5YzNjZjMyYTBmNjQwMzVkZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiODVlZWNmN2FjOTIwYTVhNmFjMDgzM2RjMzdlZjJhMGMxMGY3ZTBjNWRkMGU5MTdjYjc0NzM1Y2M5NDA3Zjk5YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMDBjMGU2M2E4MmJmNjNlZTE1ZmRiYzJkNmU1YWU4ZjQzMmJhMjBjYjE0YmQ4ZTgzYzFkNTBmYmUxNjFkODIyYiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjYyYmZkOTQ4ZjAyMDVlNDMxZDFiNmI0MWRkYmFkODM5OTk4NWE3NmY1MzY3ZGQwMTk0MzdhYzczNTY2NTY3NiJ9"
+        },
+        {
+          "resource": "repo://src/store/useStore.js#L157-L209",
+          "version": "repo-lines-v1:sha256:59f2a7c62668096815bb19b40d25cce6e385c6d5c1f03201668e1daeb63e3d49:eyJzZWxlY3RlZExpbmVDb3VudCI6NTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUxMDljYzEyZDNiNDY4ZGU3MDFhZTQ4MWE3MDFjMDFjYjNkNDhmNzViMDMwYzYzNzJmMjVhODZlNTEwYjdhNGEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY5OTE5OWU4ZDdkNDU4NmJkM2NjZDJlOWRmY2ZiYTViNWU5MDM1NDc3NTQ5ZTZmNDNiZDE3MWYzYmNlYTRmYmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImMxZjg0ODcyYTA5ZTU5MzIyMWFlZjc3OGVkODEwZWE1MmM4YTAzN2Q5MzZmOTA2MWYxNWE1ODIzMTk0MGMxMTAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_ec76a9d6b4054879ae2882eb13ad8990",
+      "statement": "Export generates read-only patch scripts (VBA or Python) that users manually copy into Excel for execution; the app never writes to workbooks directly, preserving user control and auditability.",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/BuilderScreen.jsx#L449-L453",
+          "version": "repo-lines-v1:sha256:31a0bb165c6a2ac4707e9da8089d2555760d0cf79f3034c748cefa6e07b34bd7:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMzBkMGZkNDRlZTFiMjc2MzcyMGJmMTI5MzYzNzVlNWE5MjU2YjgzN2Y4MjBjZGZiZTdkMzkwMjVkY2I0ZjNkYSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjdlNTc4OGQ1ZDlkNzNkMjRhODFkYmMwYTVhNzRiZmE4MmM5YzNiM2FmOTllNTJhZjc5NmU5MGI0NjhhOGEzZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTdkODYzMmU1NGU5Mjk4YWJiOTU4NzI3ZTJkNTE0MDhhYmFmMTM2NjAzNTM3OTEwMTQwYWJmNjViMzBhYjYxMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzk2YjFmMDllMDE0NjMwZjI5ODNjMDkxNzA5YjE4Njk0NWJkZmVhY2MzYzMwNGIxZTQ3OGU3YzljNGMzN2UwOCJ9"
+        },
+        {
+          "resource": "repo://src/screens/BuilderScreen.jsx#L573-L585",
+          "version": "repo-lines-v1:sha256:a13d7669c2c0cda7f4b5f12588cff6d0bbf0c183b7d43ecc6026171c39334023:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUyNWNiZGFmYWUwYzkyOTk2ZWMwZTRmOTYwMTNiN2FjOTYzZjA1ZmRhNWEzY2Y1YWU2YmYxMjM3MmY4YTgxNTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZlM2FhYTRjNDU4NDI4NjZmZTliOTJkMjA5NTE1OWUzNDI5NDNjYTAwYmVhYjM4MzhiMTNjZjY1ZGI4YjUzODAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJiNmYwOWMzYzIzNGVkNzNmNDhjZjExMTU1OGQzM2I3MjM2YjZiYTg2YjhmYzIyNTdhOTJlZmExNTRlYjA0NDQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQxYWY2Y2I2ZjhjMmIwZTg4NjFhMGY5MzY1MzNmODdhMWQ1MjY5NDliZjdkOTNhYjQ1NDJhNjFiODAzZmZkOWEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_9da5fa9bc417467d91ab39ee844a73fd",
+      "statement": "ProductSpecScreen is a split-panel editor: left panel (ElementType browser with families/refs), right panel (spec editor for selected ET properties like manufacturer, product code, component description).",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/ProductSpecScreen.jsx#L16-L23",
+          "version": "repo-lines-v1:sha256:92a7e38c66c72b9aa0b79d692ef366e84ca7849e3345961d367ecfdabbc497d6:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWFmMjJjZjA3MzI1OTJjMjQ3MTQxY2JlNjFlZmExMTAxMjYxMmY1YTMxMjJiOWFmOWJiYWY1MmY1NzI0ZDE5NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMmQ3MTJmNWIwZDVkMmEwMzU5MDM5Y2UzZTkzYWNmY2M3Y2YwMWNiYWU2M2VmZDlkYzRlNWQyNmQ4NGFjMTRmNCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiY2RmMjJkMGM2OWQ5ZDRkNGU2ZDU4YzE0ZGQ4MzJhMzc3ZGRiNGExZWRkODZjZTM1ZjhmNzIwZWI1NmM3ZDhkYyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNTI5NjUzZDRjZmU0OGJjYzIwMTczMmY2Zjc0OTJhZTIzM2MwODFhNDMzNGE0ZTY4OWYyOTBhMGJiYmJmOWJkMyJ9"
+        },
+        {
+          "resource": "repo://src/screens/ProductSpecScreen.jsx#L40-L80",
+          "version": "repo-lines-v1:sha256:92a905ac7fbde905705076ae8c45797572cb703202ec14da094d49851c893690:eyJzZWxlY3RlZExpbmVDb3VudCI6NDEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkYWJjMTkxNGMzNjE5YTFkZGRlYmJhNzYxMTc5ZGY1NmUxMmM0ZmUxZWYzOTMzY2I2ZTc4NTk5Nzg0NDA4MTIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJjNGUzNDhkYzUxMjNiYjc4NzgyOTRkYTQ0ZjAzMzU3NjI5NzZkMTk0ZDU0OGY2ZmQ0MDYxNTY3YzRmMTM4ZmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjMxNzhhNjE0ODZiNjQwMTMwYWIxNzBhYjI4NWI5ODk0NjQxYmZkMzFhZTc2Mzc4MmNmZGU0MjgwZDk2NDQ5NzQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_149c6befcf3542cebf8f0b83bd27ad21",
+      "statement": "ProductCodeImportScreen is a multi-step import wizard that accepts arbitrary spreadsheets, extracts product codes, learns code patterns, and stages captures into psChanges and recipes via position-by-position review or bulk build.",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/ProductCodeImportScreen.jsx#L73-L86",
+          "version": "repo-lines-v1:sha256:5ae4747ef4e9b966f5bc5eb0419133db26a382d1f8767e9ae47e5f09ecc11188:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjlhM2EyNGI1NWFhZWY1NDdjMDVjZjExYjdiMDM2OGFlZjJhYTM4ZjZiY2ExZTJiMzZiZDBiMGI4MjU1MDI2YzUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJlOWNiMWRjZWJhNmRmZTM1ZTEwNDNhODRmZjFjMDA0YjM3OTUyM2EzNTUyNzM4MmZhYmYzOGQ1MDExM2I2YmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjljY2JjZTNlOWYyOGIwOTk1YjlhZGE1YTNkZmJlNWY3MjljMWE3ZTEzZmJkNDBjMjhjYWU0MTNhYjRlMzhhMWIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d6f6f55fbc9b4ef5bbbac76a87d97032",
+      "statement": "ConnectorsScreen manages virtual element type collections with a coverage matrix (positions × collections) and detail panel for editing collection membership, rules, and applicability tags.",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/ConnectorsScreen.jsx#L19-L26",
+          "version": "repo-lines-v1:sha256:515806ce19873658aa12b728328c40a8ac4c3cade704e136b63ab5ead555219f:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWFmMjJjZjA3MzI1OTJjMjQ3MTQxY2JlNjFlZmExMTAxMjYxMmY1YTMxMjJiOWFmOWJiYWY1MmY1NzI0ZDE5NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTA4MTlmM2EzMzljNGM3ZTljYmQzOGM1MDhmMzkwZTRhMGY3MGVjMjg0Zjk0MDJhNTAyNzdkNDQ4YjI0NzZjYiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYWIxMDYzNjY4MDk4OWYzOTk3MjVkMTk3MjkxNGRiOTU4MTIzMDhlMjUyYzcyZjExOGVjZTRkY2Q1ZjIxZTY0MiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYzgzNDBkOGU4OTIyOWMwNWE5NjgzMmYxZDhlZTczZDY4NmNkMGUwZjUwMWZkNDZjMzNiNTQwNzg2ZDk4NjBmYSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_f58354507a96451abe318fa2bb5ecd21",
+      "statement": "TemplateEditorScreen manages both global templates (built-in) and project-scoped templates; each template defines ingredients, applicable tags, and recipe sections, usable in bulk recipe building.",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/TemplateEditorScreen.jsx#L40-L59",
+          "version": "repo-lines-v1:sha256:3a48d23cdb3a5e0bb24d1c780f083a27b33828d19d042791557dfb0d703bc2d0:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFlMzQxMTU3ZDRjOGY3OWNjOTc1YzI4NWY5ZjczNmIxYTk4ZWY0ZDdmYmRlMWJkNjQxM2UyNjQ5YTQ0MWYxM2MiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU1YWJhYTIwODA3ODMyNWQ1ZDM2ZmVhNmU2NGM1ODU3Y2IzODljY2QwOTUzNmI0NDA3MWJiYTBiNDZhOWUyODAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_28d251770fdd4a89b3b87d63504a72fc",
+      "statement": "BuilderScreen's right drawer (340px, persistent toggle state) provides context-aware tabs: Palette (ET search/add), Forms (linked product code import spec), Validation (issues), Readiness (completion checklist), Templates (applicable recipes), Connectors (virtual collections).",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/BuilderScreen.jsx#L164-L170",
+          "version": "repo-lines-v1:sha256:e7a7c358838bcba6171caf7de1415953bedd2a4d5404b522ccf78578eaf31fc7:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTNhZTU3M2M0MzA5NjMxMzYxYjE0MTQwNDdmNjJiODc3ZWZiYmJhOGU2OTg3YTdiOTZmMDNiZWYwOTMxODA3MSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFkZDE2YmVmNjE5NGI5NjYyNzc5OGRlNjViZGQxMTkzZGNiMzgzOWVkOTU5YTQ3ZTQ1MmRhOTgxNzQ5YTRjZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjUyYWE4Y2ExZDlmODdkMDBmZmY5OTE4YjA2NjUwM2NkZmY0NGY3ZTIwYjI1NzZmMWM4MDZjY2M1ZDhkMmJkYyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYzk1ZTM0YjRjYTc5YzUwNTFhZGY2NmM4MjhjYTNhNDdjMTEzZTM3MjI0NjU5NDMxOWNhMTk4Y2ViYmViNWY4ZiJ9"
+        },
+        {
+          "resource": "repo://src/screens/BuilderScreen.jsx#L62-L63",
+          "version": "repo-lines-v1:sha256:4782039f3c26fb145f262a5a9f4ea2d59579385a482f6295ebf6f1308a3676a1:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDZkY2IzZjMxMjc0YmFjZDU4OWQ4MGRlMmQ3Y2U1M2U2OGQwN2M2ZmFlYWRmMGMxM2E4NjRlNzlhMTkyYmJmOCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYzA2Y2I3ZGU0NDBmYWUyZWNiMWQ2MmM5MTE2MGE1ZmU3ODA5ZjUxMmU5ZTljYjYyNzFlNWRkMWJkZTkxZmU4ZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTU5MDFmZDI1Y2VjYmU3ZTVmODU0YTFhOGU4OGVkZjZhYzQ5MDNiMzdhNDBkNjQ2ODliMmYyMzFmYmUyZTUzMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjllMmUwZjFlMmVlMzM5ZjM0MDcxZjI3Y2JhNWRmYWYzOTkyNTc2ODU4ZWMyMjZlOTJlMGQ1NWNlYzcyMTIzMSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_fc30b6ccfa2947f68efd5fe861d02e23",
+      "statement": "Drag-and-drop (dnd-kit) is position-aware: recipe rows can reorder within a section or move between sections of the same position; palette items can drop onto section droppables or slot cards.",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/BuilderScreen.jsx#L380-L447",
+          "version": "repo-lines-v1:sha256:1ed0146cb630c76a4f76cbc6cfba6295f020401d77e235c3c110245102c40b25:eyJzZWxlY3RlZExpbmVDb3VudCI6NjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYxYjhmYzlkNTBkOTJiOWQzZWU4MGU3MDcwODQ1OTI5YzczNDdiZTQ3YTg1NzFiZTllZjY3YTk3MDc2YTNjYTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUwOThiMTMxZWQ1ODIxYjc5NmYxMDVlMmVhZDZmMTIxNDQ0NTRmMjE5ODM3MzI5NmNjZTk5Njg1YzA3MGQ2NWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBhM2IzNjE5YWVmZTlhNDAyMDAyZWEzYWVhNDRjNmEwYWIyZGFmNDNkN2ZiZTIwNGVkMjg0MzQzMGVmYTNkYzYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_0633bad94d7d454da63febd14bf5aad0",
+      "statement": "Internal recipe rows (ContextType=ElementType) are shared: editing a row inside a wrapper updates every position using that wrapper; fork operation copies shared rows to make position-specific variants.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L331-L340",
+          "version": "repo-lines-v1:sha256:abef7052d0817e208f5958eb210853f3b25d6d8f61602ba6b8c906f2f55ce7ca:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhjM2VkYzRiMjE5MmE5MDlkZDUwNDRkM2I0Y2RkMTVlMmE0ZjFlNzRjZTI1MzAyM2ZmZGVhY2QwMTU3OTdkYjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ5OTBlYjZjY2RiMGZlZmNjM2M5YTg4M2M4NzljOTg2NmJlMzM5MzFjYWFhYmYzNjYyZDdhYzRjNDEzZWM4YjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjMwY2ZlMWVlYTU2NjJkODFjZTNkMDI5ZmM1ZDAwZjI3Y2Y0NmRkY2RhYjg3MzYyZmI2MmM0NjE3MGM3ZTk2ZTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZiNTgwZTk2NGY4M2E0NzNmNDNkNDQzODQ2Mjk0OWQ2OGI1NjAwZmRhNzg3ZjE2Mzc0NWQwMGRlODljYmYzNmEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_26403a3752934c3195bf4405ec911b65",
+      "statement": "When updating a recipe row, normalizeRsUpdates() ensures both PascalCase (from Excel) and camelCase (app) field names are written, preventing stale field values from blocking export diff detection.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L115-L135",
+          "version": "repo-lines-v1:sha256:eaf2a5e05575af035058ef6508ec47b31e6fdc4f347a70590cc93c9f52f0364b:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImNjMjJlZmEwNzAyZDM3NGNmZWYxOWRhNDNhODYxMzRkZTI2OTk4NjljNmQ0NGU2YWE3YzEyNzQ5MDNmM2U4MGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZiOGRlMmQ4YjdjYjRmZjhkM2EzOWY0YjdhMTFjYTJjZDA0Y2JlOThhZTM0NzM1MjhlYTRmMmQxZmU1OGQ3MmUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_78cefd9d6df64d75a03c1e492bcc8a2f",
+      "statement": "ErrorBoundary is keyed by screen, so if one screen crashes, the user can navigate to another without reloading the entire app.",
+      "evidence": [
+        {
+          "resource": "repo://src/App.jsx#L102-L172",
+          "version": "repo-lines-v1:sha256:c5b82cc0f8484b87c47ac42c9d574d65fa84e051de56830e9efa3519cc6b9471:eyJzZWxlY3RlZExpbmVDb3VudCI6NzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVmNDc3MzNiOWY5NjQwMDZlMTA5MGQxZTNmMzEyNDkxZGFiOTFiYWE5NmVmZmJkODhiY2ZkOWZhNjVkZDkxMmEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNhYzA4YTU4ZTZiMGUzYTg4NjFjYjNmZmQzYTgxNjBhODQxNzJhYThjNGUwYjQ1MmY5ZTgyN2VkYTQxYjZkZTIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA5ODNiMjg5ZTgwNTA2NzY3M2FkYjJlN2U0MDUwZWRiNzY3YWZmNTViZGQ3ZjgyMzc4MWVlZjZmMmRjM2Q4NDgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImYzYjhhNmIzMjdiNWVjZDUyMTM5ODIwZGQyOWJlYmViMjM4NWM1MGJmZTNlODMwNDU5ZDNlMTRkZGJhN2I5OGEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_a05c0250670b400a9bb0366e1308e72f",
+      "statement": "FolderSetupScreen is the only entry point to the app; it lists known projects and is the sole way to pick a folder and load a project into the builder.",
+      "evidence": [
+        {
+          "resource": "repo://src/App.jsx#L106-L108",
+          "version": "repo-lines-v1:sha256:4c444748e5f154162f4487e629dadbcce61ea0aea21d4e032be13abd3061a978:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNGJhNWYzYjkwMzhhNmE5NGI4MDBiYjA3MTI3MTlmMjI5OGZkZDUyNjliODQ3OTIxYTc2MDE4NjVkZTcyMTM4YSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDdiOGMxMDg1Zjk1YTFhZmFiZTVkMTUyYWQ1OGRiOWRjMjYzMzZjMTIxOGUyYjg0MGFlN2FkODI2YTBkNTc0OCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMzMwYmU2NzA4NTRhOWViYTY1OGJkZTVlNmU1MTBlYzI1NjFjZTBiMmJhNjg0MGIzOTY1ZGQ4ZTI3NDA2ZWZjZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYzkxYTgzZjI4MzkyMzBjMjZhN2I5YzhhMDZlNjI0Yjk1MjI5ODc2MDdjMGNlNjRmY2M3ZjA1NzZiZTE4YTEyNiJ9"
+        },
+        {
+          "resource": "repo://src/screens/FolderSetupScreen.jsx#L22-L32",
+          "version": "repo-lines-v1:sha256:1ec7194205b8b1345a6550f3f7689e63745d0dc88992693cdc0c27b98e6b4674:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjI0MGVhOGYzNDNiZTFmNTY0OWRkZGVlZjQ1MThjY2NmYjk1ODFlNmVmZGQzNjdiNTMzYzdlY2FlNzNkNTlkZDAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjlhMDJjZTcyNTQ5ODJjOWU0ZWJkZDcyYWMxM2QyMDAwMDU1Mzk5NzQyOTkxZmRlOTRjZmRjMTlmYThhZGI3NzkifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-17T13:57:20.517Z"
+  }
+}

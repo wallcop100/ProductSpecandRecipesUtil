@@ -1,0 +1,228 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:4e44586d81cfd3474143b139fdb51b755275375eb428915d223764c5aed42090",
+  "claims": [
+    {
+      "id": "claim_3143ee962c16458fbd7cc83f6f91dcd2",
+      "statement": "A recipe pattern's kind is determined by three independent dimensions: wrapper type (DL/LIN/PS/TRACK/TRACKPS), driver location (LOCAL/REMOTE/INTEGRAL/NONE), and environment (EXT/INT based on position family). These dimensions index all recipe patterns and precedent lookups.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/recipePatterns.js#L110-L111",
+          "version": "repo-lines-v1:sha256:407ba9590e79bfd5e4e1bfa6279a8b166a37e0411dd6d20101fd72e77402da40:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOWEyNjA4ZjczYmQ4MWJmZDAwZjI3ZjEyNmNmMzA5ZWYxZDRkYTBmOGZjYzQ4YTA5MTFkZjAwMWJjN2JmYmVjYSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYmNlZmJiZDAxNDc2ZWZiNjJhY2FiMTg4NmMwNjExZjM5MDA1ODNjOTAyNDllNDU3MjYxZjZlNDFlOTFmMDNhMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYjc4OTdlMGE5Y2NjNjAwMzM0NzFiOGUzZGI3ZmQzYmFkMzVmMTRhZWM3NGExNTNjMzI2ZmE1MDg4YjFjYzZmYiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMmEyZDJkMzIzNzZjMzEyYmQxMGM5MGU4NGZlZjM4NmEyMWU3NTIyNzYwYjU2ZDJhZDBmZDMxOTBjYTNlOGJlNSJ9"
+        },
+        {
+          "resource": "repo://src/utils/recipePatterns.js#L16-L19",
+          "version": "repo-lines-v1:sha256:6af734ee67c5723e05424d2b933f56069c470d91d43672f6e52495d75132c3b7:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWQzODUwMmY1YWQxNDcyMWVmY2I3ZTBiZDkyMWMyNWRiN2MyMjg4NDIxMDllYzY5M2NhZjE2YTc1MDc5MTFmNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDVhY2MyZDJiMDI3ZTE3MWIzNTlmMTgzNDljYzA1MDZkYmRkNjNiZWYyZjliZTk2Zjk3NzU4MmNhOTlkODU3NyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNmZiZDAxMDcxZjRlYzM2NzFmY2YzOWZlODUyZWQzMDI1ODBiMWNlNjU2OTdjOTIyM2QwMGQwZjliNWNmZjIxNCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjBhZWU1ZTQ1ODg4Mjk3M2QwMmZjY2I4ZmQwY2YzYjFjMzE4ZjM5ZjdiZTFhYTZmNTcxODYwZDY5NGI0NTQyNyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_a892834c132a4cc5b38858ed311ebdd8",
+      "statement": "Patterns are harvested from recipes using harvestPatterns(), which groups recipes by kind, extracts design elements and ingredients, and tallies each role's frequency across positions of that kind. Patterns are read-only; the only way to change them is to build and save new recipes.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/recipePatterns.js#L96-L142",
+          "version": "repo-lines-v1:sha256:a1953c2cdfb29d9b3ffb3d06020974b2512bc03a1e18a7ddc61c07c960a6630b:eyJzZWxlY3RlZExpbmVDb3VudCI6NDcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc0MjRhYWU2ZGFlNWFiMDE0M2UwNDc1YTkyNjI5ZmMwNjFlZTdhYTk0MGE0MTVlMzBhYWE3YmE1M2NmZjliY2QiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIyMzUyNTg5YzM0ZDNjNjA2ODU5MzFiNmVjYzRkNTA5OTFhN2M1NmM4ZmJhMjg5NDExNDY1NzY5MDI3MmNhYzMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVhNTI2ZjI5ZTU1MDRjNzVmMGJjNWUyZTkwY2Q2OTZmN2IxZmI1MTc4NTc0NTdkOTRmNmJhMDY5MDcwNjAxYmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE2ZTBjNDlkZTQxOGJkOTc3NWFmZjQ4YTAwYWI0NTU1NzRmMzVjZTlmMmI4MDM4NGJkODE5ODZlMDliZTlmZjEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_46149efc3d4849d687a18b5709cd0089",
+      "statement": "Recipe proposal looks up patterns in fixed precedence order: this project first, then projects opened before (style library), then other projects via companion, then finished projects shipped with the app. The first source with patterns for a given kind wins.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/recipePatterns.js#L7-L13",
+          "version": "repo-lines-v1:sha256:724cc1e2bdc74637c20be05483238f8cba8b81c38a2cd19415743e71a4cfb6e6:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjc3MDg1MjQ2MDY4ODczM2E4NDhmNDVkM2IxMGQ0ZmViNzczYzMwMWIzY2Y1ZGFjMWI3NGMxNjVkOGEyN2NkYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjBiNDE3ZWQ3ZGY0MjQ2NDI3NWJiNDU1OGE4ZmVlYzM5OTkyMGQ3NGJlMTdjZWJkM2JiZWIwYzJkM2QzOGVhYiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiN2JiMzE1ODk2YTcyYjc3NTNjNjVkNjhhNjQ3Y2U3YjRkODQ4NzNjZmE2OGE3ZTNkMGViY2ExYmIyNzdmY2JkMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNmI5NGVmMWRiZTM2NzM2MjY5NDNiZjRhMWEwZTA3YjA3ZTJkMzFhY2UxYzU2OWYyYTk0Y2U1ZGU5ZWJkYmU0OSJ9"
+        },
+        {
+          "resource": "repo://src/utils/recipeProposal.js#L42-L50",
+          "version": "repo-lines-v1:sha256:fd8cef214f0e458a81b865a282dfef39dc85c89986a51717dd4d7b5e83f2e1e6:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDEyZjlhNWU2ZGExZDFiMTVlNzdkZTRhNGFkZGE3OWI0NDAxOWM0NmM0ZWE4ZDYyZWU0OWQ1NGYzYzg4YjY5YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMzg0YjY3NWE5OGJmNzU4OGNlZDM1OTRiM2QyZWQxMjRlZDY1ZTk1OWNiMTI4NjVmZWM2MjUzMjljNTg3MDdlMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMDhmOWU5ZDYwYTYxN2MwYWMxZTRlODdkYzE3ZDMzMWM0ODYzOGZkNjYwMDQ1NDhiNjQxZGMzYmQ4YjljNTVlYSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_021a489079d64f4fa00aca725acdcc20",
+      "statement": "proposeRecipe() constructs a first-draft recipe by: (1) determining kind from driver location and position family, (2) inferring wrapper from precedent, (3) looking up pattern roles, (4) placing Form products in their standard slots, (5) suggesting missing parts from this project or precedent, and (6) marking suggested vs. certain parts.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/recipeProposal.js#L135-L256",
+          "version": "repo-lines-v1:sha256:1b5ae08d722dfdb1fd7bc8d5cf9d6acee8f1a7b327b170a148a32a68bb7f57f7:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIyLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI4NjBkZmEwNjRlNDBiMDk5ZjcyYWMzMjc4NjEzYmMyZDBkZmM2ZWZlYzkwYTBjMDY2NWY3NTM4MTg3YmNkNTMwIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJkZGVlMjExMzY2ODEwMDZhODM3YTIyOWIxZTE5ZjQ2ZjVkYjAzNWFjYzIxNDFmNDE1YjJiOWY1MTU1MzM2MDEzIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI2ZGIwNjc1MGE0NTU0NWI0ODZhM2FkNTM2ZTIzMDI1NDcxOTk4OTEzNjkwNmRhYTUxYTExMTljZTNjNDdmYTgyIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI0NjdiNTdlM2U0NDUwYjhmYzQyYTNlNmVmMmNhOGMzNTgwM2ZmYzBiZGY2NTk3NjE2OWYxNDc5ZTRiOWNiOTUyIn0"
+        }
+      ]
+    },
+    {
+      "id": "claim_62bc297e5eb64b68b5968e3af6455b86",
+      "statement": "pickPart() searches for a role in this order: (1) same kind in this project, (2) any position in this project, (3) project ElementTypes, (4) style library exemplars, (5) empty/missing. Drivers are special: only proposed if another position uses the exact same fitting.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/recipeProposal.js#L69-L107",
+          "version": "repo-lines-v1:sha256:4520327237f66bf8b9a214db5b2edfe125f94a6d94712ca25913226e15f9b041:eyJzZWxlY3RlZExpbmVDb3VudCI6MzksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVkNWU3YTkzMDBmMTM0NmEwMzk4NmRkZDhmNGVhZjFkYTA0YmQ4Y2JkNDMwZjMwNTM2ZjgxMjM4NmZlZDMxYjgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBjODI3NmU4ZjUxZTBkY2Q0ZmI2MzM5OTNkM2Y2MmVkNWU2NTg4ZjY1YmE2NmZkNmZiMWZjZTI2NzU3MjMzNzMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ3ZmVhMmZlOWE1MDkxZDM5ODM3YzMyYTExYzBmNjM1N2Q4ZWUxZDJhNjgzZDg2MTJjMTQ2YTVhODMyZDljMTQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_2ca0730694454a818e7adc609d7b64ba",
+      "statement": "Wrappers are shared among positions of the same kind when they contain exactly the same internal ElementType refs. A wrapper that would be unique to one position is marked as 'new wrapper' and is never reused. Shared wrappers come from resolveWrapper() and persist across the project.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/recipeProposal.js#L253-L254",
+          "version": "repo-lines-v1:sha256:25e9377b2f57147c08a851b5b05858b263624cbdd4ea9867cd8fdc1275b81461:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOTc2MzJjZjZjYWFmMjYzMGI0YTE2Y2VhZjNlYzAxNzFlZjlmOTVhNzYxYjAwZmFlYTc3YmIyYjRhNTQ3YmEyYSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDVjN2FmNTg3YTg1ZjQyNzBlNzgzZTBiZTJlYTJmNGVhMjg2MThlNGVkNTI2M2YzMTA1ZTNhZTQ0N2E2Zjk2OSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTdkODYzMmU1NGU5Mjk4YWJiOTU4NzI3ZTJkNTE0MDhhYmFmMTM2NjAzNTM3OTEwMTQwYWJmNjViMzBhYjYxMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOTE0MjZhYWRkMzMwNDcyMjMxOWEyYjU3YTVkZTFhY2UwNzk5MTQzZWM0YjFhZDlkMzc4OGRjZTcyYzNiZjI4MSJ9"
+        },
+        {
+          "resource": "repo://src/utils/recipeProposal.js#L260-L270",
+          "version": "repo-lines-v1:sha256:92efff88f8d0145a3cc8b87999218f76759264e53dba745149f115db302bc650:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBmZDZhNThhMTlkMGU0YTk0MzYzOWZkNjk0YTk2MmYyNmIwMTcwODJlYjYyZTFhMzAyZTVjMGYwNzk0M2YyYWUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ2N2I1N2UzZTQ0NTBiOGZjNDJhM2U2ZWYyY2E4YzM1ODAzZmZjMGJkZjY1OTc2MTY5ZjE0NzllNGI5Y2I5NTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgwOTYzODU0MDUzOWEyMzBhNzk4YjdjMWMyNDhkM2YxNDRlZTM5NWFkY2FkYTdkOTBlNDk4ODE0ZDU0NjNmYjcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_04e75116e4b34b738a8ab52c452b482b",
+      "statement": "Exemplars are harvested from ElementTypes that have both a family and a Product Spec assignment (maker + code). Each exemplar records maker, code, family, ref, name, and description. Exemplars are shared across projects via the style library and optional companion server.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/learning.js#L85-L90",
+          "version": "repo-lines-v1:sha256:d1824d430f486d0e77d9f12a6e7d3a78ecd8610cab67fced1fb30d48f38afbac:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTYxMTQ1ZDBlNTQ0MGQ2OWZhMjRlMWVlZWI5NDQ4YzRhYWQ2Zjc5N2QxYzI2YTdiNjljODBjZTNkNmUwZmMwMSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDY3MTJhMjViN2NlMDBiMThhNTg5MzA3NzExMjg2N2Y5ZDcwN2Q5N2EwYzJlYmMyMzAzZmUwYmVjN2EzNTU2OCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNDEyZjgxZDJhZGQxOWM0ODAwNTEwYzM3YWE0Y2JmYTlmMjE2ZTQ3Njg5YTliYmE1YTllMWE3MDE2ZWZmMjE0ZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMDQ4MjhjYjRhYzVjNGRkMzMzMGI3MTFmNzFjMDFmYjQ5ZWNmZDBlYmY1NDM4NmZkYjNkMmMyZmIxN2I0ZTc2ZCJ9"
+        },
+        {
+          "resource": "repo://src/utils/styleLibrary.js#L46-L69",
+          "version": "repo-lines-v1:sha256:9bf8b38d930ec2aa7faec77a05a0788cae805258cd8a4fdb6e006bea56ca0f00:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBhZDg2NDgzZTYyMGY2Nzk3NGI0YzcwMWI5OTUwNjFlYTI4YmU2NjI3ZjUwY2M3NjEzN2M3NmYxM2U0YzRiOTciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk0MzkxOTBiOTBlNTUzNTg3MDdjZWMyOGVhOGE0YzRmZTEzZGI4MTY3YmViMGYwODY1ZTA2MjEyY2UyMjJlMjciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjkyMjFhMGJhNmRjNDc3MTc5YzkzMWNlZGRhZjRmMDViYzIwMzMwNmI0MDVmNDIxZWJiZjFiOWRiNjJiYWFmMDcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_f901bafcef1142db912f0edfc5dc276f",
+      "statement": "When importing a new product code, styleFor() finds nearest exemplars (same maker, shared code stem ≥4 chars), extracts their ref shape, and carries the middle segment to the new code, mapping code-derived parts (e.g., '260' → '350'). Text-derived parts are dropped if the new product's name/description doesn't mention them.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/styleLibrary.js#L117-L150",
+          "version": "repo-lines-v1:sha256:64fe73e439e65de5bc7885dcd60be7a6aec53451fa3d1347cbc9d837302c9e86:eyJzZWxlY3RlZExpbmVDb3VudCI6MzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEwMGY2OTA4MzY2NWI1OTBlZDdjMWRlYTkzZDg0NDY4MjVlZDVjOWQyOTc5ODFjZWYxMDFjNDU0OGE4Yzc5MjEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI1NGI1NDE2MTFhY2ZkNTBiYWMyYjQxM2ZlMGQzYzc0N2Y5MjgwZjNkNzU1ZjJjYWIwMTIzNzJhMzU4ZGZlYzciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImYyNGQ4MjVjMzU0MjA5MDIzZWViYjIzZDhlNzJlZjU0YTJlYTUxNDczMDJjMTA4ZGJiYmY0YzQxNjA1NWY4MDkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA4N2QzZTVlMWZlY2Y3ZWI2NTAwNTRkNDI3MDgxNDdiZGIwYjUzOWI3MDRjYjYxMDVmZTcxN2Q4NTllY2NmYTcifQ"
+        },
+        {
+          "resource": "repo://src/utils/styleLibrary.js#L186-L220",
+          "version": "repo-lines-v1:sha256:ea8a57d6ad8a537a6e169d2124c167229fecae6a54d830d74f426ff74e0de8bc:eyJzZWxlY3RlZExpbmVDb3VudCI6MzUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY1NmQ1MGIyMDkwOWQzZmYxNDdmNWYzNTUzMDA4MGY0MzUwMWU1MWFkNWNiY2QzOWQ3MDI5ZGQ4MzMzMzdjNjkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM1MDM1NmMzZWI4MjQ3NTdjMDljZjViNmFkNzQ0NzlmNTYzZmNjNTgwOGExNTY5NDc4NzM0MGFlNWM1Njg1NmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_32a315c8539b4a36a51d2d9ddabf5475",
+      "statement": "learning.js watches store changes to elementTypes and psRows. After a 4-second settle period, it harvests exemplars, compares to the previous snapshot, and shares only changed exemplars and assignments with the companion server in merge mode. Unchanged data is not resent.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/learning.js#L114-L122",
+          "version": "repo-lines-v1:sha256:828ef78fb4e56f6826aad0ea865415d0f5ec1a957b5de179af15f0a4da34d29a:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOGQ0ZjRkOTQ3YjFkYzM4M2E2NTM2NzI0N2Q1YTUwMjdiYWFiNjUyMDNiZjlmM2Q5MjA2NjI5ODE5YzQ5NzI1YSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNTBkOTgwZGRiYjg1MjcwMDU2ZWE2ZTZjOGVhODFiNzQ3Nzk2YzQ4MmI2OTEyZTVhOTBkYzI4Y2UxYWU3ZTVhYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiY2RjYmUwMzZlNzBmZGZmOGU3MDZjMTgzOTUyY2NiZjRlMjVkZDBlYWM4ZjRjY2ZkYTk5YTBiNTNkNjFhMjkyZSJ9"
+        },
+        {
+          "resource": "repo://src/platform/learning.js#L94-L112",
+          "version": "repo-lines-v1:sha256:fd87778f2a47ce58210f99cd54404f6a0907d3711805c1dd9567ff0cba73b051:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjViNWQ4MjYzYzZjOTNlNmFhMWE4OWFiZjljYjI3YjVkMjNkMWU2NGE4NjA2ZGEyOTBjMTE3MjQ3NDZhYmU1YmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA0ODI4Y2I0YWM1YzRkZDMzMzBiNzExZjcxYzAxZmI0OWVjZmQwZWJmNTQzODZmZGIzZDJjMmZiMTdiNGU3NmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJhMWFiNWNlMmUzNzczNGIxZjMwM2YyMDIzNTgzYjFlYjlhMWQwNjNkYmEwN2VhNmNjOWRjZDczOTgxMDg0NDUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_69f3cccfb1484da5b2f6cfb8adc3b075",
+      "statement": "Recipe styles and connector templates use rules to determine which positions they apply to. Rules evaluate against position records containing DesignDB columns, position family, tags, Form fields, and recipe contents. When multiple rules match, the most specific rule wins, with specificity computed from how much of the project each condition rules out.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/recipeStyles.js#L1-L19",
+          "version": "repo-lines-v1:sha256:ed81d053c64366cab160dcb854a5a8c6755b30ac08f948e81c15ab6f4ab7fe32:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ4YmQ2ZjRlYjcyYWFhZGI0NTVhMGU1NzdhNTYwYzY1NGRmZWI5OTNjYzIyYTE5NDFhODA4YmQ5OTQ4ZTM3ZWIifQ"
+        },
+        {
+          "resource": "repo://src/utils/templateRules.js#L69-L112",
+          "version": "repo-lines-v1:sha256:00d3aeabd09f1ba5450a921345b6936aea676bb7308c9a2c4c61a93954b61580:eyJzZWxlY3RlZExpbmVDb3VudCI6NDQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc4MTU1ZTk4NTM4MjFlOTU2YzdlNWZjODcxZjg5ZWY3YTAwMmY2MDFkMmJiMDc0MWM0YzZlNGEwMDUwMzU3MDUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFjZTM1MWE2Yjc3ZTE3YzQzMDVkMGRiNTI4NGJkZDBjNjljYjZhY2FjM2EzNzZhOTQ5ZWMyZDNmNmIzMDQ2NmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNmZDM0ZjIzMGViNGQzMzJjNDE5ZWUzMDAwODAzYjFkNDk3NTE4YjdkMWRjYzRiNjQxOWM0ODI5YzY0MjJhOWIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_fc5a343a81304c03a2dd09fdd96cb8d4",
+      "statement": "Rule specificity is computed as log₂(total positions / positions matching this condition). For AND rules, condition bits are summed. For OR rules, specificity reflects the union of matched positions. A narrower rule (whose positions all fall within another's) beats it regardless of bit scores.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/templateRules.js#L128-L146",
+          "version": "repo-lines-v1:sha256:bcd60e37191f90468d813c0ee3121cc5fb01cd692c21d6d289b347cc1ef3af47:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFmYjQzOTAzODk3NjAxYzk0MTdhODNiZTBlZTkyNmQxNWFmZjQ4NWY2Mjk4MWUwZTI0M2YzNDRhNThlMzk0NTAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM3OTI5ZTkxZTBmOTljM2U4MjVkZTY5YjQzNWZiNjQ4NGQxYjBhMWRmMmY0NjU2MWFiZjFhMjlmMDQxODhiODgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY4ZmQwMGEyNWI5NDQyNWI0MDBmY2JjOWU3OGE4YzQ3NjJmMGJiNjM1YzcwMzBjMzlmODMwMDE0OGQxMzU5YmUifQ"
+        },
+        {
+          "resource": "repo://src/utils/templateRules.js#L84-L112",
+          "version": "repo-lines-v1:sha256:3a47ae9bc9401bd0f719c1f3b15f8ae627756e2a55f3f85ab80ec3256851b537:eyJzZWxlY3RlZExpbmVDb3VudCI6MjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMxNGE0MmExOGQ3ZDcwOTBhYWQ2YWY0YTI2ODNiNTcwMDA5NGI4MmQ5M2JmODJkNTEyMTc4ZDVkNTVmOTUyZWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhmYjY0OTIzYmRmYmVjOWQ1NWQwM2EyM2NmNDViY2M2NzU1NTBhZjlmYWYzMmFkYTBhZmY3Y2E3YWRkOTlhOWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNmZDM0ZjIzMGViNGQzMzJjNDE5ZWUzMDAwODAzYjFkNDk3NTE4YjdkMWRjYzRiNjQxOWM0ODI5YzY0MjJhOWIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_3d930424321b4e96b3af90ab9631141b",
+      "statement": "SaveTemplateModal allows users to save a position's recipe as a template by: (1) building and confirming the recipe, (2) choosing a name and scope, (3) unticking rows that should not travel, and (4) optionally adding tags. Wrappers are marked to be created new each time; Form products are marked as slots to be swapped.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/SaveTemplateModal.jsx#L1-L80",
+          "version": "repo-lines-v1:sha256:edab5e7cd111bcab9b88ad856b482d2715f7e02af847071ce162bb727e509bd0:eyJzZWxlY3RlZExpbmVDb3VudCI6ODAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY4OTgyZGYxOTM1YjA0ZTYzMWNiYmU1NzA0ZTBiZmFiOTRmOTMzZTY0NTJiMTE0MDViYWQzZWYzOTBiN2Y0N2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwYzFmMTg4ZjE0MmVkN2E4MjQ2ODBiMjA3MTcyYzU1MTliYzYxNGE0OGZkYTdjZjE2N2VkYjhkZGY3OTk1NmMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdiYzYxOWVmNzFmZGZjNzkwYWMwM2U4ZDM0ZTU4Y2VlYzllZjY0NjkzYTlhOGE0NjkzNzkyMGU5NTgwMDA1Y2YifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_a009fd8f82384a88a58b6fc04c4acbac",
+      "statement": "Three template types exist: recipe templates (a saved recipe with Form slots and ingredient flags), connector templates (wiring blueprints with rules), and recipe styles (a taught recipe plus a rule, for positions built the same way). All three use rules for position matching.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/recipeStyles.js#L1-L19",
+          "version": "repo-lines-v1:sha256:ed81d053c64366cab160dcb854a5a8c6755b30ac08f948e81c15ab6f4ab7fe32:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ4YmQ2ZjRlYjcyYWFhZGI0NTVhMGU1NzdhNTYwYzY1NGRmZWI5OTNjYzIyYTE5NDFhODA4YmQ5OTQ4ZTM3ZWIifQ"
+        },
+        {
+          "resource": "repo://src/utils/templateRules.js#L1-L21",
+          "version": "repo-lines-v1:sha256:5cd189792045fef198d52428413061bdf591a0d5780a3abb1e81433a8ee3baaf:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIyMmRlOTZiZmViZmVjYTA5NGVjNzAxZGIzMzkzNjgzMDAwZmYwZWJiZjU5NzkzMTUyYTU1ZWFjNTU0ODFiMWUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_a0c1b9a947fb4956ac3c3d316fa1929b",
+      "statement": "The proposal system makes no silent guesses. Every row in a proposed recipe states its source (this project, projects opened before, shipped patterns, or empty). Parts the system cannot vouch for are left empty and flagged for manual confirmation.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/recipeProposal.js#L1-L21",
+          "version": "repo-lines-v1:sha256:a9079d6f7838cd6bc14d91847a6da5a95fa37cc83f3608a38d493469547e19f3:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJmMjQ0YTk1Nzg0NjVkMDViNjgyZTQ0MGQyZmIyYzMzYmM1MjgxNjIxMjYyNjAyNjczNGM2NDAyNTUyYzBjNTQifQ"
+        },
+        {
+          "resource": "repo://src/utils/recipeProposal.js#L210-L214",
+          "version": "repo-lines-v1:sha256:f21cb684bfe0671570b23ee28af5ae5d00b274aa0d59bb1e897720ec09a27b90:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiM2QwMzRjOWU0N2U4ZTAyYzNlNDQ1YmQ3ZjNmMTJhYWU1NzI2NGJiZjY5MzYzMzgzNjA5ZDk5MmEzM2NiNDQ4NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOWU2NDExNTI5YzFmYmQ2ODI1Mjc0MmY0OTAxZTljM2ViODFhN2EyYzVkY2MzNzAyNTg4Y2MxZWM4YjA4ZmIxOSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYmQxODRmZjllZGNjM2MzNmU0NDFjZDAzMjJhOGE2NTZiMTJmZmM2NWFmZjc0MTA5MTU3YjJkMjhiNWY5ZTBlMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZmYxZjI0MzI0N2E4YjM5MWU1MTI3MjVkMWUzM2FmYzBlMGViZTg1MjE2OTE2OGIzZTdhYzg4NGVhZDhiYzI1MiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_32551b9024ce450db0b68fbd153111fe",
+      "statement": "Form products always travel with their role. If a position's Form specifies a TAPE product, that same product ref appears in the next position's recipe when that position's Form product has the TAPE role, regardless of wrapper type. Form products are abstracted in recipe shapes.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/recipeProposal.js#L143-L148",
+          "version": "repo-lines-v1:sha256:8d28dcdb1426d2de12edbfbe196a5e3cf4237c75811ad90c13537f59b1705f95:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjIzZGI0ZGE0NGIxNGJhNGVkODU1NTc0ZDg4OGQ5Mzc2NzBkNmEzNDQyZDBmZmFjNzljNzQyZWYzYzRkNjZkMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTI3NmM5YzM2ZDc0OWYxYzdhZDM1M2U2ZDIyNGZhNGNmYzM2YWI2OGJkOTg3NDc5MDgyZGI2OTU5M2Q5OTk4YSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzVjMjU0NDA3NjM2NTQ2ZDk0ODcxNmFkNmExNzI1YjUxMjVmNmY1Y2Y4NzA4Zjc5YmQ2ZTAyY2QzZjEwZTFlNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjRiNGMxZTY3Y2MwMDIxMjJjNTYyYTY5YTJmMWEyNTIyYjYyOGVkODI1NWYxMDRmNzI1MmI1MTNlMDc1MjdiOSJ9"
+        },
+        {
+          "resource": "repo://src/utils/recipeStyles.js#L81-L99",
+          "version": "repo-lines-v1:sha256:48c4901c8cd05b3dbe0fbe32bf20fa778e3bee1ae5400cda4a9c00e985e17eea:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhlMmNlM2ZkYzMyNTAzNjNhYmFlNzQwMGZlMTUzZWM4NTNiMmIwYTVhZTFlMDEyOTc2MTJiMGI3Y2JiNDMyN2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFjZjZkOWZjODBhNWI3MzY4MTJhNzcyYmU2ZTMwZDY5ZjYxOWRkZDU5NDRiZGY0ZmFiOGU3MzE5YzEwM2UwMzcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_59bb6347ed99405ca240504ddf5b444b",
+      "statement": "Companion server integration is optional and invisible. The app is complete without one; a companion provides shared library, patterns, and project decisions via REST APIs. All companion failures are silent; the app behaves identically when the companion is absent.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/companion.js#L1-L24",
+          "version": "repo-lines-v1:sha256:778aecb387f3dc1f24b4834d33a9923044d00f1a9e790e3ae8174885f1b1b4d5:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA3MWM3YjAwNzg4NzBiMDJlOTZiMDM3OThjMjkzYmJjMjA0ZDNiNzQwZTFkNTlmYzBkZjExMmVkNmRhZjM2MDYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_183595b0a3a94280a5482f38a6153219",
+      "statement": "roleOf(ref, family) determines the semantic role of an ElementType: WRAPPER, DRIVER, FRAME, TAPE, FLEX, PROFILE, CLIP, MOUNT, FIXED, TRACK, PS, ACCESSORY, LEVER, and named connector roles (2PIN-SOCKET, 5PIN-PLUG, etc.). Connectors keep their names (the company names them consistently). Roles determine how parts are placed in recipes.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/recipePatterns.js#L41-L66",
+          "version": "repo-lines-v1:sha256:49ba2933588b7a9b6f88ec6a87e3b92c291df9e89193c4bb67c8b0ee6d6aeee8:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRjNTQ1MmE3ZGY3MWQzOWQ0MzdlZGVmODljM2M4Mjg1ODE0MGYyNDcwZmI0N2M1ODgwMmMzMWIxNWM3MjhkODgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImVhYjA2MzA5NmRhODgzOWM3ZDhiYzNhNjhlMGM3NmViODNmNjcxMDg3YmE3OWIwY2U1NmE0ODcxNDM5MTRkOTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU5Y2FhZDU1M2RhNzczMDBhYTE5ZGNmNmY2ZTlkNDJkNzk2Njk5ZTkwY2RhYjQ0OTc3ZTE1MzdlYTVjNmI5OTgifQ"
+        },
+        {
+          "resource": "repo://src/utils/recipePatterns.js#L68-L69",
+          "version": "repo-lines-v1:sha256:f85ba1d654cc5d5b9c50d70bac1e4df8e038802a75f6c0a92cb95145b36fa06e:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjlkN2JkMmJiMjFhMDNlNjM5YzM1MGJiYTdmYzAxODFmOWQ2Y2VkOWIwYjEyODYxMmEyMDQ1MzkzODMxYjJlZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTkxNDdhZWJhY2YxZGJmMzkyYTRiNjQ5ZjI3ODk4MTA5ZDE5YjU2YWNlZTJhMzVmMWViNWFiMGUzNjdiMmZjMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZWI5ZWE2OTc1ZTkwYzZlMDg2MTVkMDI2NDQxY2FhMTU1NDJkMjAxNjIwYTZkN2JmMGQ5ZWJlN2M1NmNkMWJkMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOGU0NjIxMzBmNTM5NzRjM2QxYzA3NWJmMjE3MTUxNmNmZWUzNGEwMmFmOTcxMmIzNmVjNDIyNGI3NjJmMjEyNyJ9"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-17T13:57:20.517Z"
+  }
+}

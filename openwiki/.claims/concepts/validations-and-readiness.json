@@ -1,0 +1,198 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:c950ebba601a5865690cacdcc9c4061f30bc58e39b416464617423c9730dd7da",
+  "claims": [
+    {
+      "id": "claim_2766b7c90488454091a69f1ebd69b6ec",
+      "statement": "Validation rules in validationRules.js run synchronously and without debounce on every recipe edit. The runValidation() function accepts dbData, psRows, rsRows, positionUI, and options; returns issues with severity, rule code, message, ref, and fixKind.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L3628-L3653",
+          "version": "repo-lines-v1:sha256:262aabe33631771c7cfcbab5f37009d966b3f305c4aa07d97cbc5efca039f766:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI1NDRjMzNlN2RlMTUyMTJiNDAwOTYzZjgwZjU1YTBjNjY5YTA5Y2VlMjY3ZDgzMWY4MjFkMjc1YzBjZmVhY2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjIwMTI2YTlmZWE2NTVhYWJhNmRiZmVlMGFmOTIyNWY5NzNmNzEyM2YzMDQxOWRmYzY0ODVmZDg4OTVlZjk0ZjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU0NDYyZGQ2ZjcxNDc4ZTM0ZTNiZmFjNWRjOGFlOWUyMGEwN2FkNzZkZDU2MDA4ZGFiNGU5MzQ1NTVlMGNmNzMifQ"
+        },
+        {
+          "resource": "repo://src/utils/validationRules.js#L1-L88",
+          "version": "repo-lines-v1:sha256:0fc80aebb4b0978e6f800467d549ed43fba15f52043dbc0b8fdf575b35afdf50:eyJzZWxlY3RlZExpbmVDb3VudCI6ODgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzMDY5NjQyYzgwMDE3MWFhZDEzOTkzNThiYTE2YWE1NDUwOWNkM2RmOTAwZWY0NGNjYjg0YWYxYTM1NWM3ZjMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_4c8f75cb73464852996c72c06f089a9c",
+      "statement": "BLOCKING_RULES in validationTasks.js identifies four rules that prevent correct export: BLANK_RECIPE_CONTAINER, MISSING_IS_DESIGN, DUPLICATE_IS_DESIGN, and ELEMENT_TYPE_NOT_IN_DB. All other issues are advisory and do not stop export.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/validationTasks.js#L35-L40",
+          "version": "repo-lines-v1:sha256:63f166e1989495c46ec90e1993c09264240798996f0237ab23f8e2f9c1e6ef8f:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWE3NjQ4NDM1ZWJkNWY0NGFlYzY3ODE1MTMzNDEwNDE3ZmQ2M2E2ODBiOTEwNTYzOWQwNDI5OWJkYmZlZWE2NyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYTYzYWFlMzlhZDU5ZmFmMzJkM2EwNDU4Yjg5MzQ2ZThlODhlOTFmZGQ0MDQ1NDAzYTg4YTA2N2ViNTYyOTk2MyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMDE1MzZhYzg3NTcwMGFiNzUzYzA2ZmQ0NGI0MTQwZWM1YThkZTU3MmQxNGZkMzkzNTA4NTBlNjM2MTdhNDI4MCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNmIyYzUyODg2OTNkNWZmMTBmMmRhYTAyMjUyNjNhMjIxOGY1NjViYjNkNmVlYzkxZGI3NjFmZTMwMDMzMDNiOCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_7c647e831652420887837c736358ad87",
+      "statement": "Validation enforces six classes of rules: design element rules (IsDesign, row role), quantity/dimension rules (quantity type, dimensional components), product/specification rules (duplicate codes, spec rows), design-to-database alignment (DesignDB master, orphaned internals), position-specific rules (drivers, connectors), and template/structure rules (slots, exterior contexts).",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/validationRules.js#L177-L450",
+          "version": "repo-lines-v1:sha256:9b0a67cc2c1f42bfdac8fe12d9bc87f09552c10162ca3ab1b8ad06addc523d04:eyJzZWxlY3RlZExpbmVDb3VudCI6Mjc0LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI2NmJhMmI1OTk2NzMyZTcxMzkwZDNlMGNjNWI5YmZkZmU1OGFlM2Q2ZDM4M2NlYWEzMjc0YjM3NTk2NTVkZWJlIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJjYjA1MzFjZDU4ZTEwZThiNzg3YmFmZjRjM2QwYzhmY2M1NGI3YzlkZGMzNmZiYjI3OTZjZTFjZGQzODkwNWRjIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI4NzY3OWI4YzVkODg3MzRlMTYwNGQ0NWNmZDJmNzhiY2M4NWY1YTllNzZjNzcwMTJmYWQwZDVjYWE0MjBjYTU2IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI1ZmI4MGI4MjI2OGNiYzA5ODBkYTM1ZjI5NzZmNWFmNGViN2YyZDQzYzA4MmI3MmFmNDA3MTZiMDU4ZDdiNjkyIn0"
+        }
+      ]
+    },
+    {
+      "id": "claim_29d5e2cabbe64ad18cb3f2836cdb7a05",
+      "statement": "Positions and position families can be marked as ignored via toggleIgnorePosition() or toggleIgnorePositionFamily(). Ignored positions drop out of validation scope immediately—their issues are filtered before results are returned. Delegated positions (those whose ExtRef names another position) are also treated as out-of-scope.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ValidationFixModal.jsx#L62-L71",
+          "version": "repo-lines-v1:sha256:f5a29cb52526737a6a79f503caad609898bd6fd0fa26768d414932ebac2280f7:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI0NWRhMGQ0ZjdkM2JlZWZhYTAyMjk4OTEyZTI1ZDk1ZjkxNGZiYWUxZDE5YzAxMDg3MmE0NzE2M2I4ZTg1YzQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjEzZTlhNTc3ZWYzNDYzMTdhNzAyMWQ4NDRlODdhMzYwNTAzODM1YjRiOGY2YzY5NTZhZWYzNWEwN2E3MDgzYmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM1NDIzMWRlMTlkMTcwODlhNDc4OTliNjAyZTVkMjMxNWEzNGNiZWMyNTZkNzM1YTMxNDI2NjBmZWUxMDlkZmMifQ"
+        },
+        {
+          "resource": "repo://src/utils/readiness.js#L47-L73",
+          "version": "repo-lines-v1:sha256:e6d01d0161d8475b49e8f57595769d024bf5b6583e8b9a055ebbff15ab718e58:eyJzZWxlY3RlZExpbmVDb3VudCI6MjcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA3ZjA2MDVmZTkyODg1N2ZlNjFhNjAwYWQ2OTBlYzM5ZjQ1ZmE0N2JiODk4Mzk0MGIwN2MxMzAyYjFhNjYzYmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdhNmRkY2UxMTc2Yzk0MDI0N2U1ZmRlYWRiMmIwMTYwZDJhZGVjZWJmODIwZTJlODNhZjY2NmU5MGNjMmI0NGEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjgwNDdiNjZlZmQxNzQxN2EyNzE0ZDI0MzJhNDlhMWZiYjRlM2Q0NTRlMTZlYWZkMzI2ZTM4NTQ2NTU2OTZiMzUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA4NjQzNjNjMzQ0MGY3NDhhZTUxNjM4MTFkOTg2YWUwYTA2MmQ3MzRiYjE5MzdmNTJmYzU5ZTU0ZGM0ZmEyYzQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_ce1a37d1b38244e1a44bac1543b4a71a",
+      "statement": "readiness() in readiness.js computes project completeness via four independent clauses: (1) every non-ignored position has a recipe, (2) every Form product is placed, (3) nothing blocks export (no blocking issues), (4) the three documents agree (DesignDB, Product Spec, Recipes). Each clause reports done, queued, remaining count, and detail. The project is done when all actionable clauses are done or queued.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/readiness.js#L37-L147",
+          "version": "repo-lines-v1:sha256:8e9f88d78103eec31ab6ae4abd9d81bdab6a44cd3437df3cd7879cd6db07dc1c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTExLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIyNGVkZWViNDZlZDdkNTBlZmE1MTAzZTNiMWU3ZDVlMGYwYjM5NmFkMTQyZWRhZTI0YTg1YzU5NWRhOTkxOTdkIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIyN2U1Nzg4ZDVkOWQ3M2QyNGE4MWRiYzBhNWE3NGJmYTgyYzljM2IzYWY5OWU1MmFmNzk2ZTkwYjQ2OGE4YTNkIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJjNTNmMzc5MWI0MmZhMTg1YjI0ZjMzMzA2ODIzMzAyOTZmMjRlMDIxZTgwZmM0YjU2NDNhMzg2ZDE0MDVhNTcyIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MSwiZm9sbG93aW5nQ29udGV4dEhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIn0"
+        }
+      ]
+    },
+    {
+      "id": "claim_330cce4ff28644c3adf834ee131be8a7",
+      "statement": "A readiness clause is queued when the fix is staged in a change queue (e.g., DesignDB rows in queueMissingDbRows()) pending external action (Excel paste). Queued counts as done on the user's side. Once all clauses are done or queued, readiness.done is true.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/readiness.js#L116-L138",
+          "version": "repo-lines-v1:sha256:5251382d2b4a686428b4dd9cf03c79a81edceb9c6400e57f6ac5193b0d9aed08:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMDNkMmFiMzYyZWNmMmVjZTI4OTNlZTMyOTE3NDRjNTY4OTRjZWY1MDI3Y2MyOTI1NTc3ZDkxYjRlNDcxYzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjFhODQ3OTdlZmIyNTA0Mzc2MTM3ZjQ1NmM1MWQ2MGE0NTlhYTdjYjlhNjA3MDE3OTdmMzAyYmMxNTdmZDlhOTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJkZDUxZmE3OGJlZGY1ODI5MzBhODIyMzYzNTg4ZjRkZmI2MzQ4MGM1MDk4ZDQ5ZDEzZGM0OWVhMGYyMTY4YzgifQ"
+        },
+        {
+          "resource": "repo://src/utils/readiness.js#L14-L17",
+          "version": "repo-lines-v1:sha256:9bd5194b527fe3595996a44decd506a65103af23d25baabd693222caa3212d81:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMThmNTkxOGJkYzZjNDJhZTM5ZmRkMjYyZDRkNGU1YWI3NTA0YTBjMGM1NmVmNjhiNjA3NGI5ZjVkZWNjMDU3MCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTcyYTQyOTM4MmIyZTE0NzE4ZTBlMzdiMDU3MGE4YTE3MDI5OTFmY2Q4NDk4Y2Q4NDA2MGE4YmY0ZjA1MDE3YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTI2MmFiZGJkYjFkZjE5OTM0YTU2ZTVlMTA4OTFhNWY5MzM5ZTkzZWQwMGJhOGQ2MTNhNTY4MTI0Y2E0MzVmOCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNzY4NWJhNTMwNTllZTY3ZWJiNmQ0MWZhZjEyYjExYmE1ODEwYjRjMGJjNzM5MGE4YzY4ZTE3YTc3YjM2ZGYzYSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_2ee7dfa67edf42a1883fae32dc4e35fc",
+      "statement": "PositionValidationBadge renders per-position validation status: green (no issues), yellow (warnings only), red (errors). Hovering shows a sticky popover listing all issues for that position with a clickable link to the position editor. Badge is silent (renders null) when no validation has been run.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/PositionValidationBadge.jsx#L1-L100",
+          "version": "repo-lines-v1:sha256:23f134c05a34f521c6326e991b0feb3c5a147b09827008e1abc71d514006c415:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAwLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJlM2IxYjM2MThlZWZiMWY5ZDA5MWZjZDIxMzc3ZmNiODhhNTc3NDRiYzVkN2E4YWRlZmIxOGMyMWNkOWY3NzkyIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
+        }
+      ]
+    },
+    {
+      "id": "claim_304a82b2215043b181c8c52693bd6857",
+      "statement": "ValidationPanel groups validation issues into actionable tasks via buildTasks(). Each task row shows count, title, optionally a bulk-fix button, and expandable detail of individual items. Tasks are color-coded: red (blocking), yellow (advisory), gray (queued). A headline reports open/blocking/queued counts.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ValidationPanel.jsx#L20-L108",
+          "version": "repo-lines-v1:sha256:cd130a062bfe6b101efdcfdfa341557847e93bbaaaa9c3cdb42c75ef86fec5a2:eyJzZWxlY3RlZExpbmVDb3VudCI6ODksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFhNjQwNzAzODNiOGFkODAwYTk3MDIwNWM5MWMyZTk3NTc4MmI0ZDZlMjFhMjNkOGE0MjRjODIzMTM3MDcyYjYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU0OWM2MmQ0NGM5Mzk1Y2Y0Mjg2ZWFlYWRmNDc5NmNhNDAyN2NiMTdjMzA3YWIzMWUzZGI5NDUyOWVhNzZjZjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFhOTY4MGExNzUxMThjNzZiMGEwYzJhMTEwOWYzNTBlNjRjMTQ2ZTFmNmM2NWM1MDE5NTcyOWZkMTljYTliOWUifQ"
+        },
+        {
+          "resource": "repo://src/utils/validationTasks.js#L60-L170",
+          "version": "repo-lines-v1:sha256:768aa385a6b257c05e23ba15f9a4412b6fbd6c24bd6973d15e946196bc2be741:eyJzZWxlY3RlZExpbmVDb3VudCI6MTExLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJlYWYyMmNmMDczMjU5MmMyNDcxNDFjYmU2MWVmYTExMDEyNjEyZjVhMzEyMmI5YWY5YmJhZjUyZjU3MjRkMTk0IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJmYjU4MGU5NjRmODNhNDczZjQzZDQ0Mzg0NjI5NDlkNjhiNTYwMGZkYTc4N2YxNjM3NDVkMDBkZTg5Y2JmMzZhIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI0YTBhOWQ5NzI0YWY4YWE4YTFmY2QwMjlhZjVhNDc4YTgxZDhmNjRhMmEzNzk0NjE3NTViMWIxNWQ4ZDhjOTdjIn0"
+        }
+      ]
+    },
+    {
+      "id": "claim_8cc7ffcc7a99470d980ff52dcc72749a",
+      "statement": "ValidationFixModal steps through issues one at a time (errors first) with a progress bar. Each issue shows rule code, severity, message, and a 'Go fix' button that navigates to the issue location (position editor or Product Spec) and closes the modal. Recipe issues offer 'no recipe needed' options to mark position or family as ignored, dropping issues instantly.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ValidationFixModal.jsx#L18-L157",
+          "version": "repo-lines-v1:sha256:b4f969dfdeb535fc7e4b5f523316053793682be8a837c663b7f4bdd7ea5a8ef5:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQwLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI2NDlkZTUxNTg0MmRmMmE1NDdmMTM5NjU0MmM4ZWY3ZmVmOGZjYmZiOWFiYzYyYmI5NGQ0MTMyOTY2MzAzZjNmIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJhMjcwMmEwYzc2OGM2OTc0OGUzNzAzNWRkMjU2ZDk5ZjMwMjI5ZWE3OWJiN2E3Y2NjYjkxZWQ4OGQ0YWIzMzI3IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
+        }
+      ]
+    },
+    {
+      "id": "claim_93782f4c60424677a1eebd3ec21ef1c1",
+      "statement": "FormProgressChip displays Form reconciliation progress as 'Form X/Y' showing how many positions are fully reconciled. Hovering shows detail: missing products, pending (waiting for ElementType), orphans. A 'Reconcile' button steps through incomplete positions. The chip is silent (null) when no Form is loaded.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/FormProgressChip.jsx#L24-L85",
+          "version": "repo-lines-v1:sha256:d7a002f1e9607a70918922182cf27f087145450f528172c7c05836e81c1eaa8e:eyJzZWxlY3RlZExpbmVDb3VudCI6NjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk5MDM4N2UwNjE1NWUxNGM0NmY2OTY2MjUzZjNiNWZjNjRjY2FlMDhlNjZiOTgyYjhhY2Y2OWQzMGE4MzRmODMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjliMjc2NWU2M2IwYTQ1ZDVlZDMwNGNjYzA0Y2QxYmMzYTVlNmZjNDYzYmYyZmJjNDQ2MmRkMmI3M2ZmMDJmOWQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_0c3bc3cf21f34ac784ccdd91690ceb27",
+      "statement": "bugReports.js and BugReporter.jsx implement a local bug reporting system. A report carries user note, ID, timestamp, app version, and optional context (project, screen, position, counts, DOM details, click trail, viewport). Reports are stored in localStorage, exported as Markdown, or sent to a server companion API.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/BugReporter.jsx#L1-L100",
+          "version": "repo-lines-v1:sha256:d31d9a858e1b2bcab32401188731347ae752854bc180047e52ff28ac57a94621:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAwLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJlZjM5MDUzODdlOTU4ZjdlOWNmYmQ4MWU0N2I5NWM0ZWVkN2IwYjRhYTNmYzBmZDc5ZTViYWMxY2MzMmE2Y2JkIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJjMzE2OTIxN2U4NGFhNmM1MDIxZDdkMDBmYjkxMGIzOWQ2YmEwMzkzOTI1NGVmZjgxZWM4NDAzYzQ0NzMxY2Q0IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI4ZTFhY2NmNTJlMzVkY2UyZjA2ZWUzOWQ5OTk1MzU0NTc2ZGFhY2E0OGYzYjIyNjQ1OWNkNTFhOWZkNzljYjM0In0"
+        },
+        {
+          "resource": "repo://src/utils/bugReports.js#L91-L142",
+          "version": "repo-lines-v1:sha256:69565131d7ada147f8261fcc5d6dfaeafd69e54b90a0af9fa18dc1c0e075b7d7:eyJzZWxlY3RlZExpbmVDb3VudCI6NTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBmNjQ5Y2IxMzg5OGQwZDhhNzliOTY3Y2EzYzdkYTNmMWQ1YTAzMWRjMTdkMTYyZGM1MzlkMWY1ZDIwNWQ0MDUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhlZDExMTAzZTI3NzYxMGJkMjk2YTQ0NDQ4NmVmNTNhOGYxMDVlYmNmZTAwZDMwMjMzNDJjMDM3ZmNhOWQyNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZiNTgwZTk2NGY4M2E0NzNmNDNkNDQzODQ2Mjk0OWQ2OGI1NjAwZmRhNzg3ZjE2Mzc0NWQwMGRlODljYmYzNmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_e6ce33b0b76f40af87bfeab132b4ffee",
+      "statement": "Users toggle bug mode (red icon), right-click anywhere to open a note at the pointer, optionally enable context capture, and choose to save locally or send. If sending fails, the report is kept locally. The dropdown exports all reports as Markdown.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/BugReporter.jsx#L22-L120",
+          "version": "repo-lines-v1:sha256:f7a1c4caf127b665617509e576eaac95b06981c99044f8f372d6cc6455eb1cc7:eyJzZWxlY3RlZExpbmVDb3VudCI6OTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI0MzBjNmNlMzNkYWE4ZDE1MDhkMTFjNzFjYTBjODZkZjUyNGM2Nzk4NThjYWM1MjZmYjgyMjEzNTU3OTdkZmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYzOTY3MzE1ZjE3NWMxM2EwMjVmYjg3ZTBlYjZhNTNmOTE3YjcxZTI5YjAyNDIwNjVlODA4ZTM1NjZkNTNlOTgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjYwYjg2MDA5YzdjYjdmOThhZWRiOTA3NWZhYmMxNzNmMGRiYzY5NWI0YmI3ODYyNDgwZGM4NzU2NDFhNzFhYWQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d6bd099a34b94d54b2cb933077737b25",
+      "statement": "In validationTasks.js, issues are grouped into tasks by the action that resolves them. Where one action fixes multiple rules on the same object, it is one task (e.g., fillWrapperSpecRows fixes both MISSING_PRODUCT_SPEC_ROW and ELEMENT_TYPE_NOT_IN_DB for wrappers). Advisory issues group by rule; recipe rules group by action.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/validationTasks.js#L1-L26",
+          "version": "repo-lines-v1:sha256:4ed29220573ddfe370e7b37be495f6e92601d9df11ec4d61d8e05152e5432ebc:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM3MDM4M2JmYmU3ZTBlMGI4YTkyNGNmNGU2OGRiZjQ4M2EwMTBjMzIwNGFlN2I3MjVmMjE0MjA2ZmY4NzhiZGMifQ"
+        },
+        {
+          "resource": "repo://src/utils/validationTasks.js#L60-L170",
+          "version": "repo-lines-v1:sha256:768aa385a6b257c05e23ba15f9a4412b6fbd6c24bd6973d15e946196bc2be741:eyJzZWxlY3RlZExpbmVDb3VudCI6MTExLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJlYWYyMmNmMDczMjU5MmMyNDcxNDFjYmU2MWVmYTExMDEyNjEyZjVhMzEyMmI5YWY5YmJhZjUyZjU3MjRkMTk0IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJmYjU4MGU5NjRmODNhNDczZjQzZDQ0Mzg0NjI5NDlkNjhiNTYwMGZkYTc4N2YxNjM3NDVkMDBkZTg5Y2JmMzZhIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI0YTBhOWQ5NzI0YWY4YWE4YTFmY2QwMjlhZjVhNDc4YTgxZDhmNjRhMmEzNzk0NjE3NTViMWIxNWQ4ZDhjOTdjIn0"
+        }
+      ]
+    },
+    {
+      "id": "claim_aadcb2f9e02b4f70ac1be937c2150d96",
+      "statement": "Three bulk-fix actions are available: fillWrapperSpecRows() adds Ideaworks/N/A spec rows for wrapper ETs, queueMissingDbRows() stages missing DesignDB rows for export, fixBlankRowRoles() sets IsContractItem=Y on all rows without IsDesign or IsContractItem. Each mutates store state and triggers re-validation.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ValidationPanel.jsx#L55-L61",
+          "version": "repo-lines-v1:sha256:53a0f78ff9fe7284d7b39ddd78fee4a317e088781a83b45af07a12c125eca16b:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMTNmNmE1ZWM3ZTNiNzMyYTE1YTQyMTkxMDAxYTYxZDQ3MzNiYWUyYWI2ODUwOTZjNGQ3ODYzOGI3MjYzM2I2OCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjdlNTc4OGQ1ZDlkNzNkMjRhODFkYmMwYTVhNzRiZmE4MmM5YzNiM2FmOTllNTJhZjc5NmU5MGI0NjhhOGEzZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTdkODYzMmU1NGU5Mjk4YWJiOTU4NzI3ZTJkNTE0MDhhYmFmMTM2NjAzNTM3OTEwMTQwYWJmNjViMzBhYjYxMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMDJlYTgwMzU5NWExZDgzZjQyODVkMTU1N2NjNjkzZjgzZjg5NmZmOWQ2ZWJlMjBjYTk5MWMwNmM0NTE4ZDBiYyJ9"
+        },
+        {
+          "resource": "repo://src/utils/validationTasks.js#L42-L49",
+          "version": "repo-lines-v1:sha256:b9cf6e39f6055436a816958205d414d93c950055fd3e3da0b5a31769f8e0cd24:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTUxMTljODYyNjM1ZTBjY2Y3OWM0Mjc3YTZmY2U3MTZmNjY1MmZiZTk0ZWI0MGQxM2QwOGVlOTM4ZDYzOTlhNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYzU0NmY1ZWQ0MzJkZjRiMGY0ZTUyNGRhZDU4MGE4MGFlYWFmN2Q2MTY4MzE2NDgzZGRlMTY2YWZlZjNlZWY5MiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZmIxZjUwMWEyMTljMzg2NzMyMDJmYTNhNjM0NzcyOTQwNjI4NDY2Njg2ODlmMzdhM2EzODcxMDg3YTY5ODAwNiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_5e6552d6981e4564ad564611abf37964",
+      "statement": "alignmentGaps() in specAlignment.js enforces two invariants: (1) DesignDB is the master—every ElementType in Product Spec or Recipes must exist in DesignDB, (2) recipe implies spec—every ElementType in Recipes must have a Product Spec row. A catalogue entry used in no recipe needs nothing.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/specAlignment.js#L1-L142",
+          "version": "repo-lines-v1:sha256:6bff9009bf1e8bb4006ef64020c55c7e66a82c626da03d0b688d94e2bfa09c84:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQyLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJlYWYyMmNmMDczMjU5MmMyNDcxNDFjYmU2MWVmYTExMDEyNjEyZjVhMzEyMmI5YWY5YmJhZjUyZjU3MjRkMTk0IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI4NTgwYjc2NTE4ZGFlOTc5ZmFlYmQwMjM2N2EyOTI5MmE1MGQ5NzYwOTIyNTFhMzhhNmNlMzA4ODBiYTQyODI1IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
+        }
+      ]
+    },
+    {
+      "id": "claim_3a9efa69d7cc4a29aa4947402bd906a3",
+      "statement": "connectorGapsForPosition() in collectionStatus.js computes connector template satisfaction with status values: complete (all ingredients present in required quantities/slots), partial (some missing/misplaced/under-quantity), missing (no ingredients), n/a (template does not apply). Gaps are reported as validation warnings.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/collectionStatus.js#L130-L180",
+          "version": "repo-lines-v1:sha256:8f2ed087ee413eceaf37486993625fa2c8f0f4895559efb4639af57cd2cc0cb2:eyJzZWxlY3RlZExpbmVDb3VudCI6NTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg0NWFkMjI0ZGFiYzMwYjVmYjIyZWZlNDlhZTljMDk1ODhmNDEyNmE2ZTgyMGViMTlmZDBiN2Y4MmI1OTE4ZjEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI4MjZmODA3NDViZTJjN2FlOTJiMzFmZjEwNzE2YzdlNDA2NTM5MzE4YmI4Y2YzMzhkYjQwZWEzNjUwMGU4YjEifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-17T13:57:20.517Z"
+  }
+}

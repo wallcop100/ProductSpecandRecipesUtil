@@ -1,0 +1,204 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:db29b41001daa42128f6658efae341a5325e94bac766602e31417440653f55c0",
+  "claims": [
+    {
+      "id": "claim_adccfe199a9e43cb8ed2ad3af287d30b",
+      "statement": "The app implements a unified platform abstraction via window.electronAPI that provides identical API surface across Electron (desktop) and browser (File System Access) execution contexts, enabling the entire React/business logic layer to remain unchanged regardless of deployment.",
+      "evidence": [
+        {
+          "resource": "repo://src/main.jsx#L7-L14",
+          "version": "repo-lines-v1:sha256:99bea500e230cb4970d6401588c4a9d37d9e6fcd3f45ef5453082c2260c127bd:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOTZhNmZmOGJkNDVkM2E0MTI1ODY5ZGI5MjE4N2Y3MzM3NGY5YTQzMzljNTZmOTExYzJkZGFhZGRhY2M5NjE1ZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjU5NTAxYzcxNWIzMjUzOTk4NzAwZmEyZTJlMDA1NGVmMTFlZDA0OTYyZTc1MzEwNzNiZmI3MmJiNGY4ODU3MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYmQ4ODBmNzFmZjAyY2VjZjE1YzIyODZiMmQzZGUzMzFiMDAyMDllY2NiNzZjMWY5NTQ2YmIwZDU4YjJjM2Q5NiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTc0YzRkYzMwNzFiOTEzZmY4OWFhMjhhNDgzNzYxYjA0ZDA5MTIyMGRlYzIwZGMyOGI2MTZhZDYyMmY5ZjRhYyJ9"
+        },
+        {
+          "resource": "repo://src/platform/api.js#L1-L20",
+          "version": "repo-lines-v1:sha256:b75bea8d4182338cfd4d4643c0c0a85e462f6e342297d3136653cb3a8b540022:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQwMmFhYWZhYWM4MzAyMTNmMjdmYWEwNjdjNTIwOTUxMmM4ZmU5Y2U0MTEyMmI4NjI2YWY0YWY2ZDM2YzAxOWQifQ"
+        },
+        {
+          "resource": "repo://src/platform/db.js#L1-L11",
+          "version": "repo-lines-v1:sha256:f2553128f25d91f78fb22b94bd331e68caa571a10eeb33d8b7d5b1f3313162fd:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE5OGQ3YzlkNjc3MWQwZmZlN2IzNTc2NjhmMWNhNzJhNTk3MzUzZWJkZTM2OWIxYjQ2MTQ3YzUwMzk4ZTdhZGMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_2187f3eef49b49a88a6549cdfca43e41",
+      "statement": "In browser mode, the database is backed by sql.js (SQLite-WASM) running in memory, with persistence to IndexedDB on a debounced 300ms schedule; writes are debounced to batch rapid edits, and a flush() call immediately serializes the database on manual save or page unload.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/db.js#L1-L50",
+          "version": "repo-lines-v1:sha256:1cc8d8b123e754d5742193f042b467dfe2ddaf67588d6c21dddb3bd3e4fb72af:eyJzZWxlY3RlZExpbmVDb3VudCI6NTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImIxMjA4NzkyMGJkNWViOTA4YmEwZjlkNDcyODA1YzhiMzU1YzU5ZDRmODZhZjBkNjM0NzgxMjVhYzI3YmM0MWYifQ"
+        },
+        {
+          "resource": "repo://src/platform/idb.js#L1-L40",
+          "version": "repo-lines-v1:sha256:23780e8841b31306bdecd112207dbb0c8a902eb2c2ab5b2be747bd2b0724f795:eyJzZWxlY3RlZExpbmVDb3VudCI6NDAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxNDU3NWUyNzkyNWNmOTEwYWEyNWZhNzg4NGEzMzRjY2U0NWU4OGM2MTAxZWI3Y2RmMjUyZTk4ODcyZmM2MzkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_7fda7cf652e345d78ff6f88657ceaa16",
+      "statement": "The project folder is guaranteed read-only: directory handles are opened with mode:'read', requestPermission('readwrite') is never called, and no writable stream is ever opened; files exported from the app (config YAML, library) are written to user-selected locations outside the project folder via saveAs().",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/api.js#L217-L222",
+          "version": "repo-lines-v1:sha256:436d5a19e34bfbb9c17f76910fe9a7ee3afa0fc2a3a1fdd94049799b49803ee4:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiM2I0OTI0MWI0ZmIwNWFhYmI4ODc4ZGYyMWJjNDg2ZGM2YjViMDlkMzc5OTNjZDI2ODM5NjY2MDM2YzE1YTg3NyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOGRmNTZlMDE4YTNjMTNlMTBlZmJkNTMzOTQyNWM0NGY5YjQyMDdjZGY3YjM1ZmU2MTk0MTZhN2Y2ZGVlYWI1NyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNWQzMTRhYzE2MmU1NzY2NDY5NzVkNzU4NTRlZTlkYzk5M2RmYjU0ZWYwNDRiNzljMGYxMWZjNTJkODhmNjgyYSJ9"
+        },
+        {
+          "resource": "repo://src/platform/fs.js#L1-L22",
+          "version": "repo-lines-v1:sha256:ddfc6ea93dffbe05e4dbf779226fabb89ff99821cf91cc9c7279e35136fb6ee4:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjAxMGJhM2E3YWQ1MDg5ZmY5ZTZiZWViZWEzZWYyYzc5NjFhMzJjMWRkYmQ0MDI4ODhkNWRkZTM5OGQ5OWI4YjkifQ"
+        },
+        {
+          "resource": "repo://src/platform/fs.js#L104-L106",
+          "version": "repo-lines-v1:sha256:0c94d6eea62868d78f42bf6bcd27012f104600bcc245d0c3a471e779946390d0:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjQ0OTgyYmI5N2ZkZTM1MWM3YmNlNDI1NjVkNDAwNmU1MGI4NmNlYWNiMDM5M2E3MDNkNzIyNWVjZjc2MDVjMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNGE2MDZjZjZhZjUwYTBmZDdiNjJkNTAyM2NiYzIzNjVmMDM3N2Y4ZWIwNGIyYTIzOWUzODc3N2U2NGU4MzZmOCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjY4YTIxZTUxMzNjZjJjYzMyZGUzZTY5YmZiMmFlYjliZDRhN2FjNTJhNWQ0MDMyY2RjNWM2NTgxNDdkOWM4YyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_facaf3b16043481289990e0f97f7e221",
+      "statement": "Directory handles in the File System Access API are structured-cloneable and persisted in IndexedDB (key 'project-dirs'); because browsers never expose absolute paths, projects are identified by stable generated UUIDs instead of folderPath strings, allowing the same project to be reopened without re-picking and forking a duplicate.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/fs.js#L26-L69",
+          "version": "repo-lines-v1:sha256:ffb9b771521abaf0e257a380fe473a4f24daa56a340fe7845d01da9901d18571:eyJzZWxlY3RlZExpbmVDb3VudCI6NDQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhiYTRmMjQzMzlkZTU5NTE2ZTEwNTkzYWU5MWUyMTAwNTA5NzI0NzE0ODA0MDExMzgwMzc1YTM1NDY3ZjNiMGQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjAxMGJhM2E3YWQ1MDg5ZmY5ZTZiZWViZWEzZWYyYzc5NjFhMzJjMWRkYmQ0MDI4ODhkNWRkZTM5OGQ5OWI4YjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVkOTlmMWMwNDFiNTUxMzk4MGQzNDQzMjNmYzhlNmIxZGFiZjRlNzFiNmVkMmVmMzNiOWZiMzZkOTEzYmFmOTgifQ"
+        },
+        {
+          "resource": "repo://src/screens/FolderSetupScreen.jsx#L22-L32",
+          "version": "repo-lines-v1:sha256:1ec7194205b8b1345a6550f3f7689e63745d0dc88992693cdc0c27b98e6b4674:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjI0MGVhOGYzNDNiZTFmNTY0OWRkZGVlZjQ1MThjY2NmYjk1ODFlNmVmZGQzNjdiNTMzYzdlY2FlNzNkNTlkZDAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjlhMDJjZTcyNTQ5ODJjOWU0ZWJkZDcyYWMxM2QyMDAwMDU1Mzk5NzQyOTkxZmRlOTRjZmRjMTlmYThhZGI3NzkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_0637fe0989514eb5bb17487ae1dc6e68",
+      "statement": "The file watcher in browser mode polls lastModified timestamps every 3 seconds and reports a file as changed only after it has stopped changing (two quiet polls), preventing reads of half-written files while Excel is saving or cloud sync is in progress.",
+      "evidence": [
+        {
+          "resource": "repo://src/App.jsx#L42-L59",
+          "version": "repo-lines-v1:sha256:ad63e492d43255df31975f970553a5e93e5bd4d8d0bb3c67737dbeae5b20b7d2:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU5NjZmYmZhODg5OThkYTc0NjU2YzUwMTk0OTU2YzI1ZjA4NDk0NTc2NjBjMDA5ZmU2M2QxZTlmYTlkYzkzMWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYwZGM1OGI4M2Q3NWQ1OWY2MDAzNzRlYmU4MTYwNDU1NDc4YTJlY2MwZDg4NmZlZDk3NWE4YzU2Y2VmNTJmZjIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQyNTM3YzgzMjIzYzQ4ZmUxOWJhNDU4ZTgzOGE0ODNiNmRlMDRhMmI4YjI0NmQzOTVkODIxYzU3OWJkYWViNDUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU4ZWUzYWE4Y2ZmMDEzN2ViOGFjYTFiYzIzYTJhMmNkYTBlMGFmNjAwNDk5Yjk4ZDI3ZWIzMjZlOTNmZmI5MGEifQ"
+        },
+        {
+          "resource": "repo://src/platform/fs.js#L224-L256",
+          "version": "repo-lines-v1:sha256:6c6bdc22914fb054bc1d4599b0591e89183403de0fcf45dee2d600a70e968dfb:eyJzZWxlY3RlZExpbmVDb3VudCI6MzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI0MGE4NDVhMzcyYjkwNDExNDQ3ZTU0MWExYjRiODc3ODBlYjYyMjVmYmNmYTI5MzBiNzlkYTQ0MTU0OWIyNGEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjUxMTFhYWE4MjYzYjViZWZkNmIwMjcwZDI5MTMwYjdiNjA4NmZkMWUyZmIyMjdhMGYyNTVkZDk5MjU3YzUxOTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJhY2FlMjMxYzM5MjkyNzYzMGFhYzFkZmM5YzM0NDYyYTA5MzBjYTRjZGY3MmJjNjkxY2RlYzE4ZGI0YTNkZTYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_fb7feced7b7f4dec803b175969d0c797",
+      "statement": "The database API exposes ~33 methods (upsertProject, getProject, applyConfigData, recordStyleExemplars, getPendingChanges, etc.) through dbBridge(), which wraps schema functions with read/write distinction: writers schedule persistence to IndexedDB, readers do not.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/api.js#L24-L127",
+          "version": "repo-lines-v1:sha256:6783a407cca10435037db6cbd6d688ce2efad34d3b583feed0dbdee9d325a0bd:eyJzZWxlY3RlZExpbmVDb3VudCI6MTA0LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJmZjFlMzA0ZDUwNDVhNmY0Y2FiM2Q2NmEzZTE4NjBkZWQyYjAzZWViNDUxZmE4YTQyMmU1MmE1M2FkNzRlNWJhIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJkMDJhYWFmYWFjODMwMjEzZjI3ZmFhMDY3YzUyMDk1MTJjOGZlOWNlNDExMjJiODYyNmFmNGFmNmQzNmMwMTlkIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlZjJlZGM0MDU1NjRhN2E4MjBlMTE5ZDcxOGQ3MmVlZDRhZjUzZGI1NjhjYTY5YThiYWNlMGYxNDY1MmE2MWE3In0"
+        },
+        {
+          "resource": "repo://src/platform/db.js#L76-L92",
+          "version": "repo-lines-v1:sha256:c91760218307ca499c6fe2148fdadb2b41d930857684ac32239e3024946f2784:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjlmZTE5NGU3ZjdkMDVlMjhmMmY5M2Y4M2QwNTVkOTdmZTY4Y2VlZTkwMDg2NmRlM2RhYjNlZTg5NDk1YzMxZWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNkY2ViYzMxZTExMTAwYmM3MGQ1N2NhMmY4Yzk0Yjk0MjQ0YTVjZWYzOTZlZmU2M2RlMmMyNjRmMzY5MGIwNDMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImM4MjU4ODAwYmU1Mjg1ZTBkNTFhNmI5ZTExYmI4MjQxMzFkYjllOTU0MTFkNGM0Mzc1YzMxMzVlMzNlZmVmOTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBiMTcxMDc5MjgyNWQ2ZmI5YWU1YzU3ZmJhNTIxNmZlYmE1YjcyMWIwMGJmZmI2Yzk0YWY0ZGI5Y2ZmZWJiNTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_27e54ae6cefe4b7bb2a74175d1e786c7",
+      "statement": "The File System Access API is Chromium-only (showDirectoryPicker unavailable in Firefox/Safari); FolderSetupScreen detects support via isFolderAccessSupported() and warns users; permission does not persist across page reloads, requiring ensurePermission() to re-grant access from a user gesture.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/fs.js#L149-L154",
+          "version": "repo-lines-v1:sha256:d4ddbf3839fabd21829d8a6816013e66e25a23c64ccad7a58929e89e476ce200:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZmE2MmFmMzcyM2ZiMzY4YmExMzk4NDlkM2JiYWJhODEzYzVkMTBhYjMzMTA4ZDliNTRlYjliNmY3NDE0NTlhNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYzFkOTBhNmMxNWQ4YTFiOWMyN2UzZWI5OGJkMzEzYjM4N2NiNzIyMzVkNDk5ZjlmNTM0Y2VlYjQ3NzA2ODFiMiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNzlmYjlhNzg5OTk3NjcwYTk1ODhiMjI4NjYwMzI3YTdmNGY5ZGVlZDFiY2U4MjhhYzU5Nzc5ZWY5ZWM5ZjNjOSJ9"
+        },
+        {
+          "resource": "repo://src/platform/fs.js#L28-L37",
+          "version": "repo-lines-v1:sha256:a2778f57f2937f4ffea909858639198254b049d14f548c8b3173cc5f9094ef08:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE4ODM2Yzc0NWVmMTEwMTFiMjlkNTZhZWY0ZWZhM2Y3MjUxZmJkNWFjMzM2ODc0YWVlOTYwZTYzYzM0MTkyMzYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBjNGVjOGUyMzNkNTc2M2EwOWQxNDE3ZmI4ZmM5OGViODUyODYwYjNkNjRjZDAxNDhiYjc1MzM5MDA5YjBhNDUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY5Y2U0Njk0YmUyZTM4OTQ5MWMyZjhjN2ZmNDhhOTg2N2ZjYWE1YTFjMzA2NzU2YmU3ZmU2ZDVkZmE1YzY5ODYifQ"
+        },
+        {
+          "resource": "repo://src/screens/FolderSetupScreen.jsx#L70-L75",
+          "version": "repo-lines-v1:sha256:a619ec6e86292f17f550eca3b70fc02de881aaf154997418c78c6a6ee6cd4332:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDY5NDdkZjg2NzczMTNkNWIyNzk0M2U4OTFmZGY3ZjZhMTNjYTM1MzUzZmNjNmU4MmNmMzFhZGQyMDA4YWY3NiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMTQ4OWVhODYwZmFiODVhZjM4M2Y0MTgzNDMyNDRmMTc4MzBlMjZmMGY5NjU3NWU3MTBiN2MxOWI2ODM3ZDA0NiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNGY4MTZjZmM2OGU3MjgxMGJhOGY4N2Y0ZWJjODZlMzhjYzdkMDA0NThkNTc0NmM5YjEwODU3MzA1NzY1YTQxYiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYWI2MTkwNDY3ZTRiOTdlYmIxNTIxZGNiZmFmN2RmOTk4MjllZWIzMGI2YjM5MGVkZjAxOWQyN2I5YzQwZTg4MyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_72aa1a742a5d4acf90c4894f5a7b0535",
+      "statement": "Pending changes (unexported Product Spec and Recipes Spec patches) are stored in the database as crash-safe registry; getProjectSummaries() returns unexported status on every load so users are alerted to unsaved work, and changes are keyed by projectId rather than folderPath.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/api.js#L36-L38",
+          "version": "repo-lines-v1:sha256:63e40c136687471742f43fd73aac9784e9bf8367ac3a1f7dcd58e15066a77805:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOGUxN2RmNmI1YWNlMzc5YmQ3NzE1ZDYzZWFiNzgwMGVhZWM5M2JlYjI3MTIyMzUzM2Q2NzViYTkzOTYwMGIwYSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiODU4ZTg3MDQxOGJmZjIzNzgxODM3ZTAxNWQyMWE5NTAzMmE0OTliODMwZjRhMWEwZjUwZDU2MTZiZDRmOTBmZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMDYyNzg2ZmQzY2VhNjVlMDY5MmYxMzcyYjMzZDRjMDA3MWVjYzJjOThiMzNjYTcyYTU0OTM5NzcyMzkyMzkyYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODQwNzBiZjY3M2IxMTk0NWNhYmU5MWVhZDcxMDBmNTdkNTBhOTc2YmY0MGEyNTA5M2FkMTk1MzEzMWIzYmQ1NyJ9"
+        },
+        {
+          "resource": "repo://src/platform/db.js#L150-L153",
+          "version": "repo-lines-v1:sha256:9a3925c8e147faedb1b65dedbd39fe9217e6cf3b90c1c2dfd122a41ecdfb0bf2:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMmIwZTA2ZjcwY2FhYmNkYmUxNjVhYmU1MWQ4YmRmZDA1NTc3NGIwMDdiNzAxMTkxZjdiYzFlYWQ2MTQ5YTFhZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMzM3ODZjOWNlNDU0Y2NlNDhmM2M4MTQ3ZTVmMGU2ZGY5NThmN2M5ZjQzNzFiYjNlNjcwMjcyYTQxMWE1Y2M2OCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjJmYTE5MTg0YTY5ODg1M2ZkMGI0OTM3NjYxMzlmMjk2OWYxZjEwZWFlNTI1NzJhMjllNTU5OWFlMjIyOWU5NyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_1f7300ea8b6c4026b5129f7ced2288ea",
+      "statement": "The installPlatform() function checks if a real Electron API exists (via preload script) before installing the browser mock; if no preload is detected, it creates a complete window.electronAPI implementation using File System Access API and sql.js, ensuring the app runs unchanged in either environment.",
+      "evidence": [
+        {
+          "resource": "repo://src/main.jsx#L12-L14",
+          "version": "repo-lines-v1:sha256:4855ac082799e065fa7e015b9365b4d40bbf60b06c330476c2d45219a73d64d7:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWE1ODVkYWM3YjhlNmNjMjIxNTA2OWFhMmM3ODg4MTFjMWYwYWU4YTcyMTM2YmE4NmEwZmYxNTQ4NWI0YjNlMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjU5NTAxYzcxNWIzMjUzOTk4NzAwZmEyZTJlMDA1NGVmMTFlZDA0OTYyZTc1MzEwNzNiZmI3MmJiNGY4ODU3MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiY2RlMzJmY2Q3ZGE0YTM4OGJhYmU3NDJhNGFkNGY0ZmQ2ZmNkMjkzNjBiMTAyMTY5ZWZjMzI5ZWQzMjY0MWQxYyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTc0YzRkYzMwNzFiOTEzZmY4OWFhMjhhNDgzNzYxYjA0ZDA5MTIyMGRlYzIwZGMyOGI2MTZhZDYyMmY5ZjRhYyJ9"
+        },
+        {
+          "resource": "repo://src/platform/api.js#L131-L243",
+          "version": "repo-lines-v1:sha256:67665883a9a830ddeaec28ec06504d8435c4e482e69f15331ff693bf4dd6b33c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEzLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJkNjlmNzdhMDkyMDUzMDU1ODhhOTczYjVkM2FjYzRlM2IwMWVhNTcyN2IzY2UyYjBlYTQzYWU2Y2ZjOGMwMDY5IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIyN2U1Nzg4ZDVkOWQ3M2QyNGE4MWRiYzBhNWE3NGJmYTgyYzljM2IzYWY5OWU1MmFmNzk2ZTkwYjQ2OGE4YTNkIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlZjJlZGM0MDU1NjRhN2E4MjBlMTE5ZDcxOGQ3MmVlZDRhZjUzZGI1NjhjYTY5YThiYWNlMGYxNDY1MmE2MWE3IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MSwiZm9sbG93aW5nQ29udGV4dEhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIn0"
+        }
+      ]
+    },
+    {
+      "id": "claim_13951961d53848d8a45a93abbaafdf46",
+      "statement": "Form spreadsheet handles (used in product-code import) are remembered per project in IndexedDB under key 'form-files' so the same file can be reopened without re-picking; getFormFile() returns {handle, name} or null, and ensurePermission() re-grants access after page reload.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/api.js#L154-L166",
+          "version": "repo-lines-v1:sha256:d9e015abbd8679b915b37c74351e44f62f529266352a3e4185ac1e10c2e6c178:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdlZTZiYTYzODkzNmZjZDUxN2FmNjdmY2Y4ZGUwNzQzOGFlOGY2NGI1MDg1M2JiM2NiYWIxYjQwZTQwOThlNzYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFmMGNkYjk3MmE3YmZiN2VkMjQ2ZjlmZjY3MjM4NWU1NWY0OTY4ZmMxMTA0M2RjNWI2ODRkNTFkZmEzMWRiY2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk3MWZhOTJjNTJmYzA4Y2UwZDMyM2VhNmI4ODk4YzcyMWJhNzg4ODQ5ZWJiYzg2MjljYTE3M2ViYmU0MTZiNzMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjcxZDgwYjYwNzE0MzY5MzM4MzA3NzAyYjlmMzFmYjM4MWNiYmY3YjcwOWEzZWFhNzBjNDdjOGQ3MmE4M2RhMWQifQ"
+        },
+        {
+          "resource": "repo://src/platform/fs.js#L156-L177",
+          "version": "repo-lines-v1:sha256:d7cbb2c5042fc19b794c053ec9cdea8d44c1f7dd2f9e5bb977b0af50e1dcacca:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRmNTkyNDZiNGY2MDY5MjVhNWRkZTcyMWIzMzIxMzQwYTI2YWE3OGZjMjI5ZTM1YjI4YTZmMmQ3NDRmNGJlM2YiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImMxMjNmNDNkZGM0OGVhNGE1OWY0ZjI2YzliM2JhNGU4NGVjMjA2ZGU0NTU2ZWFlZDRiNDhhOWVhMGI3OTVhMTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ3YzkyMTI3YjMwNzQzZjQ2NmU0Nzk0OWNhN2U4NGU0ZjZmYTRjZjQ4NzVlNGU2ZjcxMzg0YmJjN2Q0ZmNkMWMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_ac97501d53ac43729191fdf04a197e9b",
+      "statement": "The three former Flask routes (/detect-files, /import, /read-sheet) are now client-side in backend.js: detectFiles() classifies every XLSX in the folder, importFiles() parses workbooks using SheetJS (dynamically imported to avoid initial load bloat), and listXlsx() enumerates .xlsx files from a directory handle.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/fs.js#L181-L190",
+          "version": "repo-lines-v1:sha256:fad582366a709407cd1ad7997dbc2a960483657c40ff8ab7b52847e27cb4d7d2:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI3NDE5NmM3ZGYyOTk4ZmIzMjIwMmM3OTgyN2M1YmIwYmQwODNjODgyYzMxYTdiNjliOWIyNTVkZjA2ZGNiNTkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ3YzkyMTI3YjMwNzQzZjQ2NmU0Nzk0OWNhN2U4NGU0ZjZmYTRjZjQ4NzVlNGU2ZjcxMzg0YmJjN2Q0ZmNkMWMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFhMDA1MjA4NGI0MTA3OTAwN2IzNTAxYjMwM2FlYWUzYWIyOGY2ZDcyZGEwZWYxMTU2Nzk0YWU3MGViMGQ2YTQifQ"
+        },
+        {
+          "resource": "repo://src/utils/backend.js#L1-L13",
+          "version": "repo-lines-v1:sha256:1ed09f12f20dd0974e8184a38f1f4a0308d146daba49a322104c4e32eea53a9e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk3NjE1MDFiMzRmMGRhMzllYTdkYWQ1YTFhZmZkNTc1ZjRiYTUzYWFmZmQ0YTFmM2I0OGQ5NDZiMGU5ZTdiMjIifQ"
+        },
+        {
+          "resource": "repo://src/utils/backend.js#L68-L78",
+          "version": "repo-lines-v1:sha256:c25db912e53316bc07ac073d0e80b5ad0b27f941427b983ba6397d63daa16ce9:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYxMjk1OTY4NWQ3MjdlMmNmODZkMTQyYzJjNzkzYmRmNDNjOTE5OTA2YWI0ODU2NDdkYzUxMTU5OTIzYzA3OTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYxNDQzMmQ3NzhmMjA4ZjdlYjkwNjFkMGQzM2E0YzMwMzY5MmQ3ZWY1OWM2NmMyMjFkZmJmZWY1OWU0MGI2NmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZiZmUwMmE4OGJlZDJjODA5ODZlZDk5ZGM2ZTc1M2VkOTUxN2QzNzQ3NDc0OTM0MzZmMTg3MTViNDgxZGRkM2EifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_799bfec1e17a4dbf81459666554d548f",
+      "statement": "duplicateGroups() identifies stored directory handles that point at the same physical folder (using isSameEntry), surfacing the wreckage of the old behavior where re-picking a project forked a duplicate; each isSameEntry comparison is guarded so one stale handle never blinds the whole scan.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/fs.js#L59-L96",
+          "version": "repo-lines-v1:sha256:02c5009428d777daa3601584034e2588d12199312598e3a0abf31842af1a2727:eyJzZWxlY3RlZExpbmVDb3VudCI6MzgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg2MjAyYmU3NWFlYTMwMzVjZWU5ZmFkOWIxYjI3MTc0OWE4NDgxNWNmNjQ4YmRjZDZhZDg0YTQ1MDQyYTQ5ZDMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVkZDYxY2EwNDI4MTNhMDZjOTI1YzFhNjFhNjJlNTZlOGVhNTFmMDQxODcxZTgzZGJhOTgxYTkyYzU3ODc4MGIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZmMTgyNDMxMzE1Yjk5NTU5Y2U3NThmNDBhMDA2MDZhZGVlNzI5NDhhOTUwNWNjZjhkZWZmMWQ0MGE4ODA1ZjAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_30eab22fccad4921a500c88afe617fac",
+      "statement": "Config exports include app_version and checkConfigVersion() validates compatibility on import, enabling users to restore a config from another machine; the same projectId schema and applyConfigData() flow supports both export (collectConfigData) and import (applyConfigData) with no Electron dependency.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/api.js#L47-L75",
+          "version": "repo-lines-v1:sha256:fb77ab3c36cd0af490c71fe19d9f97c44a5536ccb47eeabbae7bb6936f578161:eyJzZWxlY3RlZExpbmVDb3VudCI6MjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNmMTQwNGY2YzZhMzQ4ZTc2ZjI1ZTM5MmQ1N2M0NzhlZDY5M2QzZDczNWNiZWRlZmNmNzQyYjYxZGU5NDgxM2MiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ5OTBlYjZjY2RiMGZlZmNjM2M5YTg4M2M4NzljOTg2NmJlMzM5MzFjYWFhYmYzNjYyZDdhYzRjNDEzZWM4YjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYwZTQ3ZDliNGRjYmE3NjRjYjU2NGQ5ZjQ3ZGMyMzkzODI5OTIyN2Q4ZTEzMDJkYjU1ZWZhNzIxODFjMTdkMjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBhMTNmZDEwYzUxYWYxMDEyZTIzMTlmZWI3YTI2MzUxYjlhY2U2YWEzMWQ3ZmU0MTUxYmY0MGQ5Nzk3MTVjM2IifQ"
+        },
+        {
+          "resource": "repo://src/platform/db.js#L136-L138",
+          "version": "repo-lines-v1:sha256:cc51efda960b3c73ca4ccbce64fe4dfe4551e79354ca6840bbd2f6e2727072e2:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDJhMzMwNWRhM2MwYzJkNWEwNGMwNDIxZGY3M2ZkMGJmMzFlMTc4NTE0NzllZDIwZTNiZGZhYWFjNmExYWRlMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDU0NjBjMzVlYmUwYTVlMzNiMDQ1ZmQzOWYwNDQ3YTk5ZmMwZjY0YzZlMjU2N2UyM2UxYTBlZTdiMmU5YmEyNiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMGUyZjFhYTE0ZGZkNWRhNzhjZDU0YzM3ZmJjMGRhNjNmNDIyZTM1MTI5ODhkNjIxZGUxZjA5YTRmNmI4NGVjZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzZiZTQ5MGNlOWEwNzRmODAzNTJhMGFkNTBlODQ3NjQ4ZGEzMGFkMTIyZTE2NjY3NDVmNDQyYjBjOTkyOWJhYSJ9"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-17T13:57:20.517Z"
+  }
+}

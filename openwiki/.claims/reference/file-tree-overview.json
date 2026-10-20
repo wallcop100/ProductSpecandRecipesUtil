@@ -1,0 +1,188 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:ae05e0b9faa55f38c99506fe4f1d065a41bddf293b8bf3c5fdae4c9bc1f4166c",
+  "claims": [
+    {
+      "id": "claim_22cd4edd866e4ea0acc3e2365eac0637",
+      "statement": "The /src/components/ directory contains 140+ React components as direct files (no subdirectories), with a specialized import/ subdirectory for import flow components (CellTokens, CompactPositionPainter, FormKindGaps, FormPositionList, FormTable).",
+      "evidence": [
+        {
+          "resource": "repo://src/components/FormSpecPane.jsx",
+          "version": "repo-file-v1:sha256:b9f0c1bbef014d6a7b1729187a2c59c1326c2d2dfb51a542cef6b13133feec51"
+        }
+      ]
+    },
+    {
+      "id": "claim_484b77c7d34e43e4b2e6d2040e2941fa",
+      "statement": "/src/screens/ contains 6 main application screens (BuilderScreen, ProductSpecScreen, TemplateEditorScreen, ConnectorsScreen, ProductCodeImportScreen, FolderSetupScreen) plus SlotMappingModal and an import/ subdirectory with useImportSession and useProjectKnowledge hooks.",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/BuilderScreen.jsx",
+          "version": "repo-file-v1:sha256:864f4dc10e4a8d1e23665c1b4dd8026b61723b3566bd173734c7bfad9e516b5c"
+        }
+      ]
+    },
+    {
+      "id": "claim_24e2e682b1934971b634c05409ba1fa0",
+      "statement": "/src/store/useStore.js is the single centralized Zustand store (195KB) managing all project state including DesignDB data, templates, position UI, dirty tracking, validation, and file-watch alerts; no other store files exist.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L1-L50",
+          "version": "repo-lines-v1:sha256:4780895e9ddc8fdedc1c671aefd0799b877500346394ef068372eeb21f17d891:eyJzZWxlY3RlZExpbmVDb3VudCI6NTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMxZmE5MGJiNDljOWZiMzAzY2I1OGY3YzA0NDJlODUyNzA0ZDIzYzc0OGIxMjliNzQxNzgxMTRiZWJiOTc0YTIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZjODVlOGYxYWFjY2QyZTgzMzI3ZjZkMTdhZTRhOWRkMjhlYjFkYjRlMGVhZGQ0YmE2NTdhNTZkNWIyYmIxYTcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_4e9cc2cd299a473cad21ac8c601a9f14",
+      "statement": "/src/platform/api.js (11KB) installs window.electronAPI before React mounts, providing a browser-compatible interface that funnels all native operations (database, file system, YAML, Excel) through one entry point.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/api.js#L1-L50",
+          "version": "repo-lines-v1:sha256:7c546f51cfc686289063fd715ae9d10882999b9c5ecb60225c4c6a1ebe0b6196:eyJzZWxlY3RlZExpbmVDb3VudCI6NTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIzYTQxYzFmY2IyYzZkZTY4OWMxZjkwMmE3NjZiMTFlYTEwNjU5MGFlMTRmZTUzOTAxOTBkODNlOWZiNzhjY2EiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgwMTJmOGU4YTNkNThjNThmNjQ4NTRmMDBkMjNhODU1MTcyMGRhZmM2YmQwNmJiNmM1Zjg4ZDVhMTIyMTJiOGEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_4f10a43e66674558858b7d570471ae7e",
+      "statement": "/src/platform/fs.js (11KB) implements read-only File System Access API integration for project folders; directory handles persist in IndexedDB across sessions; the project folder is never written to by design.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/fs.js#L1-L30",
+          "version": "repo-lines-v1:sha256:6b1309dbf90d50dfe915707a926e78fec5e188d87e30bf9d24651257b2b34bee:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQzZmNiNGFjNDljNzkwODg5MWExZTA1Y2E0ZGZjMTJlMjhjMTJlZGMyMGZmODUwM2IzOWI0ODdkMDUzNDc4ODYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d69bdc704c0a452b96418c0930b1cc2a",
+      "statement": "/src/platform/db.js (6KB) boots sql.js WASM SQLite, restores the database from IndexedDB, and serializes writes back (debounced); dbSchema.js (57KB) contains the original Electron schema (unchanged) for all project data.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/db.js#L1-L30",
+          "version": "repo-lines-v1:sha256:52ccabb51370527fc31bed4fb481be022ad5b3adca36a42bb613a72ec813ebd7:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhkNGU3YjNhNzBlNTYyZmNjMzllMWQ3MzdkMjM5MmEzYTBhOGUyYjBjNDllOGVhMmI3MjY0Y2Q0NDVlNTQ2N2MifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_aec9db33b40a441e9046cc5486f4b83c",
+      "statement": "/src/platform/projectConfig.js (8KB) implements configuration sync across browsers by project number when served beside a companion server; configuration excludes work-in-progress (unexported changes, import drafts) to prevent replay or overwrites.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/projectConfig.js#L1-L30",
+          "version": "repo-lines-v1:sha256:0661f514bd7acea76177f7ca01e0e6184e778a3be8d465732435fb8cc1d377a4:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQwYWQ0OTkzZTNhNjc2YjJmYzdkZWQ1ZjIzMmRhYTU0NjMxNWNjNzk5MGY0NmNmMTkwMmE4ODdlZjRkY2YyN2EiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgyMTVjMTA1M2EwYTYyZTM5YjBhY2MwYmQyOWI3MmY4OTEzMjdmMGQ3MjFkZjM2OTFkMjQ3MjUxMmFlMmFhNWUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_96999c9389ce4273b6f65b318b0a5d32",
+      "statement": "/src/data/ contains static reference data: codeShapes.json (90KB, code patterns), globalConnectors.js (Wago templates from Kaizen), globalTemplates.json (3KB, built-in templates), recipePatterns.json (9KB, shipped project precedents), and archetype/line definitions.",
+      "evidence": [
+        {
+          "resource": "repo://src/data/codeShapes.json",
+          "version": "repo-file-v1:sha256:3c6bb4392af72dad0b5470d6bcd1aaeeb3961290875885c4ee94933e2dac6fb4"
+        }
+      ]
+    },
+    {
+      "id": "claim_0b7e06131453467e88beddfa92719582",
+      "statement": "/src/utils/ contains 60+ domain-organized utility modules: recipe* (patterns, kinds, presence, proposals), template* (loader, rules), connector* (groups), validation*, tag*, form*, product* (codes), code* (jobs, learning, shapes), collection*, reconcile, patchScript, and others.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/recipePatterns.js",
+          "version": "repo-file-v1:sha256:1fafa44d7693d843840f0186b866fbc5e83ebaaa0b14a370c89e3171a6961157"
+        }
+      ]
+    },
+    {
+      "id": "claim_748abe10c224466a9a3c1ec00dd491ce",
+      "statement": "Recipe utilities (recipePatterns.js, recipeKinds.js, recipePresence.js, recipeProposal.js, recipeStyles.js) implement precedent-based recipe synthesis and kind classification (wrapper, driver, environment) looking up patterns from shipped data, project library, and project history.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/recipePatterns.js#L1-L30",
+          "version": "repo-lines-v1:sha256:cf9f68976dcd82a81b6b623d8fd9fbc7175c7272030742ab3c32811e4afa9e43:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEwMWQyYTQ3YjM0ZmQzNTBhZTc2MmRjOGRjZTdjN2RlNTdlMGZkOGQyNGU3OWU1M2JhOTg5M2JlYmQ1Njc3ZDgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU5NmY4ZGIxOTA1NjI1MWU0MWQwYjhhZTQ2MzBlZTZjYjRjZDgzOTFlZTE2YTVkYjc0ZGZiMmJkZmJlZDRjODAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_949648fc282241ab8aa6089aea366037",
+      "statement": "Template utilities (templateLoader.js, templateRules.js) match positions to templates by tags and rules, and extract templates from completed recipes; templateLoader converts existing filled recipes back into reusable template definitions.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/templateLoader.js#L1-L30",
+          "version": "repo-lines-v1:sha256:9968bf77f17257985fd7be9297c4b565112aeb402a91366041911c64f9cc4390:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM5ZmRiOTY4MjI3MTc4ODczMTFlYzgyMDcyY2NkY2VjMjRkMjFjOWYyMGQ1YzlkOTQzNDk4MzMwYmQ1ZDViZTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjAwNTJjZmIwMjUwMjQ2MTAwYThkZjEwZWNmMDE2MTYwNzM3MDY4ODM1ODM5OTMzN2MzZjUxODZhOWRlMmFkNzYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_6fb32af3fcf74f62b947a87d69b59573",
+      "statement": "Validation logic in validationRules.js (25KB) and validationTasks.js enforces comprehensive rules for recipe completeness, consistency, and correctness across all positions and elements.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/validationRules.js",
+          "version": "repo-file-v1:sha256:031bec297a00d5d898afeeb0a2956177c931ca341a6cc038e3cbe1cc00d172e8"
+        }
+      ]
+    },
+    {
+      "id": "claim_5c82c373ad2844bdbe0f091ac0be2f6d",
+      "statement": "/src/tutorial/ implements an interactive tutorial system: tutorials.js (16KB) defines cards (title, icon, intro, steps) where each step references a scene component and beat number; scenes/ contains 12+ scene components that animate and highlight UI; tutorials teach panes independently with no linear flow.",
+      "evidence": [
+        {
+          "resource": "repo://src/tutorial/TutorialCard.jsx",
+          "version": "repo-file-v1:sha256:e9ed544d40d7c6e68e4fc6223504054cd7decbab065f5442f69f9a97891bfefd"
+        },
+        {
+          "resource": "repo://src/tutorial/tutorials.js#L1-L30",
+          "version": "repo-lines-v1:sha256:3d8eb3dbfab16b60420fc7fa335a6029f3dd29a9546b6460a494f231117b6f20:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY1YTBhZWVhN2UxODAzNTQ2OTc1MjExZWZhMTVjZTVjZTU0NjgzMDcyNzBkODAwMmY3OWMzODNjMTRkZjhkNTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImYxYzU0NjYzMmIzNTAzOWVhZjljY2NjNWQwNWNkNDk1ZjBkMzdkNDAyYTVjYjVkZjA4ZGI4YjQ5OTBmYWMzNzIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_5f9b70696b52447d80fc5dde38075ee5",
+      "statement": "/src/App.jsx is the top-level screen router managing navigation between 6 screens (FolderSetupScreen, BuilderScreen, TemplateEditorScreen, ProductSpecScreen, ProductCodeImportScreen, ConnectorsScreen) and cross-screen state.",
+      "evidence": [
+        {
+          "resource": "repo://src/App.jsx#L17-L36",
+          "version": "repo-lines-v1:sha256:ccf65b6e09b22bbd37136383610dc09162d25dd5c7c913686879f427ced0f7a4:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYwNTBkZTdlNjcwMjhjNzRjYjkzMTM4YzdlMzFlYjRiMTgxNGFmYmE5MjM2NmQ0MTkwNTJlZGQ5YjdkYWRkMDAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjliMjBkNDhiMzlkZDVmOGZiMzUyYjkyZGJjZjZiMDZjOGU2YTJjZDNhMDAwN2EyYjY0YTRiZmU4ZDAyZGFlNDgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImExMDNmNmQ0MTliNzFiZjllZGVlMGYwMzQwMDBkMDQ3YTNkZjJlNTE5MGYzMTAyNTAxNjg0NzEyMTM4ZjU5YzcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_cccf5f94e75d4806aeba3a71b35e019e",
+      "statement": "/src/main.jsx is the React entry point; it installs the platform layer (installPlatform), starts config sync (startConfigSync), starts learning (startLearning), then renders App, ensuring window.electronAPI exists before any component mounts.",
+      "evidence": [
+        {
+          "resource": "repo://src/main.jsx",
+          "version": "repo-file-v1:sha256:0b4b6bc28c354630bef77f77df5af2c0e76535634bf7d1758d08487a6c195e6b"
+        }
+      ]
+    },
+    {
+      "id": "claim_6f56fdc3de694cd1b0c38fd0030e6ce2",
+      "statement": "The application uses Vite for build and dev. Development runs on port 5173; build outputs to dist/; relative base path (./) supports both GitHub Pages subpath (/ProductSpecandRecipesUtil/) and domain root; sql.js is pre-bundled for ESM compatibility; SheetJS and SQLite-WASM are lazy-loaded.",
+      "evidence": [
+        {
+          "resource": "repo://package.json",
+          "version": "repo-file-v1:sha256:520608ffd65d69b933de783f8a02b1edf30a2bdee747f6a565894771c6944873"
+        },
+        {
+          "resource": "repo://vite.config.js",
+          "version": "repo-file-v1:sha256:a4fdb8e6ea205e0d0fd3fcb93caa29631eab1d68401ebd89a53e443c6abb8bfd"
+        }
+      ]
+    },
+    {
+      "id": "claim_a2dcb26e76a5494fb253a5f2783a0f3a",
+      "statement": "/tests/frontend/ contains 50+ Vitest test files with parallel structure to /src/, testing store, database, domains (recipes, forms, templates, validation, collections, product codes, connectors, reconciliation, import), and platform modules.",
+      "evidence": [
+        {
+          "resource": "repo://tests/frontend/store.test.js",
+          "version": "repo-file-v1:sha256:3d23fbb6dc3b96e31c382056eb45ab98c33530a39f06bccfa86265d0490f2ab7"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-17T13:57:20.517Z"
+  }
+}

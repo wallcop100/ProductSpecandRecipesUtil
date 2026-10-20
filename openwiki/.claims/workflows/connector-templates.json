@@ -1,0 +1,266 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:b975e70505d451306b80e52c8fed20a5a1cd55e5f0ce8e511b403d0345a312a1",
+  "claims": [
+    {
+      "id": "claim_a08ace5edb80483cbdc4d9526c2e14f6",
+      "statement": "A connector template is a named, reusable recipe of connector parts (sockets, plugs, strain reliefs, levers) with quantities and sections (position level or internal) that positions can share; templates specify what a position should carry as decided by the team, not what it happens to contain.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ConnectorAutoJoin.jsx#L7-L11",
+          "version": "repo-lines-v1:sha256:99531f8556591703bc49eac010e04c28817e7549761780434e90a362c9152cb0:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWMwOTVhZjdiMzQ5ZmE5NDI4ZTE5Yjg5MWJhY2JkMzRlNjYyNGQyYWZhYzczZTk1YmM2NzYwMzRkYTJjZTQ4NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTcyYTQyOTM4MmIyZTE0NzE4ZTBlMzdiMDU3MGE4YTE3MDI5OTFmY2Q4NDk4Y2Q4NDA2MGE4YmY0ZjA1MDE3YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjFlNGYzNTM5NmM3MWNhNTVkZDQ3MmMyZTcxZGQxZTE1YjM3Yzc4ZTljZGYxOTM3ZjcyNzY0YWQyYTA0NWMwMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNGMyNmUyMDdjYTRhNjE3OGJmZGE3Zjg5NmI1NWRlNjAwZjI3ODc2MWIyYTMyZmQ4YWVlYzYzNzA2Y2ExNWI1YSJ9"
+        },
+        {
+          "resource": "repo://src/screens/ConnectorsScreen.jsx#L19-L25",
+          "version": "repo-lines-v1:sha256:62fd0d8acd77d18e757338ec9ed737c647a1e6a9b73da4871d4bd11fae3d46e0:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWFmMjJjZjA3MzI1OTJjMjQ3MTQxY2JlNjFlZmExMTAxMjYxMmY1YTMxMjJiOWFmOWJiYWY1MmY1NzI0ZDE5NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTcyYTQyOTM4MmIyZTE0NzE4ZTBlMzdiMDU3MGE4YTE3MDI5OTFmY2Q4NDk4Y2Q4NDA2MGE4YmY0ZjA1MDE3YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYWIxMDYzNjY4MDk4OWYzOTk3MjVkMTk3MjkxNGRiOTU4MTIzMDhlMjUyYzcyZjExOGVjZTRkY2Q1ZjIxZTY0MiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYTEyNjBlMWY3MDU0YTA4MzhkZWM0YjY5OGZhNjBjYzllNTJhY2M2ODFjYTUwNzIxMTg5ZDczMmJlZmNhMDRiNCJ9"
+        },
+        {
+          "resource": "repo://src/utils/connectorGroups.js#L1-L21",
+          "version": "repo-lines-v1:sha256:631a33be95570f1ebac85ddda8e2b2f9d161472f5975c02bdbfd91335773ee57:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFhZWE2NDI1M2RjMzZhYjM2ZmRjZTlhMmZiNGNlODJhNjA1NDU0MWJhZmE4NTIwN2MxMDE5OWExNmY0N2MzNTYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_faf50c6d0b5d4aee8aaa04b66f663e3d",
+      "statement": "Connector template parts are organized into two sections: 'position' (site-side parts at position level, including sockets and site strain reliefs) and 'internal' (driver-side parts inside the design element wrapper, including plugs and driver strain reliefs); quantities are summed per (section, ref).",
+      "evidence": [
+        {
+          "resource": "repo://src/data/globalConnectors.js#L27-L49",
+          "version": "repo-lines-v1:sha256:d75bf7f1d37180915deef8da247e546e26760b328e393d456891fd3472ad138a:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY2YmU4N2QzZThmZjY5OGRlMWNmMDQ1MjE4NGEzMGJjMWY5ZWJlMGMyM2VhOGE1ZTA0Yzg3NWZlMmU3M2Q0MTkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjI0NjBmMjcyNzdkOGM3Y2QwNzVkMWFmMTgxNDgzNDI0NDIyYjI1ZGVhNDM4NTU0MmJhNjJhZDY1YzE1NjMwOGEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA3OTIxZjNhZmRhOWQyZTBlNTc0ODM4MzY5NDUxMGEwZGJiZDE3ZmQ5Y2JmOGMxMmFkZjA5M2UxODI1MjRmMGQifQ"
+        },
+        {
+          "resource": "repo://src/utils/connectorGroups.js#L53-L70",
+          "version": "repo-lines-v1:sha256:7b1b06fb62162331e9e128de67bdfd793c73e9cf1aa821fafae9c4519ecad164:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA4MjkwMmM1ZTIyNDY1OTVmMTRmOTgzNDNmMzQ1NWI1N2UzZjc3ODlhNDM1NTdlMDQ3ODczMTk1MTcxNWZkNzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQyYjBkMzMxODU2ZDI2ZTc3N2IwZGM1OTZjNDVhYjIyY2ZiZTFjOWI4ZGJlZGY5ODBiYzM1ZGZiMzRlZTBiNmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZlMDg0OTRhNWNjMjU4ZTZmZjdkOGVjNWZkMmVlNjJiMWNlMjMyZWVhYjVhZWY0NzRjMzY0YmQ3YzIwNjNmZDkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_cffa87de81ba44bf949493ea7704f25b",
+      "statement": "Template assignment to positions follows three priority mechanisms: (1) pinned positions always match their pinned template regardless of other rules; (2) unpinned positions match rules, with the most specific rule winning; (3) two equally specific matching rules create a clash, flagged for user resolution; excluded positions are removed from a template.",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/ConnectorsScreen.jsx#L41-L52",
+          "version": "repo-lines-v1:sha256:47a906ca168078abe6c727955f2c2ad8f53a477a29ec9cb55f4f7a230cfdf0ca:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUwNWEzNWQ4OTEwMGYwYjRjYTU2ZmJiN2RlZDRkOWIyMzM2NWFkOTE2N2FkNDE2MDgwODU3YmNiZTJjMGYyNDgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE1NWUzNjAyOTZhMDM1MDhmNzgzZTkyNmIyNTY3MTM3NWJhNTZiNzk0ZGMzZjc1MzZlYmY3MGUzNTFjZTE4ZTciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg3MThiOGVjYzRlMmJjZThiY2FiZTkwYTI5ZWU2MzUwYTE0N2RkYWI0NDYyNTA1ZGExMGI0ZWNlMmE0ZmRjYzIifQ"
+        },
+        {
+          "resource": "repo://src/utils/connectorGroups.js#L150-L183",
+          "version": "repo-lines-v1:sha256:f8fab557dcf25ce5024c23722af4433520b98c1b779d8ddc002b0b84e3ec0f44:eyJzZWxlY3RlZExpbmVDb3VudCI6MzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJhODk0OTBiZTM1N2U4NDk3YWY4NmVmYTFkMzRmN2M2OWY0OTJjMzZlMDVkYjU3MGIzYTU1MTdiNDlmZjhiYWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM3OTI5ZTkxZTBmOTljM2U4MjVkZTY5YjQzNWZiNjQ4NGQxYjBhMWRmMmY0NjU2MWFiZjFhMjlmMDQxODhiODgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjlkYzY1YzI4ZWEwZDRmZGNjY2NhMjRhY2FhMmY1NDgzZTg4NWJiYWMxNDJiM2MzYTEzYTgyNjYxYTFmODk4OWEifQ"
+        },
+        {
+          "resource": "repo://src/utils/templateRules.js#L127-L146",
+          "version": "repo-lines-v1:sha256:dbd9365361a8ac62c380cd52dd5aec69226009b065b68c194650a719a15265c6:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdkNjFlMDI3MGVkYWY5ZGJjNWYzZWVmYzNiNTJmMzQ5YmFmZTBhY2FkODYyMWIxOTZmZGFmNWYxYTg0NjI3YmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY4ZmQwMGEyNWI5NDQyNWI0MDBmY2JjOWU3OGE4YzQ3NjJmMGJiNjM1YzcwMzBjMzlmODMwMDE0OGQxMzU5YmUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_765e2c5fb29347cebd7e3efaa08a07dd",
+      "statement": "Template rules filter positions by DesignDB columns (Family, Manufacturer, DriverLocation, ControlTypeRef), tags, and recipe fields (Recipe.Family, Recipe.ProductCode, Recipe.ElementType) using AND/OR logic; connector parts are excluded from recipe field evaluation so rules describe the position itself, not the connectors the template adds.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/CollectionEditor.jsx#L28-L57",
+          "version": "repo-lines-v1:sha256:f86fa3d5878cee1fc877139eb17e1e6fcdb4c45c63b96d9ab780bed97bbb3f4a:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRiZmFmNGQyMjJkNTViZGE1YjhhOGI4NTYyOTFmMjZhNmI0Mzk0YzY4NTk2N2FhZDhkODFhYWFkYzcxN2M0MDYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU2MjY3OTM1ZmM2MzM0NjVkODQ4YjQwYTRlZDY5NjdlN2I3YTMyM2Y4MWNkNTNjMTEwYWUyMTAyOTY4N2FhMTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUyZmE1ZWI0NzZiMWFhYThiY2FlNGRhYmQ1MjRlNzMzODNkNDc1ZWNkYzQzMzEzMjVjMTRhODA0ZDE1MmFmODkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM3OTI5ZTkxZTBmOTljM2U4MjVkZTY5YjQzNWZiNjQ4NGQxYjBhMWRmMmY0NjU2MWFiZjFhMjlmMDQxODhiODgifQ"
+        },
+        {
+          "resource": "repo://src/utils/templateRules.js#L161-L179",
+          "version": "repo-lines-v1:sha256:e4c5a2df70b683fb95f9d7a8c7601058de338add09633dc153157ca44730a0ee:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY1MTJiNjc5OWVlMGEzOWM1MjViYjc2NWU0NjMxYWZmNTJhOTE0YWU2OWI5YWM1ODMyNmU1MGMyMWQ3YWRiNDMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQwNDE4NjI4MThmZTBiNjk2N2VhMjFlOGJkMGY0NTA3Y2U3NjUwZmIwNzViNjU2M2RkZTc3ZDRlOWE2YjM4YzciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNkNDRiN2YxZDQzMjI4NDNmNzg5YzUwMzQyM2I0NzI1ZDAwZjhlYmU4YmZkYTI2ZDJjNDA4NmE4Y2RlNTdjMmEifQ"
+        },
+        {
+          "resource": "repo://src/utils/templateRules.js#L34-L39",
+          "version": "repo-lines-v1:sha256:aae8e5112caaeacdca4c28f3dbcfec012d930bd164d2324edd2ad469e1c3cf87:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNmY0YzY1YzVlNTdjOWYzNThmMjg2MTY1ODllNzYwOTYzZjEwYWI4OGI3MzA3ZmZmMGY2NGM5YzQyZDJkNjc2ZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjk0MTZlMDlmNzhiYTMxNmMwMzI1NjgyMTNiODU1ZWU3NTZlNDE1NjVkOTE4ZjA5NTE5YzgxZmQ2MjBmNDA2MCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZDBhYjFkZDEyZjc0NmQ5MTc0MGQ3MWY1NThmYzU3M2NhZTAxZTY3YTliMmIwNmMwYmYxYjBkYjVjYzYxZDY1OCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOTQyNjJkMDcxNjY0ZjA5MWMwOGY1MDc3MDc1OTRkYjM4ZjcwNGZjMzE5ZGYzMmZmN2VkY2E4M2NiZTEyNDk5OCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_1219a333cf12475ba388cdf560f3d828",
+      "statement": "Rule specificity is measured using log2(total positions / positions matched) per condition; AND adds scores, OR scores as the union of matched positions; narrower rules (whose positions all fall inside another's) beat broader ones; equal specificity results in a clash.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/templateRules.js#L127-L146",
+          "version": "repo-lines-v1:sha256:dbd9365361a8ac62c380cd52dd5aec69226009b065b68c194650a719a15265c6:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdkNjFlMDI3MGVkYWY5ZGJjNWYzZWVmYzNiNTJmMzQ5YmFmZTBhY2FkODYyMWIxOTZmZGFmNWYxYTg0NjI3YmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY4ZmQwMGEyNWI5NDQyNWI0MDBmY2JjOWU3OGE4YzQ3NjJmMGJiNjM1YzcwMzBjMzlmODMwMDE0OGQxMzU5YmUifQ"
+        },
+        {
+          "resource": "repo://src/utils/templateRules.js#L84-L112",
+          "version": "repo-lines-v1:sha256:3a47ae9bc9401bd0f719c1f3b15f8ae627756e2a55f3f85ab80ec3256851b537:eyJzZWxlY3RlZExpbmVDb3VudCI6MjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMxNGE0MmExOGQ3ZDcwOTBhYWQ2YWY0YTI2ODNiNTcwMDA5NGI4MmQ5M2JmODJkNTEyMTc4ZDVkNTVmOTUyZWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhmYjY0OTIzYmRmYmVjOWQ1NWQwM2EyM2NmNDViY2M2NzU1NTBhZjlmYWYzMmFkYTBhZmY3Y2E3YWRkOTlhOWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNmZDM0ZjIzMGViNGQzMzJjNDE5ZWUzMDAwODAzYjFkNDk3NTE4YjdkMWRjYzRiNjQxOWM0ODI5YzY0MjJhOWIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_e6734b5fbc7946cf90f45b1c371489aa",
+      "statement": "When a position has connectors matching exactly one template's parts and is not pinned to any template, ConnectorAutoJoin automatically pins the position in the background with no UI prompt; this occurs only when exactly one match exists.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ConnectorAutoJoin.jsx#L1-L36",
+          "version": "repo-lines-v1:sha256:e5e103523da07cb0991237212feabcd6ab9c1744e2ace28a1812e9cc0a990f52:eyJzZWxlY3RlZExpbmVDb3VudCI6MzYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVkYjEwNDk5ZmU1OTEyNmYyNDA4MmJhYWU5YzY0NjhmYTg1Yzg5NmE0YmYwMzBjMTliYTc3ZWJkYTkzNWFiNDAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_2a39ae2d037446ecadca18d1008a2e0c",
+      "statement": "The Connectors screen displays a three-panel layout: left panel lists templates and groups found; center panel shows a coverage matrix (positions × templates with color-coded status cells); right panel shows template details or position-cell detail with gap analysis and bulk apply options.",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/ConnectorsScreen.jsx#L134-L287",
+          "version": "repo-lines-v1:sha256:df401acf427dc96bae9f7c35121ba6779fc93ed0f762b1dcfa119088e5bb9071:eyJzZWxlY3RlZExpbmVDb3VudCI6MTU0LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJlNzIxNmU4ZTljMGExYTY4ZDA2YzJmYmFhNWZkMjEzOTQ4MmI4ZWZkMGExOTMxNWI5MTVlNmNjZTg0OWQ4OWRjIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI4MmYzY2ZkMTFkYTYxNTAxOTdhY2VlZDA4NDA2YWM2NGIwNTAzNDBkZTdiYzA0MTI0YTRjYjdlZmE2NzEzNDBiIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI1MzJjOTZhY2ZjYjg0MjAzZmNkZWEwMzdkOWNlMjJmYzk4MjU0MWQwNGY0ZTI0MGE3Y2I4NGEyNGY0ZGMxOGJhIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJiMzU5NGFmZTc4ODM4ZjhjYmZlZTk3MmIxMjlhMDQ2MDU3ZjNhYjgyZjk4YTQzZTY3MjZmMTE2Y2ExMGUzY2I4In0"
+        }
+      ]
+    },
+    {
+      "id": "claim_10ef6d32f0084bc285595617186004b3",
+      "statement": "Coverage matrix cells show five status levels: complete (green, all parts present, nothing extra), extra (yellow, all parts plus unexpected connectors), partial (tan, some parts present, some missing), missing (red, template applies but no parts present), and N/A (gray, template rule doesn't match).",
+      "evidence": [
+        {
+          "resource": "repo://src/components/CoverageMatrix.jsx#L12-L18",
+          "version": "repo-lines-v1:sha256:2ee9e27595d0f14e5b218e2eb6f642ad52db656dc4a6b2ef137ba9d7266769d8:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMGZiMjQxYzQzNDVkOTczM2E0M2M2ZTAwNTc4ODE1YTJmYWFmMjFmNzk3MzUzOTU0YTZlNjI5OTEwZDQ4OTYyYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNGM5MTRkNzJkMGEyMTgwYmExNTU0NDYxZWY2ZDJkMmJmNTQwYmQyNjBmZTY4ZTQxNGI4ZWU5YjRkNmU1MzZiZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMGViYjg0OTE5YWM0NTQ1ODIxZDNmMWI1M2VmODMzYjExYzBlNWNlODI3YTg2MTQ5N2E0YjlhZGExOTBmMGRkZSJ9"
+        },
+        {
+          "resource": "repo://src/utils/collectionStatus.js#L153-L191",
+          "version": "repo-lines-v1:sha256:ce1abfc7713d0eb6864d76c79bc70ba9cec9d4f2440a16b2111570b746124a56:eyJzZWxlY3RlZExpbmVDb3VudCI6MzksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImExNmMzM2ZiOTk2N2FmZDM4MTEzMWJmNDQzMDMwZjM1M2JlYjFjM2E2M2JlMjNiYjZhMTFkMzM5YmZjYWZlZDciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU4Y2I1NDJmMjEyY2VmOWU5NDZjOTAxZWNkMDUyMmJmNDc0ZTViZmM4YzRmYjA0ODRmOGZlZTIxOTJiMDIxNGQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZjMGM4MzI2ZTEwOWE5OTMyMWUxYzNkYTczMTdkZDUwZTdiZGY2NTkyOTFiZWJiN2EwZmYxOGI4NzYzNTRjNzcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_849aa9fa45c640ea8aaa0ded187b222a",
+      "statement": "Connector gaps (computed by connectorGapsForPosition) show parts a position needs to complete an applied template; gaps only appear for templates the position has 'started' (at least one ingredient present); gaps explain why each is missing, misplaced (wrong slot), short (under quantity), or blocked (needs wrapper without one).",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ConnectorSuggestions.jsx#L7-L22",
+          "version": "repo-lines-v1:sha256:4febbd6a28910adc5ef2f99bbed16b1e2e0c2f60cfd9898651ec4234f9732eee:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNiMzc4OTU3ZGYwMzI1M2Y3MGYzNDU0MDZlYWUzMGRjNjRiMDg2ZTNkMzM2ODVhOGUzMTM1Y2I1MDA2NDZmYmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjI4YTM0OWZkMWQ5YTYwZTQ5NGY5MjlkMDhlYWRlYTY5NzQwM2ZlNTFhNTY3NDMyN2IyOTk5OTZmMGM2NTQ3YjMifQ"
+        },
+        {
+          "resource": "repo://src/utils/collectionStatus.js#L200-L268",
+          "version": "repo-lines-v1:sha256:6644c55d3940c044c887fd7c7a019546162a31eec7b17c29e26f1b764aa23e70:eyJzZWxlY3RlZExpbmVDb3VudCI6NjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM4NjM4MDA2MmM2MjJjMjdmYzFhNjA5NTRkOGUwYzJkNzczMjBiZWIxMmE4Yzc0MTRiZTc2OTY3NThhYTQ5MDEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM3OTI5ZTkxZTBmOTljM2U4MjVkZTY5YjQzNWZiNjQ4NGQxYjBhMWRmMmY0NjU2MWFiZjFhMjlmMDQxODhiODgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ4ZjNhYzJlOTQ4NTA3M2VkNTQ5NjVhOTFiYzRhNzRlMmEwNWRlMjFhNGIzOWMzODdkOTRmNjdiMmFlNWZiYTAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_1890c02960454ccbb60d4305a7b4365f",
+      "statement": "The app ships with Wago connector templates from Kaizen page 101097 (Lighting Manufacturing - Wago plugs): 5-pin, 4-pin, 3-pin, 2-pin DALI, and combo templates; maintained by n8n automation; superseded part codes are tracked and mapped to current codes; templates auto-suggest based on position control type and driver location.",
+      "evidence": [
+        {
+          "resource": "repo://docs/global-connector-templates.md#L1-L95",
+          "version": "repo-lines-v1:sha256:aaea316ca418be60dec0812b4a7887fec0da24576a88365ae9c56b291672797a:eyJzZWxlY3RlZExpbmVDb3VudCI6OTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVkZGI1NjlhNWY1YjMyZGJlMzk3ZmFmZDZkNzFjNmRiYzIxN2EzOTc1Y2Q1Y2JlOGVmNmJiYzE1ZjU4YzI1MmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjViNjZmMmNmOGE5Y2IzYjEzYTljN2UyMWU3YTcwMTQ0ZmNkZGU2MWI4N2MwOTYxZDU5M2NjNmEzMDYwNWQxMTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://src/components/GlobalConnectors.jsx#L44-L98",
+          "version": "repo-lines-v1:sha256:fd3c7ab2b6bd2b353c0f852a5becabc5d5d0d436106e6c538ced99e945e383b9:eyJzZWxlY3RlZExpbmVDb3VudCI6NTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUxNmIzODhmYTRlMTRiOWVmZGM4MGRiZjBlMjczYWVjMjJmMzdkZWE2ZDdjNjlhM2Y3ZTAzN2E1MGMwNmNkNGUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjgzMzYzMWU1OWZlNGI0OThjYjU1ZGExZWYwZjVhZTcwZDVhNGY5M2MwOGQ0ZjlkNTY0MzIzYjg0MTVlZWQzM2EiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY4MzdjZThmODU3NzI1MjQ0YzI1MTNkOTA3MzQ4OGJmZjBhNjFlMzZhY2Y2YzMwYWU2NzE2YThhOTQ3Nzc5NDYifQ"
+        },
+        {
+          "resource": "repo://src/data/globalConnectors.js#L1-L106",
+          "version": "repo-lines-v1:sha256:9e820bcae48c8a178316bce63447498b8f3d536e59fa2cf233db7efa417bc3b3:eyJzZWxlY3RlZExpbmVDb3VudCI6MTA2LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJlYWYyMmNmMDczMjU5MmMyNDcxNDFjYmU2MWVmYTExMDEyNjEyZjVhMzEyMmI5YWY5YmJhZjUyZjU3MjRkMTk0IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIwMWJhNDcxOWM4MGI2ZmU5MTFiMDkxYTdjMDUxMjRiNjRlZWVjZTk2NGUwOWMwNThlZjhmOTgwNWRhY2E1NDZiIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJiNGY5ZjE0YTg0ODIzODg2YjBiMzA4NjNlZmVjOTEyYzM5N2VmMmQyNGQ1MWUxOGVhNjgwZTAxMGJkMzcxMTJjIn0"
+        }
+      ]
+    },
+    {
+      "id": "claim_cacbcbcfdbf940649b84cafc3f73abdb",
+      "statement": "Wago connector suggestions follow precedent-based rules: DALI + local driver suggests 2+3 combo first (dual-core cable), then 5-pin; DALI + remote driver suggests 2-pin DALI; switched/phase + local driver suggests 3-pin LEN; each suggestion includes a rule condition for auto-application.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/GlobalConnectors.jsx#L104-L150",
+          "version": "repo-lines-v1:sha256:7d0d6908b2ffc26efb7a053b26b8afa5cb0dbbd57929e1438104cefa6dc00eb6:eyJzZWxlY3RlZExpbmVDb3VudCI6NDcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIwMDY5YjllMTMxMWMyMzgyZTc1MTkxZTNjYTBmM2I3OTcxNzY5N2JjMzNhZGFjZTk5N2YxMTcxYjg5OTY1Y2UiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAzZDA1NjIwMzgyMDAyNmI3MDM3YzQ2ZTM5OTRiZjVmMDYyNDQ1ZjczM2NiZmUxYzQ5ZDc4YzE2NzAwYTc5MWEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJmYmZlMTdmYjAxMGFkMzc2NWJlYWZjNjIyOWNhMGYyODc5NzU3ZThjZGZhNDlmOGVjODNmNjRkNzBjOWNiMzIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI1ZjdkYTlmNDNiZmI4NzQzODhjNjFmODdlYjc4NmE1Zjk4MDdhYmFiYmQ0NmVlODM5NmY2YjhmYjVhYzdlMDkifQ"
+        },
+        {
+          "resource": "repo://src/data/globalConnectors.js#L99-L105",
+          "version": "repo-lines-v1:sha256:e187d6c9ca8727307f034c7b3b8fe876b16a50e66a5930db23fa5b30787160c2:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYjNhMTc2YWZkMTM2YzIxMTBlMzlmYzc4N2ZhYzE3MGFkYTQzMjRlMTY2NWVmMjU3NDQ3MGNiN2VkMmJhMTEyZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjk0MTZlMDlmNzhiYTMxNmMwMzI1NjgyMTNiODU1ZWU3NTZlNDE1NjVkOTE4ZjA5NTE5YzgxZmQ2MjBmNDA2MCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNWIwODUzMGE1NGVlODhjY2FlYjU4NDQ2MGVmZTQ3M2FlOWQ2ZTM2NjY0MjIyZGViZmI2OGZmZjgwZjM5NDI5MCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiY2UxOWRjNzkwOWRiNmI3Y2Q5MWU4YTZhNDU4YzkxOGY0YTUyMTgyMmZmOTM4NTllYzVkNWY4NDFkODlkZGI1MCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_eed4334d82fc4ba0be4b2ad499309342",
+      "statement": "A template is created from a group of positions sharing identical connectors by clicking 'Make template' in the Connectors screen; the user names the template and optionally auto-generates a rule that picks out exactly those positions; the group's positions are pinned to the new template.",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/ConnectorsScreen.jsx#L41-L52",
+          "version": "repo-lines-v1:sha256:47a906ca168078abe6c727955f2c2ad8f53a477a29ec9cb55f4f7a230cfdf0ca:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUwNWEzNWQ4OTEwMGYwYjRjYTU2ZmJiN2RlZDRkOWIyMzM2NWFkOTE2N2FkNDE2MDgwODU3YmNiZTJjMGYyNDgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE1NWUzNjAyOTZhMDM1MDhmNzgzZTkyNmIyNTY3MTM3NWJhNTZiNzk0ZGMzZjc1MzZlYmY3MGUzNTFjZTE4ZTciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg3MThiOGVjYzRlMmJjZThiY2FiZTkwYTI5ZWU2MzUwYTE0N2RkYWI0NDYyNTA1ZGExMGI0ZWNlMmE0ZmRjYzIifQ"
+        },
+        {
+          "resource": "repo://src/utils/connectorGroups.js#L217-L235",
+          "version": "repo-lines-v1:sha256:f87d3a07e3c53afcd7a9bfda9375a8724f33c3ddb5d7560b644d986655172fe2:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUzMjM4YWRmZjc1OGQ1MzIwNDQxNWEwMmE0YzRiYWI1ODU0MzZmN2I2YjY4MjRmODM0NTRlMDE3ZmUyOGEzMTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdmN2FmYmMzOTdkMmMyNjcxYzA0Y2IyMmU4NGU2NWY4ZTY1NzY4Y2VjNmE5NzdlYzc0ZTBiNzEwZWQzZTk2YTYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZiOGUxM2FiN2ExODcyOTMwZmQyOWMyZDc2NTJkODJlMzg5ZTY2ZWMwNWQ3NjMyYzBlZTg3NmQ1NDk0MzRkN2QiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZlYjlhNzE1N2RlOGM5NDRjOTBkMjZkZDE1ZGFiZDA5N2MyNDRiZWRjMDVmNDdhMDhjMTNhYTg5YzU5YTkzMWQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_8be85337181a4dcaab2eb3c6c55e503d",
+      "statement": "A template can be forked (copied with same parts and rule for independent editing) or split (fork created and specific positions moved to it); forking creates a variant without changing the original; splitting allows one position to diverge while others stay with the original template.",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/ConnectorsScreen.jsx#L213-L222",
+          "version": "repo-lines-v1:sha256:11ac3d73fc07bb3d7ca77632f67480531d08a8176fad3539adad7485d53de45d:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4YTdlMjA3YjBkNWM2YjlhZTdhYjZkNzA4NDFhNGJhOGQ5ZDhmYzNhNWE2MjNjOWNkZmE0ZjAxNDJjNjM5NDQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQyZjgyM2Q4YzZkZmE5ZWU5ZDI1OTk2NjM0YzhkODdjZjJjODI2NTEyNzAxNjcyZjEzOWM5ZjYwMTcxYTkxZmEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE1MjNhN2JmZDc1NGViNTE3NGNlYTM4MmY5YWI3NzZjNjI1OTA0YzkyNjQyNWY3NjE4MzA1MWEzNjExNzNmZDUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVjZDNkZjVlMzg5YTgxNmIzM2NkODM0YTk0NzVjNjY5ZDc4ZWNmNWZmMWNmNmQwNDEwYzZhN2NkNjNlODc1NTgifQ"
+        },
+        {
+          "resource": "repo://tests/frontend/connectorGroups.test.jsx#L115-L123",
+          "version": "repo-lines-v1:sha256:e434e5a76e6de595605d1b4c8dd9a5e6dc2c02a94d5b221095c2d5a3c9c96551:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDMxMWFkZDQxNDMyMDAzZGI1ZmIwOTg4ZjNkZDMzOTEyOTcyNjlmMTAxZTE2ODAxMzE4MDg0ZGM4NzAwNGExZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYjIzNTI1ODljMzRkM2M2MDY4NTkzMWI2ZWNjNGQ1MDk5MWE3YzU2YzhmYmEyODk0MTE0NjU3NjkwMjcyY2FjMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODBmNGY1NDg4MWUxNjgyMGMwMWE5NGRiYjlmMWM2Yzg1YzdhMWQ1NDM5NDA5OTkxNDdlNWQyYTM2NjM1NDRkZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjgzZTcxNjAwYzMzN2VjOTJjM2ZlOTU2NmJmY2VkY2UxNjg4OTNjZjVlOTQ2YWI4ZjEzMmIxYzE0NzJmNjViZCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_ab911500373b4eb5bbfbf973de4ac90a",
+      "statement": "When a Wago template creates a new ElementType ref, it follows the pattern ET-<PINS>PIN[-<VARIANT>]-<SOCKET|PLUG>[-SR], with examples like ET-5PIN-SOCKET, ET-2PIN-DALI-PLUG, and ET-5PIN-SOCKET-SR; the ref is generated from the part's properties.",
+      "evidence": [
+        {
+          "resource": "repo://src/data/globalConnectors.js#L42-L49",
+          "version": "repo-lines-v1:sha256:c1d908f3be398aee1db10d0ce23a186102c09e3b5a92067dca9cce213b55fd6b:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWFmMjJjZjA3MzI1OTJjMjQ3MTQxY2JlNjFlZmExMTAxMjYxMmY1YTMxMjJiOWFmOWJiYWY1MmY1NzI0ZDE5NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOGRkZmE1ODZmNGFjMWExMzM2MDRhODQxMDVjNWVmNGNlZjUzNGRmZjc0NDgwY2M4NWNmMTc2ZGJlZDY1NjFmZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMDc5MjFmM2FmZGE5ZDJlMGU1NzQ4MzgzNjk0NTEwYTBkYmJkMTdmZDljYmY4YzEyYWRmMDkzZTE4MjUyNGYwZCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_096886de7f12453ebc16014da3a5f9a8",
+      "statement": "Template coverage accounts for shared wrappers: a design element wrapper's internals (from any position using it) count toward coverage via positionRecipeWithWrapperInternals; bulk applies plan the wrapper's internals once to prevent duplicates; internal gaps name the container for clarity.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/collectionStatus.js#L313-L320",
+          "version": "repo-lines-v1:sha256:f3986c8d47570beefe888bcea4f6c13d0d89330acaedc439e66412346a7d2fab:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNDI2ZjgyNzQwMWZlMTk0MmJkMWE5M2YxZWVmNDIyZWQyNWU1NTM3MjlhMWVhNzIyMDA0ZTcxMTk3MmMzMTE3MyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiM2NjZDAyMWNjNmQzNTEwZDMyYWMyOTVhMTQ1YTJjMGQyNTE0NjgyNWRhNjg3OGQ1MDk4NzBmYzI0MmEwN2Y3ZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiN2Q2ZjE3OTdjZjcwMGUxOTAxNGI0NTNkMjllZjQ3ODI3MWUyZTg3OTdkYjM3NDIwMTcyYzNkYWQ5MjAyNjNhZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYmFjNjUzMWYxZGQyZTY4ZTFhOTE4ZmQ4ZTBiNzc2NDA2Yzc5ZTU4YzIxNjE5MzdiNzQ4ZjQ4YmIzMWQ5Mjk5YiJ9"
+        },
+        {
+          "resource": "repo://src/utils/collectionStatus.js#L32-L76",
+          "version": "repo-lines-v1:sha256:d27ce585a7b0f03dd5473553b272458f6ab72537c634a7551a80f40217383129:eyJzZWxlY3RlZExpbmVDb3VudCI6NDUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxZjQyMWZjOTVmOTJiOTBhMTc3YzEwZTdlZTdhMzI3NDU4OGIwNDg1M2U4NjdiZTEyMDZkNTMwNjhiN2M5NGQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjAwNzgzNDI0YWYwYzc2MzgxMTQzN2M1ODhlMWNlMzdiOGVhZmNiZTUxNDk5YzVhMmQxMzgyYTAyZmFjYWI5NTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc2MmM3YjE1NWRiMGFjZDU5MDhjNmJhMmFjM2NmZDZjMWY4NjZiZjUyMTEyOTExZDk5NmE4NzU5OTc2ZTY1NTcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_ff528de9e6bc4c8ea584ffa3ce2e4d71",
+      "statement": "Bulk apply operations plan before executing: showing exactly what will be added, moved, or raised per position; handling shared wrappers (edits ripple to every user); stopping if a gap can't be written (internal without container).",
+      "evidence": [
+        {
+          "resource": "repo://src/components/CoverageMatrix.jsx#L128-L147",
+          "version": "repo-lines-v1:sha256:4b256f03e4e8ebd61facc29e57927bde15d368b043931a032e6f4d92fea4e786:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEyYWI3YWZiMDQ4ZmYwZDQ5ZjRhNzkxNWI4N2U3NzEyYzM0ODY3ZmRiZDUzNWRkZTJkYWZjNzdmMWJiNGY4NzgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE5OWI0YmJkZTAzOGNjMzc2MWFlMDM1YWQyNTA1OTc0MzRkZTE3MDQ0NmMzOTNmZmViODUxZjYxZWQ4YmY5OTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBhNmYzY2IyMGE5ZDQ3MzcxNWZjMTAzZmJmNTE2YWM2OWMwMDQ0ZTFkN2ZmOGFlMWU3ZGM4OTllM2JhNmNmMzUifQ"
+        },
+        {
+          "resource": "repo://src/utils/collectionStatus.js#L290-L320",
+          "version": "repo-lines-v1:sha256:011f44b2915ac4dc75a0f2de0732afdeccb56c064270de6811abcb3161cd6c79:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNjY2QwMjFjYzZkMzUxMGQzMmFjMjk1YTE0NWEyYzBkMjUxNDY4MjVkYTY4NzhkNTA5ODcwZmMyNDJhMDdmN2UiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQzYzY5ZjQxOTYxNDZjZWEwOThkYWE3YjhhYzUyNGRmMTk2ZWFhN2U3MDk5Mzk2ZjdiMjdmMzc4NWEwZThiMDEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImJhYzY1MzFmMWRkMmU2OGUxYTkxOGZkOGUwYjc3NjQwNmM3OWU1OGMyMTYxOTM3Yjc0OGY0OGJiMzFkOTI5OWIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_9885b51622604f71b4f94c9aa7178d7e",
+      "statement": "By default, connector parts are recognized by name (socket, plug, strain relief, lever roles in ref); users can designate ElementType families as connector sources via the Connectors screen 'Connector families' dropdown; all parts in checked families are treated as connector parts.",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/ConnectorsScreen.jsx#L139-L154",
+          "version": "repo-lines-v1:sha256:9d26821f661f9c81f1db8020473acbcb57ec6eb19ae89790fa06d478ce961d0b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIwYTM3ODE2NTUxM2Y0MDA3NzU4NzlhMzJlODkzN2RlMDExYjc0ZWVjNDA4NjZlNzY3OTFiMmQyODNmNDBhODAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZiMGZhMDg3MDBmNDRjOWYxNGQ2MzYwMzg2NGYzMzlhOTgzYjQxYTc2Mzk1YmZiNzk2YzQ4Y2YwYTA5MTMwZDUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkzY2U0MDI5NGMwZmU5MmQ4ZDQ3MTU2NzRlZGE3OTFlYTI0NzNlOWMzZTMwOTBkZmZkYTViYmNlMmNmMDE0ZDIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY1MTgzM2U4MDNhMDZmOWE1OTNiY2M3ZTcwNmVhMGQwOWUyZjY3MjI1Yzg3NDI3ZmMwODkzYTVhMzcyMGMzY2IifQ"
+        },
+        {
+          "resource": "repo://src/utils/connectorGroups.js#L37-L51",
+          "version": "repo-lines-v1:sha256:ce10dc449ed2b601d748f992d38af4581a8663afabf20e2f342273c8b36786dd:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA3ZTkwOGYzNGUzY2VmZDBiYTJkMzlhZTZkMjI4NDlmY2ZiOThiYWQ2ODY0YjA2MDA0ZjdjNzRkMzNlMTZkNTAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM3ZjkwNTg2NzAyNGJhODBhY2ExNWRlOGM2MzkzOTc2MGU0OGQ3MjFhNTQzNjgwY2M2NzlhYjQ4MWU5MTU0ZGYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBmZTQxMjNjYjQ3NjJkMDkwZjk4YWU0ODMyODRmZGMwMDUyMDIzYTI0NzBmZWQwYmQzODU1MTFkNmNmYWRkZTQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_121b0799bfb8411db3f680f4323bb7b3",
+      "statement": "The Wago library tracks superseded part codes (old → new mappings); old codes are recognized and mapped to replacements on import or project open; they don't appear in new templates; existing projects retain old parts until explicitly updated.",
+      "evidence": [
+        {
+          "resource": "repo://docs/global-connector-templates.md#L31-L42",
+          "version": "repo-lines-v1:sha256:efb6540671ef50e5f2bfc48f78ca5d4418ba7b9fb49b436ec6dee093d6e9076d:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA4YjU2Mzg2ZWUyNDU0MDY3YmI5Y2VlOWNkMmQzNTM1YWQ4MDlmYTkzMDM2OWY3ZmVkZmVkM2JlZmZmMjM2MDIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA0MzMxNDk1NGRkOTA0MGY0MDU3OGNkYTQwNjdlNWIzOWJlMDM4NGExNDc1ZjFkZjRiZmYzYTRjYzRhZDA0MWIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQyZGQyMTkxZTEwODhlNzkxZDUzM2NmZTUzMWFhZjc4MWYxZTY1NDUwYmFjN2IzZGE5NjliZWU1ZmYwY2MwN2EiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjI5NmM0OGVkZWUxMDIwZDcwNTMxZmRlZTlmOGVjMjRjY2YyYWQ4MWZhNDYyYTYyYjU0N2QzMTM4OWZkODgzNjAifQ"
+        },
+        {
+          "resource": "repo://src/data/globalConnectors.js#L54-L63",
+          "version": "repo-lines-v1:sha256:a07663ab9702ff55028c5b993dccc84e1ba9e0a6b05f3594cb24bc5633d04685:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU0YWEwNTNhN2E1ZDYxZDQ3ZDFjYThlNTM2MDIyYjA0OWExZmNiZjI5OWMxMmVlMmI5MjczNWMzNzc4ZDE4NzIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFmOTVjM2IxYTc5NWYzYzIyNDAyMDkxYjZkNjA5YzI3NmMzNzNjNmNmMjMwOWI2YmY3OWEzYzk3YzQ0YWRhODgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgwZmUyYjE5NDdhNTA3ZDk4MjM1MTcyYzcwNzA3MzVkMzQ4YTUyYjZjMmQzZGEzYzg4MzhjZTRhZmFmNWYxN2YifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-17T13:57:20.517Z"
+  }
+}

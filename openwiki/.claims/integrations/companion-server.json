@@ -1,0 +1,220 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:132e63388fd89959070ce32236f0fff1c3f11300a8e24d49bd0842c0f89afa43",
+  "claims": [
+    {
+      "id": "claim_2855f75546cc4633a8a0c4bedb35a319",
+      "statement": "The app probes for a companion server at startup by requesting GET /api/capabilities, expecting a JSON response with { protocol: 'psr-companion/1', features: [...] }. If the response is missing, non-JSON, has a different protocol, or any network error occurs, the app treats it as having no companion and continues without optional features.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/companion.js#L101-L112",
+          "version": "repo-lines-v1:sha256:4f728119079d875bf187577f4f28e691685752eb448d5538d1675cd6866910e7:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdiMTk0NzIxZWVkN2MyOTM0YWQwMzgxYmQxNjg0ZGU1NjViZmU2NzIyZDQyODM2YWU2NzI0ZTUxYTI0OGIwZTgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZiNTgwZTk2NGY4M2E0NzNmNDNkNDQzODQ2Mjk0OWQ2OGI1NjAwZmRhNzg3ZjE2Mzc0NWQwMGRlODljYmYzNmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY2ZmJhYmU5MTRhNjdkZGY4MDZlZjQ1ZDIwYzAwMDE2MGIxZDQ3NDlhZjc1NmM1ZTcwZWYzZDFhYTZmMzZmMDcifQ"
+        },
+        {
+          "resource": "repo://tests/frontend/companion.test.js#L8-L26",
+          "version": "repo-lines-v1:sha256:f9f5efc20addae570eb4f4c3e9a52c08bb622a1a4aec75ebd8d38fe75d37b48a:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNjMzYwZjcyZTAwMDEyNjIwOWY4NTFiNWJkMDY2M2RiNDc2ZjE4MWNiNzFhYjU0OGEwM2IyZThkNzFkMTQxNjIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIyMzUyNTg5YzM0ZDNjNjA2ODU5MzFiNmVjYzRkNTA5OTFhN2M1NmM4ZmJhMjg5NDExNDY1NzY5MDI3MmNhYzMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE1NzYwMGNkZDI0NWVkZDFmMDI5OTYyZWZiNWJhYjdkYWRmMDEzNTFiNTgzNTgzZmI5OWY4OTI0NGViZDdjMTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc5MWVjZGM2ZDkwMDI2ODFlZjBkNTVhNjkyYjA3MTc2MjQ2ZTYxMjM4NTUzNzJkOGMyZDAwZDc5YTc2ZTI5YzgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_33753c41786848e29c84650c58ce10fb",
+      "statement": "Each companion feature (sweep, library, projects, contributions, etc.) is optional and determined by the features array in the /api/capabilities response. Features not listed return null, and callers treat null as 'feature unavailable, use defaults'. Only features explicitly advertised are invoked.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/companion.js#L46-L99",
+          "version": "repo-lines-v1:sha256:ba5b15321bfbbca41326bacdf49f8d98d0983c8a259fd4f8bcab45587cedad6d:eyJzZWxlY3RlZExpbmVDb3VudCI6NTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYyMjBlMGI4MTUxMGE5ODA4YjFjYThjNTVkOTYzNDYxMmVmNjhlMzNjM2RiNjkxYWMzYWFkMzEwMTVmYWU5YjEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImNlMDNhZjBmNDU3ZDY5ZTdjZDRkZDliOGU3NDliOGIxZTk5Y2E1MDczNjI0YTRlZjVhMWFmNTU0ZWY0YjNhYjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIxNjVhMTk5NDdjMDZiMjU4OTM3OTZlNDZhNzEwNDcwZTgzMzdhMGI0YTQwOTk1ZDZkNTBlNjkwZWM5MDlmNGQifQ"
+        },
+        {
+          "resource": "repo://tests/frontend/companion.test.js#L27-L33",
+          "version": "repo-lines-v1:sha256:7021835ff3790014b1260c51af6b313a258e9a5f055e73c4b47a6fd306a97308:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjFmM2ZmY2YyNjI3NzM0M2JhZjc3NDEzMDU2OGIxMjI0ZmQwMjFkODdmZGExMDU4NjgzZjlhNmY1Yzk5YTMwMiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYjIzNTI1ODljMzRkM2M2MDY4NTkzMWI2ZWNjNGQ1MDk5MWE3YzU2YzhmYmEyODk0MTE0NjU3NjkwMjcyY2FjMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNDdjMDgxMzYyNTk2MGE0MDA5MWI3ODE5YzkxNjkyMDc2ZTYzYjhmOTE4MTk3NWJiMjIwYzFiMTIyNTljNzIyNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjQ3MDMyZGYxNzU1OTZkN2ExNWM0YzlmYTU3ZDdiNzZmNTE1ZmRkMmFmOGM4ODc1MjgzNTkyZTBiZWQ0NDU1MyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_d9a30d79fdd949ae9a4d327ee3c87ceb",
+      "statement": "All companion API calls use a quiet/fallback pattern: if any endpoint fails (non-OK status, non-JSON, network error, timeout), the call returns null. The app continues without that suggestion or capability. No single failed endpoint breaks the app or stops other features from working.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/companion.js#L101-L112",
+          "version": "repo-lines-v1:sha256:4f728119079d875bf187577f4f28e691685752eb448d5538d1675cd6866910e7:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdiMTk0NzIxZWVkN2MyOTM0YWQwMzgxYmQxNjg0ZGU1NjViZmU2NzIyZDQyODM2YWU2NzI0ZTUxYTI0OGIwZTgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZiNTgwZTk2NGY4M2E0NzNmNDNkNDQzODQ2Mjk0OWQ2OGI1NjAwZmRhNzg3ZjE2Mzc0NWQwMGRlODljYmYzNmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY2ZmJhYmU5MTRhNjdkZGY4MDZlZjQ1ZDIwYzAwMDE2MGIxZDQ3NDlhZjc1NmM1ZTcwZWYzZDFhYTZmMzZmMDcifQ"
+        },
+        {
+          "resource": "repo://src/platform/companion.js#L31-L43",
+          "version": "repo-lines-v1:sha256:f4f960106ca31a48a38feddf55110c9fbe70e3bbdfc35884baff9c558f03a30f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdkMDk1NzQ3MGVkN2Y3MjY1ZGFiZTE3OGNkZDQxZjBiZDhjOWNjMzg5MGM3NGJiNzA4NTIxMDBkYmMwM2Q0OGMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVkYWUwNGIxZTdlNTJhZGU0ZTQyYzk4MDhhMzE2NTJlMmQ3ZWFiNmRkODM3MDcxNzcwY2I0MGZhZjExYTE0YWUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc0OTkwMWNlMGRmY2I1Y2YxZDE0MzBmZWU3NjU0OTZmMTU4NmUwZTRjNmQ5ODhlMTVlODczOTI1Y2FjMDY2MmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjI3MjFiZTIyZDFlZGZkN2U3NjQxODEwMjg5MmU4MzU3YmYzNDlmMmY3MTY5YWM1NDJkMTZkMWFjNzU4MmRiYjQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_41d751c0585a487fbc4084ebeab52927",
+      "statement": "All API paths are relative to the page (./api/...). The build has no configuration and does not know or care where the companion server runs. A build served at example.com calls example.com/api/capabilities; one served at example.com/v1.2/ calls example.com/v1.2/api/capabilities.",
+      "evidence": [
+        {
+          "resource": "repo://docs/companion-api.md#L23-L26",
+          "version": "repo-lines-v1:sha256:0a4e6278e296c8ae4d2e09bfcbd6e1ba213132aad5bf785954241f149a56c21b:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiY2MyMDc4MWYxMTMxYjA2NTFmNTcxZWZmYWFmOTI4OGFhMDQ3YjRiM2MxZjg0ZGJiODUzYmUwM2I4YTJhOGY4YyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODU0Y2UzOTY0MTEzMzhhMThlNGU0YmFmYjUzYzkwNzBhNmU4MGYxYTc2MmUxNmNlNGM4NDRmYTllYzUxM2Q1YiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOGJiMGRhNzRjMTA5MWJmNzYyMzAwYTA5MmJjMjZhZTMwY2NjYTFiMjdlYmQxNWUyMzQ2MTQ0MWJjNzQxYTFlYiJ9"
+        },
+        {
+          "resource": "repo://src/platform/companion.js#L31-L44",
+          "version": "repo-lines-v1:sha256:91b628493ad60f6e60f9e6f82796c900f3bb04e18edae932ffd8a9359cc1bdbb:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdkMDk1NzQ3MGVkN2Y3MjY1ZGFiZTE3OGNkZDQxZjBiZDhjOWNjMzg5MGM3NGJiNzA4NTIxMDBkYmMwM2Q0OGMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYwNTk0MWQ1Zjk1YTQ4M2I4MTliMGFlMmUxZjU0N2Y1YzBlNmYzODIzYmJhNjIyYmY4ZmY4NjgxODlmM2FhMDYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc0OTkwMWNlMGRmY2I1Y2YxZDE0MzBmZWU3NjU0OTZmMTU4NmUwZTRjNmQ5ODhlMTVlODczOTI1Y2FjMDY2MmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM4ZmY2MmVmYTJmNzZjZmRmZWY0YTVlYWRlYjMyMTc3NDFhMDQwYjNkZmJkZDYzYmZkMWZlNWQyMGU1MGJiZTYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_283c05bc1be44a0e84dbb15d889bc6ae",
+      "statement": "GET /api/products returns code metadata: known status, manufacturer, retirement info, Element Type family assignments from other projects (with confidence tier), and technical facts with source attribution. A 404 or { known: false } indicates the code has not been seen, which is not evidence the code is wrong.",
+      "evidence": [
+        {
+          "resource": "repo://docs/companion-api.md#L39-L61",
+          "version": "repo-lines-v1:sha256:ff9d83a6d4b3df9e8a4f2bdcc97aa42667af11193a7ea87621402b8a81d1de6f:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM1OTc2M2Y5ODQwYWUzM2Q5ZWExZmYxNjMyY2M0YWQ5ZmJlYjEzNzg3MTBkMTlkZWViOTcwN2E0NmNlNDA2OTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjIwY2MyMTRkZmY0MjJjNWUyZmEwYmZkYmQwMjAwMDUzNzQxM2JmZTBiNDExNmJkMGUzNWVjNWFmNzE1NzZmOTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImEyZGZmNzE5MmU4ZGQxMzgyNjI5NTA1YzZkMGIwYTExZDA4OGUwY2Q2MWMzYzhkNGNhODEwZmFlMjdhM2Y3M2YifQ"
+        },
+        {
+          "resource": "repo://src/platform/companion.js#L46-L99",
+          "version": "repo-lines-v1:sha256:ba5b15321bfbbca41326bacdf49f8d98d0983c8a259fd4f8bcab45587cedad6d:eyJzZWxlY3RlZExpbmVDb3VudCI6NTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYyMjBlMGI4MTUxMGE5ODA4YjFjYThjNTVkOTYzNDYxMmVmNjhlMzNjM2RiNjkxYWMzYWFkMzEwMTVmYWU5YjEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImNlMDNhZjBmNDU3ZDY5ZTdjZDRkZDliOGU3NDliOGIxZTk5Y2E1MDczNjI0YTRlZjVhMWFmNTU0ZWY0YjNhYjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIxNjVhMTk5NDdjMDZiMjU4OTM3OTZlNDZhNzEwNDcwZTgzMzdhMGI0YTQwOTk1ZDZkNTBlNjkwZWM5MDlmNGQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_b3977d7fc0d04de0bb2cc46478da2c85",
+      "statement": "POST /api/products/sweep with a list of codes returns which ones have been retired by their makers and their replacements. Used to flag deprecated parts when a project opens.",
+      "evidence": [
+        {
+          "resource": "repo://docs/companion-api.md#L62-L66",
+          "version": "repo-lines-v1:sha256:f7479b1a51c7636d9ca2a9868d85d727d00ca0fc1784b0c147e8dbe3fd137b0e:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTY0NzNmMDdiOTdiMDZlMzhhMTUyYmExZTU4YTZjOTlmY2YwM2M5MTVkOTcwODg0NGIyNzJiZTc2MzY2ZTY0OSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZWMyOGIwZTRlOTQxNzY4N2Y2NmNkNGNiZTQ1YWI1ZGUwNDhmOTA3MmZiYTdhMDg0OWZlODRiMDZjZDVkNTNlMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzM2MWMzZjEzZGFkYjFkYTRiNmQzMTNiOGMzZGM4NTc0YTQ2MmE1NDVhZDQ1ZTA1ZTkxMDRmZTEwMTMxMmI3MSJ9"
+        },
+        {
+          "resource": "repo://src/platform/companion.js#L51-L52",
+          "version": "repo-lines-v1:sha256:9302f69c2e2a7649285667e21c950b509f13f970cb486aeecc441c194444365f:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMzI0NWI0M2MwMDE4Y2VlYzlhNTJkZjNlMzg3MWUzMDRhMTgxNzUyYWU3YWQ3YTc1NjhkYTA4YTU5ZDFlZGU2NiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNzEwNmUyOWViZTMyYzJlNjNlY2Y1M2Y3OTRiM2VmOTE3ZWM2MzE1OTk3ZmEzMzVmODFkOTFhNDZiODNjMjNjOCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMmU3OWQ2MjcyM2Q3ODE0Zjc5OTJhNDMzNGFjMmQ2NTM0ZDU5Zjg5Mjg2Zjk2MDU4MDA5ZTllODU0ODg2OTVkMiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiY2RlYWI4ZTQzNmFiNTQ1Zjg5ZDk0NzIxODgxODhkMzFiNzcwODI2MjU3MTVmYjExYWVkMGQzMWI4NTlmZDUzNiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_06aed1cc507945c6a56f911df8a333f0",
+      "statement": "GET /api/library returns exemplars (code → Element Type family mappings) from OTHER projects for specified manufacturers. POST /api/library sends the exemplars harvested when a project opens. The server replaces the project's entire previous harvest (the whole truth) with mode='replace', or merges individual codes with mode='merge'.",
+      "evidence": [
+        {
+          "resource": "repo://docs/companion-api.md#L84-L93",
+          "version": "repo-lines-v1:sha256:ca079b98b31893a176f235c6de7954fc295fbac43cd224c5774f08c707e8b0d7:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgzZWU5NGIwMjRjOGFkMzQyYjlhYzQzMzdiNDNlYWQ2YjU5YmZkNWM2ODczYmUyMmU3NDE3MjBmMDViNjRlYjEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQyMjNiMGQ1MDlmODI3MDMwNTY3OTNiNTJiZjViNGE2Y2NkZWEyZDU0MGZmNDllOWIwYmRhN2M5MjM0YjUwNTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjcxYTNkZGNkNTVhYTExMWMzOGI5NDQwZWUzMDQ3OTc0ZjQ0NzQzN2NhYzA5MDEwM2E4MGYwMmQ2NjE4ODUxN2YifQ"
+        },
+        {
+          "resource": "repo://src/platform/companion.js#L54-L62",
+          "version": "repo-lines-v1:sha256:41d5c3f8f1fba3f1fc7ed9b8e05e54aac5e98d8b364730c4b2bf6ebcbfa45f86:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOWI0NmZjMWY2MjhlZmM1YjAxOGZlY2FhM2NjMzkyNWQzZDQ3ODI5ZGUzN2U1ODQ4ZWI1NDNiMmM3YWFhYjYwYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjA5NzE0N2E3OGI1MDNhMmNhMDRlMDMxZmFlMjRmNTQ2YWI5NWFmMDQ2YjJkYTZmYjQ5NzBiOWI2NzgyYWJjOCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZGM5OTZhNmEzMDU4ZWNiYmJhZjdhOThlNjA5NmJmMzkzOWQ0OWFmZWVkZjA5MjI3NzBkMTg4ZTY0NjhlMTRmOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjA3NDk5MjQzN2YwYjgyY2M0MWNkZTkyYjY0NzNjZDE0MWIyN2ViM2Y5MTcxNzAwMjBlZjZlZmYwMTcwNjcxZiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_5fec02c40ef24acf8006981f7436f17d",
+      "statement": "GET /api/projects/<NUMBER> returns decisions a project's users made: ElementType assignments, local ElementTypes, code role rules, and code-pair verdicts. POST /api/projects/<NUMBER>/items sends new or updated items. The latest write for each (kind, key) pair wins. Supports incremental sync via ?since=<ISO8601> to fetch only newer items.",
+      "evidence": [
+        {
+          "resource": "repo://docs/companion-api.md#L94-L113",
+          "version": "repo-lines-v1:sha256:a38eda8c100f3e1b782338b83ced5e454909080ad028aa0565b983f48d4737b2:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQyNzQzZmM2YmU1OWM1NjQwODdmMjQ0NjZmMDMxZjY3YmY2MDcxZWMyOWU3N2RiOTEzOWMyODFlNTcyODA4MzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjAxMzdhOWQ1NTRmZDU4YzQzMjE0ZTIwNTFhZmVkZmYzZDY0ZDFhZmY0ODRjNmJiZTY0Zjk2OTY0NmRmMGQ5YTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjliNmMxNzZiYjc1MTY1ZDc0ZDhhMjJjNGEzMWQzMDAxZjI3NmM5OWY1ZThiZjNhMTI5Zjc5ODkyNGVlMDBhYmYifQ"
+        },
+        {
+          "resource": "repo://src/platform/companion.js#L64-L67",
+          "version": "repo-lines-v1:sha256:a3e762c87b7b0d8b47210f54693e47c39e213b874dbc0eab2ab65e8c9c246ba7:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjZkMWFlNjE0ZDM0YjkzZjE0MWQ3ZmNjYjczMmJhNTU3OTM2YzA2Y2JlYjQ1MGIzMTZjM2JkN2U4Yzc5YzVmMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNjY3ZGVlNmNlZmIxYmY5MTg5M2ZhMzYxZjk0OWFhZWNiZGZlOWQ0MTAwMTUxNzVhNjc4ZGVlMGI4N2ZmNzcxMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYThmZGQ1ZmMwYmI3MWQzZTNkMzMyN2RhZDBjMmY0OWRlMjI0ZDU5NWZiODM5ZTA1YTAwYzMwOGY5NjBkMjY4MSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODA0MTA4MDJiZTU3MTdlOGRhZGZkY2VhN2ZhODk5OWRhM2NiM2E3OGNiN2ExMzE1ZTI1N2ZmOGQ2ODljZDViYyJ9"
+        },
+        {
+          "resource": "repo://tests/frontend/companion.test.js#L34-L41",
+          "version": "repo-lines-v1:sha256:cf39461644ce48a478d94888a48bb3d0e8c9fa3813f11557213d06a1c2526a94:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMThlZGQ1Y2JkN2JkZDIxODA2ZGYwZDRmY2U1MjQ2YTUwODNhYWIxYTgxZjk1N2UwZjVkNjc3ZDcyZGQwMzNjMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYjIzNTI1ODljMzRkM2M2MDY4NTkzMWI2ZWNjNGQ1MDk5MWE3YzU2YzhmYmEyODk0MTE0NjU3NjkwMjcyY2FjMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjQwMWViZmQxMDQ5MTcxYjkyZTNjNDZkZWRhYzNmYTk2ZGMzOTNmMzI1NDBlOWE0OTcxNzIzZjRjMjBkOGQxNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOTUwZmEwM2IxMzBiZWVhNzE3ZDk3NmI3ODdjNmU1MzM3YmE3YTI3Y2FlZTVkMWJhMjMxMWI5YmU4ZmE3MDU2NiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_9fa78cb1706d4629ad732a6918b6669a",
+      "statement": "Contributions (ElementType assignments, facts, supersession records, code-pair verdicts) are submitted via POST /api/contributions without authentication. The server must treat them as untrusted suggestions: queue them for review before entering the shared catalogue, never auto-apply. Callers can check status via GET /api/contributions/<id>.",
+      "evidence": [
+        {
+          "resource": "repo://docs/companion-api.md#L67-L82",
+          "version": "repo-lines-v1:sha256:fd2eaf7ad67368c13d30127e39490c90437f9a9d1a4f981857558d0108b47745:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMzYmNjNWZlZjE3MzRiNzI5MDRkYzIwNjcwOThkMjJhZDhhNmJmY2UzMTZlMjdmN2VmYmU4ZGY5MDk0OWRmZTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIyNmJlNGI4MmYyMzczZTg5YTA0NjQzOTJiZTMwNjAyNzc1ZDg4MGU2ODU4YWRiY2UyZTkyZjY1NjI4OWQ0YmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE3ZWU0YmVlYWM2NzA0OWYxMTE4YzU2ZTc0MWJkMmVkY2I1YjE0OGIyYmJlZTc5YTg1ZWQ0YTAxMTJkMTk1Y2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQwY2VlYjJlNWU3NDE3ZDAwN2Q1ODk3NjQzMTMzM2I3YWYzMDNhYTNlNzk3MzYwNDMyNjVlMDE1ZjRmOTMzMjkifQ"
+        },
+        {
+          "resource": "repo://src/platform/companion.js#L96-L97",
+          "version": "repo-lines-v1:sha256:676b000fbb5d0c6b8e7a7ade6987c167554a87e7c41ce8d8e073f252ede017f0:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTA2ZTI0ODc4YjAwN2JmYjc2NmRmM2IyN2U4OGFlMjk0MWJiMmE1ZWJkZDI2YzE3ZWYzYWNhMDg1ODc3NzA0MyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMTcwZTJhNGNjOTExNjE4NzQ2YTE4ZjAyYjUzYzg3NThiYmYyYmRhNzg1NzE0MTViMWMyNjdmMWI0ZjQ4ODlkOSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiY2U3YjZkZGFmNzI2NjcwOWM1YTZlMDNjMGY4OGU5MWQyNWU4NmJlYWZhZWMzMTg0NzQ3OWE2Njg2ZDQ3NjNlMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZmI1ODBlOTY0ZjgzYTQ3M2Y0M2Q0NDM4NDYyOTQ5ZDY4YjU2MDBmZGE3ODdmMTYzNzQ1ZDAwZGU4OWNiZjM2YSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_1c8da8ac8be8413eb6d482f8ba8a91be",
+      "statement": "POST /api/projects/<NUMBER>/outcomes sends feedback about learned defaults: what was supplied by the companion, what the user's final value is, and the outcome (kept/changed/cleared). Sent in the background after staging or ElementType creation. A key is sent again only when its outcome changes. No feature depends on outcomes; it is pure feedback for learning algorithms.",
+      "evidence": [
+        {
+          "resource": "repo://docs/companion-api.md#L114-L126",
+          "version": "repo-lines-v1:sha256:942080f9fca1fb051859ca3915e756d0a1d9820252350bcefc7efad2bd6aa0e0:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVmNTBiN2ZjMDcwYTRhMjIzMjQxZWMyYjQ3NmY3OTM4NjllMGJkY2Y1OWM5YzZlM2Q2MmY5ZDJhMzYxZDFkOGMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjFmYmNiMjY4MWY2YjhlN2QwZTkxMTdmZjY3OTEzMjFhOGM2ZTYwM2JkYTUxMzcwMTBhOTkxYTNlYWY5ODc2Y2QiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU0Nzc2NmUyMDQzYTFiZDFkZWFiNTZiZDk1ZGVkNWEwYjFjODg5NjZmMzY1YjFjNjAyZTQyNzJmMjFjMmExMDYifQ"
+        },
+        {
+          "resource": "repo://src/platform/companion.js#L69-L70",
+          "version": "repo-lines-v1:sha256:d42ee64521ce526731320c37875253d128956aec0352f8f21a4d6f24664c673d:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTIwMjVkMzM3YmU4ZTViODA2NTkyOTg0YmQwZGE0MzBmYWFjYTJkMmU3NjU0ZGI2NWU5NjAxNTg5YTVjNjc2ZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiODQxOWY5MGRmODMwNmM4ZTZkMjU4ZTRhZWQ1ZjE3YTJhMmE1MzdhZmFhNTZlNGFhNWE1Y2QzMTM5MTVmNzFmMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOGI0MzUyMzdlYmU5NDMzYmQ2MGY5YzUwOWUzMTAzNzNiMzk2NTVjOTYzNWVkOTkzYTFkOTMyZDQyYjI3YTVkNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzhlZjUzOGI1YzZkYjc1ZTEzZDFmZGM2MDRlNWJkZjU3YzNiZGVkMmE4Y2Y4NjY2NTQxZTE5Mjk1ZmZjZmJkYyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_fa876df8091f467c9e0a130381af54ac",
+      "statement": "Companion provides recipe-related hints via: patterns (statistical summaries of design roles by position kind), kinds (what positions typically have, with design/power/slots/connectors), kits (parts used with profiles on other projects), and templates (global recipe templates). All are shown as inline suggestions; none are applied unasked.",
+      "evidence": [
+        {
+          "resource": "repo://docs/companion-api.md#L141-L150",
+          "version": "repo-lines-v1:sha256:ae18b0b73aa21407f57a5fd68874b612cc46336d6de4da7ccff9cba9d3c4029d:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIzMmQ3Y2Y5NTMzMGY3YWM2MjRmMGJjOGNmODlhMzY1Mjc4NDM5NDIxNzMwYzVhNjk1YTQ3ZDFmNTI4MGY2ZmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUwNTJiYTEwNWIzZmRmZTJjNDlmYTZjNDlhMTk4Y2Y0YThmNzU4MGM3ZmExYmNkNjJhOWU5M2M0M2ExYzc3YTIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI1MzFiOWMyNzNkOTRiYzY4M2E1NmMwNGVkNzI1OGE5YjUwMmY4OWRmZTA2MmQ0YmE2ODk4NzM2MTMwNWRjM2UiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA1ZWQ1N2ZhM2IzNzM0NzBkNTdkYTg0NDE1ZmJhZTQzMTUyN2ZkMTIwMzE4NjNhODJjOTM4NmI2MGRlMzY1MDIifQ"
+        },
+        {
+          "resource": "repo://src/platform/companion.js#L72-L83",
+          "version": "repo-lines-v1:sha256:40cc7b94a9552eded30bc577869fc70d7b5500220c54b9d4a7498b29def154ae:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNkYjdjMmQ1YjBkYzJhNzQxYTkwYWRiN2U0YmIxYzhkZjAxNTdhMjIwYTNlMzg1MjJkMTU3MTk3MDUwYmU1NTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRmODY2ZmE5Y2Q5NGQ2YTY1MjExNTVkYWYzNzJkMDU3MTE0YjUxNmJjYjkzOWNkZWNmNmQ3MWY3MDJiMmI2YjAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM5ZTRjODJhNzUzYjcyNDkzYWIzNjAwODQ0MWVhMzQ5NDY5MTdhMTY5MjQ5YjcyNmVkMjBiMzQ2YWYxNGMyZDkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjUwMGFmNWRjYmVjMWNhYzA5ZDgyZDliY2Q3ZGUwOGVjMzE1YWRjNzQ5MGY3NDhlZmU1NWY2NDBlNTcyNDY4MzEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_cdbeef8e5577460091cffa5bb384a0ad",
+      "statement": "POST /api/products/jobs returns what job (role) each product code typically has in a recipe: tape, profile, clips, connector, driver, etc. Returns a Map of ${makerKey}|${CODE} → { slot, variant, category }. Used to suggest the correct Element Type family without waiting for manual markup.",
+      "evidence": [
+        {
+          "resource": "repo://docs/companion-api.md#L135-L140",
+          "version": "repo-lines-v1:sha256:5b8b33ab1ff694c1d681cad25d4570229f04118b3db75e1df60e876c9753394b:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTQ2OTRjMmQ2MmU0YWRkOTc1YWJlODQxNWFhN2VmMWZiNGI3NzA2ZmQ3ODMwNGNkM2FhNmRhMzY0ZTFlYzY5OCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNDBjZjRkZjM2OThiMDA0NzM2NTA5NTMwY2YwZTk0YWMyOGY2MTFlNGZlMTY1NmRkODc1ZDg4OWYxOTY0Zjk3NiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODc5YzFiNGVhZThjNGIzZmZhODk2YzI1ZjZkNWVkNjA0YjM0NDlmM2U4MGZkZmEwNDJjYmQ0YjJiN2E5NTA0MSJ9"
+        },
+        {
+          "resource": "repo://src/platform/companion.js#L85-L91",
+          "version": "repo-lines-v1:sha256:15959cb5bb6675845ddd895658c007feb91e6b58ce8b14623eaa7609d1979a58:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNDg1OTcyM2ViYzEzZGQwNjc4OGU4ZjBjODdkYmZhZWZmOTBjZGMxZThmYjIxMDgyNWExYzVmMDcwYzcwZGY5ZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZGQ0ZTdiM2FkZmMwMjk0ZGViMmRiNjRmNjk5Zjk3ZWNkOWE1MjIyMDBjOWY0N2I0MmJmZTQ2ZTNjZTU3ZGMxZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNThhN2NhZmRjYmEyMzEyZTVlOTlhMmE0NTliYWE4MGU0MzMyZDZmYjExM2ZmZjUxZmZlM2NiMTlmNGI0ZDYwZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjRhYWZjZGE0NmZhM2U0NDRkNzk2NzViNjM2MmJiOWI1ZTMwMDU1ZWY0ZmFhOTgyNGE0MmMyYTI5OTJiN2Q0ZSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_a59224d0e4ef4981a38632f23f477334",
+      "statement": "Workspaces backup and restore a browser session via a private, client-generated key (128 random bits). The app shares the key only in the URL fragment (#ws=<key>), not in request headers or logs. GET /api/workspaces/<key> fetches the backup; PUT with If-None-Match (create) or If-Match <etag> (update) stores it. ETag mismatch (412) signals conflict.",
+      "evidence": [
+        {
+          "resource": "repo://docs/companion-api.md#L153-L166",
+          "version": "repo-lines-v1:sha256:f8b65f843700bacba520869dcbe031a733abd06b6683ec8e5efbfbc791d18d59:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ2ZDk5MzhhNTA4ZWQ2NTBmNDk2MTU0NzhkZTlhMTljMzc0N2ZiMTMzMDEzYzA3NjFmMWJiOWEyMWU2MWNlNzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjliNzRiZjUxNzI1YjllMDQ5NmY4Y2RlMDQwMzIwMTJmY2E3NzE0MjZlNTlmMjJmMGFmMTBlZTBiNDM5OTUxNzMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg0MzI4ZWQyODBkNGY1YWZiNDE2ZTg1ZTcyZmNkMGFkOTI3OTljZTQ4Y2FkMTM4MzQzYmIwMTljNzhlODBiZTAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://src/platform/companion.js#L48-L49",
+          "version": "repo-lines-v1:sha256:2f01c5c19b8857f6747b9e92f16dec80a9ef1db8c6c510c21c4d66543790a4a9:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDk1ZmEwZjExMTdiNWVhNDA0MzQxNDBkZGUxYTM0MGM3MjBkZGJmMzI2MjEyZTE5MTgzOGQ0YjE1NmQzMTZiYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiN2ZjZjhiZTlmOGRhN2YwMDkxZDVkOTU4OWMwMjkxMjI0NTkwNjUxYmY1NjI2M2E4MDg5YzZiZWZmOTk5MWZkYiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYzhmZjYyZWZhMmY3NmNmZGZlZjRhNWVhZGViMzIxNzc0MWEwNDBiM2RmYmRkNjNiZmQxZmU1ZDIwZTUwYmJlNiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMmVkZDA1NjkwYjM5NzIyOWE2ZGY1MTRmNmFmZmU5NmVkMDFlOTI5MDAyMzNjYzliN2RjMjBjODk5MzZmMTI2NiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_c085dd47130c45b0babe7196dd8312a5",
+      "statement": "POST /api/reports sends bug and feature reports from the bug reporter, including app state, learned values visible on screen, viewport, and navigation trail. Server should cap size and rate, treat content as untrusted text for a person to read. Never execute or auto-process report content.",
+      "evidence": [
+        {
+          "resource": "repo://docs/companion-api.md#L127-L134",
+          "version": "repo-lines-v1:sha256:8e0167b2d0b7ede76d88de1b3449e3f1c830d2d5487c7a613683a506f22f11a9:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMGMzZWU4ZGU3MjZmM2ExMDJiZWU5MGRiMTdiNTljMjZhOTE2MzYxYmRiMDY3NjFlMTY2YWU2NzgxMjU1NTA1MSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYjYxNmEzZWZlMTEwMDNiMWIwM2QyYWIxY2RkZTZkYWM0MmY1Y2UxMjE0NjRjYTgzY2Q0MGQ3NTc0YjkxODk1NiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjY4Nzk1NzU5NDg4ZTczODNiY2I4ZTEzNWU3NmNlNDllZTBjNzU4NjMwOGM1OGFhZmMyZTQ5N2RhNzk3MzY0NCJ9"
+        },
+        {
+          "resource": "repo://src/platform/companion.js#L93-L94",
+          "version": "repo-lines-v1:sha256:9c2cf4bacc0984036df545662f0d82592a252dd2a8d595e8eb769216112226ca:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYjU2M2I5NzUwNzA3MjZmNjk1ZWY2OTlkNjJiYjE5MjIyY2EyNTc0YWJkNDdjZjZmNDgxMzk5NmM0MWY3YmZkMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzE4YTgxZWVjYjU2YzM1YWJkNTc3MTk5NWFlNGE5YjFmODY4ZjRkOGY5NGU4M2QwOTg5ZDUwNDc2MDM1OTE4YSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMDY5OGMyOGE3MzE1NTBlNmQzMTQwYmVkYjlhY2MxNWIwNmY2ZTk2YWY1YzgyMzY2YjJhNzQ1MmZjNDA3YjdiNCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzZjNDMzYjZjYjVlNzAyY2FjNzNjZjgzNTQ5MTU1MjIzZmM1MTUyOGM5ZDZhYzZhNTQ0YmZhOTQxY2ZmMTAwYSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_f56cdc51eb074be7ba0e53544ead8d38",
+      "statement": "The React hook useCompanion() returns the cached companion API or null. It allows React components to access optional features without blocking render. The probe is performed once at startup and cached; subsequent calls return the cached promise.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/companion.js#L119-L128",
+          "version": "repo-lines-v1:sha256:a59460439c4e578b2e89f67db646e143ddc8c7d984690f3c08607e2b94f78f10:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI4YmEyZTNmYjk1OTMyZjZjNDU2MDJmNmRlMzQ0ZTE1ODNmMjE5MTZkMmM4MmVkYTBkMDg2ZWVhMjE1ZWNmODMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjI0MzY1OWJmNTBkN2I2NTBiOGIyMDMxMTZhYTgyNzY0YWY3MzU3NjQyY2ZjNjgyZGE0YTdlODlmZGYyMzhlMTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-17T13:57:20.517Z"
+  }
+}
