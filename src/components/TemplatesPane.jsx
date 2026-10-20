@@ -12,7 +12,7 @@ import { C } from '../styles/tokens'
 
 const mono = { fontFamily: 'monospace' }
 const live = r => (r.IsDeleted || r.isDeleted) !== 'Y'
-const originOf = t => (t._served ? 'Orion' : t.scope === 'project' ? 'project' : t.scope === 'global' ? 'built-in' : 'mine')
+const originOf = t => (t._served ? 'Global ☁️' : t.scope === 'project' ? 'project' : t.scope === 'global' ? 'built-in' : 'mine')
 const checksOf = p => (p.rows || []).filter(r => r.check || r.missing).map(r => r.check || `${r.role.toLowerCase()} is empty`)
 
 /**

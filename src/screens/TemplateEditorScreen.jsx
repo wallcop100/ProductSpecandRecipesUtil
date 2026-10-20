@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react'
-import { Button, Badge, Form, Table, Alert, ListGroup } from 'react-bootstrap'
+import { Button, Badge, Form, Alert, ListGroup } from 'react-bootstrap'
 import { v4 as uuidv4 } from 'uuid'
 import useStore from '../store/useStore'
 import IconButton from '../components/IconButton'
 import RuleBuilder from '../components/RuleBuilder'
+import JobBoard from '../components/JobBoard'
 import TutorialHint from '../tutorial/TutorialHint'
 import MaterialIcon from '../components/MaterialIcon'
 import { useCompanion } from '../platform/companion'
@@ -13,15 +14,6 @@ import {
 } from '../utils/templateRules'
 import { C } from '../styles/tokens'
 
-const SECTION_OPTIONS = ['position', 'dl_internal', 'lin_internal']
-// Friendlier display labels for the recipe sections. Free-issue items are
-// delivered to site on their own; inside-wrapper items ship as part of the
-// downlight/linear assembly. (Underlying keys are unchanged.)
-const SECTION_LABELS = {
-  position: 'Free Issue (to site)',
-  dl_internal: 'Inside DL Wrapper',
-  lin_internal: 'Inside LIN Wrapper',
-}
 // Tags are obsolete as a way to pick a template: the rule uses DesignDB and kind columns.
 const RULE_COLUMNS = TEMPLATE_RULE_COLUMNS.filter(g => g.label !== 'Tags')
 const cleanRule = r => ({ match: r.match === 'any' ? 'any' : 'all', conditions: ruleConditionsOf(r) })
@@ -159,19 +151,7 @@ export default function TemplateEditorScreen({ onBack }) {
     toast(ok ? `Suggested “${p.name}” to Orion` : 'Orion did not take the suggestion', { ok })
   }
 
-  function updateIngredient(key, field, value) {
-    setEditState(s => ({ ...s, ingredients: s.ingredients.map(ing => (ing._key === key ? { ...ing, [field]: value } : ing)) }))
-  }
 
-  function addIngredient() {
-    setEditState(s => ({
-      ...s,
-      ingredients: [...s.ingredients, {
-        _key: uuidv4(), slotKey: '', slotLabel: '', section: 'position',
-        isDesign: null, isContractItem: null, quantity: null, dimQtyMultiplier: null, isInteger: null,
-      }],
-    }))
-  }
 
   const readOnly = !!editState?._served
   const refs = useMemo(() => positionTypes.map(p => p.PositionTypeRef), [positionTypes])
@@ -216,7 +196,7 @@ export default function TemplateEditorScreen({ onBack }) {
           <IconButton variant="link" bsSize="sm" className="p-0" icon={ACTION_ICONS.back} title="Back to builder" onClick={onBack} />
           <span className="fw-semibold small d-inline-flex align-items-center gap-1">Manage templates <TutorialHint id="templates" /></span>
         </div>
-        {group('Orion', orion, 'None served.')}
+        {group('Global ☁️', orion, 'None served.')}
         {group('This project', projectTemplates, 'No project templates.',
           <Button variant="outline-primary" size="sm" style={{ fontSize: 11, padding: '1px 8px' }} onClick={handleNewTemplate}>+ New</Button>)}
         {group('Mine', mine, 'No personal templates.')}
@@ -233,7 +213,7 @@ export default function TemplateEditorScreen({ onBack }) {
             <div className="d-flex align-items-center gap-3 mb-3">
               <Form.Control style={{ maxWidth: 300, fontWeight: 600, fontSize: '1.1rem' }} value={editState.name} aria-label="Template name"
                 onChange={e => setEditState(s => ({ ...s, name: e.target.value }))} disabled={readOnly} placeholder="Template name" />
-              <Badge bg={readOnly ? 'secondary' : 'primary'}>{readOnly ? 'Orion' : editState.scope === 'project' ? 'Project' : 'Mine'}</Badge>
+              <Badge bg={readOnly ? 'secondary' : 'primary'}>{readOnly ? 'Global ☁️' : editState.scope === 'project' ? 'Project' : 'Mine'}</Badge>
               {!readOnly && companion?.suggestTemplate && (
                 <Button variant="link" size="sm" className="p-0 text-muted ms-auto" style={{ fontSize: 11 }} onClick={suggest}
                   title="Send this to Orion as a draft for review">Suggest to Orion</Button>
@@ -241,7 +221,7 @@ export default function TemplateEditorScreen({ onBack }) {
             </div>
             {readOnly && (
               <Alert variant="info" className="py-2 mb-3">
-                Orion templates are read-only. <Button variant="link" size="sm" className="p-0 align-baseline" onClick={() => copyToMine(editState)}>Copy to mine</Button> makes an editable copy.
+                Global templates are read-only. <Button variant="link" size="sm" className="p-0 align-baseline" onClick={() => copyToMine(editState)}>Copy to mine</Button> makes an editable copy.
               </Alert>
             )}
 
@@ -260,35 +240,12 @@ export default function TemplateEditorScreen({ onBack }) {
               <CheckPosition refs={refs} value={checkRef} onChange={setCheckRef} rule={editState.rule} rec={checkRef && refs.includes(checkRef) ? recOf(checkRef) : null} />
             </div>
 
-            <div className="mb-3 d-flex align-items-center gap-2">
-              <span className="fw-semibold small">What it adds ({editState.ingredients.length})</span>
-              {!readOnly && <Button variant="outline-secondary" size="sm" style={{ fontSize: 11, padding: '1px 8px' }} onClick={addIngredient}>+ Add slot</Button>}
+            <div className="fw-semibold small mb-1">What it adds</div>
+            <div className="text-muted mb-2" style={{ fontSize: 11 }}>
+              Jobs, not products: applying it fills each job from the position's Form, and flags any it can't.
             </div>
-            <div className="text-muted small mb-2" style={{ fontSize: 11 }}>
-              <strong>Section</strong> is where each item lives: <em>Free Issue</em> items are
-              delivered to site on their own; <em>Inside DL/LIN Wrapper</em> items ship as part
-              of the downlight or linear assembly.
-            </div>
-            <div style={{ overflowX: 'auto' }}>
-              <Table bordered hover size="sm" className="small">
-                <thead className="table-light">
-                  <tr>
-                    <th>Slot</th><th>ElementType</th><th>Section</th><th>Design</th><th>Contract</th><th>Qty</th><th>DimMult</th><th>Integer</th>
-                    {!readOnly && <th></th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {editState.ingredients.length === 0 && (
-                    <tr><td colSpan={readOnly ? 8 : 9} className="text-center text-muted py-2">No slots defined</td></tr>
-                  )}
-                  {editState.ingredients.map(ing => (
-                    <IngredientRow key={ing._key} ing={ing} readOnly={readOnly}
-                      onChange={(field, val) => updateIngredient(ing._key, field, val)}
-                      onRemove={() => setEditState(s => ({ ...s, ingredients: s.ingredients.filter(i => i._key !== ing._key) }))} />
-                  ))}
-                </tbody>
-              </Table>
-            </div>
+            <JobBoard ingredients={editState.ingredients} readOnly={readOnly}
+              onChange={ingredients => setEditState(s => ({ ...s, ingredients }))} />
 
             {!readOnly && (
               <div className="d-flex gap-2 mt-3">
@@ -303,64 +260,5 @@ export default function TemplateEditorScreen({ onBack }) {
         )}
       </div>
     </div>
-  )
-}
-
-// Editable row for a single ingredient slot
-function IngredientRow({ ing, readOnly, onChange, onRemove }) {
-  function cell(field, type = 'text', options) {
-    if (readOnly) {
-      return <td>{ing[field] ?? ''}</td>
-    }
-    if (type === 'select') {
-      return (
-        <td>
-          <Form.Select size="sm" value={ing[field] || ''} onChange={e => onChange(field, e.target.value || null)}>
-            {options.map(o => <option key={o} value={o}>{field === 'section' ? (SECTION_LABELS[o] || o) : o}</option>)}
-          </Form.Select>
-        </td>
-      )
-    }
-    if (type === 'flag') {
-      return (
-        <td className="text-center">
-          <Form.Check
-            type="checkbox"
-            checked={ing[field] === 'Y'}
-            onChange={e => onChange(field, e.target.checked ? 'Y' : null)}
-          />
-        </td>
-      )
-    }
-    return (
-      <td>
-        <Form.Control
-          size="sm"
-          type={type}
-          value={ing[field] ?? ''}
-          onChange={e => onChange(field, e.target.value || null)}
-        />
-      </td>
-    )
-  }
-
-  return (
-    <tr>
-      {cell('slotKey')}
-      {ing.newWrapper
-        ? <td className="text-muted fst-italic">a new {ing.newWrapper} wrapper each time</td>
-        : cell('slotLabel')}
-      {cell('section', 'select', SECTION_OPTIONS)}
-      {cell('isDesign', 'flag')}
-      {cell('isContractItem', 'flag')}
-      {cell('quantity', 'number')}
-      {cell('dimQtyMultiplier', 'number')}
-      {cell('isInteger', 'flag')}
-      {!readOnly && (
-        <td className="text-center">
-          <Button variant="link" size="sm" className="text-danger p-0" onClick={onRemove} title="Remove ingredient" aria-label="Remove ingredient"><MaterialIcon name="close" size={15} /></Button>
-        </td>
-      )}
-    </tr>
   )
 }

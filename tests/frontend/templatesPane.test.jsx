@@ -40,7 +40,7 @@ describe('the drawer\'s Templates tab', () => {
   test('lists the matching served template for a LIN position, hides it for a DL one under the default', () => {
     const { unmount } = render(<TemplatesPane posRef="L01" />)
     expect(screen.getByText('LIN tape and profile')).toBeInTheDocument()
-    expect(screen.getByText('Orion')).toBeInTheDocument()
+    expect(screen.getByText('Global ☁️')).toBeInTheDocument()
     unmount()
     render(<TemplatesPane posRef="D01" />)
     expect(screen.queryByText('LIN tape and profile')).toBeNull()
