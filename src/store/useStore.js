@@ -513,6 +513,16 @@ const useStore = create((set, get) => ({
   clearBugReports() { saveReports([]); set({ bugReports: [] }) },
   positionList: { text: '', tags: [], formOnly: false, emptyOnly: false, showIgnored: false, showTags: false, sort: 'ref', collapsed: [] },
   setPositionList(patch) { set(s => ({ positionList: { ...s.positionList, ...(typeof patch === 'function' ? patch(s.positionList) : patch) } })) },
+  // What each screen was last showing (filters, selection, scroll) so leaving and coming back
+  // returns you to it: { [screen]: { ... } } — components/useScreenView. Session only.
+  screenView: {},
+  setScreenView(screen, patch) {
+    set(s => {
+      const cur = s.screenView[screen] || {}
+      return { screenView: { ...s.screenView, [screen]: { ...cur, ...(typeof patch === 'function' ? patch(cur) : patch) } } }
+    })
+  },
+  clearScreenView(screen) { set(s => ({ screenView: { ...s.screenView, [screen]: {} } })) },
   designPrompt: null,                 // { posRef, then } — see leavePosition
   positionHistory: [],                // positions left behind, newest last — goBackPosition
   activeContextType: 'PositionType',  // 'PositionType' | 'ElementType'
@@ -708,6 +718,7 @@ const useStore = create((set, get) => ({
       validationResults: [],
       fileWatchAlert: null,
       activePositionRef: null, positionHistory: [],
+      screenView: {},
       activeContextType: 'PositionType',
       activeETRef: null,
       showContextTree: false,
@@ -2059,7 +2070,8 @@ const useStore = create((set, get) => ({
   consumeUiRequest() { set({ uiRequest: null }) },
   specIntent: null,
   openSpec(ref, open = null, suggest = null) {
-    set({ specIntent: { ref, open, suggest, at: Date.now() }, pendingScreen: 'product-spec' })
+    // An explicit target opens a fresh Product Spec view on it, not the remembered filters.
+    set(s => ({ specIntent: { ref, open, suggest, at: Date.now() }, pendingScreen: 'product-spec', screenView: { ...s.screenView, 'product-spec': { selectedRef: ref } } }))
   },
   consumeSpecIntent() { set({ specIntent: null }) },
   // Find → "report a bug": the bug reporter opens its note.
