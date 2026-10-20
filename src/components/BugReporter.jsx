@@ -129,7 +129,7 @@ export default function BugReporter({ screen }) {
 
   return (
     <>
-      <div data-bug-reporter style={{ position: 'fixed', top: 2, right: 48, zIndex: 2000 }}>
+      <div data-bug-reporter style={{ position: 'fixed', bottom: 4, left: 56, zIndex: 2000 }}>
         <ButtonGroup size="sm">
           <Button ref={bugRef} variant={bugMode ? 'danger' : 'light'} onClick={() => setBugMode(!bugMode)} data-testid="bug-toggle"
             aria-pressed={bugMode} title={bugMode ? 'Bug reports on: right-click anything to report it (Shift + right-click for the normal menu). Click to turn off.' : 'Report bugs: turn on, then right-click anything'}
@@ -137,7 +137,7 @@ export default function BugReporter({ screen }) {
             <MaterialIcon name="bug_report" size={14} />
             {reports.length > 0 && <span className="ms-1" style={{ fontSize: 11 }}>{reports.length}</span>}
           </Button>
-          <Dropdown as={ButtonGroup} align="end">
+          <Dropdown as={ButtonGroup} drop="up">
             <Dropdown.Toggle split variant={bugMode ? 'danger' : 'light'} aria-label="Bug report options"
               style={{ padding: '0 3px', boxShadow: '0 1px 3px rgba(0,0,0,.2)' }} />
             <Dropdown.Menu style={{ fontSize: 12 }}>
