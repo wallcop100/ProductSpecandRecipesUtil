@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import {
-  Button, ButtonGroup, Dropdown, Nav, Modal, Form,
+  Button, ButtonGroup, Dropdown, Modal, Form,
 } from 'react-bootstrap'
 import {
   DndContext,
@@ -21,8 +21,6 @@ import Breadcrumbs from '../components/Breadcrumbs'
 import ProjectIdPill from '../components/ProjectIdPill'
 import FormProgressChip from '../components/FormProgressChip'
 import ElementPalette from '../components/ElementPalette'
-import ValidationPanel from '../components/ValidationPanel'
-import ReadinessPanel from '../components/ReadinessPanel'
 import SimilarPositionsPanel from '../components/SimilarPositionsPanel'
 import TutorialHint from '../tutorial/TutorialHint'
 import TagRulesModal from '../components/TagRulesModal'
@@ -37,7 +35,6 @@ import FormRecipesModal from '../components/FormRecipesModal'
 import FormAutoSaveAll from '../components/FormAutoSaveAll'
 import FormFileWatch from '../components/FormFileWatch'
 import RecipeStylesWindow from '../components/RecipeStylesWindow'
-import RestoredNotice from '../components/RestoredNotice'
 import TeachBar from '../components/TeachBar'
 import ValidationFixModal from '../components/ValidationFixModal'
 import { SaveIndicator } from '../components/SaveStatus'
@@ -87,26 +84,22 @@ export default function BuilderScreen({
   const resolveSlot = useStore(s => s.resolveSlot)
   const reorderIngredients = useStore(s => s.reorderIngredients)
   const moveIngredientAcrossSections = useStore(s => s.moveIngredientAcrossSections)
-  const runValidation = useStore(s => s.runValidation)
-  const validationResults = useStore(s => s.validationResults)
   const pendingPaletteTab = useStore(s => s.pendingPaletteTab)
   const consumePendingPaletteTab = useStore(s => s.consumePendingPaletteTab)
   const closeETRecipe = useStore(s => s.closeETRecipe)
   const undo = useStore(s => s.undo)
   const redo = useStore(s => s.redo)
-  const dbChanges = useStore(s => s.dbChanges)
-  const focusPosition = useStore(s => s.focusPosition)
 
   const [showDupModal, setShowDupModal] = useState(false)
   const [showLinWizard, setShowLinWizard] = useState(false)
   const [confirmClose, setConfirmClose] = useState(false)
-  const [backupMsg, setBackupMsg] = useState(null)
 
   /** A backup file of this setup: files, tags, templates and unexported work. */
   async function saveBackup() {
     const r = await window.electronAPI?.db?.exportConfigYAML?.(projectId, `${projectNumber || 'project'}-${configName || 'Base'}`)
-    if (r?.ok) setBackupMsg(`Backup saved to ${r.path}`)
-    else if (r?.error) setBackupMsg(`Could not save the backup: ${r.error}`)
+    const toast = useStore.getState().toast
+    if (r?.ok) toast(`Backup saved to ${r.path}`)
+    else if (r?.error) toast(`Could not save the backup: ${r.error}`, { ok: false })
     return !!r?.ok
   }
   const [showReview, setShowReview] = useState(false)
@@ -169,8 +162,6 @@ export default function BuilderScreen({
   const rightOpen = useStore(s => s.drawerOpen)
   const setDrawerOpen = useStore(s => s.setDrawerOpen)
   const setRightOpen = v => setDrawerOpen(typeof v === 'function' ? v(useStore.getState().drawerOpen) : v)
-  const [showStatus, setShowStatus] = useState(false)          // where the project stands
-  const [statusTab, setStatusTab] = useState('done')
   const [changeSummary, setChangeSummary] = useState(false)   // open the review + copy-patches modal
   const [, setActiveId] = useState(null)  // drag tracking
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)   // Transform-into-template modal (T-F4)
@@ -200,7 +191,7 @@ export default function BuilderScreen({
     useStore.getState().consumeUiRequest()
     const open = {
       export: () => setChangeSummary(true),
-      status: () => { runValidation(); setStatusTab(args.tab || 'done'); setShowStatus(true) },
+      status: () => setChangeSummary(true),   // "where the project stands" is the export checklist now
       review: () => setShowReview(true),
       formBuild: () => setFormBuild({ refs: [], thenReview: false }),
       styles: () => setShowStyles(true),
@@ -221,10 +212,6 @@ export default function BuilderScreen({
 
   const canUndo = past.length > 0
   const canRedo = future.length > 0
-
-  // Validation issues, for the toolbar's Status badge.
-  const issueCount = validationResults.length
-  const blockerCount = validationResults.filter(i => i.severity === 'error').length
 
   // Ctrl/Cmd+Z / Shift+Z / Y are app-wide: see UndoShortcut (App.jsx).
 
@@ -496,19 +483,10 @@ export default function BuilderScreen({
         {/* First, as on the Product Spec's header, so it does not move between them (ZMRK2Y). */}
         <SurfaceSwitch active={rootView === 'positions' ? 'recipes' : null} className=""
           onRecipes={() => setRootView('positions')} onProductSpec={() => onOpenProductSpec()} />
-        {/* Not a "back": it closes the project. Says so, and asks first. */}
-        <IconButton variant="outline-secondary" bsSize="sm" icon="logout"
-          title="Close project — back to choosing a project" onClick={() => setConfirmClose(true)} />
         {projectNumber && (
           <ProjectIdPill number={projectNumber} configName={configName} size="sm" className="me-1" />
         )}
         <SaveIndicator />
-        {backupMsg && (
-          <span className="text-muted d-inline-flex align-items-center gap-1" style={{ fontSize: 11 }}>
-            {backupMsg}
-            <Button variant="link" size="sm" className="p-0" style={{ fontSize: 11 }} onClick={() => setBackupMsg(null)}>×</Button>
-          </span>
-        )}
         {/* Silent unless a Form template is attached. "Reconcile →" steps through
             every position that still misses a Form product. */}
         <FormProgressChip onReconcile={startReconcile} onLoad={onOpenCodeImport} />
@@ -517,7 +495,7 @@ export default function BuilderScreen({
         <ConnectorAutoJoin />
 
         {/* Recipes (the tree, 96KPJ5) and the Product Spec (XZ3UBB): the two surfaces you move
-            between. Browsing by ElementType, the Form import and Connectors are in ⋮. */}
+            between. Browsing by ElementType and the Form import are in ⋮; Connectors in the drawer. */}
 
         <ButtonGroup size="sm" className="ms-2">
           <IconButton variant="outline-secondary" icon={ACTION_ICONS.undo}
@@ -527,60 +505,31 @@ export default function BuilderScreen({
         </ButtonGroup>
 
         <div className="flex-grow-1" />
-        {/* Where the project stands. Validation and "Am I done?" were tabs in the palette
-            drawer — closed by default, so nobody saw them. They are answers about the
-            project, so they belong in the chrome, carrying their own count. */}
-        <Button
-          variant={blockerCount > 0 ? 'danger' : issueCount > 0 ? 'outline-warning' : 'outline-primary'}
-          size="sm"
-          className="d-inline-flex align-items-center gap-1"
-          onClick={() => { runValidation(); setShowStatus(true) }}
-          title="Validation and readiness — where the project stands"
-        >
-          <MaterialIcon name={ACTION_ICONS.validate} size={15} />
-          Status
-          {issueCount > 0 && (
-            <span className="badge rounded-pill"
-              style={{ background: blockerCount > 0 ? '#fff' : '#997404', color: blockerCount > 0 ? '#dc3545' : '#fff', fontSize: 10 }}>
-              {issueCount}
-            </span>
-          )}
-        </Button>
         {/* The once-in-a-while ones. They were four more icons competing with Export for
             your eye, and none of them is something you reach for twice in an hour. */}
         <Dropdown align="end">
           <Dropdown.Toggle as={IconButton} bsSize="sm" variant="outline-secondary"
             icon={ACTION_ICONS.more} title="More" />
           <Dropdown.Menu style={{ fontSize: 12 }}>
-            <Dropdown.Item onClick={() => setRootView('elements')} active={rootView === 'elements'}>
-              <MaterialIcon name={ICONS.element} size={14} /> Browse ElementTypes
-            </Dropdown.Item>
-            {onOpenCodeImport && (
-              <Dropdown.Item onClick={onOpenCodeImport}>
-                <MaterialIcon name="auto_fix_high" size={14} /> Import product codes from a Form template
-              </Dropdown.Item>
-            )}
-            {onOpenConnectors && (
-              <Dropdown.Item onClick={() => onOpenConnectors(null)}>
-                <MaterialIcon name="cable" size={14} /> Connectors — templates and the coverage matrix
-              </Dropdown.Item>
-            )}
-            <Dropdown.Divider />
+            <Dropdown.Header>Recipes</Dropdown.Header>
             <Dropdown.Item onClick={() => setShowReview(true)}>
               <MaterialIcon name="fact_check" size={14} /> Review recipes…
             </Dropdown.Item>
             <Dropdown.Item onClick={() => setFormBuild({ refs: [], thenReview: false })} disabled={!Object.keys(formCaptures?.byPosition || {}).length}>
               <MaterialIcon name="auto_awesome" size={14} /> Build recipes from the Form…
             </Dropdown.Item>
+            {onOpenCodeImport && (
+              <Dropdown.Item onClick={onOpenCodeImport}>
+                <MaterialIcon name="auto_fix_high" size={14} /> Import product codes from a Form template
+              </Dropdown.Item>
+            )}
             <Dropdown.Item onClick={() => setShowStyles(true)}>
               <MaterialIcon name="style" size={14} /> Recipe styles…
             </Dropdown.Item>
+            <Dropdown.Divider />
+            <Dropdown.Header>Templates and tags</Dropdown.Header>
             <Dropdown.Item onClick={() => setShowSaveTemplate(true)} disabled={!hasRecipeRows}>
               <MaterialIcon name={ACTION_ICONS.saveTemplate} size={14} /> Save this position as a template
-            </Dropdown.Item>
-            <Dropdown.Divider />
-            <Dropdown.Item onClick={saveBackup}>
-              <MaterialIcon name="save_alt" size={14} /> Save project settings (.config.yaml)…
             </Dropdown.Item>
             <Dropdown.Item onClick={onOpenTemplateEditor}>
               <MaterialIcon name="dashboard_customize" size={14} /> Manage templates
@@ -589,11 +538,24 @@ export default function BuilderScreen({
               <MaterialIcon name={ACTION_ICONS.tags} size={14} /> Tags
             </Dropdown.Item>
             <Dropdown.Divider />
+            <Dropdown.Header>ElementTypes</Dropdown.Header>
+            <Dropdown.Item onClick={() => setRootView('elements')} active={rootView === 'elements'}>
+              <MaterialIcon name={ICONS.element} size={14} /> Browse ElementTypes
+            </Dropdown.Item>
             <Dropdown.Item onClick={() => setShowRetire('existing')}>
               <MaterialIcon name="category" size={14} /> ElementTypes…
             </Dropdown.Item>
             <Dropdown.Item onClick={() => setShowRetire('unused')}>
               <MaterialIcon name="cleaning_services" size={14} /> Clean up unused ElementTypes…
+            </Dropdown.Item>
+            <Dropdown.Divider />
+            <Dropdown.Header>Project</Dropdown.Header>
+            <Dropdown.Item onClick={saveBackup}>
+              <MaterialIcon name="save_alt" size={14} /> Save project settings (.config.yaml)…
+            </Dropdown.Item>
+            {/* Not a "back": it closes the project. Says so, and asks first. */}
+            <Dropdown.Item onClick={() => setConfirmClose(true)} title="Close project — back to choosing a project">
+              <MaterialIcon name="logout" size={14} /> Close project…
             </Dropdown.Item>
           </Dropdown.Menu>
         </Dropdown>
@@ -720,13 +682,11 @@ export default function BuilderScreen({
             <ElementTypeTreeView />
           ) : (
             <>
-            <RestoredNotice />
             {importLoop && (
-              <div className="d-flex align-items-center gap-2 mx-3 mt-2 px-3 py-2 rounded" data-testid="import-loop"
-                style={{ background: '#d1e7dd', border: '1px solid #a3cfbb', fontSize: 12, color: '#0f5132', flexShrink: 0 }}>
-                <MaterialIcon name="checklist" size={16} />
-                <span><strong>From the Form import:</strong> {importLoop.refs.join(', ')} added to the Product Spec. Build {importLoop.refs.length === 1 ? 'its recipe' : 'their recipes'}, then carry on.</span>
-                <Button size="sm" variant="success" className="ms-auto text-nowrap" style={{ fontSize: 11 }} onClick={onNextFromImport}>
+              <div className="d-flex align-items-center gap-2 mx-3 mt-1 text-muted" data-testid="import-loop"
+                style={{ fontSize: 12, flexShrink: 0 }}>
+                <span>From the Form import: {importLoop.refs.join(', ')} added to the Product Spec. Build {importLoop.refs.length === 1 ? 'its recipe' : 'their recipes'}, then carry on.</span>
+                <Button size="sm" variant="link" className="ms-auto p-0 text-nowrap" style={{ fontSize: 11 }} onClick={onNextFromImport}>
                   Next position →
                 </Button>
                 <IconButton variant="link" bsSize="sm" icon="close" title="Hide" onClick={onEndImportLoop} />
@@ -743,9 +703,9 @@ export default function BuilderScreen({
                 <IconButton variant="link" bsSize="sm" icon="close" title="Hide" onClick={() => setHideNextStep(true)} />
               </div>
             )}
+            {/* No onOpenConnectors: the Connectors screen opens from the drawer's pane only. */}
             <ProjectTreeView
               onOpenProductSpec={onOpenProductSpec}
-              onOpenConnectors={onOpenConnectors}
               showDeleted={showDeleted}
               onAddRow={handleAddRow}
               onNewET={handleNewET}
@@ -784,7 +744,7 @@ export default function BuilderScreen({
                     data-testid={`drawer-tab-${k}`} onClick={() => setRightTab(k)} style={{ padding: '1px 4px', position: 'relative' }}>
                     <MaterialIcon name={icon} size={15} />
                     {k === 'connectors' && connectorGaps > 0 && (
-                      <span data-testid="connector-gap-dot" style={{ position: 'absolute', top: 2, right: 6, width: 7, height: 7, borderRadius: '50%', background: '#dc3545' }} />
+                      <span data-testid="connector-gap-dot" style={{ position: 'absolute', top: 2, right: 6, width: 7, height: 7, borderRadius: '50%', background: '#ffc107' }} />
                     )}
                   </Button>
                 ))}
@@ -803,7 +763,11 @@ export default function BuilderScreen({
               : <div className="text-muted fst-italic p-3" style={{ fontSize: 11 }} data-testid="drawer-form-hint">Open a position to see what the Form asks for.</div>)}
             {rightTab === 'connectors' && (drawerPos
               ? <ConnectorsPane posRef={drawerPos} onOpenConnectors={onOpenConnectors} />
-              : <div className="text-muted fst-italic p-3" style={{ fontSize: 11 }}>Open a position to see its connectors.</div>)}
+              : <div className="text-muted fst-italic p-3" style={{ fontSize: 11 }}>
+                  Open a position to see its connectors.
+                  {onOpenConnectors && <Button variant="link" size="sm" className="p-0 d-block fst-normal" style={{ fontSize: 11 }}
+                    onClick={() => onOpenConnectors(null)}>Templates and the coverage matrix →</Button>}
+                </div>)}
             {rightTab === 'palette' && (
               <ElementPalette
                 pickTarget={addRowTarget}
@@ -844,40 +808,6 @@ export default function BuilderScreen({
         onReplaceInReview={handleReplaceFromReview}
         initialRefs={reviewInitialRefs}
       />
-
-      {/* Status: the two panels that used to hide in the palette drawer. Same panels,
-          somewhere you can actually find them. */}
-      <Modal show={showStatus} onHide={() => setShowStatus(false)} size="lg" centered scrollable>
-        <Modal.Header closeButton>
-          <Modal.Title style={{ fontSize: 15 }} className="d-flex align-items-center gap-2">
-            <MaterialIcon name={ACTION_ICONS.validate} size={18} /> Where the project stands
-            <TutorialHint id="validation-status" />
-          </Modal.Title>
-        </Modal.Header>
-        <Nav variant="tabs" activeKey={statusTab} onSelect={k => setStatusTab(k)} className="px-3 pt-2">
-          <Nav.Item><Nav.Link eventKey="done" className="py-1 px-3 small">Am I done?</Nav.Link></Nav.Item>
-          <Nav.Item>
-            <Nav.Link eventKey="validation" className="py-1 px-3 small">
-              Validation{issueCount > 0 ? ` (${issueCount})` : ''}
-            </Nav.Link>
-          </Nav.Item>
-        </Nav>
-        <Modal.Body>
-          {statusTab === 'done' && (
-            <ReadinessPanel
-              onOpenValidation={() => { runValidation(); setStatusTab('validation') }}
-              onOpenExport={() => { setShowStatus(false); setChangeSummary(true) }}
-              onOpenPosition={ref => { setShowStatus(false); focusPosition(ref) }}
-            />
-          )}
-          {statusTab === 'validation' && (
-            <ValidationPanel
-              onOpenProductSpec={ref => { setShowStatus(false); onOpenProductSpec(ref) }}
-              onOpenFixer={() => { setShowStatus(false); setShowFixer(true) }}
-            />
-          )}
-        </Modal.Body>
-      </Modal>
 
       <Modal show={confirmClose} onHide={() => setConfirmClose(false)} centered size="sm">
         <Modal.Header closeButton><Modal.Title style={{ fontSize: 15 }}>Close this project?</Modal.Title></Modal.Header>

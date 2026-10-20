@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect } from 'react'
 import { Toast, ToastContainer } from 'react-bootstrap'
 import useStore, { savePendingNow } from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
@@ -26,9 +26,13 @@ export function SaveIndicator() {
   return <StatusChip data-testid="save-indicator" title={tip} tone={tone} icon={icon} label={label} tip={tip} />
 }
 
-/** Ctrl/Cmd+S: save now, and say plainly what that did and did not do. */
+/**
+ * Ctrl/Cmd+S: save now, and say plainly what that did and did not do. Also hosts the app's
+ * one toast (store `toast(text)`), so passing news never needs a strip of its own.
+ */
 export function SaveShortcut() {
-  const [toast, setToast] = useState(null)
+  const toast = useStore(s => s.toastMsg)
+  const setToast = t => (t ? useStore.getState().toast(t.text, { ok: t.ok }) : useStore.setState({ toastMsg: null }))
   useEffect(() => {
     const onKey = async e => {
       if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 's') return
@@ -46,7 +50,7 @@ export function SaveShortcut() {
   }, [])
   return (
     <ToastContainer position="bottom-end" className="p-3" style={{ zIndex: 2000, position: 'fixed' }}>
-      <Toast show={!!toast} onClose={() => setToast(null)} delay={3500} autohide bg={toast?.ok === false ? 'danger' : 'light'}>
+      <Toast key={toast?.at} show={!!toast} onClose={() => setToast(null)} delay={4000} autohide bg={toast?.ok === false ? 'danger' : 'light'}>
         <Toast.Body className="d-flex align-items-center gap-2" style={{ fontSize: 12 }} data-testid="save-toast">
           <MaterialIcon name={toast?.ok === false ? 'warning' : 'laptop'} size={16} /> {toast?.text}
         </Toast.Body>

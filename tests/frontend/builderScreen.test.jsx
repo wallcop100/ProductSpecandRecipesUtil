@@ -15,15 +15,15 @@ beforeEach(() => {
 })
 
 describe('BuilderScreen renders after the drawer rework', () => {
-  test('the main surface mounts, with no left drawer and a Status button', () => {
+  test('the main surface mounts, with no left drawer and no Status button', () => {
     render(<BuilderScreen
       onBackToSetup={vi.fn()} onOpenProductSpec={vi.fn()} onOpenTemplateEditor={vi.fn()}
       onOpenCodeImport={vi.fn()} onOpenConnectors={vi.fn()} />)
     // the Navigator drawer is gone
     expect(screen.queryByTitle('Open navigator')).toBeNull()
     expect(screen.queryByText('Navigator')).toBeNull()
-    // validation/readiness moved to a Status button in the toolbar
-    expect(screen.getByTitle('Validation and readiness — where the project stands')).toBeTruthy()
+    // readiness is the export modal's checklist now
+    expect(screen.queryByTitle('Validation and readiness — where the project stands')).toBeNull()
     // coverage moved into the tree header
     expect(screen.getByText(/reciped/)).toBeTruthy()
   })
@@ -171,6 +171,10 @@ describe('toolbars (96KPJ5, XZ3UBB, M7DYP4, A8GNSJ, DD66AT, B3DGQT, AFEHZM)', ()
     expect(screen.queryByTitle('Import product codes from a Form template')).toBeNull()
     expect(screen.queryByTitle('Connectors — templates and the coverage matrix')).toBeNull()
     expect(screen.queryByTitle('Show IsDeleted rows')).toBeNull()
+    fireEvent.click(screen.getByTitle('More'))
+    expect(screen.queryByText(/Connectors — templates/)).toBeNull()        // the drawer's pane opens it
+    fireEvent.click(await screen.findByTitle('Close project — back to choosing a project'))
+    expect(await screen.findByText('Close this project?')).toBeInTheDocument()
     fireEvent.click(screen.getByTitle('More'))
     fireEvent.click(await screen.findByText('Browse ElementTypes'))
     expect(useStore.getState().rootView).toBe('elements')

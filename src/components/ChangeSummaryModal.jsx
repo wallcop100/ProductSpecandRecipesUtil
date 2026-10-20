@@ -9,6 +9,10 @@ import MasterGapPanel from './MasterGapPanel'
 import TutorialHint from '../tutorial/TutorialHint'
 import { reportsToMarkdown, reportId } from '../utils/bugReports'
 import { download } from '../platform/fs'
+import { exportChecklist } from '../utils/readiness'
+import { formWorklist } from '../utils/formSpec'
+import { ignoredPositionRefs } from '../utils/positionFamily'
+import { BLOCKING_RULES } from '../utils/validationTasks'
 
 /**
  * ChangeSummaryModal — review every pending change, then copy the patch scripts.
@@ -399,6 +403,45 @@ function ResolveTab({ gaps, overwrites, onFillWrappers }) {
   )
 }
 
+/**
+ * What is still open before export, one short line each; a line jumps to the first position
+ * it is about. Red only for what would make the patch wrong. It informs — export is not gated.
+ */
+function PreExportChecklist({ show, onHide }) {
+  const positionTypes = useStore(s => s.positionTypes)
+  const recipes = useStore(s => s.recipes)
+  const positionUI = useStore(s => s.positionUI)
+  const ignoredPositionFamilies = useStore(s => s.ignoredPositionFamilies)
+  const formCaptures = useStore(s => s.formCaptures)
+  const containerETRefs = useStore(s => s.containerETRefs)
+  const validationResults = useStore(s => s.validationResults)
+  const dbChanges = useStore(s => s.dbChanges)
+  useEffect(() => { if (show) useStore.getState().runValidation() }, [show])
+  const items = useMemo(() => exportChecklist({
+    positionTypes, recipes,
+    ignoredPosRefs: ignoredPositionRefs({ positionTypes, positionUI, ignoredPositionFamilies }),
+    worklist: formWorklist(recipes, formCaptures, containerETRefs),
+    issues: validationResults,
+    dbQueued: new Set(dbChanges.map(c => (c.elementTypeRef || '').toLowerCase())),
+    blockingRules: BLOCKING_RULES,
+  }), [positionTypes, recipes, positionUI, ignoredPositionFamilies, formCaptures, containerETRefs, validationResults, dbChanges])
+
+  if (items.length === 0) {
+    return <div className="px-3 pt-2 text-muted" style={{ fontSize: 12 }} data-testid="export-checklist">Ready to export ✓</div>
+  }
+  return (
+    <div className="px-3 pt-2 d-flex flex-column align-items-start" data-testid="export-checklist">
+      {items.map(it => (
+        <Button key={it.key} variant="link" size="sm" className="p-0 text-start text-decoration-none"
+          style={{ fontSize: 12, color: it.blocking ? '#dc3545' : '#495057' }} disabled={!it.posRef}
+          onClick={() => { onHide(); useStore.getState().focusPosition(it.posRef) }}>
+          {it.label}{it.posRef && ' →'}
+        </Button>
+      ))}
+    </div>
+  )
+}
+
 /** The alpha's bug reports: read, tidy, then copy or save them all as Markdown. */
 function BugReportsTab({ reports, copied, onCopy }) {
   const updateBugReport = useStore(s => s.updateBugReport)
@@ -498,6 +541,8 @@ export default function ChangeSummaryModal({ show, onHide }) {
           <TutorialHint id="export" concept={CONCEPTS.READONLY} />
         </Modal.Title>
       </Modal.Header>
+
+      <PreExportChecklist show={show} onHide={onHide} />
 
       {/* The patch is one click away on its own tab, never a long scroll past warnings. */}
       <div className="d-flex gap-1 px-3 pt-2" style={{ borderBottom: '1px solid #dee2e6' }}>
