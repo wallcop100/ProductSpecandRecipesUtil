@@ -8,7 +8,7 @@ import { C } from '../styles/tokens'
  * the screen shows only the label and the control. Use it for the "why" and the "how";
  * keep on the page only what someone needs to act.
  */
-export default function InfoTip({ children, label = 'More info', size = 13, placement = 'auto', style }) {
+export default function InfoTip({ children, label = 'More info', size = 13, placement = 'auto', style, icon = 'info' }) {
   const pop = (
     <Popover style={{ maxWidth: 340 }}>
       <Popover.Body style={{ fontSize: 12, lineHeight: 1.45 }}>{children}</Popover.Body>
@@ -18,7 +18,7 @@ export default function InfoTip({ children, label = 'More info', size = 13, plac
     <OverlayTrigger placement={placement} trigger={['hover', 'focus', 'click']} rootClose overlay={pop}>
       <span role="button" tabIndex={0} aria-label={label}
         style={{ cursor: 'help', color: C.faint, display: 'inline-flex', verticalAlign: 'middle', lineHeight: 1, ...style }}>
-        <MaterialIcon name="info" size={size} />
+        <MaterialIcon name={icon} size={size} />
       </span>
     </OverlayTrigger>
   )

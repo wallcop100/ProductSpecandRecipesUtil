@@ -107,7 +107,7 @@ function Lane({ lane, parts, readOnly, onPatch, onRemove }) {
       <div className="fw-semibold mb-1" style={{ fontSize: 12 }}>
         {lane.label} <span className="text-muted fw-normal" style={{ fontSize: 10 }}>{lane.hint}</span>
       </div>
-      {mine.length === 0 && <div className="text-muted fst-italic" style={{ fontSize: 11 }}>{readOnly ? 'Nothing.' : 'Drag jobs here.'}</div>}
+      {mine.length === 0 && <div className="text-muted fst-italic" style={{ fontSize: 11 }}>{readOnly ? 'Nothing.' : 'Drag parts here.'}</div>}
       <div className="d-flex flex-wrap gap-1">
         {mine.map(({ p, i }) => <JobChip key={`${p.slotKey}|${i}`} ing={p} index={i} readOnly={readOnly} onPatch={onPatch} onRemove={onRemove} />)}
       </div>
