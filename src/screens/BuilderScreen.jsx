@@ -46,6 +46,7 @@ import SaveTemplateModal from '../components/SaveTemplateModal'
 import IconButton from '../components/IconButton'
 import MaterialIcon from '../components/MaterialIcon'
 import { ACTION_ICONS, ICONS } from '../utils/entityStyle'
+import { C } from '../styles/tokens'
 
 /**
  * BuilderScreen — three-column layout.
@@ -610,15 +611,15 @@ export default function BuilderScreen({
             transform: 'translateY(-50%)',
             transition: 'right 0.2s ease',
             zIndex: 10,
-            background: '#f8f9fa',
-            border: '1px solid #dee2e6',
+            background: C.subtle,
+            border: `1px solid ${C.border}`,
             borderRight: 'none',
             borderRadius: '4px 0 0 4px',
             padding: '8px 4px',
             cursor: 'pointer',
             lineHeight: 1,
             fontSize: 13,
-            color: '#555',
+            color: C.muted,
           }}
         >
           <MaterialIcon name={rightOpen ? 'chevron_right' : 'chevron_left'} size={16} />
@@ -632,7 +633,7 @@ export default function BuilderScreen({
               {/* ET mode header */}
               <div
                 className="d-flex align-items-center gap-2 mb-3 px-3 py-2 rounded"
-                style={{ background: '#f0f4ff', border: '1px solid #c7d7f5', fontSize: 12, flexShrink: 0 }}
+                style={{ background: C.accentTint, border: `1px solid ${C.accentEdge}`, fontSize: 12, flexShrink: 0 }}
               >
                 <IconButton variant="outline-secondary" bsSize="sm" style={{ fontSize: 11 }}
                   icon={ACTION_ICONS.back} title="Back to tree" onClick={closeETRecipe} />
@@ -641,7 +642,7 @@ export default function BuilderScreen({
                 {etModeUsedIn.length > 0 ? (
                   <span
                     className="badge"
-                    style={{ background: '#fff3cd', color: '#856404', border: '1px solid #ffc107', fontSize: 11 }}
+                    style={{ background: C.attnTint, color: C.attnInk, border: `1px solid ${C.attn}`, fontSize: 11 }}
                     title={`Shared assembly — edits here apply to all ${etModeUsedIn.length} position${etModeUsedIn.length === 1 ? '' : 's'}: ${etModeUsedIn.join(', ')}`}
                   >
                     <MaterialIcon name="warning" size={12} /> Edits apply to {etModeUsedIn.length} position{etModeUsedIn.length === 1 ? '' : 's'}: {etModeUsedIn.join(', ')}
@@ -652,7 +653,7 @@ export default function BuilderScreen({
                 <div className="flex-grow-1" />
                 {activeETRef?.toUpperCase().includes('LIN') && (
                   <Button
-                    variant="outline-success"
+                    variant="outline-secondary"
                     size="sm"
                     className="d-inline-flex align-items-center gap-1"
                     style={{ fontSize: 11 }}
@@ -702,7 +703,7 @@ export default function BuilderScreen({
             )}
             {nextStep && (
               <div className="d-flex align-items-center gap-2 mx-3 mt-2 px-3 py-2 rounded" data-testid="next-step"
-                style={{ background: '#e7f1ff', border: '1px solid #b6d4fe', fontSize: 12, color: '#084298', flexShrink: 0 }}>
+                style={{ background: C.accentTint, border: `1px solid ${C.accentEdge}`, fontSize: 12, color: C.accentInk, flexShrink: 0 }}>
                 <MaterialIcon name={nextStep.icon} size={16} />
                 <span><strong>{nextStep.title}</strong> <span className="text-muted">{nextStep.text}</span></span>
                 <Button size="sm" variant="primary" className="ms-auto text-nowrap" style={{ fontSize: 11 }} onClick={nextStep.go}>
@@ -732,14 +733,14 @@ export default function BuilderScreen({
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
-            background: '#fff',
-            borderLeft: rightOpen ? '1px solid #dee2e6' : 'none',
+            background: C.surface,
+            borderLeft: rightOpen ? `1px solid ${C.border}` : 'none',
             transition: 'width 0.2s ease',
           }}
         >
           {/* The drawer: this position's Form spec first (K3LGUL), then the ways to add rows —
               ElementTypes and positions like this one — under one search box. */}
-          <div style={{ flexShrink: 0, borderBottom: '1px solid #dee2e6' }} className="px-2 pt-2 pb-1">
+          <div style={{ flexShrink: 0, borderBottom: `1px solid ${C.border}` }} className="px-2 pt-2 pb-1">
             <div className="d-flex align-items-center gap-1">
               <ButtonGroup size="sm" className="flex-grow-1" aria-label="Show">
                 {[
@@ -752,13 +753,13 @@ export default function BuilderScreen({
                     data-testid={`drawer-tab-${k}`} onClick={() => setRightTab(k)} style={{ padding: '1px 4px', position: 'relative' }}>
                     <MaterialIcon name={icon} size={15} />
                     {k === 'connectors' && connectorGaps > 0 && (
-                      <span data-testid="connector-gap-dot" style={{ position: 'absolute', top: 2, right: 6, width: 7, height: 7, borderRadius: '50%', background: '#ffc107' }} />
+                      <span data-testid="connector-gap-dot" style={{ position: 'absolute', top: 2, right: 6, width: 7, height: 7, borderRadius: '50%', background: C.attn }} />
                     )}
                   </Button>
                 ))}
               </ButtonGroup>
               <TutorialHint id="palette" />
-              <button className="btn btn-link p-0" style={{ color: '#888', lineHeight: 1 }} onClick={() => setRightOpen(false)} title="Close palette" aria-label="Close palette"><MaterialIcon name="close" size={18} /></button>
+              <button className="btn btn-link p-0" style={{ color: C.muted, lineHeight: 1 }} onClick={() => setRightOpen(false)} title="Close palette" aria-label="Close palette"><MaterialIcon name="close" size={18} /></button>
             </div>
             {!['form', 'connectors'].includes(rightTab) && (
               <Form.Control size="sm" className="mt-1" value={addQuery} onChange={e => setAddQuery(e.target.value)}

@@ -10,6 +10,7 @@ import IconButton from '../components/IconButton'
 import TutorialHint from '../tutorial/TutorialHint'
 import MaterialIcon from '../components/MaterialIcon'
 import { ACTION_ICONS } from '../utils/entityStyle'
+import { C } from '../styles/tokens'
 
 const SECTION_OPTIONS = ['position', 'dl_internal', 'lin_internal']
 // Friendlier display labels for the recipe sections. Free-issue items are
@@ -234,9 +235,9 @@ export default function TemplateEditorScreen({ onBack }) {
         style={{
           width: 260,
           flexShrink: 0,
-          borderRight: '1px solid #dee2e6',
+          borderRight: `1px solid ${C.border}`,
           overflowY: 'auto',
-          background: '#f8f9fa',
+          background: C.subtle,
           display: 'flex',
           flexDirection: 'column',
         }}

@@ -100,7 +100,7 @@ export default function SlotMappingModal({ show, template, posRef, onApply, onCa
         </p>
 
         {ingredients.length === 0 && (
-          <Alert variant="success" className="py-2">
+          <Alert variant="primary" className="py-2">
             All slots are already mapped — you can apply immediately.
           </Alert>
         )}
@@ -119,7 +119,7 @@ export default function SlotMappingModal({ show, template, posRef, onApply, onCa
                   {ing.section}
                 </Badge>
                 {isResolved
-                  ? <Badge bg="success" className="d-inline-flex align-items-center gap-1"><MaterialIcon name={ACTION_ICONS.complete} size={12} /> {selected}</Badge>
+                  ? <Badge bg="secondary" className="d-inline-flex align-items-center gap-1"><MaterialIcon name={ACTION_ICONS.complete} size={12} /> {selected}</Badge>
                   : <Badge bg="danger">Unresolved</Badge>
                 }
               </div>

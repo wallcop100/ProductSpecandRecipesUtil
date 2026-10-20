@@ -14,6 +14,7 @@ import MaterialIcon from '../components/MaterialIcon'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { CHANGELOG } from '../changelog'
 import BackupPanel from '../components/BackupPanel'
+import { C } from '../styles/tokens'
 
 const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev'
 
@@ -399,7 +400,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
             {badge && <Badge bg="secondary" style={{ flexShrink: 0 }}>{badge}</Badge>}
           </>
         ) : optional ? (
-          <span className="small text-truncate" style={{ color: '#856404', minWidth: 0 }}>
+          <span className="small text-truncate" style={{ color: C.attnInk, minWidth: 0 }}>
             <MaterialIcon name="add_circle" size={14} /> not found — starts empty, and your export
             patches it in
           </span>
@@ -426,7 +427,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
             </button>
           </div>
           {showChangelog && (
-            <div className="mb-3 px-2 py-2 rounded" style={{ background: '#f8f9fa', border: '1px solid #e9ecef', maxHeight: 180, overflowY: 'auto' }}>
+            <div className="mb-3 px-2 py-2 rounded" style={{ background: C.subtle, border: `1px solid ${C.border}`, maxHeight: 180, overflowY: 'auto' }}>
               {CHANGELOG.map((c, i) => (
                 <div key={i} className="text-muted" style={{ fontSize: 10, lineHeight: 1.6 }}>
                   <span className="fw-semibold">{c.date}</span> · {c.note}
@@ -495,9 +496,9 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
           {/* ── First run. State-aware, not a tour. ─────────────────────────── */}
           {!hasProjects && !picking && (
             <div className="mb-3">
-              <div className="px-3 py-3 rounded" style={{ background: '#f8f9fa', border: '1px dashed #ced4da' }}>
+              <div className="px-3 py-3 rounded" style={{ background: C.subtle, border: `1px dashed ${C.faint}` }}>
                 <div className="text-center">
-                  <MaterialIcon name="menu_book" size={28} style={{ color: '#adb5bd' }} />
+                  <MaterialIcon name="menu_book" size={28} style={{ color: C.faint }} />
                   <div className="fw-semibold mt-2" style={{ fontSize: 13 }}>
                     You build the recipes. Excel keeps the files.{' '}
                     <InfoTip label="How it works">

@@ -54,6 +54,7 @@ import { matchForms, diffRow } from '../utils/formDiff'
 import { readOlderForm } from '../utils/olderForm'
 import { groupPositions, positionStatus, mergeCaptures, restrictCaptures } from '../utils/formPositions'
 import { diffCaptures, wrapperDivergence } from '../utils/formSpec'
+import { C } from '../styles/tokens'
 
 /** Fuzzy header match: exact normalised hit first, else shortest header containing it. */
 const nh = h => String(h || '').toLowerCase().replace(/[^a-z0-9]/g, '')
@@ -1762,18 +1763,18 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
               </Button>
             )}
             {/* What the tool has worked out about this project's dialect. */}
-            <div className="mb-1 px-1 py-1 rounded" style={{ background: '#f8f9fa', fontSize: 10 }}>
+            <div className="mb-1 px-1 py-1 rounded" style={{ background: C.subtle, fontSize: 10 }}>
               <div>
                 <span className="text-muted">separators </span>
                 {signals.delimiters.size > 0
                   ? [...signals.delimiters].map(d => (
                       <span key={d} className="rounded px-1 me-1"
-                        style={{ background: '#e7f1ff', fontFamily: 'monospace' }}>{d}</span>
+                        style={{ background: C.accentTint, fontFamily: 'monospace' }}>{d}</span>
                     ))
                   : <span className="fst-italic text-muted">none detected yet</span>}
               </div>
               <div className="text-muted">
-                keeping <strong style={{ color: '#0f5132' }}>{tally.code}</strong> as code ·{' '}
+                keeping <strong style={{ color: C.ink }}>{tally.code}</strong> as code ·{' '}
                 <strong>{tally.note}</strong> as note · discarding <strong>{tally.discard}</strong>
               </div>
               {signals.profile.minLen > 0 && (
@@ -1817,7 +1818,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
               </ButtonGroup>
               {formDiff && (
                 <ButtonGroup size="sm" aria-label="Show changes">
-                  {[['changed', 'Changed', '#b45309'], ['new', 'New', '#0d6efd'], ['removed', 'Removed', '#842029'], ['unchanged', 'Unchanged', '#6c757d']].map(([k, label]) => (
+                  {[['changed', 'Changed', C.attnInk], ['new', 'New', C.accent], ['removed', 'Removed', C.dangerInk], ['unchanged', 'Unchanged', C.muted]].map(([k, label]) => (
                     <Button key={k} variant={filter === k ? 'primary' : 'outline-secondary'} style={{ fontSize: 11 }}
                       onClick={() => setFilter(filter === k ? 'all' : k)}>{label} {formDiff.counts[k]}</Button>
                   ))}
@@ -1828,7 +1829,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
                 <MaterialIcon name="difference" size={13} /> Compare with an older Form…
               </Button>}
               {easyLeft > 0 && (
-                <Button size="sm" variant="success" style={{ fontSize: 11 }} onClick={confirmObvious}
+                <Button size="sm" variant="primary" style={{ fontSize: 11 }} onClick={confirmObvious}
                   title="Rows with one clean code (plus '+' extras and accessories), and placeholder rows with nothing to add. One undo takes them all back.">
                   <MaterialIcon name="done_all" size={13} /> Confirm {easyLeft} obvious {easyLeft === 1 ? 'row' : 'rows'} <kbd>B</kbd>
                 </Button>
@@ -1852,7 +1853,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
             {/* What changed since the older Form. */}
             {formDiff && (
               <div className="mb-2 px-2 py-1 rounded d-flex align-items-center gap-2 flex-wrap" data-testid="form-diff-banner"
-                style={{ background: '#fff8e1', border: '1px solid #ffe08a', fontSize: 11, color: '#5c4400' }}>
+                style={{ background: C.attnTint, border: `1px solid ${C.attnTint}`, fontSize: 11, color: C.attnInk }}>
                 <MaterialIcon name="difference" size={13} />
                 <span>Compared with <strong>{compareBase.name}</strong>: {formDiff.counts.unchanged} unchanged · {formDiff.counts.changed} changed ·{' '}
                   {formDiff.counts.new} new · {formDiff.counts.removed} removed</span>
@@ -1864,7 +1865,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
             {/* Stage ① — what the Product Spec already knew. */}
             {knownStats && (
               <div className="mb-2 px-2 py-1 rounded d-flex align-items-center gap-2 flex-wrap"
-                style={{ background: '#d1e7dd', border: '1px solid #a3cfbb', fontSize: 11, color: '#0f5132' }}>
+                style={{ background: C.subtle, border: `1px solid ${C.border}`, fontSize: 11, color: C.ink }}>
                 {knownStats.exactCount - (knownStats.libraryCount || 0) > 0 && (
                   <span>
                     <MaterialIcon name="check_circle" size={13} /> {knownStats.exactCount - (knownStats.libraryCount || 0)} in your Product Spec
@@ -1883,13 +1884,13 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
                   </span>
                 )}
                 {knownStats.variantCount > 0 && (
-                  <span style={{ color: '#856404' }}>
+                  <span style={{ color: C.attnInk }}>
                     <MaterialIcon name="warning" size={12} /> {knownStats.variantCount} variant{knownStats.variantCount === 1 ? '' : 's'}{' '}
                     <InfoTip size={11}>Known codes with something extra, marked amber. You decide.</InfoTip>
                   </span>
                 )}
                 {knownStats.adjacentCount > 0 && (
-                  <span style={{ color: '#856404' }}>
+                  <span style={{ color: C.attnInk }}>
                     <MaterialIcon name="warning" size={12} /> {knownStats.adjacentCount} side by side{' '}
                     <InfoTip size={11}>Known codes next to each other. Painting both would merge them, so neither was painted.</InfoTip>
                   </span>
@@ -1942,7 +1943,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
 
                     {/* The field and what it yields are ONE thing: paint above, codes
                         promote onto their own line below. */}
-                    <div className="border rounded mb-3" style={{ background: '#fff' }}>
+                    <div className="border rounded mb-3" style={{ background: C.surface }}>
                       <div className="p-3" style={{ minHeight: 110, display: 'flex', alignItems: 'center' }}>
                         <CodeChips
                           row={current}
@@ -1954,7 +1955,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
                           showBoundaries={showBoundaries}
                         />
                       </div>
-                      <div className="px-3 pb-2 pt-1" style={{ background: '#fcfcfd', borderTop: '1px solid #e9ecef' }}>
+                      <div className="px-3 pb-2 pt-1" style={{ background: C.subtle, borderTop: `1px solid ${C.border}` }}>
                         <CaptureLines
                           captures={readout.captures}
                           discarded={readout.discarded}
@@ -1981,7 +1982,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
                 not something to scroll past the whole code list to find. */}
             {selection && (
               <div className="mb-3 pb-2" data-testid="selection-checklist"
-                style={{ position: 'sticky', top: 0, zIndex: 2, background: 'var(--bs-body-bg, #fff)', fontSize: 12 }}>
+                style={{ position: 'sticky', top: 0, zIndex: 2, background: `var(--bs-body-bg, ${C.surface})`, fontSize: 12 }}>
                 <div className="fw-semibold mb-1">
                   {embedded ? embedded.posRef : selection.refs.length === 1 ? selection.refs[0] : `${selection.refs.length} positions`}
                   <span className="text-muted fw-normal"> · {selection.rows} row{selection.rows === 1 ? '' : 's'}</span>
@@ -1998,7 +1999,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
                 ].map((st, i) => (
                   <div key={i} className="d-flex align-items-center gap-2 mb-1" data-testid={`sel-step-${i + 1}`}>
                     <MaterialIcon name={st.done ? 'check_circle' : 'radio_button_unchecked'} size={15}
-                      style={{ color: st.done ? '#198754' : '#adb5bd' }} />
+                      style={{ color: st.done ? C.success : C.faint }} />
                     <span className={st.done ? 'text-muted' : ''}>{i + 1}. {st.label}</span>
                     {st.action && (st.action.onClick
                       ? <Button size="sm" variant="link" className="p-0 ms-auto" style={{ fontSize: 11 }} onClick={st.action.onClick}>{st.action.label}</Button>
@@ -2008,7 +2009,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
                 {embedded && selection.refs.length === 0 ? (
                   <div className="text-muted fst-italic" data-testid="embedded-no-rows">The Form has no rows for {embedded.posRef}.</div>
                 ) : (
-                  <Button variant="success" size="sm" className="w-100 mt-1" disabled={!selection.ready || addingSel}
+                  <Button variant="primary" size="sm" className="w-100 mt-1" disabled={!selection.ready || addingSel}
                     onClick={addSelectionAndBuild} data-testid="add-and-build">
                     <MaterialIcon name="playlist_add" size={14} />{' '}
                     {embedded ? '3. Add to Product Spec' : <>3. Add to Product Spec &amp; build recipe{selection.refs.length === 1 ? '' : 's'} →</>}
@@ -2022,18 +2023,18 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
               </div>
             )}
             <div className="mb-3 pb-2" data-testid="stage-block"
-              style={{ position: 'sticky', top: 0, zIndex: 2, background: 'var(--bs-body-bg, #fff)', display: selection ? 'none' : undefined }}>
+              style={{ position: 'sticky', top: 0, zIndex: 2, background: `var(--bs-body-bg, ${C.surface})`, display: selection ? 'none' : undefined }}>
               {leftBehind === 0 && entries.length > 0 ? (
-                <div className="px-2 py-2 rounded mb-1" style={{ background: '#d1e7dd', border: '1px solid #a3cfbb', color: '#0f5132', fontSize: 11 }}>
+                <div className="px-2 py-2 rounded mb-1" style={{ background: C.subtle, border: `1px solid ${C.border}`, color: C.ink, fontSize: 11 }}>
                   <MaterialIcon name="check_circle" size={14} /> All {entries.length} code{entries.length === 1 ? ' has' : 's have'} an ElementType
                 </div>
               ) : null}
-              <Button variant="success" size="sm" className="w-100" disabled={!ready} onClick={() => handleStage()}>
+              <Button variant="primary" size="sm" className="w-100" disabled={!ready} onClick={() => handleStage()}>
                 <MaterialIcon name="playlist_add" size={14} /> Add {stageable} to Product Spec
               </Button>
               {!ready && (unconfirmedCount > 0 || unassigned.length > 0) && (
                 <div className="mt-1 px-2 py-1 rounded" data-testid="stage-todo"
-                  style={{ fontSize: 11, background: '#fff3cd', border: '1px solid #ffe69c', color: '#664d03' }}>
+                  style={{ fontSize: 11, background: C.attnTint, border: `1px solid ${C.attnTint}`, color: C.attnInk }}>
                   First:{' '}
                   {unconfirmedCount > 0 && (
                     <Button variant="link" size="sm" className="p-0 align-baseline" style={{ fontSize: 11 }} data-testid="todo-unconfirmed"
@@ -2126,7 +2127,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       <Modal show={stagedOpen && !!staged} onHide={() => setStagedOpen(false)} centered>
         <Modal.Header closeButton>
           <Modal.Title style={{ fontSize: 16 }}>
-            <MaterialIcon name="check_circle" size={18} style={{ color: '#198754' }} /> Added to the Product Spec
+            <MaterialIcon name="check_circle" size={18} style={{ color: C.success }} /> Added to the Product Spec
           </Modal.Title>
         </Modal.Header>
         <Modal.Body style={{ fontSize: 13 }}>
@@ -2139,13 +2140,13 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
                 <InfoTip>No recipe was touched. In the builder, the Side-by-Side pane shows what the Form asks for, position by position, and adds each product in one click.</InfoTip>
               </div>
               {staged.unrouted > 0 && (
-                <div className="mt-2" style={{ color: '#856404' }}>
+                <div className="mt-2" style={{ color: C.attnInk }}>
                   <MaterialIcon name="link_off" size={13} /> {staged.unrouted} row{staged.unrouted === 1 ? '' : 's'} captured nothing{' '}
                   <InfoTip>Their Form ref matches no PositionType, or you skipped it.</InfoTip>
                 </div>
               )}
               {staged.leftBehind > 0 && (
-                <div className="mt-2" style={{ color: '#856404' }}>
+                <div className="mt-2" style={{ color: C.attnInk }}>
                   <MaterialIcon name="help" size={13} /> {staged.leftBehind} code{staged.leftBehind === 1 ? '' : 's'} still without an ElementType{' '}
                   <InfoTip>Your draft is kept: come back and add them whenever you like.{staged.pending > 0 && <> The Side-by-Side pane lists them where the Form asks for them.</>}</InfoTip>
                 </div>
@@ -2170,7 +2171,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
 
               {/* A changed code inside a SHARED wrapper: edit it, or fork it. */}
               {staged.divergence?.length > 0 && (
-                <div className="mt-3 px-2 py-2 rounded" style={{ background: '#fff3cd', border: '1px solid #f0e0a8', color: '#856404', fontSize: 12 }}>
+                <div className="mt-3 px-2 py-2 rounded" style={{ background: C.attnTint, border: `1px solid ${C.attnTint}`, color: C.attnInk, fontSize: 12 }}>
                   {staged.divergence.map(d => (
                     <div key={d.wrapper} className="mb-1">
                       <MaterialIcon name="warning" size={12} />{' '}
