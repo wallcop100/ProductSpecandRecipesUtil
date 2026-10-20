@@ -1,0 +1,284 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:6dd29c751c4acf64735587a2c7a6a1dbe07b020873247c93d3666f9d4d260242",
+  "claims": [
+    {
+      "id": "claim_1887105660984292b6c19cc7add58e17",
+      "statement": "loadProject(data) initializes the entire store state in one operation with project metadata, imported Excel data, templates, slot mappings, position UI, validation state, and dirty registries, including stamping new row IDs and computing container detection.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L597-L702",
+          "version": "repo-lines-v1:sha256:d7d42c507d1cad31535c0ca5d6701f44a160ade13c0de78bc74874c7eb7ef020:eyJzZWxlY3RlZExpbmVDb3VudCI6MTA2LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI4YzA1ZmNiOWVmNmJiZjg5MjYxNDA4N2M3YTY0ZTA5MTZjOWVmMzg3MGUzODZhYTQxMGQ3OWNmZmRlZjY3YTEwIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0ZDVjZDJmYjRmM2RmODg0NTE1MjU1YjM5NTIzZjJmOGI1NDcyYmVlYTlmNTY2ZmZjYTIwNGRiODAyNTYxMDQxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIyYjAxY2ZhYmU5ZGM3ZWVlMGIwNzJiM2FmZDU2ZDQxMDAwYmM4ZjgyMmFiNmIyYTJjYzhkZmZlZTk3YWNmMTMwIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJmNjZjNWQ0YWUwMmNmYmEzMTg2ZGY4NWExMGNhMjQwMDg0MTk0YTBlNTE1N2M2MGQ2YjcyMmQwYTQ4NmZkNTViIn0"
+        },
+        {
+          "resource": "repo://tests/frontend/store.test.js#L177-L206",
+          "version": "repo-lines-v1:sha256:1d757f1fe6d971ebd1f17b61ded0d90f72c50f93bfaac03c201d56e239e5c4ae:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg2OGQxNzAyZWNhOTFkMWVkNzc4YWI2YTE2NmZhYTI2NzEwZTc4N2Y0ZDExMmFmMGIxMmE3NTI5NmM5MWJkNGEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIyMzUyNTg5YzM0ZDNjNjA2ODU5MzFiNmVjYzRkNTA5OTFhN2M1NmM4ZmJhMjg5NDExNDY1NzY5MDI3MmNhYzMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFhYzY2MThiYTA1ZjhjZDRkNmY3M2M2ZTIxODY3OTkyNTg1MDQ1OWZhZjI5NDUwMjgzNGI0ZDk5ZWQ5ZjI0ZjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZmNDRkMDMwZDQ2ZTgzNzAyZmU5ZDNiY2Y5NTliYTk1OGEwMjE5M2Q3NWVkNjUyYTcwYTRlNTI3MjJjYWYyYTQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_20d69d8d8bed42a1a67da7ebedc7f575",
+      "statement": "setActivePosition(ref, options) navigates to a position, ensures its design element is settled (auto-assigns single row, blocks navigation with prompt for multiple rows), and manages position history for back navigation.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L821-L841",
+          "version": "repo-lines-v1:sha256:2bb9eff1eba9fac5ed67eb2a405e93301cabe84745550e7a9f898107cf4f80be:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBhYjhlZTZkNjcyZTZhODk0Y2JiOGJkM2IwZjY4OGU3MzA1MzMwZTFiZGU4NTZiODA5ZGMxZmUwOTJjOTc5YzYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJhNWQ1ZDAyM2RlMGEyMzJjM2U2YTM1MzFkYmIxOTBjYzc5MTI2MWM1M2EwMDYzZDFkYTc0ZTA2NTNjZTA3MDciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjkyMDlmZGY4N2Q5ZTMzZjNkYTcyMzJkMWEyOTA2ZGUxYTlmOTNjZjEzZWU3ZjcyZTQyZGI4M2U1MDMwYjRhODMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_30a9e26d46de4ec9b5ae8189d4462f7a",
+      "statement": "leavePosition(posRef, then) settles a position's design element and runs a callback once settled, returning true if the callback ran immediately or false if waiting for a modal choice when multiple rows need picking.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L793-L809",
+          "version": "repo-lines-v1:sha256:916751288f4eaa18325fbbe79dc68b0a9ce7d549e30a7d4ea787861171f2151f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBhMzMxMzQ0MTMwYmRkNWY3OWQ4ZWUwMjZiMTI3NjM5MzEyYWMzZjE3ZGVjYWI0ODZmZGE2NmNjZjU3OTY4NDAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYzU0MTQ0NTNjMGVhZTM1MTQyZDRiMzMzMDhkZmZjODYzMTY0N2RhMzEzYWFjZGM3N2E2YjMyZGQ5MWY3NDYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNhN2E4ZTlmOTIzZDIxMmMwMmJlMDkxYWMzN2EyZWNlMjZmMTQ4MzYyMmRhMTk3YjlkNjhmYTNkNDRlMGQyZjMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_e4f5bb6567d542c3b59a319ea25566a4",
+      "statement": "updatePositionUI(posRef, updates) merges updates into position metadata, recomputes effective tags from rule tags and exceptions, and persists all changes to SQLite.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L882-L904",
+          "version": "repo-lines-v1:sha256:8bbbe79a2f4e05b58239e36b1cf7ce105b583a60b3acaf218564d12f274756bf:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxMWZmZjU5MjUwYzY1MmJlNWJhYTE3Mzg5OWM3MzhjYWNjZmNmYzE0NWQyOGZhYjU1ZTdhODA2MGZkYmI1NmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBhZjcxZTA2NmUxZDY5ZDUxMDg5M2JlMjg3NGMyMTYyZWNlN2E2MzQ5NTk5NDIxODk3YjAzYjRkOThjYjZlNTMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQwNWNhYTFmMjlmYWU2NzhiZjA4NTZjN2I5MmEyZGVmZTVmNDI4YzA5ODAzYjc3MDhmNjU0ODYyOTIyZjViM2QifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_f37e416fc6e446148c3df8b089780c05",
+      "statement": "addRecipeRow(posRef, section, ingredientData, options) adds a recipe row to a position, auto-deriving quantities and contract flags, queuing changes for export, with ET-mode broadcast to all positions sharing an open wrapper, and optional prevention via asPosition flag.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L1661-L1823",
+          "version": "repo-lines-v1:sha256:d4cfd7d13500afeaff9412ac4c20512c6d5324cdd18672519b4d95ba295cd833:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYzLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI0Nzg2MGJkZWNiMmUzYmYyZGU1YWEyMDQ4YTY4OGRkMmQ3YmNhOTc5NDdjMDNjYWQ1ZWY0YmRiOGM3ODg3ZWE4IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0ZDVjZDJmYjRmM2RmODg0NTE1MjU1YjM5NTIzZjJmOGI1NDcyYmVlYTlmNTY2ZmZjYTIwNGRiODAyNTYxMDQxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJjMGJkY2VkMTFlNWZkMTg3MWJjNDE4ZGU1NWI3MWZkZWRiOTUxNDU3MjE2YjA0NzUwNWIyM2Q0NTAyZDQzMzVlIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiIyZjUwZTEyOTdlMzdhOTI5NTJjNDczOGYxZjQxNGVkNTVhZmJjYWMzNjcwNDk5MWJlYmU3Mzc5MmYyN2Y3MzAwIn0"
+        },
+        {
+          "resource": "repo://tests/frontend/store.test.js#L200-L500",
+          "version": "repo-lines-v1:sha256:0f9a3220d064d1aa28852e6db156845baf615470b82353c737a5a70ace404a4d:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAxLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJjZWM4MDMxMGMwNDY2NTIyMmVmN2E3Yzg3ODNiZDBmOWVlNWI2NTA0OTQ5ZmQ5ZDQ0NWNjM2YyYzAyNzNhNDMyIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0M2Y0NDBmMDc3ODAyOTdiYTI2MWNhMjhkYTc5NzgxNWQ2YjU5NzcxZGVmOGU0YWM3NWYwZTZlOGY5MDI4ZDkyIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIwNDIxMDEzYzhlZTNmOTk5NGZiMWQwNTBmYzZlMDdkNDBlNzE0ODQ3NjFhY2Y3MDgwYmFmNDAyZGQzODVjMjZjIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJiNTYxOTc1MTM4M2Y2MmU1MDYzMzljMDQ0NzVkNjNjNzIzOTRiMmFhNzY3NDJkNzJkMDNmZmNjNTZlZTNiMjdhIn0"
+        }
+      ]
+    },
+    {
+      "id": "claim_b02b940685e0491bae08c49d2fedd046",
+      "statement": "addConnection(posRef, parts, options) inserts a set of recipe rows (wired connection or pasted parts) in one undo step, auto-resolving section for shared wrappers, optionally merging duplicate quantities.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L2197-L2259",
+          "version": "repo-lines-v1:sha256:ed7c455edfd11abd2d107c1e2db64dbd2f811576af83960e77b553cca908230f:eyJzZWxlY3RlZExpbmVDb3VudCI6NjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEyNjkwZGMzMWFkMjJiMzk5ZDJkNTVkNTdhMGY3MmNiYmEzMDIyZmE3ZjU4OTdlMjE1Njc4NzYyZGM3NDFjYzEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjlkYzNmOTk4YmFlYTAwZDMxYWRlZGY1ZTAyMzFmZWVjZDUyMmU1ZDY2MWEwNTBiMDZiMmQyYWQ2MjUzN2IyMDEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRlYTM0MTFmZGQxMDFiMWFmZjNhNjU3ZTBiY2MwYmI4ZGI4NmViZGRmZjcyODdhOTYxODY4ZTU5YzMxZjM5MTQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_71b987b6e263493dba191d58d87f4e63",
+      "statement": "updateRecipeRow(posRef, rowId, updates, options) updates a recipe row by _id, normalizes both PascalCase and camelCase field names for export safety, and propagates updates to all position copies in ET-mode.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L3007-L3050",
+          "version": "repo-lines-v1:sha256:61026d3bbd52708ed2714aac9edc4007e1e5b174de0a7fd1043d468c89e7e144:eyJzZWxlY3RlZExpbmVDb3VudCI6NDQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZlOGQwZGYyOWE0NWI5MDIzYTZhN2ZkMDQ5M2M3N2ZiNWFhMzg0MWEyZDljMTc1MmU3NDRlNjkyMzRjMjZjMzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhkMDQyYWE5MDFlYzk0N2FlYTM4NGZlMWIyN2Y1M2JjOTcyNDZiZTExZmM5MzBjOTQ5MTVkYmE0NDg3Yzc5ODAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVmOTk1YzBhZjk5YmJlZDhiYzk0MmJhOWRkZTgyMjU1YjU3OTY3Y2IzZWE2OWFkODM4ODVkMjk3OWY2ODlkZjAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_480a24d3becc40a5bed584437c9ba59a",
+      "statement": "removeRecipeRow(posRef, rowId, options) removes a recipe row, hard-deleting new rows and soft-deleting existing rows (IsDeleted='Y') for export, with ET-mode affecting all position copies of the same row.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L3057-L3104",
+          "version": "repo-lines-v1:sha256:7941e206a7cdd7994051c2960556b0f2777c504c8d314be366e4216d975a1afe:eyJzZWxlY3RlZExpbmVDb3VudCI6NDgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY4YzkwMzM5YzVlMGVjY2ViODEyOThmNTYxZGY0OThmNGYxMzc4NzEyODAzMDBmMzM2MTUwYjNiODJhMDg2ODUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5MWQ2ZGFkNjY0ZDVjOTNhMjRlNWJiYjY4NDQ1MTYwNTYwYmQ5OWE3NGE4ODkxMjM4N2QyMGIzMzNhYjQzNWQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRhNDkwZDg4NTIzOTg1YzlmZmNjN2Q3ZDQ1NDY3ZTU3MzM2ZTBlMzgyMDhlYWY5NjMwZjZkYmMyYWU0MmZmMWEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_5d7c8864ef5e4b6f9f92e0166710005c",
+      "statement": "updatePSRow(elementTypeRef, updates, options) updates or auto-upserts a Product Spec row, normalizes dual-casing field names for export, and recomputes container detection when spec fields change.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L3226-L3267",
+          "version": "repo-lines-v1:sha256:ac7c32e0c63ec330521194f09d2a72828a0ee5b960ce27747ff446f724b40b6b:eyJzZWxlY3RlZExpbmVDb3VudCI6NDIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU3ZmJlN2MxZTA5YTIxYTBhY2Y0OGM3YTM2ZmZhYWRlNWJmYTJkY2Y3YzRkMmY2ZTdjZDNiYTY0YzJmNDFjZGIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImM3ZmU0ODlhNjk0ODhlMTU4NDIyZWRiMDFmZGQ3YWJjZmVmOTUxNzRmZDBjZmI2NDQxYTJkZjE3ODMzZmIwMjAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI2OTVkMzJlY2Q0YWE5ZGJiNzBhZmY5MGQ3YzkxMmY5YjBjYWFjMjAwNTQwY2NmOWY0ZjA0MTZhMmE4Nzk0MDQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_632060346286407b9069cd3dfedfa400",
+      "statement": "addPSRow(elementTypeRef, defaults, options) creates a new Product Spec row with optional field defaults, idempotent (case-insensitive duplicate check), and queues the row as _isNew in psChanges for export.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L3300-L3351",
+          "version": "repo-lines-v1:sha256:2642fd5162c4bad87e99ad073d85b1fb18e6e43b00b073727aebd2b06b41de0c:eyJzZWxlY3RlZExpbmVDb3VudCI6NTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZkNDJjZjQxOGY2OWU1OTI4M2I4YjY0ZGFlMDRlNTFhMGE1Nzk4MzA2OTQ1Njk5ZjM1ODkzYTVhMjQ3ZGUxM2UiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImVjOTg3MmFmZWEzNWRiZjMyNzhlZjRlNzc0MWMwMzc2ZjE1NTc4ODBjY2QwYmUwYzI0NDkyMzJjNjM0ZGFhMTMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY0NjYzYzljN2Q2ZTk3YTMwMTExYjkzOTNiY2Q0YWMxOTYyMWZlMDdiZDNiOTliNWQ0NWYzMDcwNjkyZGQxOWEifQ"
+        },
+        {
+          "resource": "repo://tests/frontend/store.test.js#L419-L502",
+          "version": "repo-lines-v1:sha256:a77c5d3b193ecdb50989b281128d59305e2ac04fbe67fe219d1a3fca9ed18849:eyJzZWxlY3RlZExpbmVDb3VudCI6ODQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjExMmU2ZmU0N2IxMGVkMWViZWE1YmMxYmI3YjA0OTg2MzQwNzZhMDMxMThiZjAxNmY3NzkzYjllNmIzNWQ3YTgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImEzNzgzNTc5NzFkODgxNGZmMDNlNDc5ZWEyM2IwODBmMmI1MmQzZTFhZmNkYTY4MjI1NTIwMDI3MzllMGM0YjAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjFlZjBiOWRjMmI1ZTFiOWFiZWNiZjJmMTAxNWE0NTIzY2IyYTc1MWVlZDgyNDQyYTBhNzA4ODBmZmNhZjliZmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZhZjdmNGQ0YWYxMWE2NjAyZDZmZjA4MGY0YmQ2ODg3ZjcwYzIzY2EyZTc2Yjc5N2VhZDc4NTNhMjFlYTk0NTAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_3eb2ff7c0c6a4a708498de22c3991072",
+      "statement": "deletePSRow(elementTypeRef, options) removes a Product Spec row, hard-deleting new rows and soft-deleting existing rows (IsDeleted='Y'), and recomputes container detection.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L3274-L3294",
+          "version": "repo-lines-v1:sha256:98955fffd0b5cd4e7e168c0ed38e7b138c38a115bda164fdbca23b48329aba1a:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZiYjQ2MGM0NTRhOTc0MGViYzlkMGEyOTdiN2MyZTg5YWQ4OGFiMTA0MzJmNzIwZGY1MGJhYWNmODRkMGYxNmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRhMzcyMDcxYWRlYzZjNmQ2NTEyNDk2ZWQ3Y2IzZThmZWNkNzdmNDQ0MzFhYTg4Yzc5ZmQxYTYxM2E2Y2MzMmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdiZGI3YjU4MDkxYjk0NjZhZGUyNDQ3MTRlZjg2ZGFkNTJhMjkzODU5Nzg4YTBjZWFjN2EyYTBjZTk0MDE0YTEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_7ebca1e81a374a06bb9cfef4f6715c71",
+      "statement": "undo() and redo() restore or re-apply snapshots of recipes, psRows, both change registries, elementTypes, localElementTypes, and container detection, with a history limit of 50 snapshots and sync of local ETs to browser storage.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L744-L763",
+          "version": "repo-lines-v1:sha256:1ece57c1c337c0e49e8cd5faf82f268e4978d9de3e4df3704d75e61f5483dc0d:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFkMzQwOTgzMjFhY2NkOTA2ODUxNTIzN2Y1Yjk2OTc3ZDI1YTQ2YTA4ODJiM2U2YjZjNDZiZmVhNTc1ZTdlZDUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkxNDY5YmU3YzFlZmVkZDkxNmViNzM1ODk3ZjgxZjAzZDBmODllZjdmZjdlYzU4NDg1MWNjY2Y2YTBhMjc1YmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNmY2E1NDVkYzI1NzJkZGUwNzRlNjRhNjU4OTZiMjRjYjYwODcxMGYyMzM5MGI5NDk5N2M5OTg5OTEwNDAyYWYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_f5938fb751af4016b39f69fb729578e4",
+      "statement": "_pushHistory() snapshots the current editable state (recipes, psRows, registries, elementTypes, container info) onto the undo stack and clears redo, called at the start of every recipe/PS-mutating action.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L710-L715",
+          "version": "repo-lines-v1:sha256:309669015026d18cbc79b6ecf9c2e9a23293eb01f1bedb235b80322c33d7927d:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODEwZDRhZjRiOWJmNDZkNjFkYzNkYjc0MjRiMDAyOTFmM2MyMDQ3NjQxMGViZjUzNjgwNTllZTFkODcwYzc3NiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGQ1Y2QyZmI0ZjNkZjg4NDUxNTI1NWIzOTUyM2YyZjhiNTQ3MmJlZWE5ZjU2NmZmY2EyMDRkYjgwMjU2MTA0MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMGFmNzRkODdlYzhkYTAzMTNiMDYxMDAyODVlODhjMDU4ZjYzOGRiNmZmZjVmMDRiNzlhYjg4MjY4YmRmY2ExZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzkwNGM4M2Q5ODEyYzIyZDQ2ZDUxMTdkMTRhMTIyMzdmOGQyZWRlODg5Yjc2Yjk3MWUxY2FjODIzODdjMTRiYSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_b8477bd096f34d50a79857f33efe419e",
+      "statement": "runValidation() executes all validation rules against the current project data, stores results in validationResults, and returns the filtered list with ignored positions and families dropped.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L3628-L3653",
+          "version": "repo-lines-v1:sha256:262aabe33631771c7cfcbab5f37009d966b3f305c4aa07d97cbc5efca039f766:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI1NDRjMzNlN2RlMTUyMTJiNDAwOTYzZjgwZjU1YTBjNjY5YTA5Y2VlMjY3ZDgzMWY4MjFkMjc1YzBjZmVhY2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjIwMTI2YTlmZWE2NTVhYWJhNmRiZmVlMGFmOTIyNWY5NzNmNzEyM2YzMDQxOWRmYzY0ODVmZDg4OTVlZjk0ZjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU0NDYyZGQ2ZjcxNDc4ZTM0ZTNiZmFjNWRjOGFlOWUyMGEwN2FkNzZkZDU2MDA4ZGFiNGU5MzQ1NTVlMGNmNzMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_ed2ae5e2776f4427b72e2b27cff73f98",
+      "statement": "markExported() stamps pending changes with a batch number (incremented only if truly new changes exist) and persists the batch metadata for tracking exported change sets.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L3677-L3687",
+          "version": "repo-lines-v1:sha256:979ef55ebecaf78a0931aa929f8880ab288fd36262ab83b3310205e89f8f0384:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM1YTNlMmJmNWMzZTVlY2Q1ZTFiMDgxYTk0M2UzODk2OGMzMDQ0YjQzYjFhZDVhYjExZWQ3YTkxMjA5ZjliMjYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImVlMGU2YTFhYWQyNmY3NWQ3ODE1NmQ5YjExZjkxMmM4Yzk2NzM1ZWNiYmU3ODUxYmJmODBmMGU4YTVkYzQ2ZjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFmNjVhNTEzMjVlMzFlNjZhMTRlMzcxMDJlNjFjNjljZTUyMGFkMmJmYmQ1ZDM3NzEzZTc3NWQyNGQ3MTNmYjMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_6e8bbb5ed42941ab86b66821d63638ee",
+      "statement": "checkFiles() asynchronously re-reads the three workbooks (DB, PS, RS) and reconciles every pending change against them, detecting conflicts and applying settled changes, returning counts or null on read failure.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L3694-L3718",
+          "version": "repo-lines-v1:sha256:3ab8f72dcf5e6866f0436fba91601ef031bb4128db4580761639a30a85bae0bc:eyJzZWxlY3RlZExpbmVDb3VudCI6MjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAwYzdlY2MxNWQ0ZDNhMWJhYzA3MGRjZmZmN2RkNDc4YTc2ZTk0MDRmM2FmOTljODhmYmIxYTk3NmI3NDMzMjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFlMjBkMDQ4Y2Q1MWYzM2YwZTJjODA4OWNhOTFiMzFlYjA2NWM0MzM2OTZlZmE4MzEwYWRlNTYxY2QxZmUyYWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZkYjFlZDI2NGMzZDczM2FjNjNhNjUyNzZmOWVlODJjOWRlNjk2MjM2OGI4ZjVjZmRmZjRjN2ZiMDA0NGYxNDcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_10499774c0d546bba2aefe5630cfc3c2",
+      "statement": "setFileWatchAlert(data) sets or clears a file-watch alert notifying the user that a workbook has changed on disk, structured as { file: 'ps'|'rs'|'db', path } or null.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L3792-L3800",
+          "version": "repo-lines-v1:sha256:79ab261b3ff97e158d18e627e53e21773245932d548edb0c1b2c0564c132e282:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMWYxNzI0OGE2OTFlN2JmMmMwYTdiNzc3YzM3NDgyYjBmZjNlOTg5ODIwYWIyYWMyN2U0MjQ2NTExOWExNzhjNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNmRjOWFiMDEwZjVlYzM2NjNkODcwNjc0NThiZjJjZGVhOWViM2UxZjNhN2Q4MzlhNzEzYmQ3OWQ5OGQzYzA5NyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYzc2YWIzY2E0Y2Y5MmRkYTE5YmY3NjMxNTA4ZWYyZjU1NDM1N2M2ODM4NzY4YjI3ZGZmNGIyZjVmNWI0NjJiNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOWRjM2Y5OThiYWVhMDBkMzFhZGVkZjVlMDIzMWZlZWNkNTIyZTVkNjYxYTA1MGIwNmIyZDJhZDYyNTM3YjIwMSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_03140f97b5b04e9ca97c04110cc42566",
+      "statement": "useStore(selector) reads state with a selector function in React components for granular subscriptions; store.getState() enables imperative access for non-component code paths like timers and callbacks.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L1-L50",
+          "version": "repo-lines-v1:sha256:4780895e9ddc8fdedc1c671aefd0799b877500346394ef068372eeb21f17d891:eyJzZWxlY3RlZExpbmVDb3VudCI6NTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMxZmE5MGJiNDljOWZiMzAzY2I1OGY3YzA0NDJlODUyNzA0ZDIzYzc0OGIxMjliNzQxNzgxMTRiZWJiOTc0YTIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZjODVlOGYxYWFjY2QyZTgzMzI3ZjZkMTdhZTRhOWRkMjhlYjFkYjRlMGVhZGQ0YmE2NTdhNTZkNWIyYmIxYTcifQ"
+        },
+        {
+          "resource": "repo://tests/frontend/store.test.js#L128-L171",
+          "version": "repo-lines-v1:sha256:62fa83a271ba1d7dda55ac6ddfba1f64cb480804425f3fd8d0a0a21cdf3c3880:eyJzZWxlY3RlZExpbmVDb3VudCI6NDQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc2MTJkODg4MGI5NTA2Yjc3NmM5MDFjNjg1MWYxOWNkOWJjM2M0YzA5MTA2ZmMyMTFhMDBjYWZmNmE1N2I3MDQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImMxNTBkOWUzMzgyNmI5M2U5Y2IyMDM2NjNkNDdlMjk0MTY4ZWFmZTUwN2UxOGMyMDJiMWFlMmQ1NGExYTI4Y2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM5MTgyNzhmNzVkYjAwMWJiMmQyYWFhNmRlYmU5ZmNjMzNjNDg4YmRmM2Q2MmQ0MDMwZDY1NTQxZWNlMzU5ZGMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_ab561f54aab542e7b14c3390dcd07f1a",
+      "statement": "psChanges, rsChanges, and dbChanges maintain one coalesced entry per dirty row (not per edit event), each carrying a change action ('upsert'|'delete'), updated row data, and baseline 'before' values for staleness tracking and conflict detection.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L80-L209",
+          "version": "repo-lines-v1:sha256:324779d0d21b3c6f7b806737820f6cdbfe1ca4b80eed793a2abdc897c213d33a:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMwLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIyMjRjOTI0OGMzMmRjYTMwNWZjMWY5NmM2YzIzZGM2MzIyZDg4NTRiOTg1YzBhZjg1YmQxYjhjZTlkZDQ4NDU4IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJiYTJiZjQ4MDI1NTNmZmJlNmUzY2Q5YTk4MWE3ZGNmNDIzNjgxNTc2ZTUzZTc2NTAwYzE4MTdlODJmZWQzMzBlIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJjMWY4NDg3MmEwOWU1OTMyMjFhZWY3NzhlZDgxMGVhNTJjOGEwMzdkOTM2ZjkwNjFmMTVhNTgyMzE5NDBjMTEwIn0"
+        }
+      ]
+    },
+    {
+      "id": "claim_8041090c837f431180dfa143ad068321",
+      "statement": "applyTemplate(posRef, templateId, options) resolves a template against slot mappings, determines template kind (recipe/form/regular), and replaces the position's recipe with resolved rows, handling new wrapper creation for recipe templates and proposal logic for form templates.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L1334-L1380",
+          "version": "repo-lines-v1:sha256:0cb09f5079380b71e33762dbaf852f9ccd5fc869f0866173739cff9d0a1185c3:eyJzZWxlY3RlZExpbmVDb3VudCI6NDcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY0NWFmOGUwNTVjOTUyYzdjYzAzNjBlMTk0N2IxN2FmNzM0MDlkZjMwYWZiZjc0ZGMzZmNiYTJjODc1Mzg0MmEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZiODlhZDA5ZDQwYzNkZTQwMWY3Yjg3ZGNmNjk0ODQ3Njc0OWE5MmMzYjIxNmRhMDA2OTQwMDJmZWNmNGEwZDAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImVhNzYzZTg1MGU0NjZmNjlmZjA1ZmY5MTI0NzIxNzhkN2UzMWVlZmFkNDFlYTI0MmRhY2QxNTY1YzBlYTJlM2MifQ"
+        },
+        {
+          "resource": "repo://tests/frontend/store.test.js#L209-L284",
+          "version": "repo-lines-v1:sha256:03ce0220737bd5ff27569dab2cabf87439fd0e23c05f16cef7ab12900cd270fd:eyJzZWxlY3RlZExpbmVDb3VudCI6NzYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM0OWFhNzc1MzFhZWRiODBjMjYwOThjY2E4ZThhMWY0OTg2Yzc0MjlhZjMzZjVmNjIxYTRiM2FlM2QwMjIwYjEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjFlZjBiOWRjMmI1ZTFiOWFiZWNiZjJmMTAxNWE0NTIzY2IyYTc1MWVlZDgyNDQyYTBhNzA4ODBmZmNhZjliZmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNjMmYzMGU3MjYwZWVjMjliNjIxMDM3M2I0NDYyZGM5ZTUxNzVmNjk3ZTMxNjNhYzBhMmM1OWI4ZDBjZTY4NjAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_c3851de1dda04abfbbc1b7677e81031a",
+      "statement": "saveAsTemplate(posRef, options) converts the position's recipe into a reusable template, optionally excluding rows, and populates applicable_tags from position UI tags for auto-matching.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L1518-L1533",
+          "version": "repo-lines-v1:sha256:e544764d4767976fdecce03b4e789e9bc114478b41a042ad367888caab2d04f4:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM5MTgxYmMzODNiZmJjMWY1ZDdkODg1ZmJiMGE2YjZjMDRiY2VmOGRjOWQ3YmIwZmNhM2JmY2E3YzQ1MDhhZWQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImY1ZDBmYzAyYWI5OWRhNTIzY2VkYmQyZTQ3ZTIzZGFmZjNiYjNiMWQ4NjhmYzE4MGU3OGJjM2NlNjU4OGE4OTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU4NDhhZWIwNWM3ZmY1MWQ1ZTVlNTgwYmFmYzhhNThkODNmNThjMzM0N2QxOTAxYWNmNGE3NzYzMzI0MTVmNDcifQ"
+        },
+        {
+          "resource": "repo://tests/frontend/store.test.js#L345-L417",
+          "version": "repo-lines-v1:sha256:3ab1283f02e850624914de871cb4f689bb7fd9272780e29e69ab1b51e6bdee92:eyJzZWxlY3RlZExpbmVDb3VudCI6NzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE5MmYyMTU4ZmM3OTAzYzQyYmExODA2OThhYzUwMjA4YjU3N2U5YWU0Y2Q0MTJjYjgxOGViZmRiMDgzNTcyZjUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjFlZjBiOWRjMmI1ZTFiOWFiZWNiZjJmMTAxNWE0NTIzY2IyYTc1MWVlZDgyNDQyYTBhNzA4ODBmZmNhZjliZmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNkYTc1ZTc3ODhjZjA1NDU4NzFjNGI1ZjIxMGU5YTZkMDZlZDNjZmI0NGYyZjI0MDlhY2E1NDk5MjM2YTliNTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_c907d2a384294b46acda19df4acde9d5",
+      "statement": "Copy/paste methods (copyRows, pasteClipboard, requestPaste, confirmPaste) maintain an in-app clipboard (not OS clipboard) carrying full row character (flags, quantities, section), with merge-vs-separate prompting on duplicate detection via pendingPaste modal.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L2265-L2425",
+          "version": "repo-lines-v1:sha256:376b0e2b8747d0ef53984ed9ca8561d4192d5e73c223c35cb7857713da1dd4fb:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYxLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJmZmIwOTMwY2VkMGU1MTJkMTBmZGUzMWIxOWU1YTA1YzMxNTk0MTY0OGFjOTE4MjExYzUzMjg5ZjMyMzEwNTg3IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI5NDRmMTk5ZGY3OGY1Yzg4OWMzYjRhMGQ2NjlkZDMzN2FlMTY2YTNiZTQ3ZWEzNjU0NzI4MDcxZDRjNWIxNmRkIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJkYWI1NTdhODJkMmM2NzZiNzE4ZGVkZmFlZjViNzY3NzgzY2QyMmY4MWZmYTZhNjc3Y2Y1MGUzMjBkODU3NzcxIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI2MmVjYzFhZWIyMzA4ZjIyM2U2ZDkwZTFjNDk0YWI3MzM2OGFmNzAwMWJjY2FkNjlhZWE3YzVmOTE0MDk0MjM0In0"
+        }
+      ]
+    },
+    {
+      "id": "claim_0cbdf90f08914fe5ad5518a52f556175",
+      "statement": "Form capture methods (saveFormCaptures, promotePendingCapture, applyFormChange) manage product code imports per position, deduping codes with merged tracking, and handling fork/swap/update mutations on Form diff lines in one undo step.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L1831-L2018",
+          "version": "repo-lines-v1:sha256:8548a8defefec1b3522393a4fd6d39cd0bb2287aab1430a33e66a73e04b6a4f0:eyJzZWxlY3RlZExpbmVDb3VudCI6MTg4LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI0ZjJhMmY5OTZmMDhlNjgwYmQyOTIxMzVhNmZhNDk3OGJkYTI2ZTYwMmQ4NGYzM2NiMWQ1OTQ3NzVkNDMwNGI1IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0ZDVjZDJmYjRmM2RmODg0NTE1MjU1YjM5NTIzZjJmOGI1NDcyYmVlYTlmNTY2ZmZjYTIwNGRiODAyNTYxMDQxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJjM2Y0YjY4MDkwYmQxYWM3NjY5ODMxMmNkZjI0NDRkNjU5MjY2ZDE4YjhmMjNmMjk2Mzc2MTQ2NTRhNGViYzNiIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlMTIxMzc5NDdmNGZkNGNkY2FjZDE4ZjAxYzQ4ZjdiODJmN2QzN2NlODA2ODM2OTQ5ZjcwZjk1ZDk1OTlkYzA2In0"
+        }
+      ]
+    },
+    {
+      "id": "claim_d7178a28dabc42e0ab29b2cfc5fbf3e8",
+      "statement": "ET collection methods (createCollection, pinPositions, applyCollectionBulk) manage connector templates: create collections with rules, pin positions to them, and apply bulk changes (add/topup/move/remove) in one undo step, with shared wrapper internals applied once.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L2522-L2878",
+          "version": "repo-lines-v1:sha256:ed3e7ab92ddb89d1271c84eb49c1f09083a36e42f2eccb3950eac426c963b0b5:eyJzZWxlY3RlZExpbmVDb3VudCI6MzU3LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJlYmM3OGJlZjY0ZjYzNDM3YjVkYzY1OGNkY2IyOTMyYjYwYzNkMjYyNWI1MWJhNjliYzk0ZGNiY2QxYWU5M2MyIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0ZDVjZDJmYjRmM2RmODg0NTE1MjU1YjM5NTIzZjJmOGI1NDcyYmVlYTlmNTY2ZmZjYTIwNGRiODAyNTYxMDQxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI1M2NjNTkwNTRmNWRkNWQ3Y2VkODU3ZTBmMDQwODBmMWNkMTBjOGQ2NWU2ZGZkZTU0MmQzNjBkNzQ2OTdjOWJjIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI4ODZmOTk4NWQ4ZGJiOGM5YmNjMDAwOTEyODM0ZTYzOGU5ZGVjNmJmYTEwZjdjMWQ1ZThiOGRmYjhjYTM0MWM3In0"
+        }
+      ]
+    },
+    {
+      "id": "claim_a07b22c51a03452b817331948a79b440",
+      "statement": "DesignDB catalogue methods (createElementType, queueMissingDbRows, proposedFamilies) teach the master about project ElementTypes, queuing patch rows with computed sort orders and optional family assignments for architectural gaps.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L3839-L3988",
+          "version": "repo-lines-v1:sha256:6b8a6be1fbb74078ea02e642501c58c9771c2085d5b319f77a40695f320db93c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUwLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJmMWI4ZmM5ZDUwZDkyYjlkM2VlODBlNzA3MDg0NTkyOWM3MzQ3YmU0N2E4NTcxYmU5ZWY2N2E5NzA3NmEzY2E1IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0ZDVjZDJmYjRmM2RmODg0NTE1MjU1YjM5NTIzZjJmOGI1NDcyYmVlYTlmNTY2ZmZjYTIwNGRiODAyNTYxMDQxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI2Yjg5YWQwOWQ0MGMzZGU0MDFmN2I4N2RjZjY5NDg0NzY3NDlhOTJjM2IyMTZkYTAwNjk0MDAyZmVjZjRhMGQwIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI3ZDhjOTc2ZDljMWNlYjM5NTlhZjU1ZDI3MjI5MTJmMjBmZDUxOGMxYTdmNWU3YWVhNDg1OWNlYjUwNGYzYmMzIn0"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-17T13:57:20.517Z"
+  }
+}

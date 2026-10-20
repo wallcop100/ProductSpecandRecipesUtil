@@ -23,6 +23,8 @@
 import { roleOf, driverOf, envOf, wrapperFor, patternFor, designKind, PRODUCT_ROLES, SHIPPED_PATTERNS, harvestPatterns } from './recipePatterns'
 import { matchStyle, groupKeyFor } from './recipeStyles'
 import { specificityScope } from './templateRules'
+import { indexes as kindIndexes, rowJob, anchorOf, fitFor, jobLabel } from './recipeKinds'
+import { jobKey } from './codeJobs'
 
 const up = s => String(s ?? '').trim().toUpperCase()
 const refOf = r => r.ElementTypeRef || r.elementTypeRef || ''
@@ -291,6 +293,13 @@ export function proposalFromTemplate(template, posRef, ctx) {
     dimQtyMultiplier: i.dimQtyMultiplier ?? null, isInteger: i.isInteger || null,
   })
   const sectionOf = i => (i.section === 'position' ? 'position' : 'internal')
+  const idx = kindIndexes(ctx)
+  const etRefs = new Set((ctx.elementTypes || []).map(e => up(refOf(e))))
+  const jobOfRef = ref => jobKey(rowJob({ ElementTypeRef: ref, ContextType: 'ElementType' }, idx))
+  const fitsSlot = (job, slot) => job === slot || job.split(':')[0] === slot
+  const formJobs = new Map()
+  for (const p of base.products) { const j = jobOfRef(p.ref); formJobs.set(j, [...(formJobs.get(j) || []), { ElementTypeRef: p.ref }]) }
+  const anchor = anchorOf({ jobs: formJobs }, idx)
   for (const i of ings) {
     if (i.newWrapper || (i === wrapIng)) { rows.push({ section: 'position', role: 'WRAPPER', ref: null, isDesign: 'Y', from: 'rule' }); continue }
     if (i.fromForm === 'lead') {
@@ -304,6 +313,20 @@ export function proposalFromTemplate(template, posRef, ctx) {
         placed.add(prod.ref)
         rows.push({ section: sectionOf(i), role: prod.role, ref: prod.ref, code: prod.code, ...flags(i), from: 'the Form' })
       }
+      continue
+    }
+    // A job slot (an Orion template's "PROFILE"): this position's Form product doing that job, else
+    // the part that fits its profile, else empty and flagged. Its label is a name, never a ref.
+    if (i.slotKey && !i.exact && !etRefs.has(up(i.slotLabel))) {
+      const mine = base.products.filter(p => !placed.has(p.ref) && fitsSlot(jobOfRef(p.ref), i.slotKey))
+      for (const prod of mine) {
+        placed.add(prod.ref)
+        rows.push({ section: sectionOf(i), role: prod.role, ref: prod.ref, code: prod.code, ...flags(i), from: 'the Form' })
+      }
+      if (mine.length) continue
+      const fit = fitFor(i.slotKey, anchor, ctx, idx)
+      rows.push({ section: sectionOf(i), role: i.slotKey, ref: fit?.etRef || null, ...flags(i), from: fit ? fit.why : null,
+        check: fit ? null : `no ${jobLabel(i.slotKey)} on the Form: pick one` })
       continue
     }
     const role = roleOf(i.slotLabel)
@@ -405,7 +428,7 @@ export function proposalContext(state, library = {}) {
     kindOf.set(posOf(r), `${wk}|${driverOf(pt)}|${envOf(pt, parentOf)}`)
   }
   return {
-    positionTypes, elementTypes, recipes, formCaptures,
+    positionTypes, elementTypes, recipes, formCaptures, psRows: state.psRows || [],
     choices: state.recipeChoices || {},
     exemplars: library.exemplars || [],
     containerRefs: containerETRefs,

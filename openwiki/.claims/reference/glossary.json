@@ -1,0 +1,360 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:0df9302d704fded7d833d4be18ddff3fbbec7400ef66ea14426f88a2df18c83e",
+  "claims": [
+    {
+      "id": "claim_964a0e3ba2b84d4fbb4e672cd4752b66",
+      "statement": "ElementType (ET) is a component or part in the master product catalogue (DesignDB) with a reference code, name, and optional family category. ElementTypes are hierarchical: collections are virtual container ETs that group related ETs by family; leaf ETs are real products.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/xlsx.js#L24-L32",
+          "version": "repo-lines-v1:sha256:807b6ee343da858f8f51dcd668212c335852d2dd0fffbffa204d7eba64edacab:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjhjYzAyOTI1YjdhNTMzNWJmNzRiM2MxZmMxYTZkZDc2ZDJjZWJiYjZmN2Y1NTI2ZDlkZmFjZThiNDA1OTQ3ZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMWVkYmZiNGFkOTBmOWE2MmQxYTI1ZTZiZjQxMjM5MjlmM2JjZjM2ZTE3MTdkMTRkNDM2Mzk4MzcwNjE0OTlkNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDU2YjFjMzQzZjcwM2NjNWQ3N2EyMjA1Y2IwMzNkMGEwMjBiMmU1Y2NiYzk0NmFlYzI5Mzk3ZDI4YTVmZDkxOCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_85c57875f194478d858e2116fe34b1f8",
+      "statement": "PositionType (PT) is a location or role category in the fixture design with metadata like DriverLocation (LOCAL, REMOTE, INTEGRAL, NONE), environment, and control type. PositionTypes are hierarchical and drawn from the DesignDB.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/xlsx.js#L34-L45",
+          "version": "repo-lines-v1:sha256:16b8bb0797a7f66063e1cde50e9b9771c39640e570d5eebe58e65448ed58d492:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk4NDZmZThkYTBlZjhmNGVlYTdmYTg3YWFjYWQ1N2EyOTQ0ZDAwNzFkZDI5NmJkOWQ0YzRhNDczZTE4YWIyZDMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJhYmEwZDQ5YTU1ODBlNjkxYTFmMWU2YTEyMDkyNDM4YzIzMTQ5NDg5NWRmMTgwYTNhOGMxNjEyZjAyNmViZjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjkyYjYzMDIzZmUxMmFkNTBkNzViMjcyNjk5MWYzMDQ2ZGVhNDBkZjFmN2E1YTNjMzg0Nzc1YzMyMzkzODc3YTgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_2681c0e0cb114d1fb4ca2002ca27c6ba",
+      "statement": "Family is a category or classification of ElementTypes rooted in the DesignDB's ParentRef field. Families group related components and enable pattern-based recipe proposals and product code learning.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/xlsx.js#L24-L32",
+          "version": "repo-lines-v1:sha256:807b6ee343da858f8f51dcd668212c335852d2dd0fffbffa204d7eba64edacab:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjhjYzAyOTI1YjdhNTMzNWJmNzRiM2MxZmMxYTZkZDc2ZDJjZWJiYjZmN2Y1NTI2ZDlkZmFjZThiNDA1OTQ3ZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMWVkYmZiNGFkOTBmOWE2MmQxYTI1ZTZiZjQxMjM5MjlmM2JjZjM2ZTE3MTdkMTRkNDM2Mzk4MzcwNjE0OTlkNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDU2YjFjMzQzZjcwM2NjNWQ3N2EyMjA1Y2IwMzNkMGEwMjBiMmU1Y2NiYzk0NmFlYzI5Mzk3ZDI4YTVmZDkxOCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_2f12f9d4b53a4b60bbc9bf4e83db1caf",
+      "statement": "A Recipe is a specification of parts for a PositionType, defining which ElementTypes go into that position with quantities and flags (IsDesign, IsContractItem, IsDeleted). Each recipe row (Ingredient) carries ElementTypeRef, Quantity or Dim_QuantityMultiplier, and section (position level or internal).",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L44-L51",
+          "version": "repo-lines-v1:sha256:5c3fa3c8205d67f080f952f4481d36c9b4c2009172184b10f82bb55c5951c280:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNzhiODlhZWNmNmZhYWI3YzU1ZGI5MjI1MmEwZjU2NDQ3MTA2YTI3YjQxMzdlNmE4YWEyZTJjNTI2MjQzMjJhYSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjA5ZmMzYzg3ZWJhNzQyMmI3ZjczMzc0YjkzYTBjYWIyMDNmZmQ5YTRhZGQzNTgxN2ZkMGIyZjIzZDQ1MmM0YiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYmY5NjBhYmE4YTg3YjU4ZDYwMGZmNmY1YjJjYWUyZGMxNWY3YWY5NmUyNjA5YzkxNTU3N2I0YTFkNTAwZjY3NSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_da890f8baa464e5a90949865ec2176d0",
+      "statement": "Quantity and Dim_QuantityMultiplier are mutually exclusive dimensions for counting recipe parts: Quantity is count-based (integers), while Dim_QuantityMultiplier is length-based (multipliers). A row carries either one or the other, never both. Dimensioned items (TAPE, PROFILE, DIFF, MOUNT, FLEX) default to multiplier=1; caps default to quantity=2.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L40-L51",
+          "version": "repo-lines-v1:sha256:760c348b79469a35d790ae2ba1905785642ca7f3c8e106a3393d44c367ddd9e8:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNlOWVjYzcyM2Y3YmI2ZTk2NGQ3YzkxNTcxNWZmMTBkYWVjZjlmZDIzMTQ2OGNmNWNlZjgzOTZmZDc1ZTEwN2EiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImY0NTU2MDk1YzA4ZjJkM2FkZmExMDU0NGY2MzlhNDUyNWQ4NjQ4NjA5OTg0ZDZkOTQxNTJjMzBmMDM5MjE5YTgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImJmOTYwYWJhOGE4N2I1OGQ2MDBmZjZmNWIyY2FlMmRjMTVmN2FmOTZlMjYwOWM5MTU1NzdiNGExZDUwMGY2NzUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_13f84eda6a38419da1351b69926013bf",
+      "statement": "Context is the scope or container where a recipe row lives. ContextType is either 'PositionType' (position-level, site-first-fix) or 'ElementType' (inside a wrapper). ContextRef is the position type ref or wrapper ET ref that the row belongs to.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/xlsx.js#L63-L77",
+          "version": "repo-lines-v1:sha256:630e0c1e71f5ca777493944c3ea44a0d095b85f34cb7c0e98026b2a08ce7c400:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVmNzE1ZDhiNTliMjZjNWMwODMyMTU0NWI2NmYxYTg3ZTkxYmQ5MzVjNzc5NTI2MDAzY2Q0ZGFlODIzYzc5MDkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImEzMzJkODI5MjEwZDAwZjBkYjFhNDhmYjAzZTE3Y2RkYjQyYThmM2EyYjE3OWIwOWU3MzA3ZWUwYTE2NDg4NzEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc0NjZlYjJiYzJkMDJlMDc5ZmU0MzgyYjZiODg1Y2Q3ZDY3NmI5Y2U4ZjViNjg1ZmQ0MGI2YWJiZTIwOGYzOWQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_58cb86a9d716460a82505e957dea96ea",
+      "statement": "A Wrapper is a virtual assembly or container ET identified by refs starting with ET-DL- or ET-LIN- that holds components internally. Positions using a wrapper have rows at position level and internal rows inside the wrapper; wrappers can be shared across positions with identical internals.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/recipePatterns.js#L41-L66",
+          "version": "repo-lines-v1:sha256:49ba2933588b7a9b6f88ec6a87e3b92c291df9e89193c4bb67c8b0ee6d6aeee8:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRjNTQ1MmE3ZGY3MWQzOWQ0MzdlZGVmODljM2M4Mjg1ODE0MGYyNDcwZmI0N2M1ODgwMmMzMWIxNWM3MjhkODgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImVhYjA2MzA5NmRhODgzOWM3ZDhiYzNhNjhlMGM3NmViODNmNjcxMDg3YmE3OWIwY2U1NmE0ODcxNDM5MTRkOTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU5Y2FhZDU1M2RhNzczMDBhYTE5ZGNmNmY2ZTlkNDJkNzk2Njk5ZTkwY2RhYjQ0OTc3ZTE1MzdlYTVjNmI5OTgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_8594e0f7a5464c4b8318841399ab183b",
+      "statement": "Product Spec (PS) is the Excel workbook form capturing product-level metadata: manufacturer, SKU/product code, description, and flags (IsTBC, IsPropertiesTBC, IsDeleted) for each ElementType. App owns 8 of 15 columns and tracks changes in dirty registry (psChanges) for export as field-level patches.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/xlsx.js#L52-L61",
+          "version": "repo-lines-v1:sha256:0ef39c344542bd52da18716c272929425fdf1d1ac677aa0c55516e92de97f003:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU4ZThmMzUyMTViMTZjMGUwZGZhMWU4ZTBhMTllOGY4MTI1NTgyYzVmMWIxYzlkYjBmMGIzZmY0MmJhMTlmMzgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImVhYTEzNmQ0MmZiZjkwM2U1YzNiMTRiMDBkM2U4MWZmOWU0M2QwNjA4ODVjNTBhYTlmNjMxYTZjNjc4YWM3OGIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRhMTIxMGQ0YTQzOGZhNThkZDE1MTFkNzY1NTYwYTJkMjA3NDE5MjA0YmU0NzE2NTQ4ZTBiYmQxZDEzNDdmYzQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_c400f38da5134598a69b175f50850c97",
+      "statement": "ProductCode is a stock keeping unit (SKU) identifying a real product. Manufacturer is the company that makes it. The pair (Manufacturer, ProductCode) is the unique key in Product Spec; different makers can sell identically named items as separate products.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/xlsx.js#L52-L61",
+          "version": "repo-lines-v1:sha256:0ef39c344542bd52da18716c272929425fdf1d1ac677aa0c55516e92de97f003:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU4ZThmMzUyMTViMTZjMGUwZGZhMWU4ZTBhMTllOGY4MTI1NTgyYzVmMWIxYzlkYjBmMGIzZmY0MmJhMTlmMzgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImVhYTEzNmQ0MmZiZjkwM2U1YzNiMTRiMDBkM2U4MWZmOWU0M2QwNjA4ODVjNTBhYTlmNjMxYTZjNjc4YWM3OGIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRhMTIxMGQ0YTQzOGZhNThkZDE1MTFkNzY1NTYwYTJkMjA3NDE5MjA0YmU0NzE2NTQ4ZTBiYmQxZDEzNDdmYzQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_c39f120592e24c26879368d2b52bddb1",
+      "statement": "IsDesign='Y' flags the design element (main product) in a recipe; exactly one per position. IsContractItem='Y' marks a customer billing item. IsTRItem='Y' includes the row in technical reports. These are independent flags; a row may have any combination.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/xlsx.js#L70-L77",
+          "version": "repo-lines-v1:sha256:2331a284823833dea1de808032ae7c387cbf74f831e5ba5222732a6ec1f5664d:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOTRhNmZjZjU0ZmFkOTI0MGE5YTVlNzkwYjYwNjkyODg1OTAyM2I4MDMwYTQ2ZmU5MWJlYmIwNjVmZGFlOWFhZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNmZlNDVkMTI1MjE5ZmJkZTZlNmY1MGE4Mjk3ZjMwYjg4NmU2ZWFkMzkxYmUxODIwYTZkNmM2ZGE5MWU1Y2Y2MCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNzQ2NmViMmJjMmQwMmUwNzlmZTQzODJiNmI4ODVjZDdkNjc2YjljZThmNWI2ODVmZDQwYjZhYmJlMjA4ZjM5ZCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_9a30ee4f7fa941f1a79cea9d99ea9ba2",
+      "statement": "Validation is real-time error and warning detection running synchronously without debounce across six rule classes: Design Element, Quantity & Dimensional, Product & Specification, Design-to-Database Alignment, Position-Specific, and Template & Structure Rules. Each issue carries severity, rule code, message, and fix kind.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/validationRules.js",
+          "version": "repo-file-v1:sha256:031bec297a00d5d898afeeb0a2956177c931ca341a6cc038e3cbe1cc00d172e8"
+        }
+      ]
+    },
+    {
+      "id": "claim_f8995eae9f4247a9a2d0303ec13b8d0b",
+      "statement": "Readiness is a multi-clause assessment of project completeness: RECIPES (every position has a recipe), FORM (every Form product placed), VALIDATION (no blocking errors), and ALIGNMENT (documents align). Each clause independently reports done/queued/pending state.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/readiness.js",
+          "version": "repo-file-v1:sha256:f56d058b283adfbdd1b84e80bddc6ee73147919b6dffb57a5a8ea9e5ea3bf010"
+        }
+      ]
+    },
+    {
+      "id": "claim_3229c49e7b64470a9e740935dbad4b3d",
+      "statement": "Natural Key is an immutable business-based identity: ElementTypeRef for Product Spec; (ContextType, ContextRef, RecipeIndex, ElementTypeRef) for Recipes Spec. _row_num is the 1-based Excel absolute row used for targeting patches; new rows have _row_num=null until first export assigns one. Natural keys prevent duplicate appends after reload.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/xlsx.js#L1-L20",
+          "version": "repo-lines-v1:sha256:79c469f964c74267c7a3b6c840f3858bc74bbc82dda9c3786029ca7c93e3bae4:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI2YTJjZDA5NWY2NDc5NTY3NWU2NmJiZWM1ZWU5MTFlZmFkYmQxMGRlZjk1YjAwNDA2Yjk0ZWI3NWNhZDMyNTYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFlZGJmYjRhZDkwZjlhNjJkMWEyNWU2YmY0MTIzOTI5ZjNiY2YzNmUxNzE3ZDE0ZDQzNjM5ODM3MDYxNDk5ZDcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d1e857930ee44fd882d549b5e046857a",
+      "statement": "Dirty Registry (psChanges, rsChanges) is a map of pending changes: one entry per dirty row with identity, field-level updates dict, before-snapshot (staleness base for conflict detection), _isNew flag, and reconciliation metadata. One entry regardless of edit count; persisted to SQLite so crashes never lose queued work.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L79-L101",
+          "version": "repo-lines-v1:sha256:4aa2a499def2c37ca261c62d0556b4a9d9f6b979aceb78d80e79a6dc0e8ea311:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY2YmEyYjU5OTY3MzJlNzEzOTBkM2UwY2M1YjliZmRmZTU4YWUzZDZkMzgzY2VhYTMyNzRiMzc1OTY1NWRlYmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQwYmFjNDZiNzEyNWY1NjQxOWY2MmI4YzJkOTJkYzNkNDMzMWY0MGM5ZjM4YjI3NjQ4NmQ4NjMzNDE1ZDY2NmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg3MTRjYTE3Yjc3OTRhZTg0OTkyNmMzODI1N2VlZjhhZjkxMDhkMjhlZTZkOWQ5MTNiNjQwNWI5ZGRhYTc5NzgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhhYmYwNGJiMWNmYzBlZTIzMmMzNDk0NmZmMGFlMjQwZGE1MjRhNjBmNTg5MjUxNWQ4MjQ2YThlZTYxNGNhYzEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_fffc0542b9b54847ac87c3be6dc5a572",
+      "statement": "Learning is automatic tracking of ElementType assignments and product codes across projects via exemplar harvesting. Style Library stores exemplars in SQLite (product-code-to-family mappings) enabling code seeding by analogy: new products are named using patterns from exemplars with same manufacturer and shared code stem >= 4 chars.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/styleLibrary.js#L46-L87",
+          "version": "repo-lines-v1:sha256:5e0a0430b76ef0b4fc6c3ebe135fadd1fde116e4b78a8beda0c80eee9751fed5:eyJzZWxlY3RlZExpbmVDb3VudCI6NDIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBhZDg2NDgzZTYyMGY2Nzk3NGI0YzcwMWI5OTUwNjFlYTI4YmU2NjI3ZjUwY2M3NjEzN2M3NmYxM2U0YzRiOTciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk0MzkxOTBiOTBlNTUzNTg3MDdjZWMyOGVhOGE0YzRmZTEzZGI4MTY3YmViMGYwODY1ZTA2MjEyY2UyMjJlMjciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM0YTU0ZmRhNGQ3NTNjN2IzNzc5Yzk0YmM2MDE3NTcwZGFhYmI1ODU2YzAyYzFjYjNhOTQ0MjVmZDc3ODMyNTQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_db5647b422d64d1e87d21191d417a2cb",
+      "statement": "Recipe Pattern is a statistical summary of roles (connectors, drivers, frames, etc.) appearing in positions of a given kind (wrapper, driver location, environment), with frequency (n of total). Patterns are harvested from recipes using harvestPatterns() and are read-only; the only way to change a pattern is to build a new recipe.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/recipePatterns.js#L92-L100",
+          "version": "repo-lines-v1:sha256:144a4d7dbf8f14308962f0b2dad77621746c32c1c22409267ee99f8363e19f3c:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYzA1OWJiMGI2ODlmNDUwNjM0NjRmMDNlYmFjMTVlZGU5YzAyZDE5OGNiMGE2YzkzOTllMjAzMTlhZGNiNGM5MCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjk1NzU0MGM4MjhhOTIzYTEzZGMxNDA5MjM5OGI2ZWFhY2ZkNDIwZmNhNTE4NGQ3YTI2MjM1ZGQ2N2JlZWFkYSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMzc5MjllOTFlMGY5OWMzZTgyNWRlNjliNDM1ZmI2NDg0ZDFiMGExZGYyZjQ2NTYxYWJmMWEyOWYwNDE4OGI4OCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZmI1YmZkODJlNDY3MDEzZDUyZTdlYjUzNTFiZTEwY2NlOGFjNDBjOGIwNDA3MWE0NzMyY2ZjOWMwOWYyMDY0MSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_d934d7e267eb459cb54b46df85f39377",
+      "statement": "Kind is the classification of a position used for recipe pattern lookup, determined by three dimensions: Wrapper (DL, LIN, PS, TRACK, TRACKPS), DriverLocation (LOCAL, REMOTE, INTEGRAL, NONE from DesignDB), and Environment (INT or EXT when position's family chain says exterior). Examples: DL|LOCAL|INT, LIN|REMOTE|EXT.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/recipePatterns.js#L16-L34",
+          "version": "repo-lines-v1:sha256:b58b3f809ef917cccddcf4ff6bfe6a3a737ff1bfb6325bab85741d444b4ac8f1:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVkMzg1MDJmNWFkMTQ3MjFlZmNiN2UwYmQ5MjFjMjVkYjdjMjI4ODQyMTA5ZWM2OTNjYWYxNmE3NTA3OTExZjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMyOTEzNTg4NmEzY2E3ZDI4YzBiMjc0YzhjMThiMDFjOWFmYzI3OTdkNzRkYjU0ZTBhZjMxYzQxN2QxMjQ3NTYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZmYmQwMTA3MWY0ZWMzNjcxZmNmMzlmZTg1MmVkMzAyNTgwYjFjZTY1Njk3YzkyMjNkMDBkMGY5YjVjZmYyMTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE2ZWZiOGFjZTk2ZDIyN2RhZDZjYTBkYzQ1NTliZTBiZWM3ZDFiZDU1ZDFmYTc0YzYzNTgwMzkyOGRmYTQxYWUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_4d05f78251e44e328d97716fda3eec78",
+      "statement": "DriverLocation is a DesignDB field on PositionType describing how the power driver is connected: LOCAL (at position level), REMOTE (remote from position), INTEGRAL (built into fitting), or NONE (no driver). Driver location affects recipe structure and validation rules.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/recipePatterns.js#L71-L78",
+          "version": "repo-lines-v1:sha256:23ad54570004148a7f9a5c6dabde7fbc6b5212edb1ac2f3edfa8040a7e1ea786:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjVlMDVjNzU0NmRjMDA3MzcyZTZmMTZkODZlMTY1ZjMzY2Q4YTE5NzY4NDY0ZGI0OTE0ZmE2NDhjOGFiOTAzYiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZGU3YzdlNGNkMDYxMDNkNDg4ZjkyNTE3N2M4OTkzNjkzM2NmODc0ZTlhMTU0NzFjMDIyZDU5YWIwMmE1MGY3YyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYTQ4NTk4OTY4NzE1Mzk3MGRkYjkxYzIzMWUxZTJmZmE4YzQzYTg3ZWI1M2VmYTc4YjZkMzhmMmExYTMwZTAxMyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_18d56088273c4f3887c23c5d4a66df20",
+      "statement": "Companion Server is an optional API enabling collaborative learning, product code verification, and pattern sharing. The app discovers it via GET ./api/capabilities at startup; all features gracefully degrade if unavailable. Features include product catalogue, shared learning, contributions, workspace sync, and outcomes telemetry.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/companion.js",
+          "version": "repo-file-v1:sha256:3bbc963b6b8ba316eabd1f4949377b6c7e131e8ce8fd94f5d97a17750e93c30c"
+        }
+      ]
+    },
+    {
+      "id": "claim_d8d78cb417c0486fab0cdc423c1eaf04",
+      "statement": "Export sends changes back to Excel via field-level patches and appends: collection from dirty registries, staleness check (backend compares before-values against live cells), write to workbooks, reconciliation with assigned row numbers, and undo barrier insertion. Conflicts block export; app reloads conflicted file and keeps registry intact for manual resolution.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/reconcile.js#L1-L25",
+          "version": "repo-lines-v1:sha256:18f422caadd41da355a29f292d8a84dd2d0293da0d27ac06cdf2b445e46c6483:eyJzZWxlY3RlZExpbmVDb3VudCI6MjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg3M2Y0NDI2NjViYmVlMGNiNjhjNjAyNTVkY2I3MTdjNTI3Y2MxY2MxOGM0M2M0ODIyMTM3YTUyYzE5NjRiMDQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_3b32664afc4e47f5bd094af47d7180c7",
+      "statement": "Form is a user-provided Excel sheet with product codes per position for bulk import. The app matches codes to ElementTypes, proposes recipe placements to standard slots, and offers position-by-position review before commit. Form data is used to stage initial recipes for positions.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/formSpec.js",
+          "version": "repo-file-v1:sha256:71a732cfe413c47eda8ac5bcd27f54d9e06a63dece7c0bd61342f47727073db4"
+        }
+      ]
+    },
+    {
+      "id": "claim_ed3b01f46b6c4dc79ca524e2d3873681",
+      "statement": "Connector is a component transferring signal or power (sockets, plugs, strain relief, levers), identified by name (e.g., 5PIN-SOCKET) because companies name them consistently. ConnectorTemplate is a reusable blueprint of connector wiring with specific parts, quantities, sections, and optional rule. Positions with the same connector signature form a group.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/connectorGroups.js#L1-L50",
+          "version": "repo-lines-v1:sha256:e63ca23f854ba18c828f0e4c74e1db71189580e7f19f9e0745af74b1f39915a1:eyJzZWxlY3RlZExpbmVDb3VudCI6NTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVmNmU5YWVhZmI2YTBiNDY5YmE0ZDZjM2Q5YmIzNmNmYTRjNDU5ODgwYjgzNjdhODdmNzkyNjIzMTk3NTFmYmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ4MDA3MDFjMzc4ZDZjOTk3NzEyZWEyNmVhZTgyZWU3OTFiMmM3NTA1MjQ2MTg0MWFkNWI4ZGZmMDZlYmRlNGIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_da1ba4c2f2684051a232a57ff8f412e0",
+      "statement": "Undo/Redo is implemented via snapshots (whole-state captures of recipes, psRows, dirty registries) with up to 50 retained (HISTORY_LIMIT). Snapshots are created on recipe changes, undo/redo actions, and major mutations. Export Barrier markers prevent undo from crossing exports, so pre-export queues cannot be resurrected and re-exported.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L53-L54",
+          "version": "repo-lines-v1:sha256:c2af4a314da04e03bdfc71240b2a37db1349debd5e59730e145d9b76e7a719c5:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZGExM2ZiYjJjZDViM2ZlNGVkN2VjMmZmNTZlMTIyMGVlNzkzZGYwYWUwZDhkMjgwYWRmNWY2MmU5OWU0NjU2YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZmJlYWM5OGQ1MmExZjUyNjExNWE3ZWJmY2I2OTllMjZmNWVjMzUzOGU2NjU5ZWEzODFiYjNiYTE3ODk4ZGRiZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYWVhODZkMWU2NjQ3MjA0YjlhMGM3ODE5OTk1YTVlMmY1YjhiNDdkZTFlODlhZTlkOTZkMzY2ZmZlZTg1YjRmMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMWJmYzkxYTQ5ODUwOWFjNjgzYzE0ODllOTIyZDllNTRlZDZmMmFhMDU4NjA1N2I4ZGZhZTUyY2Q2YWI2YmU1YSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_0c8d833f909849c1a0f0b726c21e93d4",
+      "statement": "roleOf() is a utility that infers an ElementType's semantic function (role) in a recipe from its reference and family: WRAPPER, DRIVER, CONNECTOR (specific names like 5PIN-SOCKET), LEVER, TAPE, FLEX, PROFILE, DIFF, CLIP, MOUNT, FRAME, CAP, TRACK, TRACK-PS, PS, ACCESSORY, or OTHER.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/recipePatterns.js#L36-L66",
+          "version": "repo-lines-v1:sha256:f29f5134ee5d46d5135d764da6dbfd7402a82e0e92d82e0b9bfbfcbeb77a98a3:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM0NjM5Mzg0NDZjN2Y3MDc0YjlhNGZjMTNlZmExMmZlNmFmNzk5MzExMmY4MmEzYTI5OTllNDE3NmNmOGMzYmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU5Y2FhZDU1M2RhNzczMDBhYTE5ZGNmNmY2ZTlkNDJkNzk2Njk5ZTkwY2RhYjQ0OTc3ZTE1MzdlYTVjNmI5OTgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_04259b53c36645bd9fdb74fd1af140c4",
+      "statement": "qtyPair() determines whether a recipe row uses Quantity (count) or Dim_QuantityMultiplier (length): dimensioned keywords (TAPE, PROFILE, DIFF, MOUNT, FLEX) -> dimQtyMultiplier=1 default; CAP -> quantity=2 default; others -> quantity=1 default. A row can override the default by providing an explicit value.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L44-L51",
+          "version": "repo-lines-v1:sha256:5c3fa3c8205d67f080f952f4481d36c9b4c2009172184b10f82bb55c5951c280:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNzhiODlhZWNmNmZhYWI3YzU1ZGI5MjI1MmEwZjU2NDQ3MTA2YTI3YjQxMzdlNmE4YWEyZTJjNTI2MjQzMjJhYSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjA5ZmMzYzg3ZWJhNzQyMmI3ZjczMzc0YjkzYTBjYWIyMDNmZmQ5YTRhZGQzNTgxN2ZkMGIyZjIzZDQ1MmM0YiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYmY5NjBhYmE4YTg3YjU4ZDYwMGZmNmY1YjJjYWUyZGMxNWY3YWY5NmUyNjA5YzkxNTU3N2I0YTFkNTAwZjY3NSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_c3c4ef69bb924a689e17f5fafb84b9ef",
+      "statement": "IsDeleted is a soft-delete flag on any exported row (PS, RS, or DesignDB): once a row is written to disk, it is never hard-removed, only tombstoned with IsDeleted='Y' so the upstream pipeline tracks full history. Rows created in-app and never exported can be hard-deleted.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/xlsx.js#L88-L92",
+          "version": "repo-lines-v1:sha256:474a77934b5acfac69c1f94284d25c3a8e5b17b03b501382d8a1a6cf3dba5dcc:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNmQzZWY2YjhkYWM2M2Y4YTkxYWE0YjQxYjIxZjRmNzNiMGFkMzczNmQ4NDAxNDhhYjFhZjhkZWNjYmU5MzAzMiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiN2I4NzRhYTU0ODY2ZDUzMDRjNTk4NjM4MWFlYzFiNzQ4ZmMyNzBiOWY3ZDI4NTBiZWI3N2NkNzJmOWE4YTcwYyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZWMyMTE1YWRjM2E3NWFmYjU3MTI2ODUyNjRiNTM0MWE2MzM0YzQ1OGZjZDg4OGUzZDJiMTMzNjU4MjdjNDA3YyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_78d034df50004b14a10ab39c3d605212",
+      "statement": "IsTBC (To Be Confirmed) is a flag on Product Spec rows indicating provisional assignment pending human review. Rows marked TBC are flagged in validation and readiness reports but do not block export. Used when product family is uncertain or real product not yet decided.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/xlsx.js#L52-L61",
+          "version": "repo-lines-v1:sha256:0ef39c344542bd52da18716c272929425fdf1d1ac677aa0c55516e92de97f003:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU4ZThmMzUyMTViMTZjMGUwZGZhMWU4ZTBhMTllOGY4MTI1NTgyYzVmMWIxYzlkYjBmMGIzZmY0MmJhMTlmMzgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImVhYTEzNmQ0MmZiZjkwM2U1YzNiMTRiMDBkM2U4MWZmOWU0M2QwNjA4ODVjNTBhYTlmNjMxYTZjNjc4YWM3OGIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRhMTIxMGQ0YTQzOGZhNThkZDE1MTFkNzY1NTYwYTJkMjA3NDE5MjA0YmU0NzE2NTQ4ZTBiYmQxZDEzNDdmYzQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_b10d1f0820c248108ffc26081af54a59",
+      "statement": "Template Matching is the process of finding applicable recipe templates for a position via rule evaluation. A position pinned to a template uses that one; unpinned positions match against all templates' rules, and the most specific rule wins. Equal specificity is flagged as a clash.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/templateRules.js",
+          "version": "repo-file-v1:sha256:4e664607c859d16f1b5043cb6cc44ad2aa6e286cfe677446d85a1ad3aad18e40"
+        }
+      ]
+    },
+    {
+      "id": "claim_358e723233664c20b71a51a280bb33fb",
+      "statement": "Exemplar is a product-to-family mapping from a real project: manufacturer, product code, ElementType family, reference, name, and description. Exemplars are harvested from completed projects, stored in the style library, and teach the naming algorithm how to build new ElementType refs by analogy.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/styleLibrary.js#L46-L69",
+          "version": "repo-lines-v1:sha256:9bf8b38d930ec2aa7faec77a05a0788cae805258cd8a4fdb6e006bea56ca0f00:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBhZDg2NDgzZTYyMGY2Nzk3NGI0YzcwMWI5OTUwNjFlYTI4YmU2NjI3ZjUwY2M3NjEzN2M3NmYxM2U0YzRiOTciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk0MzkxOTBiOTBlNTUzNTg3MDdjZWMyOGVhOGE0YzRmZTEzZGI4MTY3YmViMGYwODY1ZTA2MjEyY2UyMjJlMjciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjkyMjFhMGJhNmRjNDc3MTc5YzkzMWNlZGRhZjRmMDViYzIwMzMwNmI0MDVmNDIxZWJiZjFiOWRiNjJiYWFmMDcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_21c48aaaa3a54a40bbd1953f181a3d37",
+      "statement": "Recipes Spec (RS) is the Excel workbook form capturing recipe assignments: which ElementTypes go into each position, quantities (count or length), and flags (IsDesign, IsContractItem, IsTRItem, IsInteger, IsDeleted). App owns 13 of 19 columns and tracks changes in dirty registry (rsChanges) for export as field-level patches.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/xlsx.js#L63-L77",
+          "version": "repo-lines-v1:sha256:630e0c1e71f5ca777493944c3ea44a0d095b85f34cb7c0e98026b2a08ce7c400:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVmNzE1ZDhiNTliMjZjNWMwODMyMTU0NWI2NmYxYTg3ZTkxYmQ5MzVjNzc5NTI2MDAzY2Q0ZGFlODIzYzc5MDkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImEzMzJkODI5MjEwZDAwZjBkYjFhNDhmYjAzZTE3Y2RkYjQyYThmM2EyYjE3OWIwOWU3MzA3ZWUwYTE2NDg4NzEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc0NjZlYjJiYzJkMDJlMDc5ZmU0MzgyYjZiODg1Y2Q3ZDY3NmI5Y2U4ZjViNjg1ZmQ0MGI2YWJiZTIwOGYzOWQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_7e24de2ea70e453888e5fc5609ed1e1b",
+      "statement": "Collection is a virtual container ElementType with IsCollection='Y' in the DesignDB that groups related leaf ElementTypes by family. Collections are filtered out of the active catalogue (not selectable in recipes) but tracked separately, enabling organization of the ET hierarchy.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/xlsx.js#L24-L32",
+          "version": "repo-lines-v1:sha256:807b6ee343da858f8f51dcd668212c335852d2dd0fffbffa204d7eba64edacab:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjhjYzAyOTI1YjdhNTMzNWJmNzRiM2MxZmMxYTZkZDc2ZDJjZWJiYjZmN2Y1NTI2ZDlkZmFjZThiNDA1OTQ3ZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMWVkYmZiNGFkOTBmOWE2MmQxYTI1ZTZiZjQxMjM5MjlmM2JjZjM2ZTE3MTdkMTRkNDM2Mzk4MzcwNjE0OTlkNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDU2YjFjMzQzZjcwM2NjNWQ3N2EyMjA1Y2IwMzNkMGEwMjBiMmU1Y2NiYzk0NmFlYzI5Mzk3ZDI4YTVmZDkxOCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_a41dcfca13b34ac0b1150da666855385",
+      "statement": "_id is a stable React key (UUID) for each row in memory, distinct from _row_num (Excel position) and natural key (business identity). Generated fresh when a row is parsed from Excel, retained throughout the session for DOM identity and list rendering.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L72-L77",
+          "version": "repo-lines-v1:sha256:39f0e380dbe8b614ea7a1c41ca5aa631af17651dc0519742916901ddb0723643:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMDJlZjUzYzVjOTZlYzA0ZTYxZjk2NmYzMjg0YTY0MmZiNWJkNDlhMGRkZWY4ZjQ1YWY0NzY2YjA2NzNkZjQ2NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzJmZDcxMWRjNDg4ZmQ2MWFkYzI2M2EwNGE0YzFkYjRhMGIxNzI5ZmEzZWU3OThmNWU3NzBjNjZiMDM0ZDQ2NCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_4cc0471e8f784df39f0d3a438c7d87b3",
+      "statement": "DesignDB is the read-only master workbook defining the structural backbone: all ElementTypes (31 columns), all PositionTypes (variable columns), and optionally physical Positions (instances). Multiple DesignDB workbooks can be merged into one project while sharing one PS and one RS.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/xlsx.js#L1-L50",
+          "version": "repo-lines-v1:sha256:f6e899eafed7e68dd36b1f27ab51e300b6a536684f000d08b97be7ceed1da1e0:eyJzZWxlY3RlZExpbmVDb3VudCI6NTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMyMjI5MWM1M2JlOWE3ZGM0YWY3ZDkxM2Q1ODFhN2U2YjdhMjRhMTllZjg1MGRlYjU3Y2NmOTQ5YTVlMmU2NDkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQwYzgxMjVlNGE0MDFjMTJlZGYxZTk4NWVjNzBmNWZiZDFkNjc2ZDE4NGU4YWUwMjc2NzQwZDM1ZWI2ODQzZjgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_6d45a48c91f74ae0be2126aee08350ec",
+      "statement": "Environment is whether a position is interior (INT, protected) or exterior (EXT, weather-exposed). Environment is inferred from position's family chain in DesignDB; an EXTERIOR-DOWNLIGHT is EXT; anything else is INT by default. Environment affects recipe patterns and validation rules.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/recipePatterns.js#L84-L89",
+          "version": "repo-lines-v1:sha256:35013201439b346f47a1862f7faed71a2b229811474e7a3474143cae7e4dcc28:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTEzMmQ0ZWY0NjkxYWU4ZjA5Y2RjYjBmZjQ2ODE4MDQ2YjIxMWQ2YzI4ODgxYmYzNjNjMjdmZjNmNzhjMzUxZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNDNlZDhmMTVkZTA3YzNiOWI0MDg0YzQ0OTJjZTVhOWMzZTk1Yzg4NzM0NjdkOGEwM2U4ZjRiYjdiOTA3OGM5YiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNmI2YjgxNWZjZGQzNzliNzMwMTNlYzZkMTU4MGQ1NGU4NWUzNWIyNGEzZTQzMzJhYzQ4NThjN2EwMTM1OTA1MiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_1c86ba8cc60f4a528f5f0d58f91ffdec",
+      "statement": "IsInteger is a flag on recipe rows indicating that Quantity must be a whole number (no fractional counts). Used for discrete items like end caps and connectors where partial quantities do not make sense.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/xlsx.js#L63-L77",
+          "version": "repo-lines-v1:sha256:630e0c1e71f5ca777493944c3ea44a0d095b85f34cb7c0e98026b2a08ce7c400:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVmNzE1ZDhiNTliMjZjNWMwODMyMTU0NWI2NmYxYTg3ZTkxYmQ5MzVjNzc5NTI2MDAzY2Q0ZGFlODIzYzc5MDkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImEzMzJkODI5MjEwZDAwZjBkYjFhNDhmYjAzZTE3Y2RkYjQyYThmM2EyYjE3OWIwOWU3MzA3ZWUwYTE2NDg4NzEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc0NjZlYjJiYzJkMDJlMDc5ZmU0MzgyYjZiODg1Y2Q3ZDY3NmI5Y2U4ZjViNjg1ZmQ0MGI2YWJiZTIwOGYzOWQifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-17T13:57:20.517Z"
+  }
+}

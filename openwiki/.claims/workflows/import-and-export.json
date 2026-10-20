@@ -1,0 +1,238 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:fe6d739b6d41676847dc40655aae0c36cd86e2a371dc71343fefbb80896b9b58",
+  "claims": [
+    {
+      "id": "claim_237f0214bd4748ff828875621ef262ec",
+      "statement": "Import workflow detects workbooks by filename pattern (DesignDB, ProductSpec/FormTemplate, RecipeSpec/Form) and classifies them; multiple DesignDB files indicate a project split across buildings and are merged into a single view via mergeDbs.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/openProject.js#L28-L42",
+          "version": "repo-lines-v1:sha256:f071b4d46c7ad8ad2df77c06b9fe88472c9ec14490a8d41a858482e8c40cdefc:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY4MjhkZDkzZDZkMjE3MGQyMDBhYTBjYWRlNmY5ODJlM2UwN2Q0OGU2MWI3NThjZDk1MzMxMGRlYzU1MmM5NzUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIyMzUyNTg5YzM0ZDNjNjA2ODU5MzFiNmVjYzRkNTA5OTFhN2M1NmM4ZmJhMjg5NDExNDY1NzY5MDI3MmNhYzMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ5NzdmNDM2ZTA5NmIxMTVhYjkzOGJmNTU5ZDA1MGFhYThmNjEyYTI2ZWExYzE1NDQ3NGNlZjljM2Q1YTI4M2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFlNDY5YjcxNTFjYTc0NmQ1NGE1ZTdiN2UzYzYwZmU3Yjc4ODIzZGU2OTA3ZjMxMDNlZjNjOTUzZDIwZGU1YmMifQ"
+        },
+        {
+          "resource": "repo://src/utils/backend.js#L68-L78",
+          "version": "repo-lines-v1:sha256:c25db912e53316bc07ac073d0e80b5ad0b27f941427b983ba6397d63daa16ce9:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYxMjk1OTY4NWQ3MjdlMmNmODZkMTQyYzJjNzkzYmRmNDNjOTE5OTA2YWI0ODU2NDdkYzUxMTU5OTIzYzA3OTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYxNDQzMmQ3NzhmMjA4ZjdlYjkwNjFkMGQzM2E0YzMwMzY5MmQ3ZWY1OWM2NmMyMjFkZmJmZWY1OWU0MGI2NmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZiZmUwMmE4OGJlZDJjODA5ODZlZDk5ZGM2ZTc1M2VkOTUxN2QzNzQ3NDc0OTM0MzZmMTg3MTViNDgxZGRkM2EifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_528950d73c174af5a2354008ad42ea11",
+      "statement": "Each workbook is parsed in-browser using SheetJS with header-based column matching. Every data row carries _row_num (1-based Excel row number, header = row 1) so patch scripts can target the correct row.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/xlsx.js#L1-L18",
+          "version": "repo-lines-v1:sha256:3f3fcd98cecf11e4baec7ae02bb3fe2281cd688c24fd79346db040830453396e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVkNGJmOGFkNGRhNDZiNWQ4M2FhODFiODVhZmJiYWE2YmZkYWZkZDRjMGI4MDcwYWMyMGRiZGRkNGNjZWYwODIifQ"
+        },
+        {
+          "resource": "repo://src/platform/xlsx.js#L24-L77",
+          "version": "repo-lines-v1:sha256:7a2acccecada7b2edbe2f71015a8aa94f061ca1869ce59c2acb1a37d215e3b2e:eyJzZWxlY3RlZExpbmVDb3VudCI6NTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI4Y2MwMjkyNWI3YTUzMzViZjc0YjNjMWZjMWE2ZGQ3NmQyY2ViYmI2ZjdmNTUyNmQ5ZGZhY2U4YjQwNTk0N2UiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjFlZGJmYjRhZDkwZjlhNjJkMWEyNWU2YmY0MTIzOTI5ZjNiY2YzNmUxNzE3ZDE0ZDQzNjM5ODM3MDYxNDk5ZDciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc0NjZlYjJiYzJkMDJlMDc5ZmU0MzgyYjZiODg1Y2Q3ZDY3NmI5Y2U4ZjViNjg1ZmQ0MGI2YWJiZTIwOGYzOWQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_cde3aa2e5e8246a0b457978f86eddbd3",
+      "statement": "DesignDB is parsed to extract element_types, position_types (keyed by Ref), positions (to detect placed vs. dead ElementTypes), and collection_refs (wrapper families); Product Spec is parsed to rows keyed by ElementTypeRef; Recipe Spec is parsed to rows keyed by composite key (ContextType, ContextRef, RecipeIndex, ElementTypeRef).",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/openProject.js#L52-L60",
+          "version": "repo-lines-v1:sha256:74676be58bdd7c94992329e23be6d73c50162740689a1360aa8d9702d406de13:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMTAzZDdhOTRjODVjZjg5OGZkODMyZGIxNzA5ZjRkNWZjY2IyYjliNjk3ODY0YjhlNjUzOTQ2ODYwZTQwNzEzYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzUwZTRmYTdjMTgzNzhiZDY4YTlmZmQ3NjYyZGE5YjlkNDlmZGE2OTU2Yzg4ZTE2Yzg5YjUwNjE1MmE0NWYwZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYTk3M2Y5MzJlM2NhZjJiYzBkOTBjNTZjZjQyOTE4ODdjODRhYTg5NGZlNTFiNGIwM2NlNDlkZDJlNTI2MzM5ZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOGY3OTFiNzkwMDg2NDMzZTFlY2Y4MjQ5YjMyMTI0MGZkY2MwOTJiNjE5YzdkYTNjOTEzNzZjNDA2ZmY0ZTQ2MiJ9"
+        },
+        {
+          "resource": "repo://src/utils/backend.js#L95-L118",
+          "version": "repo-lines-v1:sha256:ddf1424cb57a67d6e458d56dcc9fb3fb5146f993c40fcc568122c0829c1e8892:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBlZDc5NGZkODIyYTc5ZjBmMmU5MDY2YmVkZWFiNTgwZDFkZTgxMTcwOGM5NzJjNmU3Y2M3NDEwZGVmYWU3ZDgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjMxMTNhYzRjOWY0NmQzNGM0NjQ4NDY0NzY4ZmNmMmE5NDRkNTNmZTEwYWM5MGE4OTA3ZGY0ZTk2NDAyOTBjYzgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjAxNDc1OWQzYTVkYTFkZDJhNDYzMDNiYzAwZTU1ODZmNTAyNWY1OTNhMGExYjMzM2Y1OWUwYTI4ZWVlYmM2YTcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_26c804f23cfe466e911e39ec2e137c9b",
+      "statement": "openProject orchestrates full initialization: upserts project config to SQLite, applies restoring config if any, parses workbooks, harvests exemplars/patterns (best-effort), reads crash-surviving pending changes, computes tags and drift, loads store, and restores pending changes.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/openProject.js#L24-L106",
+          "version": "repo-lines-v1:sha256:40c7c8bd1dc552b1adb3855257acc32c1959a54ca6b571986206e946cc5247ab:eyJzZWxlY3RlZExpbmVDb3VudCI6ODMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIxZTQ1MmI3MjFkNzE5Yjc3Y2E3NzkxNGU5N2RjMGJmZTNlZTc3MDhkM2NhYzcxNjM4YzZiYjM0ZTAxZDBiZTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjI5ZTZiN2JlNjczZDFjYmEzYzg3ZjVkM2JkODljYmI4Mzc2NmI3OGRkNjU0N2M1ZDZlOTY4NDgwMWQwNGViMDAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdhOWQ2MDFiOWM3NjIxMjkzOTAxMmIwZjA4MDY0YzkyMjJmMThlMTQ5MTViZmViYTFiZDllZmU2ZWY1MGNkOTgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_1b682be1e1914c8e811ae10eda59eae1",
+      "statement": "Pending changes persist to SQLite (pending_changes table + prefs) and survive crashes. On reopen, reconcileAll tests each pending entry against fresh workbook rows to determine applied/pending/conflict status and carries the entries back into the queue.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/openProject.js#L86-L101",
+          "version": "repo-lines-v1:sha256:fbe2e00e0d4720ca489d5e41dde79f10f2267f871228d951305e1d4cde12fe26:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg3ZDkwNDE5ZWM5MDNjNjgyMmNiZDk1Njc1MzcxNTY5OTAzNDZlYTY0N2JjZTIxZmY3MmY3NDY4NjUwNWEwOTIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFhZGJmM2FiODQ2OTc2ZTRhMWU1ODljZDQwZjhmMzQwMTEyNzAyNDBiMjUxMTdmYTVmYmE3MjllZTM1ZjE5MGMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQxMWY2NTIxZTllN2QyNjA5ZTY1ZDM1Y2RiMDYzNDZiZDRlY2QwMWU4ZDUyZTdiZDE3NWRjMTIwN2U4Zjg2YjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNjM2JiZjE2N2M4NmNjYjgzM2UxZmE3N2NkNzZkNTI5ODBhMjNkNjAwMTIzZTdiYTk5NzRlYzhlMzMzYTdkNzgifQ"
+        },
+        {
+          "resource": "repo://src/store/useStore.js#L3660-L3667",
+          "version": "repo-lines-v1:sha256:f7dd444deee9a80366075cf4cf70d8d7f8c2144039c6c2f227581e261c5df532:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjQ1ZDVmMzY1OGE4MDBkMDQ1ZGNlMDI4ZmNlODU4ZmIyMGUxY2IyZTY4ZDU3MWIyYmVlZjEzYzE4MmIwN2E0NyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGQ1Y2QyZmI0ZjNkZjg4NDUxNTI1NWIzOTUyM2YyZjhiNTQ3MmJlZWE5ZjU2NmZmY2EyMDRkYjgwMjU2MTA0MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTRkN2Q3NzBkNjQ5NjNiZjEzNDc3MTdkMTFlYTdhZDI1MjRlZDIzNWQxYjgyNTY0ZWVmNTE2NGMyYjAwY2NjMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNWYyZWI3ODhjNWQ5YjA5NWQ2MTY2MzMxMzIzM2YxYWI0Yzg2MWIxZTcxOThjMmFmMWI1NTY0OWI0MWM5ZjAyZiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_3bca6751b22944ac9e56a6046943979e",
+      "statement": "Dirty registry is one entry per modified row (not per edit event). Editing the same field 5 times before export queues 1 entry. First edit captures before (staleness base); subsequent edits merge into updates/changedFields; edits reverted to original drop the entry entirely.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L157-L209",
+          "version": "repo-lines-v1:sha256:59f2a7c62668096815bb19b40d25cce6e385c6d5c1f03201668e1daeb63e3d49:eyJzZWxlY3RlZExpbmVDb3VudCI6NTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUxMDljYzEyZDNiNDY4ZGU3MDFhZTQ4MWE3MDFjMDFjYjNkNDhmNzViMDMwYzYzNzJmMjVhODZlNTEwYjdhNGEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY5OTE5OWU4ZDdkNDU4NmJkM2NjZDJlOWRmY2ZiYTViNWU5MDM1NDc3NTQ5ZTZmNDNiZDE3MWYzYmNlYTRmYmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImMxZjg0ODcyYTA5ZTU5MzIyMWFlZjc3OGVkODEwZWE1MmM4YTAzN2Q5MzZmOTA2MWYxNWE1ODIzMTk0MGMxMTAifQ"
+        },
+        {
+          "resource": "repo://src/store/useStore.js#L80-L87",
+          "version": "repo-lines-v1:sha256:57b502f42f66b7258ff5e8daee5ef46339cea53a035f99e477d445e3a26e1b77:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjI0YzkyNDhjMzJkY2EzMDVmYzFmOTZjNmMyM2RjNjMyMmQ4ODU0Yjk4NWMwYWY4NWJkMWI4Y2U5ZGQ0ODQ1OCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNjZiYTJiNTk5NjczMmU3MTM5MGQzZTBjYzViOWJmZGZlNThhZTNkNmQzODNjZWFhMzI3NGIzNzU5NjU1ZGViZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYmEyYmY0ODAyNTUzZmZiZTZlM2NkOWE5ODFhN2RjZjQyMzY4MTU3NmU1M2U3NjUwMGMxODE3ZTgyZmVkMzMwZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZmQzMTY4NjdmY2I1NmE5NmMwMGI3MzNlODE4MTc0OTNjZmNhYTRmYThiMmYxNTc5ZTgxOTUyZTdhOGQ3MDlhNSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_ea06b5653ee64181b92d767b3a524ba1",
+      "statement": "Product Spec changes are field-level with only non-null updates written; only untouched fields on disk survive. Recipe Spec changes are row-level for appends, field-level for edits to rows already on disk (_row_num != null). DesignDB changes follow PS structure (field-level).",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L221-L240",
+          "version": "repo-lines-v1:sha256:6ef6215a21d8b42898253b5de3ffe8beb7d0b7de3fdcd378313530627861265a:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE3ZTU2MGI0YzQyYjg3YWU2OGM4YjVhNDczOWVkZTMyNmFlMjBmZDY3ODgyNzk4MmNhNTBkMTMyYzQ4MGQ4OTgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImNmNzhkNjNlN2VlNjY0NDQ5MDM4YjkxMzkxYmE0OWUwZjNhMzhhZWI4NDMyNmUzZGVmNTE5NmRkYmMxM2YzYzMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdjNTI5MDU0N2Y4NDA3OGZlYjY3NGZiN2EyODk3YmQzODg2NjQ3NjU1ODRiMGVjNjA2ZDQ2NjMzZGU0ZGY4YmYifQ"
+        },
+        {
+          "resource": "repo://src/store/useStore.js#L286-L309",
+          "version": "repo-lines-v1:sha256:acf67bb48b0e056fbd2a48476ae19319f515e8a051fb88bd669e1b440d939e61:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRmYWE2MGEzYWEyOTZkNDNkNzAwNmU3MjBmM2Y4ODNhNzhiNzBiNDdlOGZiMWM1YjM1ODU5MGI3MDFmNWEwZDQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjI4Yjc2ZmQ4MDEyMjg2OGFmOTQzZDk2MWU5YzNlYjVhOWQwMjBmYWExNmRkNGQzYjAyMjNjOTM2N2Q3MGM4ZjAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJjNjU0YTYwNGYwNjNlMzA4NWQ3NzM3M2M4NDI0YjNjZjkyZGU4MDA4NGE4OWI5YmZmZmJiNjE1NWM1MzZiZTgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_ad15e117d2e34d1eb3d10da1382b6aed",
+      "statement": "After every edit, pending changes are automatically persisted to SQLite via debounced writes; a crash does not lose work.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/db.js#L19-L43",
+          "version": "repo-lines-v1:sha256:f68124b32c166924455a62644c601ba8463c1b54706b00ba28f15eac97523fff:eyJzZWxlY3RlZExpbmVDb3VudCI6MjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVlZmZhZjY0MmJmMjVmZDY0MzI2MDE3ODViYWMzNzE3M2MwM2NiZTAzNWEyZGFiNjQzNDcwMTY0OGI4NWE5ZDYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU5NDU2YzIyZTQ4YTIzZTQ1ZWUyZTJlNTYwNmMyZTdlNmE3NGRjN2ViZTM3ZjI2MjY5NTlmMjNmNmEwZDUzOTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc1MDQzMTc0N2NkY2JjZGRhN2IwZjFkMjI3MmJiNzA4Y2YwNTQyM2NjZjE5MzMxNGVjMzE3MzAxZjgxZDk0ZTkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_dae4115fad09408189c567b26943684e",
+      "statement": "Export stamps all pending changes with a new batch number and timestamp (markExported), generates idempotent Office Scripts (one per file), backs up workbooks to timestamped .backup.xlsx copies, and outputs scripts for manual execution in Excel.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/backup.js#L1-L11",
+          "version": "repo-lines-v1:sha256:a201c801f18d5eb45d05f6f4d4d2f7ab0b10437f0dd42a0ee149c31b8fe92e25:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNhM2JhMDg5M2U2M2MyNzY2Njg5MWM1OWZlYjBiZjMwMDdkMDA4NDcwYzUyNzc4Y2Y5ZjQxMGZjNmE5ZjQ4NjEifQ"
+        },
+        {
+          "resource": "repo://src/store/useStore.js#L3677-L3687",
+          "version": "repo-lines-v1:sha256:979ef55ebecaf78a0931aa929f8880ab288fd36262ab83b3310205e89f8f0384:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM1YTNlMmJmNWMzZTVlY2Q1ZTFiMDgxYTk0M2UzODk2OGMzMDQ0YjQzYjFhZDVhYjExZWQ3YTkxMjA5ZjliMjYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImVlMGU2YTFhYWQyNmY3NWQ3ODE1NmQ5YjExZjkxMmM4Yzk2NzM1ZWNiYmU3ODUxYmJmODBmMGU4YTVkYzQ2ZjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFmNjVhNTEzMjVlMzFlNjZhMTRlMzcxMDJlNjFjNjljZTUyMGFkMmJmYmQ1ZDM3NzEzZTc3NWQyNGQ3MTNmYjMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_77ee83f80e544e49b1ef1c0b9a063bf8",
+      "statement": "Office Scripts are idempotent: a row the app believes is new is looked up by its key before being appended; running the same patch twice is a no-op. Composite-key lookup uses bounded column reads (never reads whole sheet) to find rows for updates.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/patchScript.js#L1-L23",
+          "version": "repo-lines-v1:sha256:507f6972b0ee3a6f5090e609213aecb680acdf8cc280705920c7ae4c17868b44:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ4MjdmZTcwMTZlZjFlMTQ1MjE3YzliZmNjZTFhNzI1MTUwNDQ0MWZlOTBmODk5MWQwOGQ4YTBiMWMwMTY5ZjEifQ"
+        },
+        {
+          "resource": "repo://src/utils/patchScript.js#L120-L146",
+          "version": "repo-lines-v1:sha256:e4db3536d663ed7a3892047dbd0a8e65d7db5fe42ebb95942b60c770ad07e950:eyJzZWxlY3RlZExpbmVDb3VudCI6MjcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ0OTI4NTVkZjEwZDc0NWM4NWJkNmY4ODYzNzg4YzA5YzRkNzU1YTYzNzIwOWRiYTRkNzg0MzdkODAyMTdmODUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY2ZmViNjBkNGUxMDM1M2Y0ODQ0YWJiYzQ5MzNmNTM3N2U0YzUwNjk3MjkxZTliZjRmMDNhNjc4OWRiN2Y4ZGUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE5MzhkYTJhMGRhMWZlMDliMDRhNDA2ZDZkZjUwNTUyZTA2OTQ4ZmYxMjQxZDAzNTg1M2Q3NzM2ODU1NDJmNWQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNjYjg1OTNjNTNmMDQxNmE3YzMxNzIxMTI1YTAzODBhMjA0MDE2OTQzNWJlZGNjNjEyMzliNzVmNzU3MjBkNDkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d47547ae9b904eab8a467c1dbc0439b3",
+      "statement": "DesignDB patch sorts the result into TREE order (families, then members) by Ref, formats family rows purple with white bold text, and writes SortOrder 1..N.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/patchScript.js#L210-L284",
+          "version": "repo-lines-v1:sha256:040bfa8906a7f94d8f51e8bb291177d6d54f8e2c872c6e5965212d1b79d76732:eyJzZWxlY3RlZExpbmVDb3VudCI6NzUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRmMzgzMmZjNTdmMGEzZWZjMTViYmY0YzU5NWYxMGNhNTZjYWVkMWQxNGI4ZjliOTg3M2RiNDNhMzhhY2MzODYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ1NDgyMTVmMGVjNjdiNzAwZWU5YmNjNjAzOGRhMDAwOGZmMWZkZGM5MTNlODgxOTAzMWZmMDQ1YTI4M2VjMTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImIzOGQzMjk0MWM5YmE0NWMzZWJjZmYwYzkyNmQxZmQwMWFiYjliZDQ4MGNhYjc3Y2ZmY2ZhNGQ1MGU2MjQzMjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhmOGQ2Y2Y1NjMyYzQ1NDMzYjRjZjQ3ZDYzOWE0NzkwNDU2MmQxYzY5ZjA5MTgxMzQ3NzY3MGVkYjgwZjY0MDYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d43b79f81fcd4f919136dd8652637daf",
+      "statement": "reconcileAll tests each pending entry against fresh workbook rows: Applied (file holds the change → drop), Pending (file holds old value → keep), Conflict (file holds third value → flag). Special cases: rename (old ref gone AND new ref there), soft-delete (IsDeleted='Y'), new rows (_row_num=null).",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/reconcile.js#L127-L188",
+          "version": "repo-lines-v1:sha256:b15018394c2d329fa6a8142315c5fbf79e927341e6cb96773897518c81aa78d1:eyJzZWxlY3RlZExpbmVDb3VudCI6NjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVhMWQwNzQ0NTYzMDI5MTExYzQ0MTVkZDJkMDM4MGFlYzQxNDNhODcyMmU2MDJiNjA4NzY4ZTQ5NWU5MTNkNDYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjFkNTAyMWE3ZDUwMDBjOWNmNTZkOGNkOWY4NmY1MDFmMTM0OGM0ZTJhNGIzZTkzM2ZhMDcyODk1ZTAzOGViYzUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjEwYTNiMjMzNTI4NmQyYzExNjZiYWFmZGRhNWMwMjIyYzM5NWQzODgzMGQzYTY1YWFmZmU3YzgzNzc4OWFlYjMifQ"
+        },
+        {
+          "resource": "repo://src/utils/reconcile.js#L56-L118",
+          "version": "repo-lines-v1:sha256:845d3dfdf069368f647b995eba18a0225103bd029947792fa4c0257bd2c81ed6:eyJzZWxlY3RlZExpbmVDb3VudCI6NjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc3MmRkN2VjNzcyOTQyM2M4ZjY3MGM2YzZjMTU5ODA1NjI5MjMyMDhhZTFiMjIyMzRlNGNhNjA3YjEwNzkyM2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJmMWFlOTNiNDIxZTBlNjE1NjVhN2VlN2ExMWQwNDQ4YWNkODE2YzM2OGVlZjc0NGQ3NWNkYTVkN2FkYmE2NTAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjAwNmUzZGEzNTUzOTNiN2M3MjNlMjM4NWQ1YWQwYTM2ZWRmMjNhYjllY2VhYWNmOTgyYWUzOTQ3ZmE5ZGUzMjcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d3feebc4f8b64ae9835f1d299bb2b2a3",
+      "statement": "New rows never exported stay queued whole (row is complete); on export the script appends them; reconciliation stamps the assigned row number back onto the in-memory row. New rows exported once are switched to field-level tracking.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L177-L184",
+          "version": "repo-lines-v1:sha256:3273adb89c53aa242d69d4cddfc699f23dc932d444731565458d7eab7765f4a9:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYWY2MGU4MjMxNWE5ZTcxMjMwOGYzZjNhODVhOTUyNmFhMzBmN2M2ZjYxMmNlNzgxOTY4YTI3NmI5YmZhZWJhNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDg5M2Y0MGUzNzgxZWI4OTZjODJkMDQ2YTA4MDY3YTExZTM1Y2RmMmYxZGZhZjI2ZmVhOTBiOGRiNjY3NjQxMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNTdkY2EyYzYzYjA5Zjg0NDU4NTM2YTQ1Mjc3M2RlZGRkY2JhOTVlNjVhZjQ3NjlkOGZjODNlMWE3MjBlOTdiYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjM2M2JhNzRjZDUzZDU3MzViYzlhNGYwYzc5Y2YyYzk0OGMxMzBjZmQzNmY5NjY3MDVjMjNjMDQxMGE3MTBlMyJ9"
+        },
+        {
+          "resource": "repo://src/utils/reconcile.js#L146-L157",
+          "version": "repo-lines-v1:sha256:421725d603699212a7abf7b2837b64e4cbe2a74fb1c477c34e64363ea063c7f1:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJiYTE2ZWNjY2M3MTRlZWJhZjc0ZjgxYjU2ZGE1OGEyODI5MWI1ZTY0OTMwYmVlZmEwMTViOThmMDNkNzNhNTciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc0NGJiYzM4Y2I5MjIxNzAxZDY5OTI1NWM4OWNhMTUzMGVmMTQwYjZjMTIxMTc0NmJiOWMyMDgzY2U4MDc4ZTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjExOTUzOWU5M2I4NThkM2Y0OGFkZjE4NGEwNDJmNTcyYjc3ZTNkMjIwYWU1OGIwNDhlZjIwMjBlMTk1ODdmYzAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA4YWYzZjhiNDY0Njk0MGE2ZDFkNWEzYTFmYzllMGYzZTdkMWQ2Mzc5N2JhNTU2NjEzMjhjYTllNDE1NzIxNjkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_9f655c623c184ceaba8e36f389c8609a",
+      "statement": "checkFiles re-reads all three workbooks, reconciles against pending changes, and updates syncStatus with counts (applied/pending/conflicts) and any detected conflicts. File watching via Electron/File System Access API triggers a debounced checkFiles call (1.5s).",
+      "evidence": [
+        {
+          "resource": "repo://src/App.jsx#L42-L59",
+          "version": "repo-lines-v1:sha256:ad63e492d43255df31975f970553a5e93e5bd4d8d0bb3c67737dbeae5b20b7d2:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU5NjZmYmZhODg5OThkYTc0NjU2YzUwMTk0OTU2YzI1ZjA4NDk0NTc2NjBjMDA5ZmU2M2QxZTlmYTlkYzkzMWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYwZGM1OGI4M2Q3NWQ1OWY2MDAzNzRlYmU4MTYwNDU1NDc4YTJlY2MwZDg4NmZlZDk3NWE4YzU2Y2VmNTJmZjIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQyNTM3YzgzMjIzYzQ4ZmUxOWJhNDU4ZTgzOGE0ODNiNmRlMDRhMmI4YjI0NmQzOTVkODIxYzU3OWJkYWViNDUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU4ZWUzYWE4Y2ZmMDEzN2ViOGFjYTFiYzIzYTJhMmNkYTBlMGFmNjAwNDk5Yjk4ZDI3ZWIzMjZlOTNmZmI5MGEifQ"
+        },
+        {
+          "resource": "repo://src/store/useStore.js#L3694-L3718",
+          "version": "repo-lines-v1:sha256:3ab8f72dcf5e6866f0436fba91601ef031bb4128db4580761639a30a85bae0bc:eyJzZWxlY3RlZExpbmVDb3VudCI6MjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAwYzdlY2MxNWQ0ZDNhMWJhYzA3MGRjZmZmN2RkNDc4YTc2ZTk0MDRmM2FmOTljODhmYmIxYTk3NmI3NDMzMjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFlMjBkMDQ4Y2Q1MWYzM2YwZTJjODA4OWNhOTFiMzFlYjA2NWM0MzM2OTZlZmE4MzEwYWRlNTYxY2QxZmUyYWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZkYjFlZDI2NGMzZDczM2FjNjNhNjUyNzZmOWVlODJjOWRlNjk2MjM2OGI4ZjVjZmRmZjRjN2ZiMDA0NGYxNDcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_05db268a33124efb850bff1b60368388",
+      "statement": "resolveConflict settles a conflict by choice (mine keeps the change, exported again; file takes the workbook's value and drops the field). Taking the file's value updates the base so the next check sees it as simply not yet applied.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L3754-L3786",
+          "version": "repo-lines-v1:sha256:1e5444d1c034c95cdf57b0355fb36bf35ab332b782388e05816de70305e05f72:eyJzZWxlY3RlZExpbmVDb3VudCI6MzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk5MjVjNDJmNWIwOGE5MDdjNDMyY2E1OTk1YmQzY2I2YzhkYzNjYTY3MjViZDAwMDM5OTE1ZmQ5M2Q2MzYyNGMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU3N2Y0NzAwOWY2MjJlOWNiYmMwY2I5NGVhYzFkZDQ0ZTYzYzYzMWJiNmE2ODQ3MTg4NzU4NWYwNzVlZTMxODgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjkxNWZkYjNjM2QwMGE1MzNiOGE2MDRmMDliZTNkNWVhNmU3MjFiYzUwNTk1YjljYzI0NDQ5Mzc4YjhkMTQxMDAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_97402489b45441b19e35ff0d7d338f03",
+      "statement": "Undo snapshots the full bundle { recipes, psRows, rsChanges, psChanges } before each mutation. Export does NOT push a history entry, so undoing after export can resurrect already-written changes (a known quirk).",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L3677-L3677",
+          "version": "repo-lines-v1:sha256:35a3e2bf5c3e5ecd5e1b081a943e38968c3044b43b1ad5ab11ed7a91209f9b26:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMzVhM2UyYmY1YzNlNWVjZDVlMWIwODFhOTQzZTM4OTY4YzMwNDRiNDNiMWFkNWFiMTFlZDdhOTEyMDlmOWIyNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzVhM2UyYmY1YzNlNWVjZDVlMWIwODFhOTQzZTM4OTY4YzMwNDRiNDNiMWFkNWFiMTFlZDdhOTEyMDlmOWIyNiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZWUwZTZhMWFhZDI2Zjc1ZDc4MTU2ZDliMTFmOTEyYzhjOTY3MzVlY2JiZTc4NTFiYmY4MGYwZThhNWRjNDZmNCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYmM2NmUxYzc0NzQ5NjFkODQxOWMxMDllMWFhYjVhY2YwYjhlNDMzZjRkYjZlMGRiODJlNGRmNDRkNzU0OTFlMyJ9"
+        },
+        {
+          "resource": "repo://src/store/useStore.js#L54-L54",
+          "version": "repo-lines-v1:sha256:fbeac98d52a1f526115a7ebfcb699e26f5ec3538e6659ea381bb3ba17898ddbf:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZmJlYWM5OGQ1MmExZjUyNjExNWE3ZWJmY2I2OTllMjZmNWVjMzUzOGU2NjU5ZWEzODFiYjNiYTE3ODk4ZGRiZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZmJlYWM5OGQ1MmExZjUyNjExNWE3ZWJmY2I2OTllMjZmNWVjMzUzOGU2NjU5ZWEzODFiYjNiYTE3ODk4ZGRiZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZmM4NWU4ZjFhYWNjZDJlODMzMjdmNmQxN2FlNGE5ZGQyOGViMWRiNGUwZWFkZDRiYTY1N2E1NmQ1YjJiYjFhNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMWJmYzkxYTQ5ODUwOWFjNjgzYzE0ODllOTIyZDllNTRlZDZmMmFhMDU4NjA1N2I4ZGZhZTUyY2Q2YWI2YmU1YSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_4afee211ad824635a106ca8dcc42c773",
+      "statement": "Reload workbooks via Reload & discard does NOT clear the change queue. Re-applying a field-level change resolves by its key, so it finds the row again and re-writes it. The queue carries exports across reloads.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L286-L309",
+          "version": "repo-lines-v1:sha256:acf67bb48b0e056fbd2a48476ae19319f515e8a051fb88bd669e1b440d939e61:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRmYWE2MGEzYWEyOTZkNDNkNzAwNmU3MjBmM2Y4ODNhNzhiNzBiNDdlOGZiMWM1YjM1ODU5MGI3MDFmNWEwZDQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjI4Yjc2ZmQ4MDEyMjg2OGFmOTQzZDk2MWU5YzNlYjVhOWQwMjBmYWExNmRkNGQzYjAyMjNjOTM2N2Q3MGM4ZjAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJjNjU0YTYwNGYwNjNlMzA4NWQ3NzM3M2M4NDI0YjNjZjkyZGU4MDA4NGE4OWI5YmZmZmJiNjE1NWM1MzZiZTgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_bdf85e0faa88429782a1176bd19a8a75",
+      "statement": "PatchSyncPanel displays applied/pending/conflict counts after reconciliation and allows a person to check now, resolve conflicts, or dismiss the sync status. Conflicts show field, my value, workbook's value with buttons to keep mine or take the file's.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/PatchSyncPanel.jsx#L1-L105",
+          "version": "repo-lines-v1:sha256:b7199e1537b9eb74b76632a928156286e88f641964cf61075a2ee93c08b0679e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTA1LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJiYzRjNjEzZWFmYzAwNDBjN2IwZGM1NTQ0NjliNzNhNzIzZDQyZjNhMWZkNmQ5MmM2NjRmODc3NGQzMmRlY2MwIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-17T13:57:20.517Z"
+  }
+}

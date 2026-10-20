@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest'
-import { proposeRecipe, proposalContext, formGroups } from '../../src/utils/recipeProposal.js'
+import { proposeRecipe, proposalContext, formGroups, proposalFromTemplate } from '../../src/utils/recipeProposal.js'
 import { roleOf } from '../../src/utils/recipePatterns.js'
 
 const et = (ref, Family) => ({ ElementTypeRef: ref, Family })
@@ -169,5 +169,23 @@ describe('patterns from other projects (served beside a companion)', () => {
     const names = precedentSources({ libraryPatterns: [p], otherPatterns: [p] }).map(s => s.name)
     expect(names).toEqual(['projects opened before', 'other projects', 'finished projects'])
     expect(precedentSources({}).map(s => s.name)).not.toContain('other projects')
+  })
+})
+
+describe('a global template: job slots, never its labels as parts', () => {
+  const GLOBAL = { id: 'g', name: 'Linear Tape + Profile', ingredients: [
+    { slotKey: 'DESIGN_ELEMENT', slotLabel: 'LIN Virtual Element', section: 'position', isDesign: 'Y' },
+    { slotKey: 'PROFILE', slotLabel: 'Extrusion Profile', section: 'lin_internal', dimQtyMultiplier: 1 },
+    { slotKey: 'TAPE', slotLabel: 'LED Tape', section: 'lin_internal', dimQtyMultiplier: 1 },
+    { slotKey: 'MOUNT_CHANNEL', slotLabel: 'Mounting Channel', section: 'lin_internal' },
+  ] }
+
+  test('each job takes the Form product doing it; one with none is empty and flagged', () => {
+    const p = proposalFromTemplate(GLOBAL, 'C1', proposalContext(state()))
+    const refs = p.rows.map(r => r.ref)
+    expect(refs).toEqual(expect.arrayContaining(['ET-LIN-PROF-01', 'ET-LIN-TAPE-01']))
+    expect(refs).not.toContain('Extrusion Profile')
+    expect(p.rows.find(r => r.role === 'MOUNT_CHANNEL')).toMatchObject({ ref: null, check: expect.stringMatching(/mounting channel/) })
+    expect(p.rows.find(r => r.ref === 'ET-LIN-PROF-01')).toMatchObject({ section: 'internal', dimQtyMultiplier: 1, from: 'the Form' })
   })
 })

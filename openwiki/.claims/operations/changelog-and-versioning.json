@@ -1,0 +1,122 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:bbbcb215084072d1e9a4647bc218411863905c3ea2b4a7d205f829388d7fa30c",
+  "claims": [
+    {
+      "id": "claim_9a761a9534ae43a7b91d6fcb0f04c31f",
+      "statement": "The changelog is a JavaScript array of objects in src/changelog.js, each with date (YYYY-MM-DD) and note (single-line user-facing description) fields. The LATEST export points to the newest entry (CHANGELOG[0]).",
+      "evidence": [
+        {
+          "resource": "repo://src/changelog.js#L1-L10",
+          "version": "repo-lines-v1:sha256:a7c5d96afe6393307c7d3bbb0f5631493e88a75854de519eea4635a634859f38:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQzNmYyNDQzNDAxZmNmZWFmMzkyOTVmN2EzYzk2ZDVhODhiNTA0MmMyZTc1MmQ3ZjI1YWFkODkwZWZkMWZkYjAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU0ODkxODc3ZmU2YWQyNTMzMjZlMzA2Njg0MDRjNDIwZDRkY2RiMDBhYzcxNTdlNmU4MTNjZjNlNjdiN2UxMzIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_cd00afe0d8bb448b95998a49dd881265",
+      "statement": "The start page (FolderSetupScreen) displays the latest changelog entry by default and provides a collapsible drawer showing the full CHANGELOG array, styled with fontSize 10 and maxHeight 180px for compact presentation.",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/FolderSetupScreen.jsx#L16-L16",
+          "version": "repo-lines-v1:sha256:583c07f7332ca2b5602ab80cae4098dc82b5befb7ae1a31e6b3122b09b5e839e:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTgzYzA3ZjczMzJjYTJiNTYwMmFiODBjYWU0MDk4ZGM4MmI1YmVmYjdhZTFhMzFlNmIzMTIyYjA5YjVlODM5ZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNTgzYzA3ZjczMzJjYTJiNTYwMmFiODBjYWU0MDk4ZGM4MmI1YmVmYjdhZTFhMzFlNmIzMTIyYjA5YjVlODM5ZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZDM0OWRiNzI0NzVjZTdlYTk4YWVjMjljMjY3ZDk5ZWZiNTVhOWI1MDE0YTA0NmQ0MzdjODZkNzRkZjc2MDM0OCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYzc0NzZkNmI4YTQ1MDJmNTk3OGY2YTQxNmJhNWE2YWVjNTUwZDVhNDE4N2I3YzM1ZDIzNmVkNmU4MmMyNDc3NCJ9"
+        },
+        {
+          "resource": "repo://src/screens/FolderSetupScreen.jsx#L430-L430",
+          "version": "repo-lines-v1:sha256:4dbf304459d3582ebc8df441192919d0a1c5c1834daeb10812a086a3387521a7:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNGRiZjMwNDQ1OWQzNTgyZWJjOGRmNDQxMTkyOTE5ZDBhMWM1YzE4MzRkYWViMTA4MTJhMDg2YTMzODc1MjFhNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGRiZjMwNDQ1OWQzNTgyZWJjOGRmNDQxMTkyOTE5ZDBhMWM1YzE4MzRkYWViMTA4MTJhMDg2YTMzODc1MjFhNyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTFhYzY3ODllNjJiNTkyZjVjMjc1YzBlMGRlMjhhZWVjNjRjYmY5MDBjMTIyNWI0MmU3ZWJmNzE0MGQ4NmE1NyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjE2M2YzMjYxMzU0M2IxNDYxYWEyODkzNTQ4NTVhNWZjMmQwMTVkNGQyMjk1YmUyNTEyYTkwYTAwZTQ0MTkzMiJ9"
+        },
+        {
+          "resource": "repo://src/screens/FolderSetupScreen.jsx#L431-L439",
+          "version": "repo-lines-v1:sha256:edac053bff83aa17c7134d0fcec46d31bdd38c3ee2d2d0d2b07a8c3a877a795e:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYjRjODk1NWIxNmUxYWQwYzRmMzAzNDhmMjRiNGNiNTBmNDQ0NTAxNWFmM2IyMDAzNzE5ZmE5NjUyODU3ZDNjYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDg4M2U4M2E2MzY3MWUyOGM5NWZmZWZmMDY1MDc4MTczNTUzOTc5MGU1NTgxNTVhOTVkZmJjMmViMDRlNDY1OSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYjliMTczMTA2NmQwMzJjMjhiZjg2MTI1ZDFhNGViMGJhMWNlN2NhODYwNDVkZWMzMjQ1ZjJhN2RjNjg1OWZiMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNGMzMjIxMTc2N2RmNzM2Njg0YTFmYjY5NWUzYzQ1YTQ3NTlmNGZkYjM3OWM5ZDc3NWI0OTdjNzM3ZmU5NGQ5MSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_1544d4e411674e7485be60b08e47a99c",
+      "statement": "The changelog serves as a cache bypass indicator: because the latest entry is always visible on page load, changes to it prove to users that a new build has loaded past stale browser cache, which is essential in high-velocity deployment workflows.",
+      "evidence": [
+        {
+          "resource": "repo://src/changelog.js#L2-L8",
+          "version": "repo-lines-v1:sha256:9b9396f975d4d1a3e66b84b98ba68e21d777293a773d3ae552b98573ed2ad773:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOTM1NDVjMzg1YzBhMmVmY2FmNjA3ZGZkMDgxNTZiM2YzYjgzODI2N2JiOThhMTdjY2EwNDg0MjExYzZlMDMzNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTcyYTQyOTM4MmIyZTE0NzE4ZTBlMzdiMDU3MGE4YTE3MDI5OTFmY2Q4NDk4Y2Q4NDA2MGE4YmY0ZjA1MDE3YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjEsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZWFmMjJjZjA3MzI1OTJjMjQ3MTQxY2JlNjFlZmExMTAxMjYxMmY1YTMxMjJiOWFmOWJiYWY1MmY1NzI0ZDE5NCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYzMxM2Y0Mzk5YzRjM2E4Y2UwMWNiNzFjMmY1MDJhN2Y1OGE2NWQ4YWViYjQwZDcwMDNjNDNiMzEyZmYxNGQwZSJ9"
+        },
+        {
+          "resource": "repo://src/screens/FolderSetupScreen.jsx#L429-L429",
+          "version": "repo-lines-v1:sha256:88fb8399f127b906824cbcb19fc08595aa2394f3bcbf268f7d5ab38966b2b9b0:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODhmYjgzOTlmMTI3YjkwNjgyNGNiY2IxOWZjMDg1OTVhYTIzOTRmM2JjYmYyNjhmN2Q1YWIzODk2NmIyYjliMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiODhmYjgzOTlmMTI3YjkwNjgyNGNiY2IxOWZjMDg1OTVhYTIzOTRmM2JjYmYyNjhmN2Q1YWIzODk2NmIyYjliMCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODg0YjdiMmZiZjdhYmIxYWYwNTdiZTU0ZGEzODBjMTY0MDBlZDAxY2VkMDU0MjQzYTgyMDg2NTc2ZDM4ZWI1YSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDM3ZDJiMDkyOTExMjhkMGMwOGY0N2QwYjQ4NmMyOGQ1NjNmNDc1NGMyNmRhY2FjZWM0YzJkODVlNDY1ZTZkZSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_92ad6e212ca84788805c28abc177d4ef",
+      "statement": "The application version from package.json is injected into the browser runtime at Vite build time via the __APP_VERSION__ global constant, defined in vite.config.js. Code accesses it with a fallback pattern for dev mode: const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev'.",
+      "evidence": [
+        {
+          "resource": "repo://package.json#L3-L3",
+          "version": "repo-lines-v1:sha256:ab870db63114381c7b69ebf12d07cb3498793f96ebf1ecee529048417b9f56d7:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYWI4NzBkYjYzMTE0MzgxYzdiNjllYmYxMmQwN2NiMzQ5ODc5M2Y5NmViZjFlY2VlNTI5MDQ4NDE3YjlmNTZkNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYWI4NzBkYjYzMTE0MzgxYzdiNjllYmYxMmQwN2NiMzQ5ODc5M2Y5NmViZjFlY2VlNTI5MDQ4NDE3YjlmNTZkNyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjIsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZDZlY2Y2ZGZkYjE1M2Q5NWFjZmZhNjhjYjc1YWYwZDI2MTc0NTk3MDQ3MDIwMDE5NGVjMDk4NTRmN2VmZGViOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNGFmM2Y1ZjA1MTMwOTRhMzQzNDUwYTNlMzliMjZkMTUzNmFkNzhkMzhmMDY2MjNiZGRkYjZiMTJhYWZiM2MwZiJ9"
+        },
+        {
+          "resource": "repo://src/screens/FolderSetupScreen.jsx#L19-L19",
+          "version": "repo-lines-v1:sha256:cdb119241789d6df58f211285e129478d84ca66cc54db6aafe09463b7b06ff36:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiY2RiMTE5MjQxNzg5ZDZkZjU4ZjIxMTI4NWUxMjk0NzhkODRjYTY2Y2M1NGRiNmFhZmUwOTQ2M2I3YjA2ZmYzNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiY2RiMTE5MjQxNzg5ZDZkZjU4ZjIxMTI4NWUxMjk0NzhkODRjYTY2Y2M1NGRiNmFhZmUwOTQ2M2I3YjA2ZmYzNiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNDI3OTBiZjYwMWYxNzUzOTlmMmMzZjE3MDEyZTEyYzY0YjJhNmY1NGZmMmIzYWU5NTRkMDg5N2Q3NWFmNjhmMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYmU1OGIwNmQ2ZTNjNTkyZjRhNTY5ZDU0MzNjNzVmYjM5MzcyNDQyOGJkYjcwNjVkNmJjN2Q1NGM0MmE3ZjVlZCJ9"
+        },
+        {
+          "resource": "repo://vite.config.js#L10-L12",
+          "version": "repo-lines-v1:sha256:f59a79404020e019232d1204f8b0d23be433ef85123378250c14e0db1f767ee6:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNzY4MjgwYTZlNjJkNzBjMjIzOWQwYTRkY2ZjMDdiYTUxYzQxYmRjNzM1MzE5ZTRjZThjNzBiOWY2OTg2ODU5MiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGQ1Y2QyZmI0ZjNkZjg4NDUxNTI1NWIzOTUyM2YyZjhiNTQ3MmJlZWE5ZjU2NmZmY2EyMDRkYjgwMjU2MTA0MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMjhjMjVhMTUyOGU0MDI5MDE1ZGI5ODFiODIzOTlhYTJiNDA0YzBlOWQzMGJiZmMyN2RlZDBjNDBjN2FmMDA1OCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNTk1OTBiZDU5MTgwNjIxNGJhMTViY2ViNmI5OGZhZTk4MDAxMDk4MjNlN2IwNGNhMzYyZTEwZDUyMGNmMmM4YSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_ae8032b774f241158046313cde67fe73",
+      "statement": "The start page displays the application version in the header as 'v{APP_VERSION} · what's new ▾', along with the version in the 'what's new' toggle button for changelog visibility.",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/FolderSetupScreen.jsx#L424-L427",
+          "version": "repo-lines-v1:sha256:5301584cf06f14b5e1cac2626e2fa9f584c44dd76a4d137208d5d4a55785f553:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDQ1Zjg5Mjk3OTI5Zjk4OGVjNGJhNGI5NDM2YjQ5NGI0ZDc4MzU3MzVlODFmZDhmOWYxODI2ODFmYzY3MzgyZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzQ2ODA0NTgwM2FiMzY3ZTdmMTdlNDFhMzY5MDY0ZmI4MTE2ZDE2MDQ1MjdlOGZmOGNhNmYzNmYxMWE2MzU2MyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNmYzYmM1Nzc3MjBjYWY4OGM5NDIxZGZhOGUzNzVjNTg4NDhjZDQxNDg2NTU3OWRhNzhjNDBmOWJlN2U0MTU2NiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjliMTczMTA2NmQwMzJjMjhiZjg2MTI1ZDFhNGViMGJhMWNlN2NhODYwNDVkZWMzMjQ1ZjJhN2RjNjg1OWZiMyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_c48721780d514d989371681af793267e",
+      "statement": "The application version (__APP_VERSION__) is included in bug reports (src/utils/bugReports.js) and sent as app_version in telemetry/config data collection (src/platform/api.js).",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/api.js#L21-L21",
+          "version": "repo-lines-v1:sha256:cdb119241789d6df58f211285e129478d84ca66cc54db6aafe09463b7b06ff36:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiY2RiMTE5MjQxNzg5ZDZkZjU4ZjIxMTI4NWUxMjk0NzhkODRjYTY2Y2M1NGRiNmFhZmUwOTQ2M2I3YjA2ZmYzNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiY2RiMTE5MjQxNzg5ZDZkZjU4ZjIxMTI4NWUxMjk0NzhkODRjYTY2Y2M1NGRiNmFhZmUwOTQ2M2I3YjA2ZmYzNiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjFiNDFiZDhlYzFmNTY3MTg4NjVmM2U0OTQ5YjUyYWUzZmIzZTY2OGFiNWI3OThlMzYwYjM3MGNkMWRhMmJiMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZDhiMGE5YzJkMTk3OWNiZTA1MGIyMmJkNzNhOGJkOWU4MDIyNzc5ZjU0MTNhNDdlODRmYjBlZWI3Nzg2YjYwMSJ9"
+        },
+        {
+          "resource": "repo://src/platform/api.js#L48-L48",
+          "version": "repo-lines-v1:sha256:14b7888a44dcf3e1a68e2d8772cf370c2323a6d0c08bf92083d88537264f9afc:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMTRiNzg4OGE0NGRjZjNlMWE2OGUyZDg3NzJjZjM3MGMyMzIzYTZkMGMwOGJmOTIwODNkODg1MzcyNjRmOWFmYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMTRiNzg4OGE0NGRjZjNlMWE2OGUyZDg3NzJjZjM3MGMyMzIzYTZkMGMwOGJmOTIwODNkODg1MzcyNjRmOWFmYyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMDA3YzhiYmMwMmFlYjVlZDExN2Q5NGY0OWJhMmFiZDc1OTQ0YmQ1YzdlZDMwYzJhOGZmNGFlOWRlOTdiNTEwNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiN2NmNTYwN2VkMDExZWFlYWExZWJlNDE3YWE4OGMxNmY0Y2FlMTdhZGMxZjViNWUxZmRiZThlNDJlM2U0Y2JkOCJ9"
+        },
+        {
+          "resource": "repo://src/utils/bugReports.js#L11-L11",
+          "version": "repo-lines-v1:sha256:cdb119241789d6df58f211285e129478d84ca66cc54db6aafe09463b7b06ff36:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiY2RiMTE5MjQxNzg5ZDZkZjU4ZjIxMTI4NWUxMjk0NzhkODRjYTY2Y2M1NGRiNmFhZmUwOTQ2M2I3YjA2ZmYzNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiY2RiMTE5MjQxNzg5ZDZkZjU4ZjIxMTI4NWUxMjk0NzhkODRjYTY2Y2M1NGRiNmFhZmUwOTQ2M2I3YjA2ZmYzNiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTlkZjEzYTkzZjg3MTRlZTI0MjU2MTFmYTEyOGY3Njg2NjdjZDhiYjNlZDIxMDYwZTZkNWY5N2Y5OGQ0YzdlOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMDNhODI3Mjg0NmVlNjY3NWRjODg4ODQwODg0YjY2YzM2NTdkYzcxZDZhMzhkYTYwY2YxNmViMmM4MzhiOGY3NCJ9"
+        },
+        {
+          "resource": "repo://src/utils/bugReports.js#L97-L97",
+          "version": "repo-lines-v1:sha256:a6454cfc66094ecd6ece7aba663dfdf0a48ad3750ae60cdc3fba7229a432e117:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTY0NTRjZmM2NjA5NGVjZDZlY2U3YWJhNjYzZGZkZjBhNDhhZDM3NTBhZTYwY2RjM2ZiYTcyMjlhNDMyZTExNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYTY0NTRjZmM2NjA5NGVjZDZlY2U3YWJhNjYzZGZkZjBhNDhhZDM3NTBhZTYwY2RjM2ZiYTcyMjlhNDMyZTExNyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiY2Y4YzhkMzk4ZjdjNzQwYTgyOWM5OGU2ZTE2YjYwNjNlNTc0MmVjMzhiYTZmYTY1ZjlmZjZmYTk1ZThjOGRmZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYTY0Y2EyZWFmZTliZTI2OTNiOGUyN2I1MWZmOTgwMjFmMWFjYjg1YzAwMTVmNGJkZTFhYjZjMjA2NWE5NGNmNSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_d47c2d824a26481ab934a004274079bf",
+      "statement": "The changelog follows strict operational rules: one entry per user-facing ship, newest first in the array, date in YYYY-MM-DD format, and notes written as single-line plain text descriptions without markdown or line breaks (typically 80–150 characters).",
+      "evidence": [
+        {
+          "resource": "repo://src/changelog.js#L2-L8",
+          "version": "repo-lines-v1:sha256:9b9396f975d4d1a3e66b84b98ba68e21d777293a773d3ae552b98573ed2ad773:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOTM1NDVjMzg1YzBhMmVmY2FmNjA3ZGZkMDgxNTZiM2YzYjgzODI2N2JiOThhMTdjY2EwNDg0MjExYzZlMDMzNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTcyYTQyOTM4MmIyZTE0NzE4ZTBlMzdiMDU3MGE4YTE3MDI5OTFmY2Q4NDk4Y2Q4NDA2MGE4YmY0ZjA1MDE3YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjEsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZWFmMjJjZjA3MzI1OTJjMjQ3MTQxY2JlNjFlZmExMTAxMjYxMmY1YTMxMjJiOWFmOWJiYWY1MmY1NzI0ZDE5NCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYzMxM2Y0Mzk5YzRjM2E4Y2UwMWNiNzFjMmY1MDJhN2Y1OGE2NWQ4YWViYjQwZDcwMDNjNDNiMzEyZmYxNGQwZSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_effd9acffa2d40fd8d0678ccd22b4ca5",
+      "statement": "The application uses semantic versioning (MAJOR.MINOR.PATCH) in package.json, where version bumps follow conventional practice: patch for bug fixes, minor for new features, major for breaking changes.",
+      "evidence": [
+        {
+          "resource": "repo://package.json#L3-L3",
+          "version": "repo-lines-v1:sha256:ab870db63114381c7b69ebf12d07cb3498793f96ebf1ecee529048417b9f56d7:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYWI4NzBkYjYzMTE0MzgxYzdiNjllYmYxMmQwN2NiMzQ5ODc5M2Y5NmViZjFlY2VlNTI5MDQ4NDE3YjlmNTZkNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYWI4NzBkYjYzMTE0MzgxYzdiNjllYmYxMmQwN2NiMzQ5ODc5M2Y5NmViZjFlY2VlNTI5MDQ4NDE3YjlmNTZkNyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjIsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZDZlY2Y2ZGZkYjE1M2Q5NWFjZmZhNjhjYjc1YWYwZDI2MTc0NTk3MDQ3MDIwMDE5NGVjMDk4NTRmN2VmZGViOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNGFmM2Y1ZjA1MTMwOTRhMzQzNDUwYTNlMzliMjZkMTUzNmFkNzhkMzhmMDY2MjNiZGRkYjZiMTJhYWZiM2MwZiJ9"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-17T13:57:20.517Z"
+  }
+}

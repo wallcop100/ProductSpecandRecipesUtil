@@ -563,6 +563,15 @@ const useStore = create((set, get) => ({
   setDrawerOpen(open) { try { localStorage.setItem('builderDrawer', open ? '1' : '0') } catch { /* session only */ } set({ drawerOpen: !!open }) },
   drawerTab: 'form',
   setDrawerTab(tab) { get().setDrawerOpen(true); set({ drawerTab: tab }) },
+  // Templates tab: positions a template was applied to that still have rows to check, { posRef: ['why', …] },
+  // remembered with the project like the connector pins. templateHintVersion re-reads the dismissed hints.
+  templateChecks: {},
+  async setTemplateChecks(next) {
+    set({ templateChecks: next })
+    const { projectId } = get()
+    if (projectId != null) await window.electronAPI?.db?.setPref?.(projectId, 'template_checks', JSON.stringify(next))
+  },
+  templateHintVersion: 0,
   // Show IsDeleted rows in recipes (DD66AT: toggled from the Recipe actions menu).
   showDeleted: false,
   toggleShowDeleted() { set({ showDeleted: !get().showDeleted }) },
@@ -697,6 +706,7 @@ const useStore = create((set, get) => ({
       tagDrift: tagDrift ?? {},
       etCollections: etCollections ?? [],
       connectorPins: data.connectorPins ?? {},
+      templateChecks: data.templateChecks ?? {},
       connectorExcludes: data.connectorExcludes ?? {},
       specCheckSkip: data.specCheckSkip ?? ['ET-CABLES', 'ET-CABLE'],
       connectorFamilies: data.connectorFamilies ?? [...DEFAULT_CONNECTOR_FAMILIES],
@@ -2818,13 +2828,13 @@ const useStore = create((set, get) => ({
    * built once per change of the data it reads.
    */
   _templateRecOf() {
-    const { positionTypes, recipes, psRows, elementTypes, positionUI, connectorFamilies } = get()
+    const { positionTypes, recipes, psRows, elementTypes, positionUI, connectorFamilies, formCaptures } = get()
     const c = templateRecCache
     if (!c || c.positionTypes !== positionTypes || c.recipes !== recipes || c.psRows !== psRows || c.elementTypes !== elementTypes
-      || c.positionUI !== positionUI || c.connectorFamilies !== connectorFamilies) {
+      || c.positionUI !== positionUI || c.connectorFamilies !== connectorFamilies || c.formCaptures !== formCaptures) {
       const opts = get()._connectorOpts()
-      const map = templateRecords({ positionTypes, recipes, psRows, elementTypes, positionUI, isConnector: ref => isConnectorPart(ref, opts) })
-      templateRecCache = { positionTypes, recipes, psRows, elementTypes, positionUI, connectorFamilies, map, scope: specificityScope(map.values()) }
+      const map = templateRecords({ positionTypes, recipes, psRows, elementTypes, positionUI, formCaptures, isConnector: ref => isConnectorPart(ref, opts) })
+      templateRecCache = { positionTypes, recipes, psRows, elementTypes, positionUI, connectorFamilies, formCaptures, map, scope: specificityScope(map.values()) }
     }
     const map = templateRecCache.map
     const recOf = ref => map.get(ref) || { Tags: positionUI[ref]?.tags || [] }

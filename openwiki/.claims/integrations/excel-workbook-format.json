@@ -1,0 +1,304 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:140f473ecd658ba32a03bfa4452eec08289bec95c87234308c00918523e5440b",
+  "claims": [
+    {
+      "id": "claim_dbd518384b354bf5b9a7c23a498b5e65",
+      "statement": "The xlsx.js module uses SheetJS to parse all three workbooks (DesignDB, ProductSpec, RecipesSpec) entirely in the browser. It reads workbooks from ArrayBuffer or Uint8Array bytes, supports selective sheet loading to avoid memory bloat on large junk tabs, and normalizes all row data into JavaScript objects anchored at Excel cell A1.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/xlsx.js#L1-L20",
+          "version": "repo-lines-v1:sha256:79c469f964c74267c7a3b6c840f3858bc74bbc82dda9c3786029ca7c93e3bae4:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI2YTJjZDA5NWY2NDc5NTY3NWU2NmJiZWM1ZWU5MTFlZmFkYmQxMGRlZjk1YjAwNDA2Yjk0ZWI3NWNhZDMyNTYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFlZGJmYjRhZDkwZjlhNjJkMWEyNWU2YmY0MTIzOTI5ZjNiY2YzNmUxNzE3ZDE0ZDQzNjM5ODM3MDYxNDk5ZDcifQ"
+        },
+        {
+          "resource": "repo://src/platform/xlsx.js#L103-L106",
+          "version": "repo-lines-v1:sha256:87d94f5959142946cabbeee0bd4fc9ae1fff6d16c4cf9160f9ac5fd33e87849e:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTI5M2Q0YjE5YTAyNzdmZDhlN2JhYzRmYTMxNGY3YmM3ODVlNTVlYmU5YjU5ZjQwMjVlNGI5YWEwMjA4NDBmMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMWUwZTQyZGRjMGQ5MjBmODFjNTcxZTc3M2I3N2EyNGM5NjYxODNkMWZkMDI0NzRjNDk5MmQ5Y2VmZjFlNTE1MiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTI5ODEwZGI4M2YyYTlkMzMzMzY1ZDNmZDFmNTMyMzFhNDFhYjBiYmQwN2VlMzA4ZDNkYWFmNjAzMjQyYTM0ZiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_e7abde533446465d9f9aedc239849546",
+      "statement": "Every data row carries a _row_num field (1-based Excel absolute row number, with header = row 1) so patch scripts can target the exact row without relying on key lookups. ElementTypes retain _row_num for patching; PositionTypes strip it as they are read-only.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/xlsx.js#L176-L180",
+          "version": "repo-lines-v1:sha256:5b7d6e76b8366802b8631ce3ba7ad7eac737731d4e36f68b104a60eac1170fce:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNDFmZGEwNTUzZDhkOWViNGQ1ODBkNWI4MGI3MGFiNWIyZmE1NDNhYmU2MGY0OTVkZWEzODljNjgwZGY3Y2QyMiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiM2YyMmE4YzBlM2ZiYWY4ZTczMDJiMWNlMjBhOWMzOTBlNzFmNWYyZDhiOGY4YjRiZmYzMmU2OGNmZGJiMjM3MiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOWM3OWY2NmRlMWEwZjY2YjBlZTYzNWE0Nzk5MjYxMmEzNmQyMDZhYTIzNzE4NjQzYThlMWMwNDFjMzlhM2RlMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOWJjYWJlNTNjNDM4YTA5ZjUwOWMwYzYyZWNhMzhlNjdkN2NiZjhjNGUyNjEyMjExYmFhMjZkYjJkOTg3NTgzYyJ9"
+        },
+        {
+          "resource": "repo://src/platform/xlsx.js#L255-L261",
+          "version": "repo-lines-v1:sha256:a584e30ad773053b5487949498e1e0fa088a83d2ed85ef6386278e5bb36e8f51:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODAzYjRhYmY3M2M0ODhhMTJlYWUwMTc1YzQ4NTg3YWE3ZmYwYmQ0NzhiMmQyN2E4MGU4OWYxZjVhMzcyNTFjYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMWZhMDFlNjI4ZGRlZDYyNWQyM2IzYTA5MmYyZTQ5NDlmYzU3Y2UxNzNkY2QzYmM3MDAzOTQwZjM5ODU3N2VhYyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTcwM2UxM2M1ODNhYmFkNGMyNTM2NTAxMGY4ZGViNzcwMWM2M2JmMTc1ZmNkZjhiNTEwMDcyM2E0ZDg3ZWNiMiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDljMzc3YTViYjhkM2MwMGViZWIzZDE4NDc2M2NjZWJjZDNjY2RiZjQ5MjFjNTIzMWRiNTM0NDIxNGI4OGQyYiJ9"
+        },
+        {
+          "resource": "repo://src/platform/xlsx.js#L9-L10",
+          "version": "repo-lines-v1:sha256:96e7c27a978433003bc2cc24e94a20a16e512521ea15eacfdb56d384fced89f1:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNzI1NmU1MjYwYjUyZTlkNjJiNDcxZDhhNTU0ZTcxMGM0YTc4OTVhODIyNjA2ZGM0NzgxYjhmOTI4ZmY4ZjFmYSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNTIyMjY1ZmNhODY1ZDRmN2VkZmM4YWI1Yzc0M2YwZjEzNjgwNjQ5NDJmYjE5NWNjMWI1YjQ5ZjI4NDg0NjFiYyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMDZkNjQ1ZDQ3MDE0OTE3NDFkY2I4MGZlNDE1Yjg5OTJkMGJkM2Y3YzUwZDk3N2FlODRhNWMzMzQ4YTA0YmIxNiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzA3M2NmZTllNmIzMDIyYmQxNTRkNzkyMmVkY2I3Y2YzNGZlYzA5Y2YyYjI3M2ZkOWY4MDhkY2RlZjFjYWUwOSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_aeadec6bd2c1405a804e238e69cf2309",
+      "statement": "Identifier and code fields (ProductCode, ElementTypeRef, Ref, etc.) can be stored as Excel numbers. The parser coerces them to strings before returning, because downstream consumers call .trim() and .toLowerCase()—a single numeric cell crashes the load.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/xlsx.js#L188-L190",
+          "version": "repo-lines-v1:sha256:62d69185fe7c19b2f973856332c37ebf3769d2d583b7911a360e4bad3d3098cc:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTZiZDQzYmRjOThmZjkxODA3MjllOTc5N2I2MjNlMmFjMDlmYmUzMGY2MWQzNWJiNDg1MzNiY2UxODczM2YxZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNWRmODJlNGM1ZjM1OWFhMGRjZWZhYjRjN2NmNjRhYzhiM2VhMmJmNGIxMTYzZTIyN2EzODcxOGExNTEzOWQ1YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMzYxM2MwOTNjY2IyZTg1YWViYjEzYjI5NzRiODA5MDA0OGJkODZhMTVhYjRkNjk1ZTllYmExZTBlMmZiNGRiZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYmZhZTcwMzFlNWU4ZWE5MjAxYTJmN2MwMDI0NzUyYzQ1ZDY3ZjI5YzYxYzE3YjljMTM1MmY0NWYxZWE2N2Y2ZSJ9"
+        },
+        {
+          "resource": "repo://src/platform/xlsx.js#L79-L86",
+          "version": "repo-lines-v1:sha256:b3830a50ed166e5e34f5b755058d895b9378e75a9827d5708fd7e55bb19ed099:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTY2ZWNlZTRhNTVmYmI2YWY2OTlmOGRkY2Q4NzAzMTBhYWExMTVmMjk4MzI1NzhiMDEzYjZhOGRhM2UwZDFmZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNTBkYzIxYTg5ZTc1MDYxNjQxMDNlY2QyMjUwNjE1OWNjNTI4ZjdhOWZjZmM2MGEyMDU1ZjRjN2JiYzIxODQ0ZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYmRkMmE5Y2VkZjEyNDljZGE5MDQ2ZjlmOTQxMWVhNmZlMzQxN2Q2N2VlMjM0YjBjNTI1ZGZjYmQ0NDMwMTIxNiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzg1NDdkMWMzZDZmNDUyMGE5MTI0YmVmY2Q1YjY1Y2E1N2IyM2I3ZTlhNjdhNzhkZWNjMDE0MGVlNGM4ZmU5OSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_b9933979b33c4eca8dc28b53c6e1669a",
+      "statement": "Flag columns (IsTBC, IsDeleted, IsDesign, IsContractItem, IsTRItem, IsInteger, IsPropertiesTBC) are normalized to 'Y' (present) or null (absent). String values are checked case-insensitively; empty strings and blanks become null.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/xlsx.js#L186-L188",
+          "version": "repo-lines-v1:sha256:a6636f40d96836d6c0356ede50cfa94322ad0b4de8ffbe1c94b63dd7e6637b40:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOTEwNmIyMjA2YTgwYWUyYTBlYzM4MmUzMWE3NjQ0MGRhMWE2OGRiNmI0MjFiYmM5NTA2ZWJlZDlmOGUxYjQzMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYTZiZDQzYmRjOThmZjkxODA3MjllOTc5N2I2MjNlMmFjMDlmYmUzMGY2MWQzNWJiNDg1MzNiY2UxODczM2YxZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYjMzMTIwZTkyNzRiZTY0OTMyMmY4YmE2NzVmMDIyZTczYjNlYjUyYTcyMGJiZmRiOThlZDAxYTIyNmY1ODM5OSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMDM4Y2U4ZTFlMjBhOTUwYjc0YjQ0NzdhYWFjODQyNzI1NjIyOTgyODEyMGU1NTA4NTUxYWFiMjVmNjZlZDUxMiJ9"
+        },
+        {
+          "resource": "repo://src/platform/xlsx.js#L88-L91",
+          "version": "repo-lines-v1:sha256:17fc7dcfed0e755de1d928d47e2348a1d8ba6ea62973136cb163f3baa92804f0:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNmQzZWY2YjhkYWM2M2Y4YTkxYWE0YjQxYjIxZjRmNzNiMGFkMzczNmQ4NDAxNDhhYjFhZjhkZWNjYmU5MzAzMiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiODZmNjJhNWRiZWRmYzc0MmFlNzEzOTVhNDI3YWMwOTVmZDc4NTcwZGY3NmNkYTA1OWMzZmRiZGMyZTVjOGJhNyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiN2I4NzRhYTU0ODY2ZDUzMDRjNTk4NjM4MWFlYzFiNzQ4ZmMyNzBiOWY3ZDI4NTBiZWI3N2NkNzJmOWE4YTcwYyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjU2YzRlYmVhODFjOTFkMTcxZmJjODA5OWE3MGEwZmUyYTViNWExMjFmNzViOGFmNjI5MWQxYzgxYWM5MGRjMiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_a5966756120c4a8fba3cbd22446adda0",
+      "statement": "Collections (rows whose Ref appears as another row's ParentRef) are filtered from returned element_types and position_types arrays. Their refs are collected separately in collection_refs so the UI knows they exist and can validate references to them, preventing false 'ET-CABLE not found' errors when the master sheet actually defines it as a parent.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/xlsx.js#L209-L221",
+          "version": "repo-lines-v1:sha256:29bd1ffb6798a5a0a0c233532b97bb55f7cbff3dd4d848c2dfed467edd80d95b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjczNjZjZGY0MGZjN2YzMGY5MTUzMzcyOTdmYjFlMDk2NGI1OTE1M2VjNThiNjNhMTQ1NThhZjYwNDJkYTc3YWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU0MDY5NDE3NjI0ZmFiYjAyOGIyM2RiNTk1NWI1NDFkZDRhZjRlMjg3MGYyN2MyMzY5YmZjYjQ5YzE2MmJhYzMifQ"
+        },
+        {
+          "resource": "repo://src/platform/xlsx.js#L240-L249",
+          "version": "repo-lines-v1:sha256:68f249017abdd23a9b40f3bf70b06e36a90eaca8f42de679d232eec0e748348f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNjNjEyYWQxZDEyMDA0Njc4YzVhMmVmYTczZjFlMTdmMzNmOWNhMzQ5MjdhZWY4NWVlOGM0NTE3YjQ4NzNhNDkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA0NWUzZDM2MTkzZWM0NGM0ZDU3MDI1YjczNjUwMDEzMDA0YjUzOGFkOTBlOGM5ZjUwMjQyMmZkNTBkYzgxZjgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ2MGM2OWE4MDc1MTUxZTQxODAzMTEyMDU0MDRkMjI5NTI2Mzc3YmNmYjQ1ZDkwNWM0MjIyNzZmOTAzY2IxYTMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_8f357f9fa21241a2992d8b8230860994",
+      "statement": "PositionTypes parsing includes all headers in the output under their own names (pass-through columns), not just the standard column map. This is necessary because tag rules may read arbitrary DB schema fields for decision-making (e.g., checking DriverLocation='Top').",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/xlsx.js#L167-L174",
+          "version": "repo-lines-v1:sha256:20b8d20436df6926f701f7e0668c8483f928c5b0f113656affe8edcbdf2a61fe:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjc3ZWY4Y2M5MDU0NTIyMGQ5NzZhNTZkMDBmNDc4ODFjZDZlNDM4M2RlYTE1ZDk0NTMwMTNjMzg5MGQ1OTczYiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjdlNTc4OGQ1ZDlkNzNkMjRhODFkYmMwYTVhNzRiZmE4MmM5YzNiM2FmOTllNTJhZjc5NmU5MGI0NjhhOGEzZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZWEwMTczZTJjNzAwMTQ4ZmExZGEwYThmN2VhM2RhNGZhM2MzODY5Y2UzZTQwNjcwOWZlMjliYTZjNWY0NGUyNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjA1Mzk0MTQzYjk5ODFiODBhM2U2NWYzMDNjYWU1M2I4NzU1M2Q0NmI2ZGM3M2IwMTM3Njg5ZTRlZWNmN2VkZiJ9"
+        },
+        {
+          "resource": "repo://src/platform/xlsx.js#L251-L251",
+          "version": "repo-lines-v1:sha256:c633538e4a997e1f05c7bf3a765d84e230eae4a784a204b6860544fedfd26db9:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYzYzMzUzOGU0YTk5N2UxZjA1YzdiZjNhNzY1ZDg0ZTIzMGVhZTRhNzg0YTIwNGI2ODYwNTQ0ZmVkZmQyNmRiOSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYzYzMzUzOGU0YTk5N2UxZjA1YzdiZjNhNzY1ZDg0ZTIzMGVhZTRhNzg0YTIwNGI2ODYwNTQ0ZmVkZmQyNmRiOSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNmQwMjQxNWY1MDVmMTFhMDkxNzRhMDE1ZjliMDFjNWZlNDhiYmUwMWNhN2IxNzFhNmE3MGM0ZmFjY2U5YzU0OCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOTcwM2UxM2M1ODNhYmFkNGMyNTM2NTAxMGY4ZGViNzcwMWM2M2JmMTc1ZmNkZjhiNTEwMDcyM2E0ZDg3ZWNiMiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_b7ae9c32483f49689117a4ac457083fe",
+      "statement": "Recipes Spec parsing expands ElementType-level rows by PositionType. It identifies which PositionTypes claim each ET as an IsDesign='Y' element, then duplicates the ET row once per claimant PositionType. Orphan ET rows (no position claims them) are dropped. This allows a single template row at ET level to expand into recipes for multiple positions using it.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/xlsx.js#L293-L320",
+          "version": "repo-lines-v1:sha256:808a04736364e6e250e35e993505c0a92eabd0b54d32ca900db506bd9d651b41:eyJzZWxlY3RlZExpbmVDb3VudCI6MjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA2Mzg5MTQzYTNkNjllNWZiZmY0YzNlZTI1NzQwYTBiMmRmNTFiN2RhMDA3ZDMzZjBmNWZkOWMxODg4YjE1MDciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI1YzI4ZTRlODIzYmZlNTYxZWU5N2Q1YWEwMWQzZDJkOTZlYmMxNTE3NjNjNDAyYmZmOGY3MjM5MGE4YTVhYzgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM2NGIzN2U0ZDM0MWRlZWJiMTdmNjI0OTdlMDk1ZDUxM2JkYmNlNzJiYWRlNDc2ZmU3ZDJjYmM3Y2Q0OTdhNzIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_889fbfce302e49689e64932eb7bce34c",
+      "statement": "mergeDbs() unions ElementTypes and PositionTypes by ref (case-insensitive), with the first DB listed winning on conflict. Conflicts in Name across DBs are reported. Positions are concatenated—a PositionType is live (placed) if it appears in any merged DB. This supports projects split across multiple DesignDB files (e.g., one per building) sharing a single PS and RS.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/xlsx.js#L398-L450",
+          "version": "repo-lines-v1:sha256:5ac466228cdfcd641e93eccafee9ace86d2aaa35abcb2f64d11f83518b4d0958:eyJzZWxlY3RlZExpbmVDb3VudCI6NTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU2YTY3Y2NmOGYwYjZhODZlMDdmMGUyMjVkMzY3NjlmYjNiOWM2OGFmMjEyMTAwYzgzODdkOGI5M2EwODYwMGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_7cafe005fbab454cb4658656104d6379",
+      "statement": "All generated Office Scripts (patchScript.js) are idempotent. Before appending a new row, the script checks whether it already exists by key in the workbook. If it does, it updates in place instead of appending. This prevents the bug where pasting a patch twice would duplicate every new row—the natural key always decides append vs. update.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/patchScript.js#L120-L128",
+          "version": "repo-lines-v1:sha256:dba87f090d7727e7b628cf8acf8663307a5e6bb52714182e70618dc8b0842083:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDQ5Mjg1NWRmMTBkNzQ1Yzg1YmQ2Zjg4NjM3ODhjMDljNGQ3NTVhNjM3MjA5ZGJhNGQ3ODQzN2Q4MDIxN2Y4NSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYTkzOGRhMmEwZGExZmUwOWIwNGE0MDZkNmRmNTA1NTJlMDY5NDhmZjEyNDFkMDM1ODUzZDc3MzY4NTU0MmY1ZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNGRmNmU0ZTEyMDA4ZmNmODdmZGY1M2VlNjViMjcxNDY4ZGVmMGQzMjZjMzg0YWEyMGUyNmFlZDgxYzczYzk2YSJ9"
+        },
+        {
+          "resource": "repo://src/utils/patchScript.js#L14-L23",
+          "version": "repo-lines-v1:sha256:ac7987e5005d04ccb12b547db371b4346383fa16e3229475a25d0bac5b0eaa59:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYyM2NiNGMxM2Q2Nzc1OWQ1NGY3NjcxZDQ0MDM0OTcyZDA5MDNhMzlkMDhhZmFlNzNiYjk4MWViOWFiMGRjZjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImY4MGM5MDMyM2MxZWQ3NjQ4YjU3OWIzNDYxYmY3NjJjMTllOTgxZWI5Zjc3YzA0MjZjYTgwMTc3NjkzMTcwN2EiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ4MjdmZTcwMTZlZjFlMTQ1MjE3YzliZmNjZTFhNzI1MTUwNDQ0MWZlOTBmODk5MWQwOGQ4YTBiMWMwMTY5ZjEifQ"
+        },
+        {
+          "resource": "repo://src/utils/patchScript.js#L309-L326",
+          "version": "repo-lines-v1:sha256:2f35dde18bf4fb3ad9645518f99f852ff664d7c3ab7da249f558480844e02624:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZlNmI4YWFkYTIyMzg3NmFhOTRkZjdlOGI0NmQ4NzM3OTU1MzI3ODhiNTQwYzAzMjY5NmI1OGIyNmIyMTA5YzgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc1MTg0MGMyNzdkZWFiNTYxMjM2ZGI5ZWVlYTFjYWY2M2I0YzY2M2Y3NmZkYmUxOWYwOGZjMmI5OTI3MjMzMzciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ1NmZmYzBhZDEwYjVhNWZmZjdmZjliYzNhMDNhOGMxMmRjZTMxMWJmMjc5ZGFkZGY4OTk5NTE5Y2NkZmI1MjQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_44d7b36394554b1cbb21e5332e45145a",
+      "statement": "Patch scripts never read the whole sheet. They read only the header row and one key column (each bounded to the real row count), then do all lookups in memory. This is a learned design decision—reading getUsedRange().getValues() on templates padded with formatting to ~1,048,576 rows hangs Excel.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/patchScript.js#L101-L109",
+          "version": "repo-lines-v1:sha256:5e8bc0245f910096097f8d38f8f932a952f9a4794fc9f2f2f951364ba6dc6ecb:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMWVlZDE3ODgwMTdiNGFhOTA1ZmQ5Nzc5MTZhZDYwZTdhYjNkMjY5YTE3NjBiODc0OGUyYzE3NWIwOTQ5NWM1MCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYTdiYzI2M2IyY2Y3MTJjZTM2NDhmMTkxYzNmMjQ2MDczM2ZmODdiNjIyMjQ5NmVhNDBiMWM1MzY2ZTBjYWUwNyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzNjYTBlOWY0NzFmNjA4YmFlZTUzYzliZTYxZjYwNjU4Mzc0N2RmMzZmMzM3MjM0NWNjYmFiMTQ2NDU3M2ZhNCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjU2MDJkMzNhZmRlODhiM2JkOWUxM2E1NzEzMDRlOWU2Zjk0OTQzNzgyZTk2MmQzMzA2NmVjYWFjMDY5NWQzNyJ9"
+        },
+        {
+          "resource": "repo://src/utils/patchScript.js#L120-L128",
+          "version": "repo-lines-v1:sha256:dba87f090d7727e7b628cf8acf8663307a5e6bb52714182e70618dc8b0842083:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDQ5Mjg1NWRmMTBkNzQ1Yzg1YmQ2Zjg4NjM3ODhjMDljNGQ3NTVhNjM3MjA5ZGJhNGQ3ODQzN2Q4MDIxN2Y4NSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYTkzOGRhMmEwZGExZmUwOWIwNGE0MDZkNmRmNTA1NTJlMDY5NDhmZjEyNDFkMDM1ODUzZDc3MzY4NTU0MmY1ZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNGRmNmU0ZTEyMDA4ZmNmODdmZGY1M2VlNjViMjcxNDY4ZGVmMGQzMjZjMzg0YWEyMGUyNmFlZDgxYzczYzk2YSJ9"
+        },
+        {
+          "resource": "repo://src/utils/patchScript.js#L129-L140",
+          "version": "repo-lines-v1:sha256:b5b3b16ad6cfca7be0ab920b5e91839b82aa35146bd1e69e4ac1156ae5d9adaf:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIzYjYyNGUxMmZmNTM4Yjk0NDE1MGNlNDIxZTM5M2MzZDE1ZThiYTRjOGFiMGU5NTY3M2UxYTdhZTAwNDY2NzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJlMDQ3YjBiY2JhMjhhMWZlNDU5MmJhZjI5MGNmMDFjMTFiMmU3NWY0ZWRhZTVkMmE4N2Q4OTg5NDRmOGYxZTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM3MGY2ZjIzYzM3MTdiYWZmNmE4MTAxNTFhZGJiZmY1Njc2N2ViNWYxYzRjNDJiNjk3MzRkYTMxNjczMzc0MWYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_cb756375fab5424fa1fc5b042e43cabb",
+      "statement": "After patching the DesignDB ElementTypes sheet, the script re-sorts by family hierarchy: each family first, then its members (sub-families nested inside), both by Ref in natural order (LC2 before LC11). SortOrder is written 1..N, family rows are colored purple with white bold text, and leaf rows are plain. The sort reorders whole rows (formulas and all), not just filtered columns.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/patchScript.js#L220-L284",
+          "version": "repo-lines-v1:sha256:a5fe350541c8f1b60e2c0068a7c9c976cfaddb863ca215a963ccb3d07d02cd87:eyJzZWxlY3RlZExpbmVDb3VudCI6NjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA2YTg3OTc5ZjM3NWU0ZDU3OWI4OTY5OTA2ZmZiNDZmMTVjYzI4MDYxYzIwNmI5OWFiZThmYTY4YzIzYmM1MTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ1NDgyMTVmMGVjNjdiNzAwZWU5YmNjNjAzOGRhMDAwOGZmMWZkZGM5MTNlODgxOTAzMWZmMDQ1YTI4M2VjMTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZhMGRhYmU2ZWYwZjExNjlkNWNiZGE4MTQxZGRmYWNjN2RhNDMwYTlmZjA4OTQwZWZhNWFmMzQ4NjlmYjgyNGIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhmOGQ2Y2Y1NjMyYzQ1NDMzYjRjZjQ3ZDYzOWE0NzkwNDU2MmQxYzY5ZjA5MTgxMzQ3NzY3MGVkYjgwZjY0MDYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_c389a771c524431daf9dd2548bb8ef4e",
+      "statement": "Product Spec rows are keyed by EntityRef (ElementTypeRef in internal naming). This is the natural key—the patch lookup, append-vs-update decision, and staleness detection all use it. A new PS row begins with _row_num=null; the backend assigns a row number on first export.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/patchScript.js#L25-L35",
+          "version": "repo-lines-v1:sha256:ace32595d910891ec8e96040ca554d57297ac31d88c5d1c2d711c898eb6c78ca:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc5ZGViNTJhYTY4ODViZjI4MGExYzA4NDYxMjY2ZWJmM2VmODZiYWJjYmViYzJmZmZmNmI2MTVhZDZkMDJiNjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ4M2MzNWZjMTc0YjAyMWM2ZGM3ZDIwOGFiZjY4MWRlYmZmNGY2OGFlZGU2NjYzMTUxZWJjYzk0N2Y2YWNlMmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ4YmI5MDUwY2VmYjM1ZWMxMmM5YTE4ZWFmOTk5ZTM3ZWEwNDdjM2RmMTgzODNkYmM5OWYyOTg2M2NkMmE2NzYifQ"
+        },
+        {
+          "resource": "repo://src/utils/patchScript.js#L286-L304",
+          "version": "repo-lines-v1:sha256:ff0a885704fb8646535418c29e3eb0237224e3bfb350c96f6c37ff283198b542:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJkZDI4MjE4NzhjZTBjY2MzYmY0NzlhOGZlNGFhMDg2YjhmNzZhNGVlMThiZDQ5ODAxYTM3NzdiYWRhMWRkYmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBjMzRhNTNkNDBlMWFlYzI5ZDQxN2IzMWE0OGUxZmFhNzIwYjk0MzFiNzJmNDFmNjlhZDE0NjJiMjMwZDZlNDEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRjNjhhNDEyNzdkZmVhNzY3NWZlMDQ2MjI0Nzc0OGI4ZjQ2YTFhZjcyZWNiM2RhNjgxYmJiODk0N2RlNGIwNWUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_07cae06ca61d4b24a0fe5cf636a0aec6",
+      "statement": "Recipes Spec rows are keyed by a composite: (ContextType, ContextRef, RecipeIndex, ElementTypeRef). This composite uniquely identifies a recipe entry and allows multiple items in the same position with reordering by renumbering RecipeIndex.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/patchScript.js#L129-L140",
+          "version": "repo-lines-v1:sha256:b5b3b16ad6cfca7be0ab920b5e91839b82aa35146bd1e69e4ac1156ae5d9adaf:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIzYjYyNGUxMmZmNTM4Yjk0NDE1MGNlNDIxZTM5M2MzZDE1ZThiYTRjOGFiMGU5NTY3M2UxYTdhZTAwNDY2NzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJlMDQ3YjBiY2JhMjhhMWZlNDU5MmJhZjI5MGNmMDFjMTFiMmU3NWY0ZWRhZTVkMmE4N2Q4OTg5NDRmOGYxZTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM3MGY2ZjIzYzM3MTdiYWZmNmE4MTAxNTFhZGJiZmY1Njc2N2ViNWYxYzRjNDJiNjk3MzRkYTMxNjczMzc0MWYifQ"
+        },
+        {
+          "resource": "repo://src/utils/patchScript.js#L75-L75",
+          "version": "repo-lines-v1:sha256:d2b30dd2a86d5b58ca93a665b238542ef8fa7cccbdf885c6db8a36d1b20e5204:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDJiMzBkZDJhODZkNWI1OGNhOTNhNjY1YjIzODU0MmVmOGZhN2NjY2JkZjg4NWM2ZGI4YTM2ZDFiMjBlNTIwNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZDJiMzBkZDJhODZkNWI1OGNhOTNhNjY1YjIzODU0MmVmOGZhN2NjY2JkZjg4NWM2ZGI4YTM2ZDFiMjBlNTIwNCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiY2VlMjhhMmFkNDE1OTEwODE5OWFjZDQ1ZjY3M2RlNWE4ODk3ZDI0MTFmMDQ1MjdhMTU4ZjY5MTgzNGZmMWVjZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiM2I0MGU2N2U5Mzk1YWU3ZjZlYzRlOGZmYTJkMWE5NWM4NDZhYTJlMjUyMWM2NmY1YzcyOTdmNDQ1MDIwZjZmMyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_326153310ec64280bc269279908b24d8",
+      "statement": "The DesignDB ElementTypes patch uses field-to-Excel mappings: Ref (key), Name, Description, Details (free-form product identity), ParentRef (Family), IsCollection, IsDeleted, SortOrder. The script maps these at runtime by reading row 1, making column reordering transparent.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/patchScript.js#L53-L64",
+          "version": "repo-lines-v1:sha256:288ddf2d40621e5969e38f1a6c79fbd278c3eb96345608b408cf504248939a54:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFlMjFlYzJiMDA2Yzk0MjI4NTg4MWVhODIzYTg2MmNiMjhhNmE0NjIyODU0NTZmYTIxYzllOTkxMTRmNGUwYmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJkZDJhOWNlZGYxMjQ5Y2RhOTA0NmY5Zjk0MTFlYTZmZTM0MTdkNjdlZTIzNGIwYzUyNWRmY2JkNDQzMDEyMTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQyYzBkNDkxNWE0NWM2NGIyMmIxY2E1NTFjZGIxNWI2OTM4ZDBlMDhhZjc3NWJmOTE2NTdjMDE3ODA5MDM5YjkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_e9e111ff73ad4fa1992f709a0030ff00",
+      "statement": "backend.js exports the three former Flask routes (/detect-files, /import, /read-sheet) which now run entirely in the browser. There is no server. File handling is done against the File System Access directory handle opened by the user, and SheetJS is imported dynamically to keep it out of the initial page load.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/backend.js#L1-L13",
+          "version": "repo-lines-v1:sha256:1ed09f12f20dd0974e8184a38f1f4a0308d146daba49a322104c4e32eea53a9e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk3NjE1MDFiMzRmMGRhMzllYTdkYWQ1YTFhZmZkNTc1ZjRiYTUzYWFmZmQ0YTFmM2I0OGQ5NDZiMGU5ZTdiMjIifQ"
+        },
+        {
+          "resource": "repo://src/utils/backend.js#L66-L78",
+          "version": "repo-lines-v1:sha256:60595f422611cfc7f7921ac0fe206ec0854ef8c43e1132d82d7ceea2916a41bc:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMyMjI2NWJjNmFiYTI2ZWY3YjU3NGI4MGY1YWI4NTFjMjMxYzM5MDkwMzAzZDFjZGUxZDUxYjU5M2E0ZWJkNDMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZiNTgwZTk2NGY4M2E0NzNmNDNkNDQzODQ2Mjk0OWQ2OGI1NjAwZmRhNzg3ZjE2Mzc0NWQwMGRlODljYmYzNmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZiZmUwMmE4OGJlZDJjODA5ODZlZDk5ZGM2ZTc1M2VkOTUxN2QzNzQ3NDc0OTM0MzZmMTg3MTViNDgxZGRkM2EifQ"
+        },
+        {
+          "resource": "repo://src/utils/backend.js#L95-L118",
+          "version": "repo-lines-v1:sha256:ddf1424cb57a67d6e458d56dcc9fb3fb5146f993c40fcc568122c0829c1e8892:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBlZDc5NGZkODIyYTc5ZjBmMmU5MDY2YmVkZWFiNTgwZDFkZTgxMTcwOGM5NzJjNmU3Y2M3NDEwZGVmYWU3ZDgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjMxMTNhYzRjOWY0NmQzNGM0NjQ4NDY0NzY4ZmNmMmE5NDRkNTNmZTEwYWM5MGE4OTA3ZGY0ZTk2NDAyOTBjYzgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjAxNDc1OWQzYTVkYTFkZDJhNDYzMDNiYzAwZTU1ODZmNTAyNWY1OTNhMGExYjMzM2Y1OWUwYTI4ZWVlYmM2YTcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_9475e7437131443cba0ae2f91b3d5150",
+      "statement": "detectFiles() classifies every xlsx in a project folder by presence of sheets and headers: DesignDB has ElementTypes AND PositionTypes sheets; ProductSpec has Form sheet with ProductCode header; RecipesSpec has Form sheet with ContextRef header. Files are visited in sorted order for deterministic classification.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/xlsx.js#L358-L396",
+          "version": "repo-lines-v1:sha256:2cce7118c7bab09995fefed383a75a212f65daea63e88d21bcbe8c23eeb59678:eyJzZWxlY3RlZExpbmVDb3VudCI6MzksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI4MDQxYmQ1ZjNmZWFkMjEwOGI4NzFmMTc4N2ExYWRiMmFlMzE2YTAzODU3NTQ1ZGM2YTE4OTI0YTg0NWFhMDYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjMxMTc4YTY5MzlhNTExZGM1ZjA3NGM2ZmQxMTE1MWVjYjI1ZTFmMWVhMWEyZjI3OWUzNWQ1MGEwNjQyOTljMTAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRhOTQ3NjFmYjI3YjRlZGM3NGZiYTE1MGY1OTJkNGJiMGNlZmVmOTZlNzhmZDM0MDk2M2JkYWNmMDdiMGExZGQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_190a10616bbb49adbd7b02b57b75358e",
+      "statement": "Cell values are read via SheetJS cell.v property. Formula errors (cell.t='e') are mapped to cached error text; Dates are ISO-stringified; explicit empty strings are normalized to null (openpyxl parity); all other values pass through as-is.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/xlsx.js#L112-L125",
+          "version": "repo-lines-v1:sha256:8cbca1a92148bf597046bb374e5aa93f9b9355d64050b6968671cff6da61a554:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFiZTY0MGFmNzM2NDJjMzExODcwNjBiNDIzZGRmNTU3MzM1NGIxYjEwMmQ3NjRkYWU2NWM4OTU4ZWU0NzNhZjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImNjNTAxYmZjNDRhOWYwZTViMTNjNTJmZmRmNWVhZGIxYjRjYjk4NTI3ZDhjNzg5YTZhYmQyNzNmNzRjMzY5Y2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQwYWIwMWQzZDZlODA4MzMwYmVmZjVkNzk4MDUyMGExODllOTY2N2VmZmVjODhkZjhlMWIwYzUwODkyMmQ4MDgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_604a2e3b71f14693ab613b82e6e473d3",
+      "statement": "readSheet() parses an arbitrary sheet from any workbook picked via file picker. It returns raw headers and rows with no fixed schema, exposing every column and allowing the caller to map columns itself. This is used by the product-code import feature.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/xlsx.js#L327-L348",
+          "version": "repo-lines-v1:sha256:fa364700fcce97a9a93e6ab974e5516f275679459871b97f76ed3f717ff86879:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNhOTE5YzM1ZjAwOTJiNjVhZTU5Mzg3NTQ4MmUxZjIyYTNmN2RkOTA5ZmVmODRjZjcxZjJlNTZhZGM2OTM1NzQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk4OWM5ZGYzMzM4NzBlYjI3ZGJmNjM4MTVlNWUzODgxODAxMTU1NjNhYzQ0YmVkNzAzN2U1NmY1ZWY1NzA3ZGQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY1NGNjNzkxYmY4YTVjNmFlYTBlYzA1ZmJhMWFkYTY2NWMzZDZjMDVjMmNjOGRmZGFmMmJiZmNmYjRiODQ1ZjUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_6a72a1a0cac34fd3a95dddf178ae3321",
+      "statement": "The SheetJS parser is a faithful port of the Flask backend parser (openpyxl). Both anchor the cell grid at A1 (1-based absolute row and column), use cached formula results, and serialize dates to ISO strings. This ensures round-trip fidelity when patches are applied.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/xlsx.js#L1-L18",
+          "version": "repo-lines-v1:sha256:3f3fcd98cecf11e4baec7ae02bb3fe2281cd688c24fd79346db040830453396e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVkNGJmOGFkNGRhNDZiNWQ4M2FhODFiODVhZmJiYWE2YmZkYWZkZDRjMGI4MDcwYWMyMGRiZGRkNGNjZWYwODIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_69478782933147f3b560d36ed7c608d1",
+      "statement": "RS row objects may carry both PascalCase field names (ContextType, ElementTypeRef, Dim_QuantityMultiplier) and camelCase aliases (contextType, elementTypeRef, dimQtyMultiplier). The rsValue() helper resolves either form when reading values for patching.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/patchScript.js#L66-L82",
+          "version": "repo-lines-v1:sha256:32a1ce98c76bf69be5993d0ba2f6722a227020221eff6c7d6e858658bb77b4d7:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY1M2QzNzQyODA0ZDFlZjFhOTZiODUyMjk1MmEwM2Y3MDJkOTVhZTZlMTJjZmI0ZmIwZWIyMzU2MWIxYjRhOTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJhYmEwZDQ5YTU1ODBlNjkxYTFmMWU2YTEyMDkyNDM4YzIzMTQ5NDg5NWRmMTgwYTNhOGMxNjEyZjAyNmViZjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjUxZDcxODE1NWI5Y2ZhNzk2MDNhYjhjZWU0MzIyNGU5MGI4N2U5NWM4MjllNGZmNThkYWFmODY0ODk2YmVkODIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_6eba5a57ea074393983f380bcd3a55ca",
+      "statement": "When generating patch scripts, numeric fields (RecipeIndex, Quantity, PackQuantity, SortOrder, Dim_QuantityMultiplier) are output as unquoted numbers; other fields are JSON-quoted strings. Blank values become null (triggering cell.clear()).",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/patchScript.js#L76-L76",
+          "version": "repo-lines-v1:sha256:f12afec1d255ce412f999b33d2395de59218b43213b4659a01434bfb546f82a2:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjEyYWZlYzFkMjU1Y2U0MTJmOTk5YjMzZDIzOTVkZTU5MjE4YjQzMjEzYjQ2NTlhMDE0MzRiZmI1NDZmODJhMiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjEyYWZlYzFkMjU1Y2U0MTJmOTk5YjMzZDIzOTVkZTU5MjE4YjQzMjEzYjQ2NTlhMDE0MzRiZmI1NDZmODJhMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODk2YjVmNmMxMzdiYzlhZDNlODFkZTdmN2U1ZTdiYjczZjY1MzI5ZjI2NTYxZTAxNTVkMzFhYjk3MjhlYWJkZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYzE0NzgwYzkzNjVkNzVjMGZiOWQwYzdmNGRlZGRiNjZiNmM4YzMzYmE2ZjViY2FhMjdjYTBmMTc2ZDM1NjBhNiJ9"
+        },
+        {
+          "resource": "repo://src/utils/patchScript.js#L88-L97",
+          "version": "repo-lines-v1:sha256:9ff61a03e3dc16deee3cf6c4c909aecfd1d6e2e60feb4cef283d7999e48b8c73:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRlY2JjNTU5OTUwYzU2MTQyM2FlMmJmN2VkZjdkZTEyZjE5ZjkwZjcwY2YzMjgzNjI2MjRhZDkwMTAxOGY2MjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ5NjIyNjY5ZGJlMWY4N2ZmNzgyNzU4OWRlODZhMjdlZmNmMDg0MGMzODdlODVjNDE5OWJiMzkzN2RjMTgwZjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjczY2EwZTlmNDcxZjYwOGJhZWU1M2M5YmU2MWY2MDY1ODM3NDdkZjM2ZjMzNzIzNDVjY2JhYjE0NjQ1NzNmYTQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_715cb69119c14a2483a643501806b3e0",
+      "statement": "The Positions sheet (optional) is used to detect 'zero placed' PositionTypes—ones the DesignDB defines but no fixture has placed yet. Deleted positions are filtered. If the sheet is missing, this detection never fires (best-effort signal).",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/xlsx.js#L264-L272",
+          "version": "repo-lines-v1:sha256:9277a62cbd17f711806340eed5f3c64a11e09d1be66fe65d41c2e2fc71f10532:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDJhNmE3NTNjZjM4NzhlY2FjZGU3MGQxODljNmMzNzBkZjY0NjM3ZWJjMjUxYWZmM2NkMDExMTA0YmJjN2NhMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjdlNTc4OGQ1ZDlkNzNkMjRhODFkYmMwYTVhNzRiZmE4MmM5YzNiM2FmOTllNTJhZjc5NmU5MGI0NjhhOGEzZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMjg4YjI0YmY5ZjhlZjQ2OTJkOWJkNTI5NjYwZGUyYWQ5YWUyYzI0NzUxYWY2Y2MwMjVhNThkMmU5N2U2ZDg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYzNmNmM0ZGE4ZDYzYTE5ZmVhMzM1M2QwYTllNTQ0YjBjMzQ5ZTA2OGQzMTQxZjQwZmMwODFhOGU4YzIxOWRiOCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_0f9c5686d6194523975518207a791253",
+      "statement": "Fully-blank rows (all cells empty within used range) are skipped during parsing. Rows with at least one non-empty cell are included. This is checked after normalizing strings and before building the output array.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/xlsx.js#L180-L205",
+          "version": "repo-lines-v1:sha256:50d09012d58920f363cadb21f6546c3cb743ee19328892a4bc313a2c77e988f4:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNmMjJhOGMwZTNmYmFmOGU3MzAyYjFjZTIwYTljMzkwZTcxZjVmMmQ4YjhmOGI0YmZmMzJlNjhjZmRiYjIzNzIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjljYjIyYjk0MTE4MDQ1NjY5NmFiYTQwZmE5YTJjZTAzY2Y1ODUyMTQ1OTlkYjBiNjIzODdiNDEzMTMyNWRlYWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjczNjZjZGY0MGZjN2YzMGY5MTUzMzcyOTdmYjFlMDk2NGI1OTE1M2VjNThiNjNhMTQ1NThhZjYwNDJkYTc3YWIifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-17T13:57:20.517Z"
+  }
+}

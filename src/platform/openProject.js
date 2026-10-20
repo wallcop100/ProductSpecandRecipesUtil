@@ -105,7 +105,7 @@ export async function openProject({
   try { await pullConfig(projectId, projectNumber) } catch { /* open with what is here */ }
 
   // 3. Load SQLite data
-  const [positionUIArr, templates, slotMappings, containerETPref, containerExcludePref, etCollections, ignoredFamiliesPref, tagRulesPref, tagPalettePref, tagSnapshotsPref, favorites, tagColorsPref, formCapturesPref, importDraftPref, connectorPinsPref, connectorFamiliesPref, connectorExcludesPref, specCheckSkipPref] = await Promise.all([
+  const [positionUIArr, templates, slotMappings, containerETPref, containerExcludePref, etCollections, ignoredFamiliesPref, tagRulesPref, tagPalettePref, tagSnapshotsPref, favorites, tagColorsPref, formCapturesPref, importDraftPref, connectorPinsPref, connectorFamiliesPref, connectorExcludesPref, specCheckSkipPref, templateChecksPref] = await Promise.all([
     window.electronAPI.db.getAllPositionUI(projectId),
     window.electronAPI.db.getAllTemplates(projectId),
     window.electronAPI.db.getAllSlotMappings(projectId), // already { templateId: { slotKey: ref } }
@@ -124,6 +124,7 @@ export async function openProject({
     window.electronAPI.db.getPref(projectId, 'connector_families'),
     window.electronAPI.db.getPref(projectId, 'connector_excludes'),
     window.electronAPI.db.getPref(projectId, 'spec_check_skip'),
+    window.electronAPI.db.getPref(projectId, 'template_checks'),
   ])
 
   let tagColors = {}
@@ -226,6 +227,7 @@ export async function openProject({
     connectorFamilies: (() => { try { return connectorFamiliesPref == null ? [...DEFAULT_CONNECTOR_FAMILIES] : (JSON.parse(connectorFamiliesPref) || []) } catch { return [...DEFAULT_CONNECTOR_FAMILIES] } })(),
     connectorExcludes: (() => { try { return JSON.parse(connectorExcludesPref || '{}') || {} } catch { return {} } })(),
     specCheckSkip: (() => { try { return specCheckSkipPref ? JSON.parse(specCheckSkipPref) : undefined } catch { return undefined } })(),
+    templateChecks: (() => { try { return JSON.parse(templateChecksPref || '{}') || {} } catch { return {} } })(),
     etCollections: etCollections ?? [],
     favorites: favorites ?? [],
     ignoredPositionFamilies,

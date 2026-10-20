@@ -18,6 +18,12 @@ describe('global templates served beside a companion', () => {
     expect(t.map(x => x.id)).toEqual(['p1', 'served:LIN+Tape+Profile-r'])
     expect(t[1]).toMatchObject({ scope: 'global', _served: true, project_id: null })
   })
+  test('keep the rule and the kind they were made from', () => {
+    const rule = { match: 'all', conditions: [{ column: 'Design', op: 'equals', value: 'LIN' }] }
+    useStore.setState({ templates: [], library: { templates: [{ id: 'k', name: 'K', rule, from_kind: 7, ingredients: [] }] } })
+    useStore.getState().applyServedTemplates()
+    expect(useStore.getState().templates[0]).toMatchObject({ rule, from_kind: 7 })
+  })
   test('nothing served: nothing changes', () => {
     useStore.setState({ templates: [{ id: 'a', scope: 'global' }], library: { patterns: [] } })
     useStore.getState().applyServedTemplates()

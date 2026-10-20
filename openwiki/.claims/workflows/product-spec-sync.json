@@ -1,0 +1,238 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:14bea75399bd39b1e3851738b53f7c332b3153ae1764cbce055fdd533c748c19",
+  "claims": [
+    {
+      "id": "claim_2663ba24cfa3456c90a8b9e3bc87e29c",
+      "statement": "Product spec validation is founded on two invariants enforced by specAlignment.js: (1) every ElementType named in the Product Spec or Recipes must exist in the DesignDB, and (2) every ElementType used in a recipe must have a Product Spec row to record what to buy. A corollary reversed older behavior: DesignDB entries used in no recipe need nothing.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/specAlignment.js#L1-L21",
+          "version": "repo-lines-v1:sha256:337ff2fece28901dbeb0d3da5e5bdc6d4fcdfb62093991078975b7131e336439:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRhYzYxYmNkMTcyNmZmMTY1MzdhYjI2ZWFkYWVmYmYwMjljN2YzMzk3ZWQ1NzhmZTc3MjgxZGM2OTI3MTUzYzYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_87bfd26f17d44cfbb5fe392f5fb4f72a",
+      "statement": "ProductSpecTable.jsx presents a table of product spec rows with columns for ElementTypeRef, Manufacturer, ProductCode, ComponentDescription, TBC flag, and IsDeleted marker. Ghost rows (highlighted yellow) appear for ElementTypes in recipes with no spec entry; editing any cell in a ghost row creates the spec row with that value.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ProductSpecTable.jsx#L1-L50",
+          "version": "repo-lines-v1:sha256:b82a7bc6429ee51b7bc08b3358f296173d0863c75d3169cc4d723985fd537869:eyJzZWxlY3RlZExpbmVDb3VudCI6NTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNmMzA0OTUwYmM3OGM2YzEyNTAwNzVlOGQwMTcxY2ZlNTEzNTQ2YTg5ZWZiOGNiODZmMTEzZTg1NjhlMDljMTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdiYWQ0NTgwZjI0MmUxYTllYzUwMDVlZTgwZDRlM2QxM2FlZDFiMmEyOGM4NTk2ZWNhYTBhZjMxMDVhMjkxMzEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk1YzQzYjIyNzBlYmVlNDA2ZWZhMzcwOWY4NDkzZTA0NWViOWFhYWFlMmQ1YWQ3ZDg5MzM5NmJmNjY3ZWJjZTgifQ"
+        },
+        {
+          "resource": "repo://src/components/ProductSpecTable.jsx#L111-L167",
+          "version": "repo-lines-v1:sha256:c3901577734f5482fd39d83a668757e4457187a0f5c7469825041282db449e96:eyJzZWxlY3RlZExpbmVDb3VudCI6NTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwMjBiY2RlMGVlYzRkMzYwODFiNWI2NTk0YjU3YzI1YmE0MDc5ZWExYjU1YWU3YjAwOGRhMWIxZWNjNDM1NDciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAwNjQzMWY0M2M4YTJmNTQ4YmM1YzRhZGI5Mjg1NTFmY2JhZjAzNGI1YmZhNDcwNGY0M2E1ODRlYTA1NmVhYTUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRkMWMzNDUwYjhlNzVhMDRkODk3MDA1MDA1MjIyMDk5ZTMyNDkwZDEwN2ZiMTJlYzhlMGYxMjdkMTRjY2M0YmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImEzZmEwZDRiOGU2YjNlZDVkNWM0MmU1YTY4NDVlZGUzN2MwNGM0MzgwOTYzOWZlZGRlYzI5ZjA3NThmNDIzMWUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_4d21641b25b94422b9f4fad2d3cd3d68",
+      "statement": "ProductSpecScreen organizes rows into status categories: Missing Spec (no row for recipe-used ETs), Partial/TBC (lacking manufacturer or code), Complete (filled, not TBC), Deleted (IsDeleted='Y'), Duplicate (same manufacturer+code pair), and Skipped (in user-configured families). Stats are computed by specAlignment.alignmentGaps() and skippedRefs(), ensuring consistency across the Product Spec, validation panel, and export summary.",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/ProductSpecScreen.jsx#L92-L123",
+          "version": "repo-lines-v1:sha256:4dffbc314269b2b79e0743b8e5d34a1a31a4b6be073ab81c75d69deb977bce8f:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA0YzA2NTBjMDJhMjBiMDk2ZGIyYzFiZWI5Mzk2NjRlZWNmOTdlN2RkYzFkM2Y2ODg1YTI3YzRhNTE5YzE4YTciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMzZTYxYzRmMjYyMzg5ODE3YzNiZTY4ZDY4OWFiMTFiY2I2YTdhMTk0NjhhMGM1ZTQwMjk0MTkyYjM2NTRiOGMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI3N2Y5NzQ5YWRhZTc5ZTY4MWZhMjg0YmM2OTYwYWVhNDEzZDI0NzFhNDIzNDNlZjkwYTkwOGY0OWI5ODc4OTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA3Yzc4MTM3NjM5MGM5ZWI2ODYwZDgyZjEyNWZiNGMyNjc1Yjg0ZmZhZTNhODQ4ZTgwYWNhNjM3NGE1YjU5YzUifQ"
+        },
+        {
+          "resource": "repo://src/utils/specAlignment.js#L45-L134",
+          "version": "repo-lines-v1:sha256:37f8efccdbccf368b1e3e7709a4925a3d58a32271782708e38acdfa0321be125:eyJzZWxlY3RlZExpbmVDb3VudCI6OTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjlhMmI0NzFiMWMwZGNjYWIyNGU4Y2QzYjFkMDg5YWFiMWUzMmQ5NTQwMmI2NjNkNWFhMGU2M2QwMDI5ZTExODAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE3NzJjODkwNTg3NzI0ODAzM2FjOWQ0YmI1YTMxODcyMzNiYmE2ZWNkNDcwNDM0NGNhZWEwNjU0YTdjNWU0MjYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjlkNGQyNzJkODliYTU2NTg0NGE5ZWExZWVkMTUzMTJlOWQ2N2M3NzY2NDRkNDNhZGI1ZTllNjJiZDJkMTczZDMifQ"
+        },
+        {
+          "resource": "repo://src/utils/specChecks.js#L1-L23",
+          "version": "repo-lines-v1:sha256:d1175f5201919108160b9219bfa2f469743fa418f16f06aed8c13483d14a0765:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_6bf4dac9bbf745c683e07811493d8ca8",
+      "statement": "A product is uniquely identified by the pair (Manufacturer, ProductCode). Two makers using the same code are two products, not a duplicate. The system flags as 'Duplicate' only rows where both manufacturer and code are identical. This is enforced by productCodes.duplicateProductKeys().",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ProductSpecTable.jsx#L25-L76",
+          "version": "repo-lines-v1:sha256:829bd943dc9bcd7a1ab2eb57e7fa16edf2d0eb3a62c8270d2410e9dffd5cb814:eyJzZWxlY3RlZExpbmVDb3VudCI6NTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZiM2IwZWY1ZTM4ODJjNzFkMDg2NWUwYTE0MGVkMjAxZDJmYzA5NzJjY2I2YWU4ZjE5OTU0NzdiYmE2NzA4M2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImIyNWVlMWIyYjVhMzBkMmIwOWZlYzk4Y2ZhOGU2OWNkOWQ3YWZiOWZlNTVmYjZiNWM2MWFmMzZlMmQxNzBiN2YifQ"
+        },
+        {
+          "resource": "repo://src/screens/ProductSpecScreen.jsx#L109-L123",
+          "version": "repo-lines-v1:sha256:a9bf4921d7616ca7986aadccf8c6a4266edcf03bc48e3991035872eb8865f111:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAwNjE2YzllMzdkZjRkZmI2NjYzZDFlMjYxMTE5MjY5ZTYzMThiODliYWEzMzBlMzQ0YTdjMWEzY2IwZTEwYzciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMzZTYxYzRmMjYyMzg5ODE3YzNiZTY4ZDY4OWFiMTFiY2I2YTdhMTk0NjhhMGM1ZTQwMjk0MTkyYjM2NTRiOGMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI0OTE3NTNlMTE1OTRmODU1ZjQxMjAwM2QwMzIwZjQyNWIwODI5NTIxNzkwYzIxNmFiNzFlZDE3YTRmODVlMGIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA3Yzc4MTM3NjM5MGM5ZWI2ODYwZDgyZjEyNWZiNGMyNjc1Yjg0ZmZhZTNhODQ4ZTgwYWNhNjM3NGE1YjU5YzUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_a2c9e79196e4484885cc461bc6dac88b",
+      "statement": "ProductSpecScreen is a split-panel editor: left panel (ETSpecBrowser) filters and lists ElementTypes by family/manufacturer, status, or search; right panel (ETSpecEditor) displays full details and editing forms for the selected ET. The splitter is user-resizable (220–520px). Selection state is shared: clicking a browser row selects that ET in the editor.",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/ProductSpecScreen.jsx#L39-L54",
+          "version": "repo-lines-v1:sha256:50252a4857afa653c808dd003ffee4c3a59a9122b8486f68a4888704f706176a:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ5NDQ1NDVjYmRjMjVjMTM2MzkyYTAxZTM1ZDU0ZDhlNmM2MTg1MjAwNDI0OTA1MGE2YmMyNGJhNzZmYTUzMzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE0ODllYTg2MGZhYjg1YWYzODNmNDE4MzQzMjQ0ZjE3ODMwZTI2ZjBmOTY1NzVlNzEwYjdjMTliNjgzN2QwNDYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE2NWU3ZmQxZDdkZGRiMTA5NjQxNmVkZTZkZGUwOTNmMzJhNmJjMDBkZGJlMzM2NzdlMWIyZDYzMGJmN2JlNmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFhZmQ5Zjc2NTNlMTNkMTY0ZTM3YTBhNjNiNTcwNDZiOWUyODQwNTdlYjE0YjIxNjFjZGRlZDkwNGQxYTYxOTEifQ"
+        },
+        {
+          "resource": "repo://src/screens/ProductSpecScreen.jsx#L410-L451",
+          "version": "repo-lines-v1:sha256:04324ed2eb0f20f9c0666d5ce6093873824cc090a830d60ea1381a74fb850e0f:eyJzZWxlY3RlZExpbmVDb3VudCI6NDIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdkOWNmODJlMzNkODAwYzUzZjVjZTkyZjJjNGU1MjhmOTFlOTU5MTFkODlmZDNkODYyYzM4MTQ4ZDk1NmEyNzQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFmMjE1ZmQwM2NmYzJiZWViZjgwNGExN2FjNWU5NDc5NTFmN2NkMmRjMDU2MDUyMjQ5OWM2MDZmZGJjZDcxODUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY1YmI0NzIxMzcxNzExNjM1YzM3YzA0ZmVmYWUzMThjZWNkMDZhZjI2M2JjY2M0N2IxNmY5NzM3MDM2Yjk3MzAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgwZDgyOGI2NDUwOTVjNWI4OGEyOGI5OWJlYzgyYmI4YzEwZjZlNDQ3MzIzODY3ZTM0ZWVjZGMwNjgzMjkyMTYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_2be12f5cd0f240a2957dc28cf9889211",
+      "statement": "ETSpecBrowser provides search (by ref, code, manufacturer, description), view mode toggle (Family vs. Manufacturer grouping), status filters (linked to header pills), and bulk selection checkboxes. Keyboard navigation (↑/↓) steps through the filtered list. Hover on an ET ref shows usage in positions and wrappers via UsagePopover.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ETSpecBrowser.jsx#L1-L100",
+          "version": "repo-lines-v1:sha256:37385a6c1848b14970122f8d96a7430c5668f249fcff251c79c2521c923a769a:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAwLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIyMDIzMTk2YzgzNjI3NDhiMmEyOTYzZjdhYmQwNDJjY2EzYzVmODU2MzAxMDgzYTE3OGY2YzdjYjUxZGJjOGM4IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJkYWZmNDgzZjEyZWRiMTFhM2QxODgxZWQ2ZTY3ZTA3N2MyNjVlYmU1Y2M2NmQwYWQzNjIzMWY0NzZlZDVkMWExIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJkY2VkZDJkZWRmYWZmODJkOWUzN2EzNTY5YjM1Y2Q5MmNhNTg2OWRmMDM0YTY1MDhkNTczNGI5NDQ4ZTVjODBlIn0"
+        },
+        {
+          "resource": "repo://src/screens/ProductSpecScreen.jsx#L142-L145",
+          "version": "repo-lines-v1:sha256:9d4589337efb79b349bdab66785c09cc36a4d0b0ef68dd2afcb9eeaedec747d5:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjU3NDUyMTIxYTUwNGIxODlmN2YzYWQ1YTkzNGQxMmZlY2ZlMzQ3ZmRiOTY5NDVkNDI5NzU0YjBjZDdmODljYiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMzNhMWUyMjFiOTFlOGM2NWEwZGNiNGIxNzZhZWFkYTVhZjNjMTFkYjAzZDMwZjBkMjBmNTE5Y2EwNTcwODg4YyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDZhNzdkNGE4Mzc1YTA5MTU4NGI5MzljNzgzMGRmM2FhYzZjNGViOWFhNDMzYTgzYjc4Yjg1YzE2OTRkMzQ5ZiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_6e7a9828bd924c5c8b6b9b0e5df1ecb4",
+      "statement": "ETSpecEditor displays inline editable fields for Manufacturer, ProductCode, ComponentDescription, TBC flag, and internal notes. A header row shows ElementTypeRef, family, and quick-action buttons (N/A, Restore). Ghost hint blocks appear for 'Elsewhere' (same part in other projects) and 'Similar' (same family in current project) to suggest copying existing codes.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ETSpecEditor.jsx#L175-L243",
+          "version": "repo-lines-v1:sha256:a587e726ba84be8a0f9c17a73932bf8c698a69140d45ebb82c480824d5e6b598:eyJzZWxlY3RlZExpbmVDb3VudCI6NjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEyMWVhM2Y1YWNhMjNjMWFmODAzNWQ3MTc5Yjg3N2U2NjVkZDM1ZGM3M2I0MjRiNzE1MzY2NDQ1NTFlMGZhNjUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhiZjM5YTg3MjM2NzBlYjBhMWFmYmExMzZhMTkwYTM3MjczNzZjMmJmZDAxMWYwZmVhMjEzNTc1NWI0ZjhkNjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE2MWY2NWZmMTM2ZWZkMzRiMmVhYzc0OTQ1MjIwY2QwZjMwNmVjMmI4NzVkOTVkNmQ5MTM1OTE0NGVhMWY3NTAifQ"
+        },
+        {
+          "resource": "repo://src/components/ETSpecEditor.jsx#L56-L100",
+          "version": "repo-lines-v1:sha256:7b7e6a080efb494c89f05d25133cc476ca8202355ca9dfa87907af92842ded15:eyJzZWxlY3RlZExpbmVDb3VudCI6NDUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU2ODM0MGUzZDE5OGMxZWFhMDI2YmIyMzcyM2ZjMjhiZDQ1YWYwMWIxNGQzMGYwN2E2Zjg2MGRkMThhODdiYjkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMyMDQ0MmE3Njc1NzZmZDg1MDY5MmZkMWEwZWY1NDYwZDY4NzlhNzkxNWQ5OTExMzJmMDhjMjk0OTg0MDVlYzMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFhZGVlMmY0MmQ0MGUyNDBmM2YxY2MyYWY4OGNlZGRkOGM4NTEzNDNlNWM4MDBkMWZmN2UzYmM3N2NhN2VmZmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA3ZTZlMjAxZDBjMDZiM2VlYzc0NjYyNDZkMzAyYzM4NjY4OTkzNjhkZWY3YmZiNmJiZjA5Mzg1NDc4YjY1ZDYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_efac7b630b2341d597657c27b4140c8d",
+      "statement": "alignmentGaps() identifies three classes of gaps: (1) specRows.wrappers — wrapper ETs used in recipes with no spec row (safe to auto-fill with N/A), (2) specRows.products — non-wrapper ETs used in recipes lacking spec rows (need human review), (3) dbRows — ET refs named in spec or recipes but missing from DesignDB. This function is the canonical source for gap counts across the Product Spec screen, validation panel, and export summary.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/specAlignment.js#L69-L142",
+          "version": "repo-lines-v1:sha256:2542281681887d884ad6ccffe908173c85c98481f2cbaf75769ca122b54d3650:eyJzZWxlY3RlZExpbmVDb3VudCI6NzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNiZDc5NTk5NTNhOGM3ZTU2MWYyZGJlMzNhNDk0Yjg4OTdmMzQ2MGI5MWMzZmUyYjcwZGUwZWIxNmE3M2I5ODYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU4OTI4NmZiZjExOGZmNDE1NTI4ZWQxYTcxMzY2MWIzMmZhMTdlNjRlMjU2ODk1YzU5MWM4NzY3OGI3MDFmNzgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_c37f31318f7246b9933298b53f84eda6",
+      "statement": "BulkCreateETModal proposes and edits multiple new ElementTypes at once from product codes. Proposals are grouped by family and sorted by confidence. Users can drag codes between families, create new families inline, or reassign via a menu. A 'Needs a family' group blocks Apply until all codes are assigned or unticked. Each proposal shows a verification icon (✓ for firm rules, ? for guesses); hover shows the reasoning (family rule, company line, shape match, etc.).",
+      "evidence": [
+        {
+          "resource": "repo://src/components/BulkCreateETModal.jsx#L17-L85",
+          "version": "repo-lines-v1:sha256:536cc4fc71f94b238ead84f072d27d4fdbde4c85a15e87024a11c23e7b4e1934:eyJzZWxlY3RlZExpbmVDb3VudCI6NjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZjMTY0Y2UzYWRlZGRkZjY5ZTA5MmRjODRhM2FiNDRiMWFkM2Q3NDNkY2E4NGUzZTBhYWNkOTkwYTg1YzYyNGQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhmNzc3NWNkNDk1YjU4MzBlNDRmMDcwMDczMzcyZDk3YzYxYzg5MmRmMWVkNDlmN2MyNzU0MjZjMzFkMDRiMTkifQ"
+        },
+        {
+          "resource": "repo://src/components/BulkCreateETModal.jsx#L40-L66",
+          "version": "repo-lines-v1:sha256:bb545f58ab4418f259a8f1cd26321c5eac340a4123ca74403a2b23104f7a50b5:eyJzZWxlY3RlZExpbmVDb3VudCI6MjcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM5OTJmZjBjODMxYjdjOGNhOGQ1NmRkOWU0NmNjMzI4YTJmYTY4YWNiNDNjOTFkNzg3YzhiZTk3ZjdjZTk5YmQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU3MjI2ZjUyMmM5YmM5MmE0YTE2NzAwNTUwYWNiYTUzZTljMDE2NjIxMDlmNzg3ZTZiMWRhMmIyZjlkYzNiZjAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjUwNDllMGRiYjU5Mzg0YWJlZWI3YTI4NTFlMWRmOTRkYzgyODk5NzNiNTQ5YjAwNTg0OTBlODgwMjNmZDE0NjgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_922c5d0f03bf4c9fb4aa1f0823e5a0cc",
+      "statement": "FormDiffBlock visualizes changes between a baseline Form and a newer import at the position level. For each position, it matches old and new Form rows, reads them as ElementType refs and product codes, and proposes one action per change: Swap (old ET → new ET), Update (change ET's code in place if safe), Fork (create a copy for positions that change while others keep the original), or New ElementType (create a fresh ET for a new code). Click buttons to apply actions; each is one undo step.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/FormDiffBlock.jsx#L14-L43",
+          "version": "repo-lines-v1:sha256:216c0346427235f3e84c217b03df8e42e06c61012820831ebf2d176783033839:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImY0NmZmN2FiZDcwZTllNTkxYTIxMGVhYWRjNWYxNDY3MDY4ZGU2M2MyM2JmMDViYzQ2MmRjMGZhNTI4YWMwZTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgyZmVmZTczZjAwZWZhZmFjNTA5MTBlZGEwNTU5YjBmZDY5ZjkxMmMxNzgzZTk2NWQ4YjM0ODgyMzlhMjk4ZmUifQ"
+        },
+        {
+          "resource": "repo://src/components/FormDiffBlock.jsx#L44-L107",
+          "version": "repo-lines-v1:sha256:be7f37240a9c33dd1cc69f992e9dfd681652bace77099689e2a401d4d615a25e:eyJzZWxlY3RlZExpbmVDb3VudCI6NjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ0OTljNGQ3ODc2NzBjMTk0MjlkY2UxYTYzYzUzN2M2ZmUwMTFlNzg2Y2ViNTA4NzRjNDc0NDE1Y2NhMjg4MjYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY2NDIxYzVmMjE4NzIwZjE4OTIwNDFkZTBmYTgyOTkyYWM4ZjAwNjI2YWRiMWYyZGE4NDYzMGE4OWVmM2NkN2YiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM2NmI5NDIwMmY3ZDE3NWM1ODcwZDc3YTRhMmExNzhhYjc5ZDAyMWMyYjNhOTRhMjYyZWZmNjNmOTFjOGVjNmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNlYjNmNDFmZjJhZWVjYTBjY2EyM2UzZDU2NmY0ODYyNTMzNDVlYzBhMWNlNDg0MGE3OTdkODQxYTIzMjRlMGUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_c08ce7179b314bca9972702087095808",
+      "statement": "formImpact() interprets Form changes as recipe actions by reading Form rows as codes (known ElementTypes or unknown code-shaped words) and comparing against the recipe's current ElementTypes. It records what changed in the Form, what ElementType(s) are affected, and whether changing one affects others (sharing analysis). If an ET is shared by multiple positions and only some change in the Form, it recommends Fork instead of Update in place.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/formImpact.js#L1-L66",
+          "version": "repo-lines-v1:sha256:c3d94a9fc60bef76633dd0153085889b48fa00cb267a54812371d87ebcb438a0:eyJzZWxlY3RlZExpbmVDb3VudCI6NjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM2NzRhZjQ5MGYzY2IwZmY2MDljOWJiZDlmZWFjNTkwYjNkM2Q5MTQ2YmVmOGUzODQ4YWUzZjU4NWU4YmNkMTYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_7a29a4a7035e460397585a92ad057150",
+      "statement": "formDiff.matchForms() pairs old and new Form rows by position ref and similarity. Rows with identical text under the same ref are marked unchanged (or changed if the manufacturer differs). Unmatched rows are sorted by word-level similarity to find the best pair, else matched in order. Rows nobody pairs with are marked removed.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/formDiff.js#L35-L72",
+          "version": "repo-lines-v1:sha256:1fee27ceabb4c183badb9fe586edeac11a970cd7be5656abe16e93880dbb4bc4:eyJzZWxlY3RlZExpbmVDb3VudCI6MzgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjFiNWE0ZDIxOTNiNWNiM2U0NWEwYzJiYmRmYmQ1OGViMzRiN2JkNTM4OTljZmVmOWEyMzNkNWIyNTgxNDgwMjgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRkMTUyZWQ0OWY3MjhkZTBhMGViZjFlYTMzYTZkZGUwZjQ5YmVhMmRjZjVmYmIxZWI0ZGZiZDM3ODlmYTczOGUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_07d606dd1bf84a6bb322b18073c31bb5",
+      "statement": "The bulk selection bar (shown when ≥1 ETs are selected in ETSpecBrowser) offers Set N/A (Manufacturer='Ideaworks', ProductCode='N/A' for all), Set Manufacturer (enter a name, apply to all), Mark IsDeleted (soft-delete all), and Clear (deselect). These actions are performed immediately and are tracked in undo/redo.",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/ProductSpecScreen.jsx#L200-L234",
+          "version": "repo-lines-v1:sha256:ee280d9fce4b545ec800086d23da45e86e9690642497a97db727e30053b186ef:eyJzZWxlY3RlZExpbmVDb3VudCI6MzUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ3ODhlNGM1MTJhODFkMDdmOGQzM2M5NTNiYTgxYzU1Mzc5ZGUxNTdkZWIxMTU4NGY0MTY2OTM2ODk0OGRhYTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY5ODQyYzkxMjFiOTBlOWY4NDQ5MTEwOGY0YTQ0M2Q2NWRjMTUwNGQxMjY1YjQ3NDcxNGQ0ZmI2OGRmMzZjNzYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA2NTkzN2VkZjA4YjAxOWJjNjI1MTY2MTQzYWFiM2RkODBjOGI5Y2ZlNGViYzEyNWU5OGZlYWMzMzg2OGMyMzkifQ"
+        },
+        {
+          "resource": "repo://src/screens/ProductSpecScreen.jsx#L353-L407",
+          "version": "repo-lines-v1:sha256:9c4de52fa4c325547c5078638a9bca264831188c43deb91cabd974eeb15a1b3b:eyJzZWxlY3RlZExpbmVDb3VudCI6NTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBlMzdhM2JhMDQ1ZTUzODQxNDAyMDRhYjRkYmU4YzljYjVkZDQ1NTNlNWIzNDQwMWQ3NjdhNWJkZmM5YTJlMzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFmMjE1ZmQwM2NmYzJiZWViZjgwNGExN2FjNWU5NDc5NTFmN2NkMmRjMDU2MDUyMjQ5OWM2MDZmZGJjZDcxODUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImNhZmM5YTcxNWNiNzViMzBkZmU1YjRmMjUxZDBiYTQzZmE0NmVmN2RiM2ZlMGZlNGNmMmYzNzEyMWEwYzYxNjEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc2MDQ3MDYyNTE2NzFlNjRiMjE4NjVmYTg0NjUxZWI0YmViMjAxMGRlYmUxYTYzYmYwMmIzZWY2ZDI1ZTViMjcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_96113a516611437a9faa436ce6082a31",
+      "statement": "The 'Fill next' button steps through incomplete ET specs (used in recipes, lacking manufacturer or code, not TBC, not deleted) in the filtered list, wrapping around. When clicked, it selects the next incomplete ET and focuses the manufacturer field, enabling keyboard-only spec entry without mouse interaction.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ETSpecEditor.jsx#L41-L45",
+          "version": "repo-lines-v1:sha256:4e4cbec1e2658b4f3e6269d22f60f9cbde6cf4c931cfcb11eba3b760c61b4155:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOTc1MGIwYWU5YTg1MDdkNTQxM2M0YzliMTQxNmQ5OGY0YmQ4NGZiNWUzMjgyYzQ2MDkwMjg3NDQxZGU4MDViNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNWVhMzY0ZTBhMmRkMDY5NjQyZWIyNTQzMWUwMDhmMGMyOTk0YWU3YjA2MjJmYTY5MTc5NGM4ZDNlZWZlNmMwMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZWM2YTRjY2I2MTgyNTkwMWI0N2RmOGU0YzZmODc2MWM2MGE2ZjI5N2M2MzM1M2I0OGJkYjNkZGJiZjBhNTAyZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMDY1OTM3ZWRmMDhiMDE5YmM2MjUxNjYxNDNhYWIzZGQ4MGM4YjljZmU0ZWJjMTI1ZTk4ZmVhYzMzODY4YzIzOSJ9"
+        },
+        {
+          "resource": "repo://src/screens/ProductSpecScreen.jsx#L147-L180",
+          "version": "repo-lines-v1:sha256:430b35d1216bf98be5827776ba0909d8e4eec13ca05aa5f5bccfa6ca11bbaa28:eyJzZWxlY3RlZExpbmVDb3VudCI6MzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJiM2QzM2Y0NjA0MjQwNGExZDRjMDExOTdiNWQ0YWIxN2ZkNjFlYTQwMWFkYWU2M2FkMzNiMzZhM2JjMDVjN2YiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZiYmY0YWM3OTYyZjVhZWNmYjczOTVhMTE4YTNjMzM5NTY2OGQzZGQ3YWRmNzZiNzJiYmMwMzA5ZTQ2Y2ZkZGQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU5MWUyM2UzM2ZiZmIyYzdiZWQyNTdmM2IyYTI1ZTI5NzA4Y2IxMGNlZGZhZmQ1OTkzOGU5ZmQ2YzYxMmFlMjEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_bc03f4c2e42141dd8db99d507d3ceed7",
+      "statement": "Families configured to be skipped in validation (via the ⋯ menu 'Checks skip these families') are never flagged as missing or partial. skippedRefs() identifies ET refs in those families and filters them out of the incomplete queue. The skip list is per-project and persists across sessions (via store.specCheckSkip).",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/ProductSpecScreen.jsx#L91-L106",
+          "version": "repo-lines-v1:sha256:1f85e81a5e13a31ff77288036e6f6f87604162e5ed05e7783ad000cb10a63001:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZkNWI3YjQ3M2UwNzI4MjZlYThlOGFkY2YxZTdiYzc1ZWY3MTEwMDAyNTc2NGQyNjdmZjE3ZmIyNjBlMzJmNGQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI2Yjk3ZmExYzA4MWMxOGIwNTQ1YjA5YmU3OWZiYzk3YzI3NTI0Yzg3Y2U5MjFjODBhZmZjMWUzN2JlZWE2NmUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ1ZDRmZTdlZGFjMGE0ZTUwODExNGU3MWUxNWEwN2QxODRiODA5MTk2ZGYxOWVmZDIwMmIxOThkZWYwN2ZhYWYifQ"
+        },
+        {
+          "resource": "repo://src/utils/specChecks.js#L1-L23",
+          "version": "repo-lines-v1:sha256:d1175f5201919108160b9219bfa2f469743fa418f16f06aed8c13483d14a0765:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_0cfa795507fc4f878accf09dc74de621",
+      "statement": "ETUsedIn is a Map keyed by lowercased ET ref, recording which positions and wrappers use each ET. Computed by ProductSpecScreen from the recipes array, it enables usage popovers and filters for 'used where' views. It is passed to ETSpecBrowser, ETSpecEditor, and ProductSpecTable to display context.",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/ProductSpecScreen.jsx#L68-L82",
+          "version": "repo-lines-v1:sha256:acabd9667adf619ea4095f155912e8123c67d0c0666ec61528022b06f8228b01:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc4YTQxZGU2YWJhZjFlNzA4ZDI3ZWQyMjk0NTdlODNjN2IwNjMyZTYxYmFiN2NmZmRlM2Q4NzQwNTA3Mzc4YTciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhjZDlmMjlmZDk0MDQ0MDUzZWZjMDBiNzMwMjNkNjE0NmQzMGQ2MmY0OGIxNDA4Yzk3NjIyY2EyODA5MDgzODYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjEwZjhiZTM3YzViNjFhN2U1YWNjZTY0OWIyZDE5ODlmNDVmMWQwMTc2NzUyZWVjM2UxYzAwYzliN2Y1M2QwNTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQwMmViMWExNTQyMmRhMzgyYmFjZGM0ZDJiMTAyYTBjZDk1NmMzMDczMmRhYWMzMjZlODc0ZmVjZWY5Mzc1M2YifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_fcb8bea89eb745f58a43d9312fc20099",
+      "statement": "ProductCodeImportScreen is a wizard for bulk product code imports: (1) Upload a spreadsheet with codes and optional positions/manufacturers/descriptions; (2) Split multi-code cells; (3) Map codes to positions by ref or description match; (4) Review which codes have ETs (green), are new (blue), or are ambiguous (yellow); (5) Use BulkCreateETModal to propose ETs for new codes, optionally filling manufacturers from the import; (6) Compare the new codes against Forms to surface recipe changes via FormDiffBlock.",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/ProductCodeImportScreen.jsx",
+          "version": "repo-file-v1:sha256:4d65799745d97cac259a4c92a851cb282f4f0ed20116ab881dac23a224ac34bb"
+        }
+      ]
+    },
+    {
+      "id": "claim_3faedd4d062d4d48a936ac51a2b54bec",
+      "statement": "FormDiffBlock is collapsible via a chevron icon. The shown/hidden state is saved in localStorage and persists across positions and reloads (key: 'formDiffShown'). A 'clear' button stops comparison and hides the diff block. This makes the diff block non-intrusive for users who want to focus on other edits.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/FormDiffBlock.jsx#L52-L77",
+          "version": "repo-lines-v1:sha256:88772c18b9d87f57303cfed3ff5c3cc73ce4695989c0fe1ca8a458c3cfd4035f:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJiNGViMjhlYWVlMWIwNWJhN2Y3ZGE2ODhjNGMwNTI0MWY3ZTUwZmI2YTc2Njk5NTY1NmMxN2E3ZWMyNjY3MjAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgyZjNjZmQxMWRhNjE1MDE5N2FjZWVkMDg0MDZhYzY0YjA1MDM0MGRlN2JjMDQxMjRhNGNiN2VmYTY3MTM0MGIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjI1YTI2Zjk3YjA1NjhjNTljMTk5MjY5YWRlYmE1ZmRkM2Y4MzhlYzU2NGUyNWYxYjJjMzMwY2Y1NzFmOTQ3NjciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU2YjFiMTc0MDAwM2EzZGQ4MTNiNDkyYjFkNTEyZmE0OTY4YjhmZWUyNzY0NDllODQzNTFjOWM4N2EzMDhmMDEifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-17T13:57:20.517Z"
+  }
+}

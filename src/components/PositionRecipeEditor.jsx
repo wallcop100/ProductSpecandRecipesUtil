@@ -1,6 +1,6 @@
 import SaveTemplateModal from './SaveTemplateModal'
 import React, { useState, useEffect } from 'react'
-import { Button, Dropdown, Modal } from 'react-bootstrap'
+import { Button, Dropdown } from 'react-bootstrap'
 import useStore, { getRecipeForPosition } from '../store/useStore'
 import RecipeSection from './RecipeSection'
 import TagBadge from './TagBadge'
@@ -16,7 +16,7 @@ import RecipeSuggestions from './RecipeSuggestions'
 import RecipeErrorBanner from './RecipeErrorBanner'
 import FormSpecPane from './FormSpecPane'
 import ForkPositionModal from './ForkPositionModal'
-import TemplatePicker from './TemplatePicker'
+import { openTemplates } from './useTemplateMatches'
 import { colorsForType, ICONS, ACTION_ICONS } from '../utils/entityStyle'
 import { CONCEPTS } from './ConceptCard'
 import { C } from '../styles/tokens'
@@ -66,7 +66,6 @@ export default function PositionRecipeEditor({
   const rowClipboard = useStore(s => s.rowClipboard)
   const [pasteMsg, setPasteMsg] = useState(null)
   const [forking, setForking] = useState(false)
-  const [applyingTemplate, setApplyingTemplate] = useState(false)
   const showDeletedRows = useStore(s => s.showDeleted)
   const toggleShowDeleted = useStore(s => s.toggleShowDeleted)
   const [savingTemplate, setSavingTemplate] = useState(false)
@@ -156,7 +155,7 @@ export default function PositionRecipeEditor({
             <Dropdown.Item disabled={count === 0} onClick={() => setSavingTemplate(true)}>
               <MaterialIcon name="bookmark_add" size={14} /> Save as template…
             </Dropdown.Item>
-            <Dropdown.Item onClick={() => setApplyingTemplate(true)} data-testid="apply-template">
+            <Dropdown.Item onClick={() => openTemplates(ref)} data-testid="apply-template">
               <MaterialIcon name="bookmark" size={14} /> Apply a template…
             </Dropdown.Item>
             <Dropdown.Divider />
@@ -241,13 +240,6 @@ export default function PositionRecipeEditor({
       {embedded && <FormSpecPane posRef={ref} embedded />}
       </div>
 
-      <Modal show={applyingTemplate} onHide={() => setApplyingTemplate(false)} size="sm" scrollable>
-        <Modal.Header closeButton><Modal.Title style={{ fontSize: 14 }}>Apply a template to {ref}</Modal.Title></Modal.Header>
-        <Modal.Body className="p-0">
-          <TemplatePicker posRef={ref} activeTags={tags.map(t => t.name || t)} hasRows={count > 0}
-            onApply={() => setApplyingTemplate(false)} />
-        </Modal.Body>
-      </Modal>
       <ForkPositionModal show={forking} sourceRef={ref} onHide={() => setForking(false)} />
       <SaveTemplateModal show={savingTemplate} posRef={ref} name={name}
         onHide={saved => { setSavingTemplate(false); if (saved) flashPaste('Saved as a template — find it under Templates') }} />

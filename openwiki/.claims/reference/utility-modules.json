@@ -1,0 +1,184 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:6ee45d26b898f4ebf7eafd51f1cc83e969601b0cb973c5250c7d54272789bd43",
+  "claims": [
+    {
+      "id": "claim_43dcaa1f82654916bce76cf6d17fcb8b",
+      "statement": "backend.js is an in-browser File System Access wrapper with no server backend. It provides detectFiles(), importFiles(), fileMeta() to classify xlsx files and parse the three workbooks (DesignDB, Product Spec, Recipes Spec) without exposing absolute paths.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/backend.js#L1-L30",
+          "version": "repo-lines-v1:sha256:6762a7c4a2570deea72bf7165d97339b90c888fdc9868884502b1b6fb047a34d:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ2MzYyMzI2MzM1NmMxNDkxYWVhZWUzM2Q4ZjI2ZTJjNTUxM2E1ZDcyOTFiMzQ4YWRhYTAwZjcwMDA4YTc0OTUifQ"
+        },
+        {
+          "resource": "repo://src/utils/backend.js#L69-L118",
+          "version": "repo-lines-v1:sha256:041d37f672f8eb5e2cd46e790bda8a2ae918b956d806a517c9fc613ae612059b:eyJzZWxlY3RlZExpbmVDb3VudCI6NTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFjZGM3YWM2YzBlM2QxNDY0NjlmNjc1NDEzYjVjOTZhMTVjNTQzNzVlNDkwYzc1ZWY5MjRkZGY5Yjc1NzUyMjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQxMzRlOGYzZGViYTJlMWU1NjU4MTg3NjM4ZWViMTM4Mjg5Yzc4YWI3OGM2MTJjMGRmNmE3ZWZhNjkzYzBlZTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjAxNDc1OWQzYTVkYTFkZDJhNDYzMDNiYzAwZTU1ODZmNTAyNWY1OTNhMGExYjMzM2Y1OWUwYTI4ZWVlYmM2YTcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_371d7d4db96f49048af14f040d54e3d3",
+      "statement": "codeLearning.js implements three-tier syntax learning: exact rules (batch-wide, revocable), context suggestions (neighbor patterns), and shape suggestions (token morphology). Learning is entirely user-driven; the tool learns only from rows the user has touched, never from its own defaults.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/codeLearning.js#L1-L19",
+          "version": "repo-lines-v1:sha256:28d7a4ba5f7479be47e16aca6baf6a0784714c90ee04b25b759abbbf94e4c567:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImJlMmFkODdlMzBhNWIwZmM1ODQ0YmRkOWVjMDQ4MWI3ZDNmMjNkNzAwMmM3ODA3MDQ5NWM2NjMzNmM0OGQ3MTcifQ"
+        },
+        {
+          "resource": "repo://src/utils/codeLearning.js#L41-L89",
+          "version": "repo-lines-v1:sha256:180f8be3e34ec8580daaf716a1de5bb51f3d4e77de2672690c556a5b34da84e8:eyJzZWxlY3RlZExpbmVDb3VudCI6NDksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImEyZjQxZmVhMDM4ODVhOWM2OWFlODVjN2UzZDgwOThjY2E5YWM4MzQ0YzMzZjIyNzQwN2JmZWNhNjFjOTNhMTgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE4YmZjNTEzZjcyMjJlYjcwNDJmOWRjYTQyMzdmMDY5ZTJmN2IyZGUwMDk2NjU3Njc5YzRhNjNmYzlhZGFiYjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU0YmJhOGMyZGUzYTE3ODE1NDE1MWMyZTZkYjhmNTA5M2YzMzdjOWE0OWRhNTQ5ODAxNWJjNmNkODc1MmM0NDcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_42fe80da715d4005a515ccb74fd9df33",
+      "statement": "productCodes.js implements code parsing with two core principles: nothing is silently used or lost (all roles are explicit), and separators need no meaning (a code is adjacent 'code' tokens; separators are classified once). It delegates role resolution to codeLearning.js.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/productCodes.js#L1-L23",
+          "version": "repo-lines-v1:sha256:4ddf8c8da5ceeb13c0e129187d3ef5f4c21cf9fbf105766433db4e2aefbaf151:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ1ZDVhYmFjYTIyNjgwYWU5NTMzNjcwMGRmNzY2MzYxOTdhN2NiNmMwMDRmNGNkNzlhYzFiMWZkMmYwYWM0YTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVkYjU0NGE1ODg2MzQzNTBjMTkxNjlhODI0M2I1MzFiZjMwOTVlYjU3YzhmYjAzZTQ0ODM2OTQzZjA4MTY4ODEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRhNjE3Zjg0ODZlMjZhNDc0MDM1MzUyNGQxYzRkZDNkYTNkN2U2ZTYwMGMyNjBmOGI4NmY4ZTczZGZhNDdmMzEifQ"
+        },
+        {
+          "resource": "repo://src/utils/productCodes.js#L116-L130",
+          "version": "repo-lines-v1:sha256:02cb32253fcfe27ac338c9c0962f8ebc67fc210c1a3228620577a45285d67035:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY4ZjUzNjA5YWVmZjhlYTZhYTVjOGYyNjQ1ODU2NDI3MjUzNWUyNWE0Y2YxNjI1MmI1ODE4OTE2ZWU0NzVkYjIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUyMmZhYTUzNWJkMmVhM2Q1MmU3NDFlZDQ1NDQzNWI3ZmU0OWU4MzU4NmU5NDNkOThkODJiYmZiMjRkMWY1YzUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk4MzAyZDgwMzliOTQ2YmZlOGY3MDllMzVmN2M3NWVlYWYxYzFkNjRkZGI2NjY4YTVmZDY0NWRkNzRjNTgwYmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY2ZjMyMzBmMTIzODIzYjUzZGQyYmNiYzFlY2QwMjJlNDlkMzVjZGY1Njk3YTVmNTRjY2IxZTE1MGRjZjNjZmYifQ"
+        },
+        {
+          "resource": "repo://src/utils/productCodes.js#L39-L69",
+          "version": "repo-lines-v1:sha256:93415873bc0742a4ee4a3d5d51d4f81ce311c2e48226fb7ff0f14f1d6107fad2:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU1MGU4MzliNzRlNGQzOTEzZDA5NTA4NDE0ZDhkMmMzMTczMTk0OTlhOWM3MjJmNGRjYmMzODQzYTU4ZGRlNGIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUyMmZhYTUzNWJkMmVhM2Q1MmU3NDFlZDQ1NDQzNWI3ZmU0OWU4MzU4NmU5NDNkOThkODJiYmZiMjRkMWY1YzUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRiMDU5NTlhZmQxYjFkYzI3ZmQxYTAxNWJjZmFhOTNlY2Y3MDU3NjU0MzM4MTRmNzgyZmI0N2FjNDBmZGI0ZjAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc2OGMzMDNhZTcyOTlmYWNjMDIyODI0MDFhYmQyOTQ2MGZlOTc1Y2E3OTFkM2VhNTljYTI2MDkwZTA3NGYyMTAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_a33a54c1e3f84771887a0c40e0fe3eae",
+      "statement": "codeShapes.js determines product kind from code shape alone, using two levels: fine (first two letter runs literal; catches variants) and coarse (first letter run literal only; catches new members of known lines). Shipped shape table (src/data/codeShapes.json) maps (maker, shape) to family and ref head.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/codeShapes.js#L1-L23",
+          "version": "repo-lines-v1:sha256:12a6b614bfc5625c18646104a2fd33193252e695890a5d77524d02d888442210:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBjNDc4ZWFjZWQ5ZDBiZmNkMDI4YTc3NzhhM2RkMjIwYWJiMmMzNThhYzE0NzMzZGZkZTg0ZjdiZGEzYmIxM2EifQ"
+        },
+        {
+          "resource": "repo://src/utils/codeShapes.js#L29-L45",
+          "version": "repo-lines-v1:sha256:1d1b8b4e6a904dcd2f562b8b269e20863a0a4746e89f45de5159a6677dc69836:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY1NmUwYmZhZGEzZjZkZjk4NjBiZWVmOWU1OTIyYjFlYjlhYzY5Y2Q3N2I0NTM3NDJhOTRhZjhiNmUxNTI1NGQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJlODYxYWI5MzE0ZTNhZjY0YTA0ZTNlMjg0YWViZDg4MjlhNTk3Zjg1NTgwMGJlNzhmMzAxZmFhMTUzZjJkYzciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU4YWRmNzIxZGFmZGU4NDE0NWZlMjhmZWM5YjNjOWY1NjRkYWFlODhkYzcxOWE1NTViODQxZTBiNDUwMjYxNGQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_c55335a0f03849daa6d297730972dfd6",
+      "statement": "collectionStatus.js computes coverage by comparing recipe contents against ingredient lists, considering both position-level rows and a wrapper's internal rows (fetching them if stored under another PositionTypeRef). This delegation enables shared wrapper definitions.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/collectionStatus.js#L1-L12",
+          "version": "repo-lines-v1:sha256:b17a5851191f2ddc6e174ef92c6710ac459f9a91e43745070f1be47459393c7d:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU4OWZjNTViZTYyMDg0ZTNmMDRkYTgxNTJmMmNiMzM4YTU2MGZlOTk5OTRhOWUwYTNkYjFiYWRmMzIwZTIxMzYifQ"
+        },
+        {
+          "resource": "repo://src/utils/collectionStatus.js#L31-L76",
+          "version": "repo-lines-v1:sha256:21c6ef8e247081954c59348fbbf666d0a925fe25b31c353631f7957743fed420:eyJzZWxlY3RlZExpbmVDb3VudCI6NDYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ4NDEyMWQ0N2QxMzAxYWI2YzI2N2NmYzA0MDc5MGMzZmJjZmIxMmVkYzZlYWRkNDQyYjgzZWJiZDVkNDE5ZmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc2MmM3YjE1NWRiMGFjZDU5MDhjNmJhMmFjM2NmZDZjMWY4NjZiZjUyMTEyOTExZDk5NmE4NzU5OTc2ZTY1NTcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_a3ae17005a0e4e9895623092424a2a11",
+      "statement": "connectorGroups.js defines templates as groups of positions sharing the same connector signature: every connector part (own rows + wrapper internals) as {ref, section, quantity}. Membership is determined by pin (override) or by rule match (templateRules.js), with clash detection.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/connectorGroups.js#L1-L21",
+          "version": "repo-lines-v1:sha256:631a33be95570f1ebac85ddda8e2b2f9d161472f5975c02bdbfd91335773ee57:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFhZWE2NDI1M2RjMzZhYjM2ZmRjZTlhMmZiNGNlODJhNjA1NDU0MWJhZmE4NTIwN2MxMDE5OWExNmY0N2MzNTYifQ"
+        },
+        {
+          "resource": "repo://src/utils/connectorGroups.js#L77-L93",
+          "version": "repo-lines-v1:sha256:fe05b99a78e063a695db84e5518f1701e859fdb297f2f0773b2089f63869f5af:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU2NGU1NmU5YjAwNjllNTA2OTdjYzI5NTE5NjQwZGE0ZWIxZDhjMDYxMmMyZTU2YzQyZDliMWRjZjE0YjFhMGIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc5YThiMTNmOWVjZTY3YzA2NzhlNjQ2NTEzYmJjNTU2NmJmOGY4N2RkMmRiYTc5MmYzNTY1MjdlOWUzYzhiNTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImJmNDE3OTVmMmQxODA2MGFhM2E2OTNkOTdkZmUxNDI0OTRlZjZjNTQwNmE3NjBkNGMyZGJiNGM5ZWYyMDg0YmIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_9dea18303b7247fb846d6f28f98f738b",
+      "statement": "containerUtils.js detects wrappers (DL, LIN) via multi-signal soft match: naming pattern, Ideaworks/N/A Product Spec mark, recipe internals, IsCollection flag. Manual include/exclude overrides all heuristics. Scoring combines hint weights; threshold marks a wrapper.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/containerUtils.js#L1-L13",
+          "version": "repo-lines-v1:sha256:49a65d78fc9ce962de20a9e0e54b9eb3970f6343a6f56caea2d391da58a735f6:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBkMGIzNGRkMzIyNDQ3NWNiMzBmZTE3ZGJmNDg4MjRlNjc1OWM1ZWQ0Zjk5ZWY0NTljOWNmMTg2MDk5ODA2ZDgifQ"
+        },
+        {
+          "resource": "repo://src/utils/containerUtils.js#L45-L99",
+          "version": "repo-lines-v1:sha256:bb08d395a5ef266feb2d2a15591e70154e01708b682e9de63d24b09ff71ac2b6:eyJzZWxlY3RlZExpbmVDb3VudCI6NTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE4NWUwMmFlMDAyYjFiMjRjMWNhZDU5NDljNzViZDM5Y2U1YTcwYjM0ODgwNGI4OWQ0NGExNzE4ZGMyZGYyYTkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM3OTI5ZTkxZTBmOTljM2U4MjVkZTY5YjQzNWZiNjQ4NGQxYjBhMWRmMmY0NjU2MWFiZjFhMjlmMDQxODhiODgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImEzMDY2YmM3ZGI2MTk4NzE1NWRmZmIxOTJjOGYzN2RiZjExMGU5ZDMwN2Y4YTg0MGFkODZlMTRiMmIxNmFkYzYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_7a51eef00a294ffd83aa77c8935f04d7",
+      "statement": "etSeed.js proposes ElementTypes by guessing family with this precedence (first match wins): library (same product before), track (TRACK position), stem (shared code stem), style (prior naming), shape (shipped table), line (product lines), design (existing IsDesign), canon (Form semantics), parent (PositionType fallback). Nothing guessed from maker alone.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/etSeed.js#L1-L41",
+          "version": "repo-lines-v1:sha256:1138a1321c365cd2dcd96700b6d1b0a58107885a699b1a0b887624fc9b6f4024:eyJzZWxlY3RlZExpbmVDb3VudCI6NDEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY3MTE4MGVhNzI2M2NhNTcyYzMyZDRhOTY4OWU5ZTA3ZDE1MDMzNTI3YmFmYWMwMjY1NzQ5MmJiMmZiMmRiMWQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_83f7a17e21a24759897d7af14ecc9614",
+      "statement": "patchScript.js generates Office Scripts (ExcelScript) patches that are idempotent: rows believed new are still looked up by key before appending, so pasting a patch twice is a no-op. Duplicates are coalesced to one deterministic operation (update / append / soft-delete).",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/patchScript.js#L1-L23",
+          "version": "repo-lines-v1:sha256:507f6972b0ee3a6f5090e609213aecb680acdf8cc280705920c7ae4c17868b44:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ4MjdmZTcwMTZlZjFlMTQ1MjE3YzliZmNjZTFhNzI1MTUwNDQ0MWZlOTBmODk5MWQwOGQ4YTBiMWMwMTY5ZjEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_c3653a3424674cca9ba69cb8834db24a",
+      "statement": "recipeProposal.js proposes first recipes using Form products and precedent. Kind (wrapper shape) comes from DesignDB/position family. Products placed in template slots. Parts sourced from this project recipes, then ElementTypes, then style library; unvoouched parts left empty and flagged.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/recipeProposal.js#L1-L21",
+          "version": "repo-lines-v1:sha256:a9079d6f7838cd6bc14d91847a6da5a95fa37cc83f3608a38d493469547e19f3:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJmMjQ0YTk1Nzg0NjVkMDViNjgyZTQ0MGQyZmIyYzMzYmM1MjgxNjIxMjYyNjAyNjczNGM2NDAyNTUyYzBjNTQifQ"
+        },
+        {
+          "resource": "repo://src/utils/recipeProposal.js#L42-L63",
+          "version": "repo-lines-v1:sha256:708b2996cf53ee5d289c4602e383d3171c846c3953ce792bb38cc9eaf1063a82:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxMmY5YTVlNmRhMWQxYjE1ZTc3ZGU0YTRhZGRhNzliNDQwMTljNDZjNGVhOGQ2MmVlNDlkNTRmM2M4OGI2OWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM4NGI2NzVhOThiZjc1ODhjZWQzNTk0YjNkMmVkMTI0ZWQ2NWU5NTljYjEyODY1ZmVjNjI1MzI5YzU4NzA3ZTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgyMjZjOTJiNWVhYTg0MGU3M2M3OTE0Yjg0YzRhMGFjOGQ4NTFiY2ZmYzk1YThjNGI3ZThlOGFlMzExY2E5NzkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_68291e46dc8240e981c02a4a0cf60de8",
+      "statement": "templateRules.js evaluates template applicability via rules (column, op, value; 'all' or 'any' match). When multiple rules apply, precedence is: pin > most specific (narrower rule, higher project data score). Specificity scored by log₂(positions / matched), with caching via specificityScope.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/templateRules.js#L1-L21",
+          "version": "repo-lines-v1:sha256:5cd189792045fef198d52428413061bdf591a0d5780a3abb1e81433a8ee3baaf:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIyMmRlOTZiZmViZmVjYTA5NGVjNzAxZGIzMzkzNjgzMDAwZmYwZWJiZjU5NzkzMTUyYTU1ZWFjNTU0ODFiMWUifQ"
+        },
+        {
+          "resource": "repo://src/utils/templateRules.js#L69-L100",
+          "version": "repo-lines-v1:sha256:0270808231aaa45242830c33d20cce8aaa4450f3108ec870d6151de817833af3:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc4MTU1ZTk4NTM4MjFlOTU2YzdlNWZjODcxZjg5ZWY3YTAwMmY2MDFkMmJiMDc0MWM0YzZlNGEwMDUwMzU3MDUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg5MzcyMjFkY2MyNjUzZjU1NWU3Nzc0OTFkZWI4NGRjNDJjZmEyNTRjNTRhNWUyMmNlMjFhY2YxMTBmZTg4MGUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFjZTM1MWE2Yjc3ZTE3YzQzMDVkMGRiNTI4NGJkZDBjNjljYjZhY2FjM2EzNzZhOTQ5ZWMyZDNmNmIzMDQ2NmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI2Zjc1OTFhMDU0NDgyNjEwZTk4OTQxODcwNmRkNDNlOWZjODQ4NDU4MWUyNGI3OTEyNjFhNmQxYzBjMzUyZTAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_7592fc72da70496b98737b4a04d66fb8",
+      "statement": "validationRules.js mirrors backend validation client-side, running in-browser for real-time feedback. Issues shaped as {severity, rule, message, ref}. Checks for missing ElementTypes, duplicate codes, connector gaps, quantity mismatches, and spec alignment.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/validationRules.js#L1-L88",
+          "version": "repo-lines-v1:sha256:0fc80aebb4b0978e6f800467d549ed43fba15f52043dbc0b8fdf575b35afdf50:eyJzZWxlY3RlZExpbmVDb3VudCI6ODgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzMDY5NjQyYzgwMDE3MWFhZDEzOTkzNThiYTE2YWE1NDUwOWNkM2RmOTAwZWY0NGNjYjg0YWYxYTM1NWM3ZjMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_701d4abfa27b40488b9e806307b0af62",
+      "statement": "reconcile.js implements three-way merge (local vs. server vs. baseline) after export. Each field assessed as applied (file holds change), pending (file holds old value), or conflict (file holds third value). Exported fields moved to baseline on next edit; timestamps don't decide, content does.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/reconcile.js#L1-L25",
+          "version": "repo-lines-v1:sha256:18f422caadd41da355a29f292d8a84dd2d0293da0d27ac06cdf2b445e46c6483:eyJzZWxlY3RlZExpbmVDb3VudCI6MjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg3M2Y0NDI2NjViYmVlMGNiNjhjNjAyNTVkY2I3MTdjNTI3Y2MxY2MxOGM0M2M0ODIyMTM3YTUyYzE5NjRiMDQifQ"
+        },
+        {
+          "resource": "repo://src/utils/reconcile.js#L44-L100",
+          "version": "repo-lines-v1:sha256:5a0c1b73524c98f56f7b9ee03b3221a9df04fdf53fa69ad9d86b8c0d7de0c0e3:eyJzZWxlY3RlZExpbmVDb3VudCI6NTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhjNzJkNDAzZWY5YmFhMWZlOTA3MjgwZWE4OWFhOTQzZGE4ODNmZDdhNDc0ZWM3MTJhMTQwZmIxZTcxMTEzMTAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxMzc3MDM4NjExOGRkYTg0NDU3OWYwZjkzNjM2NTQzM2QwZTg4ZTRkMGJiZjFjN2ZmY2UyZDdiZmQzMWMwZTIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjAxZmVjNDY0MjM0NWFiOGIxMzA1MjY5NDQ1YWJiNTZhYzQxYzRlMWQ2NGNlNDNjZmQ3ZGFmYmY5ZTRiMGJlZDMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImIyODkyYzQ0NjUwYjAzNWVmNGJmMDg1NjVhNzY5OGE3ODQ3OGZiMDVhMmY2NGY1NjVmOThjZGM1YjM5MTVjZjgifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-17T13:57:20.517Z"
+  }
+}

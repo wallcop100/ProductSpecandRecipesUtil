@@ -1,0 +1,338 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:7c36bc847c9f340189734cb0d6db7cd3c85c2c15511e57cb0c5f45d2f40636da",
+  "claims": [
+    {
+      "id": "claim_336da95ee09642a3bce0dce1c51dd050",
+      "statement": "The Form is authoritative about which products a position uses; a Form product missing from the recipe is a defect, while recipe products absent from the Form are derived detail (connectors, kits) and never flagged as errors.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/FormSpecPane.jsx#L27-L42",
+          "version": "repo-lines-v1:sha256:89284467727e59f8ccb09e9d956defe2e77738aa9ef0d7c89466c98377a98d9c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImIxYjEzYWQ3MzVhNWVkZDUwYWMzMGY4YmUzZTdhOGIxNDk4ODZkYzAzZmMzYTUyZjI1YTcxZmYzNmY0MDA3MTAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjI2NjY0Yzc5Y2I1MmJlOTUwMTBlZDk4ZWRkZDBlOTA1NGMzMzdlY2Q2NWJkYTI3MmE1NDEwNmViYjkzNDVjZDcifQ"
+        },
+        {
+          "resource": "repo://src/utils/formSpec.js#L1-L26",
+          "version": "repo-lines-v1:sha256:5bc3886054aad901bbe084da0cc345e661aca091a37b701927a32bcf41c4a154:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRjMzQ5YmVmNDc1NDAzNzg3MmFkYzBhYzc3YTg3ZjAyNzYwMzBiMGJjN2I1NjJjZjljMTQyZjM1ZTA4MzIwYjgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_e4aa3e5b56874a7bb977e9645e3ed932",
+      "statement": "Code runs are maximal sequences of adjacent tokens marked 'code', split on line breaks; adjacent code tokens form one code (e.g., 'V6815' + '000' = one code 'V6815 000'), while non-adjacent tokens form separate codes regardless of separators.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/productCodes.js#L116-L130",
+          "version": "repo-lines-v1:sha256:02cb32253fcfe27ac338c9c0962f8ebc67fc210c1a3228620577a45285d67035:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY4ZjUzNjA5YWVmZjhlYTZhYTVjOGYyNjQ1ODU2NDI3MjUzNWUyNWE0Y2YxNjI1MmI1ODE4OTE2ZWU0NzVkYjIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUyMmZhYTUzNWJkMmVhM2Q1MmU3NDFlZDQ1NDQzNWI3ZmU0OWU4MzU4NmU5NDNkOThkODJiYmZiMjRkMWY1YzUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk4MzAyZDgwMzliOTQ2YmZlOGY3MDllMzVmN2M3NWVlYWYxYzFkNjRkZGI2NjY4YTVmZDY0NWRkNzRjNTgwYmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY2ZjMyMzBmMTIzODIzYjUzZGQyYmNiYzFlY2QwMjJlNDlkMzVjZGY1Njk3YTVmNTRjY2IxZTE1MGRjZjNjZmYifQ"
+        },
+        {
+          "resource": "repo://tests/frontend/productCodes.test.js#L84-L96",
+          "version": "repo-lines-v1:sha256:3c2bc321ae6df0781d23815c75980e19a49d31f83bb841a896c23886a7ab5c9f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFlY2IwYWVlNGE1NDI3Y2UxOTNlZTIyMjJhODUxNTc1YTAyOTg0NzkyYzc2NGUzZmRmN2NkOTExMDUzMjk1MzQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIyMzUyNTg5YzM0ZDNjNjA2ODU5MzFiNmVjYzRkNTA5OTFhN2M1NmM4ZmJhMjg5NDExNDY1NzY5MDI3MmNhYzMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjFlZjBiOWRjMmI1ZTFiOWFiZWNiZjJmMTAxNWE0NTIzY2IyYTc1MWVlZDgyNDQyYTBhNzA4ODBmZmNhZjliZmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZkMTY4ZTA4OWVkNTRlMTZkYjc0ZDQ4YTBlNmUwMWUyZDBkMzJlNDdmNGRmMjczMGM3Y2QwMWQ0NWM5NDg0ZmIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_5f36afe9c67744e291ff7ff627613d0b",
+      "statement": "Tokenization is mechanical and assumes no syntax: leading/trailing punctuation peels into single-character tokens, hyphens internal to words are kept whole, and no separator ('+', parentheses, etc.) has fixed meaning.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/productCodes.js#L25-L69",
+          "version": "repo-lines-v1:sha256:30ce0c3c2b006ffd9b6c9ab1ca6c70a18721ad97f0092f89f96ff5392a499a2c:eyJzZWxlY3RlZExpbmVDb3VudCI6NDUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ1ZDVhYmFjYTIyNjgwYWU5NTMzNjcwMGRmNzY2MzYxOTdhN2NiNmMwMDRmNGNkNzlhYzFiMWZkMmYwYWM0YTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUyMmZhYTUzNWJkMmVhM2Q1MmU3NDFlZDQ1NDQzNWI3ZmU0OWU4MzU4NmU5NDNkOThkODJiYmZiMjRkMWY1YzUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjEyNGFmMTNlZmIwZTYzMDZhNzE5NTAyOGIxZWQ1ZmZlMmZiMjI0NTFjNWI2NWE5YzAwZTZiMmI1ZGJjZGViN2UiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc2OGMzMDNhZTcyOTlmYWNjMDIyODI0MDFhYmQyOTQ2MGZlOTc1Y2E3OTFkM2VhNTljYTI2MDkwZTA3NGYyMTAifQ"
+        },
+        {
+          "resource": "repo://tests/frontend/productCodes.test.js#L52-L82",
+          "version": "repo-lines-v1:sha256:2606e832230abcf53025664a85ac24b9e9f8be3bed39f7d7ed104ad342bcfd37:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRlZTEzMmZkODM2NDQ4ODdjZDg4NmEwNDMxNDkxOThhOWNmYzQ1NzBiM2I4ZGFkNzFmNDFmMGE0ODc2ZjBmYWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjFlZjBiOWRjMmI1ZTFiOWFiZWNiZjJmMTAxNWE0NTIzY2IyYTc1MWVlZDgyNDQyYTBhNzA4ODBmZmNhZjliZmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgzOWUyMjljNjAwYjg5NDUyYmMxYWMxM2U1MDBlZTA4OTVlMTlkODVlYWE1MDAxYTEyNTkxNDhhZDk2MDNiM2IifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_682d443729f0424b9950bf8a479cf9f0",
+      "statement": "A product is the pair (manufacturer, code); the same code from two makers is two different products and must have separate ElementTypes.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/productCodes.js#L264-L300",
+          "version": "repo-lines-v1:sha256:5163e9c30f3834150f48fc3b9a8c0602e256692b58004ab122176952ff2a4f56:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY4MzAzMmY4MjA5MTk2ZjVhYmZlNDYzNTdlNDhhZWUzNDFjOGJmMTEwMjQyYjZhZjNmM2M2YjczZWRiYjM4YzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdlYjcwMjU3NTkzZGEwNmY2ODJhM2RkZGE1NGE5ZDI2MGQ0ZmM1MTRmNjQ1MjM3ZjVjYTc0YjA4ZjhkYTYxYTYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhmOTBmNmIwYzUyNDc1MjQyNmUwODFjM2Y2MTZiZWIzMzg5MGFlMWE4ZTkzMWYyZjk0OWNhZmQwZmI4ZDBlMzYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk3YzViNmViMzI5ZDE1NzI5NmNiMDk2NjA3YzY4NWVjMjM3ZTJmODA5YjQ4MGMyOTcwZmIyM2FiZjgzYzcwNDgifQ"
+        },
+        {
+          "resource": "repo://src/utils/productCodes.js#L329-L339",
+          "version": "repo-lines-v1:sha256:f8a51375c85f1ebd1bd56e486b7a237ceaba8092d293efa43d43d67ccaef7d53:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFlNTk1NzkyMjI5ODZiODhhY2NkYTU1OTc2YzkzZGZlMTZhNTExNGExODVjMzc4MmE4NzJlMDM2YmUyMTM5MWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUyMmZhYTUzNWJkMmVhM2Q1MmU3NDFlZDQ1NDQzNWI3ZmU0OWU4MzU4NmU5NDNkOThkODJiYmZiMjRkMWY1YzUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYyMDQ2MDVjZjcxYjQ5MmU0NWFhMDM4NDkxZGYwY2Y5YWEwNDE2MTlmMzk3OGFiMmNjYTk3Yzk0OWE2ZDkzNWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZmZjAzOTg5MmI5YThjN2UwZjg0MDFlZjMyNWNiNjZkM2EwZDE1NzQyNGZiN2UyNzQzMTY2NjkyMzNkNTkxOTEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_3e3e454bac3747c796bf087aa34c1253",
+      "statement": "Nothing is silently used or lost: every token defaults to 'note' and only explicit acts (Code, Discard, ElementType assignment) change roles; notes surface in unattached or code-associated form and are never dropped.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/productCodes.js#L1-L23",
+          "version": "repo-lines-v1:sha256:4ddf8c8da5ceeb13c0e129187d3ef5f4c21cf9fbf105766433db4e2aefbaf151:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ1ZDVhYmFjYTIyNjgwYWU5NTMzNjcwMGRmNzY2MzYxOTdhN2NiNmMwMDRmNGNkNzlhYzFiMWZkMmYwYWM0YTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVkYjU0NGE1ODg2MzQzNTBjMTkxNjlhODI0M2I1MzFiZjMwOTVlYjU3YzhmYjAzZTQ0ODM2OTQzZjA4MTY4ODEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRhNjE3Zjg0ODZlMjZhNDc0MDM1MzUyNGQxYzRkZDNkYTNkN2U2ZTYwMGMyNjBmOGI4NmY4ZTczZGZhNDdmMzEifQ"
+        },
+        {
+          "resource": "repo://tests/frontend/productCodes.test.js#L30-L49",
+          "version": "repo-lines-v1:sha256:48ccc198139e7d439a9a1332b0660471e9282daec6827864fefba2fc2b3e0533:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU0M2ZiNjdmZmQ4MDRhYzRlNjUzYTk0YjlmYzkxYzFiNWZiZGFhM2U4Y2U2MGJmNTc0MzIyYTEzMzUxM2QxNDUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIyMzUyNTg5YzM0ZDNjNjA2ODU5MzFiNmVjYzRkNTA5OTFhN2M1NmM4ZmJhMjg5NDExNDY1NzY5MDI3MmNhYzMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdjYTk4ZTQ4ODhkOTc2OTdiMjNmMWNjZGIwM2JlM2JlOTliZjgzN2Y4ZDM3MzNjYjIyMmY1ZGQ2OTFmNDRmODEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBjYWY1NzQ4OGJhOWNiNjQxYWI2MzhkOGZlM2I3N2QxZTYyMDc0YmZlZDYyYTAxYWM3OTRkZjYyNzIyNDlkYTkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_91456c3a5a0540ccb89df328cbe5ecc3",
+      "statement": "The import workflow has three phases: (1) pick a Form file and map columns (ProductCode, Manufacturer, PositionType, etc.) via auto-detection and user override; (2) resolve Form position references to DesignDB PositionTypes via ExtRef or user mapping; (3) paint by position, assigning ElementTypes to codes and saving confirmed captures.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/MapColumnsStep.jsx#L1-L45",
+          "version": "repo-lines-v1:sha256:d7c1ba0589ecb505ae07b870d882c8d263b6f29371df44ecebaea2cac9eba0d8:eyJzZWxlY3RlZExpbmVDb3VudCI6NDUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY0NWI1OGU4NGE1NDU5MGEzNGU2OGNkODIyZmY1OGRlNzYxZjU1Y2EyNzFjYTRhZTljMGVlYWFlOTkxMjYwMDciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjYxNjEyMjU2YjZmMTdiNjg3ODkxNzI2YmNhOGMzOTc4MDEyMDE2YmQ0NDkzODlkNWNlYTIxYzY4MjA1YWUwZTgifQ"
+        },
+        {
+          "resource": "repo://src/components/ResolveRefsStep.jsx#L1-L50",
+          "version": "repo-lines-v1:sha256:67f48b8a2342710daf4ac7a2c6fa9efdf505f86fd6b04877c8c6cc12f8ba87a3:eyJzZWxlY3RlZExpbmVDb3VudCI6NTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY0NWI1OGU4NGE1NDU5MGEzNGU2OGNkODIyZmY1OGRlNzYxZjU1Y2EyNzFjYTRhZTljMGVlYWFlOTkxMjYwMDciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBmM2M1MTI2ZjY2N2UyYjRkNTNiMDRiZGJiNWIxNDM1M2UyY2QwMjg5OTEyMjdjYTE1OTYyYWRkYzBlMDhiMjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjI0MTk5OTU5N2YzYzI3NDI3YzFmZDBmZjdkN2Y5OGFjN2Y5NjM5NGRmNzVkZjJiNmFiYjA4ZWIzMzYzZTcwZmEifQ"
+        },
+        {
+          "resource": "repo://src/screens/ProductCodeImportScreen.jsx#L209-L280",
+          "version": "repo-lines-v1:sha256:57f810006b45bf331d964f5bd444c5e0dbb017458e8ebd0efb0dda6f7879d0e8:eyJzZWxlY3RlZExpbmVDb3VudCI6NzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVjNzRiYTNiMGYwNWEwNTg0YzE2NmE1YTI1MDRiNWYxMGFjZjNlMWExNDNiYTZlNzAxMGRiOTRhNzg4ODcxODEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImY4YmFiMjY5MTQ2YWVmZmQ4N2YzZjVlM2Q4NzE4OWZiZmYzMzE4YjVjODhhNGQ3MGY4YzI1OGM2ZjI5MTE2YzEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM2YjJlOTBmZWM3ZmNlNjU4NzFmYWZlMjM5MzdkODFiNmQxYjk2YTBkYWNmYmQ1YWNkNTdjZGY5YTllMDE2MTIifQ"
+        },
+        {
+          "resource": "repo://src/screens/ProductCodeImportScreen.jsx#L73-L105",
+          "version": "repo-lines-v1:sha256:67ce499654f9e4f7ac8b7cf48348392846bb8e64c205a872a8346b5d7884979f:eyJzZWxlY3RlZExpbmVDb3VudCI6MzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY1YWY2NTJkYWYwODkxNWEwODdkM2Q2ZWU4NDg4ZTI2MDVjNDY2ZWYyMjEwYzg1Mzk1ZDIxMzkxZjE4MmFmYWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJlOWNiMWRjZWJhNmRmZTM1ZTEwNDNhODRmZjFjMDA0YjM3OTUyM2EzNTUyNzM4MmZhYmYzOGQ1MDExM2I2YmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY3NjFhZjcxMmNhMmExMjUwNjg2OGZlNjlhMzZmYTVhZmE5NmFkNzc4ZDg5N2IwOGY2ZmRmMWJhMGY4Y2UxMTQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_cf50b942784044b5b427fae1703ab7e2",
+      "statement": "Column mapping uses fuzzy header matching: exact normalized hit first, else shortest header containing the target (e.g., 'productcode' maps to 'ProductCode', 'PRODUCT CODES SHOWING OLD AND NEW' or any variant).",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/ProductCodeImportScreen.jsx#L58-L72",
+          "version": "repo-lines-v1:sha256:41c80dd4baa3b913e603619d15d48c9ad72b6a9dd1b51f95e6fb482225b4baae:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA3NzQ2M2RjODZmMzA0OTBmMmUzMDk1N2I3OTQxOTdhZjc1YTMwODQ4MTEyNWEyN2FhNTljYWYxMDY5ZDk3NzUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImYyYzNmZTc5ZDY0ZGU5Yjk0YmQwMmFjZjJlZTU4MjUxNzdlNWE1M2U0MWY1YTY0NjU3ODUwOWIxNTExNTUxOTgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgwYTVmOWY1YTlkYTg2MjBkMzkyZDRjYWVhOGRlZWE4MzZmMTc5MzE3ZGY1MGUyYTQ5ZTVjZTgxMWNmYzczZjQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_9fe5786a991c4f4b810a5597765ae98c",
+      "statement": "Form references are resolved to DesignDB PositionTypes with three outcomes: VIA.DIRECT (exact match), VIA.EXT_REF (found via DesignDB ExtRef redirect), or VIA.MISSING (not in DesignDB); resolution is saved once and reused for all positions.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ResolveRefsStep.jsx#L1-L100",
+          "version": "repo-lines-v1:sha256:6f3ad528068378052cc113a83f7849558ec61b110d645b8b3e125948e31aca46:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAwLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI2NDViNThlODRhNTQ1OTBhMzRlNjhjZDgyMmZmNThkZTc2MWY1NWNhMjcxY2E0YWU5YzBlZWFhZTk5MTI2MDA3IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI4MWM3MDA1YTBmOTU2NjgzMGU2NzcxNTkzNGRlZWU3OTY4MzY2YzU0Yzg3NTk3MmQxNGM4MjhmZmIwZGY0MzUzIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiIxYzk0MTQxMmM2OWJkMTM5MGQwODM0OTcwZGJkMTFhYzhhNDJmNDkzNWUwNDU4N2NjNDMxMGQ2MDg0NDM2NDhlIn0"
+        },
+        {
+          "resource": "repo://src/utils/ptResolve.js",
+          "version": "repo-file-v1:sha256:88efe8f455e3d06054416b3c8416ffe803098c5fcc29fb40acd0dbffd6f9cc94"
+        }
+      ]
+    },
+    {
+      "id": "claim_1f45512b37c54ce297846638ea07b591",
+      "statement": "A note token belongs to a code run via segment ownership (if delimiters are found, note belongs to the one code in its segment) or reading order (forward/backward) based on user correction direction.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/productCodes.js#L187-L207",
+          "version": "repo-lines-v1:sha256:1287331f1440647c1dea1d5ffc74b9f45f7af4b70247475927bc1bacf61ab62a:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ2NTVmOTFiNzBjODNkZjRmZDBkNmE0ZDc0MWRiNjI5MGM4YTY2ODIzZWVkNjU0YmE1YWFiMjFhMzhjMmI4M2UiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUyMmZhYTUzNWJkMmVhM2Q1MmU3NDFlZDQ1NDQzNWI3ZmU0OWU4MzU4NmU5NDNkOThkODJiYmZiMjRkMWY1YzUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg3ZDMxMDYwNDllZDAzMjAyYzA1YmNmMzdlODBkMGI0MDc2MmJjMDZjZTdkNGY4NmJjMTQ5ZmI5Mzg4NWFkZjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc3M2U2M2Q2Mjk4OTM4ODc2YjcyZDBkYWFlMzY0ODQyOWRmNThiYTdkNzllMzhiYjhjYjdmZDIwMzM5YmZlOWUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_78545a10d66d47aab785d93678d030ce",
+      "statement": "The tool learns three signals from user touches: (1) exact token text (rules, batch-wide, strongest), (2) neighbour context ('token after X is usually code'), (3) token shape (e.g., AAAA#### for 4 letters + 4 digits), plus note direction (forward/backward).",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/ProductCodeImportScreen.jsx#L578-L592",
+          "version": "repo-lines-v1:sha256:df0c4bbc24c84baeb1d7261bfb8eca2c0f2504c2bf5ff04815a72a661053628b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYyNWIyMjkxNDgxMGVkYjY3ZDE1MGEyNjIyMDk1MTIzOTE5YWQ1NWMyMGRmNTVhYjEzNDdjYjU4ZjlkNmUwYmQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU2MjY3OTM1ZmM2MzM0NjVkODQ4YjQwYTRlZDY5NjdlN2I3YTMyM2Y4MWNkNTNjMTEwYWUyMTAyOTY4N2FhMTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJmNzYwZWMyYTk2ZDA4NjlhNTU1NmIzMDk1MzI3ODkzNDI3N2UzOWQyYmYwOWE4OTBkZWJiNmI5NjQ1M2FlODIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU3OGJhZGJhYWEwNWNkMTc1YmM3N2ZkNDJkMzcwZjdhNzYyYWFiNzBiZDhkYTEyYTU0NTY2MzZmYzE5YTY3MzEifQ"
+        },
+        {
+          "resource": "repo://src/utils/codeLearning.js#L1-L50",
+          "version": "repo-lines-v1:sha256:9b47314d2490a1f968804417e4a08a1dc62782bbd97388c370497b8fba69f5f2:eyJzZWxlY3RlZExpbmVDb3VudCI6NTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjEyNzVjMTk3MTJhMjFlYzA0MDc0NDc0NzU4MWZiMGVmYTAzZThmODQ3YmNhMzZkM2UwNDliY2ExYzMzYzczZDUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_af45a144fee3406f96f4614b8241f54e",
+      "statement": "Rules (batch-wide, revocable, applied immediately) are learned from exact token text, while suggestions (advisory, never applied silently) come from shape matching, neighbour context, and frequency heuristics.",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/ProductCodeImportScreen.jsx#L654-L670",
+          "version": "repo-lines-v1:sha256:405cc8f9f77dd821f7ad59b2eef990a23798f01eb3291e015b68d4fb907908c7:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmZjYzE2MWI0MzdjMDRkMGVjMmQ3MGZlZDI2YTRlN2QyOGZlZmNmYWQwZmEzMWFmNDEzMThlOGFhYTZhNmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ5OGIzOWNmZmRjMGMyNTQyNGJmYWRlYzU0YzlkODYwNzk0NWEzNmZjYjJmMWY3NTgwY2Y2YjJkYTFkNjQyYjkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc5ZDc3OWNhNmZkMzViMWIyNTg4YTBlODMwZDhjZDc4MTJjMWNiYjU1OTJlOTk3NTdkNjYyOWM0MzFjNzVlNmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImEwYTIzM2Y4MTA1Njk1OGE4ZDc5MDljZGFiNzRmMzcyYjI3MWIwZjcyNGU1YzlhOTk5ODA5Y2MxYjFlM2IxMDQifQ"
+        },
+        {
+          "resource": "repo://src/utils/codeLearning.js#L37-L121",
+          "version": "repo-lines-v1:sha256:4324d21c62e58c472396aa7ce2d0f6d2c879b237d6e1694e44dbc9a6cd605b0a:eyJzZWxlY3RlZExpbmVDb3VudCI6ODUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY2YmEyYjU5OTY3MzJlNzEzOTBkM2UwY2M1YjliZmRmZTU4YWUzZDZkMzgzY2VhYTMyNzRiMzc1OTY1NWRlYmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJlZjY3NjNlOWQ2MTI1MDMyMzViMmIwZWVkYzZlM2YwNzcxZmNlN2FkMjY2MjI4MWVlYjdkYTFmY2E4MGNjNmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg4N2VjZjI1YTcyZWIwNGUzNmJjMGQ1NTcwNmVkNWVkZDRkZDZiYzkwOWY0YzY5ODk5NDYyOWNiYWY3ODRhMzAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_48dfdb6ca1a14d9f89cf8e46416ab0e3",
+      "statement": "Clicking a word cycles its role: code → note → discard → code. Batch scope (default) teaches every identical token; Alt or row-scope toggle limits to this row only.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/import/CompactPositionPainter.jsx#L1-L109",
+          "version": "repo-lines-v1:sha256:4428035cc0054940cfee63146d96976f18eb051a2662a11070246936a04599b7:eyJzZWxlY3RlZExpbmVDb3VudCI6MTA5LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIxOTUzOTQ2N2JmNzgyMDFhOTNjMmEwMGVlYjk5YzcyOGY1MmI0ZTYyM2YxNGE3ZjIwYTY5MTEzN2U3ODRjMzM0IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
+        },
+        {
+          "resource": "repo://src/screens/ProductCodeImportScreen.jsx#L603-L626",
+          "version": "repo-lines-v1:sha256:7100347cc71e618d7414441e4bb3ad7313534fe2fc4d45bf9449cfe8e6b5e9e6:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUzZjg4OTNhZTA1MTQ3Mzk5ZGMwNjEwMTRjMzcxYmE1YWQwNTViZDBmNzAwNzJmM2EyNTNmZDQyNDk5YzY4M2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJiYWYwZGU5MDZmNjBhNmY5NjUyYmM5OWMwNjZiYTNlYTY1YTc1NjUxZjEwN2FkMDQ5NDAxNjJiNmU0ZjU0MmQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjFjNjI1ZGRjODg2OWNlZDVjNGE2NmY5NmRjNDE4ZjNjNDRkMzM0YjhjZDIyMzAzYTcxYWI4Njk2Y2UxYmJjZWYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhjYWU2MjhiOGM5Y2JlNmM5YTA4NGYwN2FlMjQwMzBlZmRkNjk1MzViMDUwMGU1MDlhZmE3MjNmNDNkZGRiZTIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_4cd41afe0fa84a4abaa7897018c0797b",
+      "statement": "Dragging a note word between codes teaches direction: notes read forward (after code) or backward (before code) based on cumulative user drags, informing future note attachment.",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/ProductCodeImportScreen.jsx#L588-L592",
+          "version": "repo-lines-v1:sha256:414274d3ce0bf8a4b9ab2c58ff066e09091e9a3b091cd7456c79edb7b8671b7f:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjYwYmIzMjE2MGZiMDhmZDJhZTlkNzZkYjkyMjI4YTA2MGRlZjA1NWZmNzg4YWY3NjYzOTM2ZjNhNWU1Zjg4ZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNTYyNjc5MzVmYzYzMzQ2NWQ4NDhiNDBhNGVkNjk2N2U3YjdhMzIzZjgxY2Q1M2MxMTBhZTIxMDI5Njg3YWExMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMDU0ZmVjY2RlOTQ3YzkzNDJkYzEzYmM2MTFlYTFkZGI3ZWZlY2I5YzIzZTJkOTdiMWI2ZTRjM2NiYzdlYWZjNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNTc4YmFkYmFhYTA1Y2QxNzViYzc3ZmQ0MmQzNzBmN2E3NjJhYWI3MGJkOGRhMTJhNTQ1NjYzNmZjMTlhNjczMSJ9"
+        },
+        {
+          "resource": "repo://src/screens/ProductCodeImportScreen.jsx#L691-L715",
+          "version": "repo-lines-v1:sha256:20b707dcee43be076c3d116e8f079c50368b27334c6dd3bce600049c5f7d489e:eyJzZWxlY3RlZExpbmVDb3VudCI6MjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE2YjViMDc0N2Q2YWUxMGFjNDU1ZjBkMTNjODk2MWMxZGViZTk2NjRhZDU2MjE2NWI4ODUzYTUzNGY4MzJmMmEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI5MTY1OGI2MjJmZmVjOTdkZWZiYTFhYzM1ZmJlNmIxYmI1MDMxOGRhMWIyNGIxZmU4YmY1MmUwYTJhZGNjODEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI0NDZjZGNmYTNiYWYzOGU4NTNkYTI1ZmVjNTJjZWYyNDJlMDc1YTlhMTMzNjQ5MWYyYTU3NjY5NTkzODUyNDAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg2M2JmZDJkMjc1M2E3YWRjZGNhNzFiYWQ0YmIzZGMwN2U3ODIwZmNjZDRlNjFlZDM1ODk1OWE1OGVhN2Q4MTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_f57fa1c553b248b2afe89710b0f4f603",
+      "statement": "In embedded mode (builder Form spec pane), once every code has an ElementType, the position is auto-saved without an explicit Save button; user clicks Next to move to the next position.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/FormPaintBar.jsx#L21-L52",
+          "version": "repo-lines-v1:sha256:a38d634a9a605d265de362004c8e2a75c0cc396bab980d42b10bef0080c8b689:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjI1ODg0MWJiNWQ1MGI2OThlZGFhYTMxYmYwNDA0MmZkMDk4YzVlNDVkMjFhMTE4OTcyMDFkNTU2NDAxODcwNWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZlNDYwYjZhMzgxMWJhZTY0Y2NhMDM5NzE4Yjc3MTMyYzYwMjRkZWZlMmEzMzJhZWEyOWZjYTM0YjkyZGI5MDEifQ"
+        },
+        {
+          "resource": "repo://src/components/import/CompactPositionPainter.jsx#L11-L23",
+          "version": "repo-lines-v1:sha256:7c81f96b43673a02bd955edbd9390206770d2c5c641cfad8aa22b849021751c7:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjI2YjY0YmRiMzU2NWMzMjBlZTg1OGFkY2ZjZGM2NTE4ZmRjOTQ5YmEzY2MzN2U0MTM3NmE5OGFkNDMyNGQ0NjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFmYWI2MWM5Njc5ZmY4OTQ1ZjY4YWUxM2QyNDJkYWQ2ZmEyNGJmZTU5MTY5YzQ1YjM3MzAzNzc3NWU4NTg4ZWEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_2dce947dda8747179c1145a4ff4fbc48",
+      "statement": "Pending codes are Form products without ElementTypes yet (blocked on type assignment); missing codes are Form products absent from the recipe (must be added once typed). Pending is counted separately in coverage metrics.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/formSpec.js#L119-L130",
+          "version": "repo-lines-v1:sha256:d903d3a83078d7fad0b945b553b6224882af2860140f223492d4f839bd7c0fee:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZiNTgwZTk2NGY4M2E0NzNmNDNkNDQzODQ2Mjk0OWQ2OGI1NjAwZmRhNzg3ZjE2Mzc0NWQwMGRlODljYmYzNmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjMyNDc4ZjlmYTE5ZDdlZDJkMjQ2YTlkN2NiODA3NzRkMjk1ZWIyNWJkZjVhODI0OGFhNjYzMzc4YjM1YjA0OGYifQ"
+        },
+        {
+          "resource": "repo://src/utils/formSpec.js#L195-L199",
+          "version": "repo-lines-v1:sha256:bfdaf1341b01281299ce22f9ca660b9f87cadf681409d83e0caa8d8d7ed766db:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYjM5NGZkZDQ4YzhlMmQxZGE3ZjRmYzFiOWRlYzVjYjhhM2QxYTA2YTRiMDBhMjEwY2Q0YzZmZGU5MmVkMGI2YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNDJlNjY5NDY4MDMxMTU0NjVlOTM3ZjNlOWQyNGIyOTUxOGNhMDdiZDlkYjc2Yzk3OGE2YmQ3NDFjZDUzMTAxMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjQwMzRjMDk4YTY5YWFlMWYwNTRjOGQzMzkxMTg1MjNkZmJkYTA1NzJkNGFlYTIyYjE2OTNmZDg2ZDdlYzExZCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_5e3783db75c643d4af68527b274d230e",
+      "statement": "FormCaptures are indexed by PositionTypeRef: byPosition[posRef] = [{code, note, elementTypeRef, manufacturer, merged, ...}]; indexed once, persisted, powers the Form spec pane and worklist without re-import.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/FormSpecPane.jsx#L231-L231",
+          "version": "repo-lines-v1:sha256:c25c66e703800bbf6f13b106535138a4ad5fa1b7e83170dc9918ef45cd342c70:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYzI1YzY2ZTcwMzgwMGJiZjZmMTNiMTA2NTM1MTM4YTRhZDVmYTFiN2U4MzE3MGRjOTkxOGVmNDVjZDM0MmM3MCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYzI1YzY2ZTcwMzgwMGJiZjZmMTNiMTA2NTM1MTM4YTRhZDVmYTFiN2U4MzE3MGRjOTkxOGVmNDVjZDM0MmM3MCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYTYzNTIxZTRmMzI2YTRiNzQ0MGFhNTBmMGRmNGJmMzM2ZWViMzY3MGFlOWQ4NzQ0ZjQ0MWI1MWFlMmU4MTVhNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMTRlZDYyYmJlNTViNzVlMGFkNzk3OTIzY2ZjYmI0M2FkZDA4NTExOGQ5NDdhN2NmMGI4MmYzYTJjYzc2NjYzMCJ9"
+        },
+        {
+          "resource": "repo://src/screens/ProductCodeImportScreen.jsx#L113-L113",
+          "version": "repo-lines-v1:sha256:c25c66e703800bbf6f13b106535138a4ad5fa1b7e83170dc9918ef45cd342c70:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYzI1YzY2ZTcwMzgwMGJiZjZmMTNiMTA2NTM1MTM4YTRhZDVmYTFiN2U4MzE3MGRjOTkxOGVmNDVjZDM0MmM3MCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYzI1YzY2ZTcwMzgwMGJiZjZmMTNiMTA2NTM1MTM4YTRhZDVmYTFiN2U4MzE3MGRjOTkxOGVmNDVjZDM0MmM3MCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMjk0ZjVlZjgxNDk4YjRhNmNhNjllOWNiYzA3Zjg5YjJiOWNjMGMwZTIwMTU4YzIzYWVlNWVlMTBkZmU2OTgzZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjczYWI5MzViZDI5NTQyZjJmYTgxYTQwMDg0NjgxZGZlY2U3NjM2Yjg2NDA3YzJmZGFiNjM2YjFlZGNiYmI3ZiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_26639bc6ec3a45de8331523db74dbd05",
+      "statement": "By-position mode paints one position at a time without loading the full table; after confirming a position and saving it, click Next to move to the next position; the Form stays loaded until Detach is pressed.",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/ProductCodeImportScreen.jsx#L100-L105",
+          "version": "repo-lines-v1:sha256:3fa2c5ed125387243e4795e11100bdd01414308acf7c2747d0e5df1d35f19bd9:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMTc5N2Q5NjM4N2M4OGZlOGUzNmViOTkyYmVhZDBkYjMxMDZiYjQ3MjY5Y2Y0NzVhZTU4ZGViODdmNjQxZGY2NyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjVhZjY1MmRhZjA4OTE1YTA4N2QzZDZlZTg0ODhlMjYwNWM0NjZlZjIyMTBjODUzOTVkMjEzOTFmMTgyYWZhZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMDA4OTk5YzVlOGYyOTM2NjU1NjE0ZjUyMmJjNDVjYTFiM2U5MTllYzMyNWZiNDEzOWI4MTFhYTQ3NmRlZDRlNCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjc2MWFmNzEyY2EyYTEyNTA2ODY4ZmU2OWEzNmZhNWFmYTk2YWQ3NzhkODk3YjA4ZjZmZGYxYmEwZjhjZTExNCJ9"
+        },
+        {
+          "resource": "repo://src/screens/ProductCodeImportScreen.jsx#L150-L170",
+          "version": "repo-lines-v1:sha256:3e6f14de72cb714b321a6ffbff0d7a722aca4afcbe7f88fd15cc394c57f25b7c:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU4MDcyN2YxMTUyMTljNmMxZGRlYThlNWFiNmIwYjVmYzRmY2MyMzc5ODA3ZDJhOGE0YTFhZGVhMTljNDIzNjEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMwZmVlMjE1MDlmZGM2ZjQyNzM5ODMxODEzYTlkZjQyZDZhMDNiNmE1NzAwMGIwZGZlNDg4ZjYyOTNkMTRkZDkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZiMDI0NjA4NjQ3MjNjNzdkNmY5NmZmZjM0NGFlN2ZiMzE0YTI3YjQ5ZmJkNWY0NTZmN2M3MWFlMjNkYzI4MGMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRlYTZmMmY5YWMwODhmZGQ5Y2E1N2E2ODJkZmE0NDhlYWVkNTEzMDExNjUwMTAwMmY4YzBlZGVmMGY4MjVmNTAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_9298ef56c11841aaa38b1579812340b4",
+      "statement": "The Form is loaded once per project and reused for every position; all positions share the same FormCaptures and column mappings until Detach is pressed.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/FormPaintBar.jsx#L21-L30",
+          "version": "repo-lines-v1:sha256:f92a841a860de05b199a42cdea787e70e6b8d98dd85fc3531d320712346ff355:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjI1ODg0MWJiNWQ1MGI2OThlZGFhYTMxYmYwNDA0MmZkMDk4YzVlNDVkMjFhMTE4OTcyMDFkNTU2NDAxODcwNWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU2MDI0M2MwNzc1MmY5MTg4OWZkYjZjZjc3Yjc1MTI5NzdlODkzNjY0YzRhMTdjZjAxZTg5OTk5YzMxZTkwZjAifQ"
+        },
+        {
+          "resource": "repo://src/screens/ProductCodeImportScreen.jsx#L183-L190",
+          "version": "repo-lines-v1:sha256:247f1f3ab5112c3b383d131d6356416db4087a0d161246b540c9029e095d06aa:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNGRhMjI2YjA1ODA1NmJlNDdjNmVlY2Y5ZTc1Y2RlZDQ3ZTVlMGYyMmY2MTNlYjhlZmJkY2U5YmQ5MDZkMzhlNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjUzNzQ1ZDg4YmI1Y2ZjZGI2Zjk0NjI4ZGYwZDVkMWZkNWU3N2NiZjk4YzJmMzIzNjE0ZjBkYTViYmQ1ZjhiZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTg1YTZiYWZlYWE5ZmI4NWNiOGU1MjNmOGZiMmFhYjdjODU5MGIzYTAwNWQxYTJiMTAwZWZmOGZlOWMzYjZiOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNWI0YWI0MWVlZDFmMDBlZDJmMDE5MTgzZjc2MzdhYmQxZDVmZTI2NmU3ZGI5NTc0OTdkOTMzNTFlMjA3NmFlZSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_81628fedcf904b55b33c05670e770065",
+      "statement": "On re-import, the old import becomes the comparison baseline; rows unchanged (text, positionType, manufacturer) keep their painting; new or changed rows are read fresh; positions with changed rows are saved again.",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/ProductCodeImportScreen.jsx#L476-L510",
+          "version": "repo-lines-v1:sha256:5716cd92c184241407bbf56d03a69eb49fc1fcace8981a912e20a0fac4ae4fe6:eyJzZWxlY3RlZExpbmVDb3VudCI6MzUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc5Njg2NjBjMDQ2YzIyNTZkMzcxNzE1YjQxNTllYTI4M2UzMDJhNjcxNGYzOWNhNzc1MDhhNzFkNjRhMDZiOTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFkNTc5Mzk1MmEyZTMzMTFlOTZiYTI2ZjFhYjdkNjY2YzlhNWNlN2YyYmRhZGY4MzlmYWVlMTQ3ZmViMjFhZTgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY4NzkzYmFiYmQzYTMwMzA5YzcxYzU3NTJlZGRlZTMyZWExZTUwMWE2YTNkM2I1NzBmMGQwMDA1MjQ1YmMxOWIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_59415dff22ce4dbd9f50c905fe755880",
+      "statement": "The import session is saved as importDraft once painting begins, persisting decisions across browser reloads; clearing it requires explicit user act, allowing resume after interruption.",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/ProductCodeImportScreen.jsx#L135-L150",
+          "version": "repo-lines-v1:sha256:d4a6bc428fa5575188a188cc2d7c7236b0e65dbf2a4f0e062ca707cfbe0e2465:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI5OTU4YWNhMjkyYWQ0YzA0YzJkZWJmYWE4YTdhZjQ0MzExMmM1YmUzOWFiMTcxYmVlZjA3ZjM4Mzc5MDdjZDQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU4MDcyN2YxMTUyMTljNmMxZGRlYThlNWFiNmIwYjVmYzRmY2MyMzc5ODA3ZDJhOGE0YTFhZGVhMTljNDIzNjEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU2MGVkYmFjNmRkYTk0YTNkNWJjN2ZmOGNlN2UyMGZiZTA0MDI3ZjkyYzk4MmUzNjI3NTM0ODc4Nzk2YmM3ZGMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjUwODhmYjU5YjJhMzg5ODRhOWM5Yzc4Yjk3MmQ3MzBkMzdkOTNlMjkzYTNlZjM5YzUxNTY3ODBmM2NlNmEwZjkifQ"
+        },
+        {
+          "resource": "repo://src/screens/ProductCodeImportScreen.jsx#L400-L425",
+          "version": "repo-lines-v1:sha256:d7725840b3ad8ee19d1884cc640153010a440de30dac8b6e43db9a6bb41935b2:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg4NDUyYWQ1ZTMwYTYzY2FlMDU3NWQwNTk4MDg4YjIzMWRlNTk0MWJhNzhlYmMwMDAwOWRjNDUwY2M4OWU1MjEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjljZTJiNWMwYmU1ZTc3ZWZiZGE2NjQ0ZGQwZWMyMzM1ZjhjZDk0YjBmYTdmNjRiNDU1NTlhNDk1MDI2NGE4NDMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImMxOGU1MmY3YzhjYjlhNzdhNjIzMTk1Y2U2NWFkM2YxOWI0ODIxYjBjYTkzMDM0MWMyOTlkMDU2ZjFiYmE1YjciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA1MGIyMTZmNGRhYWViYTg2YTA3OTcxMGZmYzQ3NDhjMjYzODRmYWM5MmNmZDY3NjhhOTc1YjU1MDhkMWNkNjAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_275eb5d179f342ca9e2bb9e431661ea5",
+      "statement": "On first import of a project with no Product Spec, if most rows are 'obvious' (one clean code or nothing to add), start painting immediately; if many need disambiguation, offer 'Teach from examples' to prime suggestions.",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/ProductCodeImportScreen.jsx#L382-L392",
+          "version": "repo-lines-v1:sha256:a5038e1726d50da90b66bbb49ee867015a3516fee7751ad441c928bcce9f7b32:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA5NDgyZTNjMDU3YTRmNWNiNDQ4NDhmM2Q4NDI4N2M0OTM4NGZlZjVjZDg4YTk0OTcxYzQwYjNhOWQwOTQ2YjUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjFiMTM0MWYxNWQ5YjczNWM2NDRiZjhhZGZmYjJmMDkyNDYxMmUzNDEwZjEwN2I4MjkwOGM0OTI5ZGE1MzI2MjciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM0MDdjMGI3M2QyYjdiMzQ1YjhkYjUxNmU4OGQ4ZmNkMjliNDg1MTFiYTVkMGRhZWQ5YWZhMjA2YWIwYWRmMjQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_eedb63e69c3a488d8e9fd850ef214323",
+      "statement": "Orphans are Form products the old import asked for but the new one doesn't; tracked in formCaptures.orphansByPosition; shown in Form spec pane as soft info (not error); user may keep or remove them.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/FormSpecPane.jsx#L322-L327",
+          "version": "repo-lines-v1:sha256:ffd3e67c468e3efbb620543868a738f6a5e8e208407d40de8e347788caf9c53e:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZGI1ZTAxNzU2OWQ2OWUzNDQ3ZmY1MjI3MmQ0NDIxYWQ3NzVjNzg3NzAzMzc5ZGFmNzQ5NGY0ODkxNzg1NTUxZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjY5Zjg1YTIyYjVkZmMxMGJjNTM0M2QwOGFiMGVlMjViMjY2MDNkMGIzNmNhMzA0OTM4MTNhYmM2ZjkxN2JjYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTQxN2EyN2EyNTc2MWJiNGI4OWEyMTAzNTc3NDJjMmZiODk0NGFjMzQwMTFhNTFkNGM3MWJlOTQ1ZmEyOGY3MCJ9"
+        },
+        {
+          "resource": "repo://src/utils/formSpec.js#L99-L111",
+          "version": "repo-lines-v1:sha256:140cfc5b0179b589e46edd4544f25ff2cb8d5d97e97ee518e0f754e60e9d4148:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3YzdhNzUwNzc4NmQ2MmYzYzE3NWE3Y2QxODM0NjhmYzFiN2JjNDcwNzNkMTNlM2Q3MGU4Nzg2MDliNGY2YzYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhiZDI2YjQwMGMwMGFhNDI2MzdlOWJlMjUwYTI1NmIzMDNjODc0YWMyY2UyMmI0YjUwNjdhYTkwZjBjNDljY2UiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg4ZDM2MTMxNzc1MDdmMzkyNjIyYjM1OTVjYWIyZWY3YjBkM2E0MGZmNzIyZjJjYWY3NGY0OThiYjRiNTZmNmYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_5e5f65c8ecee4eeeb4ef911e70204b23",
+      "statement": "Every column the sheet contains is captured on import; which columns are shown is a display preference saved per project, separate from capture; users can toggle visibility via ⋮ menu without re-import.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/FormSpecPane.jsx#L188-L217",
+          "version": "repo-lines-v1:sha256:f519952b252ecbb3944cbc20536f1fa22dc0d0466397bd810dadeb9ac16d8b91:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjViNDNjNWFmZjkyOWVhMjIxMWYxODRjM2IxOTZkMjVhYmYxODRiZTQyYjc0YTUyYTQzYzhhYWFlN2YxNGMzMjAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZhNTNmNTJkYzlhZDExNjMxNmE0MTIwOWYxNGQ0YWQ2NjBmNjgxZTMxOWIyNjkzMDc4MDVhMTFkOTQxMzI5MGMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjAzMTVlNDZmOTM3YmJmYmUzZmZjNGIwZDFmYzU1NDBhNDQ5MDFjZWJhMWJhZjNlZmQ1YzMyNzUzMmQ3MDMwZmMifQ"
+        },
+        {
+          "resource": "repo://src/components/FormSpecPane.jsx#L305-L322",
+          "version": "repo-lines-v1:sha256:d5bcd32d41f1fd702c26b8ae42fa3ebb1161f93bde3762a4e7cb71a1552097a0:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNhNzlkMWQ2MGNhMjZlYzNjYjkyYThjMDE4NDlhNGVlYWExMWY0YmZlZjQ0Yzc4MzJjYTU5ZDBmNWVmNjI4Y2QiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRiNWUwMTc1NjlkNjllMzQ0N2ZmNTIyNzJkNDQyMWFkNzc1Yzc4NzcwMzM3OWRhZjc0OTRmNDg5MTc4NTU1MWYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE3NDU3NWVjNGI2NzEzOTA1ZTlkNDRhNWFlNWNhZmM5YTFkY2NiODE2MTY2MDllZGI2NTQ3ODY0ZDAzM2QxNjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ5NTEwOTBkNTQ4Nzg4ODNhOWE0ZDg1ZDc3MGVmN2E0YzU4NDdhYjViODE2ZGU5NzgxODkxOGJiODJiZGI2ZGUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_7bb304cff11140e9aa4505ebfa0ad817",
+      "statement": "Form matching is slot-agnostic: the Form never says whether a code sits at position level or inside a wrapper, so matching ignores placement rules and product inside a wrapper satisfies Form without 'misplaced' errors.",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/formSpec.js#L1-L56",
+          "version": "repo-lines-v1:sha256:1b2da0bd6fb4a2dcb761094e32933e15891b4c000c12f618badabc3d21536556:eyJzZWxlY3RlZExpbmVDb3VudCI6NTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM3NmZhN2Q4YTQ3NzAzOTBhZTc3YTdhNTljZmUyODkwZTcxZmFmNDAzNmZjNjU1Mzc3M2EwZTkzN2JhNTI4NWQifQ"
+        },
+        {
+          "resource": "repo://tests/frontend/formSpec.test.js#L25-L45",
+          "version": "repo-lines-v1:sha256:cf841bc5e555bac968701824b2799cdf2a25659a842f14da5d7b685601d945df:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMWE4MDc3NzVjODg2ZDFmZjE4MGQ4MTlmYjYwYzcwNGY0MjYwYjg4ZThmNDc4YTcwNTczZmM2NDZjZTg2ZjIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIyMzUyNTg5YzM0ZDNjNjA2ODU5MzFiNmVjYzRkNTA5OTFhN2M1NmM4ZmJhMjg5NDExNDY1NzY5MDI3MmNhYzMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkyZTZhMzU0ZmQ4MDNmMzVjNjM2ZWRjMjlhNjc5NTdkMDUzMGFjYWJkZDZlZWUwMjdlNTczOGJkOWNhNjYyNjAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIwZjk4NDQ2YWU5NDQ0ODRlMmUyMzYxMzdiM2IzODhlYTlkMzljOTczNDhhNjYwMGVmYjc1NTQzNWMzZTlkYzcifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-17T13:57:20.517Z"
+  }
+}

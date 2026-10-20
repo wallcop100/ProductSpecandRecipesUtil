@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 1,
+  "pages": {
+    "/openwiki/architecture/core-systems.md": {
+      "pageVersion": "sha256:95e02b636ad0e31888ca7d84fa88ed4d68be7efc2b98d72bd1764d9b7695c1ae",
+      "completedBy": "openwiki/0.7.2",
+      "completedRunId": "c83b8f96-f789-4310-ac02-c52adc18fd49",
+      "sourceFingerprint": "sha256:9c5195f71d45ceb6d0e4db7643e46f6855f4adc40bb9a9bd8f162b48a2521e68"
+    },
+    "/openwiki/architecture/data-model.md": {
+      "pageVersion": "sha256:755e371e8e6319ebb8ba1b2fa71c90c5ad6f805715698c27cf18211b17531b20",
+      "completedBy": "openwiki/0.7.2",
+      "completedRunId": "c83b8f96-f789-4310-ac02-c52adc18fd49",
+      "sourceFingerprint": "sha256:9c5195f71d45ceb6d0e4db7643e46f6855f4adc40bb9a9bd8f162b48a2521e68"
+    },
+    "/openwiki/architecture/state-management.md": {
+      "pageVersion": "sha256:ec1e3e400acb6c328ce41b5ccf72817fcbe226b988365881a5d7333004389be0",
+      "completedBy": "openwiki/0.7.2",
+      "completedRunId": "c83b8f96-f789-4310-ac02-c52adc18fd49",
+      "sourceFingerprint": "sha256:9c5195f71d45ceb6d0e4db7643e46f6855f4adc40bb9a9bd8f162b48a2521e68"
+    },
+    "/openwiki/concepts/code-learning-and-suggestions.md": {
+      "pageVersion": "sha256:0329e6239e3c249f2309a7ce07f118a95fe55d5d43348a942521a9751b029503",
+      "completedBy": "openwiki/0.7.2",
+      "completedRunId": "c83b8f96-f789-4310-ac02-c52adc18fd49",
+      "sourceFingerprint": "sha256:9c5195f71d45ceb6d0e4db7643e46f6855f4adc40bb9a9bd8f162b48a2521e68"
+    },
+    "/openwiki/concepts/templates-and-patterns.md": {
+      "pageVersion": "sha256:4e44586d81cfd3474143b139fdb51b755275375eb428915d223764c5aed42090",
+      "completedBy": "openwiki/0.7.2",
+      "completedRunId": "c83b8f96-f789-4310-ac02-c52adc18fd49",
+      "sourceFingerprint": "sha256:9c5195f71d45ceb6d0e4db7643e46f6855f4adc40bb9a9bd8f162b48a2521e68"
+    },
+    "/openwiki/concepts/validations-and-readiness.md": {
+      "pageVersion": "sha256:c950ebba601a5865690cacdcc9c4061f30bc58e39b416464617423c9730dd7da",
+      "completedBy": "openwiki/0.7.2",
+      "completedRunId": "c83b8f96-f789-4310-ac02-c52adc18fd49",
+      "sourceFingerprint": "sha256:9c5195f71d45ceb6d0e4db7643e46f6855f4adc40bb9a9bd8f162b48a2521e68"
+    },
+    "/openwiki/integrations/companion-server.md": {
+      "pageVersion": "sha256:132e63388fd89959070ce32236f0fff1c3f11300a8e24d49bd0842c0f89afa43",
+      "completedBy": "openwiki/0.7.2",
+      "completedRunId": "c83b8f96-f789-4310-ac02-c52adc18fd49",
+      "sourceFingerprint": "sha256:9c5195f71d45ceb6d0e4db7643e46f6855f4adc40bb9a9bd8f162b48a2521e68"
+    },
+    "/openwiki/integrations/electron-platform.md": {
+      "pageVersion": "sha256:db29b41001daa42128f6658efae341a5325e94bac766602e31417440653f55c0",
+      "completedBy": "openwiki/0.7.2",
+      "completedRunId": "c83b8f96-f789-4310-ac02-c52adc18fd49",
+      "sourceFingerprint": "sha256:9c5195f71d45ceb6d0e4db7643e46f6855f4adc40bb9a9bd8f162b48a2521e68"
+    },
+    "/openwiki/integrations/excel-workbook-format.md": {
+      "pageVersion": "sha256:140f473ecd658ba32a03bfa4452eec08289bec95c87234308c00918523e5440b",
+      "completedBy": "openwiki/0.7.2",
+      "completedRunId": "c83b8f96-f789-4310-ac02-c52adc18fd49",
+      "sourceFingerprint": "sha256:9c5195f71d45ceb6d0e4db7643e46f6855f4adc40bb9a9bd8f162b48a2521e68"
+    },
+    "/openwiki/operations/changelog-and-versioning.md": {
+      "pageVersion": "sha256:bbbcb215084072d1e9a4647bc218411863905c3ea2b4a7d205f829388d7fa30c",
+      "completedBy": "openwiki/0.7.2",
+      "completedRunId": "c83b8f96-f789-4310-ac02-c52adc18fd49",
+      "sourceFingerprint": "sha256:9c5195f71d45ceb6d0e4db7643e46f6855f4adc40bb9a9bd8f162b48a2521e68"
+    },
+    "/openwiki/operations/debugging-and-profiling.md": {
+      "pageVersion": "sha256:97bf6dc269686439f0138bc50494179e35727b7fa7465fc960685d9dc51cdc01",
+      "completedBy": "openwiki/0.7.2",
+      "completedRunId": "c83b8f96-f789-4310-ac02-c52adc18fd49",
+      "sourceFingerprint": "sha256:9c5195f71d45ceb6d0e4db7643e46f6855f4adc40bb9a9bd8f162b48a2521e68"
+    },
+    "/openwiki/operations/project-setup.md": {
+      "pageVersion": "sha256:eccb8791de689bcc98207836e1616ca4b9b0e28e9f1aaf63ccbb8bf3f0078520",
+      "completedBy": "openwiki/0.7.2",
+      "completedRunId": "c83b8f96-f789-4310-ac02-c52adc18fd49",
+      "sourceFingerprint": "sha256:9c5195f71d45ceb6d0e4db7643e46f6855f4adc40bb9a9bd8f162b48a2521e68"
+    },
+    "/openwiki/operations/testing.md": {
+      "pageVersion": "sha256:862b7960ee45e0253bde9a50fc70ee9296b8d321792a63aeb25beef511c38391",
+      "completedBy": "openwiki/0.7.2",
+      "completedRunId": "c83b8f96-f789-4310-ac02-c52adc18fd49",
+      "sourceFingerprint": "sha256:9c5195f71d45ceb6d0e4db7643e46f6855f4adc40bb9a9bd8f162b48a2521e68"
+    },
+    "/openwiki/quickstart.md": {
+      "pageVersion": "sha256:1f517a5e74f2bd0f41d82d95ce0532651c75c1a42d4d1a5e7ad72e5dd33ca7f4",
+      "completedBy": "openwiki/0.7.2",
+      "completedRunId": "c83b8f96-f789-4310-ac02-c52adc18fd49",
+      "sourceFingerprint": "sha256:9c5195f71d45ceb6d0e4db7643e46f6855f4adc40bb9a9bd8f162b48a2521e68"
+    },
+    "/openwiki/reference/api-and-hooks.md": {
+      "pageVersion": "sha256:6dd29c751c4acf64735587a2c7a6a1dbe07b020873247c93d3666f9d4d260242",
+      "completedBy": "openwiki/0.7.2",
+      "completedRunId": "c83b8f96-f789-4310-ac02-c52adc18fd49",
+      "sourceFingerprint": "sha256:9c5195f71d45ceb6d0e4db7643e46f6855f4adc40bb9a9bd8f162b48a2521e68"
+    },
+    "/openwiki/reference/component-hierarchy.md": {
+      "pageVersion": "sha256:a6d2cb868c7b43ae2edf9a7d12804e678eea8b0a29111f4cee331f793f7ea21f",
+      "completedBy": "openwiki/0.7.2",
+      "completedRunId": "c83b8f96-f789-4310-ac02-c52adc18fd49",
+      "sourceFingerprint": "sha256:9c5195f71d45ceb6d0e4db7643e46f6855f4adc40bb9a9bd8f162b48a2521e68"
+    },
+    "/openwiki/reference/file-tree-overview.md": {
+      "pageVersion": "sha256:ae05e0b9faa55f38c99506fe4f1d065a41bddf293b8bf3c5fdae4c9bc1f4166c",
+      "completedBy": "openwiki/0.7.2",
+      "completedRunId": "c83b8f96-f789-4310-ac02-c52adc18fd49",
+      "sourceFingerprint": "sha256:9c5195f71d45ceb6d0e4db7643e46f6855f4adc40bb9a9bd8f162b48a2521e68"
+    },
+    "/openwiki/reference/glossary.md": {
+      "pageVersion": "sha256:0df9302d704fded7d833d4be18ddff3fbbec7400ef66ea14426f88a2df18c83e",
+      "completedBy": "openwiki/0.7.2",
+      "completedRunId": "c83b8f96-f789-4310-ac02-c52adc18fd49",
+      "sourceFingerprint": "sha256:9c5195f71d45ceb6d0e4db7643e46f6855f4adc40bb9a9bd8f162b48a2521e68"
+    },
+    "/openwiki/reference/utility-modules.md": {
+      "pageVersion": "sha256:6ee45d26b898f4ebf7eafd51f1cc83e969601b0cb973c5250c7d54272789bd43",
+      "completedBy": "openwiki/0.7.2",
+      "completedRunId": "c83b8f96-f789-4310-ac02-c52adc18fd49",
+      "sourceFingerprint": "sha256:9c5195f71d45ceb6d0e4db7643e46f6855f4adc40bb9a9bd8f162b48a2521e68"
+    },
+    "/openwiki/workflows/connector-templates.md": {
+      "pageVersion": "sha256:b975e70505d451306b80e52c8fed20a5a1cd55e5f0ce8e511b403d0345a312a1",
+      "completedBy": "openwiki/0.7.2",
+      "completedRunId": "c83b8f96-f789-4310-ac02-c52adc18fd49",
+      "sourceFingerprint": "sha256:9c5195f71d45ceb6d0e4db7643e46f6855f4adc40bb9a9bd8f162b48a2521e68"
+    },
+    "/openwiki/workflows/form-import-and-painting.md": {
+      "pageVersion": "sha256:7c36bc847c9f340189734cb0d6db7cd3c85c2c15511e57cb0c5f45d2f40636da",
+      "completedBy": "openwiki/0.7.2",
+      "completedRunId": "c83b8f96-f789-4310-ac02-c52adc18fd49",
+      "sourceFingerprint": "sha256:9c5195f71d45ceb6d0e4db7643e46f6855f4adc40bb9a9bd8f162b48a2521e68"
+    },
+    "/openwiki/workflows/import-and-export.md": {
+      "pageVersion": "sha256:fe6d739b6d41676847dc40655aae0c36cd86e2a371dc71343fefbb80896b9b58",
+      "completedBy": "openwiki/0.7.2",
+      "completedRunId": "c83b8f96-f789-4310-ac02-c52adc18fd49",
+      "sourceFingerprint": "sha256:9c5195f71d45ceb6d0e4db7643e46f6855f4adc40bb9a9bd8f162b48a2521e68"
+    },
+    "/openwiki/workflows/product-spec-sync.md": {
+      "pageVersion": "sha256:14bea75399bd39b1e3851738b53f7c332b3153ae1764cbce055fdd533c748c19",
+      "completedBy": "openwiki/0.7.2",
+      "completedRunId": "c83b8f96-f789-4310-ac02-c52adc18fd49",
+      "sourceFingerprint": "sha256:9c5195f71d45ceb6d0e4db7643e46f6855f4adc40bb9a9bd8f162b48a2521e68"
+    },
+    "/openwiki/workflows/recipe-building.md": {
+      "pageVersion": "sha256:2dbfc165ab87b3b4958782ae694e3b80c1e3a4f13be3bae23c297adc404d44b6",
+      "completedBy": "openwiki/0.7.2",
+      "completedRunId": "c83b8f96-f789-4310-ac02-c52adc18fd49",
+      "sourceFingerprint": "sha256:9c5195f71d45ceb6d0e4db7643e46f6855f4adc40bb9a9bd8f162b48a2521e68"
+    }
+  }
+}

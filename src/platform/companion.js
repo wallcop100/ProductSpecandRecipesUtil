@@ -73,6 +73,9 @@ function build(features) {
     /** Global templates published for this app (Orion): [{ id, name, applicable_tags, ingredients, replaces }]. */
     templates: has('templates') ? async () => (await quiet(getJson('./api/recipes/templates')))?.templates || null : null,
 
+    /** A personal / project template offered to Orion, which keeps it as a draft: { name, rule, ingredients, by, project } → accepted? */
+    suggestTemplate: has('templates') ? async t => !!(await quiet(post('./api/recipes/templates/suggest', t))) : null,
+
     /** Recipe kinds from other projects (recipeKinds.js): design, power, slots with shares and rules. */
     kinds: has('kinds') ? async () => (await quiet(getJson('./api/recipes/kinds')))?.kinds || null : null,
 

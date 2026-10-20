@@ -1,0 +1,210 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:2dbfc165ab87b3b4958782ae694e3b80c1e3a4f13be3bae23c297adc404d44b6",
+  "claims": [
+    {
+      "id": "claim_600b7b03d58f48c2858f73231d27a4a2",
+      "statement": "BuilderScreen implements a three-column layout: left column (ProjectTreeView position index), center column (recipe editor when position selected or position overview), right column (ElementPalette and supporting panels like ValidationPanel, FormProgressChip, ConnectorsPane, RecipeStylesWindow).",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/BuilderScreen.jsx#L53-L62",
+          "version": "repo-lines-v1:sha256:1e8f8c34cdde43a12f593b7e00a0cc460794426921d2797168dea40a8525f659:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ2ZGNiM2YzMTI3NGJhY2Q1ODlkODBkZTJkN2NlNTNlNjhkMDdjNmZhZWFkZjBjMTNhODY0ZTc5YTE5MmJiZjgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU3NWJkMTZlMTI3NmI1YTNiZDVlYjQ4OGI1M2Q1Y2VlY2M4ZjQzNTk0NDkxNjg1NWIzOWFlZTI5MDUyNDNkMWYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU4ZTU5OTY3NjdmZmQxMzE4MjY2OGQwYTNiMTJjZmY0ZGQwZGI2ZWY3YjM0ODEzNjFjZmU3NjlkMTk5MGVlMzIifQ"
+        },
+        {
+          "resource": "repo://src/screens/BuilderScreen.jsx#L62-L63",
+          "version": "repo-lines-v1:sha256:4782039f3c26fb145f262a5a9f4ea2d59579385a482f6295ebf6f1308a3676a1:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDZkY2IzZjMxMjc0YmFjZDU4OWQ4MGRlMmQ3Y2U1M2U2OGQwN2M2ZmFlYWRmMGMxM2E4NjRlNzlhMTkyYmJmOCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYzA2Y2I3ZGU0NDBmYWUyZWNiMWQ2MmM5MTE2MGE1ZmU3ODA5ZjUxMmU5ZTljYjYyNzFlNWRkMWJkZTkxZmU4ZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTU5MDFmZDI1Y2VjYmU3ZTVmODU0YTFhOGU4OGVkZjZhYzQ5MDNiMzdhNDBkNjQ2ODliMmYyMzFmYmUyZTUzMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjllMmUwZjFlMmVlMzM5ZjM0MDcxZjI3Y2JhNWRmYWYzOTkyNTc2ODU4ZWMyMjZlOTJlMGQ1NWNlYzcyMTIzMSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_f39cf8f0ebf148759e0041e2d8b77432",
+      "statement": "Position selection flow: clicking a position in ProjectTreeView calls setActivePosition(ref), which first calls settleDesign() on the previous position to mark its IsDesign item; if multiple position-level rows exist with no design item, opens DesignPickerModal to ask user to choose; once settled, switches activePositionRef and closes any open ElementType editor.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/PositionRail.jsx#L70-L73",
+          "version": "repo-lines-v1:sha256:635747e48a6fef1de793d0eba30cfa016a3c2bf462d99e899aa9fe8fdca4cdbf:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjU5NjI3MDU4MDIyZjgyNzI1OWFlZTZkYjM0OTE1MTRjM2MxZDVjMGEwZmMzYzU3MTUwMTUxMTBhMDY0MDlhNSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjdlNTc4OGQ1ZDlkNzNkMjRhODFkYmMwYTVhNzRiZmE4MmM5YzNiM2FmOTllNTJhZjc5NmU5MGI0NjhhOGEzZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODY1MTJkNjU0MjJkNzE1OWMxY2Q0OTM1NjhiMjM2ZmQ2ZGFmNDk1YzE4Nzc4NDMzZTZkM2FkYmEyYTRmYjY5NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzRhMThhZTdhZDQ1OGQ0OWVmMmIzMDljOWFkOGJjZGUzZDlhYjE2NjFmZGVkNDU3ODhjMzk2ZDM0YmQwZWM5ZCJ9"
+        },
+        {
+          "resource": "repo://src/store/useStore.js#L775-L786",
+          "version": "repo-lines-v1:sha256:fea112ad19833360c080b3b234f40a373659057afb782939b0ab92fb57dab3ba:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ1NGRkOWU4MGE1N2NlMjVlNzg0YTlkYzQwZTQ5YTYxYTVlNjkyYjlhNDkxMzk5YjFlNTU2NDQyZjdmOTNhN2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhjYzBjNGFhODA0YmM5YTU4NGM5NTY3ZTFmZjUxMTM5ZmNjZWFkMjdhNjY0N2YxMGM5YjgxM2ZjYjA1NDg2ZmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUwYzgxZTExYmQ3ZDc4ZTM0MmY4ZjExMzNmYTJjN2JjNTFmOGNiNGYzNjQ3YmZhNjFiOTgzMDliNTA1ODI4ZDQifQ"
+        },
+        {
+          "resource": "repo://src/store/useStore.js#L821-L841",
+          "version": "repo-lines-v1:sha256:2bb9eff1eba9fac5ed67eb2a405e93301cabe84745550e7a9f898107cf4f80be:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBhYjhlZTZkNjcyZTZhODk0Y2JiOGJkM2IwZjY4OGU3MzA1MzMwZTFiZGU4NTZiODA5ZGMxZmUwOTJjOTc5YzYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJhNWQ1ZDAyM2RlMGEyMzJjM2U2YTM1MzFkYmIxOTBjYzc5MTI2MWM1M2EwMDYzZDFkYTc0ZTA2NTNjZTA3MDciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjkyMDlmZGY4N2Q5ZTMzZjNkYTcyMzJkMWEyOTA2ZGUxYTlmOTNjZjEzZWU3ZjcyZTQyZGI4M2U1MDMwYjRhODMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_b23c2c08ed284c65ba8dfb71237ebf74",
+      "statement": "When leaving the builder screen, App.jsx calls leavePosition() on the activePositionRef before switching screens, ensuring design settlement happens before navigating to Product Spec, Templates, or other screens.",
+      "evidence": [
+        {
+          "resource": "repo://src/App.jsx#L61-L68",
+          "version": "repo-lines-v1:sha256:db2f0f5c79333c03014dc12c596723e51dd72b5eb2eb48e436bc230a892f1f8a:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYmRjNWM1Yjc0Y2IwNDNhZjk5NDU4Y2MyZTkwMGZhMTBjNDIyZWNkOGQ5YjRhMGU4ZjdjYWM4ZGU5YzFkZTE5ZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjdlNTc4OGQ1ZDlkNzNkMjRhODFkYmMwYTVhNzRiZmE4MmM5YzNiM2FmOTllNTJhZjc5NmU5MGI0NjhhOGEzZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzc4OGY1NzRiMzExOTJkZTQ3NjRlZDU3OWQwZDA5OTkxYjJmYWRkZTM2OGE3MjFkMDhhMGI3MGY0ZGQ4MTBmMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZmI1MjhiODBkZDQyNzJiN2RhNDJhZDZiYmFmMDAxNjZkNTcxOTc4NTQ5ZWU5MTkyNTczZTU4YzdiYTk1ZTllNCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_d52e67e52b4e40a8a36b0f22be7b3257",
+      "statement": "Recipe proposal via proposeRecipe (recipeProposal.js) gathers Form captures (product codes assigned to ElementTypes), determines wrapper type (LIN/DL/PS/none) from patterns, and picks parts from precedent (same-kind recipes → any-kind recipes → project ElementTypes → style library).",
+      "evidence": [
+        {
+          "resource": "repo://src/utils/recipeProposal.js#L1-L21",
+          "version": "repo-lines-v1:sha256:a9079d6f7838cd6bc14d91847a6da5a95fa37cc83f3608a38d493469547e19f3:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJmMjQ0YTk1Nzg0NjVkMDViNjgyZTQ0MGQyZmIyYzMzYmM1MjgxNjIxMjYyNjAyNjczNGM2NDAyNTUyYzBjNTQifQ"
+        },
+        {
+          "resource": "repo://src/utils/recipeProposal.js#L135-L149",
+          "version": "repo-lines-v1:sha256:eeab917933bd07cc65d897bf44ca32213e63f7faa0212210f80c520513832487:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg2MGRmYTA2NGU0MGIwOTlmNzJhYzMyNzg2MTNiYzJkMGRmYzZlZmVjOTBhMGMwNjY1Zjc1MzgxODdiY2Q1MzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk2NzVmMDk5ZWMxZDI2MzU2YTM4MmY0MzNiNTI2YWRmYTk2NDZkOWRhMzg5ZDkxNDJiN2U3ZTRmNTQyYzRmODQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZkYjA2NzUwYTQ1NTQ1YjQ4NmEzYWQ1MzZlMjMwMjU0NzE5OTg5MTM2OTA2ZGFhNTFhMTExOWNlM2M0N2ZhODIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJkYmRlYjk0NGEzYWExNzliMGI3Yzk3YTI4NDZlZDczMWY1ZWJhYmJiZTQ2OTljZDdkZjY4ZjJlYTA3YjVlMjEifQ"
+        },
+        {
+          "resource": "repo://src/utils/recipeProposal.js#L69-L107",
+          "version": "repo-lines-v1:sha256:4520327237f66bf8b9a214db5b2edfe125f94a6d94712ca25913226e15f9b041:eyJzZWxlY3RlZExpbmVDb3VudCI6MzksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVkNWU3YTkzMDBmMTM0NmEwMzk4NmRkZDhmNGVhZjFkYTA0YmQ4Y2JkNDMwZjMwNTM2ZjgxMjM4NmZlZDMxYjgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBjODI3NmU4ZjUxZTBkY2Q0ZmI2MzM5OTNkM2Y2MmVkNWU2NTg4ZjY1YmE2NmZkNmZiMWZjZTI2NzU3MjMzNzMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ3ZmVhMmZlOWE1MDkxZDM5ODM3YzMyYTExYzBmNjM1N2Q4ZWUxZDJhNjgzZDg2MTJjMTQ2YTVhODMyZDljMTQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_938507774fc34bfeb170e3667323aed9",
+      "statement": "IngredientCard displays each recipe row with quantity/dimension controls (Quantity for counted items, Dim_QuantityMultiplier for dimensioned items), flags (IsDesign, IsContractItem, IsInteger), drag-to-reorder handle, and right-click actions (move to section, delete, fork, copy/paste).",
+      "evidence": [
+        {
+          "resource": "repo://src/components/IngredientCard.jsx#L22-L29",
+          "version": "repo-lines-v1:sha256:4130de341c29b05a51f2335575b264644da33ca9a6f0dc7229865b38c37b8842:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWFmMjJjZjA3MzI1OTJjMjQ3MTQxY2JlNjFlZmExMTAxMjYxMmY1YTMxMjJiOWFmOWJiYWY1MmY1NzI0ZDE5NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTcyYTQyOTM4MmIyZTE0NzE4ZTBlMzdiMDU3MGE4YTE3MDI5OTFmY2Q4NDk4Y2Q4NDA2MGE4YmY0ZjA1MDE3YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMDZjM2RiMDMwMzdkZThmNWIzZjViMTNmZTMwNTZjMzlhOWNjOTAyNWJiNjRkNGUyNjZlMjRiYzBhYTBlNTdhYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNWZhOTA2MWJlZDE3OWFkYTQyMDBhNDdlY2U2NjlmZjNmNDJkNjU5YWI3NGNjMTkwMWYzNDE0YzkxZjZiNzE0NCJ9"
+        },
+        {
+          "resource": "repo://src/components/IngredientCard.jsx#L38-L89",
+          "version": "repo-lines-v1:sha256:0ee482f840a2e8e74f687afd641408c2a622922a42216cb92a3464637824d8e0:eyJzZWxlY3RlZExpbmVDb3VudCI6NTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBlMmZjNDgwNjAzZmM4MDVjMzAyN2JkOWQwYmFmMTI1YTgwZmQyZmRiYzIwNThjMTA3OTk2YWYxMjAwNmJmNzQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjIyMmNmMDQ3ZDk5NDU3MWJlNWFjZmU0YTJiNmMzZTNkY2I4NTQxZDllOTJkMDMzMTRhNzdiN2ZmNDMyNmUxZDciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjMzMTI5MmVkM2NhZGIwZjQ5N2Q5ZTRkODZiMmYyYzlmMGU4MWI5ZTg1MDY5YTYwNzBkNmZiMThiODk3OGI0MjgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_8039e6baeeef442ca73ac53439457bc4",
+      "statement": "ElementPalette provides two browse modes: ET Ref (grouped by Family) and Mfr+Code (grouped by Manufacturer from Product Spec), merges ElementTypes from database, Product Spec rows, and recipes, supports drag-drop and button-add to recipe sections, and allows inline pick or NewETWizardModal for creating new ElementTypes.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ElementPalette.jsx#L13-L18",
+          "version": "repo-lines-v1:sha256:2479b94db6937ee5bf83819f88fd5dd39c338b16a16fc8237a16e04577b83726:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWFmMjJjZjA3MzI1OTJjMjQ3MTQxY2JlNjFlZmExMTAxMjYxMmY1YTMxMjJiOWFmOWJiYWY1MmY1NzI0ZDE5NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZDY4OTRmY2Y2ZWJiNmI4YTZmMDFiMDJiM2U3NmJiZWEwMzk2ZTJmMzJhOGJlM2Y0ZGMyYWMwNmVjNGYwZGUyMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTU5MmUxZjgzZmYyNDRhYTc5NTI3MjBhZTNiNjNmOWU1YWU3MTBjYjBiNDk5N2QyZGY5NDRmZmQ5ZWY1NWQ2YSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMDRhODQyNzlkODkxMjBiMzE4MjA4OTE0NWE3YTAwOWY0YzdhZmExMjY2M2FmNmE1YjQzNjBlMTg5ZjkwYjM0NCJ9"
+        },
+        {
+          "resource": "repo://src/components/ElementPalette.jsx#L44-L80",
+          "version": "repo-lines-v1:sha256:bf468e400ef6cee28ff4104ec62540d71522be9e585fbd8638b674d662552c92:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ0YmVkODE5ZWY5N2FkNDBiMjA1Njg2ZTgxNmMwYmExYzA3ZTcwZWYyNGFlOGEzYWFmZTYzMjIwMzhlMjM1OGEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYwYjhjNzVjZjZhZmQ0NjU4MGY3ZGJmYzZjNzFjMmMxYmY4ZTkyYTg0NWJjNmJkZWRjNzE2NThkYWMwOTUyMGMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFhODYyZmZiMmQ2YTQxYjI0NThhODU1NGE2MDk5NDNhNTcwZGQ2ZGYyZmM4YzM4NzU4ZTc4MmJiYzFiMzI0NGYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE0NWYzOTM3NzQ2MDY0YmQ3ZjAyZGU5ZTI0MDRjZjllMGJhOGM2MGVjYTI5NTk2ZjNiZWJkNmUwNmUzYmJjZDMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_a80cce4ee2ad445eb72998d52902e5c1",
+      "statement": "RecipeSection manages one recipe section (position/dl_internal/lin_internal) as a sortable, droppable zone; displays IngredientCard rows; provides 'Add Entity' button that offers Existing or New fork; shows Paste button when in-app clipboard holds rows.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/RecipeSection.jsx#L21-L37",
+          "version": "repo-lines-v1:sha256:73bf05d3ee83a3e00e9f121df9a6197dbe452b56ceb49bb237aa26e83fd5c303:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZiMTdhYzRjZDU0YjMwNmMxZDc3NjFmZjRiODM4NTE3ZGYwNWU2YmJiZWQzM2RjM2RhNzI2YTk0ZWJkOWE5YzUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjAzMzY1MDk1YTdhNDMyN2Q0OTI1Y2M2MWQ5YTc1NGQ4OTMwODNmN2Y5YTJkNjg2YzQ4MjFkYjc2MGJmMDIxYWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE0ZTdlNDQyY2M4MWE1MjQ2NThmMjQ1MDY4YjA4MDEwNGRjMGY2NjVhMTBhZmY5MzI1NzEzYzU3NTU3YzZjNDgifQ"
+        },
+        {
+          "resource": "repo://src/components/RecipeSection.jsx#L46-L56",
+          "version": "repo-lines-v1:sha256:71bf76f3d42e1642d328afdd68208a08a629a6fd37bd564796505cc1d68ed8db:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ3M2VhYmM4ZDU1NzFjZGVkNzM3YzQzYjdlNWVhNmZmOGM2NDg1MDA5M2ZmNjhhNDM1ZjM2ZDMyYmQyZTNiMTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVhYjI5Nzk5ZGQxNjBiY2ZlMjEzYjMzYjRjYWFlMTY0MTRkYmZiZTkwZjczZTM0YjQ5ZGRjYWJkMzg4ZmExNDgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU3MDhmNmMzOWE0ZGU4NmM4NjZlMmJkZTcxZjU4NTJhNWE2OWJjZDA1ZjhlYmRkMTY1N2RkZWFkZTE5OThlZDIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_a02ffaf316a440979d03a0c27083803c",
+      "statement": "ValidationPanel displays validation issues grouped into actionable tasks (blocking if must fix before export, queued if fix is ready to export, warning otherwise); provides bulk action buttons (fillWrapperSpecRows, queueMissingDbRows, fixBlankRowRoles) and item-level fixes that focus positions or open Product Spec.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ValidationPanel.jsx#L55-L61",
+          "version": "repo-lines-v1:sha256:53a0f78ff9fe7284d7b39ddd78fee4a317e088781a83b45af07a12c125eca16b:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMTNmNmE1ZWM3ZTNiNzMyYTE1YTQyMTkxMDAxYTYxZDQ3MzNiYWUyYWI2ODUwOTZjNGQ3ODYzOGI3MjYzM2I2OCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjdlNTc4OGQ1ZDlkNzNkMjRhODFkYmMwYTVhNzRiZmE4MmM5YzNiM2FmOTllNTJhZjc5NmU5MGI0NjhhOGEzZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTdkODYzMmU1NGU5Mjk4YWJiOTU4NzI3ZTJkNTE0MDhhYmFmMTM2NjAzNTM3OTEwMTQwYWJmNjViMzBhYjYxMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMDJlYTgwMzU5NWExZDgzZjQyODVkMTU1N2NjNjkzZjgzZjg5NmZmOWQ2ZWJlMjBjYTk5MWMwNmM0NTE4ZDBiYyJ9"
+        },
+        {
+          "resource": "repo://src/components/ValidationPanel.jsx#L8-L25",
+          "version": "repo-lines-v1:sha256:520af49b0becffcfa524b35df4b5c9da45e0022da86dd4b0649db59a65129584:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUxNDMwM2ExNzVhNjQwNDYzODFjNWM4MTQzYjdmMjQ1MWU2MjYxYjUzNDM1OGI2ZTU1NDRlNDQ0ZWQ3N2ZjMWIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImEwODRhMGU1Yjg5Njg3YTA1YmUzMjQ5ZjkxZWJkMzJmZDVlYmRlMzBjYmIyYjc2YWIxZmFhNTcwZmQ2YmM3NzEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU4MjhjNGY3ZDJkNTA2ODg5ZmU3YWRmYmE3MDgxNWY4YmQwYWY1MzI2YWMwMGEwZmU3ZmMxMDBlNWI3MDBkYzEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_77bd0c57aaab4737b6c43066a2aad9a5",
+      "statement": "FormProgressChip shows Form reconciliation status (X/Y positions with all Form products in recipe), color-codes green (done) or orange (incomplete), displays tooltip with detail (missing items, positions needing ElementType), and offers Reconcile button to step through incomplete positions via ReviewModal.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/FormProgressChip.jsx#L10-L24",
+          "version": "repo-lines-v1:sha256:6de4c9a34647826b7d9158ba4d52c643ed47f7d5f92b11f5a3759e966c32cf41:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk5MDM4N2UwNjE1NWUxNGM0NmY2OTY2MjUzZjNiNWZjNjRjY2FlMDhlNjZiOTgyYjhhY2Y2OWQzMGE4MzRmODMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhkMThmMDE4Y2VjZGY4YTY4ZTVlZWM1YWUyNjlkOTQ3NjA0MTdjNzE5MzgyYWI4MjYzYzMyMzE0OTJiMjY0ZjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY4OGNkNmNjMDFhYzdhMjQyOWQ2ODVjNmE3ZmJiNDA5Y2U4NWEwNzVjYjAwZmVhZTY1OWFhZWQzZDU5YWFhZTIifQ"
+        },
+        {
+          "resource": "repo://src/components/FormProgressChip.jsx#L60-L84",
+          "version": "repo-lines-v1:sha256:5204af320b9135c4d38f0408de2170d7fb267b3923c22321fcd0e31365d0ee87:eyJzZWxlY3RlZExpbmVDb3VudCI6MjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZmODExNTIzMDdlODU1YmVkMzg5ODYxMGViMzRiYjM4NjU5NDI1ODEwMmVkMWE2YjdiZjcwMDdjMmQ4YzAxNmEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU2MjY3OTM1ZmM2MzM0NjVkODQ4YjQwYTRlZDY5NjdlN2I3YTMyM2Y4MWNkNTNjMTEwYWUyMTAyOTY4N2FhMTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhjYmZlYmI0YjFiNjJlN2E0OGM2NjM2ZDc0Yzc2YzZiYmQ3ODZiMzhlN2Y2MTk0ZWE3NTAwMmQyYWFhNDUyY2YiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_c535402b563c4a85be287c5edec9af08",
+      "statement": "ConnectorsPane shows which connector template applies to a position (pinned/rule-based/clash), lists template parts with one-click fixes (add/remove/restore), detects connectors in recipe not asked for by template, suggests creating new template or applying to similar positions, and displays precedent from same-kind positions.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ConnectorsPane.jsx#L21-L27",
+          "version": "repo-lines-v1:sha256:53cefe82d1d7da9533b630e89a042bf2a7cade56d9c5b3b975166771009af8db:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWFmMjJjZjA3MzI1OTJjMjQ3MTQxY2JlNjFlZmExMTAxMjYxMmY1YTMxMjJiOWFmOWJiYWY1MmY1NzI0ZDE5NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTcyYTQyOTM4MmIyZTE0NzE4ZTBlMzdiMDU3MGE4YTE3MDI5OTFmY2Q4NDk4Y2Q4NDA2MGE4YmY0ZjA1MDE3YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNGQyMDNlZTM2MzI2ZTFhNGExN2I1MDM4YjNkNWIzMzI2N2ZmM2M3MmNhMTY1Y2YwZDQ3M2M2ZTQwNGJkM2IxNCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNmNhMzRlYWI5MDBiNzkwMzg0ZjliYzIxYzkzYTg5ZDA5OTgwZDZmOTU4NWM0NThlOTViZDkxMjFmMmM1MWVmZiJ9"
+        },
+        {
+          "resource": "repo://src/components/ConnectorsPane.jsx#L40-L74",
+          "version": "repo-lines-v1:sha256:cd5c6ba4b9e74f4c11ca0f76a95f0db605d3e64cb29156a092965ebeb1fa8cac:eyJzZWxlY3RlZExpbmVDb3VudCI6MzUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4YjRmZGExZDI4MmZmOGU1NzhiYjhmZDA0NDQ3Nzg0MDAzM2I1ODZmNWNiNzdjYjIyZmYzMWE0ODU5YTZkMTciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRlZWU0YmJmN2M4YmI4MDAzOTAxY2I2OTdiMmMwNTU2OGVlNDUzNzljY2UwMWFlM2QyOTc4MzBlZjYwNmYyZGUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjUxYjUwZDA0MjU3OWQ3YjQzNjhhMzQzZWM3YjNmMzcwY2IzN2U4Y2YyOWJiMDFjZmY1Y2IyMjk2MWEwMWFhYWMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQwZTc3OGM0MGZiZDFhN2NiYTBiMDBmMjU0Yjg5MTVmODQxMmJmYWRhMjg0MjVjNzczYTFjMGEzYzc0NTY1MmQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d52b5c6fc75b41fa9dfb92df9ddd9d7c",
+      "statement": "Recipe row edits are captured in rsChanges dirty registry; each entry tracks the row's _id, action (upsert/delete), changedFields (only fields differing from before), and before snapshot (staleness baseline); normalizeRsUpdates ensures both PascalCase and camelCase field names are written so export diffing works correctly.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L128-L135",
+          "version": "repo-lines-v1:sha256:053d864d20a05a43b47387005fd670dbec82814037c1c2cb6fcbdcb76152c2e3:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWY5MmE0YTZkZmM0M2YyZTg3ZjRjNTE3Y2ZkMjY4YjhlMmYwYTY1OTEzNDM4ZjVlNTYyNmE3MmMwMzhlYTUzNSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYzk2NmViYzM5ZjlkNDk5MDY5N2I1N2U2NjQxMGM2MWUwNDBiYTgzMmJiMjgwYzkzMDRkMTA5ZDk3Zjc5N2Q0ZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZmI4ZGUyZDhiN2NiNGZmOGQzYTM5ZjRiN2ExMWNhMmNkMDRjYmU5OGFlMzQ3MzUyOGVhNGYyZDFmZTU4ZDcyZSJ9"
+        },
+        {
+          "resource": "repo://src/store/useStore.js#L157-L209",
+          "version": "repo-lines-v1:sha256:59f2a7c62668096815bb19b40d25cce6e385c6d5c1f03201668e1daeb63e3d49:eyJzZWxlY3RlZExpbmVDb3VudCI6NTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUxMDljYzEyZDNiNDY4ZGU3MDFhZTQ4MWE3MDFjMDFjYjNkNDhmNzViMDMwYzYzNzJmMjVhODZlNTEwYjdhNGEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY5OTE5OWU4ZDdkNDU4NmJkM2NjZDJlOWRmY2ZiYTViNWU5MDM1NDc3NTQ5ZTZmNDNiZDE3MWYzYmNlYTRmYmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImMxZjg0ODcyYTA5ZTU5MzIyMWFlZjc3OGVkODEwZWE1MmM4YTAzN2Q5MzZmOTA2MWYxNWE1ODIzMTk0MGMxMTAifQ"
+        },
+        {
+          "resource": "repo://src/store/useStore.js#L80-L87",
+          "version": "repo-lines-v1:sha256:57b502f42f66b7258ff5e8daee5ef46339cea53a035f99e477d445e3a26e1b77:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjI0YzkyNDhjMzJkY2EzMDVmYzFmOTZjNmMyM2RjNjMyMmQ4ODU0Yjk4NWMwYWY4NWJkMWI4Y2U5ZGQ0ODQ1OCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNjZiYTJiNTk5NjczMmU3MTM5MGQzZTBjYzViOWJmZGZlNThhZTNkNmQzODNjZWFhMzI3NGIzNzU5NjU1ZGViZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYmEyYmY0ODAyNTUzZmZiZTZlM2NkOWE5ODFhN2RjZjQyMzY4MTU3NmU1M2U3NjUwMGMxODE3ZTgyZmVkMzMwZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZmQzMTY4NjdmY2I1NmE5NmMwMGI3MzNlODE4MTc0OTNjZmNhYTRmYThiMmYxNTc5ZTgxOTUyZTdhOGQ3MDlhNSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_d9734c4729f0430fbf3a6e629db928f4",
+      "statement": "leavePosition(posRef, then) settles the design item: if the position has exactly one position-level row with no IsDesign, auto-marks it; if multiple rows exist with no design item, opens DesignPickerModal (designPrompt) to ask user to pick; once settled (or already settled), runs the then callback; returns true if then ran immediately, false if waiting on modal.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L789-L809",
+          "version": "repo-lines-v1:sha256:2dbf164685c87c329fbba43ec18c1c6111b88fb38c9a00d008c2387c618d6535:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYyYjliNzVjMmZmODE4Y2ExNTNjMDRiNGY0OWZjZmViYzE5YjI2ZDdmNTFlNDgzZDZkMTEyNjI1Y2RlODIzZjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjlkYzNmOTk4YmFlYTAwZDMxYWRlZGY1ZTAyMzFmZWVjZDUyMmU1ZDY2MWEwNTBiMDZiMmQyYWQ2MjUzN2IyMDEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNhN2E4ZTlmOTIzZDIxMmMwMmJlMDkxYWMzN2EyZWNlMjZmMTQ4MzYyMmRhMTk3YjlkNjhmYTNkNDRlMGQyZjMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_c49eec2d0c144e17b585ce15004adea4",
+      "statement": "PositionRail provides compact sidebar when editing a position, showing all positions as filterable list grouped by family, status dots (red empty, orange form issues, green complete, grey ignored), and keyboard navigation (↑/↓ to jump); clicking a position calls leavePosition then setActivePosition.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/PositionRail.jsx#L30-L35",
+          "version": "repo-lines-v1:sha256:263d388c52a9fffeea9a3bc5156169b4d93a23b2f50b4413e8b7da8d51ce1ba9:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWFmMjJjZjA3MzI1OTJjMjQ3MTQxY2JlNjFlZmExMTAxMjYxMmY1YTMxMjJiOWFmOWJiYWY1MmY1NzI0ZDE5NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzY5MmMxNzA3MWYwNjBkNDY5MDg1OTgzOGRmYTQ5YTY3NWRjYTQ0MTRiODMyNzIwMmMyMDYwODRlODI5OWY2MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzJiNzExMzExYTYxMTg0NTBmMzg5MGUyNjE4YjgxMjgwMzA0NjE0NDgzMjhkODc3ZWUzMDFiNjQ3ZTYyN2JiYyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiM2FiYzU1M2U4NDI0ZTY5YmFlODNlY2RkMjgzZjU3NTg3NTEwNmJkYjQ5ZDQ1ZTEyMTA3NzAwYjBmYjlmN2M3OSJ9"
+        },
+        {
+          "resource": "repo://src/components/PositionRail.jsx#L70-L80",
+          "version": "repo-lines-v1:sha256:65c8f5c4bd04d94aeeb892174a5596fd5ce46bdfea9441f91ff11aed68a53272:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY1OTYyNzA1ODAyMmY4MjcyNTlhZWU2ZGIzNDkxNTE0YzNjMWQ1YzBhMGZjM2M1NzE1MDE1MTEwYTA2NDA5YTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg2NTEyZDY1NDIyZDcxNTljMWNkNDkzNTY4YjIzNmZkNmRhZjQ5NWMxODc3ODQzM2U2ZDNhZGJhMmE0ZmI2OTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjMwOWZhYmY5ODg4ZjgyYTZjOGY2OTQwMDQ2MGJjMDUwYTdhM2U0ZTI5MjBlZDk4NTMzMGMyYWQ5Y2I2OTU1NjIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_a5c207f295f74609af7f40a00be638f7",
+      "statement": "RecipeStylesWindow allows defining named recipe styles with rules to target position groups, setting recipe-level properties (laminate type, shrink tubing, etc.) that travel with the recipe; styles are stored as templates with scope 'project' and a rule for matching positions.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/RecipeStylesWindow.jsx#L29-L35",
+          "version": "repo-lines-v1:sha256:6ff61e14b845a9876804ef62e33a10f03e1a30bbaacd2d9a58670d7cb6b4ee7a:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWFmMjJjZjA3MzI1OTJjMjQ3MTQxY2JlNjFlZmExMTAxMjYxMmY1YTMxMjJiOWFmOWJiYWY1MmY1NzI0ZDE5NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjQyMGFhN2YzNTliNWEzOTMzMjM0ZjRiZWM2Y2YwMTEwNzljOTBkNjg0ZGJjNGViYjY1MzkzMThlOGFkMmQzMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzdiMmM1N2ViYjM4MmU2NmYwNGZlMzJlYTc0ODJlMDZiOGJkZDVmYWJkMjAwMTE0MzBjNTQyZjU5MmFhYjFiZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZDU1YTI0MWZiOWM0NjY0YjgxMjU2NTIwZTUyYjYyNmExOGVlMjcyYzk1MjUxMTBjZTJkNWNmZTlmZDk2MjAyMiJ9"
+        },
+        {
+          "resource": "repo://src/components/RecipeStylesWindow.jsx#L52-L56",
+          "version": "repo-lines-v1:sha256:6a2dbb2274343311a5c5b71ed80b8c3f0d58f6246b25c55123afa14eb965a413:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMzBiZjI5YjlkYjk3ZDdjOTRjZDI2NjQxNGZjNzAyYzdkMzE0YjMyZmJhZjA1NzU4NGRiYjBlYzRjMWFlMGMxZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYjQ3NjRiMGVjYjEzZjNiYjVkYzE2Yzc4ZGQ2YWNmNDAxMjJiMzYzOGFjOGM0MWZiMmEyZDhmMGM0Mjc1YTdlYiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZjAwNGM5NmE0NDVhYzczNTQ2MWQ4Y2E5Nzg0NzhmM2FkNzk0ZGZhY2FlNGQ4MjhkY2I2NTQ1NTMxNTFhNzlhOCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDk2Mjc2OTA3ZGNiYjhjOWU2NDRiYWY2YmFiZjZjMDJmMzlmZDAyZDE0OTMwOWRjYTAxYmVkMjdlZWFiNzVjNyJ9"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-17T13:57:20.517Z"
+  }
+}

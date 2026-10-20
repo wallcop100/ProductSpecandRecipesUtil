@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { Modal, Button, Form } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
+import { seedRule } from '../utils/templateRules'
 import { C } from '../styles/tokens'
 
 const lc = s => String(s ?? '').trim().toLowerCase()
@@ -49,6 +50,7 @@ export default function SaveTemplateModal({ show, onHide, posRef, name: posName 
       await saveAsTemplate(posRef, {
         name, scope, excludeIds: [...skip],
         tags: tags.split(',').map(t => t.trim()).filter(Boolean),
+        rule: seedRule(useStore.getState()._templateRecOf()(posRef)),
       })
       onHide(true)
     } catch (e) {

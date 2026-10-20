@@ -21,6 +21,8 @@
  */
 import { conditionMatches, TAG_COLUMNS, RECIPE_TAG_COLUMNS, recipeTagIndex, withRecipeFields } from './tagRules'
 import { positionFamilyOf } from './positionFamily'
+import { indexes, positionMakeup, rowJob, DEFINING } from './recipeKinds'
+import { jobKey } from './codeJobs'
 
 const lc = s => String(s ?? '').trim().toLowerCase()
 const parseList = raw => {
@@ -31,10 +33,14 @@ const parseList = raw => {
 
 export const EMPTY_RULE = { match: 'all', conditions: [] }
 
+/** The kind columns, as recipeKinds.js computes them: a template is a kind's recipe plus a rule over these. */
+export const KIND_RULE_COLUMNS = { label: 'Kind (Orion)', options: ['Design', 'DriverLocation', 'DriverType', 'Jobs'].map(key => ({ key, label: key })) }
+
 /** The fields a template rule can use, grouped for a picker. */
 export const TEMPLATE_RULE_COLUMNS = [
   { label: 'Tags', options: [{ key: 'Tags', label: 'Tags' }] },
   { label: 'PositionType (DesignDB)', options: [{ key: 'Family', label: 'Family (position)' }, ...TAG_COLUMNS.map(c => ({ key: c, label: c }))] },
+  KIND_RULE_COLUMNS,
   { label: 'What its recipe holds, besides connectors (Product Spec)', options: RECIPE_TAG_COLUMNS },
 ]
 
@@ -161,10 +167,14 @@ export const asRecord = x => (Array.isArray(x) ? recordFromTags(x) : (x || recor
  * templateRecords({ positionTypes, recipes, psRows, elementTypes, positionUI, isConnector })
  * → Map(PositionTypeRef → record). Connector parts are left out of the Recipe.* lists, so
  * a rule describes the position, not the connectors the template itself adds.
+ * Design / DriverLocation / DriverType / Jobs are the position's kind (recipeKinds.positionMakeup);
+ * with no recipe rows, Jobs (and LIN, when it has tape or a profile) come from its Form capture.
  */
-export function templateRecords({ positionTypes = [], recipes = [], psRows = [], elementTypes = [], positionUI = {}, isConnector = () => false } = {}) {
+export function templateRecords({ positionTypes = [], recipes = [], psRows = [], elementTypes = [], positionUI = {}, isConnector = () => false, formCaptures } = {}) {
   const live = recipes.filter(r => !isConnector(r.ElementTypeRef || r.elementTypeRef || ''))
   const index = recipeTagIndex({ recipes: live, psRows, elementTypes })
+  const kindState = { positionTypes, recipes, psRows, elementTypes }
+  const idx = indexes(kindState)
   const out = new Map()
   for (const pt of positionTypes) {
     const ref = pt.PositionTypeRef
@@ -173,9 +183,35 @@ export function templateRecords({ positionTypes = [], recipes = [], psRows = [],
     Object.assign(rec, withRecipeFields({ PositionTypeRef: ref }, index))
     rec.Family = positionFamilyOf(pt) || ''
     rec.Tags = positionUI[ref]?.tags || []
+    const kind = kindFields(ref, kindState, idx, formCaptures)
+    // DriverLocation is also a DesignDB column: its own text stays when it already says local / remote / integral,
+    // so rules and tests written against the raw value (REMOTE) still hold; free text ("Remote to fitting") is normalised.
+    if (/^(local|remote|integral)$/i.test(String(rec.DriverLocation ?? '').trim())) delete kind.DriverLocation
+    Object.assign(rec, kind)
     out.set(ref, rec)
   }
   return out
+}
+
+/** Design, DriverLocation, DriverType and Jobs of one position: what recipeKinds matches kinds on. */
+function kindFields(ref, state, idx, formCaptures) {
+  const m = positionMakeup(ref, state, idx)
+  let { design, defining } = m
+  if (!m.rows) {
+    const jobs = (formCaptures?.byPosition?.[ref] || []).filter(c => c.elementTypeRef)
+      .map(c => jobKey(rowJob({ ElementTypeRef: c.elementTypeRef, ContextType: 'ElementType' }, idx)))
+    defining = [...new Set(jobs.filter(j => DEFINING.has(j)))].sort()
+    if (defining.some(j => j === 'PROFILE' || j.startsWith('TAPE:'))) design = 'LIN'   // as formKindGaps does
+  }
+  return { Design: design === 'none' ? '' : design, DriverLocation: m.driver, DriverType: m.secondary, Jobs: defining }
+}
+
+/** The rule a position's own kind gives: Design / DriverLocation / DriverType equal it, and it contains each defining job. */
+export function seedRule(rec) {
+  const conditions = ['Design', 'DriverLocation', 'DriverType']
+    .filter(column => String(rec?.[column] ?? '').trim() !== '').map(column => ({ column, op: 'equals', value: String(rec[column]).trim() }))
+  for (const job of rec?.Jobs || []) conditions.push({ column: 'Jobs', op: 'contains', value: job })
+  return { match: 'all', conditions }
 }
 
 /** A rule in words: "Tags is Exterior and DriverLocation is REMOTE". */
@@ -301,4 +337,26 @@ export function compareRule(rule, scope, recOf, hasParts) {
     else if (h) out.missed.push(r)
   }
   return out
+}
+
+/** A rule against one record, condition by condition: [{ cond, ok, has }] (has = the record's value). */
+export const explainRule = (rule, rec) => ruleConditionsOf(rule).map(cond => ({ cond, ok: conditionMatches(cond, rec), has: rec?.[cond.column] }))
+
+/**
+ * templatesFor(posRef, { templates, ...templateRecords inputs }) → { matches, others }
+ * matches: templates whose rule holds for the position, most specific first (specificity measured
+ * over every position's record). others: the rest, each with `why` = explainRule, so "why not?" can
+ * name the failing conditions; a template with no rule is in others.
+ */
+export function templatesFor(posRef, state = {}) {
+  const records = state.records || templateRecords(state)   // callers matching many positions pass `records` / `scope` once
+  const rec = records.get(posRef) || {}
+  const withRule = (state.templates || []).map(t => ({ ...t, rule: templateRule({ Rule: t.rule }) }))
+  const hit = withRule.filter(t => ruleMatchesRecord(t.rule, rec))
+  const { winners, beaten } = mostSpecific(hit, state.scope || specificityScope(records.values()))
+  const byId = new Map(hit.map(t => [t.id, t]))
+  return {
+    matches: [...winners, ...beaten].map(id => byId.get(id)),
+    others: withRule.filter(t => !byId.has(t.id)).map(t => ({ ...t, why: explainRule(t.rule, rec) })),
+  }
 }

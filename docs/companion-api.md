@@ -19,7 +19,7 @@ speaks this protocol, it adds three optional features:
 | `patterns`      | Recipe patterns from other projects, in `recipePatterns.js` shape, used as precedent below this browser's own. |
 | `kinds`         | What positions like this one usually have (design, power, slots with their shares and rules). Shown as inline suggestions in the recipe editor and at the Form step; never applied unasked. |
 | `kits`          | The parts used with a profile / channel on other projects. Inline suggestions in the ElementType review and the recipe editor. |
-| `templates`     | Global templates to show beside the built-in ones (read-only); one that `replaces` a built-in hides it. |
+| `templates`     | Global templates, each with a rule saying which positions it is for (read-only), and a way to suggest one back. |
 
 All paths are **relative to the page** (`./api/...`), so a build needs no configuration. If any
 call fails, the feature behaves as though it is absent. Nothing in the app depends on a
@@ -146,7 +146,11 @@ size and rate, and treat the content as untrusted text for a person to read.
   slots: [{ slot, core, share, section, qty, dim, contract, integer }], connectors: [{ set, positions }] }] }`.
 - `POST api/recipes/kits` with `{ "codes": [{ code, manufacturer }], "project" }` → `{ "kits": [{ key, anchor, part:
   { code, slot, name }, share, qty, dim, integer, contract }] }`.
-- `GET api/recipes/templates` → `{ "templates": [{ id, name, applicable_tags, ingredients, replaces, version }] }`.
+- `GET api/recipes/templates` → `{ "templates": [{ id, name, rule, from_kind, ingredients, version }] }`. `rule` is
+  `{ match: "all", conditions: [{ column, op, value }] }` over `Design`, `DriverLocation`, `DriverType`, `Jobs`
+  (or null: any position); `from_kind` is the kind it was made from.
+- `POST api/recipes/templates/suggest` with `{ name, rule, ingredients: [1-60 rows], by, project }` → `{ "id", "status": "draft" }`.
+  Offers a template made in the app; it is kept as a draft for a person to review, never served until published.
 
 Suggestions answered with Add or dismiss go back through `outcomes` with `kind` `kit` / `kind` / `same` /
 `connector` and `outcome` `accepted` / `dismissed`.

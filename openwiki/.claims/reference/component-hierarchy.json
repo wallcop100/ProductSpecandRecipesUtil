@@ -1,0 +1,218 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:a6d2cb868c7b43ae2edf9a7d12804e678eea8b0a29111f4cee331f793f7ea21f",
+  "claims": [
+    {
+      "id": "claim_4e9e8e15099145409fd07b69a8547365",
+      "statement": "App.jsx is the screen router managing six screens: folder-setup, builder, template-editor, product-spec, product-code-import, and connectors. It routes between screens and wraps each in ErrorBoundary keyed by screen to auto-clear caught errors on navigation.",
+      "evidence": [
+        {
+          "resource": "repo://src/App.jsx#L17-L87",
+          "version": "repo-lines-v1:sha256:1aefde90b2682aa7206f72bcffcf860818ec86b5271c872df5b1028c65fff565:eyJzZWxlY3RlZExpbmVDb3VudCI6NzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjliMjBkNDhiMzlkZDVmOGZiMzUyYjkyZGJjZjZiMDZjOGU2YTJjZDNhMDAwN2EyYjY0YTRiZmU4ZDAyZGFlNDgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY1YWNlYmMyOWI2NGM3NjQxZGIzYWM3MzM3OWYwZTdjYTM0ZWRmMDQ1NDMyOTM3ZTU4YjIyMDI0ODkzNGE1NmYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_7101a50444564d0baad35ecfbaf358a2",
+      "statement": "BuilderScreen implements a three-column layout: centre (project tree, ET editor, or element tree), right drawer (340px, tabbed palette with form spec, connectors, element types, and similar positions), and no left column. The right drawer slides on/off and auto-opens when adding rows or dropping items.",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/BuilderScreen.jsx#L52-L68",
+          "version": "repo-lines-v1:sha256:dfb807ec85bb71e64672824e54cd82baa507da66014b34ded880dfc382af3766:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZiMTdhYzRjZDU0YjMwNmMxZDc3NjFmZjRiODM4NTE3ZGYwNWU2YmJiZWQzM2RjM2RhNzI2YTk0ZWJkOWE5YzUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJiNzUzYzgyZWVmNWM1ZDhlZjYwY2Q3ZGY2MGFhYWI5YTRiZDE5ZTRkNzM2MzBjMGE1ZTJjNGIzNmMxNDAwOTciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk1M2JkMDFkYjFmYzIyYTMzZDhhZjUzNzE1MjY3OTIzNTkzMmFjNmJmYjNkNmFlZmY2MTY0ZDAyOTk2MjAwM2YifQ"
+        },
+        {
+          "resource": "repo://src/screens/BuilderScreen.jsx#L603-L795",
+          "version": "repo-lines-v1:sha256:28df15c07bff562a2f33cfcf873d7404603fcb47dafbdac42e7d0cb84737503f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTkzLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJhODE4NTcxMDhmYWM5N2IwYTcxYzVkMzNkOTBiMDFjYTNjOGJkMjM4OTJiNjhjNGQ3NjkxNGNkOTIwN2M3YjJkIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI4MmYzY2ZkMTFkYTYxNTAxOTdhY2VlZDA4NDA2YWM2NGIwNTAzNDBkZTdiYzA0MTI0YTRjYjdlZmE2NzEzNDBiIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJkOWRjZTM3ZWVhYTRjMTQzNDU1NDZjMzAwZmU1NTE1MGQyMmM5NTNjYTRhNGRiZjI0M2U3ODYzODRmZjBmY2YxIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJkZGQyYjFiMWM5ODhiMDY2Y2QzYmFiZGEwZTVjNTZmZTZhMDc1NzkwYWMyNWM2ODNkY2Q3NWQ4YmQ4MjUzODA0In0"
+        }
+      ]
+    },
+    {
+      "id": "claim_19d04228078e4295819e04debd266bb9",
+      "statement": "ProjectTreeView renders all positions in overview mode (scannable list with tags, row count, validation) or switches to focused mode (full position editor). It filters by tag, search text, and ignored toggles, and hosts the left index (PositionRail) and favorites panel.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ProjectTreeView.jsx#L21-L97",
+          "version": "repo-lines-v1:sha256:0a6be4de52b867f65500fbe2c799cff9ba07fc046aa17c059b0f71bb1a4260d7:eyJzZWxlY3RlZExpbmVDb3VudCI6NzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI4ZjEzYWQ2MTQ0OTRjYzlmMTQ0YjU1NjZjZjhhNjg0YTkwMzY4MzhhMzVmYjVkNWRhMDZlNDhmOTBjOWUzNGQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjkzNTE1ZjcwYWJmMWYyZGVjZDJhYjJjYmMxM2E3NmU5NTdmMWFjMGU0MTk2YzZmZjYxMTNmZTc4NmQyZTRjNTkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_34dd13d5337649379843cc0950dc346f",
+      "statement": "RecipeSection is a droppable, sortable container for recipe rows in one section (position, dl_internal, or lin_internal). Rows are scoped by posRef, enabling any expanded position in the tree to receive palette drops independently. Add-row callback opens palette or inline ET picker.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/RecipeSection.jsx#L21-L57",
+          "version": "repo-lines-v1:sha256:c270eda85fbe1c7937e1ca3fe0b67dd7c83351c11f1e047507f471d344015917:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjAzMzY1MDk1YTdhNDMyN2Q0OTI1Y2M2MWQ5YTc1NGQ4OTMwODNmN2Y5YTJkNjg2YzQ4MjFkYjc2MGJmMDIxYWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIzNzQyYjRjZjc5ZmJkNjA2OWMzZGU3Y2RjZThlNTU5ZjgzZmM4ZDg2YWIwYzA2MTlmZGM1ZjVkZmFmNDE3NDQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_423a7cfaebdc4f63ac1d480774834a5d",
+      "statement": "IngredientCard renders one recipe row with drag-to-reorder (via dnd-kit sortable), edit-inline for ET and quantity, delete/duplicate/swap actions, and dirty/deleted badges. It looks up Product Spec for product code and manufacturer.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/IngredientCard.jsx#L22-L99",
+          "version": "repo-lines-v1:sha256:6e5fbc5566dfdb5616a1055ce61cd2c5e7008e688ebda0df1067bf68891503d4:eyJzZWxlY3RlZExpbmVDb3VudCI6NzgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhjZWU1MDY2NGZlNTA2MzIxYzM2ZWY4OTY0NjQzMzcwOGY5MmU4YzE5OTQ1YTA3YjEyZDQ0ZmEzZmQwNjI5NGQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA2YzNkYjAzMDM3ZGU4ZjViM2Y1YjEzZmUzMDU2YzM5YTljYzkwMjViYjY0ZDRlMjY2ZTI0YmMwYWEwZTU3YWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZkZGUzY2FkN2JiMDUyNzIxM2YyZDcwNWQ2NTVmMTdmODkyZjVmMDM3NjNhYjUwZGU1Y2QyNGI3ZGI3ODM3OTQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_56e7fa8aab774f86851613fb53584e89",
+      "statement": "FormSpecPane displays side-by-side form capture and recipe for one position, never in a modal. Form rows absent from recipe are flagged red (defect); recipe rows absent from form are OK (derived detail). Context columns at top show form sheet columns.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/FormSpecPane.jsx#L27-L80",
+          "version": "repo-lines-v1:sha256:8d49643b9d945fcc6ed5cf25533fe4e2cac6477f77a8a59c7df979922290c6d6:eyJzZWxlY3RlZExpbmVDb3VudCI6NTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUwNTYzMDRiMGVlYWJkODhhZDRjYmRkNjBiZGY0NjY1MWFkODU3YWQxZTAxMDRlNDJhYmZmNmIwNDNhZThlYTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImIxYjEzYWQ3MzVhNWVkZDUwYWMzMGY4YmUzZTdhOGIxNDk4ODZkYzAzZmMzYTUyZjI1YTcxZmYzNmY0MDA3MTAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM0MGM1ZDNkYzNhNzczMDc5M2M4OTI3OTQ4YjU1OTY2NDIwN2Y3OWJhODc3NzNjMjE1MDA0NDMxOTYyZmQ0ODgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_6d5dc2f43e7f4b0db5b69d836a51f067",
+      "statement": "ConnectorAutoJoin runs silently at mount: if a position has no template and its connectors match exactly one template's parts, it auto-pins that template (and saves). Renders nothing.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ConnectorAutoJoin.jsx#L6-L35",
+          "version": "repo-lines-v1:sha256:86ddf3900c2eb492128edd9d528b579e09ebd7e3dacfb6ea773d441c7693cafc:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwNGIyMzk1YjNjOTVmOTE5MWFkMDBiMDAxYzAxNWQ2MTQ4N2FkYmExNTc1MTBmZGIzNDYyNjI3YzcwMzU4ODMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImVhM2Y2OWY2NDM2MTdjM2ZmZmMzNjgwYzBiZTczZjBiZjNlNzQyODMzYzkzYWY5OTQzZDhlMWJkNWVkMTJkMjciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_739ffd4f96024aeda93e9096854aa139",
+      "statement": "ValidationPanel groups validation issues by action, not by issue count. Blocking issues appear first (red), queued fixes middle (grey). Run and Step-through buttons trigger validation and modal respectively.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ValidationPanel.jsx#L8-L61",
+          "version": "repo-lines-v1:sha256:cc65ed042176ff3ba16e61898c5d24d781c2ea8e07cab2d6326a8ac93205c1fc:eyJzZWxlY3RlZExpbmVDb3VudCI6NTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImEwODRhMGU1Yjg5Njg3YTA1YmUzMjQ5ZjkxZWJkMzJmZDVlYmRlMzBjYmIyYjc2YWIxZmFhNTcwZmQ2YmM3NzEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjAyZWE4MDM1OTVhMWQ4M2Y0Mjg1ZDE1NTdjYzY5M2Y4M2Y4OTZmZjlkNmViZTIwY2E5OTFjMDZjNDUxOGQwYmMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_56e594ecb61f45afb0820fe76168696f",
+      "statement": "ReadinessPanel queries four clauses (Recipes, Validation, Form, Alignment) and displays their live status with one-click navigation. It deliberately omits a percentage (fixes are queued independently).",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ReadinessPanel.jsx#L11-L50",
+          "version": "repo-lines-v1:sha256:9a67c972bc1de9b753d083ebd87e2f467a068b87ac441c6b391c20d10a7cb6e8:eyJzZWxlY3RlZExpbmVDb3VudCI6NDAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNlMzdhNjE2NjE0ZDQ5MWYzNjdmZjRhZTE4NTZjZWVjYTBjMjE3MDdiYWQyYjQ4YjkxNjgxMGRkMjMzZGZhODciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjAyZWE4MDM1OTVhMWQ4M2Y0Mjg1ZDE1NTdjYzY5M2Y4M2Y4OTZmZjlkNmViZTIwY2E5OTFjMDZjNDUxOGQwYmMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_0299afa6dcbc42a68ffabcaaa114a502",
+      "statement": "ConnectorsPane shows one position's connector template, parts with one-click fixes (CellDetailPanel), extra connectors not in template, and nearest/same-as templates. Template rule builder allows conditions for which positions use it.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ConnectorsPane.jsx#L21-L79",
+          "version": "repo-lines-v1:sha256:3cc817b6b51a949991d51d602f719807978886b053dd740e35218a23ab6f2b49:eyJzZWxlY3RlZExpbmVDb3VudCI6NTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRkMjAzZWUzNjMyNmUxYTRhMTdiNTAzOGIzZDViMzMyNjdmZjNjNzJjYTE2NWNmMGQ0NzNjNmU0MDRiZDNiMTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUwZTQxZjM4NGNiNjAyMjdiOGQ2OWVmZGUyYWNhZTlmZDQ3NTQwNjI1NDBmOTc0YTQ1Yjk4M2QzNGY1MDJmNDQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_131fc2d5f3f84fc0871aecf546ce71cb",
+      "statement": "ElementPalette offers two browse modes: ET Ref (grouped by family) and Mfr+Code (grouped by Manufacturer from Product Spec). Items drag to centre or click to pick in modal. Multi-add toggle enables adding same ET to multiple positions.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ElementPalette.jsx#L13-L80",
+          "version": "repo-lines-v1:sha256:6a03d53334f2e47019484508ed9faf0610a80fb045ce4c4941058dea1f8f2ed4:eyJzZWxlY3RlZExpbmVDb3VudCI6NjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYwYjhjNzVjZjZhZmQ0NjU4MGY3ZGJmYzZjNzFjMmMxYmY4ZTkyYTg0NWJjNmJkZWRjNzE2NThkYWMwOTUyMGMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk1OTJlMWY4M2ZmMjQ0YWE3OTUyNzIwYWUzYjYzZjllNWFlNzEwY2IwYjQ5OTdkMmRmOTQ0ZmZkOWVmNTVkNmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE0NWYzOTM3NzQ2MDY0YmQ3ZjAyZGU5ZTI0MDRjZjllMGJhOGM2MGVjYTI5NTk2ZjNiZWJkNmUwNmUzYmJjZDMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_1bf477298b4b4519b828eb68f89361be",
+      "statement": "useStore follows Zustand selector pattern: components read slices (e.g., activePositionRef, recipes) and call actions (e.g., setActivePosition) via useStore(s => s.action). Selectors re-render only if their slice changes.",
+      "evidence": [
+        {
+          "resource": "repo://src/store/useStore.js#L1-L40",
+          "version": "repo-lines-v1:sha256:31c05bbe7c02783c66569f205d95c6158c3f50e5c4ebf312e01496fa42a16964:eyJzZWxlY3RlZExpbmVDb3VudCI6NDAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNlOWVjYzcyM2Y3YmI2ZTk2NGQ3YzkxNTcxNWZmMTBkYWVjZjlmZDIzMTQ2OGNmNWNlZjgzOTZmZDc1ZTEwN2EiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjYwOWZjM2M4N2ViYTc0MjJiN2Y3MzM3NGI5M2EwY2FiMjAzZmZkOWE0YWRkMzU4MTdmZDBiMmYyM2Q0NTJjNGIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_7fe1fc6230204d75800c5b2e7ea34147",
+      "statement": "FormContext component displays form columns for one row (key-value pairs, bold label, truncated value with tooltip). Reused identically in FormSpecPane and ReviewModal for consistent display. No provider/consumer pattern.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/FormContext.jsx#L1-L38",
+          "version": "repo-lines-v1:sha256:7890a34128bb366df0e8c71bed9a884db22820d4ffd15be5917630abc1e6e108:eyJzZWxlY3RlZExpbmVDb3VudCI6MzgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE5NTM5NDY3YmY3ODIwMWE5M2MyYTAwZWViOTljNzI4ZjUyYjRlNjIzZjE0YTdmMjBhNjkxMTM3ZTc4NGMzMzQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_e24626dd4c3d44cea7d05c9491a42a4d",
+      "statement": "FormAutoSaveAll runs silently in BuilderScreen: auto-saves form captures when all codes for a position are known, confirms entries whose codes all have an ET, and re-saves if Form now names a product the earlier save doesn't have. Renders nothing.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/FormAutoSaveAll.jsx#L8-L48",
+          "version": "repo-lines-v1:sha256:ca6a49e718a4519c0db2c1786b28d5b922adbc75edee69770a850cae0898eb41:eyJzZWxlY3RlZExpbmVDb3VudCI6NDEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVmNDgxNjRjOTczY2NmNzE5ZmNkZjNmOGZhOTU0ZjZiZGJmNDBmZDk5OTgwMWE0YjEzMDRjNDU5NTI2MzM5OTciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFmMjczMzU1NDRjNDI0YjVjMzIyZGMyOTY3MDJiMTk0MTIzZTdlNDNhMDY5NzYxM2FlOWUyZGMzY2E3ODIzNTgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjI3ZjFlZjU1NTlkOTc0YWQ5YWM4OTg2ZWMxMDcxMWMyYzgzMTM1Y2I2NzcwZDI0MzVkNTUyMGNlM2QyYWJmMWEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_ab3d5c51f28a47028a5ebbbf4e4a992a",
+      "statement": "ErrorBoundary catches render errors, displays error message and stack, and offers Try Again / Reload / Copy Details buttons. It does not touch the store. Keyed by screen in App.jsx to clear errors on navigation.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ErrorBoundary.jsx#L3-L50",
+          "version": "repo-lines-v1:sha256:4e389d7755f65a0106976951a68fc57c4d11abb5380056d4d72102857135ce52:eyJzZWxlY3RlZExpbmVDb3VudCI6NDgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4MzUwODU1OTc0NzVkMWJiOGY2NmU2MTVjNzA1ZjYwNjYwMzMzYzYxMzNkZmM0YjBjYTg5MTBhZjJkZGY0ZjQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjoyLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE3NmZhNjg3MDI2ZWI3NDljODZjOTA5NzllNzg0ZTc2MjUxMzgyZjM1MWI0ZDU5MjJhYWNmMGYwZDgzZDc4ZGEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRjZTQyZmE4ODdmNGM0MGMwNWFkMDcxMzg4ODY0ZjEyZDY1NWFiMTgyMGUyMzZjNjJjNTM5MmFhNzJhNThjNzcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_33f015f35d2944cdb723a4589b3e1571",
+      "statement": "BuilderScreen's drag-drop is scoped by position via dnd-kit droppable IDs (e.g., 'section-drop-position-posRef'). Palette items drop onto section droppables or recipe rows; recipe rows reorder within same section or move cross-section.",
+      "evidence": [
+        {
+          "resource": "repo://src/screens/BuilderScreen.jsx#L384-L447",
+          "version": "repo-lines-v1:sha256:20bfb2a33af291a9bd51d4058aabe6af9fafaa4584a1e9edb78f758a41cfbfe6:eyJzZWxlY3RlZExpbmVDb3VudCI6NjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJhMDk5ZWM0MjIyMjNjMDlhZmQ5ZWI2ZjFjNjRlNGY2ZDE0OTZhNjZlNTBiMTMwOGMyOWZkYmZlNmExNDgxNGEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZhYjE2NTZjMzFlMTllNDQ1NzViNjE4YTdmN2RkYWU1NDM2ODdlNGQ2NWQxNTU2OGZjNjU5YmQzY2NiOGUwMjUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBhM2IzNjE5YWVmZTlhNDAyMDAyZWEzYWVhNDRjNmEwYWIyZGFmNDNkN2ZiZTIwNGVkMjg0MzQzMGVmYTNkYzYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_bb6793df8d5147618780939082040647",
+      "statement": "FilterBar is a reusable filter row with text search, tag toggles, and family select. Presentational; each surface owns filter state. Used by ProjectTreeView, ElementPalette, and ReviewModal.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/FilterBar.jsx#L3-L29",
+          "version": "repo-lines-v1:sha256:5bc773d3977db11b83b519cc8e45520fd4ba617a6d95710fa2c33735376e675c:eyJzZWxlY3RlZExpbmVDb3VudCI6MjcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZiMTdhYzRjZDU0YjMwNmMxZDc3NjFmZjRiODM4NTE3ZGYwNWU2YmJiZWQzM2RjM2RhNzI2YTk0ZWJkOWE5YzUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjoyLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBjMmQwMmFlZTA2YzlkM2Y5NWVjMmM1YzE3NDUyN2Y4M2M1MGJjMzQwMjA3YTc0MDVmZjk5NjQ1NzMzMTA2N2EiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjI4NGYyM2I1OTNjZTRhZGViMzNhZDVmMmU4ZDFlYjQyN2VhNTMyNzQ1NjQxNGNiZDJhMjA1OGI3MjNiZGNiNjQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_c54492f8e70c4829a1a2d22b04a2af11",
+      "statement": "RecipeStylesWindow discovers groups of positions built alike and auto-suggests a recipe style + rule. Rules are edited like connector template rules with conditions. Check a position button tests rule match against today's recipes.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/RecipeStylesWindow.jsx#L29-L80",
+          "version": "repo-lines-v1:sha256:4e4c01f949ed55d2c70a796855611c0fcbfe873de8e4fe50338cbf6f3f7784b7:eyJzZWxlY3RlZExpbmVDb3VudCI6NTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc3YjJjNTdlYmIzODJlNjZmMDRmZTMyZWE3NDgyZTA2YjhiZGQ1ZmFiZDIwMDExNDMwYzU0MmY1OTJhYWIxYmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhjZjg0ZGJkNzExNWQxNTJlNjFhODc3MzMzNmE1MWQ0ZWU5YWU0YjVlOTA0NGMyODI4N2M4NmFmZTE0NDg3YWQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_c9f23ebc145744db8e120fa1f605cc8f",
+      "statement": "FavoritesPanel holds cross-project favorites: templates (global-scope), tags, and element types with product spec. Each item is draggable into the active position. Lives in BuilderScreen's right drawer.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/FavoritesPanel.jsx#L8-L38",
+          "version": "repo-lines-v1:sha256:fedae195843fc378b283cb8c23488f360991615c6f5d93f7596e8e90de7483fe:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImNmODVhYmU2YjZkMDliMTE1YTk3YTc0NmFhZTNhYWZjYzMyODM5OGRhOTBlMjJhODAwOTFjMGEyNjI3NmU2MTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIwMWQzOGY4OWFmZDM0Y2YwMzMzNWY1MGE5NTA1YjYyZmQ5YTljYTg2NmM5M2E5MjdjMzM4YjU3ZTkzZDc2OGUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_3541e8a007764ab8be43477691711088",
+      "statement": "Modal components follow a consistent pattern: show/hide state in store or component, onClose callback in props, store read for content, store write on save (mutations trigger re-render). Common modals include ReviewModal, TagRulesModal, ValidationFixModal, and DesignPickerModal.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ReviewModal.jsx#L30-L86",
+          "version": "repo-lines-v1:sha256:a3be936d10c4a046e612b6a202757fadda9d646b1ea77d84f184420998942690:eyJzZWxlY3RlZExpbmVDb3VudCI6NTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdkZDEwZGE1NjkzOTM0OTY4ZTA5NTA4OGU4Mjg2ZDc2Y2JhNjE3NTk2NTA4YWM0NjZiOWIwYTQ0NTA4Zjk1NWIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImY5ZjFjNzFlMzBiZjYxOWMwZjMzNDlmYjMzZDllNjk3M2QwNjY5MmE3NjVlZGRkMzQzNmM5ZTZmNDExMTRmNzgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjljOGY3ZDNhMDRkZTliMzIzNzhhOTc0ZjM2MTU0YzUwYzQ0ZDQzNDMyNTdiMWI2NGYwYTQxODcxZjE3M2E3NDcifQ"
+        },
+        {
+          "resource": "repo://src/components/TagRulesModal.jsx#L19-L76",
+          "version": "repo-lines-v1:sha256:9b5002772c4b7ad38498a09cc553bbaab6d25fb313ec2f547aae394849f38741:eyJzZWxlY3RlZExpbmVDb3VudCI6NTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUwNTYzMDRiMGVlYWJkODhhZDRjYmRkNjBiZGY0NjY1MWFkODU3YWQxZTAxMDRlNDJhYmZmNmIwNDNhZThlYTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ1ODA0OWU4YTRlZTljOGJjMDBlNjZjOWQ1OTMwNDJhYTM3MTg4YzIzNjhiZDZhM2E4OTc4NDVmMDlmY2ExZDciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM0MGM1ZDNkYzNhNzczMDc5M2M4OTI3OTQ4YjU1OTY2NDIwN2Y3OWJhODc3NzNjMjE1MDA0NDMxOTYyZmQ0ODgifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-17T13:57:20.517Z"
+  }
+}
