@@ -12,7 +12,7 @@ const { default: IngredientCard } = await import('../../src/components/Ingredien
 const row = (p, ctxType, ctxRef, ref, id) => ({ _id: id, PositionTypeRef: p, ContextType: ctxType, ContextRef: ctxRef, ElementTypeRef: ref, Quantity: 1 })
 beforeEach(() => {
   useStore.setState({
-    projectId: 1, showSharedEverywhere: false, containerETRefs: new Set(['ET-DL-01']), psRows: [],
+    projectId: 1, showSharedEverywhere: false, screenView: {}, containerETRefs: new Set(['ET-DL-01']), psRows: [],
     elementTypes: ['ET-DL-01', 'ET-PS-01', 'ET-5PIN-SOCKET'].map(r => ({ ElementTypeRef: r })),
     recipes: [
       row('A01', 'PositionType', 'A01', 'ET-DL-01', 'a'), row('A01', 'ElementType', 'ET-DL-01', 'ET-PS-01', 'b'),
@@ -116,4 +116,16 @@ describe('quiet row: selection checkbox and shared icon', () => {
     fireEvent.mouseOver(screen.getByTestId('shared-icon'))
     expect(await screen.findByTestId('shared-with')).toHaveTextContent('shared with A02')
   })
+})
+
+test('wrapper contents stay open across remounts; the toolbar collapses them all', () => {
+  useStore.setState({ containerETRefs: new Set(['et-dl-01']) })
+  const r = useStore.getState().recipes.find(x => x._id === 'a')
+  const { unmount } = render(<IngredientCard row={r} posRef="A01" sectionKey="position" />)
+  fireEvent.click(screen.getByTitle('Show contents'))
+  unmount()
+  render(<IngredientCard row={r} posRef="A01" sectionKey="position" />)
+  expect(screen.getByTestId('contents-item')).toBeInTheDocument()
+  act(() => useStore.getState().setScreenView('recipes', { wrappers: { all: false } }))
+  expect(screen.queryByTestId('contents-item')).toBeNull()
 })
