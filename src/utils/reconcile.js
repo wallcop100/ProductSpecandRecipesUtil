@@ -141,7 +141,7 @@ function reconcileRs(entries = [], recipes = []) {
     const k = rsKey(keyOf(r))
     if (!byKey.has(k) || U(rsv(byKey.get(k), 'IsDeleted')) === 'Y') byKey.set(k, r)
   }
-  const out = { keep: [], applied: [], conflicts: [] }
+  const out = { keep: [], applied: [], conflicts: [], dropped: [] }
   for (const e of entries) {
     const row = e.row || {}
     const action = e.action || 'upsert'
@@ -153,6 +153,11 @@ function reconcileRs(entries = [], recipes = []) {
       if (!at || U(rsv(at, 'IsDeleted')) === 'Y') out.applied.push(e)
       else out.keep.push(stripConflict(e))
       continue
+    }
+    // A new row missing part of its key can never be written (the patch refuses it): it
+    // leaves the queue rather than wait for ever. Only a row an older build let through.
+    if (!e.changedFields && action === 'upsert' && RS_KEY_FIELDS.some(f => String(rsv(row, f) ?? '').trim() === '')) {
+      out.dropped.push(e); continue
     }
     if (!e.changedFields) {                       // a row the file did not have: appended by the patch
       const at = byKey.get(rsKey(keyOf(row)))

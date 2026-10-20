@@ -432,6 +432,11 @@ export function buildRsScript(rsChanges, filename = 'Recipe Spec', { project = '
         '      else { writeCell(S, r, col["IsDeleted"], "Y"); }',
         '    }',
       ].join('\n'))
+    } else if (isAppend && RS_KEY_FIELDS.some(f => isBlank(rsValue(row, f)))) {
+      // A row missing part of its key is never written: blank cells are skipped, so it would
+      // land with an empty ContextRef (or ref) that no position shows and nobody can delete.
+      const missing = RS_KEY_FIELDS.filter(f => isBlank(rsValue(row, f))).map(f => RS_FIELD_TO_EXCEL[f]).join(', ')
+      otherBlocks.push(`    console.log(${q(`WARNING: recipe row ${key} has no ${missing} - not written.`)});`)
     } else if (isAppend) {
       // UPSERT on the composite key. A recipe row the tool believes is new may already be
       // on the sheet — you pasted this patch once. rowOf holds the sheet's keys, so a
@@ -462,7 +467,8 @@ export function buildRsScript(rsChanges, filename = 'Recipe Spec', { project = '
       ].join('\n'))
     } else {
       const changed = entry.changedFields || {}
-      const fields = Object.entries(changed).filter(([f]) => RS_FIELD_TO_EXCEL[f])
+      // A key cell is never blanked: that is how a row loses its position.
+      const fields = Object.entries(changed).filter(([f, v]) => RS_FIELD_TO_EXCEL[f] && !(RS_KEY_FIELDS.includes(f) && isBlank(v)))
       if (fields.length === 0) continue
       const l = ['    {', lookup,
         '      if (r < 0) { console.log("WARNING: recipe row not found - skipped."); }',

@@ -82,3 +82,10 @@ describe('reconcile: the file decides', () => {
     expect(reconcileAll({ ps: k1.keep }, { psRows: [ps('ET-A', { ProductCode: 'HAND' })] }).ps.conflicts).toHaveLength(1)
   })
 })
+
+test('a queued new row with no ContextRef leaves the queue: it can never be written', () => {
+  const phantom = { _id: 'x', action: 'upsert', row: { ContextType: 'PositionType', ContextRef: undefined, RecipeIndex: 1, ElementTypeRef: 'ET-A', IsContractItem: 'Y' } }
+  const r = reconcileAll({ rs: [phantom] }, { recipes: [] })
+  expect(r.rs.keep).toEqual([])
+  expect(r.rs.dropped).toEqual([phantom])
+})

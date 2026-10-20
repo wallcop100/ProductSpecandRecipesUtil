@@ -105,6 +105,24 @@ describe('buildRsScript', () => {
     expect(s).toContain('apR++;')
   })
 
+  test('a new row missing part of its key is not written, and says so', () => {
+    const s = buildRsScript([
+      { _id: '9', positionTypeRef: undefined, action: 'upsert',
+        row: { ContextType: 'PositionType', ContextRef: null, RecipeIndex: 1, elementTypeRef: 'ET-PS-MINI-TINI-01', quantity: 1, isContractItem: 'Y' } },
+    ])
+    expect(s).not.toContain('writeCell(S, apR')
+    expect(s).toContain('has no ContextRef - not written.')
+  })
+
+  test('an update never blanks a key cell', () => {
+    const s = buildRsScript([
+      { _id: '1', positionTypeRef: 'P1', action: 'upsert',
+        row: { _row_num: 5, ...key, ContextRef: '' }, changedFields: { ContextRef: '', Quantity: 2 }, before: { ...key, Quantity: 1 } },
+    ])
+    expect(s).not.toContain('col["ContextRef"], null')
+    expect(s).toContain('writeCell(S, r, col["Quantity"], 2)')
+  })
+
   test('delete tombstones the matched row via the composite key', () => {
     const s = buildRsScript([
       { _id: '3', positionTypeRef: 'P1', action: 'delete', row: { ...key }, before: { ...key } },
