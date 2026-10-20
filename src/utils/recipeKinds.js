@@ -167,6 +167,9 @@ export const codeIsTbc = (ref, idx) => {
   return !!ps && (/^(TBC|-)?$/.test(codeOf(ref, idx)) || U(ps.IsTBC) === 'Y')
 }
 
+/** True when the Product Spec row already carries a real code, even if flagged TBC (a held spec, e.g. an opal diffuser). */
+export const hasRealCode = (ref, idx) => !/^(TBC|N\/?A|-)?$/.test(codeOf(ref, idx))
+
 /**
  * Of a profile range's catalogue parts for one job (kits served as `range`), the one to offer:
  * the profile's own finish (…BG2000 → …ECG), else the variant this project already uses on

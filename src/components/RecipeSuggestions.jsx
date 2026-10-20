@@ -8,7 +8,7 @@ import { familiesForJob, familyForJob, jobOf } from '../utils/codeJobs'
 import { nextRef } from '../utils/etSeed'
 import {
   indexes, positionMakeup, sameKindAs, matchKind, usuallyMissing, elementTypesForJob, sectionFor, rowFromSlot,
-  jobLabel, ruleText, usualConnectors, anchorOf, fitFor, pickRangePart, rangeStem, codeIsTbc, FITS_PROFILE,
+  jobLabel, ruleText, usualConnectors, anchorOf, fitFor, pickRangePart, rangeStem, codeIsTbc, hasRealCode, FITS_PROFILE,
 } from '../utils/recipeKinds'
 import { C } from '../styles/tokens'
 
@@ -30,7 +30,8 @@ import { C } from '../styles/tokens'
  *              the project has none. A range that has no such part (FPS2020: no clip) means no line.
  *              With nothing known, Add makes a TBC placeholder for this profile, and ⋯ picks one of
  *              the project's own instead.
- *   tbc      — a part of this recipe made for the profile whose code is still TBC, once the
+ *   tbc      — a part of this recipe made for the profile whose code is still TBC (no code at all: a
+ *              part flagged TBC that holds a code is left alone), once the
  *              profile's range is known: "End caps ET-LIN-CAP-06 is TBC — this profile's is
  *              FPS0808ECG" sets its Product Spec code.
  *   connector — the connector set positions like this usually carry, mapped onto this project's
@@ -204,6 +205,8 @@ export default function RecipeSuggestions({ posRef }) {
       for (const r of me.jobs.get(job) || []) {
         const ref = r.ElementTypeRef || r.elementTypeRef
         if (!codeIsTbc(ref, idx)) continue
+        // Flagged TBC but already holding a code (an opal diffuser, say): replacing it would be an unmonitored spec change.
+        if (hasRealCode(ref, idx)) continue
         const part = pickRangePart(kits.filter(k => k.range && k.part.slot === job).map(k => k.part), profile, job, state, idx)
         if (!part) continue
         lines.push({ key: `tbc|${ref}|${part.code}`, kind: 'tbc', icon: 'edit', supplied: part.code, addLabel: 'Set code',

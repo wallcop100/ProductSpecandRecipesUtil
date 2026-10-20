@@ -469,7 +469,15 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                               <EntityPill type="ElementType" label={item.ref} />
                               {code
                                 ? <ProductInline etRef={item.ref} manufacturer={maker} productCode={code} onOpenProductSpec={onOpenProductSpec} />
-                                : <span className="text-muted fst-italic" title="No product spec yet">no product spec</span>}
+                                : (
+                                  <span className="d-inline-flex align-items-center gap-1">
+                                    <span className="text-muted fst-italic" title="No product spec yet">no product spec</span>
+                                    <button type="button" className="btn btn-link p-0" style={{ lineHeight: 1 }}
+                                      onClick={() => onOpenProductSpec && onOpenProductSpec(item.ref)} title="Open in Product Spec" aria-label="Open in Product Spec">
+                                      <MaterialIcon name="edit" size={12} style={{ color: C.faint }} />
+                                    </button>
+                                  </span>
+                                )}
                               {/* The ElementType's name, unless it only repeats the maker – code (8D9XNH). */}
                               {item.name && !(code && sameText(item.name, `${maker || ''}${code}`)) && <span className="text-muted">— {item.name}</span>}
                               {showSharedEverywhere && (() => {
