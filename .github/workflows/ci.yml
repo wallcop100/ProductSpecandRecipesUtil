@@ -1,0 +1,35 @@
+name: CI
+
+# Every PR, and every push to a branch, runs what the deploy runs. master is protected on this check,
+# so a red suite is caught before the merge rather than by a failed deploy after it (#67, 2026-10-20).
+on:
+  pull_request:
+  push:
+    branches-ignore: [master]    # pages.yml tests master itself before publishing
+
+permissions:
+  contents: read
+
+# A newer push to the same ref makes the older run pointless.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Test
+        run: npx vitest run
+
+      - name: Build
+        run: npm run build
