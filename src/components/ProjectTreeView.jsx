@@ -153,7 +153,7 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
       <div
         key={ref}
         onClick={() => setActivePosition(ref)}
-        className="d-flex align-items-center gap-2 px-2 py-2 mb-1"
+        className="ptv-row d-flex align-items-center gap-2 px-2 py-2 mb-1"
         style={{
           cursor: 'pointer',
           border: '1px solid #e5e7eb',
@@ -161,18 +161,19 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
           borderRadius: 6,
           background: '#fff',
           opacity: isIgnored ? 0.55 : 1,
+          color: isIgnored ? '#adb5bd' : undefined,
         }}
       >
         <MaterialIcon name={ICONS.position} size={18} style={{ color: colorsForType('PositionType').accent }} title="Position" />
         <span className="fw-semibold" style={{ fontSize: 13 }}>{ref}</span>
         {name && name !== ref && <span className="text-muted" style={{ fontSize: 11 }}>{name}</span>}
         {ownIgnored && (
-          <span className="badge" style={{ background: '#fff3cd', color: '#856404', fontSize: 10, border: '1px solid #ffc107' }}>
+          <span className="badge" style={{ background: '#f8f9fa', color: '#6c757d', fontSize: 10, border: '1px solid #dee2e6' }}>
             Ignore
           </span>
         )}
         {familyIgnored && (
-          <span className="badge" style={{ background: '#fff3cd', color: '#856404', fontSize: 10, border: '1px solid #ffc107' }}
+          <span className="badge" style={{ background: '#f8f9fa', color: '#6c757d', fontSize: 10, border: '1px solid #dee2e6' }}
             title={`Family “${family}” is ignored`}>
             family ignored
           </span>
@@ -195,10 +196,10 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
         {count > 0
           ? <span className="badge bg-light text-dark border" style={{ fontSize: 10 }}>{count} {count === 1 ? 'row' : 'rows'}</span>
           : <span className="text-muted fst-italic" style={{ fontSize: 11 }}>empty</span>}
-        {/* Ignore toggle — stop propagation so it doesn't open the position */}
+        {/* Ignore toggle — shown on row hover or focus; stop propagation so it doesn't open the position */}
         <button
-          className="btn btn-link p-0"
-          style={{ fontSize: 14, color: isIgnored ? '#ffc107' : '#ccc', lineHeight: 1 }}
+          className="ptv-ignore btn btn-link p-0"
+          style={{ fontSize: 14, color: isIgnored ? '#6c757d' : '#adb5bd', lineHeight: 1 }}
           title={isIgnored ? 'Remove Ignore flag' : 'Flag as no recipe needed'}
           onClick={e => { e.stopPropagation(); toggleIgnorePosition(ref) }}
         >
@@ -215,6 +216,7 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
         className="d-flex align-items-center gap-2 px-3 py-2 border-bottom bg-white"
         style={{ flexShrink: 0, position: 'sticky', top: 0, zIndex: 2 }}
       >
+        <style>{'.ptv-row .ptv-ignore{opacity:0}.ptv-row:hover .ptv-ignore,.ptv-ignore:focus-visible{opacity:1}'}</style>
         <strong className="small text-uppercase text-muted" style={{ letterSpacing: 0.5 }}>
           PositionTypes
         </strong>
@@ -234,7 +236,7 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
           </span>
         )}
         <Button
-          variant={emptyCount > 0 ? 'outline-warning' : 'outline-secondary'}
+          variant="outline-secondary"
           size="sm"
           style={{ fontSize: 11 }}
           disabled={emptyCount === 0}

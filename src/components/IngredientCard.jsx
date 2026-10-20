@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
-import { Card, Form, Button } from 'react-bootstrap'
+import { Card, Form, Button, Dropdown, OverlayTrigger, Popover } from 'react-bootstrap'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import useStore from '../store/useStore'
@@ -14,7 +14,6 @@ import { wrapperUsedBy } from '../utils/collectionStatus'
 import DuplicateETModal from './DuplicateETModal'
 import SharedEditGuard from './SharedEditGuard'
 import SwapEverywhereModal from './SwapEverywhereModal'
-import { ConceptHint, CONCEPTS } from './ConceptCard'
 import { familyOf } from '../utils/etRef'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { roleOf, QTY_CONFIRM_ROLES } from '../utils/recipePatterns'
@@ -48,12 +47,18 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   const containerReasons = useStore(s => s.containerReasons)
   const selectedRowIds = useStore(s => s.selectedRowIds)
   const toggleRowSelection = useStore(s => s.toggleRowSelection)
+  const selectMode = useStore(s => s.selectMode)
+  const setSelectMode = useStore(s => s.setSelectMode)
+  const shiftHeld = useShiftHeld()
   const copyRows = useStore(s => s.copyRows)
   const suggestNextETRef = useStore(s => s.suggestNextETRef)
   const restoreRecipeRow = useStore(s => s.restoreRecipeRow)
 
   const rowId = row._id
   const isSelected = selectedRowIds.includes(rowId)
+  // The checkbox exists only for multi-row copy: hidden until Shift is held or
+  // "Select multiple" is on (or this row is already in the selection).
+  const showCheck = isSelected || shiftHeld || selectMode
   // Unsynced = this row has a pending change not yet exported to the source file
   const isDirty = useStore(s => s.rsChanges.some(c => c._id === rowId))
   const isDeleted = (row.IsDeleted || row.isDeleted) === 'Y'
@@ -217,6 +222,14 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   return (
     <div ref={composedRef} style={style} data-debug-id="IngredientCard">
       <Card
+        onClickCapture={e => {
+          // Shift-click anywhere on the card selects it (and does nothing else), except in a text box.
+          if (!e.shiftKey) return
+          const t = e.target
+          if (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && !['checkbox', 'radio'].includes(t.type))) return
+          e.preventDefault(); e.stopPropagation()
+          toggleRowSelection(rowId)
+        }}
         style={{
           borderLeft: `3px solid ${leftColor}`,
           borderRadius: 6,
@@ -226,36 +239,21 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
           position: 'relative',
         }}
       >
-        {/* New badge, docked to the top-left corner */}
+        {/* New: a dot docked to the top-left corner */}
         {isNewRow && (
           <span
-            className="badge"
-            style={{
-              position: 'absolute', top: -7, left: -6, zIndex: 1,
-              background: '#198754', color: '#fff', border: '1px solid #146c43',
-              fontSize: 9, flexShrink: 0,
-            }}
+            data-testid="new-dot"
+            style={{ ...CORNER_DOT, left: -4, background: '#6c757d' }}
             title="New — added here and not yet in the source file (unsaved until you export)"
-          >
-            New
-          </span>
+          />
         )}
         {/* Provenance: pre-filled from the imported ProductCode form, not yet structured. */}
         {row._origin === 'form' && (
           <span
-            className="badge d-inline-flex align-items-center"
-            style={{
-              position: 'absolute', top: -7, right: -6, zIndex: 1,
-              background: '#e7f1ff', color: '#084298', border: '1px solid #b6d4fe',
-              fontSize: 9, flexShrink: 0, padding: '2px 4px',
-            }}
+            data-testid="form-dot"
+            style={{ ...CORNER_DOT, right: -4, background: '#0d6efd' }}
             title={`From the imported form${row._formCode ? ` — code "${row._formCode}"` : ''}. Move it into structure (a DL/wrapper) when ready.`}
-          >
-            {/* 'token', not 'contextual_token': the latter is a Material Symbols icon
-                and the bundled font is classic Material Icons, where it has no
-                ligature and would render as literal text. */}
-            <MaterialIcon name="token" size={11} />
-          </span>
+          />
         )}
         <Card.Body className="py-2 px-3">
           {isDeleted && (
@@ -265,23 +263,41 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
           )}
           <div className="d-flex align-items-start gap-2">
             {/* Select for copy */}
-            <Form.Check
-              type="checkbox"
-              checked={isSelected}
-              onChange={() => toggleRowSelection(rowId)}
-              title="Select for copy"
-              style={{ paddingTop: 2 }}
-            />
-            {/* Copy this row */}
-            <button
-              className="btn btn-link p-0"
-              style={{ color: '#aaa', lineHeight: 1, paddingTop: 2 }}
-              title="Copy this row"
-              aria-label="Copy this row"
-              onClick={() => copyRows([rowId])}
-            >
-              <MaterialIcon name={ACTION_ICONS.copy} size={15} />
-            </button>
+            {showCheck && (
+              <Form.Check
+                type="checkbox"
+                checked={isSelected}
+                onChange={() => toggleRowSelection(rowId)}
+                title="Select for copy"
+                aria-label="Select for copy"
+                style={{ paddingTop: 2 }}
+              />
+            )}
+            {/* The row's rarer acts. The right-hand stack keeps the per-row edits. */}
+            <Dropdown>
+              <Dropdown.Toggle as={IconButton} icon="more_vert" size={16} title="Row actions" aria-label="Row actions"
+                style={{ color: '#aaa', padding: 0, paddingTop: 2 }} bsPrefix="row-actions-toggle" /* no caret */ />
+              <Dropdown.Menu style={{ fontSize: 12 }}>
+                <Dropdown.Item onClick={() => copyRows([rowId])}>
+                  <MaterialIcon name={ACTION_ICONS.copy} size={14} /> Copy this row
+                </Dropdown.Item>
+                <Dropdown.Item onClick={() => { setSelectMode(true); if (!isSelected) toggleRowSelection(rowId) }}>
+                  <MaterialIcon name="checklist" size={14} /> Select multiple
+                </Dropdown.Item>
+                {isContainer && etRef && (
+                  <Dropdown.Item onClick={() => openETRecipe(etRef)}
+                    title={sharedWith.length > 0
+                      ? `Edit this assembly's contents — it is shared, so this also changes ${sharedWith.join(', ')}`
+                      : "Edit this element's internal recipe"}>
+                    <MaterialIcon name="edit" size={14} /> Edit internals →
+                  </Dropdown.Item>
+                )}
+                <Dropdown.Item disabled={extraInUse || qtyToConfirm} onClick={() => setShowExtra(v => !v)}>
+                  <MaterialIcon name={showExtraControls ? ACTION_ICONS.remove : ACTION_ICONS.more} size={14} />
+                  {showExtraControls ? ' Hide DimMult, PackQty, TRItem' : ' Show DimMult, PackQty, TRItem'}
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
             {/* Drag handle */}
             <span
               {...attributes}
@@ -335,23 +351,20 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                   </div>
                 )}
 
-                {/* Container controls */}
-                {isContainer && etRef && (
+                {/* Container controls: plain "Edit internals" lives in the row ⋮; it shows
+                    here only while quantities inside wait to be confirmed. */}
+                {isContainer && etRef && insidePending.length > 0 && (
                   <button
                     className="btn btn-link btn-sm p-0"
                     style={{ fontSize: 11, color: '#0d6efd', textDecoration: 'none' }}
                     onClick={() => openETRecipe(etRef)}
-                    data-testid={insidePending.length ? 'qty-inside' : undefined}
-                    title={insidePending.length ? `Quantities to confirm inside: ${insidePending.join(', ')}` : sharedWith.length > 0
-                      ? `Edit this assembly's contents — it is shared, so this also changes ${sharedWith.join(', ')}`
-                      : "Edit this element's internal recipe"}
+                    data-testid="qty-inside"
+                    title={`Quantities to confirm inside: ${insidePending.join(', ')}`}
                   >
-                    {insidePending.length > 0
-                      ? <span className="rounded px-1" style={{ animation: 'qtyPulse 1.4s ease-out infinite', background: '#fff3cd', color: '#664d03' }}>
-                          <style>{'@keyframes qtyPulse{0%{box-shadow:0 0 0 0 rgba(255,193,7,.9)}70%{box-shadow:0 0 0 6px rgba(255,193,7,0)}100%{box-shadow:0 0 0 0 rgba(255,193,7,0)}}'}</style>
-                          Edit internals → confirm {insidePending.length} quantit{insidePending.length === 1 ? 'y' : 'ies'}
-                        </span>
-                      : 'Edit internals →'}
+                    <span className="rounded px-1" style={{ animation: 'qtyPulse 1.4s ease-out infinite', background: '#fff3cd', color: '#664d03' }}>
+                      <style>{'@keyframes qtyPulse{0%{box-shadow:0 0 0 0 rgba(255,193,7,.9)}70%{box-shadow:0 0 0 6px rgba(255,193,7,0)}100%{box-shadow:0 0 0 0 rgba(255,193,7,0)}}'}</style>
+                      Edit internals → confirm {insidePending.length} quantit{insidePending.length === 1 ? 'y' : 'ies'}
+                    </span>
                   </button>
                 )}
 
@@ -359,12 +372,10 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                     icon in the action stack, same as every other row. */}
                 {isContainer && etRef && sharedWith.length > 0 && (
                   <span className="rounded px-1 d-inline-flex align-items-center gap-1"
-                    style={{ fontSize: 10, background: '#fff3cd', color: '#856404' }}
+                    style={SHARED_PILL}
                     title={`Shared assembly — its contents are the same for ${[posRef, ...sharedWith].join(', ')}`}>
-                    <MaterialIcon name="warning" size={11} />
+                    <MaterialIcon name="group" size={11} />
                     shared with {sharedWith.join(', ')}
-                    <ConceptHint concept={CONCEPTS.WRAPPER} size={11}
-                      title="What is a wrapper, and why is it shared?" />
                   </span>
                 )}
 
@@ -372,16 +383,17 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                     across positions is normal, so the detail lives in the tooltip. The fork
                     itself is in the action stack, near the container icon. */}
                 {usedElsewhere.length > 0 && (
-                  <span className="rounded px-1 d-inline-flex align-items-center gap-1" data-testid="shared-with"
-                    style={{ fontSize: 10, background: '#e7f1ff', color: '#084298' }}
-                    title={`${etRef} is also used by ${usedElsewhere.join(', ')}`}>
-                    <MaterialIcon name="category_search" size={11} />
-                    shared with {usedElsewhere.join(', ')}
-                  </span>
+                  <SharedPill etRef={etRef} refs={usedElsewhere} />
                 )}
+                {/* The quiet form: an icon whose hover shows the same pill. */}
                 {!showSharedEverywhere && !isContainer && etRef && etSharedWith.length > 0 && (
-                  <MaterialIcon name="group" size={13} style={{ color: '#adb5bd', flexShrink: 0 }}
-                    title={`Also used by ${etSharedWith.length} other position${etSharedWith.length === 1 ? '' : 's'}: ${etSharedWith.join(', ')}`} />
+                  <OverlayTrigger placement="top" trigger={['hover', 'focus']}
+                    overlay={<Popover id={`shared-${rowId}`}><Popover.Body className="p-1"><SharedPill etRef={etRef} refs={etSharedWith} /></Popover.Body></Popover>}>
+                    <span tabIndex={0} data-testid="shared-icon" style={{ display: 'inline-flex', flexShrink: 0 }}
+                      aria-label={`Also used by ${etSharedWith.length} other position${etSharedWith.length === 1 ? '' : 's'}: ${etSharedWith.join(', ')}`}>
+                      <MaterialIcon name="group" size={13} style={{ color: '#adb5bd' }} />
+                    </span>
+                  </OverlayTrigger>
                 )}
               </div>
 
@@ -462,7 +474,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                               {showSharedEverywhere && (() => {
                                 const others = getUsedIn(item.ref, recipes, posRef)
                                 return others.length > 0 && (
-                                  <span className="rounded px-1" style={{ fontSize: 10, background: '#e7f1ff', color: '#084298' }} data-testid="shared-with">
+                                  <span className="rounded px-1" style={SHARED_PILL} data-testid="shared-with">
                                     shared with {others.join(', ')}
                                   </span>
                                 )
@@ -490,19 +502,19 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                   label="Contract"
                   value={row.isContractItem || row.IsContractItem || null}
                   onChange={val => handleFlagChange('isContractItem', val)}
-                  activeVariant="success"
+                  activeVariant="primary"
                 />
                 <FlagPill
                   label="Integer"
                   value={row.isInteger || row.IsInteger || null}
                   onChange={val => handleFlagChange('isInteger', val)}
-                  activeVariant="secondary"
+                  activeVariant="primary"
                 />
                 <FlagPill
                   label="TBC"
                   value={row.isTBC || row.IsTBC || null}
                   onChange={val => handleFlagChange('isTBC', val)}
-                  activeVariant="danger"
+                  activeVariant="primary"
                 />
 
                 {/* Qty field with category icon */}
@@ -522,7 +534,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                   )}
                 </span>
 
-                {/* Rarely-used extras */}
+                {/* Rarely-used extras — opened from the row ⋮ */}
                 {showExtraControls ? (
                   <>
                     <FieldInput
@@ -545,25 +557,10 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                       label="TRItem"
                       value={row.isTRItem || row.IsTRItem || null}
                       onChange={val => handleFlagChange('isTRItem', val)}
-                      activeVariant="warning"
+                      activeVariant="primary"
                     />
-                    {!extraInUse && (
-                      <IconButton
-                        icon={ACTION_ICONS.remove} size={15}
-                        style={{ color: '#aaa', padding: 0 }}
-                        onClick={() => setShowExtra(false)}
-                        title="Collapse extra fields"
-                      />
-                    )}
                   </>
-                ) : (
-                  <IconButton
-                    icon={ACTION_ICONS.more} size={16}
-                    style={{ color: '#aaa', padding: 0 }}
-                    onClick={() => setShowExtra(true)}
-                    title="Show DimMult, PackQty, TRItem"
-                  />
-                )}
+                ) : null}
               </div>
             </div>
 
@@ -660,6 +657,39 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   )
 }
 
+const SHARED_PILL = { fontSize: 10, background: '#f8f9fa', color: '#6c757d', border: '1px solid #dee2e6' }
+const CORNER_DOT = { position: 'absolute', top: -4, zIndex: 1, width: 8, height: 8, borderRadius: '50%' }
+
+/** "shared with …" — one pill, shown inline or in the group icon's hover. */
+function SharedPill({ etRef, refs }) {
+  return (
+    <span className="rounded px-1 d-inline-flex align-items-center gap-1" data-testid="shared-with"
+      style={SHARED_PILL} title={`${etRef} is also used by ${refs.join(', ')}`}>
+      <MaterialIcon name="category_search" size={11} />
+      shared with {refs.join(', ')}
+    </span>
+  )
+}
+
+/** True while Shift is held (reset when the window loses focus, or keyup is never seen). */
+function useShiftHeld() {
+  const [held, setHeld] = useState(false)
+  useEffect(() => {
+    const down = e => { if (e.key === 'Shift') setHeld(true) }
+    const up = e => { if (e.key === 'Shift') setHeld(false) }
+    const blur = () => setHeld(false)
+    window.addEventListener('keydown', down)
+    window.addEventListener('keyup', up)
+    window.addEventListener('blur', blur)
+    return () => {
+      window.removeEventListener('keydown', down)
+      window.removeEventListener('keyup', up)
+      window.removeEventListener('blur', blur)
+    }
+  }, [])
+  return held
+}
+
 // Right-side action icons read as clutter when always coloured. Keep them grey at rest
 // and reveal the semantic colour (danger red, fork amber) only on hover — the container
 // toggle is exempt because it carries its own active (orange) state.
@@ -681,8 +711,8 @@ function HoverIconButton({ icon, size = 16, onClick, title, disabled, restColor 
   )
 }
 
-// Qty field: category icon (with the count when >1); clicking it expands a
-// stepper that slides open to the right (no floating popover).
+// Qty field: category icon (with the count when >1); clicking it opens a
+// stepper to the right (no floating popover).
 function QtyField({ value, onChange }) {
   const num = value === '' || value == null ? 1 : Number(value)
   const [open, setOpen] = useState(false)
@@ -711,7 +741,7 @@ function QtyField({ value, onChange }) {
           <span style={{ fontSize: 12, fontWeight: 600, color: '#212529' }}>{num}</span>
         )}
       </button>
-      {/* Slides open to the right */}
+      {/* Opens to the right */}
       <div
         style={{
           display: 'flex',
@@ -721,7 +751,6 @@ function QtyField({ value, onChange }) {
           width: open ? 122 : 0,
           marginLeft: open ? 4 : 0,
           opacity: open ? 1 : 0,
-          transition: 'width 0.2s ease, opacity 0.2s ease, margin-left 0.2s ease',
         }}
       >
         <Button

@@ -492,6 +492,7 @@ const useStore = create((set, get) => ({
 
   // Copy / paste of recipe rows (in-app clipboard, not the OS clipboard)
   selectedRowIds: [],                // recipe row _ids currently selected for copy
+  selectMode: false,                 // "Select multiple": row checkboxes stay shown until the selection is cleared
   rowClipboard: null,                // { parts: [{section, elementTypeRef, quantity}], label, count }
   pendingPaste: null,                // { posRef, forceSection } while the merge-vs-separate prompt is open
   favorites: [],                     // cross-project user library: [{ id, kind, ref, label, data }]
@@ -2331,7 +2332,8 @@ const useStore = create((set, get) => ({
     }))
   },
 
-  clearRowSelection() { set({ selectedRowIds: [] }) },
+  clearRowSelection() { set({ selectedRowIds: [], selectMode: false }) },
+  setSelectMode(on) { set({ selectMode: !!on }) },
 
   /**
    * Build clipboard parts from a set of recipe rows.

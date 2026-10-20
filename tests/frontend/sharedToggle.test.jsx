@@ -79,3 +79,41 @@ test('8D9XNH: a wrapper item’s name that only repeats maker – code is not sh
   fireEvent.click(screen.getByTitle('Show contents'))
   expect(screen.getByTestId('contents-item').textContent).not.toMatch(/— LEDFlex/)
 })
+
+describe('quiet row: selection checkbox and shared icon', () => {
+  const plain = () => useStore.getState().recipes.find(x => x._id === 'c')
+  beforeEach(() => useStore.setState({ selectedRowIds: [], selectMode: false }))
+
+  test('the checkbox is hidden at rest, shown while Shift is held, gone on blur', () => {
+    render(<IngredientCard row={plain()} posRef="A01" sectionKey="position" />)
+    expect(screen.queryByLabelText('Select for copy')).toBeNull()
+    fireEvent.keyDown(window, { key: 'Shift' })
+    expect(screen.getByLabelText('Select for copy')).toBeInTheDocument()
+    fireEvent.blur(window)
+    expect(screen.queryByLabelText('Select for copy')).toBeNull()
+  })
+
+  test('Shift-click on the card selects it', () => {
+    render(<IngredientCard row={plain()} posRef="A01" sectionKey="position" />)
+    fireEvent.click(screen.getByText('ET-5PIN-SOCKET'), { shiftKey: true })
+    expect(useStore.getState().selectedRowIds).toEqual(['c'])
+  })
+
+  test('"Select multiple" keeps checkboxes shown until the selection is cleared', () => {
+    render(<IngredientCard row={plain()} posRef="A01" sectionKey="position" />)
+    fireEvent.click(screen.getByLabelText('Row actions'))
+    fireEvent.click(screen.getByText('Select multiple'))
+    expect(useStore.getState().selectedRowIds).toEqual(['c'])
+    fireEvent.click(screen.getByLabelText('Select for copy'))   // unticking the last keeps the mode
+    expect(screen.getByLabelText('Select for copy')).toBeInTheDocument()
+    act(() => useStore.getState().clearRowSelection())
+    expect(screen.queryByLabelText('Select for copy')).toBeNull()
+  })
+
+  test('the quiet group icon shows the same "shared with" pill on hover', async () => {
+    render(<IngredientCard row={plain()} posRef="A01" sectionKey="position" />)
+    expect(screen.queryByTestId('shared-with')).toBeNull()
+    fireEvent.mouseOver(screen.getByTestId('shared-icon'))
+    expect(await screen.findByTestId('shared-with')).toHaveTextContent('shared with A02')
+  })
+})
