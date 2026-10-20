@@ -195,63 +195,6 @@ export const DEMO_MATRIX = {
   missingRef: 'ET-5PIN-SOCKET',
 }
 
-/**
- * "Where the project stands" — the Status modal's two tabs, in the shapes they really use.
- *
- * CLAUSES (ReadinessPanel) are answerable sentences, each with its own DETAIL line naming the
- * actual refs, and a count pill. Never a percentage: 87% done tells you nothing about what to
- * do next, and the clauses always do.
- *
- * TASKS (ValidationPanel, buildTasks) are the point of the whole panel: issues are grouped by
- * the ACTION that clears them, so 45 missing master rows is ONE task with one button, not 45
- * alarms. `blocking` is red and means a pasted patch would be WRONG; everything else is amber
- * and merely unfinished; `queued` has gone grey because the fix is already in the patch.
- */
-export const DEMO_STATUS = {
-  clauses: [
-    {
-      label: 'Every position has a recipe',
-      detail: '1 of 4 have none: A02wE',
-      state: 'open', count: 1,
-    },
-    { label: 'Every Form product is placed', detail: 'All 2 products are in a recipe.', state: 'done' },
-    {
-      label: 'Nothing that would make the export patch wrong',
-      detail: '1 ElementType is not in the DesignDB master.',
-      state: 'open', count: 1,
-    },
-    { label: 'Every ElementType exists in all three documents', detail: '1 spec row still to write.', state: 'open', count: 1 },
-  ],
-  tasks: [
-    {
-      count: 1, title: 'ElementType missing from the DesignDB master',
-      hint: 'The DesignDB is the master list. These reach it through the ElementTypes patch.',
-      blocking: true, action: 'Fix all 1',
-      items: [{ ref: 'ET-LIN-END-01', message: 'used in a recipe but not in the DesignDB' }],
-    },
-    {
-      count: 1, title: 'product used in a recipe with no Product Spec row',
-      hint: 'Each needs a manufacturer and a product code, which only you know.',
-      blocking: false, action: 'Fix all 1',
-      items: [{ ref: 'ET-LIN-TAPE-01', message: 'no manufacturer or product code' }],
-    },
-    {
-      count: 1, title: 'wrapper needs its Ideaworks / N/A spec row',
-      hint: 'A wrapper is a virtual assembly — its contents are what you buy. Nothing here needs deciding.',
-      queued: true,
-      items: [{ ref: 'ET-LIN-01', message: 'queued for the Product Spec patch' }],
-    },
-  ],
-  /** The step-through fixer, on the position that genuinely needs no recipe. */
-  fixer: {
-    rule: 'POSITION_HAS_NO_RECIPE',
-    message: 'Position "A02wE" has no recipe rows.',
-    ref: 'A02wE',
-    family: 'DOWNLIGHT',
-    index: 1, total: 3,
-  },
-}
-
 /** A template: one fill-later slot, one exact ref. */
 export const DEMO_TEMPLATE = {
   name: '250mA Local Downlight',

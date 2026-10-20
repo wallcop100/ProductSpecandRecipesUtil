@@ -154,19 +154,6 @@ export const TUTORIALS = {
       { blurb: 'Applying a template REPLACES what is in the position\'s recipe. If you only want to add a row or two, use the palette instead.', scene: 'template', beat: 3 },
     ],
   },
-
-  'validation-status': {
-    title: 'Where the project stands',
-    icon: 'rule',
-    intro: 'The honest answer to "am I finished?", plus a list of what is left — written as things to do, not things that are wrong.',
-    steps: [
-      { blurb: 'Two tabs. "Am I done?" gives you four straight answers: every position has a recipe (or is ignored), every product the Form asked for has been placed, nothing would make the export wrong, and every ElementType exists in all three spreadsheets. Each one names the refs holding it up. There is no percentage on purpose — 87% does not tell you what to do next.', scene: 'status', beat: 0 },
-      { blurb: 'These are not just a score. Click one you have not finished and it takes you straight to the thing that needs doing.', scene: 'status', beat: 1 },
-      { blurb: 'The Validation tab does not throw a list of problems at you — it groups them into JOBS. So 45 missing rows becomes one card with one button, instead of 45 warnings. Red means the export would write something wrong. Amber just means it is not finished. Grey means you have already dealt with it and it is waiting in the patch.', scene: 'status', beat: 2 },
-      { blurb: 'Open a card to see every ref and what is wrong with it — or press "Fix all" and clear the lot in one go.', scene: 'status', beat: 3 },
-      { blurb: '"Step through" walks you through what is left, one at a time, taking you to the right place for each. And remember, not everything on the list is a mistake: if a position genuinely needs no recipe you can say so right here — just that one, or the whole family (which asks you first).', scene: 'status', beat: 4 },
-    ],
-  },
 }
 
 /** Every card id — what "Skip all tutorials" marks seen. */
