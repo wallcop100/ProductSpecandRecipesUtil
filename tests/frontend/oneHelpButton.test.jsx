@@ -19,6 +19,7 @@ describe('one help button per header', () => {
   })
 
   test('the tutorial opens with the key idea on its first page', () => {
+    window.localStorage.removeItem('rb-tutorial-seen')   // setup.js marks every card seen
     render(<TutorialHint id="form-pane" concept={CONCEPTS.INTENT} />)
     fireEvent.click(screen.getByRole('button', { name: /How this pane works/ }))
     expect(screen.getByTestId('concept-body')).toBeInTheDocument()
