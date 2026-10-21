@@ -1,18 +1,17 @@
 import React, { useMemo, useState } from 'react'
-import { Button, Dropdown, Form, Modal } from 'react-bootstrap'
+import { Button, Dropdown, Form } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import IconButton from './IconButton'
 import CellDetailPanel from './CellDetailPanel'
 import { WagoSuggestion } from './GlobalConnectors'
 import useConnectorGroups from './useConnectorGroups'
-import { templateParts, partsToIngredients, diffParts, diffSize, describeParts, findGroups, suggestName } from '../utils/connectorGroups'
+import { templateParts, diffParts, diffSize, describeParts, findGroups, suggestName } from '../utils/connectorGroups'
 import { templateRule, ruleIsEmpty, describeRule, ruleFor, ruleMatchesRecord, TEMPLATE_RULE_COLUMNS } from '../utils/templateRules'
 import { TAG_OPS } from '../utils/tagRules'
 import { C } from '../styles/tokens'
 
 const mono = { fontFamily: 'monospace' }
-const lc = s => String(s || '').toLowerCase()
 const diffText = d => [
   ...d.add.map(p => `+ ${p.ref}${p.quantity > 1 ? ` ×${p.quantity}` : ''}${p.section === 'internal' ? ' (wrapper)' : ''}`),
   ...d.remove.map(p => `− ${p.ref}${p.section === 'internal' ? ' (wrapper)' : ''}`),
@@ -33,10 +32,8 @@ export default function ConnectorsPane({ posRef, onOpenConnectors }) {
   const removeFromTemplate = useStore(s => s.removeFromTemplate)
   const restoreToTemplate = useStore(s => s.restoreToTemplate)
   const excludes = useStore(s => s.connectorExcludes)
-  const updateCollection = useStore(s => s.updateCollection)
   const makeTemplateFromGroup = useStore(s => s.makeTemplateFromGroup)
   const setActivePosition = useStore(s => s.setActivePosition)
-  const [confirm, setConfirm] = useState(null)   // { title, parts, collection }
 
   const m = groups.members.get(posRef) || { templates: [], pinnedTo: null, clash: false }
   const have = groups.sigs.get(posRef) || []
@@ -73,19 +70,6 @@ export default function ConnectorsPane({ posRef, onOpenConnectors }) {
   const ruleMatches = withRule && !ruleIsEmpty(withRule.rule)
     ? scopeRefs.filter(r => ruleMatchesRecord(withRule.rule, groups.recOf(r))) : []
   const ruleHasThis = !withRule || ruleIsEmpty(withRule.rule) || ruleMatches.includes(posRef)
-
-  // Changing the template changes every position on it: ask, naming them.
-  function askTemplateChange(collection, parts, title) {
-    setConfirm({ collection, parts, title, affected: groups.membersOf(collection.CollectionId) })
-  }
-  const addPart = x => current && askTemplateChange(current,
-    [...templateParts(current), { ref: x.ref, section: x.section === 'position' ? 'position' : 'internal', quantity: Number(x.row.Quantity ?? x.row.quantity ?? 1) || 1 }],
-    `Add ${x.ref} to ${current.Name}`)
-  const removePart = ing => {
-    if (!current) return
-    const ref = lc(ing.ElementTypeRef || ing.slotLabel)
-    askTemplateChange(current, templateParts(current).filter(p => lc(p.ref) !== ref), `Take ${ing.ElementTypeRef || ing.slotLabel} out of ${current.Name}`)
-  }
 
   // From the card: as assumed, or with the conditions set under Make with conditions.
   async function makeFromCard() {
@@ -148,8 +132,7 @@ export default function ConnectorsPane({ posRef, onOpenConnectors }) {
 
       {/* 2 + 3. Its parts here, fixes, and connectors it doesn't ask for */}
       {current && (
-        <CellDetailPanel posRef={posRef} collectionId={current.CollectionId} compact
-          onAddToTemplate={addPart} onRemoveFromTemplate={removePart} />
+        <CellDetailPanel posRef={posRef} collectionId={current.CollectionId} compact />
       )}
 
       {/* 5. No template */}
@@ -221,24 +204,6 @@ export default function ConnectorsPane({ posRef, onOpenConnectors }) {
           )}
         </div>
       )}
-
-
-      {/* 4. A change to the template, which reaches every position on it */}
-      <Modal show={!!confirm} onHide={() => setConfirm(null)} size="sm">
-        <Modal.Header closeButton><Modal.Title style={{ fontSize: 14 }}>{confirm?.title}</Modal.Title></Modal.Header>
-        <Modal.Body style={{ fontSize: 12 }} data-testid="template-change-confirm">
-          This changes the template <strong>{confirm?.collection?.Name}</strong> for {confirm?.affected?.length || 0} position{confirm?.affected?.length === 1 ? '' : 's'}:
-          <div className="mt-1" style={mono}>{(confirm?.affected || []).join(', ') || '(none yet)'}</div>
-          <div className="text-muted mt-2" style={{ fontSize: 11 }}>Their recipes are not changed: those that no longer match show it in their Connectors tab and the matrix.</div>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button size="sm" variant="link" onClick={() => setConfirm(null)}>Cancel</Button>
-          <Button size="sm" variant="primary" data-testid="template-change-ok" onClick={async () => {
-            await updateCollection(confirm.collection.CollectionId, { Ingredients: partsToIngredients(confirm.parts) })
-            setConfirm(null)
-          }}>Change template</Button>
-        </Modal.Footer>
-      </Modal>
     </div>
   )
 }

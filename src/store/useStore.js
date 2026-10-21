@@ -3958,6 +3958,7 @@ const useStore = create((set, get) => ({
         // A product is (manufacturer, code) and the two never travel apart. Details is
         // the sheet's free-form attribute column ("Colour: Blue"), so it is where the
         // identity belongs — Description stays for a human.
+        manufacturer: mfr, code,
         details: hasProductIdentity(code) ? [mfr, code].filter(Boolean).join(' ') || null : null,
         guess: guessCollection(gap.ref, elementTypes, dbCollectionRefs),
       }
@@ -4017,6 +4018,21 @@ const useStore = create((set, get) => ({
     }
     set({ dbChanges })
     return gaps.length
+  },
+
+  /**
+   * autoQueueDbRows() — the ElementTypes patch adds every ElementType the DesignDB lacks; only its
+   * family is a decision. Those with a confident sibling are queued here under it; the rest wait
+   * for the review in MasterGapPanel. Returns how many it queued.
+   */
+  autoQueueDbRows() {
+    const queued = new Set(get().dbChanges.map(c => String(c.elementTypeRef || '').toLowerCase()))
+    const families = {}
+    for (const p of get().dbRowProposals()) {
+      if (p.guess?.confident && !queued.has(p.ref.toLowerCase())) families[p.ref] = p.guess.parent
+    }
+    const refs = Object.keys(families)
+    return refs.length ? get().queueMissingDbRows(refs, { recordHistory: false, families }) : 0
   },
 
   /**

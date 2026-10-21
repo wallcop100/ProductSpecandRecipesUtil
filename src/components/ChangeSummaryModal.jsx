@@ -290,7 +290,7 @@ function ChangesTab({ sections }) {
   ))
 }
 
-function PatchesTab({ files, copiedKey, previewKey, onCopy, onPreview }) {
+function PatchesTab({ files, copiedKey, previewKey, onCopy, onPreview, dbWaiting = 0 }) {
   if (files.length === 0) return <div className="text-muted small fst-italic">Nothing to patch.</div>
   return (
     <>
@@ -305,7 +305,9 @@ function PatchesTab({ files, copiedKey, previewKey, onCopy, onPreview }) {
             <MaterialIcon name="description" size={15} className="text-muted" style={{ flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 12, fontWeight: 600 }}>{i + 1}. {f.label}</div>
-              <div className="text-muted" style={{ fontSize: 10 }}>paste into {f.file}</div>
+              <div className="text-muted" style={{ fontSize: 10 }}>
+                {f.key === 'db' && dbWaiting > 0 ? `${dbWaiting} new ElementType${dbWaiting === 1 ? ' needs' : 's need'} a family first: Resolve first` : `paste into ${f.file}`}
+              </div>
             </div>
             <Button size="sm" variant="link" className="p-0" style={{ fontSize: 11 }}
               onClick={() => onPreview(previewKey === f.key ? null : f.key)}>
@@ -313,7 +315,7 @@ function PatchesTab({ files, copiedKey, previewKey, onCopy, onPreview }) {
             </Button>
             <Button size="sm" variant={copiedKey === f.key ? 'primary' : 'outline-primary'}
               className="d-inline-flex align-items-center gap-1" style={{ fontSize: 11 }}
-              onClick={() => onCopy(f.script, f.key)}>
+              disabled={f.key === 'db' && dbWaiting > 0} onClick={() => onCopy(f.script, f.key)}>
               <MaterialIcon name="content_paste" size={13} /> {copiedKey === f.key ? 'Copied!' : 'Copy'}
             </Button>
           </div>
@@ -498,6 +500,8 @@ export default function ChangeSummaryModal({ show, onHide }) {
   const [copiedKey, setCopiedKey] = useState(null)
   const [previewKey, setPreviewKey] = useState(null)
   useEffect(() => { if (show) { setCopiedKey(null); setPreviewKey(null); setTab('changes') } }, [show])
+  // The patch adds every ElementType the DesignDB lacks; only a family that is not certain is left to review.
+  useEffect(() => { if (show) useStore.getState().autoQueueDbRows() }, [show])
 
   // Two invariants, one selector (see specAlignment): the DesignDB is the master, and a
   // recipe implies a spec.
@@ -565,7 +569,7 @@ export default function ChangeSummaryModal({ show, onHide }) {
           : tab === 'changes' ? <ChangesTab sections={sections} />
           : tab === 'patches' ? (
               <PatchesTab files={patchFiles} copiedKey={copiedKey} previewKey={previewKey}
-                onCopy={copy} onPreview={setPreviewKey} />
+                onCopy={copy} onPreview={setPreviewKey} dbWaiting={openDbRows} />
             )
           : <ResolveTab gaps={gaps} overwrites={overwrites} onFillWrappers={() => fillWrapperSpecRows()} />}
       </Modal.Body>

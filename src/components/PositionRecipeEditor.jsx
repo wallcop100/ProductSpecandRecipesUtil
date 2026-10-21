@@ -68,6 +68,7 @@ export default function PositionRecipeEditor({
   const [forking, setForking] = useState(false)
   const showDeletedRows = useStore(s => s.showDeleted)
   const toggleShowDeleted = useStore(s => s.toggleShowDeleted)
+  const wrappersOpen = useStore(s => s.screenView.recipes?.wrappers?.all) === true
   const [savingTemplate, setSavingTemplate] = useState(false)
 
   const ref = posRef
@@ -166,6 +167,9 @@ export default function PositionRecipeEditor({
             )}
             <Dropdown.Item onClick={toggleShowDeleted} data-testid="toggle-deleted">
               <MaterialIcon name={showDeletedRows ? ACTION_ICONS.hideDeleted : ACTION_ICONS.showDeleted} size={14} /> {showDeletedRows ? 'Hide IsDeleted rows' : 'Show IsDeleted rows'}
+            </Dropdown.Item>
+            <Dropdown.Item onClick={() => useStore.getState().setScreenView('recipes', { wrappers: { all: !wrappersOpen } })}>
+              <MaterialIcon name={wrappersOpen ? 'unfold_less' : 'unfold_more'} size={14} /> {wrappersOpen ? 'Collapse' : 'Expand'} all wrappers
             </Dropdown.Item>
           </Dropdown.Menu>
         </Dropdown>

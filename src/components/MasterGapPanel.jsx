@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react'
 import { Button, Form } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
+import { useCompanion } from '../platform/companion'
 import { C } from '../styles/tokens'
 
 /**
@@ -27,6 +28,7 @@ const CONF = {
   none:      { bg: C.subtle, fg: C.muted, label: 'no family' },
 }
 
+const NO_FAMILY = '-'
 const lc = s => String(s ?? '').toLowerCase()
 
 export default function MasterGapPanel({ gaps }) {
@@ -37,6 +39,8 @@ export default function MasterGapPanel({ gaps }) {
   const dbChanges = useStore(s => s.dbChanges)
   const dbCollectionRefs = useStore(s => s.dbCollectionRefs)
   const elementTypes = useStore(s => s.elementTypes)
+  const projectNumber = useStore(s => s.projectNumber)
+  const companion = useCompanion()
 
   const proposals = useMemo(() => dbRowProposals(), [dbRowProposals, gaps])
   const families = useMemo(() => proposedFamilies(), [proposedFamilies, gaps])
@@ -62,6 +66,7 @@ export default function MasterGapPanel({ gaps }) {
         if (next[p.ref] !== undefined) continue
         if (p.guess?.confident) next[p.ref] = p.guess.parent
         else if (styleFamilyOf[p.ref]) next[p.ref] = styleFamilyOf[p.ref]
+        else if (p.guess) next[p.ref] = p.guess.parent
       }
       return next
     })
@@ -90,21 +95,26 @@ export default function MasterGapPanel({ gaps }) {
     return CONF.none
   }
 
-  const withFamily = open.filter(p => chosen[p.ref]).length
+  // Every row needs a decision (a family, or "no family" on purpose) before the patch takes it.
+  const undecided = open.filter(p => chosen[p.ref] === undefined).length
 
   function apply() {
-    if (open.length === 0) return
+    if (open.length === 0 || undecided) return
+    const fam = Object.fromEntries(open.map(p => [p.ref, chosen[p.ref] === NO_FAMILY ? undefined : chosen[p.ref]]))
     // Create any house-style family that an open ref is being filed under and the
     // workbook lacks; createFamilies queues those members with their family set.
-    const need = families.filter(f => open.some(p => chosen[p.ref] === f.ref))
+    const need = families.filter(f => open.some(p => fam[p.ref] === f.ref))
     if (need.length) createFamilies(need)
     // Queue the rest (and re-affirm the created ones — mergeDbChanges coalesces) with the
     // chosen family. Idempotent.
-    queueMissingDbRows(open.map(p => p.ref), { families: chosen })
+    queueMissingDbRows(open.map(p => p.ref), { families: fam })
+    // What was decided is evidence for the next project: product → ElementType → family.
+    for (const p of open) {
+      if (p.code && p.manufacturer && fam[p.ref]) {
+        companion?.contribute?.({ kind: 'et-assignment', code: p.code, manufacturer: p.manufacturer, ref: p.ref, family: fam[p.ref], project: projectNumber || '' })
+      }
+    }
   }
-
-  const [expanded, setExpanded] = useState(false)
-  const editable = expanded ? open : []
 
   return (
     <div className="mb-3 px-2 py-2 rounded" style={{ background: C.accentTint, border: `1px solid ${C.accentEdge}` }}>
@@ -141,21 +151,17 @@ export default function MasterGapPanel({ gaps }) {
           )}
 
           <div className="d-flex align-items-center gap-2">
-            <Button size="sm" variant="outline-primary" style={{ fontSize: 11 }} onClick={apply}>
+            <Button size="sm" variant="outline-primary" style={{ fontSize: 11 }} onClick={apply} disabled={undecided > 0}>
               <MaterialIcon name="playlist_add_check" size={13} /> Add {open.length} to the ElementTypes patch
             </Button>
             <span className="text-muted" style={{ fontSize: 10 }}>
-              {withFamily} of {open.length} have a family
+              {undecided > 0 ? `${undecided} still need a family` : 'all have a family'}
             </span>
-            <Button size="sm" variant="link" className="ms-auto p-0" style={{ fontSize: 10 }}
-              onClick={() => setExpanded(v => !v)}>
-              {expanded ? 'Hide' : 'Review'} each row
-            </Button>
           </div>
 
-          {expanded && (
+          {open.length > 0 && (
             <div className="mt-2" style={{ maxHeight: 260, overflowY: 'auto' }}>
-              {editable.map(p => {
+              {open.map(p => {
                 const style = familyLabel(p)
                 return (
                   <div key={p.ref} className="d-flex align-items-center gap-2 py-1 border-top" style={{ fontSize: 10 }}>
@@ -172,8 +178,9 @@ export default function MasterGapPanel({ gaps }) {
                     </span>
                     <Form.Select size="sm" style={{ width: 190, fontSize: 10, flexShrink: 0 }}
                       value={chosen[p.ref] ?? ''}
-                      onChange={e => setChosen(c => ({ ...c, [p.ref]: e.target.value || undefined }))}>
-                      <option value="">— no family —</option>
+                      onChange={e => setChosen(c => ({ ...c, [p.ref]: e.target.value }))}>
+                      <option value="" disabled>— choose a family —</option>
+                      <option value={NO_FAMILY}>— no family (top level) —</option>
                       {collOptions.map(o => <option key={o} value={o}>{o}</option>)}
                     </Form.Select>
                   </div>
