@@ -200,7 +200,7 @@ export default function TemplateEditorScreen({ onBack }) {
       <ListGroup.Item key={tpl.id} action active={selectedId === tpl.id} className="py-2 px-3" onClick={() => selectTemplate(tpl)}>
         <div className="d-flex justify-content-between align-items-start">
           <div>
-            <div className="fw-semibold small">{tpl.name}</div>
+            <div className="fw-semibold small d-flex align-items-center gap-1">{tpl._served && <span className="companion-dot" title="From the companion" />}{tpl.name}</div>
             <div className="text-muted" style={{ fontSize: 11 }}>{n} row{n !== 1 ? 's' : ''} · {describeRule(templateRule({ Rule: tpl.rule }))}</div>
           </div>
           {tpl._served && (

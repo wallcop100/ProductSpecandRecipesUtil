@@ -243,7 +243,7 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
 
         {/* The code the same part has elsewhere */}
         {elsewhere && !dismissedElsewhere && (
-          <div className="alert alert-info py-2 px-3 mb-3 d-flex align-items-center gap-2" style={{ fontSize: 12 }} data-testid="code-elsewhere">
+          <div className={`alert alert-info py-2 px-3 mb-3 d-flex align-items-center gap-2${(localExemplars || []).some(x => x.code === elsewhere.code) ? '' : ' companion-card'}`} style={{ fontSize: 12 }} data-testid="code-elsewhere">
             <div className="flex-grow-1">
               Elsewhere <span className="font-monospace">{elsewhere.ref}</span> is <strong>{elsewhere.maker} {elsewhere.code}</strong>
               {elsewhere.description && <span className="text-muted"> — {elsewhere.description}</span>}

@@ -229,7 +229,7 @@ export default function BulkCreateETModal({
       <Modal.Body style={{ fontSize: 12 }}>
         {header}
         {kitLines.length > 0 && (
-          <div className="mb-2 px-2 py-1 rounded" data-testid="kit-suggestions" style={{ background: C.accentTint, border: `1px solid ${C.accentEdge}` }}>
+          <div className="mb-2 px-2 py-1 rounded companion-card" data-testid="kit-suggestions" style={{ background: C.accentTint, border: `1px solid ${C.accentEdge}` }}>
             {kitLines.map(k => (
               <div key={k.key} className="d-flex align-items-center gap-2 py-1">
                 <MaterialIcon name="extension" size={13} style={{ color: C.accent }} />
