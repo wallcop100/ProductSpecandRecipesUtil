@@ -236,6 +236,11 @@ describe('the DesignDB patch keeps ElementTypes in line', () => {
     expect(s).toMatch(/setBold\(true\)/)
     expect(s).toMatch(/colMap\([^)]*\["Ref", "ParentRef", "SortOrder", "IsCollection"\]|"SortOrder"/)
   })
+  test('sort: false leaves the sheet order and formatting alone', () => {
+    const s = buildDbScript([{ elementTypeRef: 'ET-PS-01', updates: { ElementTypeRef: 'ET-PS-01', Family: 'ET-PS' }, _isNew: true }], undefined, { sort: false })
+    expect(s).toContain('ET-PS-01')
+    expect(s).not.toMatch(/setFormulas\(sorted\)|#7030A0|getFill\(\)\.clear/)
+  })
   test('nothing to patch, no script', () => {
     expect(buildDbScript([])).toBe('')
   })
