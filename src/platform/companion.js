@@ -17,6 +17,7 @@
  *   jobs           what job a product does in a recipe (tape, profile, clips …), by maker + code
  *   patterns       recipe patterns from other projects, below this browser's own (recipeProposal.js)
  *   find           Find's words, titles and how-to text as changed on Orion /psr → Find, live
+ *   connectors     the Wago connector library, in place of the one bundled with the app
  *   kinds / kits   what positions like this one usually have, and the parts used with a profile:
  *                  inline suggestions in the recipe editor (RecipeSuggestions.jsx), never applied unasked
  *
@@ -75,6 +76,9 @@ function build(features) {
 
     /** A personal / project template offered to Orion, which keeps it as a draft: { name, rule, ingredients, by, project } → accepted? */
     suggestTemplate: has('templates') ? async t => !!(await quiet(post('./api/recipes/templates/suggest', t))) : null,
+
+    /** The Wago connector library (globalTemplates.json `connectors` shape), or null to keep the bundled one. */
+    connectors: has('connectors') ? async () => (await quiet(getJson('./api/recipes/connectors')))?.connectors || null : null,
 
     /** Recipe kinds from other projects (recipeKinds.js): design, power, slots with shares and rules. */
     kinds: has('kinds') ? async () => (await quiet(getJson('./api/recipes/kinds')))?.kinds || null : null,

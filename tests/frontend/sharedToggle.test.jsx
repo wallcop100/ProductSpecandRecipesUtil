@@ -99,6 +99,17 @@ describe('quiet row: selection checkbox and shared icon', () => {
     expect(useStore.getState().selectedRowIds).toEqual(['c'])
   })
 
+  test('Shift-clicking the select checkbox toggles it once and mousedown does not start a text range', () => {
+    render(<IngredientCard row={plain()} posRef="A01" sectionKey="position" />)
+    act(() => useStore.setState({ selectMode: true }))
+    const box = screen.getByLabelText('Select for copy')
+    expect(fireEvent.mouseDown(box, { shiftKey: true })).toBe(false)   // default prevented
+    fireEvent.click(box, { shiftKey: true })
+    expect(useStore.getState().selectedRowIds).toEqual(['c'])
+    fireEvent.click(box, { shiftKey: true })
+    expect(useStore.getState().selectedRowIds).toEqual([])
+  })
+
   test('"Select multiple" keeps checkboxes shown until the selection is cleared', () => {
     render(<IngredientCard row={plain()} posRef="A01" sectionKey="position" />)
     fireEvent.click(screen.getByLabelText('Row actions'))

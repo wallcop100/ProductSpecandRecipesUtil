@@ -27,6 +27,7 @@ export function CodePills({ parts }) {
 
 /** How many in-scope positions each library entry is suggested for. */
 function useFits() {
+  useStore(s => s.library?.connectors)
   const groups = useConnectorGroups()
   return useMemo(() => {
     const fits = new Map()
@@ -43,6 +44,7 @@ function useFits() {
  * otherwise. Add makes the template this project's, with any ElementTypes it lacks.
  */
 export function WagoLibrary() {
+  useStore(s => s.library?.connectors)
   const etCollections = useStore(s => s.etCollections)
   const psRows = useStore(s => s.psRows)
   const planGlobalConnector = useStore(s => s.planGlobalConnector)
@@ -103,6 +105,7 @@ export function WagoLibrary() {
  * control and driver location suggest, with Use (the others as "or …").
  */
 export function WagoSuggestion({ posRef }) {
+  useStore(s => s.library?.connectors)
   const groups = useConnectorGroups()
   const etCollections = useStore(s => s.etCollections)
   const psRows = useStore(s => s.psRows)

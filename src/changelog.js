@@ -7,6 +7,8 @@
  * start page's "what's new" link.
  */
 export const CHANGELOG = [
+  { date: '2026-10-21', note: 'Connector suggestions (the Wago library) come from the companion when connected, the bundled library otherwise' },
+  { date: '2026-10-21', note: 'Shift-click multi-select on recipe rows is reliable again: shift no longer starts a text selection across cards, and shift-clicking the tick box toggles it once' },
   { date: '2026-10-21', note: 'New How it works card: Fork a position — a variant of a recipe (the ? in the Fork window, or search Find for "fork")' },
   { date: '2026-10-21', note: 'Suggestions on the recipe surface (same-as, kit, usual part, TBC, connectors): the ⋯ menu has Report a problem with this suggestion, opening the bug note aimed at that line' },
   { date: '2026-10-21', note: 'Templates tab: on a position that already has a recipe, each template part is ticked, flagged (wrong place or too few) or crossed against it; the Global badge uses a cloud icon' },

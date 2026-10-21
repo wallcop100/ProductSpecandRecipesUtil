@@ -16,7 +16,7 @@ import { reconcileAll, stampExported, hasUnexported } from '../utils/reconcile.j
 import { jobOf, linearWrapperFamily } from '../utils/codeJobs.js'
 import { loadReports, saveReports } from '../utils/bugReports.js'
 import { connectorSignature, templateParts, partsToIngredients, diffParts, isConnectorPart, DEFAULT_CONNECTOR_FAMILIES, sortParts, signatureKey } from '../utils/connectorGroups.js'
-import { globalConnector, suggestRef, partName, sectionOf, supersededBy, WAGO } from '../data/globalConnectors.js'
+import { globalConnector, setConnectorLibrary, suggestRef, partName, sectionOf, supersededBy, WAGO } from '../data/globalConnectors.js'
 import { templateRecords, templateRule, specificityScope } from '../utils/templateRules.js'
 
 /** _templateRecOf's cache: not state (no re-render), keyed on the arrays it reads. */
@@ -1129,8 +1129,9 @@ const useStore = create((set, get) => ({
     try {
       const { getCompanion } = await import('../platform/companion.js')
       const api = await getCompanion()
-      const [served, kinds, templates] = await Promise.all([api?.patterns ? api.patterns() : null,
-        api?.kinds ? api.kinds() : null, api?.templates ? api.templates() : null])
+      const [served, kinds, templates, connectors] = await Promise.all([api?.patterns ? api.patterns() : null,
+        api?.kinds ? api.kinds() : null, api?.templates ? api.templates() : null, api?.connectors ? api.connectors() : null])
+      if (connectors && setConnectorLibrary(connectors)) set({ library: { ...get().library, connectors } })
       if (served?.length) set({ library: { ...get().library, others: served } })
       if (kinds?.length) set({ library: { ...get().library, kinds } })
       if (templates) { set({ library: { ...get().library, templates } }); get().applyServedTemplates() }
