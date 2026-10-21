@@ -7,6 +7,7 @@
  * start page's "what's new" link.
  */
 export const CHANGELOG = [
+  { date: '2026-10-21', note: 'The export banner ("run the patches") has a Dismiss for when you did not export after all; the changes stay queued for the next export. No more OneDrive mention' },
   { date: '2026-10-21', note: 'Connector suggestions (the Wago library) come from the companion when connected, the bundled library otherwise' },
   { date: '2026-10-21', note: 'Shift-click multi-select on recipe rows is reliable again: shift no longer starts a text selection across cards, and shift-clicking the tick box toggles it once' },
   { date: '2026-10-21', note: 'New How it works card: Fork a position — a variant of a recipe (the ? in the Fork window, or search Find for "fork")' },

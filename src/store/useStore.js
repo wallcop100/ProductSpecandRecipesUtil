@@ -3762,6 +3762,17 @@ const useStore = create((set, get) => ({
   },
 
   /**
+   * Stop waiting on the last export (the patches were never run): the changes stay queued, unstamped,
+   * so they go in the next export as new. Nothing is discarded.
+   */
+  dismissBatch() {
+    const { psChanges, rsChanges, dbChanges, projectId } = get()
+    const clear = list => list.map(({ batch, exported, ...e }) => e)
+    set({ psChanges: clear(psChanges), rsChanges: clear(rsChanges), dbChanges: clear(dbChanges), patchBatch: null })
+    try { if (projectId != null) window.electronAPI?.db?.setPref?.(projectId, 'patch_batch', 'null') } catch { /* best-effort */ }
+  },
+
+  /**
    * Read the three workbooks again and settle every pending change against them: what they hold
    * leaves the queue, what they do not stays, a hand edit in between is flagged. Never discards.
    * → counts, or null when the files could not be read (a half-synced file: try again).

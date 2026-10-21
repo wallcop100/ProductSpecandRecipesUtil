@@ -25,6 +25,16 @@ describe('the sync panel', () => {
     expect(screen.getByText(/The DesignDB patch isn't in yet/)).toBeTruthy()
   })
 
+  test('Dismiss drops the banner and keeps the changes queued as unexported', () => {
+    useStore.setState({ patchBatch: { n: 1, at: Date.now() - 1000, counts: { db: 1, ps: 0, rs: 0 } }, dbChanges: [e('ET-A', 1)] })
+    const { container } = render(<PatchSyncPanel />)
+    expect(container.textContent).not.toMatch(/OneDrive/)
+    fireEvent.click(screen.getByTestId('sync-dismiss'))
+    expect(container.textContent).toBe('')
+    const [c] = useStore.getState().dbChanges
+    expect(c.elementTypeRef).toBe('ET-A'); expect(c.batch).toBeUndefined(); expect(c.exported).toBeUndefined()
+  })
+
   test('conflicts are settled here', () => {
     const resolve = vi.spyOn(useStore.getState(), 'resolveConflict').mockImplementation(() => {})
     useStore.setState({ syncStatus: { at: Date.now(), counts: {}, conflicts: [{ file: 'ps', key: 'ET-A', ref: 'ET-A', fields: [{ field: 'ProductCode', mine: 'X', file: 'H' }] }] } })
