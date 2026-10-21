@@ -104,8 +104,26 @@ export const SUGGESTIONS = [
     rule: { match: 'all', conditions: [cond('ControlTypeRef', 'isNotEmpty'), cond('ControlTypeRef', 'notContains', 'DALI'), cond('ControlTypeRef', 'notContains', 'DMX'), HAS_DRIVER_LOCATION, NOT_REMOTE] } },
 ]
 
-const { connectors: C } = GLOBAL
-export const WAGO_PAGE = C.source
-export const WAGO_TEMPLATES = C.templates
-export const WAGO_COMBOS = C.combos
-export const WAGO_SUPERSEDED = C.superseded
+// The library is the bundled JSON until a companion serves one (`connectors`), then that one.
+let C = GLOBAL.connectors
+export let WAGO_PAGE = C.source
+export let WAGO_TEMPLATES = C.templates
+export let WAGO_COMBOS = C.combos
+export let WAGO_SUPERSEDED = C.superseded
+
+/**
+ * Use a served library in place of the bundled one. Refused (→ false) unless it is shaped like the
+ * bundle and still has every key the suggestion rules name, so a bad answer leaves the bundle in use.
+ * `null` goes back to the bundle.
+ */
+export function setConnectorLibrary(block) {
+  const b = block ?? GLOBAL.connectors
+  if (!Array.isArray(b?.templates) || (b.combos && !Array.isArray(b.combos))) return false
+  const keys = new Set(b.templates.map(t => t?.key).concat((b.combos || []).map(c => c?.key)))
+  const ok = b.templates.every(t => t?.key && Array.isArray(t.site) && Array.isArray(t.driver))
+    && SUGGESTIONS.every(sg => sg.keys.every(k => keys.has(k)))
+  if (!ok) return false
+  C = { combos: [], superseded: {}, source: {}, ...b }
+  WAGO_PAGE = C.source; WAGO_TEMPLATES = C.templates; WAGO_COMBOS = C.combos; WAGO_SUPERSEDED = C.superseded
+  return true
+}

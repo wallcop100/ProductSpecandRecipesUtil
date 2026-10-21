@@ -18,6 +18,7 @@ speaks this protocol, it adds three optional features:
 | `jobs`          | Knows what job a product does in a recipe (tape, profile, clips …), by maker + code; it settles the ElementType family over the words. |
 | `patterns`      | Recipe patterns from other projects, in `recipePatterns.js` shape, used as precedent below this browser's own. |
 | `kinds`         | What positions like this one usually have (design, power, slots with their shares and rules). Shown as inline suggestions in the recipe editor and at the Form step; never applied unasked. |
+| `connectors`    | The Wago connector library (`globalTemplates.json` `connectors` shape), in place of the one bundled with the app. |
 | `kits`          | The parts used with a profile / channel on other projects. Inline suggestions in the ElementType review and the recipe editor. |
 | `templates`     | Global templates, each with a rule saying which positions it is for (read-only), and a way to suggest one back. |
 
@@ -144,6 +145,8 @@ size and rate, and treat the content as untrusted text for a person to read.
 - `GET api/recipes/patterns` → `{ "patterns": [...] }` (the shape `harvestPatterns` makes).
 - `GET api/recipes/kinds` → `{ "kinds": [{ id, name, design, driver, secondary, defining, positions, projects,
   slots: [{ slot, core, share, section, qty, dim, contract, integer }], connectors: [{ set, positions }] }] }`.
+- `GET api/recipes/connectors` → `{ "connectors": {source, manufacturer, templates, combos, superseded} | null }`. Null until one is loaded
+  (server: meta `global_connectors`); the app also refuses one that lacks a key its suggestion rules name.
 - `POST api/recipes/kits` with `{ "codes": [{ code, manufacturer }], "project" }` → `{ "kits": [{ key, anchor, part:
   { code, slot, name }, share, qty, dim, integer, contract }] }`.
 - `GET api/recipes/templates` → `{ "templates": [{ id, name, rule, from_kind, ingredients, version }] }`. `rule` is

@@ -152,3 +152,17 @@ describe('where it shows', () => {
     expect(screen.queryByTestId('wago-upgrade')).toBeNull()
   })
 })
+
+describe('a companion can serve the library', () => {
+  const bundled = JSON.parse(readFileSync(resolve(process.cwd(), 'src/data/globalTemplates.json'), 'utf8')).connectors
+  test('a served library replaces the bundle; a malformed one or one missing a rule key is refused', () => {
+    const served = { ...bundled, templates: bundled.templates.map(t => t.key === '2pin-dali' ? { ...t, name: 'Served 2-pin' } : t) }
+    expect(G.setConnectorLibrary(served)).toBe(true)
+    expect(G.globalConnector('2pin-dali').name).toBe('Served 2-pin')
+    expect(G.setConnectorLibrary({ ...bundled, templates: bundled.templates.filter(t => t.key !== '2pin-dali') })).toBe(false)
+    expect(G.setConnectorLibrary({ templates: 'x' })).toBe(false)
+    expect(G.globalConnector('2pin-dali').name).toBe('Served 2-pin')      // still the served one
+    expect(G.setConnectorLibrary(null)).toBe(true)
+    expect(G.globalConnector('2pin-dali').name).toBe(bundled.templates.find(t => t.key === '2pin-dali').name)
+  })
+})

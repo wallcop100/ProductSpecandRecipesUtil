@@ -36,6 +36,8 @@ function specRowFor(psRows, ref) {
   return rows.find(p => p.ProductCode || p.productCode) || rows[0] || null
 }
 
+const isTextBox = t => t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && !['checkbox', 'radio'].includes(t.type))
+
 export default function IngredientCard({ row, posRef, sectionKey, onOpenProductSpec, onReplace }) {
   const updateRecipeRow = useStore(s => s.updateRecipeRow)
   const removeRecipeRow = useStore(s => s.removeRecipeRow)
@@ -228,11 +230,14 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   return (
     <div ref={composedRef} style={style} data-debug-id="IngredientCard">
       <Card
+        // Shift-mousedown would otherwise start a text range across cards, which swallows the next shift-click.
+        onMouseDownCapture={e => { if (e.shiftKey && !isTextBox(e.target)) e.preventDefault() }}
         onClickCapture={e => {
           // Shift-click anywhere on the card selects it (and does nothing else), except in a text box.
+          // The select checkbox is left alone: preventDefault on a controlled checkbox desyncs it, and its own onChange toggles.
           if (!e.shiftKey) return
           const t = e.target
-          if (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && !['checkbox', 'radio'].includes(t.type))) return
+          if (isTextBox(t) || t.getAttribute?.('aria-label') === 'Select for copy') return
           e.preventDefault(); e.stopPropagation()
           toggleRowSelection(rowId)
         }}
