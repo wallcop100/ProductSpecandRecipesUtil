@@ -3,6 +3,8 @@
  *
  * Meaning, not decoration: accent = action/selection/active; attn = needs a decision;
  * danger = blocks export or destructive; success = ✓ icon only. Everything else is a neutral.
+ * companion purple = anything learned from or served by the companion: a card shows it with `.companion-card`
+ * (glistening purple outline), a lone item with `.companion-dot` — never both. Both live in debug.css.
  * Entity colours (ElementType orange, PositionType blue) live in utils/entityStyle.js.
  */
 export const C = {
@@ -26,6 +28,8 @@ export const C = {
   danger:     '#dc3545',
   dangerTint: '#f8d7da',
   dangerInk:  '#842029',
+  // companion purple — anything learned from or linked to the companion
+  companion:  '#8b5cf6',
   // ✓ only
   success:    '#198754',
 }

@@ -247,7 +247,7 @@ export default function RecipeSuggestions({ posRef }) {
   }
 
   return (
-    <div className="mb-3 px-3 py-2 rounded" data-testid="recipe-suggestions" style={{ background: C.accentTint, border: `1px solid ${C.accentEdge}`, fontSize: 12 }}>
+    <div className={`mb-3 px-3 py-2 rounded${shown.some(l => l.kind === 'kit' || l.kind === 'kind') ? ' companion-card' : ''}`} data-testid="recipe-suggestions" style={{ background: C.accentTint, border: `1px solid ${C.accentEdge}`, fontSize: 12 }}>
       {shown.map(l => (
         <div key={l.key} className="d-flex align-items-center gap-2 py-1" data-testid={`suggestion-${l.kind}`}>
           <MaterialIcon name={l.icon} size={13} style={{ color: C.accent, flexShrink: 0 }} />

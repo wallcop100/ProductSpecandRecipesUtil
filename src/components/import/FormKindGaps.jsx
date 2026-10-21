@@ -14,7 +14,7 @@ export default function FormKindGaps({ gaps = [], onAnswer = () => {} }) {
   const shown = gaps.filter(g => !gone.has(g.key))
   if (!shown.length) return null
   return (
-    <div className="mb-2 px-2 py-1 rounded" data-testid="form-kind-gaps" style={{ background: C.accentTint, border: `1px solid ${C.accentEdge}`, fontSize: 12 }}>
+    <div className="mb-2 px-2 py-1 rounded companion-card" data-testid="form-kind-gaps" style={{ background: C.accentTint, border: `1px solid ${C.accentEdge}`, fontSize: 12 }}>
       {shown.map(g => (
         <div key={g.key} className="d-flex align-items-center gap-2 py-1">
           <MaterialIcon name="lightbulb" size={13} style={{ color: C.accent }} />
