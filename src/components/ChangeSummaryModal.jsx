@@ -1,6 +1,6 @@
 import InfoTip from './InfoTip'
 import React, { useMemo, useState, useEffect } from 'react'
-import { Modal, Button } from 'react-bootstrap'
+import { Modal, Button, Form } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { buildPsScript, buildRsScript, buildDbScript } from '../utils/patchScript'
@@ -199,12 +199,12 @@ export function summaryMarkdown(sections) {
  * changes (a non-empty script) are returned. The master learns about new ElementTypes
  * here or nowhere, so the DesignDB script always travels with the other two.
  */
-function patchFilesFor({ psChanges, rsChanges, dbChanges, projectNumber }) {
+function patchFilesFor({ psChanges, rsChanges, dbChanges, projectNumber, sortDb = true }) {
   // In the order to run them: the DesignDB first — the Product Spec and recipes name its ElementTypes.
   // Each refuses to run on a workbook whose name lacks the project number.
   const o = { project: projectNumber || '' }
   return [
-    { key: 'db', label: 'DesignDB ElementTypes', file: 'DesignDB.xlsx', script: buildDbScript(dbChanges, undefined, o) },
+    { key: 'db', label: 'DesignDB ElementTypes', file: 'DesignDB.xlsx', script: buildDbScript(dbChanges, undefined, { ...o, sort: sortDb }) },
     { key: 'ps', label: 'Product Spec', file: 'ProductSpec.xlsx', script: buildPsScript(psChanges, undefined, o) },
     { key: 'rs', label: 'Recipe Spec', file: 'RecipesSpec.xlsx', script: buildRsScript(rsChanges, undefined, o) },
   ].filter(f => f.script)
@@ -290,7 +290,7 @@ function ChangesTab({ sections }) {
   ))
 }
 
-function PatchesTab({ files, copiedKey, previewKey, onCopy, onPreview, dbWaiting = 0 }) {
+function PatchesTab({ files, copiedKey, previewKey, onCopy, onPreview, dbWaiting = 0, sortDb = true, onSortDb }) {
   if (files.length === 0) return <div className="text-muted small fst-italic">Nothing to patch.</div>
   return (
     <>
@@ -319,6 +319,11 @@ function PatchesTab({ files, copiedKey, previewKey, onCopy, onPreview, dbWaiting
               <MaterialIcon name="content_paste" size={13} /> {copiedKey === f.key ? 'Copied!' : 'Copy'}
             </Button>
           </div>
+          {f.key === 'db' && onSortDb && (
+            <Form.Check type="checkbox" className="px-2 pb-2 ms-3" style={{ fontSize: 11 }} id="db-sort-tree"
+              checked={sortDb} onChange={e => onSortDb(e.target.checked)}
+              label="Re-sort the ElementTypes sheet into tree order (untick to leave your order and formatting alone)" />
+          )}
           {previewKey === f.key && (
             <pre className="m-0 px-2 py-2" style={{
               fontSize: 10, maxHeight: 220, overflow: 'auto', background: C.subtle, borderTop: `1px solid ${C.border}`,
@@ -512,7 +517,8 @@ export default function ChangeSummaryModal({ show, onHide }) {
   const overwrites = useMemo(() => dbOverwrites(dbChanges), [dbChanges])
   const sections = useMemo(() => buildSummary({ psChanges, rsChanges, dbChanges }), [psChanges, rsChanges, dbChanges])
   const projectNumber = useStore(s => s.projectNumber)
-  const patchFiles = useMemo(() => patchFilesFor({ psChanges, rsChanges, dbChanges, projectNumber }), [psChanges, rsChanges, dbChanges, projectNumber])
+  const [sortDb, setSortDb] = useState(true)   // opt-out: the DesignDB patch re-sorts the whole ElementTypes tree unless unticked
+  const patchFiles = useMemo(() => patchFilesFor({ psChanges, rsChanges, dbChanges, projectNumber, sortDb }), [psChanges, rsChanges, dbChanges, projectNumber, sortDb])
 
   // A master gap whose fix already sits in the ElementTypes patch is queued, not open —
   // it should not keep the "Resolve first" tab lit. (The panel itself shows the queued
@@ -569,7 +575,7 @@ export default function ChangeSummaryModal({ show, onHide }) {
           : tab === 'changes' ? <ChangesTab sections={sections} />
           : tab === 'patches' ? (
               <PatchesTab files={patchFiles} copiedKey={copiedKey} previewKey={previewKey}
-                onCopy={copy} onPreview={setPreviewKey} dbWaiting={openDbRows} />
+                onCopy={copy} onPreview={setPreviewKey} dbWaiting={openDbRows} sortDb={sortDb} onSortDb={setSortDb} />
             )
           : <ResolveTab gaps={gaps} overwrites={overwrites} onFillWrappers={() => fillWrapperSpecRows()} />}
       </Modal.Body>

@@ -362,9 +362,10 @@ export function buildPsScript(psChanges, filename = 'Product Spec', { project = 
   return buildUniqueKeyScript(psChanges, PS_FIELD_TO_EXCEL, 'Form', 'EntityRef', filename, { withEntityType: true, project })
 }
 
-export function buildDbScript(dbChanges, filename = 'ElementTypes (DB)', { project = '' } = {}) {
+/** `sort: false` opts out of the tree re-sort: new rows are written where the script adds them, and the sheet's order and formatting are left alone. */
+export function buildDbScript(dbChanges, filename = 'ElementTypes (DB)', { project = '', sort = true } = {}) {
   return buildUniqueKeyScript(dbChanges, DB_FIELD_TO_EXCEL, 'ElementTypes', 'Ref', filename, {
-    withEntityType: false, tidy: DB_TIDY, tidyCols: ['ParentRef', 'SortOrder'], project,
+    withEntityType: false, tidy: sort ? DB_TIDY : null, tidyCols: ['ParentRef', 'SortOrder'], project,
   })
 }
 
