@@ -228,7 +228,7 @@ let watchTimer = null
 /**
  * Poll `lastModified` on all three workbooks — the DesignDB(s) too: a DB patch is a patch.
  * A change is reported once the file has STOPPED changing (two quiet polls), so a file
- * OneDrive is still syncing down, or Excel is still saving, is not read half-written.
+ * that is still syncing down, or that Excel is still saving, is not read half-written.
  * Emits `{ file, path }` per settled file; the app then checks every workbook's content
  * (useStore.checkFiles), so which file fired never decides anything.
  */
