@@ -40,7 +40,7 @@ describe('the drawer\'s Templates tab', () => {
   test('lists the matching served template for a LIN position, hides it for a DL one under the default', () => {
     const { unmount } = render(<TemplatesPane posRef="L01" />)
     expect(screen.getByText('LIN tape and profile')).toBeInTheDocument()
-    expect(screen.getByText('Global ☁️')).toBeInTheDocument()
+    expect(screen.getByText('Global', { exact: false })).toBeInTheDocument()
     unmount()
     render(<TemplatesPane posRef="D01" />)
     expect(screen.queryByText('LIN tape and profile')).toBeNull()
@@ -61,6 +61,19 @@ describe('the drawer\'s Templates tab', () => {
     const st = useStore.getState()
     expect(st.recipes.some(r => r.PositionTypeRef === 'L01' && r.ElementTypeRef === 'ET-PROF-01')).toBe(true)
     expect(st.past.length).toBe(before + 1)
+  })
+})
+
+describe('a position that already has a recipe', () => {
+  test('each template part is ticked or crossed against it', () => {
+    const tpl = { ...LIN, rule: { match: 'all', conditions: [{ column: 'Family', op: 'equals', value: 'LN' }] }, ingredients: [
+      { slotKey: 'X', slotLabel: 'ET-PROF-01', exact: true, section: 'position' },
+      { slotKey: 'X', slotLabel: 'ET-DRV-09', exact: true, section: 'position' },
+    ] }
+    setup({ templates: [tpl], positionTypes: [{ PositionTypeRef: 'L01', ParentRef: 'LN' }], recipes: [{ PositionTypeRef: 'L01', ContextType: 'PositionType', ContextRef: 'L01', ElementTypeRef: 'ET-PROF-01', _id: 'r1' }] })
+    render(<TemplatesPane posRef="L01" />)
+    expect(screen.getAllByTestId('tpl-present')).toHaveLength(1)
+    expect(screen.getAllByTestId('tpl-missing')).toHaveLength(1)
   })
 })
 
