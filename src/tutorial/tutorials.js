@@ -54,6 +54,19 @@ export const TUTORIALS = {
     ],
   },
 
+  'fork-position': {
+    title: 'Fork a position — a variant of a recipe',
+    icon: 'call_split',
+    intro: 'Fork copies one position\'s recipe into other positions, so you can change the copy without touching the original.',
+    steps: [
+      { blurb: 'Open the recipe\'s ⋮ menu and choose Fork into new position(s). It copies the whole recipe, including what is inside its wrapper.', scene: 'fork', beat: 0 },
+      { blurb: 'Pick the positions the copy goes into. One that already has a recipe is replaced — the window counts them before you confirm — and Undo brings it back.', scene: 'fork', beat: 1 },
+      { blurb: 'Untick the rows the variant should not have, like the driver or a connector. It applies to every position you picked.', scene: 'fork', beat: 2 },
+      { blurb: 'Keep "Give each its own copy of the wrapper" on unless you mean to share it. Off, the positions still share one wrapper, and an edit to it changes them all.', scene: 'fork', beat: 3 },
+      { blurb: 'Each position gets its own recipe and its own auto-named wrapper. The original is untouched, and one Undo takes the whole fork back.', scene: 'fork', beat: 4 },
+    ],
+  },
+
   'palette': {
     title: 'The palette drawer',
     icon: 'widgets',

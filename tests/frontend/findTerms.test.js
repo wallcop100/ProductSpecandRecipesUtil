@@ -35,4 +35,8 @@ describe('Find terms: data, and Orion’s live changes over them', () => {
     const plain = buildActions()
     expect(find('frobnicate the label', { actions: plain.actions, synonyms: plain.synonyms, state: {} }).filter(r => r.action?.id === 'et.rename')).toEqual([])
   })
+  it('the Fork card is found by Find', () => {
+    const { actions, synonyms } = buildActions()
+    expect(find('fork', { actions, synonyms, state: {} }).some(r => r.action?.id === 'tut.fork-position')).toBe(true)
+  })
 })

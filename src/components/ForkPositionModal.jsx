@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react'
 import { Modal, Button, Form } from 'react-bootstrap'
 import useStore from '../store/useStore'
+import TutorialHint from '../tutorial/TutorialHint'
 import MaterialIcon from './MaterialIcon'
 import EntityPill from './EntityPill'
 import { positionRecipeWithWrapperInternals } from '../utils/collectionStatus'
@@ -129,6 +130,7 @@ export default function ForkPositionModal({ show, sourceRef, onHide }) {
       <Modal.Header closeButton>
         <Modal.Title style={{ fontSize: 15 }} className="d-flex align-items-center gap-2">
           <MaterialIcon name="call_split" size={18} /> Fork <EntityPill type="PositionType" label={sourceRef} />
+          <TutorialHint id="fork-position" />
         </Modal.Title>
       </Modal.Header>
 
