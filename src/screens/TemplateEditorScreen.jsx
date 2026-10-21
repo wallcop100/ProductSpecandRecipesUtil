@@ -231,7 +231,7 @@ export default function TemplateEditorScreen({ onBack }) {
           <IconButton variant="link" bsSize="sm" className="p-0" icon={ACTION_ICONS.back} title="Back to builder" onClick={onBack} />
           <span className="fw-semibold small d-inline-flex align-items-center gap-1">Manage templates <TutorialHint id="templates" /></span>
         </div>
-        {group('Global ☁️', orion, 'None served.')}
+        {group(<>Global <MaterialIcon name="cloud" size={12} /></>, orion, 'None served.')}
         {group('This project', projectTemplates, 'No project templates.',
           <Button variant="outline-primary" size="sm" style={{ fontSize: 11, padding: '1px 8px' }} onClick={handleNewTemplate}>+ New</Button>)}
         {group('Mine', mine, 'No personal templates.')}
@@ -248,7 +248,7 @@ export default function TemplateEditorScreen({ onBack }) {
             <div className="d-flex align-items-center gap-3 mb-3">
               <Form.Control style={{ maxWidth: 300, fontWeight: 600, fontSize: '1.1rem' }} value={editState.name} aria-label="Template name"
                 onChange={e => setEditState(s => ({ ...s, name: e.target.value }))} disabled={readOnly} placeholder="Template name" />
-              <Badge bg={readOnly ? 'secondary' : 'primary'}>{readOnly ? 'Global ☁️' : editState.scope === 'project' ? 'Project' : 'Mine'}</Badge>
+              <Badge bg={readOnly ? 'secondary' : 'primary'}>{readOnly ? <>Global <MaterialIcon name="cloud" size={12} /></> : editState.scope === 'project' ? 'Project' : 'Mine'}</Badge>
               {!readOnly && companion?.suggestTemplate && (
                 <Button variant="link" size="sm" className="p-0 text-muted ms-auto" style={{ fontSize: 11 }} onClick={suggest}
                   title="Send this as a draft global template for review">Suggest as global</Button>

@@ -7,6 +7,7 @@
  * start page's "what's new" link.
  */
 export const CHANGELOG = [
+  { date: '2026-10-21', note: 'Templates tab: on a position that already has a recipe, each template part is ticked, flagged (wrong place or too few) or crossed against it; the Global badge uses a cloud icon' },
   { date: '2026-10-20', note: 'Suggestions: a part flagged TBC that already holds a code (an opal diffuser, say) is no longer offered a replacement code, so no silent spec change' },
   { date: '2026-10-20', note: 'Builder: a wrapper’s content with no product spec yet has the pencil too, so you can open the Product Spec from it' },
   { date: '2026-10-20', note: 'No more phantom recipe rows: an add that has lost its position is refused (it used to land in the Recipes sheet with a blank ContextRef, as a contract item no position shows), the Recipes patch never writes a row missing part of its key, and such rows already queued leave the queue. Renaming an ElementType now carries the Form\'s captures, its import choices, slot mappings, wrapper overrides and the open ElementType with it, so the Form pane no longer offers a delete and an add for a rename' },

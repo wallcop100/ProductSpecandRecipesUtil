@@ -8,11 +8,16 @@ import { useCompanion } from '../platform/companion'
 import { shareOutcomes } from '../platform/outcomes'
 import { proposalContext, proposalFromTemplate } from '../utils/recipeProposal'
 import { describeRule } from '../utils/templateRules'
+import { positionRecipeWithWrapperInternals } from '../utils/collectionStatus'
+import { buildPresence, ingredientPresence, wantedSlots } from '../utils/recipePresence'
+import { indexes as kindIndexes, rowJob } from '../utils/recipeKinds'
+import { jobKey } from '../utils/codeJobs'
+import { ACTION_ICONS } from '../utils/entityStyle'
 import { C } from '../styles/tokens'
 
 const mono = { fontFamily: 'monospace' }
 const live = r => (r.IsDeleted || r.isDeleted) !== 'Y'
-const originOf = t => (t._served ? 'Global ☁️' : t.scope === 'project' ? 'project' : t.scope === 'global' ? 'built-in' : 'mine')
+const originOf = t => (t._served ? 'Global' : t.scope === 'project' ? 'project' : t.scope === 'global' ? 'built-in' : 'mine')
 const checksOf = p => (p.rows || []).filter(r => r.check || r.missing).map(r => r.check || `${r.role.toLowerCase()} is empty`)
 
 /**
@@ -21,6 +26,24 @@ const checksOf = p => (p.rows || []).filter(r => r.check || r.missing).map(r => 
  * with this position's Form products, confirm the template is right (an outcome, so Orion learns
  * from it), write in one Undo. Rows that need checking are remembered in `templateChecks`.
  */
+/**
+ * A template's parts against the position's recipe → one status per ingredient (present / misplaced /
+ * short / missing), or null where the part comes from the Form and there is nothing to compare.
+ * A job slot ("PROFILE") counts as present when a live row on the position does that job.
+ */
+function alignment(ings, rows, wrapperRefs, idx) {
+  const presence = buildPresence(rows, wrapperRefs)
+  const wanted = wantedSlots(ings)
+  const jobs = rows.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y').map(r => jobKey(rowJob(r, idx)))
+  return ings.map(i => {
+    if (i.fromForm) return null
+    if (i.newWrapper) return { status: wrapperRefs.length ? 'present' : 'missing' }
+    if (i.slotKey && !i.exact) return { status: jobs.some(j => j === i.slotKey || j.split(':')[0] === i.slotKey) ? 'present' : 'missing' }
+    return ingredientPresence(presence, i, { wanted })
+  })
+}
+const TICK = { present: [ACTION_ICONS.complete, C.success, 'In the recipe'], missing: [ACTION_ICONS.incomplete, C.danger, 'Not in the recipe'] }
+
 export default function TemplatesPane({ posRef }) {
   const state = useStore(s => s)
   const { recipes, positionTypes, library, projectNumber, templateChecks } = state
@@ -42,6 +65,10 @@ export default function TemplatesPane({ posRef }) {
   const byPos = useTemplateMatches(refs)
   const { matches = [], others = [] } = byPos.get(posRef) || {}
   const isEmpty = emptyRefs.includes(posRef)
+  const own = useMemo(() => {
+    const { combined, wrapperRefs } = positionRecipeWithWrapperInternals(recipes, posRef)
+    return { rows: combined, wrapperRefs, idx: kindIndexes(proposalContext(state, library)) }
+  }, [recipes, posRef, library])   // eslint-disable-line react-hooks/exhaustive-deps
   const shown = showAll ? [...matches.map(t => ({ t, fits: true })), ...others.map(t => ({ t, fits: false }))] : matches.map(t => ({ t, fits: true }))
   const alsoEmpty = t => emptyRefs.filter(r => r !== posRef && (byPos.get(r)?.matches || []).some(m => m.id === t.id))
 
@@ -99,11 +126,12 @@ export default function TemplatesPane({ posRef }) {
       )}
       {shown.map(({ t, fits }) => {
         const more = fits ? alsoEmpty(t) : []
+        const marks = fits && !isEmpty ? alignment(t.ingredients || [], own.rows, own.wrapperRefs, own.idx) : []
         return (
           <div key={t.id} className="mb-2 p-2 rounded border" data-testid="template-card" style={fits ? undefined : { opacity: 0.8 }}>
             <div className="d-flex align-items-center gap-2">
               <strong>{t.name}</strong>
-              <span className="badge" style={{ background: C.subtle, color: C.muted, border: `1px solid ${C.border}`, fontSize: 10 }}>{originOf(t)}</span>
+              <span className="badge" style={{ background: C.subtle, color: C.muted, border: `1px solid ${C.border}`, fontSize: 10 }}>{t._served && <MaterialIcon name="cloud" size={11} />} {originOf(t)}</span>
               {fits && isEmpty && (
                 <Button size="sm" className="ms-auto py-0" style={{ fontSize: 11 }} onClick={() => start(t, [posRef])}>Apply…</Button>
               )}
@@ -111,7 +139,11 @@ export default function TemplatesPane({ posRef }) {
             <div className="text-muted" style={{ fontSize: 11 }}>{describeRule(t.rule)}</div>
             <div style={{ fontSize: 11 }}>
               {(t.ingredients || []).map((i, k) => (
-                <div key={k}><span style={mono}>{i.fromForm ? `from the Form (${i.fromForm})` : (i.newWrapper ? 'new wrapper' : i.slotLabel)}</span>
+                <div key={k}>
+                  {marks[k] && (() => {
+                    const [icon, color, tip] = TICK[marks[k].status] || ['warning', C.attnInk, marks[k].status === 'short' ? `Only ${marks[k].have} of ${marks[k].need}` : 'In the recipe, but in the wrong place']
+                    return <span title={tip} data-testid={`tpl-${marks[k].status}`} style={{ color, marginRight: 4 }}><MaterialIcon name={icon} size={13} /></span>
+                  })()}<span style={mono}>{i.fromForm ? `from the Form (${i.fromForm})` : (i.newWrapper ? 'new wrapper' : i.slotLabel)}</span>
                   <span className="text-muted"> · {i.slotKey || ''} · {i.section === 'position' ? 'position' : 'inside'}</span></div>
               ))}
             </div>
