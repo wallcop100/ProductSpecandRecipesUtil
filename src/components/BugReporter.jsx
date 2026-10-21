@@ -110,12 +110,14 @@ export default function BugReporter({ screen }) {
     say(`${n} sent`)
   }
 
-  /** A note not aimed at anything: under the bug. */
+  /** A note under the bug, or under the element it was asked from (a suggestion's ⋯ menu). */
   function openNote() {
-    const b = bugRef.current?.getBoundingClientRect()
+    const target = useStore.getState().bugNoteTarget?.isConnected ? useStore.getState().bugNoteTarget : null
+    const b = (target || bugRef.current)?.getBoundingClientRect()
+    const d = target ? domContext(target) : null
     setDraft({
-      host: document.body, x: b ? b.left - 140 : 80, y: b ? b.bottom + 6 : 40, target: null, note: '', capture: true,
-      preview: screenRef.current || '',
+      host: document.body, x: b ? (target ? b.left : b.left - 140) : 80, y: b ? b.bottom + 6 : 40, target, note: '', capture: true,
+      preview: target ? [screenRef.current, d.areas[0], d.element].filter(Boolean).join(' · ') : screenRef.current || '',
     })
   }
 

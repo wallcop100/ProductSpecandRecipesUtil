@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { Button } from 'react-bootstrap'
+import { Button, Dropdown } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { connectorGapsForPosition } from '../utils/collectionStatus'
@@ -27,6 +27,11 @@ const STYLE = {
   misplaced: { icon: 'move_down',   action: 'Move',  variant: 'outline-warning' },
   short:     { icon: 'exposure_plus_1', action: 'Raise', variant: 'outline-primary' },
 }
+
+const Dots = React.forwardRef(({ onClick }, ref) => (
+  <button ref={ref} type="button" className="btn btn-link btn-sm text-muted p-0" style={{ fontSize: 13, lineHeight: 1 }}
+    aria-label="More" title="More" onClick={e => { e.preventDefault(); onClick(e) }}>⋯</button>
+))
 
 export default function ConnectorSuggestions({ posRef }) {
   const recipes = useStore(s => s.recipes)
@@ -62,7 +67,7 @@ export default function ConnectorSuggestions({ posRef }) {
       {gaps.map(g => {
         const s = STYLE[g.status] || STYLE.missing
         return (
-          <div key={`${g.ref}|${g.section}|${g.status}`} className="d-flex align-items-center gap-2 py-1">
+          <div key={`${g.ref}|${g.section}|${g.status}`} className="d-flex align-items-center gap-2 py-1" data-testid="suggestion-connector-row">
             <MaterialIcon name={g.blocked ? 'block' : s.icon} size={13}
               style={{ color: g.blocked ? C.dangerInk : C.attnInk, flexShrink: 0 }} />
             <span style={{ flex: 1, color: g.blocked ? C.dangerInk : undefined }}>{g.label}</span>
@@ -74,6 +79,12 @@ export default function ConnectorSuggestions({ posRef }) {
                   {s.action}
                 </Button>
               )}
+            <Dropdown align="end">
+              <Dropdown.Toggle as={Dots} />
+              <Dropdown.Menu style={{ fontSize: 12 }}>
+                <Dropdown.Item data-testid="report-suggestion" onClick={e => useStore.getState().requestBugNote(e.currentTarget.closest('[data-testid="suggestion-connector-row"]'))}>Report a problem with this suggestion…</Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
           </div>
         )
       })}

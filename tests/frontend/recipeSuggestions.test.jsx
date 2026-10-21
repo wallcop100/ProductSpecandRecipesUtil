@@ -49,6 +49,14 @@ describe('recipe suggestions', () => {
     expect(JSON.parse(localStorage.getItem('psr-suggestions-dismissed:7900'))).toEqual([expect.stringMatching(/^C05r\|same\|C01r>C05r/)])
   })
 
+  test('⋯ → Report a problem asks the bug reporter for a note aimed at that suggestion', () => {
+    setup()
+    fireEvent.click(screen.getByLabelText('More'))
+    fireEvent.click(screen.getByTestId('report-suggestion'))
+    expect(useStore.getState().bugNoteTarget).toBe(screen.getByTestId('suggestion-same'))
+    expect(useStore.getState().bugNoteRequest).toBeTruthy()
+  })
+
   test('× hides a line for now only, and says nothing back', () => {
     setup()
     fireEvent.click(screen.getByLabelText('Hide'))
