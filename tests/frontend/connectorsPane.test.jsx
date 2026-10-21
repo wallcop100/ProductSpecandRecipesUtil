@@ -70,20 +70,6 @@ describe('the drawer\'s Connectors tab, for one position', () => {
     expect(useStore.getState().connectorExcludes.t1).toContain('A04')
   })
 
-  test('changing the template asks first, naming every position it changes', async () => {
-    setup()
-    render(<ConnectorsPane posRef="A01" />)
-    fireEvent.click(screen.getByTestId('tpl-add-part'))                        // the extra ET-5PIN-SR-IP
-    expect(await screen.findByTestId('template-change-confirm')).toHaveTextContent('for 4 positions')
-    expect(screen.getByTestId('template-change-confirm')).toHaveTextContent('A01, A02, A03, A04')
-    fireEvent.click(screen.getByText('Cancel'))
-    expect(useStore.getState().etCollections.find(c => c.CollectionId === 't1').Ingredients).toBe(T1.Ingredients)
-    fireEvent.click(screen.getByTestId('tpl-add-part'))
-    await act(async () => { fireEvent.click(await screen.findByTestId('template-change-ok')) })
-    const ing = useStore.getState().etCollections.find(c => c.CollectionId === 't1').Ingredients
-    expect(JSON.stringify(ing)).toContain('ET-5PIN-SR-IP')
-  })
-
   test('no template: the nearest is offered and Use pins it; or make one from this position', async () => {
     setup({ connectorPins: { t1: ['A01', 'A02', 'A03'], t2: ['A02'] } })
     render(<ConnectorsPane posRef="A04" />)

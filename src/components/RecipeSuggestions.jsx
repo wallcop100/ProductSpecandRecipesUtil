@@ -132,7 +132,12 @@ export default function RecipeSuggestions({ posRef }) {
       }) })
   }
   const kitFor = new Map()
-  for (const k of kits) if (!k.range && !me.jobs.has(k.part.slot) && !kitFor.has(k.part.slot)) kitFor.set(k.part.slot, k)
+  // A kit part whose code is an ElementType doing another job (the profile itself as "clips") is not a part to add.
+  const isOtherJob = k => {
+    const own = ownByCode(String(k.part.code || '').toUpperCase())
+    return !!own && !elementTypesForJob(k.part.slot, state, idx).includes(own)
+  }
+  for (const k of kits) if (!k.range && !me.jobs.has(k.part.slot) && !kitFor.has(k.part.slot) && !isOtherJob(k)) kitFor.set(k.part.slot, k)
   for (const [job, k] of kitFor) {
     const rule = { qty: k.qty, dim: k.dim, integer: k.integer ? 1 : 0, contract: k.contract ? 1 : 0, section: 'internal' }
     const kindSlot = kind?.slots.find(s => s.slot === job)

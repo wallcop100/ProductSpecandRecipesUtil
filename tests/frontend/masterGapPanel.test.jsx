@@ -38,14 +38,13 @@ describe('the house-style family is suggested per row', () => {
   test('a ref with no sibling still gets a family, from the guide', () => {
     render(<MasterGapPanel gaps={gapsNow()} />)
     // both gaps have a family: the sibling-guessed one and the house-style one
-    expect(screen.getByText('2 of 2 have a family')).toBeTruthy()
+    expect(screen.getByText('all have a family')).toBeTruthy()
     // the guide offers to create ET-PS
     expect(screen.getByText(/house-style famil/)).toBeTruthy()
   })
 
   test('the per-row review shows the house-style family, not "no family"', () => {
     render(<MasterGapPanel gaps={gapsNow()} />)
-    fireEvent.click(screen.getByText('Review each row'))
     expect(screen.getByText('house style')).toBeTruthy()   // ET-PS-01's label
     expect(screen.getByText('confident')).toBeTruthy()     // the CCR driver's label
   })
@@ -81,5 +80,26 @@ describe('the primary action queues the open rows with their families', () => {
     // ET-PS-01 was filed under the created house-style family
     const psRow = useStore.getState().dbChanges.find(c => c.elementTypeRef === 'ET-PS-01')
     expect(psRow.updates.Family).toBe('ET-PS')
+  })
+})
+
+describe('the family review is required, and only the family', () => {
+  test('a ref nothing resembles must be given a family (or none on purpose) before it can be added', () => {
+    seed({ recipes: [pos('P1', 'ZZ-UNKNOWN-01')] })
+    render(<MasterGapPanel gaps={gapsNow()} />)
+    const add = screen.getByText(/Add 1 to the ElementTypes patch/).closest('button')
+    expect(add.disabled).toBe(true)
+    expect(screen.getByText('1 still need a family')).toBeTruthy()
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: '-' } })
+    expect(add.disabled).toBe(false)
+    fireEvent.click(add)
+    expect(useStore.getState().dbChanges.map(c => c.elementTypeRef)).toContain('ZZ-UNKNOWN-01')
+  })
+
+  test('autoQueueDbRows queues the confident ones and leaves the rest for review', () => {
+    useStore.getState().autoQueueDbRows()
+    const q = useStore.getState().dbChanges.map(c => c.elementTypeRef)
+    expect(q).toContain('ET-CCR-D-250-1CH-01')
+    expect(q).not.toContain('ET-PS-01')
   })
 })
