@@ -264,6 +264,7 @@ export default function RecipeSuggestions({ posRef }) {
                 <Dropdown.Divider />
               </>}
               <Dropdown.Item onClick={() => answer(l, 'dismissed')}>Don't show this again for {posRef}</Dropdown.Item>
+              <Dropdown.Item data-testid="report-suggestion" onClick={e => useStore.getState().requestBugNote(e.currentTarget.closest('[data-testid^="suggestion-"]'))}>Report a problem with this suggestion…</Dropdown.Item>
             </Dropdown.Menu>
           </Dropdown>
           <Button size="sm" variant="link" className="text-muted p-0" style={{ fontSize: 11 }} aria-label="Hide" title="Not now"
