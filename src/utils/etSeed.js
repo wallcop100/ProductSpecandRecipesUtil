@@ -353,7 +353,9 @@ export function proposeElementTypes(entries = [], project = {}) {
       why: pick.why,
       parent: pick.parent || null,
       spread: pick.spread,
-      styledOn: pick.seen ? { ref: pick.seen.ref, code: pick.seen.code, source: pick.seen.source }
+      styledOn: pick.seen ? { ref: pick.seen.ref, code: pick.seen.code, source: pick.seen.source,
+          // beside a companion: how sure it is of this family (utils/certainty.js)
+          ...(pick.seen.tier ? { family: pick.seen.family, tier: pick.seen.tier, votes: pick.seen.votes } : {}) }
         : pick.style ? { ref: pick.style.exemplar.ref, code: pick.style.exemplar.code, source: pick.style.exemplar.source } : null,
       job: pick.job || null,
       wasFamily: pick.was || null,

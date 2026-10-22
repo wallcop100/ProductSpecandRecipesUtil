@@ -54,6 +54,7 @@ curl -s https://wallcop100.github.io/ProductSpecandRecipesUtil/ | grep -o 'build
 
 ## Gotchas
 
+- (2026-10-22) Every companion addition must stay invisible on the GitHub Pages release, which has no companion. Gate it on a companion feature (`useCompanion()` is null there), never only on data. Suggestion checks also need the `checks` feature.
 - (2026-10-22) The browser app never loads the DesignDB's Elements or LinksMap, so it cannot tell whether an ElementType is placed there. Anything that retires ETs (merge, #29) must warn instead of check.
 - (2026-10-22) Position status is ONE pip (`StatusPip`, levels from `utils/positionHealth.js`) in the rail and the recipe header; it replaced the grey symbols of 2026-10-20, which existed because status had been shown three ways. Add new status signals to `positionHealth`, not as another icon. A purple pip needs `RecipeSuggestions` mounted (it sets `companionPending`), so only visited positions show it.
 
@@ -61,4 +62,5 @@ curl -s https://wallcop100.github.io/ProductSpecandRecipesUtil/ | grep -o 'build
 - (2026-10-17) `.gitignore` has `*.md`, so `CLAUDE.md`, `STATE.md`, `AGENTS.md` are untracked unless force-added.
 - (2026-10-17) `openwiki/quickstart.md` has ~38 broken `../` links; use `openwiki/index.md` instead.
 - (2026-10-17) OpenWiki sends source to the Anthropic API and is token-heavy (~40 min for this repo); it is only run on large projects. Key comes via `isec run trading-bot`; no `openwiki` Infisical project exists.
+- (2026-10-22) A PR stacked on another branch keeps that branch as its base after the base merges. #90 merged into `pip-flash` and never reached master. Retarget a stacked PR to `master` before merging it.
 - (2026-10-20) The setup screen renders `src/changelog.js`, so a loose `findByText` regex in its tests can also match a changelog note. #67 turned master red this way (fixed in #68).

@@ -1,4 +1,4 @@
-import { describe, test, expect, vi } from 'vitest'
+import { describe, test, expect, vi, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -15,11 +15,14 @@ vi.mock('../../src/utils/backend.js', () => ({
   registerFile: vi.fn(), setActiveDirectory: vi.fn(), getActiveDirectory: vi.fn(), fileMeta: vi.fn(),
 }))
 
+const api = { current: null }
+vi.mock('../../src/platform/companion', () => ({ useCompanion: () => api.current, getCompanion: async () => api.current }))
 const { default: useStore } = await import('../../src/store/useStore.js')
 const G = await import('../../src/data/globalConnectors.js')
 const { default: ConnectorsPane } = await import('../../src/components/ConnectorsPane.jsx')
 const { WagoLibrary, WagoUpgradeBanner, wagoNameOf, WagoSuggestion } = await import('../../src/components/GlobalConnectors.jsx')
 const { templateParts } = await import('../../src/utils/connectorGroups.js')
+const { resetAsked } = await import('../../src/utils/certainty.js')
 
 const PT = (ref, ctl, loc) => ({ PositionTypeRef: ref, ControlTypeRef: ctl, DriverLocation: loc })
 function setup(over = {}) {
@@ -195,5 +198,40 @@ describe('in the recipe editor', () => {
     setup({ recipes: [row('A02', 'ET-5PIN-SOCKET')], library: {} })
     render(<ConnectorsPane posRef="A01" />)
     expect(screen.getByTestId('wago-suggestion')).toHaveAttribute('data-source', 'app')
+  })
+})
+
+describe('checking a served set', () => {
+  const lib = JSON.parse(readFileSync(resolve(process.cwd(), 'src/data/globalTemplates.json'), 'utf8')).connectors
+  const row = (p, ref) => ({ _id: `${p}${ref}`, _row_num: 1, PositionTypeRef: p, ContextType: 'PositionType', ContextRef: p, ElementTypeRef: ref, Quantity: 1 })
+  function served(votes) {
+    resetAsked(); localStorage.clear()
+    const withVotes = { ...lib, templates: lib.templates.map(t => ({ ...t, votes })), combos: (lib.combos || []).map(c => ({ ...c, votes })) }
+    G.setConnectorLibrary(withVotes)
+    api.current = { features: new Set(['checks']), shareOutcomes: vi.fn(async () => ({ stored: 1 })) }
+    const applyGlobalConnector = vi.fn(async () => {})
+    setup({ recipes: [row('A02', 'ET-5PIN-SOCKET')], library: { connectors: withVotes }, projectNumber: '7900', applyGlobalConnector })
+    render(<WagoSuggestion posRef="A01" />)
+    return applyGlobalConnector
+  }
+  afterEach(() => { G.setConnectorLibrary(null); api.current = null })
+
+  test('a set someone said was wrong halts Use; Yes uses it and votes', async () => {
+    const apply = served({ yes: 1, no: 1, origins: 2, openNo: true })
+    await act(async () => { fireEvent.click(screen.getByTestId('wago-use')) })
+    expect(apply).not.toHaveBeenCalled()
+    expect(screen.getByText(/your input helps future projects/)).toBeInTheDocument()
+    expect(screen.queryByLabelText('Right code')).toBeNull()
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Yes, it's right/ })) })
+    expect(apply).toHaveBeenCalled()
+    expect(api.current.shareOutcomes.mock.calls[0][1][0]).toMatchObject({ kind: 'connector', outcome: 'confirmed' })
+  })
+
+  test('an unchallenged set is used at once, then asked with a chip', async () => {
+    const apply = served({ yes: 0, no: 0, origins: 0, openNo: false })
+    await act(async () => { fireEvent.click(screen.getByTestId('wago-use')) })
+    expect(apply).toHaveBeenCalled()
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'No, this is wrong' })) })
+    expect(api.current.shareOutcomes.mock.calls[0][1][0]).toMatchObject({ kind: 'connector', outcome: 'rejected', final: null })
   })
 })

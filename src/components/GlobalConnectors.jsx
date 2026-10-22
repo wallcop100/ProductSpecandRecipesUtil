@@ -6,6 +6,10 @@ import useConnectorGroups from './useConnectorGroups'
 import { globalConnectors, suggestConnectors, recogniseCodes, SUGGESTIONS, WAGO_PAGE, WAGO_TEMPLATES, WAGO_COMBOS } from '../data/globalConnectors'
 import { templateParts } from '../utils/connectorGroups'
 import { C } from '../styles/tokens'
+import { useCompanion } from '../platform/companion'
+import { shareOutcomes } from '../platform/outcomes'
+import { levelOf, saidOf, mayAsk, noteAsked } from '../utils/certainty'
+import ConfirmSuggestionModal from './ConfirmSuggestionModal'
 
 const pill = { fontSize: 10, lineHeight: '18px', background: C.surface, border: `1px solid ${C.border}`, fontFamily: 'monospace' }
 const ruleFor = key => [...WAGO_COMBOS, ...WAGO_TEMPLATES].find(e => e.key === key)?.rule || SUGGESTIONS.find(s => s.keys.includes(key))?.rule || null
@@ -116,21 +120,59 @@ export function WagoSuggestion({ posRef, inRecipe = false }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const sugg = useMemo(() => suggestConnectors(rec), [rec])
   const [pick, setPick] = useState(0)
+  const companion = useCompanion()
+  const projectNumber = useStore(st => st.projectNumber)
+  const [asking, setAsking] = useState(false)
+  const [chip, setChip] = useState(null)                 // { name, key, voted }: a served set used, "is this right?"
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const plan = useMemo(() => (sugg[pick] ? planGlobalConnector(sugg[pick].key) : null), [sugg, pick, etCollections, psRows])
+  const vote = (key, v, note = null) => shareOutcomes(companion, projectNumber, [{ kind: 'connector', key: String(key), tier: 'connector',
+    source: '', supplied: String(key), final: v === 'rejected' ? null : String(key), outcome: v, note }])
+  const thumb = v => { setChip(c => ({ ...c, voted: v })); vote(chip.key, v) }
+  // The chip outlives the card, which goes once the position has the template.
+  const chipCard = chip && (
+    <div className="p-2 rounded mb-2 companion-card text-muted d-flex align-items-center gap-2" style={{ background: C.accentTint, border: `1px solid ${C.accentEdge}`, fontSize: 11 }} data-testid="suggestion-check-chip">
+      <MaterialIcon name="fact_check" size={13} style={{ color: C.companion, flexShrink: 0 }} />
+      <span style={{ flex: 1 }}>Used <strong>{chip.name}</strong>.
+        {chip.voted ? (chip.voted === 'confirmed' ? ' Thanks.' : " Noted — remove it from the recipe if it's wrong.") : ' Is this right? Your answer helps future projects.'}</span>
+      {!chip.voted && <>
+        <Button size="sm" variant="link" className="p-0" title="Yes, this is right" aria-label="Yes, this is right" onClick={() => thumb('confirmed')}>
+          <MaterialIcon name="thumb_up" size={14} /></Button>
+        <Button size="sm" variant="link" className="p-0" title="No, this is wrong" aria-label="No, this is wrong" onClick={() => thumb('rejected')}>
+          <MaterialIcon name="thumb_down" size={14} /></Button>
+      </>}
+    </div>
+  )
   // In the recipe editor only where this project's recipes already use connectors, and this position has no template yet.
   const m = groups.members.get(posRef)
-  if (!sugg.length || !plan || (inRecipe && (!groups.sigs.size || m?.templates.length || m?.clash))) return null
+  if (!sugg.length || !plan || (inRecipe && (!groups.sigs.size || m?.templates.length || m?.clash))) return chipCard || null
   const s = sugg[pick]
   const others = groups.scoped.filter(pt => pt.PositionTypeRef !== posRef
     && suggestConnectors(groups.recOf(pt.PositionTypeRef))[0]?.key === s.key).length
+  // A served set is voted on by its id (datajoin `connectors()` serves its `votes`); the bundle is not.
+  const votes = served ? [...WAGO_COMBOS, ...WAGO_TEMPLATES].find(e => e.key === s.key)?.votes : null
 
-  async function use() {
+  async function apply() {
     setBusy(true)
     try { await applyGlobalConnector(s.key, { posRefs: [posRef], rule: pick === 0 ? s.rule : null }) } finally { setBusy(false) }
   }
+  async function use() {
+    if (served) {
+      const level = levelOf({ votes, projects: 2 }, !!companion?.features?.has?.('checks'))
+      if (level === 'unsure' && mayAsk(projectNumber, `connector|${s.key}`, votes)) { setAsking(true); return }
+      if (level !== 'sure') setChip({ key: s.key, name: plan.collection?.Name || s.name })
+    }
+    await apply()
+  }
+  function checked(v, { note }) {
+    setAsking(false)
+    noteAsked(projectNumber, `connector|${s.key}`, votes, v)
+    vote(s.key, v, note)
+    if (v !== 'rejected') apply()
+  }
 
-  return (
+  return (<>
+    {chipCard}
     <div className={`p-2 rounded mb-2${served ? ' companion-card' : ''}`} style={{ background: C.accentTint, border: `1px solid ${C.accentEdge}` }} data-testid="wago-suggestion" data-source={served ? 'companion' : 'app'}>
       <div className="d-flex align-items-center gap-1">
         <MaterialIcon name="auto_awesome" size={13} style={{ color: C.accent }} />
@@ -159,8 +201,14 @@ export function WagoSuggestion({ posRef, inRecipe = false }) {
           ))}
         </div>
       )}
+      {asking && (
+        <ConfirmSuggestionModal onCancel={() => setAsking(false)} onAnswer={checked}
+          check={{ key: s.key, posRef, job: 'connector set', rule: s.why, noCode: true, unsureLabel: 'Not sure: use it',
+            part: { code: globalConnectors().find(g => g.key === s.key).parts.map(p => p.code).join(' + '), name: s.name },
+            evidence: ['a Wago set published on Orion for positions like this', saidOf(votes)].filter(Boolean).join('; ') }} />
+      )}
     </div>
-  )
+  </>)
 }
 
 /** "Wago 5-pin…" when a project template's parts are a library entry (by their Product Spec codes). */
