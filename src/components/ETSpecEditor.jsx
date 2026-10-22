@@ -244,13 +244,13 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
 
         {/* The code the same part has elsewhere */}
         {elsewhere && !dismissedElsewhere && (
-          <div className={`alert alert-info py-2 px-3 mb-3 d-flex align-items-center gap-2${(localExemplars || []).some(x => x.code === elsewhere.code) ? '' : ' companion-card'}`} style={{ fontSize: 12 }} data-testid="code-elsewhere" data-source="companion">
+          <div className={`alert alert-primary py-2 px-3 mb-3 d-flex align-items-center gap-2${(localExemplars || []).some(x => x.code === elsewhere.code) ? '' : ' companion-card'}`} style={{ fontSize: 12 }} data-testid="code-elsewhere" data-source="companion">
             <div className="flex-grow-1">
               Elsewhere <span className="font-monospace">{elsewhere.ref}</span> is <strong>{elsewhere.maker} {elsewhere.code}</strong>{' '}
               <CopyButton text={`${elsewhere.maker} ${elsewhere.code}`} what="maker and code" />
               {elsewhere.description && <span className="text-muted"> — {elsewhere.description}</span>}
             </div>
-            <Button variant="info" size="sm" style={{ fontSize: 11, padding: '1px 8px' }}
+            <Button variant="outline-primary" size="sm" style={{ fontSize: 11, padding: '1px 8px' }}
               onClick={() => { updatePSRow(selectedRef, { Manufacturer: elsewhere.maker, ProductCode: elsewhere.code, IsTBC: null }); setDismissedElsewhere(true) }}>Use</Button>
             <button className="btn-close" style={{ fontSize: 10 }} aria-label="Not this" onClick={() => setDismissedElsewhere(true)} />
           </div>
