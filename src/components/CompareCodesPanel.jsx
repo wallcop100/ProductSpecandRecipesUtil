@@ -140,9 +140,9 @@ export default function CompareCodesPanel({ entries, knownPTs, ptTarget, onCreat
             )}
 
             {e.retired && (
-              <div style={{ fontSize: 10, color: C.dangerInk }} data-testid="retired"
+              <div className="d-flex align-items-center gap-1" style={{ fontSize: 10, color: C.muted }} data-testid="retired"
                 title={e.retired.retired ? `Replaced by the manufacturer (${e.retired.retired})` : 'Replaced by the manufacturer'}>
-                <MaterialIcon name="history" size={10} /> replaced by{' '}
+                <span className="companion-dot" /> replaced by{' '}
                 <span style={{ fontFamily: 'monospace' }}>{e.retired.replacement}</span> — check the current code
               </div>
             )}

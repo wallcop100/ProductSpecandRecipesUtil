@@ -324,8 +324,8 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
         </Form.Group>
 
         {retired && !isDeleted && (
-          <div className="mb-3" style={{ fontSize: 11, color: C.dangerInk, marginTop: -8 }} data-testid="retired">
-            <MaterialIcon name="history" size={11} /> replaced by{' '}
+          <div className="mb-3 d-flex align-items-center gap-1" style={{ fontSize: 11, color: C.muted, marginTop: -8 }} data-testid="retired">
+            <span className="companion-dot" /> replaced by{' '}
             <span style={{ fontFamily: 'monospace' }}>{retired.replacement}</span> — check the current code
           </div>
         )}

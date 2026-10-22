@@ -45,6 +45,10 @@ npm test        # vitest run
 npm run build   # vite build
 ```
 
+To try any project's real workbooks in a browser: `psr fixture <n>` (psr-cli) writes them to
+`psr_bridge/data/cli/cli-state/fixtures/current/`; in the Playwright MCP run `browser_run_code_unsafe
+filename=tools/browse.pw.js`, navigate to the app, and "Open a folder…" loads them.
+
 Every build stamps `<meta name="build-commit">` into `index.html` (`vite.config.js`), so a served copy can be
 checked against master:
 
