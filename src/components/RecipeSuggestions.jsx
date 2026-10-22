@@ -53,9 +53,11 @@ export function readDismissed(n) {
 }
 export function writeDismissed(n, set) {
   try { localStorage.setItem(DISMISSED(n), JSON.stringify([...set].slice(-500))) } catch { /* a convenience only */ }
+  window.dispatchEvent(new Event('psr-dismissed'))   // the watchers (below) re-read
 }
 
-export default function RecipeSuggestions({ posRef }) {
+/** `watch`: renders nothing, only keeps this position's purple pip right while it is not open. */
+export default function RecipeSuggestions({ posRef, watch = false }) {
   const recipes = useStore(s => s.recipes)
   const elementTypes = useStore(s => s.elementTypes)
   const psRows = useStore(s => s.psRows)
@@ -67,7 +69,12 @@ export default function RecipeSuggestions({ posRef }) {
   const [kits, setKits] = useState([])
   const [pick, setPick] = useState({})
   const [hidden, setHidden] = useState(() => new Set())   // × — for now, this position
-  useEffect(() => { setDismissed(readDismissed(projectNumber)) }, [projectNumber])
+  useEffect(() => {
+    const reread = () => setDismissed(readDismissed(projectNumber))
+    reread()
+    window.addEventListener('psr-dismissed', reread)
+    return () => window.removeEventListener('psr-dismissed', reread)
+  }, [projectNumber])
   // The library (with what other projects do, beside a companion) loads once, on first use.
   useEffect(() => { if (!libraryAsked) { libraryAsked = true; useStore.getState().loadLibrary?.() } }, [])
 
@@ -234,9 +241,9 @@ export default function RecipeSuggestions({ posRef }) {
   const fromCompanion = shown.some(l => l.kind === 'kit' || l.kind === 'kind')
   useEffect(() => {
     useStore.getState().setCompanionPending(posRef, fromCompanion)
-    return () => useStore.getState().setCompanionPending(posRef, false)
+    // No reset on unmount: a watcher handing over to the open editor would wipe the pip the editor still shows.
   }, [posRef, fromCompanion])
-  if (!shown.length) return null
+  if (watch || !shown.length) return null
 
   function answer(l, outcome, chosen = null) {
     if (outcome === 'accepted') (chosen ? chosen.add : l.add)?.()

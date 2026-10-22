@@ -4498,6 +4498,17 @@ const useStore = create((set, get) => ({
 // debounced into SQLite; a restore prompt on project open offers it back.
 // ---------------------------------------------------------------------------
 
+// Validation runs from the start, not when Export is opened: the status pips read it.
+let _validateTimer = null
+useStore.subscribe((state, prev) => {
+  if (state.recipes === prev.recipes && state.psRows === prev.psRows && state.elementTypes === prev.elementTypes
+    && state.positionTypes === prev.positionTypes && state.positionUI === prev.positionUI
+    && state.ignoredPositionFamilies === prev.ignoredPositionFamilies) return
+  if (!state.positionTypes?.length) return
+  clearTimeout(_validateTimer)
+  _validateTimer = setTimeout(() => { try { useStore.getState().runValidation() } catch { /* the next change retries */ } }, 400)
+})
+
 let _pendingPersistTimer = null
 useStore.subscribe((state, prev) => {
   if (state.psChanges === prev.psChanges &&

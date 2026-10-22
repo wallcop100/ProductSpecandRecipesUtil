@@ -14,7 +14,8 @@ describe('positionHealth: worst of', () => {
     [{ status: 'done', issues: [warn] }, 'amber'],
     [{ status: 'done', companion: true }, 'purple'],
     [{ status: 'empty', companion: true }, 'purple'],
-    [{ status: 'done', issues: [warn], companion: true }, 'amber'],
+    [{ status: 'done', issues: [warn], companion: true }, 'purple'],   // purple outranks amber
+    [{ status: 'empty', issues: [{ severity: 'error', rule: 'MISSING_IS_DESIGN', message: 'x' }] }, 'grey'],   // no recipe is not red
     [{ status: 'form', issues: [err], companion: true }, 'red'],
   ])('%j → %s', (input, level) => expect(positionHealth(input).level).toBe(level))
 

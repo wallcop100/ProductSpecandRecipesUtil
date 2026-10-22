@@ -3,6 +3,8 @@ import { Form, OverlayTrigger, Tooltip } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import StatusPip from './StatusPip'
+import RecipeSuggestions from './RecipeSuggestions'
+import { useCompanion } from '../platform/companion'
 import IconButton from './IconButton'
 import PositionListMenu from './PositionListMenu'
 import usePositionList from './usePositionList'
@@ -34,6 +36,7 @@ export default function PositionRail({ onReviewEmpty, onReviewDrift }) {
   const formCaptures = useStore(s => s.formCaptures)
   const positionTypes = useStore(s => s.positionTypes)
   const list = usePositionList()
+  const companion = useCompanion()
   const importDraft = useStore(s => s.importDraft)
   const psRows = useStore(s => s.psRows)
   const diffStates = useMemo(() => {
@@ -169,6 +172,10 @@ export default function PositionRail({ onReviewEmpty, onReviewDrift }) {
         </div>
       )}
       <div ref={listRef} style={{ flex: 1, overflowY: 'auto', paddingBottom: 8 }}>
+        {/* Suggestions are worked out per position; the open one does it itself, these keep the other pips right. */}
+        {companion && positionTypes.filter(pt => pt.PositionTypeRef !== activeRef).map(pt => (
+          <RecipeSuggestions key={pt.PositionTypeRef} posRef={pt.PositionTypeRef} watch />
+        ))}
         {groups.map(renderGroup)}
         {view.showIgnored && ignoredGroups.length > 0 && (
           <>
