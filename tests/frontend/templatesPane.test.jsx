@@ -75,6 +75,19 @@ describe('a position that already has a recipe', () => {
     expect(screen.getAllByTestId('tpl-present')).toHaveLength(1)
     expect(screen.getAllByTestId('tpl-missing')).toHaveLength(1)
   })
+
+  test('report #49: a ticked part names the ET holding it, a missing one what it would be', () => {
+    const tpl = { ...LIN, rule: { match: 'all', conditions: [{ column: 'Family', op: 'equals', value: 'LN' }] }, ingredients: [
+      { slotKey: 'X', slotLabel: 'ET-PROF-01', exact: true, section: 'position' },
+      { slotKey: 'X', slotLabel: 'ET-DRV-09', exact: true, section: 'position' },
+    ] }
+    setup({ templates: [tpl], positionTypes: [{ PositionTypeRef: 'L01', ParentRef: 'LN' }],
+      elementTypes: [{ ElementTypeRef: 'ET-PROF-01' }, { ElementTypeRef: 'ET-DRV-09' }],
+      psRows: [{ ElementTypeRef: 'ET-PROF-01', ProductCode: 'FPS2020' }, { ElementTypeRef: 'ET-DRV-09', ProductCode: 'LCM-25' }],
+      recipes: [{ PositionTypeRef: 'L01', ContextType: 'PositionType', ContextRef: 'L01', ElementTypeRef: 'ET-PROF-01', _id: 'r1' }] })
+    render(<TemplatesPane posRef="L01" />)
+    expect(screen.getAllByTestId('tpl-holder').map(e => e.textContent)).toEqual(['held by ET-PROF-01 · FPS2020', 'would be ET-DRV-09 · LCM-25'])
+  })
 })
 
 describe('the hint on an empty matching position', () => {
