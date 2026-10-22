@@ -10,7 +10,7 @@ import { proposalContext, proposalFromTemplate } from '../utils/recipeProposal'
 import { describeRule } from '../utils/templateRules'
 import { positionRecipeWithWrapperInternals } from '../utils/collectionStatus'
 import { buildPresence, ingredientPresence, wantedSlots } from '../utils/recipePresence'
-import { indexes as kindIndexes, rowJob, jobLabel } from '../utils/recipeKinds'
+import { indexes as kindIndexes, rowJob, jobLabel, anchorOf, fitFor, positionMakeup } from '../utils/recipeKinds'
 import { jobKey } from '../utils/codeJobs'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { C } from '../styles/tokens'
@@ -34,11 +34,14 @@ const checksOf = p => (p.rows || []).filter(r => r.check || r.missing).map(r => 
 function alignment(ings, rows, wrapperRefs, idx) {
   const presence = buildPresence(rows, wrapperRefs)
   const wanted = wantedSlots(ings)
-  const jobs = rows.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y').map(r => jobKey(rowJob(r, idx)))
+  const jobs = rows.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y').map(r => [jobKey(rowJob(r, idx)), r])
   return ings.map(i => {
     if (i.fromForm) return null
     if (i.newWrapper) return { status: wrapperRefs.length ? 'present' : 'missing' }
-    if (i.slotKey && !i.exact) return { status: jobs.some(j => j === i.slotKey || j.split(':')[0] === i.slotKey) ? 'present' : 'missing' }
+    if (i.slotKey && !i.exact) {
+      const hit = jobs.find(([j]) => j === i.slotKey || j.split(':')[0] === i.slotKey)
+      return { status: hit ? 'present' : 'missing', rows: hit ? [hit[1]] : [] }
+    }
     return ingredientPresence(presence, i, { wanted })
   })
 }
@@ -67,12 +70,24 @@ export default function TemplatesPane({ posRef }) {
   const isEmpty = emptyRefs.includes(posRef)
   const own = useMemo(() => {
     const { combined, wrapperRefs } = positionRecipeWithWrapperInternals(recipes, posRef)
-    return { rows: combined, wrapperRefs, idx: kindIndexes(proposalContext(state, library)) }
+    const ctx = proposalContext(state, library)
+    return { rows: combined, wrapperRefs, ctx, idx: kindIndexes(ctx) }
   }, [recipes, posRef, library])   // eslint-disable-line react-hooks/exhaustive-deps
   // Report #48: the design ingredient names the position's own design ElementType, not "design element".
   const designRef = own.rows.find(r => live(r) && (r.IsDesign || r.isDesign) === 'Y')
   const designName = designRef && (designRef.ElementTypeRef || designRef.elementTypeRef)
   const shown = showAll ? [...matches.map(t => ({ t, fits: true })), ...others.map(t => ({ t, fits: false }))] : matches.map(t => ({ t, fits: true }))
+  // Report #49: which ET holds a ticked part; for a missing one, the ET and code it would become.
+  const anchor = useMemo(() => anchorOf(positionMakeup(posRef, own.ctx, own.idx), own.idx), [posRef, own])
+  const etCode = ref => { const ps = own.idx.psByRef.get(String(ref).toUpperCase()); return ps ? `${ref} · ${ps.ProductCode || ps.productCode || 'no code'}` : ref }
+  function holder(i, mark) {
+    if (String(i.slotKey || '').startsWith('DESIGN_ELEMENT')) return null   // its label is already the design ref
+    const row = mark?.rows?.[0]
+    if (row) return `held by ${etCode(row.ElementTypeRef || row.elementTypeRef)}`
+    if (mark?.status !== 'missing') return null
+    if (i.slotKey && !i.exact) { const fit = fitFor(i.slotKey, anchor, own.ctx, own.idx); return fit ? `would be ${etCode(fit.etRef)}` : null }
+    return own.idx.etByRef.has(String(i.slotLabel).toUpperCase()) ? `would be ${etCode(i.slotLabel)}` : null
+  }
   const alsoEmpty = t => emptyRefs.filter(r => r !== posRef && (byPos.get(r)?.matches || []).some(m => m.id === t.id))
 
   const toCheck = Object.keys(templateChecks || {}).filter(r => !emptyRefs.includes(r) && positionTypes.some(p => p.PositionTypeRef === r))
@@ -147,7 +162,8 @@ export default function TemplatesPane({ posRef }) {
                     const [icon, color, tip] = TICK[marks[k].status] || ['warning', C.attnInk, marks[k].status === 'short' ? `Only ${marks[k].have} of ${marks[k].need}` : 'In the recipe, but in the wrong place']
                     return <span title={tip} data-testid={`tpl-${marks[k].status}`} style={{ color, marginRight: 4 }}><MaterialIcon name={icon} size={13} /></span>
                   })()}<span style={mono}>{i.fromForm ? `from the Form (${i.fromForm})` : (i.newWrapper ? 'new wrapper' : String(i.slotKey || '').startsWith('DESIGN_ELEMENT') && designName ? designName : i.slotLabel)}</span>
-                  <span className="text-muted"> · {i.slotKey ? jobLabel(i.slotKey) : ''} · {i.section === 'position' ? 'position' : 'inside'}</span></div>
+                  <span className="text-muted"> · {i.slotKey ? jobLabel(i.slotKey) : ''} · {i.section === 'position' ? 'position' : 'inside'}</span>
+                  {marks[k] && holder(i, marks[k]) && <div className="text-muted ms-3" style={mono} data-testid="tpl-holder">{holder(i, marks[k])}</div>}</div>
               ))}
             </div>
             {fits && !isEmpty && <div className="text-muted fst-italic" style={{ fontSize: 11 }}>{posRef} already has a recipe.</div>}

@@ -283,6 +283,7 @@ function checkDuplicateProductCode(psRows) {
     if ((row.IsDeleted || row.isDeleted) === 'Y') continue
     const code = (row.productCode || row.ProductCode || '').trim()
     if (!hasProductIdentity(code)) continue   // "N/A" names no product
+    if (/\b(tbc|tba|tbd)\b|custom/i.test(code)) continue   // "TBC Custom" twice is two products not chosen yet
 
     const manufacturer = (row.Manufacturer || row.manufacturer || '').trim()
     const key = productKey(manufacturer, code)

@@ -733,6 +733,12 @@ describe('DUPLICATE_PRODUCT_CODE keys on manufacturer + code', () => {
     expect(only(ps)).toHaveLength(0)
   })
 
+  test('a code still TBC is not a duplicate (4746: "TBC Custom", "…(Fibre Size TBC)…")', () => {
+    const ps = [row('ET-A', 'UFO', 'TBC Custom'), row('ET-B', 'UFO', 'TBC Custom'),
+      row('ET-C', 'UFO', 'SFL-AC-XX(Fibre Size TBC)-CL'), row('ET-D', 'UFO', 'SFL-AC-XX(Fibre Size TBC)-CL')]
+    expect(only(ps)).toHaveLength(0)
+  })
+
   test('a deleted row does not create a duplicate', () => {
     const ps = [row('ET-A', 'Orluna', 'X1'), row('ET-B', 'Orluna', 'X1', { IsDeleted: 'Y' })]
     expect(only(ps)).toHaveLength(0)
