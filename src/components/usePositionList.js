@@ -5,6 +5,7 @@ import { positionFamilyOf } from '../utils/positionFamily'
 import { positionPaintStatus } from '../utils/formPositions'
 import { buildRefMap, targetFor } from '../utils/ptResolve'
 import { positionFormDone } from '../utils/formDone'
+import { positionHealth } from '../utils/positionHealth'
 
 /**
  * usePositionList — the PositionTypes list, filtered, sorted and grouped by family, with a
@@ -28,6 +29,8 @@ export default function usePositionList() {
   const formCaptures = useStore(s => s.formCaptures)
   const containerETRefs = useStore(s => s.containerETRefs)
   const view = useStore(s => s.positionList)
+  const results = useStore(s => s.validationResults)
+  const pending = useStore(s => s.companionPending)
   const importDraft = useStore(s => s.importDraft)
   const psRows = useStore(s => s.psRows)
 
@@ -86,9 +89,16 @@ export default function usePositionList() {
     return ref.toLowerCase().includes(q) || name.toLowerCase().includes(q) || tags.some(t => t.toLowerCase().includes(q))
   })
 
-  const STATUS_ORDER = { form: 0, empty: 1, done: 2, notInForm: 3, ignored: 4 }
-  const sortPts = pts => [...pts].sort((a, b) => (view.sort === 'status'
-    ? (STATUS_ORDER[statusOf(a)] - STATUS_ORDER[statusOf(b)]) : 0) || byRef(a.PositionTypeRef, b.PositionTypeRef))
+  // Status sort follows the pip: red, purple, amber, then the rest.
+  const STATUS_ORDER = { form: 3, empty: 4, done: 5, notInForm: 6, ignored: 7 }
+  const LEVEL_ORDER = { red: 0, purple: 1, amber: 2 }
+  const rank = pt => {
+    const ref = pt.PositionTypeRef
+    const status = statusOf(pt)
+    const issues = results.filter(i => i.fixKind !== 'spec' && i.ref === ref)
+    return LEVEL_ORDER[positionHealth({ status, issues, companion: !!pending[ref] }).level] ?? STATUS_ORDER[status]
+  }
+  const sortPts = pts => [...pts].sort((a, b) => (view.sort === 'status' ? rank(a) - rank(b) : 0) || byRef(a.PositionTypeRef, b.PositionTypeRef))
 
   const group = pts => {
     const map = new Map()
