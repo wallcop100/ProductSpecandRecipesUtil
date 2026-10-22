@@ -50,6 +50,25 @@ describe('recipe make-up by job', () => {
     }
     expect(sameKindAs('A1', st)).toEqual([])
   })
+  it('on another fitting, a frame that differs by fitting is not offered, nor anything from another family (5532)', () => {
+    const pt = (r, ParentRef) => ({ PositionTypeRef: r, ParentRef, DriverLocation: 'Remote', SecondaryPowerType: 'CC' })
+    const pts = [pt('A1', 'DOWNLIGHT'), pt('A2', 'DOWNLIGHT'), pt('A3', 'DOWNLIGHT'), pt('A9', 'DOWNLIGHT'), pt('B12', 'SPIKE LIGHT')]
+    const fit = (p, i) => [row(p, 'ET-PS-0' + i, 'PositionType', { IsDesign: 'Y' })]
+    const st = {
+      positionTypes: pts,
+      elementTypes: [...[1, 2, 3, 4, 5].map(i => ({ ElementTypeRef: 'ET-PS-0' + i, Family: 'ET-PS' })),
+        { ElementTypeRef: 'ET-FRAME-01', Family: 'ET-FRAME' }, { ElementTypeRef: 'ET-FRAME-02', Family: 'ET-FRAME' },
+        { ElementTypeRef: 'ET-FIRE-HOOD-01', Family: 'ET-FIRE-HOOD' }],
+      psRows: [],
+      recipes: [...fit('A1', 1), row('A1', 'ET-FRAME-01', 'PositionType'), row('A1', 'ET-FIRE-HOOD-01', 'PositionType'),
+        ...fit('A2', 2), row('A2', 'ET-FRAME-02', 'PositionType'), row('A2', 'ET-FIRE-HOOD-01', 'PositionType'),
+        ...fit('A3', 3), row('A3', 'ET-FIRE-HOOD-01', 'PositionType'), ...fit('A9', 4), ...fit('B12', 5)],
+    }
+    const jobs = ref => sameKindAs(ref, st).flatMap(s => s.adds.map(a => a.job))
+    expect(jobs('A9').some(j => /FRAME|COLLAR/.test(j))).toBe(false)
+    expect(jobs('A9').length).toBeGreaterThan(0)   // the fire hood, one part on every downlight, still is
+    expect(jobs('B12')).toEqual([])
+  })
   it('matches a kind and lists what positions like it usually also have', () => {
     const m = positionMakeup('C05r', state)
     expect(matchKind(m, [KIND]).id).toBe(2)
