@@ -6,7 +6,7 @@ import { positionHealth, STATUS_LABEL } from '../utils/positionHealth'
 import { C } from '../styles/tokens'
 
 const COLOR = { red: C.danger, amber: C.attn, green: C.success, purple: C.companion, grey: C.faint }
-const HEAD = { red: 'Needs fixing', amber: 'Needs a decision', green: 'Done', purple: 'Companion suggestions', grey: '' }
+const HEAD = { red: 'Needs fixing', amber: 'Needs a decision', green: 'Done', purple: 'Suggestions waiting', grey: '' }
 const ICON = { error: 'error', warning: 'warning', info: 'info' }
 
 /**

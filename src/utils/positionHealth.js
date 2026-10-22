@@ -16,7 +16,7 @@ export function positionHealth({ status, issues = [], companion = false }) {
   const reasons = issues.map(i => ({ kind: 'validation', severity: i.severity === 'error' ? 'error' : 'warning', message: i.message }))
   if (status === 'form') reasons.push({ kind: 'form', severity: 'warning', message: STATUS_LABEL.form })
   if (status !== 'done' && STATUS_LABEL[status]) reasons.push({ kind: 'status', severity: 'info', message: STATUS_LABEL[status] })
-  if (companion) reasons.push({ kind: 'companion', severity: 'info', message: 'The companion has suggestions for this recipe' })
+  if (companion) reasons.push({ kind: 'companion', severity: 'info', message: 'There are suggestions for this recipe' })
   const has = s => reasons.some(r => r.severity === s)
   const level = has('error') ? 'red' : has('warning') ? 'amber' : companion ? 'purple' : status === 'done' ? 'green' : 'grey'
   return { level, reasons }
