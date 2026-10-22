@@ -2,9 +2,10 @@
 Updated: 2026-10-22
 
 ## Now
-On branch `merge-duplicates-29`, committed, not yet PR'd: report #29, "Merge…" in the Product Spec bulk bar (`utils/mergePlan.js`, store `mergeElementTypes`, `MergeETModal`, tutorial `merge-ets`). Tests and build pass; not checked in a browser.
+Reports #32, #38–41 are live (#91 merged; Pages and Connected serve 7fdeb5a). Reports #42, #45, #46 are fixed in PR #92 (`reports-42-46`), not merged; tests and build pass, not checked in a browser. #43/#44 duplicate #39/#40: the companion's learned clip for FPSN1013 has part_code `TBC` (name FPSN1013MC), so the app shows the TBC line, which is purple since #40. None are resolved in Orion yet.
 
 ## Next
+- Suggestion checks (plan: `~/.claude/plans/precious-conjuring-cupcake.md`): built across all three repos, each on a `suggestion-checks` branch with a PR open; none merged or deployed. Merge datajoin and psr_bridge first, redeploy both, then the app. Then check end to end on 5642 C01r (FPSN1013) as the plan's Verification says. The n8n digest receives `flagged` but does not show it yet.
 - Templates phases 3 and 7 (`TEMPLATES_PLAN.md`): remove the built-ins and tag matching, then Recipe Styles / Build Recipes from Form, then drop the compat `applicable_tags`/`replaces` from datajoin `psr_app.templates()`.
 - Templates: the read-only global rule still looks editable; no contract toggle on a job chip; DL/PS design not inferred for empty positions, and positions without a Form capture match nothing.
 - `forkPosition` keeps the source's ContextRef on copied position rows, so the patch overwrites the source position (useStore.js forkPosition).
@@ -15,6 +16,10 @@ On branch `merge-duplicates-29`, committed, not yet PR'd: report #29, "Merge…"
 (nothing)
 
 ## Log
+- 2026-10-22 (suggestion checks, part 2): Added the import's learned-family chip and its batched popup at Apply (`BulkCreateETModal`, exemplar `votes` from `/api/library`). Added the Wago card's chip and popup (`WagoSuggestion`, votes keyed by set id). Branch `suggestion-checks` is off master; `RecipeSuggestions` conflicts with #92 on the placeholder `addLabel` line. Every addition is gated on companion data, so Pages shows none of it. Thumbs are purple: green and red clashed with the purple outline.
+- 2026-10-22 (suggestion checks): Built the check popup (`ConfirmSuggestionModal`) and the 👍/👎 chip, wired into RecipeSuggestions; full suite passes. Screenshots came from `shots/` (vite with its own cacheDir, because `node_modules/.vite` is root-owned) with `/api/**` mocked by Playwright.
+
+2026-10-22 (deploy): "Auto-deploy not working": it is working (Connected = Pages = master b6379be; 3 transient `gh run list` empties today). The fixes were missing because PR #90 targeted `pip-flash`. Re-opened as #91 against master and merged. The timer's intermittent "no successful Pages run found" is `gh run list --status success` returning empty with exit 0 (about 1 call in 5); psr_bridge PR #2 retries it.
 2026-10-22: Connector sets are served with their own `rule`/`why` (suggestConnectors uses them over the bundled SUGGESTIONS); the Wago card is also in the recipe editor, only when the project already has a connector template and the position none, purple when the library is served. Orion side in datajoin_mx (connector sets are `psr_templates` rows, kind 'connector'). Uncommitted; datajoin not redeployed. Gate on Orion templates removed.
 2026-10-22 (report #29): `planMerge` blocks on different maker/code, non-identical wrappers, and same-context rows differing in more than quantity; else rewrites, sums, retires. The browser app has no DesignDB Elements/LinksMap, so "in use" cannot be detected: a second confirm always warns that placed entities would be orphaned.
 2026-10-22 (report #34): `utils/positionHealth.js` + `StatusPip` replace the rail's grey symbols and `PositionValidationBadge` (deleted). Worst-of; no recipe/not in Form/ignored grey; purple when `companionPending[ref]` (set by RecipeSuggestions, so only visited positions). Not checked in a browser.

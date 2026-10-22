@@ -39,4 +39,27 @@ describe('kits in the ElementType review (beside a companion)', () => {
     render(<BulkCreateETModal show proposals={[PROF]} newFamilies={[]} families={['ET-LIN-PROF']} elementTypes={[]} onApply={() => {}} onHide={() => {}} />)
     expect(screen.queryByTestId('kit-suggestions')).toBeNull()
   })
+
+  test('a learned family with a newer "no" is asked about at Apply, together; a "no" goes back to fix it', async () => {
+    const { resetAsked } = await import('../../src/utils/certainty')
+    resetAsked(); localStorage.clear()
+    api.current = { features: new Set(['checks']), kits: vi.fn(async () => []), shareOutcomes: vi.fn(async () => ({ stored: 1 })) }
+    const learned = (code, votes) => ({ ...PROF, code, ref: `ET-PS-${code}`, family: 'ET-PS', why: 'library',
+      styledOn: { ref: 'ET-PS-EYP-01', code, source: '5410', family: 'ET-PS', tier: 'observed', votes } })
+    const onApply = vi.fn()
+    useStore.setState({ projectNumber: '7900' })
+    await act(async () => {
+      render(<BulkCreateETModal show proposals={[learned('EYP-1', { yes: 1, no: 1, origins: 2, openNo: true }), learned('EYP-2', { yes: 0, no: 0, origins: 0 })]}
+        newFamilies={[]} families={['ET-PS']} elementTypes={[]} onApply={onApply} onHide={() => {}} />)
+    })
+    expect(screen.getAllByTestId('family-check-chip')).toHaveLength(2)
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Apply 2' })) })
+    expect(onApply).not.toHaveBeenCalled()
+    expect(screen.getAllByTestId('learned-row')).toHaveLength(1)
+    expect(screen.getByTestId('confirm-learned').textContent).toMatch(/Please double check this now/)
+    fireEvent.click(screen.getByRole('button', { name: 'Wrong: EYP-1' }))
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Back to fix them' })) })
+    expect(onApply).not.toHaveBeenCalled()
+    expect(api.current.shareOutcomes).toHaveBeenCalledWith('7900', [expect.objectContaining({ kind: 'family', key: 'EYP-1>ET-PS', outcome: 'rejected' })])
+  })
 })

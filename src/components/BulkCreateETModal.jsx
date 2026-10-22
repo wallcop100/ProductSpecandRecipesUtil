@@ -13,6 +13,8 @@ import { familyForJob } from '../utils/codeJobs'
 import { jobLabel, ruleText } from '../utils/recipeKinds'
 import useStore from '../store/useStore'
 import { CANON_FAMILIES } from '../data/etCanon'
+import { levelOf, saidOf, mayAsk, noteAsked } from '../utils/certainty'
+import { ConfirmLearnedModal } from './ConfirmSuggestionModal'
 import { C } from '../styles/tokens'
 
 /**
@@ -202,6 +204,34 @@ export default function BulkCreateETModal({
   const nCreate = included.filter(r => r.action === 'create').length
   const usedFams = new Set(rows.filter(creating).map(r => r.family))
   const famsToCreate = fams.filter(f => f.include && usedFams.has(f.ref))
+
+  // A family learned from another project, beside a companion: likely ones get 👍/👎 under the row,
+  // unsure ones (a newer "no") are asked about together when Apply is pressed. Votes key CODE>FAMILY.
+  const [thumbs, setThumbs] = useState({})
+  const [checking, setChecking] = useState(null)
+  const checks = !!companion?.features?.has?.('checks')
+  const learned = r => companion && r.why === 'library' && r.styledOn?.tier && r.family === r.styledOn.family ? r.styledOn : null
+  const famKey = r => `${String(r.code).toUpperCase()}>${r.family}`
+  const levelFor = r => levelOf({ own: learned(r).tier === 'confirmed', votes: learned(r).votes, projects: 2 }, checks)
+  const vote = (r, outcome) => ({ kind: 'family', key: famKey(r), tier: learned(r).tier, source: learned(r).source || '', supplied: r.family, final: r.family, outcome })
+  function thumb(r, outcome) {
+    setThumbs(t => ({ ...t, [famKey(r)]: outcome }))
+    shareOutcomes(companion, projectNumber, [vote(r, outcome)])
+  }
+  function apply() {
+    const ask = included.filter(r => learned(r) && !thumbs[famKey(r)] && levelFor(r) === 'unsure' && mayAsk(projectNumber, famKey(r), learned(r).votes))
+    if (ask.length) setChecking(ask)
+    else onApply({ families: famsToCreate, items: included, notCodes })
+  }
+  function checked(answers) {
+    const asked = checking
+    setChecking(null)
+    for (const r of asked) noteAsked(projectNumber, famKey(r), learned(r).votes, answers[famKey(r)])
+    const said = asked.filter(r => answers[famKey(r)])
+    if (said.length) shareOutcomes(companion, projectNumber, said.map(r => vote(r, answers[famKey(r)])))
+    setThumbs(t => ({ ...t, ...answers }))
+    if (!Object.values(answers).includes('rejected')) onApply({ families: famsToCreate, items: included, notCodes })
+  }
 
   // Everywhere a code can go: the project's families, the ones proposed here, and the company's.
   const familyOptions = useMemo(
@@ -438,6 +468,16 @@ export default function BulkCreateETModal({
                                   {whyText(r)}{r.spread > 1 ? ` · used under ${r.spread} families` : ''}
                                 </div>
                               )}
+                              {learned(r) && levelFor(r) !== 'sure' && (
+                                <div className="d-flex align-items-center gap-1" style={{ fontSize: 10, color: C.companion }} data-testid="family-check-chip">
+                                  {thumbs[famKey(r)] === 'rejected' ? 'Noted — move it to the right family'
+                                    : thumbs[famKey(r)] ? 'Thanks' : <>
+                                      learned family — right?
+                                      <IconButton icon="thumb_up" size={12} title="Yes, this family is right" style={{ padding: 0, color: C.companion }} onClick={() => thumb(r, 'confirmed')} />
+                                      <IconButton icon="thumb_down" size={12} title="No, this family is wrong" style={{ padding: 0, color: C.companion }} onClick={() => thumb(r, 'rejected')} />
+                                    </>}
+                                </div>
+                              )}
                             </td>
                             <td>
                               <Form.Control size="sm" value={r.name} aria-label={`Name for ${r.code}`}
@@ -481,10 +521,15 @@ export default function BulkCreateETModal({
         </span>
         <Button variant="secondary" size="sm" onClick={onHide}>Cancel</Button>
         <Button variant="primary" size="sm" disabled={(included.length === 0 && notCodes.length === 0) || problems.size > 0}
-          onClick={() => onApply({ families: famsToCreate, items: included, notCodes })}>
+          onClick={apply}>
           Apply {included.length + notCodes.length}
         </Button>
       </Modal.Footer>
+      {checking && (
+        <ConfirmLearnedModal onCancel={() => setChecking(null)} onDone={checked}
+          items={checking.map(r => ({ key: famKey(r), code: r.code, maker: r.manufacturer, value: r.family, from: learned(r).source,
+            evidence: saidOf(learned(r).votes) }))} />
+      )}
     </Modal>
   )
 }

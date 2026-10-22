@@ -21,6 +21,7 @@ speaks this protocol, it adds three optional features:
 | `connectors`    | The Wago connector library (`globalTemplates.json` `connectors` shape), in place of the one bundled with the app. |
 | `kits`          | The parts used with a profile / channel on other projects. Inline suggestions in the ElementType review and the recipe editor. |
 | `templates`     | Global templates, each with a rule saying which positions it is for (read-only), and a way to suggest one back. |
+| `checks`        | The server counts people's checks of suggestions (`outcomes` `confirmed` / `rejected` / `unsure` / `proposed`) and serves them back as `votes`. With it, Add on a suggestion the app is unsure of opens a popup that asks; without it nothing halts and a likely suggestion only gets a 👍/👎 chip. |
 
 All paths are **relative to the page** (`./api/...`), so a build needs no configuration. If any
 call fails, the feature behaves as though it is absent. Nothing in the app depends on a
@@ -157,6 +158,23 @@ size and rate, and treat the content as untrusted text for a person to read.
 
 Suggestions answered with Add or dismiss go back through `outcomes` with `kind` `kit` / `kind` / `same` /
 `connector` and `outcome` `accepted` / `dismissed`.
+
+### checks
+
+A person's check of a suggestion is an `outcome` too: `confirmed` (yes), `rejected` (no), `unsure` (counts for
+nothing) or `proposed` (a code given for a placeholder), with optional `note`, `slot` (the job) and `final` (the
+right code, given with a "no"). The latest answer per (kind, key, origin) stands. Keys:
+
+| kind | key |
+|---|---|
+| `kit` | `maker\|ANCHOR>maker\|PART`; a placeholder is `maker\|ANCHOR>?\|SLOT` |
+| `family` | `CODE>FAMILY` |
+| `connector` | the served set's `key` |
+
+Kits, range parts, library exemplars and connector entries carry `votes: { yes, no, origins, openNo, verdict, dropped }`
+(`openNo`: a "no" newer than the last yes; `verdict`: Orion's `confirmed` or `dropped`), and kits carry `alsoWith:
+[{ code, maker_key, positions, projects }]` (other profiles the part is used with). A dropped suggestion is not served.
+How much the app asks is `src/utils/certainty.js`.
 
 ## workspaces
 
