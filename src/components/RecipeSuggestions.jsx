@@ -240,9 +240,9 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
   const shown = lines.filter(l => !dismissed.has(l.key) && !dismissed.has(here(l)) && !hidden.has(here(l)))
   const fromCompanion = shown.some(l => l.kind === 'kit' || l.kind === 'kind')
   useEffect(() => {
-    useStore.getState().setCompanionPending(posRef, fromCompanion)
+    if (watch) useStore.getState().setCompanionPending(posRef, fromCompanion)   // the visible copy starts empty and would blink the pip off
     // No reset on unmount: a watcher handing over to the open editor would wipe the pip the editor still shows.
-  }, [posRef, fromCompanion])
+  }, [posRef, fromCompanion, watch])
   if (watch || !shown.length) return null
 
   function answer(l, outcome, chosen = null) {
