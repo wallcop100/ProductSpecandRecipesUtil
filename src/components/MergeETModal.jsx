@@ -61,7 +61,8 @@ export default function MergeETModal({ show, refs, onClose, onMerged }) {
             label="Merge into a new ref" />
           {mode === 'new' && (
             <>
-              <Form.Select size="sm" className="mt-2" value={keep} onChange={e => setKeep(e.target.value)} aria-label="Start from">
+              <div className="text-muted mt-2">All {refs.length} become the new ref. Copy the Product Spec row and fields from:</div>
+              <Form.Select size="sm" className="mt-1" value={keep} onChange={e => setKeep(e.target.value)} aria-label="Start from">
                 {refs.map(r => <option key={r}>{r}</option>)}
               </Form.Select>
               <Form.Control size="sm" className="my-2" placeholder="New ref" value={newRef} isInvalid={!!name && nameBad}

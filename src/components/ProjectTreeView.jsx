@@ -135,7 +135,7 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
         showDeleted={showDeleted}
         onOpenProductSpec={onOpenProductSpec}
         onOpenConnectors={onOpenConnectors}
-        onBack={() => setActivePosition(null)}
+        onBack={() => useStore.getState().goBackFromPosition()}
         onAddRow={onAddRow}
         onNewET={onNewET}
         onReplace={onReplace}

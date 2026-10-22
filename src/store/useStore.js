@@ -527,6 +527,7 @@ const useStore = create((set, get) => ({
   clearScreenView(screen) { set(s => ({ screenView: { ...s.screenView, [screen]: {} } })) },
   designPrompt: null,                 // { posRef, then } — see leavePosition
   positionHistory: [],                // positions left behind, newest last — goBackPosition
+  returnScreen: null,                 // the screen a position was opened from (Product Spec, Connectors): what Back returns to once positionHistory is spent
   activeContextType: 'PositionType',  // 'PositionType' | 'ElementType'
   activeETRef: null,                   // ET ref being edited in canvas
   showContextTree: false,
@@ -730,7 +731,7 @@ const useStore = create((set, get) => ({
       future: [],
       validationResults: [],
       fileWatchAlert: null,
-      activePositionRef: null, positionHistory: [],
+      activePositionRef: null, positionHistory: [], returnScreen: null,
       screenView: {},
       activeContextType: 'PositionType',
       activeETRef: null,
@@ -859,8 +860,23 @@ const useStore = create((set, get) => ({
     get().setActivePosition(h[h.length - 1], { back: true })
   },
 
+  /** Back from a focused position: the position before, else the screen it was opened from, else the list. */
+  goBackFromPosition() {
+    if (get().positionHistory.length) return get().goBackPosition()
+    const to = get().returnScreen
+    if (to) { set({ returnScreen: null, pendingScreen: to }); return }
+    get().setActivePosition(null)
+  },
+
+  /** Open a position from another screen, remembering that screen for Back. */
+  openPositionFrom(screen, ref) {
+    get().setActivePosition(ref)
+    set({ positionHistory: [], returnScreen: screen })
+  },
+
   setActivePosition(ref, { back = false } = {}) {
     const from = get().activePositionRef
+    if (!ref) set({ returnScreen: null })
     // An error about another position (a refused add) must not follow you here (Y7QVN4).
     if (ref !== from && get().recipeError) set({ recipeError: null })
     if (from && ref !== from && get().settleDesign(from) === 'choose') {
