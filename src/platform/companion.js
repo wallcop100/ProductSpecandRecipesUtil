@@ -41,6 +41,8 @@ async function getJson(url, init) {
 const post = (url, body) => getJson(url, {
   method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
 })
+/** Kits from a reply: [] when there are none, null when the call failed (so a caller can tell a refusal from "nothing"). */
+const kitsOf = body => (body ? body.kits || [] : null)
 /** The JSON answer, or null on any failure. */
 const quiet = p => p.then(({ res, body }) => (res.ok ? body : null)).catch(() => null)
 const projectUrl = n => `./api/projects/${encodeURIComponent(String(n).trim())}`
@@ -85,7 +87,7 @@ function build(features) {
 
     /** The parts used with these profiles / channels on other projects → [{ key, anchor, part, share, qty, dim, … }]. */
     kits: has('kits') ? async (codes, project = '') =>
-      (await quiet(post('./api/recipes/kits', { codes: codes.slice(0, 200), project: String(project || '') })))?.kits || [] : null,
+      kitsOf(await quiet(post('./api/recipes/kits', { codes: codes.slice(0, 200), project: String(project || '') }))) : null,
 
     /** Find's live term changes from Orion /psr → Find (help/terms.js overrides shape), cached a minute → object | null. */
     findTerms: has('find') ? (() => {

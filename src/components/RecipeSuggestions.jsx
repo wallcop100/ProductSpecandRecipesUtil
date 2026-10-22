@@ -47,6 +47,16 @@ const Dots = React.forwardRef(({ onClick }, ref) => (
     aria-label="More" title="More" onClick={e => { e.preventDefault(); onClick(e) }}>⋯</button>
 ))
 let libraryAsked = false
+// One lookup per profile, shared by every copy (the rail mounts one per position) so the bridge's rate limit is not hit.
+const kitCache = new WeakMap()   // per companion connection
+function kitsFor(companion, anchor, project) {
+  const key = `${project}|${anchor.manufacturer}|${anchor.code}`
+  const mine = kitCache.get(companion) || kitCache.set(companion, new Map()).get(companion)
+  if (!mine.has(key)) {
+    mine.set(key, companion.kits([anchor], project).then(k => { if (!k) mine.delete(key); return k }))   // a failure is retried, not remembered
+  }
+  return mine.get(key)
+}
 const DISMISSED = n => `psr-suggestions-dismissed:${n || '-'}`
 export function readDismissed(n) {
   try { return new Set(JSON.parse(localStorage.getItem(DISMISSED(n)) || '[]')) } catch { return new Set() }
@@ -93,7 +103,7 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
     setKits([])
     if (!companion?.kits || !anchor) return
     let live = true
-    companion.kits([anchor], projectNumber).then(k => { if (live) setKits(k || []) })
+    kitsFor(companion, anchor, projectNumber).then(k => { if (live && k) setKits(k) })
     return () => { live = false }
   }, [companion, anchor?.code, anchor?.manufacturer, projectNumber])   // eslint-disable-line react-hooks/exhaustive-deps
 
