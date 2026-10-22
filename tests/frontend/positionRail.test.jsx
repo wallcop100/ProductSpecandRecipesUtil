@@ -40,14 +40,17 @@ function setup(over = {}) {
 describe('PositionRail in the recipe view', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  test('the list sits beside the open recipe, selected row highlighted, natural order', () => {
+  test('the list sits beside the open recipe, selected row highlighted, natural order', async () => {
     setup()
     const rail = screen.getByTestId('position-rail')
     expect(document.querySelector('[data-debug-id="PositionRecipeEditor"]')).toBeTruthy()
     const rows = [...rail.querySelectorAll('[data-testid^="rail-"]')].map(n => n.textContent)
-    expect(rows).toEqual(['●A2', '○A10', '○B1'])   // status is a symbol, not a coloured dot
+    expect(rows).toEqual(['A2', 'A10', 'B1'])
+    expect(screen.getAllByTestId('pip-A2')[0].dataset.level).toBe('green')
+    expect(screen.getByTestId('pip-A10').dataset.level).toBe('grey')
     expect(screen.getByTestId('rail-A2').dataset.active).toBe('true')
-    expect(screen.getByTestId('rail-A10').title).toMatch(/Ten · No recipe yet/)
+    fireEvent.mouseOver(screen.getByTestId('rail-A10'))
+    expect(await screen.findByText('Ten')).toBeTruthy()
   })
 
   test('clicking a row and ↓ move to another position', () => {
@@ -93,6 +96,6 @@ describe('F8T5XM: grey, not red, for an empty position the Form never mentions',
 describe('YCU5SZ: a code that needs an ElementType is orange', () => {
   test('a position with a recipe and a pending Form code is orange, not green', () => {
     setup({ importDraft: null, formCaptures: { byPosition: {}, pendingByPosition: { A2: [{ code: 'NEW-1' }] } } })
-    expect(screen.getAllByLabelText('The Form asks for something it lacks, or a code needs an ElementType')).toHaveLength(1)
+    expect(screen.getAllByLabelText('The Form asks for something it lacks, or a code needs an ElementType')).toHaveLength(2)
   })
 })

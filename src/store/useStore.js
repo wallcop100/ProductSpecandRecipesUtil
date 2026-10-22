@@ -2088,6 +2088,9 @@ const useStore = create((set, get) => ({
   },
   consumeSpecIntent() { set({ specIntent: null }) },
   // Find → "report a bug": the bug reporter opens its note.
+  // Positions whose open recipe shows companion suggestions: the status pip turns purple (RecipeSuggestions sets it).
+  companionPending: {},
+  setCompanionPending(ref, on) { set(s => (!!s.companionPending[ref] === on ? s : { companionPending: { ...s.companionPending, [ref]: on } })) },
   bugNoteRequest: null,
   bugNoteTarget: null,   // the element the note is about (a suggestion row), if it was asked from one
   // The Find button in the Recipes | Product Spec switch opens the palette (Ctrl+K does too).

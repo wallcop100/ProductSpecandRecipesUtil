@@ -6,6 +6,7 @@ import { getUsedIn } from '../utils/containerUtils'
 import FlagPill from './FlagPill'
 import { getCompanion } from '../platform/companion'
 import { retiredFor } from '../platform/retired'
+import CopyButton from './CopyButton'
 import EntityPill from './EntityPill'
 import MaterialIcon from './MaterialIcon'
 import IconButton from './IconButton'
@@ -245,7 +246,8 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
         {elsewhere && !dismissedElsewhere && (
           <div className={`alert alert-info py-2 px-3 mb-3 d-flex align-items-center gap-2${(localExemplars || []).some(x => x.code === elsewhere.code) ? '' : ' companion-card'}`} style={{ fontSize: 12 }} data-testid="code-elsewhere">
             <div className="flex-grow-1">
-              Elsewhere <span className="font-monospace">{elsewhere.ref}</span> is <strong>{elsewhere.maker} {elsewhere.code}</strong>
+              Elsewhere <span className="font-monospace">{elsewhere.ref}</span> is <strong>{elsewhere.maker} {elsewhere.code}</strong>{' '}
+              <CopyButton text={`${elsewhere.maker} ${elsewhere.code}`} what="maker and code" />
               {elsewhere.description && <span className="text-muted"> — {elsewhere.description}</span>}
             </div>
             <Button variant="info" size="sm" style={{ fontSize: 11, padding: '1px 8px' }}
@@ -393,12 +395,18 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
             )}
             {usage.elements?.size > 0 && (
               <div>
-                <div className="text-muted" style={{ fontSize: 11 }}>In ElementTypes</div>
-                <div className="d-flex flex-wrap gap-1 mt-1">
-                  {[...usage.elements].map(r => (
-                    <button key={r} type="button" className="btn p-0 border-0" title={`Open ${r}`} disabled={!onSelectRef}
-                      onClick={() => onSelectRef?.(r)}><EntityPill type="ElementType" label={r} style={{ fontSize: 10, cursor: onSelectRef ? 'pointer' : undefined }} /></button>
-                  ))}
+                <div className="text-muted" style={{ fontSize: 11 }}>Nested inside ElementTypes (a helper in each, not placed directly)</div>
+                <div className="d-flex flex-wrap gap-1 mt-1 align-items-center">
+                  {[...usage.elements].map(r => {
+                    const pts = [...(etUsedIn[r.toLowerCase()]?.positions || [])]
+                    return (
+                      <span key={r} className="d-inline-flex align-items-center gap-1 me-2">
+                        <button type="button" className="btn p-0 border-0" title={`Open ${r}`} disabled={!onSelectRef}
+                          onClick={() => onSelectRef?.(r)}><EntityPill type="ElementType" label={r} style={{ fontSize: 10, cursor: onSelectRef ? 'pointer' : undefined }} /></button>
+                        {pts.length > 0 && <span className="text-muted" style={{ fontSize: 10 }}>in {pts.join(', ')}</span>}
+                      </span>
+                    )
+                  })}
                 </div>
               </div>
             )}

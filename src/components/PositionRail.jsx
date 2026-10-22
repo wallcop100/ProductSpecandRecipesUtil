@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Form } from 'react-bootstrap'
+import { Form, OverlayTrigger, Tooltip } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
+import StatusPip from './StatusPip'
 import IconButton from './IconButton'
 import PositionListMenu from './PositionListMenu'
 import usePositionList from './usePositionList'
@@ -11,15 +12,6 @@ import { formDiffStates } from '../utils/formImpact'
 import { buildMaster } from '../utils/productCodes'
 import { buildRefMap, targetFor } from '../utils/ptResolve'
 import { C } from '../styles/tokens'
-
-// Status is a shape, not a colour: grey throughout, amber only on the one needing a decision.
-export const STATUS_DOT = {
-  empty: { symbol: '○', label: 'No recipe yet' },
-  form: { symbol: '◐', color: C.attn, label: 'The Form asks for something it lacks, or a code needs an ElementType' },
-  done: { symbol: '●', label: 'Has a recipe' },
-  notInForm: { symbol: '–', label: 'No recipe — the Form asks for nothing here' },
-  ignored: { symbol: '⊘', label: 'Ignored' },
-}
 
 /** The Form compared with an older one (862MB6): what moved for each position. */
 export const DIFF_SYMBOL = { add: '+', omit: '−', mixed: '±' }
@@ -120,16 +112,17 @@ export default function PositionRail({ onReviewEmpty, onReviewDrift }) {
           const on = ref === activeRef
           const name = pt.Name || pt.name || ''
           return (
-            <div key={ref} role="button" data-active={on ? 'true' : undefined} data-testid={`rail-${ref}`}
-              onClick={() => go(ref)} title={[name && name !== ref ? name : null, STATUS_DOT[st].label].filter(Boolean).join(' · ')}
+            <OverlayTrigger key={ref} placement="right" delay={{ show: 250, hide: 0 }}
+              overlay={<Tooltip>{name && name !== ref ? name : ref}</Tooltip>}>
+            <div role="button" data-active={on ? 'true' : undefined} data-testid={`rail-${ref}`}
+              onClick={() => go(ref)}
               className="d-flex align-items-center gap-2 ps-4 pe-2"
               style={{
                 fontSize: 12, lineHeight: '22px', cursor: 'pointer', fontFamily: 'monospace',
                 background: on ? C.accentTint : undefined, borderLeft: `3px solid ${on ? C.accent : 'transparent'}`,
                 fontWeight: on ? 700 : 400, opacity: st === 'ignored' ? 0.6 : 1,
               }}>
-              <span aria-label={STATUS_DOT[st].label}
-                style={{ width: 10, textAlign: 'center', color: STATUS_DOT[st].color || C.muted, flexShrink: 0 }}>{STATUS_DOT[st].symbol}</span>
+              <StatusPip posRef={ref} status={st} />
               <span className="text-truncate">{ref}</span>
               {tagDrift?.[ref] && <MaterialIcon name="warning" size={12} style={{ color: C.attn }} title="Tags changed" />}
               {diffStates.has(ref) && (
@@ -139,6 +132,7 @@ export default function PositionRail({ onReviewEmpty, onReviewDrift }) {
                 </span>
               )}
             </div>
+            </OverlayTrigger>
           )
         })}
       </div>

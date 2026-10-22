@@ -61,7 +61,7 @@ export default function NewETModal({
   const [manufacturer, setMfr]      = useState('')
   const [productCode, setCode]      = useState('')
   const [psDesc, setPsDesc]         = useState('')
-  const [showSpec, setShowSpec]     = useState(false)
+  const [showSpec, setShowSpec]     = useState(true)
   const [saving, setSaving]         = useState(false)
 
   // Seed on open, but ONLY for a draft we have not started. The modal stays mounted,
@@ -101,6 +101,8 @@ export default function NewETModal({
   // A family the project has no row for yet is created with the ElementType (GX9RLV).
   const familyIsNew = family.trim() !== ''
     && !elementTypes.some(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === family.trim().toLowerCase())
+  // Other ElementTypes already name it as their Family, so it is not new, only missing its row.
+  const familyInUse = elementTypes.some(e => (e.Family || e.family || '').trim().toLowerCase() === family.trim().toLowerCase())
   const [familyParent, setFamilyParent] = useState('')
 
   // All known ET refs for the next-available suggestion
@@ -327,7 +329,7 @@ export default function NewETModal({
           {familyIsNew && (
             <div className="d-flex align-items-center gap-2 mt-1" style={{ fontSize: 11 }} data-testid="new-family">
               <MaterialIcon name="create_new_folder" size={13} style={{ color: C.accent }} />
-              <span>New family <strong style={{ fontFamily: 'monospace' }}>{family.trim()}</strong>: its row is created too, under</span>
+              <span>{familyInUse ? 'No family row yet for' : 'New family'} <strong style={{ fontFamily: 'monospace' }}>{family.trim()}</strong>: its row is created too, under</span>
               <Form.Control size="sm" list={`${familyListId}-parent`} value={familyParent} onChange={e => setFamilyParent(e.target.value)}
                 placeholder="(top level)" aria-label="Parent family" style={{ fontSize: 11, width: 170 }} />
               <datalist id={`${familyListId}-parent`}>{familyOptions.map(f => <option key={f} value={f} />)}</datalist>

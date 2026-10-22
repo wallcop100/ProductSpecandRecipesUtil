@@ -104,10 +104,11 @@ export default function BugReporter({ screen }) {
   /** The reports kept here (written before, or that could not go): send them, keeping what fails. */
   async function sendKept() {
     let n = 0
-    for (const r of useStore.getState().bugReports) {
+    const all = useStore.getState().bugReports
+    for (const r of all) {
       if (await deliver(r)) { useStore.getState().deleteBugReport(r.id); n++ }
     }
-    say(`${n} sent`)
+    say(n === all.length ? `${n} sent` : `${n} of ${all.length} sent, the rest kept`)
   }
 
   /** A note under the bug, or under the element it was asked from (a suggestion's ⋯ menu). */
@@ -169,7 +170,7 @@ export default function BugReporter({ screen }) {
           </Dropdown>
         </ButtonGroup>
         {sent && <span className="ms-1 small" role="status" style={{ background: C.surface, borderRadius: 4, padding: '1px 6px', boxShadow: '0 1px 4px rgba(0,0,0,.25)' }}>
-          {sent === 'sent' ? 'Sent, thank you' : sent === 'kept' ? 'Kept with your bug reports' : `${sent}, thank you`}</span>}
+          {sent === 'sent' ? 'Sent, thank you' : sent === 'kept' ? 'Kept with your bug reports' : sent.endsWith('kept') ? sent : `${sent}, thank you`}</span>}
       </div>
 
       {draft && createPortal(
