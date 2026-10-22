@@ -8,6 +8,7 @@
  */
 export const CHANGELOG = [
   { date: '2026-10-22', note: 'One status pip per position (red, amber, green, grey, purple for suggestions waiting), the same in the list and the recipe header, with a popup of reasons' },
+  { date: '2026-10-21', note: 'The export banner ("run the patches") has a Dismiss for when you did not export after all; the changes stay queued for the next export. No more OneDrive mention' },
   { date: '2026-10-21', note: 'Connector suggestions (the Wago library) come from the companion when connected, the bundled library otherwise' },
   { date: '2026-10-21', note: 'Shift-click multi-select on recipe rows is reliable again: shift no longer starts a text selection across cards, and shift-clicking the tick box toggles it once' },
   { date: '2026-10-21', note: 'New How it works card: Fork a position — a variant of a recipe (the ? in the Fork window, or search Find for "fork")' },

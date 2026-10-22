@@ -29,6 +29,7 @@ export default function PatchSyncPanel() {
   const lists = { dbChanges: useStore(s => s.dbChanges), psChanges: useStore(s => s.psChanges), rsChanges: useStore(s => s.rsChanges) }
   const checkFiles = useStore(s => s.checkFiles)
   const resolveConflict = useStore(s => s.resolveConflict)
+  const dismissBatch = useStore(s => s.dismissBatch)
   const [hidden, setHidden] = useState(null)   // the sync.at a person closed the "all in" line on
 
   const conflicts = sync?.conflicts || []
@@ -70,6 +71,8 @@ export default function PatchSyncPanel() {
         <span className="ms-auto d-inline-flex gap-2">
           {!allIn && <Button size="sm" variant="outline-secondary" style={{ fontSize: 11, padding: '0 8px' }} disabled={sync?.checking}
             onClick={() => checkFiles()} data-testid="sync-check">Check now</Button>}
+          {batch && <Button size="sm" variant="link" className="p-0 text-muted" style={{ fontSize: 11 }} onClick={() => dismissBatch()}
+            title="Not exporting after all: the changes stay queued and go in the next export" data-testid="sync-dismiss">Dismiss</Button>}
           {allIn && <Button size="sm" variant="link" className="p-0 text-success" style={{ fontSize: 11 }} onClick={() => setHidden(sync.at)}>OK</Button>}
         </span>
       </div>
@@ -81,7 +84,7 @@ export default function PatchSyncPanel() {
       )}
       {batch && !sync?.checking && sync?.at && sync.at > batch.at && FILES.some(f => waiting(f) > 0) && !laterIn && (
         <div className="mt-1 text-muted">Run each patch in its workbook. This checks again by itself when a workbook changes; if it has
-          not caught up, OneDrive may still be syncing the file.</div>
+          not caught up, the file may still be syncing.</div>
       )}
       {conflicts.length > 0 && (
         <div className="mt-2" data-testid="sync-conflicts">
