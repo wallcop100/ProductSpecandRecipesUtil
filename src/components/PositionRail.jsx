@@ -172,8 +172,8 @@ export default function PositionRail({ onReviewEmpty, onReviewDrift }) {
         </div>
       )}
       <div ref={listRef} style={{ flex: 1, overflowY: 'auto', paddingBottom: 8 }}>
-        {/* Suggestions are worked out per position; the open one does it itself, these keep the other pips right. */}
-        {companion && positionTypes.filter(pt => pt.PositionTypeRef !== activeRef).map(pt => (
+        {/* Suggestions are worked out per position; these keep every pip right, the open one included. */}
+        {companion && positionTypes.map(pt => (
           <RecipeSuggestions key={pt.PositionTypeRef} posRef={pt.PositionTypeRef} watch />
         ))}
         {groups.map(renderGroup)}
