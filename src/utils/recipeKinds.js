@@ -98,7 +98,8 @@ const codeOf = (ref, idx) => U(idx.psByRef.get(U(ref))?.ProductCode || idx.psByR
 /**
  * The positions of this project with the same design, power and make-up whose recipe has jobs this
  * one lacks — "same as C01r" adds just those. A part made for a profile (FITS_PROFILE) is only
- * taken from a position on the same profile, and from another profile only a job most of them have. Best first: the same profile, then the most
+ * taken from a position on the same profile; from another profile, only a job most of them have, done by
+ * one part everywhere, from a position of the same family (a spike light is not built like a downlight). Best first: the same profile, then the most
  * positions sharing that recipe.
  * → [{ posRef, adds: [{ job, rows }], basis: 'profile' | 'makeup', anchor }]
  */
@@ -111,12 +112,15 @@ export function sameKindAs(posRef, state, idx = indexes(state)) {
   const alike = posRefs.map(p => positionMakeup(p, state, idx)).filter(o => sig(o) === sig(me))
   // On another profile, only a job most alike positions have: one emergency pack or collar is that position's own.
   const usual = k => alike.filter(o => o.jobs.has(k)).length * 2 > alike.length
+  // ...and one done by the same part everywhere: a frame or fire hood that differs by fitting is made for that fitting.
+  const varies = k => new Set(alike.flatMap(o => (o.jobs.get(k) || []).map(r => U(refOf(r))))).size > 1
+  const family = p => U(idx.ptByRef.get(U(p))?.ParentRef ?? idx.ptByRef.get(U(p))?.parentRef)
   for (const other of alike) {
     const p = other.posRef
     const anchor = anchorOf(other, idx)
     const basis = sameAnchor(mine, anchor) ? 'profile' : 'makeup'
     const adds = [...other.jobs.entries()].filter(([k]) => !me.jobs.has(k))
-      .filter(([k]) => basis === 'profile' || (!FITS_PROFILE.has(k) && usual(k))).map(([job, rows]) => ({ job, rows }))
+      .filter(([k]) => basis === 'profile' || (family(p) === family(posRef) && !FITS_PROFILE.has(k) && usual(k) && !varies(k))).map(([job, rows]) => ({ job, rows }))
     if (adds.length) out.push({ posRef: p, adds, basis, anchor })
   }
   const key = o => o.adds.map(a => a.job).sort().join('+')
