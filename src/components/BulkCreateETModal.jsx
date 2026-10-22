@@ -210,7 +210,7 @@ export default function BulkCreateETModal({
   const [thumbs, setThumbs] = useState({})
   const [checking, setChecking] = useState(null)
   const checks = !!companion?.features?.has?.('checks')
-  const learned = r => r.why === 'library' && r.styledOn?.tier && r.family === r.styledOn.family ? r.styledOn : null
+  const learned = r => companion && r.why === 'library' && r.styledOn?.tier && r.family === r.styledOn.family ? r.styledOn : null
   const famKey = r => `${String(r.code).toUpperCase()}>${r.family}`
   const levelFor = r => levelOf({ own: learned(r).tier === 'confirmed', votes: learned(r).votes, projects: 2 }, checks)
   const vote = (r, outcome) => ({ kind: 'family', key: famKey(r), tier: learned(r).tier, source: learned(r).source || '', supplied: r.family, final: r.family, outcome })

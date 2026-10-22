@@ -150,14 +150,14 @@ export function WagoSuggestion({ posRef, inRecipe = false }) {
   const others = groups.scoped.filter(pt => pt.PositionTypeRef !== posRef
     && suggestConnectors(groups.recOf(pt.PositionTypeRef))[0]?.key === s.key).length
   // A served set is voted on by its id (datajoin `connectors()` serves its `votes`); the bundle is not.
-  const votes = served ? [...WAGO_COMBOS, ...WAGO_TEMPLATES].find(e => e.key === s.key)?.votes : null
+  const votes = served && companion ? [...WAGO_COMBOS, ...WAGO_TEMPLATES].find(e => e.key === s.key)?.votes : null
 
   async function apply() {
     setBusy(true)
     try { await applyGlobalConnector(s.key, { posRefs: [posRef], rule: pick === 0 ? s.rule : null }) } finally { setBusy(false) }
   }
   async function use() {
-    if (served) {
+    if (served && companion) {
       const level = levelOf({ votes, projects: 2 }, !!companion?.features?.has?.('checks'))
       if (level === 'unsure' && mayAsk(projectNumber, `connector|${s.key}`, votes)) { setAsking(true); return }
       if (level !== 'sure') setChip({ key: s.key, name: plan.collection?.Name || s.name })
