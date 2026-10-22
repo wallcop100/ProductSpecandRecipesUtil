@@ -140,3 +140,25 @@ test('wrapper contents stay open across remounts; the toolbar collapses them all
   act(() => useStore.getState().setScreenView('recipes', { wrappers: { all: false } }))
   expect(screen.queryByTestId('contents-item')).toBeNull()
 })
+
+test('#45: Integer toggles off again, and leaves Design/Contract alone', () => {
+  useStore.setState({ recipes: [{ ...row('A01', 'PositionType', 'A01', 'ET-5PIN-SOCKET', 'c'), IsInteger: 'Y', IsContractItem: 'Y' }], past: [], future: [], rsChanges: [] })
+  const get = () => useStore.getState().recipes.find(x => x._id === 'c')
+  const { rerender } = render(<IngredientCard row={get()} posRef="A01" sectionKey="position" />)
+  fireEvent.click(screen.getByText('Integer'))
+  expect(get().IsInteger).toBeNull()
+  expect(get().IsContractItem).toBe('Y')
+  rerender(<IngredientCard row={get()} posRef="A01" sectionKey="position" />)
+  fireEvent.click(screen.getByText('Integer'))
+  expect(get().IsInteger).toBe('Y')
+})
+
+test('#46: discarding flushes the browser DB before the reload', async () => {
+  const flush = vi.fn().mockResolvedValue(undefined)
+  window.electronAPI.db.flush = flush
+  useStore.setState({ rsChanges: [{ _id: 'c' }] })
+  await useStore.getState().discardPendingChanges()
+  expect(flush).toHaveBeenCalled()
+  expect(useStore.getState().rsChanges).toEqual([])
+  delete window.electronAPI.db.flush
+})

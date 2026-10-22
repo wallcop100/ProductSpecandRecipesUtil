@@ -207,11 +207,11 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
       // Nothing known to fit: a placeholder for THIS profile, its code TBC; ⋯ for one of the project's own.
       const label = `TBC - ${jobLabel(s.slot)} for ${profile.ref}`
       const placeholder = elementTypes.find(e => e.Name === label)
-      lines.push({ ...base, supplied: placeholder?.ElementTypeRef || 'placeholder', addLabel: placeholder ? 'Add' : 'Add placeholder',
+      lines.push({ ...base, supplied: placeholder?.ElementTypeRef || 'placeholder', addLabel: 'Add placeholder',
         add: () => addRow(placeholder?.ElementTypeRef || makePlaceholder(s.slot, label)),
         more: options.slice(0, 12).map(o => ({ ref: o.ElementTypeRef, label: `${o.ElementTypeRef}${o.Name ? ` — ${o.Name}` : ''}`, add: () => addRow(o.ElementTypeRef) })),
         text: <>{head}<span className="text-muted"> — {profile.code ? `not known for ${profile.code}` : `${profile.ref}'s code is TBC: fill it in for the right part`}
-          {placeholder ? <>; <span className="font-monospace">{placeholder.ElementTypeRef}</span> holds its place</> : ''}</span></> })
+          {placeholder ? <>; placeholder <span className="font-monospace">{placeholder.ElementTypeRef}</span></> : ''}</span></> })
       continue
     }
     const chosen = pick[s.slot] ?? options[0]?.ElementTypeRef ?? ''
