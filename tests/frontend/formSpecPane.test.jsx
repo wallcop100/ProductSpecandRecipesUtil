@@ -130,10 +130,12 @@ describe('FormSpecPane renders the Form beside the recipe', () => {
    * The divergence line was the most useful sentence the popover knew, and you could only
    * reach it by hovering the exact ref you already suspected. It is now marked on the row.
    */
-  test('3C3VTE: a disagreement is told on the row\'s status icon, with no second warning sign', () => {
+  test('3C3VTE: a disagreement is told on the row\'s status icon, with no second warning sign', async () => {
     // C03r's recipe holds ET-TAPE-01; the Form only asks for it on C01r.
     setup({ recipes: [...recipes(), pos('C03r', 'ET-TAPE-01')] })
-    expect(screen.getAllByTitle(/the Form and the recipe disagree/i).length).toBeGreaterThan(0)
+    // The tip is a styled tooltip (report 32), shown on hover, not a native title.
+    for (const i of document.querySelectorAll('i.material-icons')) fireEvent.mouseOver(i)
+    expect((await screen.findAllByText(/the Form and the recipe disagree/i)).length).toBeGreaterThan(0)
     expect(screen.queryByLabelText(/the Form and the recipe disagree/i)).not.toBeInTheDocument()
   })
 

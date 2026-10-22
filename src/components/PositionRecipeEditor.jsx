@@ -58,6 +58,8 @@ export default function PositionRecipeEditor({
   embedded = false,
   showInternals = false,   // also render container internals (grouped by ElementTypeRef)
 }) {
+  const backTitle = useStore(s => s.positionHistory.length ? `Back to ${s.positionHistory[s.positionHistory.length - 1]}`
+    : s.returnScreen ? `Back to ${s.returnScreen === 'product-spec' ? 'Product Spec' : 'Connectors'}` : 'All PositionTypes')
   const recipes = useStore(s => s.recipes)
   const selectedRowIds = useStore(s => s.selectedRowIds)
   const clearRowSelection = useStore(s => s.clearRowSelection)
@@ -126,7 +128,7 @@ export default function PositionRecipeEditor({
       <div className="d-flex align-items-center gap-2 px-3 py-2 border-bottom bg-white" style={{ flexShrink: 0 }}>
         {showBack && (
           <IconButton variant="outline-secondary" bsSize="sm" style={{ fontSize: 11 }}
-            icon={ACTION_ICONS.back} title="All PositionTypes" onClick={onBack} />
+            icon={ACTION_ICONS.back} title={backTitle} onClick={onBack} />
         )}
         <MaterialIcon name={ICONS.position} size={20} style={{ color: colorsForType('PositionType').accent }} title="PositionType" />
         <span className="fw-semibold" style={{ fontSize: 15 }}>{ref}</span>

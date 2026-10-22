@@ -68,7 +68,7 @@ export function writeDismissed(n, set) {
 
 /** `watch`: renders nothing, only keeps this position's purple pip right while it is not open. */
 // Whose suggestion each line is (reports carry it): served by the companion, built into the app, or read from this project's own recipes.
-const SOURCE = { kit: 'companion', kind: 'companion', connector: 'companion', tbc: 'app', same: 'project' }
+const SOURCE = { kit: 'companion', kind: 'companion', connector: 'companion', tbc: 'companion', same: 'project' }
 
 export default function RecipeSuggestions({ posRef, watch = false }) {
   const recipes = useStore(s => s.recipes)
@@ -80,6 +80,7 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
   const companion = useCompanion()
   const [dismissed, setDismissed] = useState(() => readDismissed(projectNumber))
   const [kits, setKits] = useState([])
+  const [kitsLoaded, setKitsLoaded] = useState(false)   // until then a profile's lines are unknown: showing them would flash
   const [pick, setPick] = useState({})
   const [hidden, setHidden] = useState(() => new Set())   // × — for now, this position
   useEffect(() => {
@@ -104,9 +105,10 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
   const anchor = profile?.code ? { code: profile.code, manufacturer: profile.maker } : null
   useEffect(() => {
     setKits([])
+    setKitsLoaded(!companion?.kits || !anchor)
     if (!companion?.kits || !anchor) return
     let live = true
-    kitsFor(companion, anchor, projectNumber).then(k => { if (live && k) setKits(k) })
+    kitsFor(companion, anchor, projectNumber).then(k => { if (live) { if (k) setKits(k); setKitsLoaded(true) } }, () => { if (live) setKitsLoaded(true) })
     return () => { live = false }
   }, [companion, anchor?.code, anchor?.manufacturer, projectNumber])   // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -177,6 +179,7 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
     const base = { key: `kind|${kind.id}|${s.slot}`, kind: 'kind', icon: 'lightbulb' }
     const addRow = ref => useStore.getState().addRecipeRow(posRef, sectionFor(s, me.design), rowFromSlot(s, ref), { asPosition: true })
     const fitsProfile = FITS_PROFILE.has(s.slot) && profile
+    if (fitsProfile && !kitsLoaded) continue   // the maker's range may rule this line out
     const fit = fitsProfile ? fitFor(s.slot, profile, state, idx) : null
     if (fit) {
       lines.push({ ...base, supplied: fit.etRef, add: () => addRow(fit.etRef),
@@ -251,7 +254,7 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
   // Keys stored before dismissals were per position hid a line project-wide; they still do.
   const here = l => `${posRef}|${l.key}`
   const shown = lines.filter(l => !dismissed.has(l.key) && !dismissed.has(here(l)) && !hidden.has(here(l)))
-  const fromCompanion = shown.some(l => l.kind === 'kit' || l.kind === 'kind')
+  const fromCompanion = shown.some(l => SOURCE[l.kind] === 'companion')
   useEffect(() => {
     if (watch) useStore.getState().setCompanionPending(posRef, fromCompanion)   // the visible copy starts empty and would blink the pip off
     // No reset on unmount: a watcher handing over to the open editor would wipe the pip the editor still shows.

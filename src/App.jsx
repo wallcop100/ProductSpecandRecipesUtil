@@ -37,7 +37,6 @@ export default function App() {
   const [debugIds, setDebugIds] = useState(false)
 
   const setFileWatchAlert = useStore(s => s.setFileWatchAlert)
-  const setActivePosition = useStore(s => s.setActivePosition)
   const setRootView = useStore(s => s.setRootView)
 
   useEffect(() => {
@@ -140,7 +139,7 @@ export default function App() {
             onOpenCodeImport={() => { setPsScrollToRef(null); openCodeImport('product-spec') }}
             onOpenPosition={ref => {
               setPsScrollToRef(null)
-              useStore.getState().setActivePosition(ref)
+              useStore.getState().openPositionFrom('product-spec', ref)
               navigateTo('builder')
             }}
             onBack={() => {
@@ -163,7 +162,7 @@ export default function App() {
             focusPosRef={connectorsFocusRef}
             onOpenPosition={(posRef) => {
               setRootView('positions')
-              setActivePosition(posRef)
+              useStore.getState().openPositionFrom('connectors', posRef)
               setConnectorsFocusRef(null)
               navigateTo('builder')
             }}
