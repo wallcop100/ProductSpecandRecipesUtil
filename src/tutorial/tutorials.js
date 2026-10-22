@@ -128,6 +128,17 @@ export const TUTORIALS = {
     ],
   },
 
+  'merge-ets': {
+    title: 'Merging duplicate product codes',
+    icon: 'merge',
+    intro: 'Two ElementTypes for one product? Fold them into one, and every recipe follows.',
+    steps: [
+      { blurb: 'In the Product Spec, tick ElementTypes under "Duplicate product code". Merge… appears in the bar.', scene: 'merge', beat: 0 },
+      { blurb: 'Keep one, or merge into a new ref. Wrappers merge only if identical; rows on the same position add up if they differ in nothing but quantity. Anything else is listed and blocks the merge.', scene: 'merge', beat: 1 },
+      { blurb: 'Confirm that nothing placed in the DesignDB uses the old refs. Undo takes it all back in one step.', scene: 'merge', beat: 2 },
+    ],
+  },
+
   'export': {
     title: 'Export — getting your changes out',
     icon: 'ios_share',
