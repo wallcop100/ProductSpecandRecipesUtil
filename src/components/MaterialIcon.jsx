@@ -1,4 +1,5 @@
 import React from 'react'
+import { OverlayTrigger, Tooltip } from 'react-bootstrap'
 
 /**
  * MaterialIcon — thin wrapper around the bundled Material Icons font.
@@ -18,20 +19,22 @@ const SYMBOLS = {
 }
 
 export default function MaterialIcon({ name, size = 18, className = '', style, title }) {
+  // A `title` shows as a styled tooltip, not the browser's plain-text one (report #32).
+  const tip = el => title
+    ? <OverlayTrigger placement="top" overlay={<Tooltip style={{ fontSize: 11 }}>{title}</Tooltip>}>{el}</OverlayTrigger>
+    : el
   if (SYMBOLS[name]) {
-    return (
+    return tip(
       <svg width={size} height={size} viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"
         className={className || undefined} style={{ verticalAlign: 'middle', flexShrink: 0, ...style }}>
-        {title && <title>{title}</title>}
         <path d={SYMBOLS[name]} />
       </svg>
     )
   }
-  return (
+  return tip(
     <i
       className={`material-icons${className ? ' ' + className : ''}`}
       style={{ fontSize: size, lineHeight: 1, verticalAlign: 'middle', ...style }}
-      title={title}
       aria-hidden="true"
     >
       {name}

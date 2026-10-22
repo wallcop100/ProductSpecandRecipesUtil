@@ -7,6 +7,7 @@
  * start page's "what's new" link.
  */
 export const CHANGELOG = [
+  { date: '2026-10-22', note: 'Back on a position returns to where you came from (the previous position, Product Spec or Connectors); icon hints are styled popups; Merge into a new ref says which ElementType the fields are copied from; companion suggestions no longer flash in and out, and the TBC-code suggestion is purple' },
   { date: '2026-10-22', note: 'Merge duplicate product codes: tick ElementTypes with the same maker and code in the Product Spec, then Merge… (into one of them or a new ref). Recipes follow; Find has a how-to' },
   { date: '2026-10-22', note: 'One status pip per position (red, amber, green, grey, purple for suggestions waiting), the same in the list and the recipe header, with a popup of reasons' },
   { date: '2026-10-21', note: 'The export banner ("run the patches") has a Dismiss for when you did not export after all; the changes stay queued for the next export. No more OneDrive mention' },
