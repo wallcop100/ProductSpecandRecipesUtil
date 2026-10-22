@@ -18,7 +18,7 @@ vi.mock('../../src/utils/backend.js', () => ({
 const { default: useStore } = await import('../../src/store/useStore.js')
 const G = await import('../../src/data/globalConnectors.js')
 const { default: ConnectorsPane } = await import('../../src/components/ConnectorsPane.jsx')
-const { WagoLibrary, WagoUpgradeBanner, wagoNameOf } = await import('../../src/components/GlobalConnectors.jsx')
+const { WagoLibrary, WagoUpgradeBanner, wagoNameOf, WagoSuggestion } = await import('../../src/components/GlobalConnectors.jsx')
 const { templateParts } = await import('../../src/utils/connectorGroups.js')
 
 const PT = (ref, ctl, loc) => ({ PositionTypeRef: ref, ControlTypeRef: ctl, DriverLocation: loc })
@@ -164,5 +164,36 @@ describe('a companion can serve the library', () => {
     expect(G.globalConnector('2pin-dali').name).toBe('Served 2-pin')      // still the served one
     expect(G.setConnectorLibrary(null)).toBe(true)
     expect(G.globalConnector('2pin-dali').name).toBe(bundled.templates.find(t => t.key === '2pin-dali').name)
+  })
+
+  test('served entries carry their own rule: it decides, in the served order', () => {
+    const rule = { match: 'all', conditions: [{ column: 'ControlTypeRef', op: 'contains', value: 'DMX' }] }
+    const served = { ...bundled, templates: bundled.templates.map(t => t.key === '3pin-len' ? { ...t, rule, why: 'DMX only' } : t) }
+    expect(G.setConnectorLibrary(served)).toBe(true)
+    expect(G.suggestConnectors({ ControlTypeRef: 'DMX' }).map(x => [x.key, x.why])).toEqual([['3pin-len', 'DMX only']])
+    expect(G.suggestConnectors({ ControlTypeRef: 'DALI', DriverLocation: 'Local to fitting' })).toEqual([])
+    G.setConnectorLibrary(null)
+  })
+})
+
+describe('in the recipe editor', () => {
+  const lib = JSON.parse(readFileSync(resolve(process.cwd(), 'src/data/globalTemplates.json'), 'utf8')).connectors
+  const row = (p, ref) => ({ _id: `${p}${ref}`, _row_num: 1, PositionTypeRef: p, ContextType: 'PositionType', ContextRef: p, ElementTypeRef: ref, Quantity: 1 })
+  test('shown only where this project\'s recipes already use connectors; purple and sourced when served', () => {
+    setup({ library: { connectors: lib } })
+    const { unmount } = render(<WagoSuggestion posRef="A01" inRecipe />)
+    expect(screen.queryByTestId('wago-suggestion')).toBeNull()          // no recipe uses a connector: stay quiet
+    unmount()
+    setup({ recipes: [row('A02', 'ET-5PIN-SOCKET')], library: { connectors: lib } })
+    render(<WagoSuggestion posRef="A01" inRecipe />)
+    const card = screen.getByTestId('wago-suggestion')
+    expect(card).toHaveClass('companion-card')
+    expect(card).toHaveAttribute('data-source', 'companion')
+    expect(screen.getByTestId('report-suggestion')).toBeInTheDocument()
+  })
+  test('a bundled library is an app suggestion', () => {
+    setup({ recipes: [row('A02', 'ET-5PIN-SOCKET')], library: {} })
+    render(<ConnectorsPane posRef="A01" />)
+    expect(screen.getByTestId('wago-suggestion')).toHaveAttribute('data-source', 'app')
   })
 })

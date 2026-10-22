@@ -13,6 +13,7 @@ import SameRecipePill from './SameRecipePill'
 import StatusPip from './StatusPip'
 import usePositionList from './usePositionList'
 import ConnectorSuggestions from './ConnectorSuggestions'
+import { WagoSuggestion } from './GlobalConnectors'
 import RecipeSuggestions from './RecipeSuggestions'
 import RecipeErrorBanner from './RecipeErrorBanner'
 import FormSpecPane from './FormSpecPane'
@@ -212,6 +213,7 @@ export default function PositionRecipeEditor({
         <RecipeErrorBanner />
         <RecipeSuggestions posRef={ref} />
         <ConnectorSuggestions posRef={ref} />
+        <WagoSuggestion posRef={ref} inRecipe />
         <RecipeSection
           title="PositionType Level"
           sectionKey="position"

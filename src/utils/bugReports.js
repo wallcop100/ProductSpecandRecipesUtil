@@ -51,6 +51,7 @@ const REF_RE = /\bET-[A-Z0-9][A-Z0-9-]*\b/gi
  * What the right-click landed on, from the DOM.
  * → { element, areas, dialogs, row, refs }
  */
+/** `data-source` on a suggestion says whose it is, so a report knows where the fix goes: companion | app | project | user-template. */
 export function domContext(target) {
   const el = target && target.nodeType === 1 ? target : target?.parentElement
   const areas = []
@@ -58,14 +59,14 @@ export function domContext(target) {
   for (let n = el; n && n !== document.body && areas.length < 6; n = n.parentElement) {
     const id = n.getAttribute?.('data-debug-id') || n.getAttribute?.('data-testid')
     if (id && !areas.includes(id)) areas.push(id)
-    for (const a of ['data-code', 'data-active']) if (n.getAttribute?.(a) && !attrs[a]) attrs[a] = n.getAttribute(a)
+    for (const a of ['data-code', 'data-active', 'data-source']) if (n.getAttribute?.(a) && !attrs[a]) attrs[a] = n.getAttribute(a)
   }
   const tr = el?.closest?.('tr')
   const row = tr ? [...tr.children].slice(0, 10).map(c => clip(c.textContent, 40)) : null
   const dialogs = [...document.querySelectorAll('.modal.show .modal-title')].map(t => clip(t.textContent, 60))
   const refs = [...new Set([el?.textContent || '', (row || []).join(' '), attrs['data-code'] || '']
     .join(' ').match(REF_RE) || [])].slice(0, 8)
-  return { element: describeElement(el), areas, dialogs, row, refs, code: attrs['data-code'] || null }
+  return { element: describeElement(el), areas, dialogs, row, refs, code: attrs['data-code'] || null, source: attrs['data-source'] || null }
 }
 
 /** What the app was doing: where you were and how big the project is. */
@@ -120,6 +121,7 @@ export function reportsToMarkdown(reports, { title = 'Bug reports' } = {}) {
       a && line('Project', a.project),
       a && line('Screen', a.screen),
       d && line('Window', d.dialogs),
+      d && line('Suggestion source', d.source),
       a && line('Position', a.position),
       a && line('ElementType', a.elementType),
       a && line('Setting up', a.teaching),
