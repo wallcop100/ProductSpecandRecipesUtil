@@ -67,7 +67,7 @@ export default function ConnectorSuggestions({ posRef }) {
       {gaps.map(g => {
         const s = STYLE[g.status] || STYLE.missing
         return (
-          <div key={`${g.ref}|${g.section}|${g.status}`} className="d-flex align-items-center gap-2 py-1" data-testid="suggestion-connector-row">
+          <div key={`${g.ref}|${g.section}|${g.status}`} className="d-flex align-items-center gap-2 py-1" data-testid="suggestion-connector-row" data-source="user-template">
             <MaterialIcon name={g.blocked ? 'block' : s.icon} size={13}
               style={{ color: g.blocked ? C.dangerInk : C.attnInk, flexShrink: 0 }} />
             <span style={{ flex: 1, color: g.blocked ? C.dangerInk : undefined }}>{g.label}</span>

@@ -103,3 +103,13 @@ describe('bug reports', () => {
     expect(writeText).toHaveBeenCalledWith(expect.stringContaining('## K3F9QZ · Broken thing'))
   })
 })
+
+describe('a report on a suggestion says whose it is', () => {
+  test('domContext reads the nearest data-source, and the Markdown prints it', async () => {
+    const { domContext, reportsToMarkdown: md } = await import('../../src/utils/bugReports.js')
+    document.body.innerHTML = '<div data-testid="suggestion-kit" data-source="companion"><button id="b">Add</button></div>'
+    const dom = domContext(document.getElementById('b'))
+    expect(dom.source).toBe('companion')
+    expect(md([{ id: 'K3F9QZ', at: '2026-10-22T10:00:00Z', note: 'wrong part', dom }])).toContain('**Suggestion source:** companion')
+  })
+})

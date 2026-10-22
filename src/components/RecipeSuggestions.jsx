@@ -67,6 +67,9 @@ export function writeDismissed(n, set) {
 }
 
 /** `watch`: renders nothing, only keeps this position's purple pip right while it is not open. */
+// Whose suggestion each line is (reports carry it): served by the companion, built into the app, or read from this project's own recipes.
+const SOURCE = { kit: 'companion', kind: 'companion', connector: 'companion', tbc: 'app', same: 'project' }
+
 export default function RecipeSuggestions({ posRef, watch = false }) {
   const recipes = useStore(s => s.recipes)
   const elementTypes = useStore(s => s.elementTypes)
@@ -271,7 +274,7 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
   return (
     <div className={`mb-3 px-3 py-2 rounded${fromCompanion ? ' companion-card' : ''}`} data-testid="recipe-suggestions" style={{ background: C.accentTint, border: `1px solid ${C.accentEdge}`, fontSize: 12 }}>
       {shown.map(l => (
-        <div key={l.key} className="d-flex align-items-center gap-2 py-1" data-testid={`suggestion-${l.kind}`}>
+        <div key={l.key} className="d-flex align-items-center gap-2 py-1" data-testid={`suggestion-${l.kind}`} data-source={SOURCE[l.kind]}>
           <MaterialIcon name={l.icon} size={13} style={{ color: C.accent, flexShrink: 0 }} />
           <span style={{ flex: 1 }}>{l.text}</span>
           {l.add && (

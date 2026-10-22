@@ -128,7 +128,7 @@ export default function TemplatesPane({ posRef }) {
         const more = fits ? alsoEmpty(t) : []
         const marks = fits && !isEmpty ? alignment(t.ingredients || [], own.rows, own.wrapperRefs, own.idx) : []
         return (
-          <div key={t.id} className={`mb-2 p-2 rounded border${t._served ? ' companion-card' : ''}`} data-testid="template-card" style={fits ? undefined : { opacity: 0.8 }}>
+          <div key={t.id} className={`mb-2 p-2 rounded border${t._served ? ' companion-card' : ''}`} data-testid="template-card" data-source={t._served ? 'companion' : t.scope === 'global' ? 'app' : 'user-template'} style={fits ? undefined : { opacity: 0.8 }}>
             <div className="d-flex align-items-center gap-2">
               <strong>{t.name}</strong>
               <span className="badge" style={{ background: C.subtle, color: C.muted, border: `1px solid ${C.border}`, fontSize: 10 }}>{t._served && <MaterialIcon name="cloud" size={11} />} {originOf(t)}</span>

@@ -145,7 +145,7 @@ size and rate, and treat the content as untrusted text for a person to read.
 - `GET api/recipes/patterns` → `{ "patterns": [...] }` (the shape `harvestPatterns` makes).
 - `GET api/recipes/kinds` → `{ "kinds": [{ id, name, design, driver, secondary, defining, positions, projects,
   slots: [{ slot, core, share, section, qty, dim, contract, integer }], connectors: [{ set, positions }] }] }`.
-- `GET api/recipes/connectors` → `{ "connectors": {source, manufacturer, templates, combos, superseded} | null }`. Null until one is loaded
+- `GET api/recipes/connectors` → `{ "connectors": {source, manufacturer, templates, combos, superseded} | null }`; an entry may carry `rule` (a template rule: where it is suggested) and `why`, and then the served rules replace the bundled ones. Null until one is loaded
   (server: meta `global_connectors`); the app also refuses one that lacks a key its suggestion rules name.
 - `POST api/recipes/kits` with `{ "codes": [{ code, manufacturer }], "project" }` → `{ "kits": [{ key, anchor, part:
   { code, slot, name }, share, qty, dim, integer, contract }] }`.

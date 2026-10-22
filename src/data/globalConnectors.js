@@ -80,7 +80,12 @@ export function recogniseCodes(codes) {
 export function suggestConnectors(rec) {
   if (!rec) return []
   const out = []
-  for (const s of SUGGESTIONS) {
+  // A served library says where each entry is suggested (`rule`, `why`), in its own order; the bundle uses SUGGESTIONS.
+  const served = [...WAGO_COMBOS, ...WAGO_TEMPLATES].some(e => e.rule)
+  const rules = served
+    ? [...WAGO_COMBOS, ...WAGO_TEMPLATES].filter(e => e.rule).map(e => ({ why: e.why || e.name, keys: [e.key], rule: e.rule }))
+    : SUGGESTIONS
+  for (const s of rules) {
     if (!ruleMatchesRecord(s.rule, rec)) continue
     for (const key of s.keys) {
       const g = globalConnector(key)
@@ -121,7 +126,7 @@ export function setConnectorLibrary(block) {
   if (!Array.isArray(b?.templates) || (b.combos && !Array.isArray(b.combos))) return false
   const keys = new Set(b.templates.map(t => t?.key).concat((b.combos || []).map(c => c?.key)))
   const ok = b.templates.every(t => t?.key && Array.isArray(t.site) && Array.isArray(t.driver))
-    && SUGGESTIONS.every(sg => sg.keys.every(k => keys.has(k)))
+    && (b.templates.some(t => t.rule) || (b.combos || []).some(c => c.rule) || SUGGESTIONS.every(sg => sg.keys.every(k => keys.has(k))))
   if (!ok) return false
   C = { combos: [], superseded: {}, source: {}, ...b }
   WAGO_PAGE = C.source; WAGO_TEMPLATES = C.templates; WAGO_COMBOS = C.combos; WAGO_SUPERSEDED = C.superseded

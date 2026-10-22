@@ -3,12 +3,12 @@ import { Button } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import useConnectorGroups from './useConnectorGroups'
-import { globalConnectors, suggestConnectors, recogniseCodes, SUGGESTIONS, WAGO_PAGE } from '../data/globalConnectors'
+import { globalConnectors, suggestConnectors, recogniseCodes, SUGGESTIONS, WAGO_PAGE, WAGO_TEMPLATES, WAGO_COMBOS } from '../data/globalConnectors'
 import { templateParts } from '../utils/connectorGroups'
 import { C } from '../styles/tokens'
 
 const pill = { fontSize: 10, lineHeight: '18px', background: C.surface, border: `1px solid ${C.border}`, fontFamily: 'monospace' }
-const ruleFor = key => SUGGESTIONS.find(s => s.keys.includes(key))?.rule || null
+const ruleFor = key => [...WAGO_COMBOS, ...WAGO_TEMPLATES].find(e => e.key === key)?.rule || SUGGESTIONS.find(s => s.keys.includes(key))?.rule || null
 
 /** A library entry's parts: site codes, then (dashed) the driver-side codes in the wrapper. */
 export function CodePills({ parts }) {
@@ -104,8 +104,8 @@ export function WagoLibrary() {
  * WagoSuggestion — in the drawer, for a position with no template: the Wago template its
  * control and driver location suggest, with Use (the others as "or …").
  */
-export function WagoSuggestion({ posRef }) {
-  useStore(s => s.library?.connectors)
+export function WagoSuggestion({ posRef, inRecipe = false }) {
+  const served = useStore(s => s.library?.connectors)
   const groups = useConnectorGroups()
   const etCollections = useStore(s => s.etCollections)
   const psRows = useStore(s => s.psRows)
@@ -118,7 +118,9 @@ export function WagoSuggestion({ posRef }) {
   const [pick, setPick] = useState(0)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const plan = useMemo(() => (sugg[pick] ? planGlobalConnector(sugg[pick].key) : null), [sugg, pick, etCollections, psRows])
-  if (!sugg.length || !plan) return null
+  // In the recipe editor only where this project's recipes already use connectors, and this position has no template yet.
+  const m = groups.members.get(posRef)
+  if (!sugg.length || !plan || (inRecipe && (!groups.sigs.size || m?.templates.length || m?.clash))) return null
   const s = sugg[pick]
   const others = groups.scoped.filter(pt => pt.PositionTypeRef !== posRef
     && suggestConnectors(groups.recOf(pt.PositionTypeRef))[0]?.key === s.key).length
@@ -129,11 +131,13 @@ export function WagoSuggestion({ posRef }) {
   }
 
   return (
-    <div className="p-2 rounded mb-2" style={{ background: C.accentTint, border: `1px solid ${C.accentEdge}` }} data-testid="wago-suggestion">
+    <div className={`p-2 rounded mb-2${served ? ' companion-card' : ''}`} style={{ background: C.accentTint, border: `1px solid ${C.accentEdge}` }} data-testid="wago-suggestion" data-source={served ? 'companion' : 'app'}>
       <div className="d-flex align-items-center gap-1">
         <MaterialIcon name="auto_awesome" size={13} style={{ color: C.accent }} />
         <span style={{ flex: 1 }}>Suggested: <strong>{plan.collection?.Name || s.name}</strong></span>
         <Button size="sm" variant="primary" className="py-0" style={{ fontSize: 10 }} disabled={busy} onClick={use} data-testid="wago-use">Use</Button>
+        <Button size="sm" variant="link" className="text-muted p-0" style={{ fontSize: 10 }} data-testid="report-suggestion" title="Report a problem with this suggestion"
+          onClick={e => useStore.getState().requestBugNote(e.currentTarget.closest('[data-testid="wago-suggestion"]'))}><MaterialIcon name="flag" size={13} /></Button>
       </div>
       <div className="text-muted" style={{ fontSize: 10 }}>
         {s.why}

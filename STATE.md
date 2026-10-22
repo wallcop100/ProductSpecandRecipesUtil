@@ -5,15 +5,17 @@ Updated: 2026-10-22
 On branch `merge-duplicates-29`, committed, not yet PR'd: report #29, "Merge…" in the Product Spec bulk bar (`utils/mergePlan.js`, store `mergeElementTypes`, `MergeETModal`, tutorial `merge-ets`). Tests and build pass; not checked in a browser.
 
 ## Next
-- Templates phases 3 and 7 (`TEMPLATES_PLAN.md`): remove the built-ins and tag matching, then Recipe Styles / Build Recipes from Form, then drop the compat `applicable_tags`/`replaces` from datajoin `psr_app.templates()`. Waits on the gate below.
+- Templates phases 3 and 7 (`TEMPLATES_PLAN.md`): remove the built-ins and tag matching, then Recipe Styles / Build Recipes from Form, then drop the compat `applicable_tags`/`replaces` from datajoin `psr_app.templates()`.
 - Templates: the read-only global rule still looks editable; no contract toggle on a job chip; DL/PS design not inferred for empty positions, and positions without a Form capture match nothing.
 - `forkPosition` keeps the source's ContextRef on copied position rows, so the patch overwrites the source position (useStore.js forkPosition).
 - Decide whether to commit `openwiki/` and force-add `AGENTS.md`/`CLAUDE.md`/`STATE.md`.
 
 ## Blocked / needs Erik
-- 🛑 Publish global templates for the main kinds via Orion /psr → Recipes → Draft from kind (65 of 68 kinds have none) before phase 3.
+
+(nothing)
 
 ## Log
+2026-10-22: Connector sets are served with their own `rule`/`why` (suggestConnectors uses them over the bundled SUGGESTIONS); the Wago card is also in the recipe editor, only when the project already has a connector template and the position none, purple when the library is served. Orion side in datajoin_mx (connector sets are `psr_templates` rows, kind 'connector'). Uncommitted; datajoin not redeployed. Gate on Orion templates removed.
 2026-10-22 (report #29): `planMerge` blocks on different maker/code, non-identical wrappers, and same-context rows differing in more than quantity; else rewrites, sums, retires. The browser app has no DesignDB Elements/LinksMap, so "in use" cannot be detected: a second confirm always warns that placed entities would be orphaned.
 2026-10-22 (report #34): `utils/positionHealth.js` + `StatusPip` replace the rail's grey symbols and `PositionValidationBadge` (deleted). Worst-of; no recipe/not in Form/ignored grey; purple when `companionPending[ref]` (set by RecipeSuggestions, so only visited positions). Not checked in a browser.
 2026-10-22 (reports #28, #30, #35, #36): TemplatesPane uses `jobLabel`; NewETModal showSpec defaults true; ETSpecEditor gets a CopyButton and a nesting caption.
