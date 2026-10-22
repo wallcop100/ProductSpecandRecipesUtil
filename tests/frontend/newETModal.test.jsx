@@ -99,3 +99,8 @@ describe('the draft survives closing and reopening', () => {
     expect(screen.getByPlaceholderText('e.g. ET-TAPE-004')).toHaveValue('ET-PROF-02')
   })
 })
+
+test('report #30: the Product Spec fields open expanded even with nothing prefilled', () => {
+  setup({ prefill: {}, importContext: null, draftKey: 'blank' })
+  expect(screen.getByPlaceholderText('e.g. Osram')).toBeInTheDocument()
+})
