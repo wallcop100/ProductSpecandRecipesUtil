@@ -231,14 +231,14 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
       const label = `TBC - ${jobLabel(s.slot)} for ${profile.ref}`
       const placeholder = elementTypes.find(e => e.Name === label)
       const addPlaceholder = () => addRow(placeholder?.ElementTypeRef || makePlaceholder(s.slot, label))
-      lines.push({ ...base, supplied: placeholder?.ElementTypeRef || 'placeholder', addLabel: placeholder ? 'Add' : 'Add placeholder',
+      lines.push({ ...base, supplied: placeholder?.ElementTypeRef || 'placeholder', addLabel: 'Add placeholder',
         add: addPlaceholder,
         // A code given here is proposed as this profile's part for the next person (datajoin _vote).
         check: profile.code ? { vkey: `${makerKey(profile.maker)}|${String(profile.code).toUpperCase()}>?|${s.slot}`, job: s.slot, placeholder: true,
           apply: (vote, code) => code ? addRow(elementTypeFor(s.slot, { code })) : addPlaceholder() } : null,
         more: options.slice(0, 12).map(o => ({ ref: o.ElementTypeRef, label: `${o.ElementTypeRef}${o.Name ? ` — ${o.Name}` : ''}`, add: () => addRow(o.ElementTypeRef) })),
         text: <>{head}<span className="text-muted"> — {profile.code ? `not known for ${profile.code}` : `${profile.ref}'s code is TBC: fill it in for the right part`}
-          {placeholder ? <>; <span className="font-monospace">{placeholder.ElementTypeRef}</span> holds its place</> : ''}</span></> })
+          {placeholder ? <>; placeholder <span className="font-monospace">{placeholder.ElementTypeRef}</span></> : ''}</span></> })
       continue
     }
     const chosen = pick[s.slot] ?? options[0]?.ElementTypeRef ?? ''

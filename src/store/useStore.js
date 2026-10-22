@@ -589,6 +589,8 @@ const useStore = create((set, get) => ({
     try {
       await window.electronAPI?.db?.clearPendingChanges?.(projectId)
       await window.electronAPI?.db?.setPref?.(projectId, 'pending_db_changes', '[]')
+      // The browser DB persists on a debounce; without this the reload restores what was discarded.
+      await window.electronAPI?.db?.flush?.()
     } catch { /* best-effort */ }
     set({ psChanges: [], rsChanges: [], dbChanges: [] })
     // The rows on screen still carry them: reopen from the workbooks.

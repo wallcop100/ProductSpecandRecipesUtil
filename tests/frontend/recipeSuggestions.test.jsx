@@ -126,7 +126,7 @@ describe('recipe suggestions', () => {
     expect(screen.queryByTestId('suggestion-kind')).toBeNull()
     // Removing it brings the line back (an Add is not a dismissal), now naming the placeholder.
     await act(async () => useStore.setState({ recipes: useStore.getState().recipes.filter(r => r.ElementTypeRef !== ph.ElementTypeRef) }))
-    expect(screen.getByTestId('suggestion-kind').textContent).toMatch(new RegExp(`${ph.ElementTypeRef} holds its place`))
+    expect(screen.getByTestId('suggestion-kind').textContent).toMatch(new RegExp(`placeholder ${ph.ElementTypeRef}`))
     fireEvent.click(screen.getByLabelText('More'))
     expect(screen.getByText(/^ET-LIN-CLIP-01/)).toBeInTheDocument()
   })

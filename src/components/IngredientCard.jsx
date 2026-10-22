@@ -207,6 +207,10 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   // contract rather than leaving the row role-less (see checkRowRole). updateRecipeRow
   // keeps each field's PascalCase twin in step (normalizeRsUpdates).
   function handleFlagChange(flag, value) {
+    if (flag !== 'isDesign' && flag !== 'isContractItem') {
+      updateRecipeRow(posRef, rowId, { [flag]: value === 'Y' ? 'Y' : null })
+      return
+    }
     if (value !== 'Y') {
       // Un-setting. If this was the row's only role, become a contract item instead of blank.
       const other = flag === 'isDesign' ? 'isContractItem' : 'isDesign'
