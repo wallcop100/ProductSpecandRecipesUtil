@@ -14,6 +14,7 @@ import ConnectorsScreen from './screens/ConnectorsScreen'
 import PatchSyncPanel from './components/PatchSyncPanel'
 import FindPalette from './components/FindPalette'
 import ErrorBoundary from './components/ErrorBoundary'
+import ConfirmHost from './components/ConfirmHost'
 
 /**
  * App — top-level screen router.
@@ -97,6 +98,7 @@ export default function App() {
       <FindPalette screen={activeScreen} />
       <PatchSyncPanel />
       <DesignPickerModal />
+      <ConfirmHost />
       <SaveShortcut />
       <UndoShortcut screen={activeScreen} />
 

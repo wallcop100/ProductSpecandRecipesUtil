@@ -53,9 +53,9 @@ export default function PatchSyncPanel() {
             : batch ? `Export ${batch.n} (${time(batch.at)}): run the patches`
               : 'Workbooks'}
         </span>
-        {batch && FILES.map((f, i) => {
-          const n = waiting(f), total = batch.counts?.[f.key] || 0
-          if (!total && !n) return null
+        {/* Numbered among the files in this batch, as the export modal numbers them. */}
+        {batch && FILES.filter(f => (batch.counts?.[f.key] || 0) || waiting(f)).map((f, i) => {
+          const n = waiting(f)
           return (
             <span key={f.key} className="d-inline-flex align-items-center gap-1" data-testid={`sync-${f.key}`} title={f.note}>
               <span className="text-muted">{i + 1}.</span> {f.label}

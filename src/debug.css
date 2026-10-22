@@ -39,3 +39,6 @@
 .companion-card .btn-info .material-icons { color: inherit !important; }
 .companion-card .btn-link { color: #7c3aed; }
 .companion-card.alert { --bs-alert-color: #212529; }
+
+/* ConfirmHost opens over other modals. */
+.confirm-backdrop { z-index: 1065 !important; }

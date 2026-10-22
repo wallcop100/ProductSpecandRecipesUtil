@@ -8,6 +8,7 @@ import { download } from '../platform/fs'
 import { useCompanion } from '../platform/companion'
 import { learnedInView } from '../platform/outcomes'
 import { C } from '../styles/tokens'
+import { askConfirm } from './ConfirmHost'
 
 /**
  * BugReporter — the alpha's bug-report mode. The bug beside ALPHA turns it on; then a
@@ -162,7 +163,7 @@ export default function BugReporter({ screen }) {
                 <MaterialIcon name="download" size={14} /> Save as .md
               </Dropdown.Item>
               <Dropdown.Divider />
-              <Dropdown.Item onClick={() => { if (window.confirm(`Delete all ${reports.length} bug reports?`)) clearBugReports() }}
+              <Dropdown.Item onClick={async () => { if (await askConfirm(`Delete all ${reports.length} bug reports?`, { ok: 'Delete', danger: true })) clearBugReports() }}
                 disabled={!reports.length} className="text-danger">
                 <MaterialIcon name="delete" size={14} /> Delete all
               </Dropdown.Item>

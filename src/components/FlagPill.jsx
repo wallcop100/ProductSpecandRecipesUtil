@@ -24,6 +24,10 @@ export default function FlagPill({ label, value, onChange, readOnly = false, act
       bg={isActive ? activeVariant : 'light'}
       text={isActive ? 'white' : 'muted'}
       onClick={handleClick}
+      {...(readOnly ? {} : {
+        role: 'switch', 'aria-checked': isActive, 'aria-label': label, tabIndex: 0,
+        onKeyDown: e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClick() } },
+      })}
       style={{
         cursor: readOnly ? 'default' : 'pointer',
         border: isActive ? 'none' : `1px solid ${C.border}`,

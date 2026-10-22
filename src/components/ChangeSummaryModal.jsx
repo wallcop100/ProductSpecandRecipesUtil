@@ -14,6 +14,7 @@ import { formWorklist } from '../utils/formSpec'
 import { ignoredPositionRefs } from '../utils/positionFamily'
 import { BLOCKING_RULES } from '../utils/validationTasks'
 import { C } from '../styles/tokens'
+import { askConfirm } from './ConfirmHost'
 
 /**
  * ChangeSummaryModal — review every pending change, then copy the patch scripts.
@@ -466,7 +467,7 @@ function BugReportsTab({ reports, copied, onCopy }) {
           <MaterialIcon name="download" size={14} /> Save .md
         </Button>
         <Button size="sm" variant="link" className="text-danger ms-auto p-0" style={{ fontSize: 12 }}
-          onClick={() => { if (window.confirm(`Delete all ${reports.length} bug reports?`)) clearBugReports() }}>
+          onClick={async () => { if (await askConfirm(`Delete all ${reports.length} bug reports?`, { ok: 'Delete', danger: true })) clearBugReports() }}>
           Delete all
         </Button>
       </div>

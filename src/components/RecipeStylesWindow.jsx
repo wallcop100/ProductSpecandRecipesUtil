@@ -10,6 +10,7 @@ import {
 import { ruleConditionsOf, ruleSpecificity, specificityText, specificityScope, compareRule, ruleMatchesRecord } from '../utils/templateRules'
 import { conditionMatches } from '../utils/tagRules'
 import { C } from '../styles/tokens'
+import { askConfirm } from './ConfirmHost'
 
 const EMPTY = { match: 'all', conditions: [] }
 const up = s => String(s ?? '').trim().toUpperCase()
@@ -195,7 +196,7 @@ export default function RecipeStylesWindow({ show, onHide, focusId = null, recor
                 <div className="d-flex gap-2 mt-3">
                   <Button size="sm" onClick={async () => { await setStyleRule(current.id, rule); setNote('Saved.') }} data-testid="save-style-rule">Save rule</Button>
                   <Button size="sm" variant="outline-danger" onClick={async () => {
-                    if (!window.confirm(`Delete the style “${current.name}”? Recipes already built stay as they are.`)) return
+                    if (!await askConfirm(`Delete the style “${current.name}”? Recipes already built stay as they are.`)) return
                     await deleteTemplate(current.id); setSel(null)
                   }}>Delete style</Button>
                 </div>

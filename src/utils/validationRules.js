@@ -16,7 +16,7 @@ import { alignmentGaps } from './specAlignment.js'
 // Ref-token vocabularies for tag-driven recipe checks. Tokens are matched as
 // hyphen-delimited segments of the (uppercased) ElementTypeRef, which avoids the
 // false positives a bare substring match would cause for short tokens like SR.
-const DRIVER_TOKENS = ['DRIVER', 'CCL', 'CCR', 'CVR']
+const DRIVER_TOKENS = ['DRIVER', 'CCL', 'CCR', 'CVR', 'PSU']
 const SOCKET_TOKENS = ['SOCK', 'SOCKET']
 const STRAIN_RELIEF_TOKENS = ['SR']
 const CONNECTOR_TOKENS = ['SOCK', 'SOCKET', 'PLUG', 'PIN']
@@ -218,6 +218,15 @@ function checkRowRole(rsRows, positionUI) {
     if (!inScope.has(posRef)) continue
     const design = (r.isDesign || r.IsDesign) === 'Y'
     const contract = (r.isContractItem || r.IsContractItem) === 'Y'
+    if (design && contract) {
+      issues.push({
+        severity: 'error',
+        rule: 'ROW_HAS_BOTH_ROLES',
+        message: `${r.ElementTypeRef || r.elementTypeRef || 'A row'} in "${posRef}" is marked both the design element and a contract item.`,
+        ref: posRef,
+      })
+      continue
+    }
     if (design || contract) continue
     issues.push({
       severity: 'error',
@@ -456,7 +465,7 @@ function checkLocalDriverRequirements(rsRows, positionUI) {
       issues.push({
         severity: 'warning',
         rule: 'LOCAL_MISSING_DRIVER',
-        message: `Local position "${ref}" has no driver (DRIVER/CCL/CCR) in its assembly.`,
+        message: `Local position "${ref}" has no driver (DRIVER/CCL/CCR/PSU) in its assembly.`,
         ref,
       })
     }

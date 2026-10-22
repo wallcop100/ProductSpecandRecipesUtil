@@ -42,6 +42,8 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
   const addPSRowForNew = useStore(s => s.addPSRow)
   // Remembered across visits (useScreenView); an explicit scrollToRef still wins below.
   const [selectedRef,  setSelectedRef]  = useScreenView('product-spec', 'selectedRef', scrollToRef || null)
+  // A new ElementType starts in the selected one's family; the modal title says so.
+  const selectedFamily = elementTypes.find(e => (e.ElementTypeRef || '').toLowerCase() === (selectedRef || '').toLowerCase())?.Family || ''
   const [bulkSelected, setBulkSelected] = useState(new Set())
   const [mergeOpen, setMergeOpen] = useState(false)
   const [leftWidth,    setLeftWidth]    = useScreenView('product-spec', 'leftWidth', 320)   // resizable browser panel
@@ -480,9 +482,9 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
       <NewETModal
         show={newEtOpen}
         onHide={() => setNewEtOpen(false)}
-        contextLabel="for the Product Spec"
+        contextLabel={selectedFamily ? `for the Product Spec, family as ${selectedRef}` : 'for the Product Spec'}
         draftKey="product-spec-new"
-        prefill={{ family: (useStore.getState().elementTypes.find(e => (e.ElementTypeRef || '').toLowerCase() === (selectedRef || '').toLowerCase())?.Family) || '' }}
+        prefill={{ family: selectedFamily }}
         onCreated={ref => {
           setNewEtOpen(false)
           // Always a spec row, so the new ElementType shows in this list straight away.

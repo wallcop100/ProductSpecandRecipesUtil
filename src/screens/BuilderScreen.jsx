@@ -49,6 +49,7 @@ import IconButton from '../components/IconButton'
 import MaterialIcon from '../components/MaterialIcon'
 import { ACTION_ICONS, ICONS } from '../utils/entityStyle'
 import { C } from '../styles/tokens'
+import { askConfirm } from '../components/ConfirmHost'
 
 /**
  * BuilderScreen — three-column layout.
@@ -562,9 +563,9 @@ export default function BuilderScreen({
               <MaterialIcon name="save_alt" size={14} /> Save project settings (.config.yaml)…
             </Dropdown.Item>
             {psChanges.length + rsChanges.length > 0 && (
-              <Dropdown.Item className="text-danger" onClick={() => {
+              <Dropdown.Item className="text-danger" onClick={async () => {
                 const n = psChanges.length + rsChanges.length
-                if (window.confirm(`Discard all ${n} unexported changes? This cannot be undone.`)) useStore.getState().discardPendingChanges()
+                if (await askConfirm(`Discard all ${n} unexported changes? This cannot be undone.`, { ok: 'Discard', danger: true })) useStore.getState().discardPendingChanges()
               }}>
                 <MaterialIcon name="delete_sweep" size={14} /> Discard unexported changes…
               </Dropdown.Item>

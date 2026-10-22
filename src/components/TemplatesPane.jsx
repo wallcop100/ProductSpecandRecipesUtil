@@ -69,6 +69,9 @@ export default function TemplatesPane({ posRef }) {
     const { combined, wrapperRefs } = positionRecipeWithWrapperInternals(recipes, posRef)
     return { rows: combined, wrapperRefs, idx: kindIndexes(proposalContext(state, library)) }
   }, [recipes, posRef, library])   // eslint-disable-line react-hooks/exhaustive-deps
+  // Report #48: the design ingredient names the position's own design ElementType, not "design element".
+  const designRef = own.rows.find(r => live(r) && (r.IsDesign || r.isDesign) === 'Y')
+  const designName = designRef && (designRef.ElementTypeRef || designRef.elementTypeRef)
   const shown = showAll ? [...matches.map(t => ({ t, fits: true })), ...others.map(t => ({ t, fits: false }))] : matches.map(t => ({ t, fits: true }))
   const alsoEmpty = t => emptyRefs.filter(r => r !== posRef && (byPos.get(r)?.matches || []).some(m => m.id === t.id))
 
@@ -143,7 +146,7 @@ export default function TemplatesPane({ posRef }) {
                   {marks[k] && (() => {
                     const [icon, color, tip] = TICK[marks[k].status] || ['warning', C.attnInk, marks[k].status === 'short' ? `Only ${marks[k].have} of ${marks[k].need}` : 'In the recipe, but in the wrong place']
                     return <span title={tip} data-testid={`tpl-${marks[k].status}`} style={{ color, marginRight: 4 }}><MaterialIcon name={icon} size={13} /></span>
-                  })()}<span style={mono}>{i.fromForm ? `from the Form (${i.fromForm})` : (i.newWrapper ? 'new wrapper' : i.slotLabel)}</span>
+                  })()}<span style={mono}>{i.fromForm ? `from the Form (${i.fromForm})` : (i.newWrapper ? 'new wrapper' : String(i.slotKey || '').startsWith('DESIGN_ELEMENT') && designName ? designName : i.slotLabel)}</span>
                   <span className="text-muted"> · {i.slotKey ? jobLabel(i.slotKey) : ''} · {i.section === 'position' ? 'position' : 'inside'}</span></div>
               ))}
             </div>

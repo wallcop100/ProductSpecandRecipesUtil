@@ -6,6 +6,7 @@ import MaterialIcon from './MaterialIcon'
 import EntityPill from './EntityPill'
 import { positionRecipeWithWrapperInternals } from '../utils/collectionStatus'
 import { C } from '../styles/tokens'
+import { askConfirm } from './ConfirmHost'
 
 /**
  * ForkPositionModal — make one or more independent copies of a position's recipe.
@@ -100,10 +101,10 @@ export default function ForkPositionModal({ show, sourceRef, onHide }) {
     })
   }
 
-  function confirm() {
+  async function confirm() {
     if (overwrites.length > 0) {
       const list = overwrites.map(t => `${t.ref} (${t.rows} row${t.rows === 1 ? '' : 's'})`).join(', ')
-      if (!window.confirm(`This will replace the existing recipe on: ${list}.\n\nContinue?`)) return
+      if (!(await askConfirm(`This will replace the existing recipe on: ${list}.\n\nContinue?`))) return
     }
     forkPosition(sourceRef, [...targets], { forkWrapper, excludeRowIds: [...excluded] })
     onHide()
