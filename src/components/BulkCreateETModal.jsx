@@ -469,7 +469,8 @@ export default function BulkCreateETModal({
                                 </div>
                               )}
                               {learned(r) && levelFor(r) !== 'sure' && (
-                                <div className="d-flex align-items-center gap-1" style={{ fontSize: 10, color: C.companion }} data-testid="family-check-chip">
+                                <div className="d-flex align-items-center gap-1 text-muted" style={{ fontSize: 10 }} data-testid="family-check-chip">
+                                  <span className="companion-dot" />
                                   {thumbs[famKey(r)] === 'rejected' ? 'Noted — move it to the right family'
                                     : thumbs[famKey(r)] ? 'Thanks' : <>
                                       learned family — right?

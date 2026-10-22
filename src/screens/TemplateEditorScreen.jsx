@@ -14,6 +14,7 @@ import {
   TEMPLATE_RULE_COLUMNS, KIND_RULE_COLUMNS, isDynamic, dynamicWords, templateRule, ruleConditionsOf, ruleIsEmpty, ruleMatchesRecord, explainRule, describeRule, EMPTY_RULE,
 } from '../utils/templateRules'
 import { C } from '../styles/tokens'
+import { askConfirm } from '../components/ConfirmHost'
 
 // Tags are obsolete as a way to pick a template: the rule uses DesignDB and kind columns.
 // Tags are obsolete, and Orion's kind columns are not schema: they show in the Dynamically Assessed Rule card.
@@ -132,7 +133,7 @@ export default function TemplateEditorScreen({ onBack }) {
 
   async function copyToMine(tpl) {
     const rule = cleanRule(templateRule({ Rule: tpl.rule }))
-    if (rule.conditions.some(isDynamic) && !window.confirm(`Copy “${tpl.name}” to your templates?\n\n${LOST_ON_COPY}`)) return
+    if (rule.conditions.some(isDynamic) && !(await askConfirm(`Copy “${tpl.name}” to your templates?\n\n${LOST_ON_COPY}`))) return
     const { _served, ...rest } = tpl
     const copy = {
       ...rest, id: uuidv4(), name: `${tpl.name} (copy)`, scope: 'global', project_id: null, projectId: null, base_template_id: null,
@@ -170,7 +171,7 @@ export default function TemplateEditorScreen({ onBack }) {
   }
 
   async function handleDelete() {
-    if (!window.confirm(`Delete template "${editState.name}"?`)) return
+    if (!(await askConfirm(`Delete template "${editState.name}"?`, { ok: 'Delete', danger: true }))) return
     await deleteTemplate(editState.id)
     setSelectedId(null)
     setEditState(null)

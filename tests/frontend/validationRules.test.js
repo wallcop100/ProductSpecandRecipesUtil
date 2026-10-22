@@ -436,6 +436,12 @@ describe('LOCAL_DRIVER_REQUIREMENTS', () => {
     expect(rules).not.toContain('LOCAL_MISSING_STRAIN_RELIEF')
   })
 
+  test('a PSU counts as the driver (5552 M1: ET-COELUX-PSU)', () => {
+    const rsRows = [makeRsRow({ elementTypeRef: 'ET-DL-SPOT-01', isDesign: 'Y' }),
+      makeRsRow({ elementTypeRef: 'ET-COELUX-PSU', isContractItem: 'Y' })]
+    expect(runValidation(dbData, [], rsRows, localUI).map(i => i.rule)).not.toContain('LOCAL_MISSING_DRIVER')
+  })
+
   /**
    * THE REAL BUG. `ET-2Pin-LIN-Socket` is a LINEAR connector, and its ref carries the
    * segment SOCKET. A project-wide "does anyone use connectors?" gate therefore saw that
@@ -745,6 +751,12 @@ describe('ROW_HAS_NO_ROLE — every row is design or contract', () => {
     const role = issues.filter(i => i.rule === 'ROW_HAS_NO_ROLE')
     expect(role).toHaveLength(1)
     expect(role[0].message).toContain('ET-C')
+  })
+
+  test('report #47: a row marked both design and contract is flagged', () => {
+    const rsRows = [makeRsRow({ elementTypeRef: 'ET-A', isDesign: 'Y', isContractItem: 'Y' })]
+    const issues = runValidation({ element_types: [] }, [], rsRows, { 'PT-DL-LOCAL-01': { tags: [] } })
+    expect(issues.filter(i => i.rule === 'ROW_HAS_BOTH_ROLES')).toHaveLength(1)
   })
 
   test('a deleted role-less row is not flagged', () => {

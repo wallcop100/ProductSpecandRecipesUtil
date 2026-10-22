@@ -24,6 +24,7 @@ import { readSheet, fileMeta } from '../utils/backend'
 import { positionPaintStatus } from '../utils/formPositions'
 import { buildRefMap, targetFor } from '../utils/ptResolve'
 import { C } from '../styles/tokens'
+import { askConfirm } from './ConfirmHost'
 
 /**
  * FormSpecPane — the Form's spec beside the recipe it produced.
@@ -382,16 +383,16 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
     })
 
     if (plan.action === 'taken') {
-      if (!window.confirm(
+      if (!(await askConfirm(
         `The Product Spec says "${p.code}" is ${plan.otherRef}, not ${ref}.\n\n` +
         `Use ${plan.otherRef} instead? (Linking it to ${ref} would not stick — the spec wins.)`
-      )) return
+      ))) return
       ref = plan.otherRef
     } else if (plan.action === 'conflict') {
-      if (!window.confirm(
+      if (!(await askConfirm(
         `${ref} is already ${plan.current.manufacturer || 'no maker'} / ${plan.current.code} in the Product Spec.\n\n` +
         `Link "${p.code}" to it anyway? The Product Spec is left as it is.`
-      )) return
+      ))) return
     } else if (plan.action === 'stamp') {
       updatePSRow(ref, plan.updates)
     }
@@ -422,8 +423,8 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
   } : {}
   // Also in the Review window (TEE8EV): its Swap / Update / Fork are the same one-click acts.
   const diffBlock = <FormDiffBlock posRef={posRef} />
-  const handleDetach = () => {
-    if (window.confirm('Detach the Form template from the whole project? Every position loses its Form comparison and the loaded Form is closed. Recipes and the Product Spec stay.')) {
+  const handleDetach = async () => {
+    if (await askConfirm('Detach the Form template from the whole project? Every position loses its Form comparison and the loaded Form is closed. Recipes and the Product Spec stay.', { ok: 'Detach', danger: true })) {
       useStore.getState().detachForm()
     }
   }

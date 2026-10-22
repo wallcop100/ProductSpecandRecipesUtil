@@ -36,6 +36,20 @@ describe('recipe make-up by job', () => {
     expect(s.posRef).toBe('C01r')
     expect(s.adds.map(a => a.job)).toEqual(['END_CAPS'])
   })
+  it('on another profile, one position\'s own extra (an emergency pack) is not offered to the rest', () => {
+    const pts = ['A1', 'A2', 'A3E']
+    const st = {
+      positionTypes: pts.map(r => ({ PositionTypeRef: r, DriverLocation: 'Remote', SecondaryPowerType: 'CV' })),
+      elementTypes: [...pts.map((p, i) => ({ ElementTypeRef: `ET-LIN-PROF-0${i + 1}`, Family: 'ET-LIN-PROF' })),
+        { ElementTypeRef: 'ET-LIN-01', Family: 'ET-LIN' }, { ElementTypeRef: 'ET-LIN-TAPE-01', Family: 'ET-LIN-TAPE' },
+        { ElementTypeRef: 'ET-EM-PACK-01', Family: 'ET-DRIVER' }],
+      psRows: [],
+      recipes: [...pts.flatMap((p, i) => [row(p, 'ET-LIN-01', 'PositionType', { IsDesign: 'Y' }),
+        row(p, 'ET-LIN-TAPE-01', 'ElementType'), row(p, `ET-LIN-PROF-0${i + 1}`, 'ElementType')]),
+        row('A3E', 'ET-EM-PACK-01', 'ElementType')],
+    }
+    expect(sameKindAs('A1', st)).toEqual([])
+  })
   it('matches a kind and lists what positions like it usually also have', () => {
     const m = positionMakeup('C05r', state)
     expect(matchKind(m, [KIND]).id).toBe(2)

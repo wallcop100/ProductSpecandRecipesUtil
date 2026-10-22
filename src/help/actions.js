@@ -22,6 +22,7 @@ import { TUTORIALS } from '../tutorial/tutorials'
 import { refNumberFix } from '../utils/specSuggest'
 import BASE_TERMS from './terms.json'
 import { mergeTerms, actionsFromTerms } from './terms'
+import { askConfirm } from '../components/ConfirmHost'
 
 const pending = s => (s.psChanges?.length || 0) + (s.rsChanges?.length || 0) + (s.dbChanges?.length || 0)
 
@@ -112,7 +113,7 @@ export const BEHAVIOUR = [
   { id: 'exp.order', run: c => c.ui('export') },
   { id: 'exp.pending', screen: 'builder', run: c => c.ui('export') },
   { id: 'exp.discard', when: s => pending(s) > 0, inPlace: true,
-    run: c => { if (window.confirm(`Discard all ${pending(c.s)} unexported changes? This cannot be undone.`)) c.s.discardPendingChanges() } },
+    run: async c => { if (await askConfirm(`Discard all ${pending(c.s)} unexported changes? This cannot be undone.`, { ok: 'Discard', danger: true })) c.s.discardPendingChanges() } },
   { id: 'exp.undo', cli: 'psr undo', inPlace: true, run: c => c.s.undo() },
   { id: 'exp.redo', cli: 'psr redo', inPlace: true, run: c => c.s.redo() },
   { id: 'exp.save', inPlace: true, run: c => c.saveNow() },

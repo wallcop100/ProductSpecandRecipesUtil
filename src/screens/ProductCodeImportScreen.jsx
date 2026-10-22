@@ -55,6 +55,7 @@ import { readOlderForm } from '../utils/olderForm'
 import { groupPositions, positionStatus, mergeCaptures, restrictCaptures } from '../utils/formPositions'
 import { diffCaptures, wrapperDivergence } from '../utils/formSpec'
 import { C } from '../styles/tokens'
+import { askConfirm } from '../components/ConfirmHost'
 
 /** Fuzzy header match: exact normalised hit first, else shortest header containing it. */
 const nh = h => String(h || '').toLowerCase().replace(/[^a-z0-9]/g, '')
@@ -552,7 +553,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
 
   /** Start again from a (new) Form spreadsheet: the ⋯ menu's Re-import. */
   async function reimport() {
-    if (rows.some(r => r.confirmed && !r.autoConfirmed) && !window.confirm('Start again from a spreadsheet? The painting and confirms on this import are dropped (anything already added to the Product Spec stays).')) return
+    if (rows.some(r => r.confirmed && !r.autoConfirmed) && !(await askConfirm('Start again from a spreadsheet? The painting and confirms on this import are dropped (anything already added to the Product Spec stays).'))) return
     // The Form being replaced becomes what the new one is compared with.
     const base = rows.length ? { name: source?.name || 'the last import', rows: rows.map(diffRow) } : compareBase
     // Pick first: cancelled, the loaded Form stays as it was (X4AN58). The saved import is
@@ -1806,8 +1807,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
               <Form.Control size="sm" value={query} onChange={e => setQuery(e.target.value)}
                 placeholder="Search rows…" aria-label="Search rows" style={{ maxWidth: 200, fontSize: 12 }} />
               {!embedded && <Button size="sm" variant="link" className="p-0" style={{ fontSize: 11 }} title="Change which columns are read"
-                onClick={() => {
-                  if (rows.some(r => r.confirmed && !r.autoConfirmed) && !window.confirm('Changing columns re-reads the rows and loses the painting and confirms. Continue?')) return
+                onClick={async () => {
+                  if (rows.some(r => r.confirmed && !r.autoConfirmed) && !(await askConfirm('Changing columns re-reads the rows and loses the painting and confirms. Continue?'))) return
                   setStep('map')
                 }}>← Columns</Button>}
               <ButtonGroup size="sm" aria-label="Show rows">

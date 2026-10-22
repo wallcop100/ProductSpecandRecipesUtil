@@ -155,6 +155,7 @@ const RULE_LABEL = {
   MISSING_IS_DESIGN: ['position has no design item', 'positions have no design item'],
   DUPLICATE_IS_DESIGN: ['position has more than one design item', 'positions have more than one design item'],
   ROW_HAS_NO_ROLE: ['row is neither design nor contract item', 'rows are neither design nor contract item'],
+  ROW_HAS_BOTH_ROLES: ['row is both design and contract item', 'rows are both design and contract item'],
   DUPLICATE_PRODUCT_CODE: ['product code is used more than once', 'product codes are used more than once'],
   MISSING_LOCKING_LEVER: ['LIN position has no locking lever', 'LIN positions have no locking lever'],
   QTY_AND_DIM_MULT: ['row has both Quantity and a multiplier', 'rows have both Quantity and a multiplier'],

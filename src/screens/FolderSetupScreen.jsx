@@ -15,6 +15,7 @@ import { ACTION_ICONS } from '../utils/entityStyle'
 import { CHANGELOG } from '../changelog'
 import BackupPanel from '../components/BackupPanel'
 import { C } from '../styles/tokens'
+import { askConfirm } from '../components/ConfirmHost'
 
 const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev'
 
@@ -131,10 +132,10 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
         : 'No DesignDB in that folder — it may have been renamed or moved.')
       return
     }
-    if (missing.length && !window.confirm(
+    if (missing.length && !(await askConfirm(
       `This config also reads ${missing.join(', ')}, which is no longer in the folder.\n\n` +
       `Open with ${dbs.join(', ')} only? Positions placed only in the missing file will look unused.`
-    )) return
+    ))) return
     await doOpenProject({
       projectNumber: p.project_number || extractProjectId(dbs[0]),
       configName: p.config_name || 'Base',
@@ -303,10 +304,10 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
 
   async function handleWipe(p) {
     const name = p.project_label || p.folder_path
-    if (!window.confirm(
+    if (!(await askConfirm(
       `Wipe “${name}” (${p.config_name})?\n\n` +
-      'Its tags, templates and unexported changes are deleted. The Excel files are never touched.'
-    )) return
+      'Its tags, templates and unexported changes are deleted. The Excel files are never touched.', { ok: 'Wipe', danger: true }
+    ))) return
     await window.electronAPI.db.deleteProject?.(p.id)
     await refresh()
   }
@@ -326,12 +327,12 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
     const plan = adoptPlan(canonical, rows.filter(r => r.id !== canonical.id))
     const kept = plan.filter(a => a.action === 'rekey').length
     const dropped = plan.filter(a => a.action === 'delete').length
-    if (!window.confirm(
+    if (!(await askConfirm(
       `Merge into “${canonical.project_label || 'this project'}”?\n\n` +
       (kept ? `${kept} copy with work in it becomes another config — nothing is lost.\n` : '') +
       (dropped ? `${dropped} empty copy is discarded.\n` : '') +
       '\nThe Excel files are never touched.'
-    )) return
+    ))) return
 
     for (const a of plan) {
       if (a.action === 'delete') {

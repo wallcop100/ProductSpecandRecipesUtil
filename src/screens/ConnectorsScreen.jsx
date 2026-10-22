@@ -17,6 +17,7 @@ import { describeParts, suggestName, isConnectorPart } from '../utils/connectorG
 import { ruleFor, templateRule, describeRule, ruleIsEmpty } from '../utils/templateRules'
 import { WagoLibrary, WagoUpgradeBanner, wagoNameOf } from '../components/GlobalConnectors'
 import { C } from '../styles/tokens'
+import { askConfirm } from '../components/ConfirmHost'
 
 /**
  * ConnectorsScreen — dedicated screen for managing virtual ElementType Collections
@@ -115,7 +116,7 @@ export default function ConnectorsScreen({ onBack, focusPosRef, onOpenPosition }
   }
 
   async function handleDelete(collectionId) {
-    if (!window.confirm('Delete this connector template? This does not modify any recipes.')) return
+    if (!(await askConfirm('Delete this connector template? This does not modify any recipes.', { ok: 'Delete', danger: true }))) return
     await deleteCollection(collectionId)
     if (selectedCollectionId === collectionId) setSelectedCollectionId(null)
     if (selectedCell?.collectionId === collectionId) setSelectedCell(null)

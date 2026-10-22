@@ -17,6 +17,7 @@ import TagDriftWizard from './TagDriftWizard'
 import { colorsForType, ICONS, ACTION_ICONS } from '../utils/entityStyle'
 import { positionFamilyOf } from '../utils/positionFamily'
 import usePositionList, { NO_FAMILY } from './usePositionList'
+import StatusPip from './StatusPip'
 import PositionRail from './PositionRail'
 import PositionListMenu from './PositionListMenu'
 import { C } from '../styles/tokens'
@@ -54,7 +55,7 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
   // Filters, sort, collapsed families and the ignored toggle are shared with the sidebar.
   const {
     view, countByRef, incompleteRefs, availableTags, isIgnored: isIgnoredPt, ignoredFamilySet,
-    active: activeVisible, ignored: ignoredVisible, groups, ignoredGroups,
+    active: activeVisible, ignored: ignoredVisible, groups, ignoredGroups, statusOf,
   } = usePositionList()
   const showTags = view.showTags
   const showIgnored = view.showIgnored
@@ -172,6 +173,7 @@ export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, s
         }}
       >
         <MaterialIcon name={ICONS.position} size={18} style={{ color: colorsForType('PositionType').accent }} title="Position" />
+        <StatusPip posRef={ref} status={statusOf(pt)} />
         <span className="fw-semibold" style={{ fontSize: 13 }}>{ref}</span>
         {name && name !== ref && <span className="text-muted" style={{ fontSize: 11 }}>{name}</span>}
         {ownIgnored && (

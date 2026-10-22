@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, within } from '@testing-library/react'
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react'
 
 // Augment jsdom's window — never replace it, or React has no DOM to render into.
 window.electronAPI = { db: { setPref: vi.fn().mockResolvedValue(undefined) } }
@@ -339,12 +339,12 @@ describe('the attached-Form strip', () => {
     expect(useStore.getState().pendingScreen).toBe('product-code-import')
   })
 
-  test('Detach confirms, then clears the captures', () => {
+  test('Detach confirms, then clears the captures', async () => {
     setup()
     openMenu()
     fireEvent.click(screen.getByText('Detach'))
     expect(window.confirm).toHaveBeenCalled()
-    expect(useStore.getState().formCaptures).toBeNull()
+    await waitFor(() => expect(useStore.getState().formCaptures).toBeNull())
   })
 
   // Detach and Re-import moved into the ⋮ menu; that menu must exist in EVERY state the

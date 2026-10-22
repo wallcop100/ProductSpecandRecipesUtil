@@ -18,6 +18,7 @@ import { familyOf } from '../utils/etRef'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { roleOf, QTY_CONFIRM_ROLES } from '../utils/recipePatterns'
 import { C } from '../styles/tokens'
+import { retiredFor } from '../platform/retired'
 import { useScreenView } from './useScreenView'
 
 /**
@@ -818,6 +819,7 @@ function FieldInput({ label, value, onChange, width = 80, type = 'text', min, st
  */
 function ProductInline({ etRef, manufacturer, productCode, onOpenProductSpec }) {
   const updatePSRow = useStore(s => s.updatePSRow)
+  const retired = useStore(s => retiredFor(s.retiredCodes, productCode))
   const [editing, setEditing] = useState(false)
   const [mfr, setMfr] = useState('')
   const [code, setCode] = useState('')
@@ -856,6 +858,11 @@ function ProductInline({ etRef, manufacturer, productCode, onOpenProductSpec }) 
         onClick={() => onOpenProductSpec && onOpenProductSpec(etRef)} title="Open in Product Spec" aria-label="Open in Product Spec">
         <MaterialIcon name="edit" size={12} style={{ color: C.faint }} />
       </button>
+      {retired && (
+        <span className="d-inline-flex align-items-center gap-1" style={{ fontSize: 10, color: C.muted }} data-testid="retired">
+          <span className="companion-dot" /> replaced by <span className="font-monospace">{retired.replacement}</span>
+        </span>
+      )}
     </span>
   )
 }

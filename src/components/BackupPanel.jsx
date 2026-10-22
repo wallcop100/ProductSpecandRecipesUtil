@@ -4,6 +4,7 @@ import MaterialIcon from './MaterialIcon'
 import { savePendingNow } from '../store/useStore'
 import { download } from '../platform/fs'
 import { makeBackup, restoreBackup, checkBackup, hasSavedWork, describeBackup } from '../platform/backup'
+import { askConfirm } from './ConfirmHost'
 
 /**
  * BackupPanel — the start page's "your work in this browser": back all of it up to a file
@@ -45,7 +46,7 @@ export default function BackupPanel({ children }) {
       if (bad) { setMsg({ ok: false, text: bad }); return }
       const when = b.createdAt ? new Date(b.createdAt).toLocaleString() : 'an unknown date'
       const ask = `Restore ${describeBackup(b)} from ${when}?` + (empty ? '' : '\n\nThis REPLACES everything saved in this browser now.')
-      if (!window.confirm(ask)) return
+      if (!(await askConfirm(ask))) return
       await restoreBackup(b)
       setMsg({ ok: true, text: 'Restored. Reloading…' })
       setTimeout(() => window.location.reload(), 800)

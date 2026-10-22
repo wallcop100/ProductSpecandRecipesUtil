@@ -80,7 +80,7 @@ export default function NewETModal({
     setMfr(prefill.manufacturer || '')
     setCode(prefill.productCode || '')
     setPsDesc(prefill.componentDescription || '')
-    setShowSpec(!!(prefill.manufacturer || prefill.productCode))
+    setShowSpec(true)
     setSaving(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show, draftKey])

@@ -167,7 +167,9 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
     const own = ownByCode(String(k.part.code || '').toUpperCase())
     return !!own && !elementTypesForJob(k.part.slot, state, idx).includes(own)
   }
-  for (const k of kits) if (!k.range && !me.jobs.has(k.part.slot) && !kitFor.has(k.part.slot) && !isOtherJob(k)) kitFor.set(k.part.slot, k)
+  // A job a "Same profile as" line already adds is not offered again from the kit or the kind.
+  const fromSame = new Set(same.flatMap(s => s.adds.map(a => a.job)))
+  for (const k of kits) if (!k.range && !me.jobs.has(k.part.slot) && !fromSame.has(k.part.slot) && !kitFor.has(k.part.slot) && !isOtherJob(k)) kitFor.set(k.part.slot, k)
   for (const [job, k] of kitFor) {
     const rule = { qty: k.qty, dim: k.dim, integer: k.integer ? 1 : 0, contract: k.contract ? 1 : 0, section: 'internal' }
     const kindSlot = kind?.slots.find(s => s.slot === job)
@@ -188,7 +190,7 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
       } })
   }
   for (const s of missing) {
-    if (kitFor.has(s.slot)) continue
+    if (kitFor.has(s.slot) || fromSame.has(s.slot)) continue
     const pct = Math.round(s.share * 100)
     const head = <>Positions like this usually also have <b>{jobLabel(s.slot)}</b>{pct < 100 ? ` (${pct}%)` : ''}{ruleText(s) ? `, ${ruleText(s)}` : ''}</>
     const base = { key: `kind|${kind.id}|${s.slot}`, kind: 'kind', icon: 'lightbulb' }
