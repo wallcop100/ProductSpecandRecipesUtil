@@ -10,7 +10,7 @@ import { proposalContext, proposalFromTemplate } from '../utils/recipeProposal'
 import { describeRule } from '../utils/templateRules'
 import { positionRecipeWithWrapperInternals } from '../utils/collectionStatus'
 import { buildPresence, ingredientPresence, wantedSlots } from '../utils/recipePresence'
-import { indexes as kindIndexes, rowJob } from '../utils/recipeKinds'
+import { indexes as kindIndexes, rowJob, jobLabel } from '../utils/recipeKinds'
 import { jobKey } from '../utils/codeJobs'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { C } from '../styles/tokens'
@@ -144,7 +144,7 @@ export default function TemplatesPane({ posRef }) {
                     const [icon, color, tip] = TICK[marks[k].status] || ['warning', C.attnInk, marks[k].status === 'short' ? `Only ${marks[k].have} of ${marks[k].need}` : 'In the recipe, but in the wrong place']
                     return <span title={tip} data-testid={`tpl-${marks[k].status}`} style={{ color, marginRight: 4 }}><MaterialIcon name={icon} size={13} /></span>
                   })()}<span style={mono}>{i.fromForm ? `from the Form (${i.fromForm})` : (i.newWrapper ? 'new wrapper' : i.slotLabel)}</span>
-                  <span className="text-muted"> · {i.slotKey || ''} · {i.section === 'position' ? 'position' : 'inside'}</span></div>
+                  <span className="text-muted"> · {i.slotKey ? jobLabel(i.slotKey) : ''} · {i.section === 'position' ? 'position' : 'inside'}</span></div>
               ))}
             </div>
             {fits && !isEmpty && <div className="text-muted fst-italic" style={{ fontSize: 11 }}>{posRef} already has a recipe.</div>}

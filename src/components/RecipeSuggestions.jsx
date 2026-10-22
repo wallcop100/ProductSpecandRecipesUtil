@@ -231,6 +231,11 @@ export default function RecipeSuggestions({ posRef }) {
   // Keys stored before dismissals were per position hid a line project-wide; they still do.
   const here = l => `${posRef}|${l.key}`
   const shown = lines.filter(l => !dismissed.has(l.key) && !dismissed.has(here(l)) && !hidden.has(here(l)))
+  const fromCompanion = shown.some(l => l.kind === 'kit' || l.kind === 'kind')
+  useEffect(() => {
+    useStore.getState().setCompanionPending(posRef, fromCompanion)
+    return () => useStore.getState().setCompanionPending(posRef, false)
+  }, [posRef, fromCompanion])
   if (!shown.length) return null
 
   function answer(l, outcome, chosen = null) {
@@ -247,7 +252,7 @@ export default function RecipeSuggestions({ posRef }) {
   }
 
   return (
-    <div className={`mb-3 px-3 py-2 rounded${shown.some(l => l.kind === 'kit' || l.kind === 'kind') ? ' companion-card' : ''}`} data-testid="recipe-suggestions" style={{ background: C.accentTint, border: `1px solid ${C.accentEdge}`, fontSize: 12 }}>
+    <div className={`mb-3 px-3 py-2 rounded${fromCompanion ? ' companion-card' : ''}`} data-testid="recipe-suggestions" style={{ background: C.accentTint, border: `1px solid ${C.accentEdge}`, fontSize: 12 }}>
       {shown.map(l => (
         <div key={l.key} className="d-flex align-items-center gap-2 py-1" data-testid={`suggestion-${l.kind}`}>
           <MaterialIcon name={l.icon} size={13} style={{ color: C.accent, flexShrink: 0 }} />

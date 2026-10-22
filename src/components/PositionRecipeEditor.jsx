@@ -10,7 +10,8 @@ import MaterialIcon from './MaterialIcon'
 import IconButton from './IconButton'
 import SharedToggle from './SharedToggle'
 import SameRecipePill from './SameRecipePill'
-import PositionValidationBadge from './PositionValidationBadge'
+import StatusPip from './StatusPip'
+import usePositionList from './usePositionList'
 import ConnectorSuggestions from './ConnectorSuggestions'
 import RecipeSuggestions from './RecipeSuggestions'
 import RecipeErrorBanner from './RecipeErrorBanner'
@@ -72,6 +73,8 @@ export default function PositionRecipeEditor({
   const [savingTemplate, setSavingTemplate] = useState(false)
 
   const ref = posRef
+  const { statusOf } = usePositionList()
+  const headerStatus = statusOf(useStore(s => s.positionTypes).find(pt => pt.PositionTypeRef === ref) || { PositionTypeRef: ref })
   const grouped = getRecipeForPosition(recipes, ref)
 
   function filterDeleted(rows) {
@@ -173,7 +176,7 @@ export default function PositionRecipeEditor({
             </Dropdown.Item>
           </Dropdown.Menu>
         </Dropdown>
-        <PositionValidationBadge posRef={ref} size={16} showOk={count > 0} />
+        <StatusPip posRef={ref} status={headerStatus} size={12} />
       </div>
 
       {/* Selection bar */}
