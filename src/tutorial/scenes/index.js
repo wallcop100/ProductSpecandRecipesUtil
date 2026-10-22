@@ -13,6 +13,7 @@ import ExportScene from './ExportScene'
 import MatrixScene from './MatrixScene'
 import TemplateScene from './TemplateScene'
 import ForkScene from './ForkScene'
+import MergeScene from './MergeScene'
 
 export const SCENES = {
   tree: TreeScene,
@@ -26,4 +27,5 @@ export const SCENES = {
   matrix: MatrixScene,
   template: TemplateScene,
   fork: ForkScene,
+  merge: MergeScene,
 }

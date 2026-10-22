@@ -339,7 +339,7 @@
    "needs": "et",
    "title": "Merge {ref} into another (same product twice)",
    "titleNoRef": "Merge an ElementType into another (same product twice)",
-   "how": "Swap the duplicate everywhere for the one to keep, then clean up the unused one.",
+   "how": "Product Spec → tick the duplicate ElementTypes → Merge…",
    "words": [
     "merge",
     "duplicate ets",

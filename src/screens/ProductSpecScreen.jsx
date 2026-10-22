@@ -9,6 +9,8 @@ import ETSpecEditor  from '../components/ETSpecEditor'
 import ChangeSummaryModal from '../components/ChangeSummaryModal'
 import IconButton from '../components/IconButton'
 import TutorialHint from '../tutorial/TutorialHint'
+import MergeETModal from '../components/MergeETModal'
+import { productKey, hasProductIdentity } from '../utils/productCodes'
 import MaterialIcon from '../components/MaterialIcon'
 import SurfaceSwitch from '../components/SurfaceSwitch'
 import { ACTION_ICONS } from '../utils/entityStyle'
@@ -41,6 +43,7 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
   // Remembered across visits (useScreenView); an explicit scrollToRef still wins below.
   const [selectedRef,  setSelectedRef]  = useScreenView('product-spec', 'selectedRef', scrollToRef || null)
   const [bulkSelected, setBulkSelected] = useState(new Set())
+  const [mergeOpen, setMergeOpen] = useState(false)
   const [leftWidth,    setLeftWidth]    = useScreenView('product-spec', 'leftWidth', 320)   // resizable browser panel
   const draggingRef = useRef(false)
 
@@ -231,6 +234,14 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
     setBulkMfrInput('')
   }
 
+  // Ticked ETs that are one product (same maker + code): the Merge… offer.
+  const mergeRefs = useMemo(() => {
+    const rows = [...bulkSelected].map(k => psRows.find(r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === k)).filter(Boolean)
+    const key = r => productKey(r.Manufacturer || r.manufacturer, r.ProductCode || r.productCode)
+    const same = rows.length > 1 && rows.every(r => key(r) === key(rows[0])) && hasProductIdentity(rows[0].ProductCode || rows[0].productCode)
+    return same ? rows.map(r => r.ElementTypeRef || r.elementTypeRef) : []
+  }, [bulkSelected, psRows])
+
   function bulkDelete() {
     for (const key of bulkSelected) {
       const ref = psRows.find(r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === key)
@@ -356,6 +367,9 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
         onHide={() => setShowChangelog(false)}
       />
 
+      <MergeETModal show={mergeOpen} refs={mergeRefs} onClose={() => setMergeOpen(false)}
+        onMerged={ref => { clearBulk(); setSelectedRef(ref) }} />
+
       {/* Bulk action bar */}
       {bulkSelected.size > 0 && (
         <div
@@ -403,6 +417,12 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
               </Popover.Body>
             </Popover>
           </Overlay>
+
+          {mergeRefs.length > 1 && (
+            <Button variant="outline-primary" size="sm" style={{ fontSize: 11 }} onClick={() => setMergeOpen(true)}>
+              Merge…
+            </Button>
+          )}
 
           <Button variant="outline-danger" size="sm" style={{ fontSize: 11 }} onClick={bulkDelete}>
             Mark IsDeleted

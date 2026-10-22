@@ -30,6 +30,7 @@ import { planCollectionBulk, effectiveActions, positionRecipeWithWrapperInternal
 import { positionFamilyOf, ignoredPositionRefs } from '../utils/positionFamily.js'
 import { alignmentGaps } from '../utils/specAlignment.js'
 import { planSwap, swapPatch } from '../utils/swapPlan.js'
+import { planMerge } from '../utils/mergePlan.js'
 import { guessCollection, missingFamilies } from '../utils/collectionGuess.js'
 import { hasProductIdentity, findProductET } from '../utils/productCodes.js'
 import { deadPositionRefs, retirableElementTypes } from '../utils/deadPositions.js'
@@ -1928,6 +1929,61 @@ const useStore = create((set, get) => ({
       if (i === 0) get().ensurePSRow(toRef)
     })
     return plan.rows.length
+  },
+
+  /**
+   * mergeElementTypes(keepRef, dropRefs, { newRef }) — the dropped ElementTypes are the same product
+   * as `keepRef`: every recipe row follows, rows that land together are summed, the drops (and their
+   * Product Spec rows) are retired, and `newRef` renames the survivor. ONE undo step.
+   * Returns the plan; nothing happens unless plan.ok (see mergePlan).
+   */
+  mergeElementTypes(keepRef, dropRefs, { newRef = '' } = {}) {
+    const plan = planMerge(get(), keepRef, dropRefs)
+    if (!plan.ok) return plan
+    const pastBefore = get().past
+    const snap = get()._historySnapshot()
+    const drops = dropRefs.filter(d => d.toLowerCase() !== keepRef.toLowerCase())
+    const patch = swapPatch(keepRef, true)
+
+    for (const r of plan.rewrites) get().updateRecipeRow(r.posRef, r._id, patch, { recordHistory: false })
+    for (const c of plan.collapses) {
+      get().updateRecipeRow(c.keepPos, c.keepId, { ...patch, Quantity: c.quantity, quantity: c.quantity }, { recordHistory: false })
+      for (const r of c.remove) get().removeRecipeRow(r.posRef, r._id, { recordHistory: false })
+    }
+    for (const r of plan.retire) get().removeRecipeRow(r.posRef, r._id, { recordHistory: false })
+
+    // Where the Form, the import session and slot mappings name a dropped ref, they name the survivor.
+    // One Form entry per ET per position: a position that had both keeps the survivor's, the other rides in merged[].
+    const lcs = s => String(s ?? '').trim().toLowerCase()
+    const isDrop = r => drops.some(d => lcs(d) === lcs(r))
+    const fc = get().formCaptures
+    if (fc?.byPosition) {
+      const byPosition = {}
+      for (const [pos, list] of Object.entries(fc.byPosition)) {
+        const out = []
+        for (const e of list) {
+          const into = isDrop(e.elementTypeRef) ? out.find(x => lcs(x.elementTypeRef) === lcs(keepRef)) : null
+          if (into) into.merged = [...(into.merged ?? []), e]
+          else out.push(isDrop(e.elementTypeRef) ? { ...e, elementTypeRef: keepRef } : e)
+        }
+        byPosition[pos] = out
+      }
+      get().saveFormCaptures({ ...fc, byPosition })?.catch?.(() => {})
+    }
+    let { importDraft, slotMappings } = get()
+    for (const d of drops) {
+      if (importDraft?.assignments) importDraft = { ...importDraft, assignments: renameRefDeep(importDraft.assignments, d, keepRef) }
+      slotMappings = renameRefDeep(slotMappings || {}, d, keepRef)
+    }
+    set({ importDraft, slotMappings })
+
+    for (const d of drops) {
+      get().deletePSRow(d, { recordHistory: false })
+      get().deleteElementType(d, { recordHistory: false })
+    }
+    if (newRef && newRef.trim() !== keepRef) get().renameElementType(keepRef, newRef.trim())
+    set({ past: [...pastBefore, snap].slice(-HISTORY_LIMIT), future: [] })
+    return plan
   },
 
   /**
