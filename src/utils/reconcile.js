@@ -83,8 +83,9 @@ function reconcileKeyed(entries = [], rows = [], { familyRefs = [], reads = null
     if (!row) {
       // A family row: the DesignDB parse files those under collection_refs, not element_types.
       if (families.has(lc(to || from))) { out.applied.push(e); continue }
-      // A soft delete: the DesignDB parse leaves IsDeleted rows out, so gone is done.
-      if (U(e.updates?.IsDeleted) === 'Y' && !e._isNew) { out.applied.push(e); continue }
+      // A soft delete: the DesignDB parse leaves IsDeleted rows out, so gone is done (a new row
+      // deleted before it was written too: report #55, it waited for ever).
+      if (U(e.updates?.IsDeleted) === 'Y') { out.applied.push(e); continue }
       out.keep.push(stripConflict(e)); continue  // a new row the file does not have yet (or a rename not run)
     }
     const states = {}, moved = {}

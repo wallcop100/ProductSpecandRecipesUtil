@@ -3790,13 +3790,7 @@ const useStore = create((set, get) => ({
 
     // Ignored positions/families are out-of-scope — drop their issues so they
     // don't count toward validation totals.
-    const ignoredFamilies = new Set(ignoredPositionFamilies)
-    const isIgnored = (ref) => {
-      if (!ref) return false
-      if (positionUI[ref]?.ignored) return true
-      const pt = positionTypes.find(p => p.PositionTypeRef === ref)
-      return pt ? ignoredFamilies.has(positionFamilyOf(pt)) : false
-    }
+    const isIgnored = (ref) => !!ref && ignoredPosRefs.has(String(ref).toLowerCase())
     const filtered = results.filter(i => !isIgnored(i.ref))
 
     set({ validationResults: filtered })
@@ -4543,7 +4537,7 @@ const useStore = create((set, get) => ({
     const { elementTypes, dbChanges, projectId } = get()
     const lc = trimmed.toLowerCase()
     const hit = elementTypes.find(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === lc)
-    if (!hit) return
+    // The browser never loads DesignDB Elements, so an unseen ET is still queued: the patch finds its row by ref.
 
     if (recordHistory) get()._pushHistory()
 
@@ -4555,7 +4549,7 @@ const useStore = create((set, get) => ({
     patch.dbChanges = mergeDbChanges(dbChanges, {
       elementTypeRef: trimmed,
       updates: { IsDeleted: 'Y' },
-      before: { IsDeleted: hit.IsDeleted ?? null },
+      before: { IsDeleted: hit?.IsDeleted ?? null },
     })
     set(patch)
 

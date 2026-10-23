@@ -213,9 +213,9 @@ export default function PositionRecipeEditor({
           </div>
         )}
         <RecipeErrorBanner />
-        <RecipeSuggestions posRef={ref} />
+        <RecipeSuggestions key={ref} posRef={ref} />
         <ConnectorSuggestions posRef={ref} />
-        <WagoSuggestion posRef={ref} inRecipe />
+        <WagoSuggestion key={ref} posRef={ref} inRecipe />
         <RecipeSection
           title="PositionType Level"
           sectionKey="position"

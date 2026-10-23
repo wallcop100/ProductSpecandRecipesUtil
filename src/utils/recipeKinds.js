@@ -114,12 +114,14 @@ export function sameKindAs(posRef, state, idx = indexes(state)) {
   const usual = k => alike.filter(o => o.jobs.has(k)).length * 2 > alike.length
   // ...and one done by the same part everywhere: a frame or fire hood that differs by fitting is made for that fitting.
   const varies = k => new Set(alike.flatMap(o => (o.jobs.get(k) || []).map(r => U(refOf(r))))).size > 1
+  const have = new Set([...me.jobs.values()].flat().map(r => U(refOf(r))))
   const family = p => U(idx.ptByRef.get(U(p))?.ParentRef ?? idx.ptByRef.get(U(p))?.parentRef)
   for (const other of alike) {
     const p = other.posRef
     const anchor = anchorOf(other, idx)
     const basis = sameAnchor(mine, anchor) ? 'profile' : 'makeup'
     const adds = [...other.jobs.entries()].filter(([k]) => !me.jobs.has(k))
+      .map(([k, rows]) => [k, rows.filter(r => !have.has(U(refOf(r))))]).filter(([, rows]) => rows.length)   // never offer a part already in this recipe, whatever job it is filed under
       .filter(([k]) => basis === 'profile' || (family(p) === family(posRef) && !FITS_PROFILE.has(k) && usual(k) && !varies(k))).map(([job, rows]) => ({ job, rows }))
     if (adds.length) out.push({ posRef: p, adds, basis, anchor })
   }
