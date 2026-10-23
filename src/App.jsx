@@ -15,9 +15,17 @@ import FindPalette from './components/FindPalette'
 import ErrorBoundary from './components/ErrorBoundary'
 import ConfirmHost from './components/ConfirmHost'
 import { APP_CHANNEL } from './utils/bugReports'
+import { C } from './styles/tokens'
 
 // The short commit this build was made from; 'local' when there is no stamp (tests, an unstamped build).
 const BUILD = (document.querySelector('meta[name="build-commit"]')?.getAttribute('content') || 'local').slice(0, 7)
+const ADJECTIVES = ['Brave', 'Bright', 'Calm', 'Clever', 'Cosy', 'Daring', 'Eager', 'Gentle', 'Glad', 'Happy', 'Jolly', 'Keen', 'Kind', 'Lucky', 'Merry', 'Mighty',
+  'Nimble', 'Noble', 'Plucky', 'Proud', 'Quick', 'Quiet', 'Sunny', 'Swift', 'Tidy', 'Trusty', 'Witty', 'Zesty', 'Bold', 'Cheery', 'Fair', 'Wise']
+const ANIMALS = ['Otter', 'Badger', 'Fox', 'Heron', 'Hare', 'Owl', 'Wren', 'Robin', 'Seal', 'Puffin', 'Lynx', 'Panda', 'Koala', 'Gecko', 'Llama', 'Bison',
+  'Falcon', 'Beaver', 'Moose', 'Newt', 'Orca', 'Raven', 'Stoat', 'Tiger', 'Walrus', 'Yak', 'Zebra', 'Dingo', 'Ferret', 'Ibex', 'Mole', 'Swan']
+// A name to say out loud for the build, picked by the commit (the hash stays beside it for tracing).
+const BUILD_NAME = /^[0-9a-f]{4}/.test(BUILD)
+  ? `${ADJECTIVES[parseInt(BUILD.slice(0, 2), 16) % 32]} ${ANIMALS[parseInt(BUILD.slice(2, 4), 16) % 32]} · ` : ''
 
 /**
  * App — top-level screen router.
@@ -96,8 +104,8 @@ export default function App() {
       {/* Dev is always red, so a dev screenshot can't pass for prod. */}
       <span data-testid="build-badge"
         style={{ position: 'fixed', bottom: 4, right: 8, zIndex: 2000, pointerEvents: 'none',
-          fontFamily: 'Arial, sans-serif', fontSize: 11, color: APP_CHANNEL === 'dev' ? '#d1242f' : '#8c959f' }}>
-        {APP_CHANNEL === 'dev' ? 'DEV · ' : ''}{BUILD}
+          fontFamily: 'Arial, sans-serif', fontSize: 11, color: APP_CHANNEL === 'dev' ? C.danger : C.muted }}>
+        {APP_CHANNEL === 'dev' ? 'DEV · ' : ''}{BUILD_NAME}{BUILD}
       </span>
       <BugReporter screen={activeScreen} />
       <FindPalette screen={activeScreen} />
