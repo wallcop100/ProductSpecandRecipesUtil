@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { execSync } from 'node:child_process'
 import pkg from './package.json'
+import names from './src/data/buildNames.json'
 
 // The commit this build is of, stamped into index.html so a served copy can be checked against the
 // repo. CI sets GITHUB_SHA; a build without .git (a Docker context) passes BUILD_COMMIT.
@@ -13,17 +14,25 @@ function buildCommit() {
 }
 
 // The tree (the files) this build is of: a "Ship dev" merge makes a new commit but keeps dev's tree, so
-// the build name (App.jsx) stays the same from dev to prod. A Docker context passes BUILD_TREE.
+// the build name stays the same from dev to prod. A Docker context passes BUILD_TREE.
 function buildTree() {
   if (process.env.BUILD_TREE) return process.env.BUILD_TREE
   try { return execSync('git rev-parse HEAD^{tree}', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() }
   catch { return 'unknown' }
 }
 
+// Positive adjective or colour + animal from the tree's first two bytes: 4,096 names, so a repeat is rare.
+// Stamped rather than worked out in the app so anything that fetches index.html (psr_bridge autodeploy) reads it.
+function buildName(tree) {
+  if (!/^[0-9a-f]{4}/.test(tree)) return ''
+  return `${names.adjectives[parseInt(tree.slice(0, 2), 16) % 64]} ${names.animals[parseInt(tree.slice(2, 4), 16) % 64]}`
+}
+
 const stampCommit = {
   name: 'stamp-commit',
   transformIndexHtml: () => [{ tag: 'meta', attrs: { name: 'build-commit', content: buildCommit() }, injectTo: 'head' },
-    { tag: 'meta', attrs: { name: 'build-tree', content: buildTree() }, injectTo: 'head' }],
+    { tag: 'meta', attrs: { name: 'build-tree', content: buildTree() }, injectTo: 'head' },
+    { tag: 'meta', attrs: { name: 'build-name', content: buildName(buildTree()) }, injectTo: 'head' }],
 }
 
 export default defineConfig({
