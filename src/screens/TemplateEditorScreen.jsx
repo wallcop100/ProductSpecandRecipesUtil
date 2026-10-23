@@ -17,13 +17,13 @@ import { C } from '../styles/tokens'
 import { askConfirm } from '../components/ConfirmHost'
 
 // Tags are obsolete as a way to pick a template: the rule uses DesignDB and kind columns.
-// Tags are obsolete, and Orion's kind columns are not schema: they show in the Dynamically Assessed Rule card.
+// Tags are obsolete, and the companion's kind columns are not schema: they show in the Dynamically Assessed Rule card.
 const RULE_COLUMNS = TEMPLATE_RULE_COLUMNS.filter(g => g.label !== 'Tags' && g !== KIND_RULE_COLUMNS)
 const LOST_ON_COPY = 'Your copy keeps the parts and any DesignDB conditions, but not the Dynamically Assessed Rule: that is '
   + "worked out by this tool from what it has learnt across projects, and only global templates can have it. Give your copy "
   + 'DesignDB conditions so it matches the positions you want.'
 
-/** Orion's taught conditions, read-only: a blue card above the editable rule. */
+/** The companion's taught conditions, read-only: a blue card above the editable rule. */
 function DynamicRule({ conditions }) {
   if (!conditions.length) return null
   return (
@@ -92,7 +92,7 @@ function CheckPosition({ refs, value, onChange, rule, rec }) {
 }
 
 /**
- * TemplateEditorScreen — Orion (read-only), this project's and personal templates. A template is a
+ * TemplateEditorScreen — the companion (read-only), this project's and personal templates. A template is a
  * recipe plus a rule (templateRules.js) saying which positions it is for, built as in CollectionEditor.
  */
 export default function TemplateEditorScreen({ onBack }) {
@@ -113,7 +113,7 @@ export default function TemplateEditorScreen({ onBack }) {
   const [saveError, setSaveError] = useState(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
 
-  const orion = templates.filter(t => t._served)
+  const served = templates.filter(t => t._served)
   const mine = templates.filter(t => !t._served && t.scope !== 'project')
   const projectTemplates = templates.filter(t => !t._served && t.scope === 'project')
 
@@ -232,7 +232,7 @@ export default function TemplateEditorScreen({ onBack }) {
           <IconButton variant="link" bsSize="sm" className="p-0" icon={ACTION_ICONS.back} title="Back to builder" onClick={onBack} />
           <span className="fw-semibold small d-inline-flex align-items-center gap-1">Manage templates <TutorialHint id="templates" /></span>
         </div>
-        {group(<>Global <MaterialIcon name="cloud" size={12} /></>, orion, 'None served.')}
+        {group(<>Global <MaterialIcon name="cloud" size={12} /></>, served, 'None served.')}
         {group('This project', projectTemplates, 'No project templates.',
           <Button variant="outline-primary" size="sm" style={{ fontSize: 11, padding: '1px 8px' }} onClick={handleNewTemplate}>+ New</Button>)}
         {group('Mine', mine, 'No personal templates.')}

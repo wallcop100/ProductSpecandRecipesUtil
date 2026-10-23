@@ -43,7 +43,7 @@ function useFits() {
 }
 
 /**
- * WagoLibrary — the company's Wago templates (Kaizen page 101097), on the Connectors
+ * WagoLibrary — the company's Wago templates (company wiki), on the Connectors
  * screen: open when the project has no templates, folded under "Add from library"
  * otherwise. Add makes the template this project's, with any ElementTypes it lacks.
  */
@@ -99,7 +99,7 @@ export function WagoLibrary() {
           </div>
         )
       })}
-      {open && <div className="text-muted px-1" style={{ fontSize: 9 }}>From Kaizen page {WAGO_PAGE.pageId}, {WAGO_PAGE.syncedAt}</div>}
+      {open && <div className="text-muted px-1" style={{ fontSize: 9 }}>Synced {WAGO_PAGE.syncedAt}</div>}
     </div>
   )
 }
@@ -261,7 +261,7 @@ export function WagoSuggestion({ posRef, inRecipe = false }) {
         <ConfirmSuggestionModal onCancel={() => setAsking(null)} onAnswer={checked}
           check={{ key: asking.key, posRef, job: 'connector set', rule: asking.why, noCode: true, unsureLabel: 'Not sure: use it',
             part: { code: globalConnectors().find(g => g.key === asking.key).parts.map(p => p.code).join(' + '), name: asking.name },
-            evidence: ['a Wago set published on Orion for positions like this', saidOf(votesOf(asking))].filter(Boolean).join('; ') }} />
+            evidence: ['a Wago set published for positions like this', saidOf(votesOf(asking))].filter(Boolean).join('; ') }} />
       )}
     </div>
   </>)

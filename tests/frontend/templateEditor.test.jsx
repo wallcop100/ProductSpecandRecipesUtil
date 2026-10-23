@@ -26,7 +26,7 @@ beforeEach(() => {
     positionTypes: [{ PositionTypeRef: 'A1', DriverLocation: 'REMOTE' }, { PositionTypeRef: 'A2', DriverLocation: 'LOCAL' }],
     positionUI: {}, recipes: [row('A1', 'ET-DL-02', { IsDesign: 'Y' })],
     templates: [
-      { id: 'served:1', name: 'Orion one', scope: 'global', _served: true, rule, ingredients: ing },
+      { id: 'served:1', name: 'Global one', scope: 'global', _served: true, rule, ingredients: ing },
       { id: 'p1', name: 'Proj one', scope: 'project', project_id: 7, rule, ingredients: ing },
     ],
   })
@@ -43,14 +43,14 @@ describe('Template editor', () => {
     expect(screen.getByTestId('check-position')).toHaveTextContent('✗ DriverLocation equals “LOCAL” — it has REMOTE')
   })
 
-  test('Orion is read-only; Copy to mine makes an editable copy', async () => {
+  test('The companion is read-only; Copy to mine makes an editable copy', async () => {
     render(<TemplateEditorScreen onBack={vi.fn()} />)
-    fireEvent.click(screen.getByText('Orion one'))
+    fireEvent.click(screen.getByText('Global one'))
     expect(screen.getByLabelText('Template name')).toBeDisabled()
     expect(screen.queryByText('Save template')).toBeNull()
     fireEvent.click(screen.getAllByText('Copy to mine')[0])
     await waitFor(() => expect(useStore.getState().templates).toHaveLength(3))
-    const copy = useStore.getState().templates.find(t => t.name === 'Orion one (copy)')
+    const copy = useStore.getState().templates.find(t => t.name === 'Global one (copy)')
     expect(copy).toMatchObject({ scope: 'global', rule })
     expect(copy._served).toBeUndefined()
     await waitFor(() => expect(screen.getByLabelText('Template name')).toBeEnabled())
@@ -58,7 +58,7 @@ describe('Template editor', () => {
 
   test('Suggest as global posts the template, only for editable ones with the feature', async () => {
     render(<TemplateEditorScreen onBack={vi.fn()} />)
-    fireEvent.click(screen.getByText('Orion one'))
+    fireEvent.click(screen.getByText('Global one'))
     expect(screen.queryByText('Suggest as global')).toBeNull()
     fireEvent.click(screen.getByText('Proj one'))
     fireEvent.click(screen.getByText('Suggest as global'))

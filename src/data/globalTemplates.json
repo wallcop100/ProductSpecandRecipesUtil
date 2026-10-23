@@ -1,12 +1,7 @@
 {
-  "_readme": "Global templates shipped with the app. Read and written by tools (n8n). Contract: docs/global-connector-templates.md. Keep each template's key stable; ship current parts only; list superseded codes under superseded (old: new). combos is the team's choice and is not on the Kaizen page.",
+  "_readme": "Global templates shipped with the app. Read and written by tools (n8n). Contract: docs/global-connector-templates.md. Keep each template's key stable; ship current parts only; list superseded codes under superseded (old: new). combos is the team's choice and is not on the wiki page.",
   "connectors": {
-    "source": {
-      "system": "Kaizen",
-      "pageId": 141527,
-      "title": "Global Templates - PSR Tool",
-      "syncedAt": "2026-10-03"
-    },
+    "source": { "syncedAt": "2026-10-03" },
     "manufacturer": "WAGO",
     "templates": [
       {

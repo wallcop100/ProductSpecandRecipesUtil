@@ -1,7 +1,7 @@
 /**
  * certainty — how sure the companion is of one suggestion, and so how much to ask of the person adding it.
  *
- *   sure     one click, as before: the project's own, Orion-confirmed, or ≥3 yes from ≥2 people and no open "no"
+ *   sure     one click, as before: the project's own, confirmed, or ≥3 yes from ≥2 people and no open "no"
  *   likely   one click, then a 👍/👎 chip that never blocks
  *   unsure   Add opens the check popup: a range-only match, a kit seen once, a placeholder, someone's
  *            correction not yet confirmed, or a pair whose latest "no" is newer than its latest yes

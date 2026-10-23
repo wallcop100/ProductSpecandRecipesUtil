@@ -59,6 +59,11 @@ export async function openProject({
   // Collections are stripped from element_types but ARE in the master list.
   const dbCollectionRefs = db_data?.collection_refs ?? []
 
+  // Beside a companion, prove this project's DesignDB is open here, so its own rows open to us.
+  const proved = projectNumber
+    ? getCompanion().then(api => api?.prove?.(projectNumber, positions)).catch(() => false)
+    : Promise.resolve(false)
+
   // Feed the tool-wide style library: how this project named its products' ElementTypes.
   // Best-effort and silent — it only ever helps a later import seed refs.
   try {
@@ -68,7 +73,7 @@ export async function openProject({
     await window.electronAPI.db.recordStyleExemplars?.(exemplars)
     // …and, beside a companion, to the library other projects learn from; and ask which of
     // this spec's codes have since been replaced. Both silent; both need nothing back.
-    if (projectNumber) getCompanion().then(api => api?.shareLibrary?.(projectNumber, exemplars))
+    if (projectNumber) proved.then(() => getCompanion()).then(api => api?.shareLibrary?.(projectNumber, exemplars))
     // What the project says as it opens is the baseline; only later edits are corrections.
     primeLearning(projectNumber, { elementTypes, psRows: ps_rows ?? [] })
     sweepCodes((ps_rows ?? []).filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
@@ -102,6 +107,8 @@ export async function openProject({
 
   // The project's configuration as last saved anywhere under this project number (beside
   // a companion; silent, bounded, configuration only — see platform/projectConfig.js).
+  // A first proof of the day reads the design server-side (up to ~15 s); never hold the open longer.
+  await Promise.race([proved, new Promise(r => setTimeout(r, 20000))])
   try { await pullConfig(projectId, projectNumber) } catch { /* open with what is here */ }
 
   // 3. Load SQLite data

@@ -37,7 +37,7 @@ async function setup(kits = [CAP], features = ['checks']) {
 const setCode = () => act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Set code' })) })
 
 describe('levelOf', () => {
-  test('own and Orion-confirmed are sure; a range guess, a one-off kit, a placeholder and an open "no" are unsure', () => {
+  test('own and confirmed are sure; a range guess, a one-off kit, a placeholder and an open "no" are unsure', () => {
     expect(levelOf({ own: true })).toBe('sure')
     expect(levelOf({ range: true, votes: { verdict: 'confirmed' } })).toBe('sure')
     expect(levelOf({ range: true })).toBe('unsure')

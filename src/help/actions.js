@@ -1,7 +1,7 @@
 /**
  * actions.js — everything Find (Ctrl+K) can do. What each action DOES lives here; what it is
  * CALLED — its title, the words people type for it, its one-line how, its area — lives in
- * help/terms.json, which Orion /psr → Find edits (live beside a companion, then a pull request).
+ * help/terms.json, which the companion admin (Find) edits (live beside a companion, then a pull request).
  *
  * Each action takes you to the place that does it, already open on the thing you named, or does it
  * on the spot. "rename ET-PS-MINI-TINI" → the Product Spec on that ElementType with its ref field
@@ -140,7 +140,7 @@ const TUTORIAL_ACTIONS = Object.entries(TUTORIALS).map(([id, t]) => ({
   how: t.intro || '', run: c => c.tutorial(id), inPlace: true, tutorial: true,
 }))
 
-/** The searchable actions: the terms (with Orion's live overrides) joined to what each action does. */
+/** The searchable actions: the terms (with the companion's live overrides) joined to what each action does. */
 export function buildActions(overrides = null) {
   const terms = mergeTerms(BASE_TERMS, overrides)
   const named = actionsFromTerms(terms).filter(a => BY_ID.has(a.id)).map(a => {

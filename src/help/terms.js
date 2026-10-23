@@ -1,6 +1,6 @@
 /**
  * terms.js — Find's words, titles and how-to text as DATA (help/terms.json), and the live changes
- * made on Orion /psr → Find laid over them. No imports: Orion's preview loads this very file (and
+ * made on the companion admin (Find) laid over them. No imports: the companion's preview loads this very file (and
  * help/search.js) from the repo, so its preview is the app's search, not a copy.
  *
  *   terms.json      { version, synonyms: { word: [means…] }, actions: { id: { area, needs, title,
@@ -20,7 +20,7 @@ export function mergeTerms(base = {}, ov = null) {
   const synonyms = { ...(base.synonyms || {}) }
   if (!ov) return { ...base, actions, synonyms }
   for (const [id, o] of Object.entries(ov.actions || {})) {
-    // An action the code no longer has: nothing to apply it to (Orion lists it as orphaned).
+    // An action the code no longer has: nothing to apply it to (the companion lists it as orphaned).
     if (!actions[id]) continue
     const t = actions[id]
     for (const f of ['title', 'titleNoRef', 'how']) if (o[f] != null && String(o[f]).trim()) t[f] = String(o[f])

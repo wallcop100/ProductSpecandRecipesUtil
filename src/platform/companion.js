@@ -16,10 +16,12 @@
  *   reports        bug reports and feature requests, sent from the bug reporter, with what was on screen
  *   jobs           what job a product does in a recipe (tape, profile, clips …), by maker + code
  *   patterns       recipe patterns from other projects, below this browser's own (recipeProposal.js)
- *   find           Find's words, titles and how-to text as changed on Orion /psr → Find, live
+ *   find           Find's words, titles and how-to text as changed on the companion admin (Find), live
  *   connectors     the Wago connector library, in place of the one bundled with the app
  *   kinds / kits   what positions like this one usually have, and the parts used with a profile:
  *                  inline suggestions in the recipe editor (RecipeSuggestions.jsx), never applied unasked
+ *   proof          a project's own rows open only to someone holding its DesignDB: `prove` sends
+ *                  salted hashes of its Positions, and the token rides on every project call
  *
  * Every call is relative to the page, so the build needs no configuration and knows nothing
  * about who answers. Failures are quiet: a companion that is down is the same as none.
@@ -38,14 +40,19 @@ async function getJson(url, init) {
   return { res, body: await res.json().catch(() => null) }
 }
 
-const post = (url, body) => getJson(url, {
-  method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+const post = (url, body, headers = {}) => getJson(url, {
+  method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body),
 })
 /** Kits from a reply: [] when there are none, null when the call failed (so a caller can tell a refusal from "nothing"). */
 const kitsOf = body => (body ? body.kits || [] : null)
 /** The JSON answer, or null on any failure. */
 const quiet = p => p.then(({ res, body }) => (res.ok ? body : null)).catch(() => null)
 const projectUrl = n => `./api/projects/${encodeURIComponent(String(n).trim())}`
+// shortcut: tokens last 12 h and are not renewed; reopening the project proves again.
+const proofs = new Map()
+const proofOf = n => (proofs.has(String(n).trim()) ? { 'X-PSR-Proof': proofs.get(String(n).trim()) } : {})
+const hex16 = async text => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)))]
+  .slice(0, 8).map(b => b.toString(16).padStart(2, '0')).join('')
 
 function build(features) {
   const has = f => features.has(f)
@@ -63,20 +70,31 @@ function build(features) {
     } : null,
     /** mode 'replace' (a project's whole harvest) or 'merge' (only these codes; `{deleted: true}` removes). */
     shareLibrary: has('library') ? (project, exemplars, mode = 'replace') =>
-      quiet(post('./api/library', { project: String(project), exemplars, mode })) : null,
+      quiet(post('./api/library', { project: String(project), exemplars, mode }, proofOf(project))) : null,
 
     /** { items: [{ id, kind, key, value, updated_at }], dialect: [...] } | null — `since` for only newer items. */
     projectItems: has('projects') ? (n, since = '') =>
-      quiet(getJson(`${projectUrl(n)}${since ? `?${new URLSearchParams({ since })}` : ''}`)) : null,
-    shareProjectItems: has('projects') ? (n, items) => quiet(post(`${projectUrl(n)}/items`, { items })) : null,
+      quiet(getJson(`${projectUrl(n)}${since ? `?${new URLSearchParams({ since })}` : ''}`, { headers: proofOf(n) })) : null,
+    shareProjectItems: has('projects') ? (n, items) => quiet(post(`${projectUrl(n)}/items`, { items }, proofOf(n))) : null,
+
+    /** Positions [{ Ref, TypeRef }] of the open DesignDB → proven? Only hashes leave, salted per ask. */
+    prove: has('proof') ? async (n, positions) => {
+      const nonce = (await quiet(getJson('./api/proof')))?.nonce
+      const pairs = [...new Set(positions.filter(p => p.Ref).map(p => `${p.Ref}|${p.TypeRef ?? ''}`))].slice(0, 15000)
+      if (!nonce || !pairs.length) return false
+      const hashes = await Promise.all(pairs.map(p => hex16(`${nonce}|${p}`)))
+      const token = (await quiet(post(`${projectUrl(n)}/proof`, { nonce, hashes })))?.token
+      if (token) proofs.set(String(n).trim(), token)
+      return !!token
+    } : null,
 
     /** What became of the learned defaults: [{ kind, key, tier, source, supplied, final, outcome }]. */
-    shareOutcomes: has('outcomes') ? (n, outcomes) => quiet(post(`${projectUrl(n)}/outcomes`, { outcomes })) : null,
+    shareOutcomes: has('outcomes') ? (n, outcomes) => quiet(post(`${projectUrl(n)}/outcomes`, { outcomes }, proofOf(n))) : null,
 
-    /** Global templates published for this app (Orion): [{ id, name, applicable_tags, ingredients, replaces }]. */
+    /** Global templates published for this app (the companion): [{ id, name, applicable_tags, ingredients, replaces }]. */
     templates: has('templates') ? async () => (await quiet(getJson('./api/recipes/templates')))?.templates || null : null,
 
-    /** A personal / project template offered to Orion, which keeps it as a draft: { name, rule, ingredients, by, project } → accepted? */
+    /** A personal / project template offered to the companion, which keeps it as a draft: { name, rule, ingredients, by, project } → accepted? */
     suggestTemplate: has('templates') ? async t => !!(await quiet(post('./api/recipes/templates/suggest', t))) : null,
 
     /** The Wago connector library (globalTemplates.json `connectors` shape), or null to keep the bundled one. */
@@ -89,7 +107,7 @@ function build(features) {
     kits: has('kits') ? async (codes, project = '') =>
       kitsOf(await quiet(post('./api/recipes/kits', { codes: codes.slice(0, 200), project: String(project || '') }))) : null,
 
-    /** Find's live term changes from Orion /psr → Find (help/terms.js overrides shape), cached a minute → object | null. */
+    /** Find's live term changes from the companion admin (Find) (help/terms.js overrides shape), cached a minute → object | null. */
     findTerms: has('find') ? (() => {
       let at = 0, last = null
       return async () => {
@@ -135,6 +153,7 @@ export function getCompanion() {
 /** Tests only: forget the probe. */
 export function resetCompanion() {
   probe = null
+  proofs.clear()
 }
 
 /** React: the companion, or null (also null until the probe answers). */

@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * kaizen-scope-examples.mjs — turn Kaizen lighting Scope Spec rows into shape examples.
+ * scope-examples.mjs — turn lighting Scope Spec rows into shape examples.
  *
- *   node scripts/kaizen-scope-examples.mjs raw1.json [raw2.json …] > examples.json
+ *   node scripts/scope-examples.mjs raw1.json [raw2.json …] > examples.json
  *   node scripts/build-code-shapes.mjs --examples examples.json
  *
- * INPUT is the saved output of this Kaizen `run_sql` (one row, `rows` = newline-joined lines of
+ * INPUT is the saved output of this design-database query (one row, `rows` = newline-joined lines of
  * `notes|ElementTypeRef|ParentRef|Name|Description`), over the lighting Scope Spec delivery
  * sheets (find_delivery "Scope Spec"; each sheet's delivery_id and pinned set_id):
  *
@@ -41,7 +41,7 @@ function familyOf(parent, ref, text) {
   // Cables share their family name with AV (ET-CABLE) and carry no lighting product code.
   if (/CABLE/.test(p)) return null
   if (canon.has(p.toLowerCase()) && !/^ET-LIN(-INGREDIENTS)?$/.test(p)) return { family: canon.get(p.toLowerCase()), from: 'family' }
-  // A linear ingredient's ref carries its keyword (Kaizen page 140959).
+  // A linear ingredient's ref carries its keyword (company wiki).
   const kw = r.match(/^ET-LIN-(TAPE|FLEX|FIXED|PROF|DIFF|CAP|CLIP|MOUNT|PLUG)\b/)
   if (kw) {
     const head = `ET-LIN-${kw[1]}`
