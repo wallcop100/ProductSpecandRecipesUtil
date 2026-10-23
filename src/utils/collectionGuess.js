@@ -139,3 +139,10 @@ export function missingFamilies(refs = [], elementTypes = [], collectionRefs = [
     .filter(fam => fam.adopts.length > 0)
     .sort((a, b) => segs(a.ref).length - segs(b.ref).length || a.ref.localeCompare(b.ref))
 }
+
+/** True when the project already has a row for this family: an ElementType or a DesignDB collection ref. */
+export function familyRowExists(family, elementTypes = [], collectionRefs = []) {
+  const f = lc(family)
+  return !!f && (collectionRefs.some(r => lc(r) === f)
+    || elementTypes.some(e => lc(e.ElementTypeRef || e.elementTypeRef) === f))
+}

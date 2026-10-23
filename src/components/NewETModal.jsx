@@ -2,6 +2,7 @@ import InfoTip from './InfoTip'
 import React, { useRef, useState, useMemo, useEffect, useId } from 'react'
 import { Modal, Button, Form } from 'react-bootstrap'
 import useStore from '../store/useStore'
+import { familyRowExists } from '../utils/collectionGuess'
 import MaterialIcon from './MaterialIcon'
 import { getNextAvailableRef } from '../utils/containerUtils'
 import { CANON_FAMILIES } from '../data/etCanon'
@@ -44,6 +45,7 @@ export default function NewETModal({
   draftKey = null,
 }) {
   const elementTypes      = useStore(s => s.elementTypes)
+  const dbCollectionRefs  = useStore(s => s.dbCollectionRefs)
   const psRows            = useStore(s => s.psRows)
   const recipes           = useStore(s => s.recipes)
   const createElementType = useStore(s => s.createElementType)
@@ -99,8 +101,8 @@ export default function NewETModal({
     return [...s].filter(Boolean).sort((a, b) => a.localeCompare(b))
   }, [elementTypes])
   // A family the project has no row for yet is created with the ElementType (GX9RLV).
-  const familyIsNew = family.trim() !== ''
-    && !elementTypes.some(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === family.trim().toLowerCase())
+  // The DesignDB parse files family rows under collection_refs, not elementTypes (#59).
+  const familyIsNew = family.trim() !== '' && !familyRowExists(family, elementTypes, dbCollectionRefs)
   // Other ElementTypes already name it as their Family, so it is not new, only missing its row.
   const familyInUse = elementTypes.some(e => (e.Family || e.family || '').trim().toLowerCase() === family.trim().toLowerCase())
   const [familyParent, setFamilyParent] = useState('')
