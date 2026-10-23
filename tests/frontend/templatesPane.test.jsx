@@ -92,6 +92,20 @@ describe('a position that already has a recipe', () => {
     expect(screen.getByTestId('tpl-add-template').title).toMatch(/LCM-25/)
   })
 
+  test('the design line reads "LIN Wrapper" with its ElementType in the pill', () => {
+    const tpl = { ...LIN, rule: { match: 'all', conditions: [{ column: 'Family', op: 'equals', value: 'LN' }] }, ingredients: [
+      { slotKey: 'DESIGN_ELEMENT', slotLabel: 'design element', section: 'position' },
+    ] }
+    setup({ templates: [tpl], positionTypes: [{ PositionTypeRef: 'L01', ParentRef: 'LN' }],
+      elementTypes: [{ ElementTypeRef: 'ET-LIN-06', Family: 'ET-LIN' }],
+      recipes: [{ PositionTypeRef: 'L01', ContextType: 'PositionType', ContextRef: 'L01', ElementTypeRef: 'ET-LIN-06', IsDesign: 'Y', _id: 'r1' }] })
+    render(<TemplatesPane posRef="L01" />)
+    const line = screen.getByTestId('tpl-line')
+    expect(line.textContent).toMatch(/LIN WrapperET-LIN-06$/)
+    expect(line.textContent).not.toMatch(/position|design element/)
+    expect(screen.getByTestId('tpl-holder').textContent).toBe('ET-LIN-06')
+  })
+
   test('report #70: a part fewer than all the template\'s positions have shows its share; Add writes the template\'s part', () => {
     const tpl = { ...LIN, rule: { match: 'all', conditions: [{ column: 'Family', op: 'equals', value: 'LN' }] }, ingredients: [
       { slotKey: 'X', slotLabel: 'ET-PROF-01', exact: true, section: 'position' },

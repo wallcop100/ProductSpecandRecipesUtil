@@ -13,7 +13,7 @@ import { buildPresence, ingredientPresence, wantedSlots } from '../utils/recipeP
 import { indexes as kindIndexes, rowJob, jobLabel, anchorOf, fitFor, positionMakeup, sectionFor } from '../utils/recipeKinds'
 import { jobKey, familyForJob } from '../utils/codeJobs'
 import { nextRef } from '../utils/etSeed'
-import { ACTION_ICONS, TYPE_COLORS } from '../utils/entityStyle'
+import { ACTION_ICONS } from '../utils/entityStyle'
 import { C } from '../styles/tokens'
 
 const mono = { fontFamily: 'monospace' }
@@ -205,15 +205,16 @@ export default function TemplatesPane({ posRef }) {
                       const [icon, color, tip] = TICK[mark.status] || ['warning', C.attnInk, mark.status === 'short' ? `Only ${mark.have} of ${mark.need}` : 'In the recipe, but in the wrong place']
                       return <span title={tip} data-testid={`tpl-${mark.status}`} style={{ color }}><MaterialIcon name={icon} size={13} /></span>
                     })()}
-                    <span style={mono}>{i.fromForm ? `from the Form (${i.fromForm})` : (i.newWrapper ? 'new wrapper' : isDesign && designName ? designName : i.slotLabel)}</span>
-                    <span className="text-muted">· {i.slotKey ? jobLabel(i.slotKey) : ''} · {i.section === 'position' ? 'position' : 'inside'}</span>
+                    <span>{i.fromForm ? `from the Form (${i.fromForm})` : i.newWrapper ? 'new wrapper'
+                      : isDesign ? (['LIN', 'DL'].includes(makeup.design) ? `${makeup.design} Wrapper` : 'design element')
+                        : i.slotKey ? jobLabel(i.slotKey) : (own.idx.etByRef.get(String(i.slotLabel).toUpperCase())?.Name || i.slotLabel)}</span>
                     {sh && sh.of > 1 && n < sh.of && (
                       <span className="ms-auto text-nowrap" style={{ fontSize: 10, color: C.muted }} data-testid="tpl-share"
                         title={`${n} of the ${sh.of} positions on this template have it`}>{n} of {sh.of} · {Math.round((100 * n) / sh.of)}%</span>
                     )}
-                    {held && !isDesign && (
-                      <span className={`${sh && sh.of > 1 && n < sh.of ? '' : 'ms-auto '}rounded-pill px-2`} style={{ ...mono, fontSize: 10, background: TYPE_COLORS.ElementType.fill, color: TYPE_COLORS.ElementType.accent }}
-                        title={codeOf(held)} data-testid="tpl-holder">{held}</span>
+                    {(held || (isDesign && designName)) && (
+                      <span className={`${sh && sh.of > 1 && n < sh.of ? '' : 'ms-auto '}rounded-pill px-2`} style={{ ...mono, fontSize: 10, background: C.refTint, color: C.refInk }}
+                        title={codeOf(held || designName)} data-testid="tpl-holder">{held || designName}</span>
                     )}
                     {t2 && (
                       <Button size="sm" variant={t2.kind === 'placeholder' ? 'outline-secondary' : 'outline-primary'}
