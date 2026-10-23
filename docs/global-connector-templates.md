@@ -7,7 +7,7 @@
 | Data, for tools | **`src/data/globalTemplates.json`** on `master` |
 | Raw URL (read) | `https://raw.githubusercontent.com/wallcop100/productspecandrecipesutil/master/src/data/globalTemplates.json` (private repo: send a token, or use the GitHub API below) |
 | GitHub API (read + write) | `GET` / `PUT https://api.github.com/repos/wallcop100/productspecandrecipesutil/contents/src/data/globalTemplates.json` |
-| Source of the connector templates | Kaizen page **101097**, "Lighting Manufacturing - Wago plugs" |
+| Source of the connector templates | the company wiki page, "Lighting Manufacturing - Wago plugs" |
 | Guard | `tests/frontend/globalConnectors.test.jsx`: the JSON must parse and match the shape below |
 | Code that reads it | `src/data/globalConnectors.js` (suggestion rules live here, not in the JSON) |
 
@@ -19,7 +19,7 @@ The JSON holds data only. One top-level key per kind of global template. Today t
 {
   "_readme": "…",
   "connectors": {
-    "source": { "system": "Kaizen", "pageId": 101097, "title": "…", "syncedAt": "YYYY-MM-DD" },
+    "source": { "syncedAt": "YYYY-MM-DD" },
     "manufacturer": "WAGO",
     "templates": [
       { "key": "5pin-dali-perm", "name": "Wago 5-pin DALI + perm", "pins": 5, "note": "…",
@@ -39,18 +39,18 @@ Rules:
 - `role` is `socket`, `plug` or `sr`. Codes 770-50x are strain reliefs; the first other code on the site side is the socket, and on the driver side the plug.
 - `pins`, plus `variant` where it is set (keep `"variant": "DALI"` on the 2-pin), make new ElementType refs such as `ET-5PIN-SOCKET` and `ET-2PIN-DALI-PLUG-SR`.
 - Ship current parts only. Replaced codes go in `superseded` (old → new). The test fails if a superseded code is in a template.
-- `combos` is the team's choice and is not on the Kaizen page. Carry it through unchanged.
+- `combos` is the team's choice and is not on the wiki page. Carry it through unchanged.
 
 ## n8n workflow
 
-1. **Trigger:** a Schedule node (e.g. daily), or a webhook if Kaizen can call one when page 101097 is saved.
-2. **Read the page:** an HTTP Request node to Kaizen for page 101097. Fill in Kaizen's page endpoint; it is not recorded here.
+1. **Trigger:** a Schedule node (e.g. daily), or a webhook if the wiki can call one when the page is saved.
+2. **Read the page:** an HTTP Request node to the wiki page. Fill in its endpoint; it is not recorded here.
 3. **Get the JSON:** an HTTP Request node, `GET …/contents/src/data/globalTemplates.json?ref=master`, using the GitHub credential. Keep `sha`, and decode `content` (base64) to JSON.
 4. **Build:** a Code node (below). It rewrites `connectors.templates` and `connectors.superseded` from the page, and keeps `key`, `combos` and everything else from the current JSON.
 5. **Changed?** An IF node: stop if nothing but `syncedAt` changed.
 6. **Propose:**
    - create the branch `n8n/global-templates-YYYYMMDD` from `master` (`POST /git/refs`);
-   - `PUT …/contents/src/data/globalTemplates.json` with `branch`, `sha`, the base64 `content` and the message "Global templates from Kaizen page 101097";
+   - `PUT …/contents/src/data/globalTemplates.json` with `branch`, `sha`, the base64 `content` and the message "Global templates from the company wiki";
    - open a pull request to `master` (`POST /pulls`).
 7. **Notify:** send the PR link to whoever approves it.
 

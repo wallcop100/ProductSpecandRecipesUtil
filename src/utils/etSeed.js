@@ -5,7 +5,7 @@
  * gets a proposal — family, ref, name, description — and the user weeds out the wrong
  * ones. Nothing here writes anything.
  *
- * THE FAMILY is one of the company's (src/data/etCanon.js — Kaizen page 1217215): ET-PS,
+ * THE FAMILY is one of the company's (src/data/etCanon.js — the company wiki): ET-PS,
  * ET-DL, ET-LIN-TAPE/FLEX/FIXED/PROF/CLIP/MOUNT, ET-DRIVER, ET-CONNECTION… The rule, first
  * match wins, each reported in `why`:
  *
@@ -33,7 +33,7 @@
  * Nothing is guessed from a maker alone: on an early project (5452) that filed every Phos
  * downlight as a remote driver, because Phos also makes a driver.
  *
- * Linear ingredient refs carry their keyword (Kaizen page 140959): a diffuser files under
+ * Linear ingredient refs carry their keyword (company wiki): a diffuser files under
  * ET-LIN-PROF but its ref is ET-LIN-DIFF-NN — `head` is that ref prefix.
  *
  * Families that do not exist yet are returned as `newFamilies`, with the canon's description

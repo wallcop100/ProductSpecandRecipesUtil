@@ -15,7 +15,7 @@ const LANES = [
   { id: 'internal', label: 'Inside wrapper', hint: 'Ships inside the DL or LIN assembly' },
 ]
 const PALETTE = Object.keys(JOB_LABEL)
-// Orion's slots say TAPE where the jobs say TAPE:tape.
+// The companion's slots say TAPE where the jobs say TAPE:tape.
 const jobOfSlot = k => (JOB_LABEL[k] ? k : JOB_LABEL[`${k}:tape`] ? `${k}:tape` : null)
 const nameOf = job => (job === 'LOCAL_DRIVER' ? 'driver (local)' : job === 'REMOTE_DRIVER' ? 'driver (remote)' : jobLabel(jobOfSlot(job) || job))
 const laneOf = i => (i.section === 'position' ? 'position' : 'internal')

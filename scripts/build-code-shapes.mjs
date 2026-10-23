@@ -11,7 +11,7 @@
  *              (and optionally "Old Item code", "…Category", "New Description"). New codes are
  *              current; old codes are marked superseded. Repeat with its own --maker.
  * --examples   a JSON list [{ maker, code, family, head }] — e.g. the output of
- *              scripts/kaizen-scope-examples.mjs (Kaizen lighting Scope Spec sheets).
+ *              scripts/scope-examples.mjs (lighting Scope Spec sheets).
  * --project    a DesignDB and its Product Spec. Each product's ElementType family is mapped
  *              to the company canon (src/data/etCanon.js) — directly, or from its name and
  *              description; products that map to nothing are skipped.
@@ -86,7 +86,7 @@ for (const { db, ps } of projects) {
   projectCount++
 }
 
-// Ready-made examples, e.g. from scripts/kaizen-scope-examples.mjs: [{ maker, code, family, head }].
+// Ready-made examples, e.g. from scripts/scope-examples.mjs: [{ maker, code, family, head }].
 for (const file of exampleFiles) {
   for (const ex of JSON.parse(fs.readFileSync(file, 'utf8'))) {
     if (ex.maker && ex.code && canon.has(String(ex.family).toLowerCase())) examples.push({ maker: ex.maker, code: ex.code, family: ex.family, head: ex.head || ex.family })

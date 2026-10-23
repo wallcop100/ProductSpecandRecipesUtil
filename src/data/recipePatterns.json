@@ -1,6 +1,6 @@
 {
  "version": 1,
- "note": "Recipe patterns from finished projects (Kaizen psr_sql). Roles, levels, flags and how many positions of each kind carry them. No product codes. Exterior = the position's family says EXTERIOR (not IP / inground).",
+ "note": "Recipe patterns from finished projects (design database). Roles, levels, flags and how many positions of each kind carry them. No product codes. Exterior = the position's family says EXTERIOR (not IP / inground).",
  "sources": [
   "4343"
  ],

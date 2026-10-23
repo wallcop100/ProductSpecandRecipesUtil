@@ -8,7 +8,7 @@
  *
  *   1. project — this project's own finished recipes of the same kind
  *   2. library — projects opened in this tool before (harvested on open)
- *   3. shipped — finished projects read from Kaizen (src/data/recipePatterns.json)
+ *   3. shipped — finished projects read from the design database (src/data/recipePatterns.json)
  *
  * A pattern is ROLES, not products: "a 5-pin socket at position level, contract item, on
  * 23 of 24 local interior downlights". Which socket is a separate question (recipeProposal).
@@ -18,7 +18,7 @@
  *   driver  — LOCAL / REMOTE / INTEGRAL / NONE, from the DesignDB's DriverLocation
  *   env     — EXT when the position's family says exterior / inground, else INT
  *
- * Rebuilding the shipped file: run `harvestPatterns`' SQL twin through Kaizen's psr_sql on a
+ * Rebuilding the shipped file: run `harvestPatterns`' SQL twin through the design database on a
  * finished project (the query is kept in the commit that added the file) and replace
  * src/data/recipePatterns.json. Pure.
  */
@@ -89,7 +89,7 @@ export function envOf(pt, parentOf = () => null) {
 }
 
 /**
- * The pattern rows of one project's recipes — the in-app twin of the Kaizen query.
+ * The pattern rows of one project's recipes — the in-app twin of the design-database query.
  * → [{ wk, dl, env, lvl: 'P'|'I', role, isDesign, isContractItem, quantity, dimQtyMultiplier,
  *      isInteger, n, of }]
  */
@@ -155,7 +155,7 @@ export function designKind(ref) {
 
 const clean = o => Object.fromEntries(Object.entries(o).filter(([, v]) => v != null && v !== ''))
 
-/** Shipped patterns (finished projects read from Kaizen). */
+/** Shipped patterns (finished projects read from the design database). */
 export const SHIPPED_PATTERNS = shipped.patterns || []
 
 /**

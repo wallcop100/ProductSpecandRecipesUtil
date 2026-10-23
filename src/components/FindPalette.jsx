@@ -20,7 +20,7 @@ import { C } from '../styles/tokens'
  * tutorials, in one list (help/actions.js, help/search.js).
  *
  * Every search ends as an outcome (beside a companion): the result picked, or nothing — which is how
- * the missing words and the features nobody can find show up on Orion. Nothing here says so.
+ * the missing words and the features nobody can find show up on the companion. Nothing here says so.
  */
 const KIND_ICON = { et: 'category', position: 'place', template: 'dashboard_customize', family: 'folder', formcode: 'description' }
 const KIND_LABEL = { et: 'ElementType', position: 'position', template: 'template', family: 'family', formcode: 'Form code' }
@@ -53,7 +53,7 @@ export default function FindPalette({ screen }) {
 
   // The store as it is when you type: read on demand, so a closed palette never re-renders with it.
   const state = show ? useStore.getState() : null
-  // The words people use, as Orion /psr → Find has them now: the built-in terms with its live changes
+  // The words people use, as the companion admin (Find) has them now: the built-in terms with its live changes
   // laid over (beside a companion; fetched when Find opens, cached a minute).
   const [overrides, setOverrides] = useState(null)
   useEffect(() => {
