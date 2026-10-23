@@ -21,6 +21,9 @@ import { C } from '../styles/tokens'
 import { retiredFor } from '../platform/retired'
 import { useScreenView } from './useScreenView'
 
+// A part's tree line in its wrapper's contents and its card when exploded share this, so one morphs into the other (#74).
+const partTransitionName = (container, ref) => `part-${`${container}-${ref}`.toLowerCase().replace(/[^a-z0-9-]/g, '-')}`
+
 /**
  * IngredientCard — a resolved recipe row with drag-to-reorder support.
  *
@@ -169,6 +172,13 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
 
   // Sticky per wrapper across positions and screens; `all` is the toolbar's expand/collapse.
   const [wrapView, setWrapView] = useScreenView('recipes', 'wrappers', {})
+  const exploded = useStore(s => s.screenView.recipes?.explode === true && s.activeContextType !== 'ElementType')
+  // Only the first card of a part takes the name; the browser drops a transition with two of one name.
+  const container = row.ContextRef || row.contextRef
+  const morphName = exploded && sectionKey !== 'position' && container && recipes.find(r =>
+    (r.PositionTypeRef || r.positionTypeRef) === posRef && (r.ContextRef || r.contextRef) === container
+    && (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === etRef.toLowerCase())?._id === rowId
+    ? partTransitionName(container, etRef) : undefined
   const wrapKey = (etRef || '').toLowerCase()
   const showContents = wrapView[wrapKey] ?? wrapView.all ?? false
   const setShowContents = f => setWrapView(v => ({ ...v, [wrapKey]: f(v[wrapKey] ?? v.all ?? false) }))
@@ -233,7 +243,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   const background = isSelected ? C.accentTint : isDeleted ? C.subtle : isNewRow ? C.subtle : isDirty ? C.attnTint : undefined
 
   return (
-    <div ref={composedRef} style={style} data-debug-id="IngredientCard">
+    <div ref={composedRef} style={{ ...style, viewTransitionName: morphName }} data-debug-id="IngredientCard">
       <Card
         // Shift-mousedown would otherwise start a text range across cards, which swallows the next shift-click.
         onMouseDownCapture={e => { if (e.shiftKey && !isTextBox(e.target)) e.preventDefault() }}
@@ -455,8 +465,8 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                 </div>
               )}
 
-              {/* Container contents (read-only) */}
-              {isContainer && (
+              {/* Container contents (read-only); exploded, they are their own section below (#74). */}
+              {isContainer && !exploded && (
                 <div className="mb-2" style={{ fontSize: 11 }}>
                   <ContentsBadge
                     count={internalItems.length}
@@ -472,7 +482,8 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                           const code = spec?.ProductCode || spec?.productCode
                           const maker = spec?.Manufacturer || spec?.manufacturer
                           return (
-                            <div key={item.ref} className="d-flex align-items-center gap-1 pb-1 position-relative" data-testid="contents-item">
+                            <div key={item.ref} className="d-flex align-items-center gap-1 pb-1 position-relative" data-testid="contents-item"
+                              style={{ viewTransitionName: partTransitionName(etRef, item.ref) }}>
                               {/* Tree branch: ├ for each part, └ on the last. */}
                               <span aria-hidden style={{ position: 'absolute', left: -10, top: 0, bottom: i === internalItems.length - 1 ? '50%' : 0, borderLeft: `1px solid ${C.faint}` }} />
                               <span aria-hidden style={{ position: 'absolute', left: -10, width: 8, top: 'calc(50% - 2px)', borderTop: `1px solid ${C.faint}` }} />

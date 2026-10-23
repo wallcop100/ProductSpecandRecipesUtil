@@ -42,3 +42,15 @@
 
 /* ConfirmHost opens over other modals. */
 .confirm-backdrop { z-index: 1065 !important; }
+
+/* Explode internals (#74): each wrapper's section inflates like a balloon, a little after the one before. */
+.balloon-in { --balloon-ms: 650ms; --balloon-gap: 90ms; animation: balloon-in var(--balloon-ms) cubic-bezier(.3, 1.4, .5, 1) both; animation-delay: calc(var(--i, 0) * var(--balloon-gap)); transform-origin: 50% 0; }
+.balloon-in .card { animation: balloon-in var(--balloon-ms) cubic-bezier(.3, 1.4, .5, 1) both; animation-delay: calc(var(--i, 0) * var(--balloon-gap) + 120ms); }
+@keyframes balloon-in {
+  0%   { opacity: 0; transform: scale(.6) translateY(8px); border-radius: 40px; }
+  55%  { opacity: 1; transform: scale(1.06) translateY(-3px); }
+  80%  { transform: scale(.98) translateY(0); }
+  100% { opacity: 1; transform: none; }
+}
+::view-transition-group(*) { animation-duration: 800ms; animation-timing-function: cubic-bezier(.3, 1.3, .5, 1); }
+@media (prefers-reduced-motion: reduce) { .balloon-in, .balloon-in .card { animation: none; } }

@@ -1,8 +1,10 @@
 import SaveTemplateModal from './SaveTemplateModal'
 import React, { useState, useEffect } from 'react'
+import { flushSync } from 'react-dom'
 import { Button, Dropdown } from 'react-bootstrap'
 import useStore, { getRecipeForPosition } from '../store/useStore'
 import RecipeSection from './RecipeSection'
+import EntityPill from './EntityPill'
 import TagBadge from './TagBadge'
 import PositionTagEditor from './PositionTagEditor'
 import TutorialHint from '../tutorial/TutorialHint'
@@ -33,6 +35,19 @@ function groupByContainer(rows) {
     map.get(ref).push(r)
   }
   return [...map.entries()].map(([contextRef, groupRows]) => ({ contextRef, rows: groupRows }))
+}
+
+// Explode/implode a recipe's wrappers (#74). The wrappers' contents trees open first, so each
+// part's tree line is what inflates into its card (and what a card shrinks back into).
+function setExploded(on, wrappers) {
+  const { setScreenView } = useStore.getState()
+  const flip = () => setScreenView('recipes', { explode: on })
+  const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  if (!document.startViewTransition || reduced) return flip()
+  if (on) flushSync(() => setScreenView('recipes', cur => ({
+    wrappers: { ...cur.wrappers, ...Object.fromEntries(wrappers.map(w => [w.toLowerCase(), true])) },
+  })))
+  document.startViewTransition(() => flushSync(flip))
 }
 
 /**
@@ -73,6 +88,8 @@ export default function PositionRecipeEditor({
   const showDeletedRows = useStore(s => s.showDeleted)
   const toggleShowDeleted = useStore(s => s.toggleShowDeleted)
   const wrappersOpen = useStore(s => s.screenView.recipes?.wrappers?.all) === true
+  const exploded = useStore(s => s.screenView.recipes?.explode) === true
+  const internals = showInternals || exploded
   const [savingTemplate, setSavingTemplate] = useState(false)
 
   const ref = posRef
@@ -81,6 +98,7 @@ export default function PositionRecipeEditor({
   const headerStatus = statusOf(pt || { PositionTypeRef: ref })
   const description = String(pt?.Description ?? '').trim()
   const grouped = getRecipeForPosition(recipes, ref)
+  const wrapperRefs = [...new Set([...grouped.dlInternal, ...grouped.linInternal].map(r => r.ContextRef || r.contextRef).filter(Boolean))]
 
   function filterDeleted(rows) {
     return showDeleted ? rows : rows.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
@@ -176,9 +194,18 @@ export default function PositionRecipeEditor({
             <Dropdown.Item onClick={toggleShowDeleted} data-testid="toggle-deleted">
               <MaterialIcon name={showDeletedRows ? ACTION_ICONS.hideDeleted : ACTION_ICONS.showDeleted} size={14} /> {showDeletedRows ? 'Hide IsDeleted rows' : 'Show IsDeleted rows'}
             </Dropdown.Item>
-            <Dropdown.Item onClick={() => useStore.getState().setScreenView('recipes', { wrappers: { all: !wrappersOpen } })}>
-              <MaterialIcon name={wrappersOpen ? 'unfold_less' : 'unfold_more'} size={14} /> {wrappersOpen ? 'Collapse' : 'Expand'} all wrappers
-            </Dropdown.Item>
+            <Dropdown.Divider />
+            <Dropdown.Header>View</Dropdown.Header>
+            {!showInternals && (
+              <Dropdown.Item onClick={() => setExploded(!exploded, wrapperRefs)} data-testid="toggle-explode">
+                <MaterialIcon name={exploded ? 'close_fullscreen' : 'open_in_full'} size={14} /> {exploded ? 'Implode' : 'Explode'} internals
+              </Dropdown.Item>
+            )}
+            {!exploded && (
+              <Dropdown.Item onClick={() => useStore.getState().setScreenView('recipes', { wrappers: { all: !wrappersOpen } })}>
+                <MaterialIcon name={wrappersOpen ? 'unfold_less' : 'unfold_more'} size={14} /> {wrappersOpen ? 'Collapse' : 'Expand'} all wrappers
+              </Dropdown.Item>
+            )}
           </Dropdown.Menu>
         </Dropdown>
         <StatusPip posRef={ref} status={headerStatus} size={12} />
@@ -235,19 +262,19 @@ export default function PositionRecipeEditor({
           onNewET={onNewET}
           onReplace={onReplace}
         />
-        {showInternals ? (
-          <>
-            {groupByContainer(filterDeleted(grouped.dlInternal)).map(g => (
-              <RecipeSection key={`dl-${g.contextRef}`} title={g.contextRef} sectionKey="dl_internal"
-                rows={g.rows} posRef={ref} onOpenProductSpec={onOpenProductSpec}
-                onAddRow={onAddRow} onNewET={onNewET} onReplace={onReplace} />
-            ))}
-            {groupByContainer(filterDeleted(grouped.linInternal)).map(g => (
-              <RecipeSection key={`lin-${g.contextRef}`} title={g.contextRef} sectionKey="lin_internal"
-                rows={g.rows} posRef={ref} onOpenProductSpec={onOpenProductSpec}
-                onAddRow={onAddRow} onNewET={onNewET} onReplace={onReplace} />
-            ))}
-          </>
+        {internals ? (
+          // One section per wrapper, named by the wrapper (the dl/lin split goes by each part's own ref).
+          groupByContainer(filterDeleted([...grouped.dlInternal, ...grouped.linInternal]))
+            .map(g => ({ ...g, lin: g.contextRef.toUpperCase().includes('LIN') }))
+            .map((g, i) => (
+              <div key={g.contextRef} className={exploded && !document.startViewTransition ? 'balloon-in' : undefined}
+                style={{ '--i': i }}>
+                <RecipeSection sectionKey={g.lin ? 'lin_internal' : 'dl_internal'}
+                  title={<span className="d-inline-flex align-items-center gap-2">{g.lin ? 'LIN' : 'DL'} Wrapper <EntityPill type="ElementType" label={g.contextRef} /></span>}
+                  rows={g.rows} posRef={ref} onOpenProductSpec={onOpenProductSpec}
+                  onAddRow={onAddRow} onNewET={onNewET} onReplace={onReplace} />
+              </div>
+            ))
         ) : (
           <div className="text-muted mb-3" style={{ fontSize: 11 }}>
             Element internals are shown read-only on each container row above — use the
