@@ -24,6 +24,8 @@ export default defineConfig({
   base: './',
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
+    // 'dev' for the build that serves the dev branch (APP_CHANNEL=dev); every other build is 'prod'.
+    __APP_CHANNEL__: JSON.stringify(process.env.APP_CHANNEL || 'prod'),
   },
   server: {
     // Fail loudly if 5173 is taken rather than silently moving to 5174.

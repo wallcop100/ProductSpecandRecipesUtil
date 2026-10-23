@@ -9,6 +9,8 @@ import { LATEST } from '../changelog'
 
 const KEY = 'bugReports'
 const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev'
+/** Which line of builds this is: 'dev' (the dev branch, before it ships) or 'prod'. */
+export const APP_CHANNEL = typeof __APP_CHANNEL__ !== 'undefined' ? __APP_CHANNEL__ : 'prod'
 const clip = (s, n = 120) => { const t = String(s ?? '').replace(/\s+/g, ' ').trim(); return t.length > n ? `${t.slice(0, n - 1)}…` : t }
 const live = r => (r.IsDeleted || r.isDeleted) !== 'Y'
 
@@ -124,6 +126,7 @@ export function buildReport({ note, kind = 'bug', target, via, state, screen, tr
     ...(kind === 'feature' ? { kind: 'feature' } : {}),
     version: APP_VERSION,
     build: LATEST?.version || null,
+    channel: APP_CHANNEL,
     ...pageContext(),
     companion: !!companion,
     ...(capture ? {
@@ -146,7 +149,7 @@ export function reportsToMarkdown(reports, { title = 'Bug reports' } = {}) {
     const a = r.app, d = r.dom
     const meta = [
       line('When', r.at?.replace('T', ' ').slice(0, 19)),
-      line('Version', [r.version, r.build && `build ${r.build}`, r.commit && `commit ${r.commit}`].filter(Boolean).join(', ')),
+      line('Version', [r.version, r.build && `build ${r.build}`, r.commit && `commit ${r.commit}`, r.channel === 'dev' && 'DEV build'].filter(Boolean).join(', ')),
       line('Host', r.host && `${r.host}${r.companion ? ' (companion)' : ''}`),
       a && line('Project', a.project),
       a && line('Screen', a.screen),
