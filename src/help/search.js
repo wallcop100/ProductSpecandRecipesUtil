@@ -15,7 +15,7 @@ const STOP = new Set(['a', 'an', 'the', 'to', 'of', 'in', 'on', 'for', 'and', 'o
   'does', 'how', 'can', 'what', 'where', 'which', 'this', 'that', 'with', 'want', 'just', 'please', 'there', 'way',
   'rather', 'than', 'one', 'some', 'be', 'get', 'onto', 'into', 'from', 'at', 'by', 'are', 'was', 'had', 'have', 'so', 'as', 'if'])
 
-// Synonyms (what people type → words the actions use) come with the terms: help/terms.json, edited on Orion.
+// Synonyms (what people type → words the actions use) come with the terms: help/terms.json, edited on the companion.
 
 const norm = s => String(s ?? '').toLowerCase()
 const tokens = s => norm(s).split(/[^a-z0-9+/×#.-]+/).map(t => t.replace(/^[-.]+|[-.]+$/g, '')).filter(t => t && !STOP.has(t))

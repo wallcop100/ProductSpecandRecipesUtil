@@ -1,7 +1,7 @@
 /**
  * globalConnectors.js — the company's Wago connector set-ups as GLOBAL connector templates.
  *
- * The data is globalTemplates.json (`connectors`), copied from Kaizen page 101097 (Lighting
+ * The data is globalTemplates.json (`connectors`), copied from the company wiki (Lighting
  * Manufacturing - Wago plugs) and rewritten by an n8n job when the page changes; see
  * docs/global-connector-templates.md. Only the page's CURRENT parts ship; superseded codes
  * are listed so an existing project's old parts are recognised, never offered.

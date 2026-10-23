@@ -4,7 +4,7 @@ import BASE from '../../src/help/terms.json'
 import { buildActions, BEHAVIOUR } from '../../src/help/actions'
 import { find } from '../../src/help/search'
 
-describe('Find terms: data, and Orion’s live changes over them', () => {
+describe('Find terms: data, and the companion’s live changes over them', () => {
   it('every action in the code has terms, and every term an action', () => {
     expect(Object.keys(BASE.actions).sort()).toEqual(BEHAVIOUR.map(b => b.id).sort())
     for (const [id, t] of Object.entries(BASE.actions)) {

@@ -1,7 +1,7 @@
 /**
  * etCanon.js — the company's lighting ElementType families, as shipped defaults.
  *
- * Source: Kaizen company KB "Element Type Ref and Naming Guide" (page 1217215, Lighting Families)
+ * Source: the company wiki "Element Type Ref and Naming Guide" (Lighting Families)
  * and "Lighting - Linear LED - Element types" (page 140959). A remote `families` dataset (see
  * docs/SEED_DATABASE_SPEC.md) replaces this list when synced; this copy only makes the tool work
  * before the first sync.

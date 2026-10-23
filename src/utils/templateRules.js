@@ -214,7 +214,7 @@ export function seedRule(rec) {
 }
 
 /**
- * Orion's taught conditions: worked out per position (its parts and design), not a DesignDB or Product Spec
+ * The companion's taught conditions: worked out per position (its parts and design), not a DesignDB or Product Spec
  * column, so nobody edits them. Only global templates carry them; a copy leaves them behind.
  */
 const DYNAMIC = new Set(['Design', 'DriverType', 'Jobs'])

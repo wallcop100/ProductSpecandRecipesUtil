@@ -24,7 +24,7 @@ const checksOf = p => (p.rows || []).filter(r => r.check || r.missing).map(r => 
 /**
  * TemplatesPane — the templates whose rule fits ONE position, in the builder's right drawer.
  * Apply is the Form-ingest method (applyTaughtTemplate / proposalFromTemplate): preview the rows
- * with this position's Form products, confirm the template is right (an outcome, so Orion learns
+ * with this position's Form products, confirm the template is right (an outcome, so the companion learns
  * from it), write in one Undo. Rows that need checking are remembered in `templateChecks`.
  */
 /**

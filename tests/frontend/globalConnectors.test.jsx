@@ -39,7 +39,6 @@ describe('the shipped global templates JSON (n8n rewrites it)', () => {
   test('it parses, is shaped, and ships no superseded code', () => {
     const json = JSON.parse(readFileSync(resolve(process.cwd(), 'src/data/globalTemplates.json'), 'utf8'))
     const c = json.connectors
-    expect(c.source.pageId).toBeTruthy()
     expect(c.source.syncedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/)
     expect(Array.isArray(c.templates) && Array.isArray(c.combos) && typeof c.superseded === 'object').toBe(true)
     const keys = new Set(c.templates.map(t => t.key))

@@ -14,7 +14,7 @@ speaks this protocol, it adds three optional features:
 | `contribution-status` | Shows contributors whether what they offered was accepted. |
 | `outcomes`      | Says what became of each default the app filled in from `projects` or `library`: kept, changed or cleared. Sent in the background at staging and at ElementType creation; nothing is shown. |
 | `reports`       | The bug reporter sends instead of saving: a bug or feature request goes straight away, with what was on screen; one that cannot be sent is kept with the browser's own bug reports, and the ▾ sends what is kept. Without it, reports are saved in the browser and copied as Markdown. |
-| `find`          | Find's words, titles, how-to text and synonyms as changed on Orion /psr → Find, laid over `src/help/terms.json` (GET `api/find/terms` → `{ overrides }`, cached a minute). Without it Find uses the built-in terms. |
+| `find`          | Find's words, titles, how-to text and synonyms as changed on the companion admin (Find), laid over `src/help/terms.json` (GET `api/find/terms` → `{ overrides }`, cached a minute). Without it Find uses the built-in terms. |
 | `jobs`          | Knows what job a product does in a recipe (tape, profile, clips …), by maker + code; it settles the ElementType family over the words. |
 | `patterns`      | Recipe patterns from other projects, in `recipePatterns.js` shape, used as precedent below this browser's own. |
 | `kinds`         | What positions like this one usually have (design, power, slots with their shares and rules). Shown as inline suggestions in the recipe editor and at the Form step; never applied unasked. |
@@ -172,7 +172,7 @@ right code, given with a "no"). The latest answer per (kind, key, origin) stands
 | `connector` | the served set's `key` |
 
 Kits, range parts, library exemplars and connector entries carry `votes: { yes, no, origins, openNo, verdict, dropped }`
-(`openNo`: a "no" newer than the last yes; `verdict`: Orion's `confirmed` or `dropped`), and kits carry `alsoWith:
+(`openNo`: a "no" newer than the last yes; `verdict`: the companion's `confirmed` or `dropped`), and kits carry `alsoWith:
 [{ code, maker_key, positions, projects }]` (other profiles the part is used with). A dropped suggestion is not served.
 How much the app asks is `src/utils/certainty.js`.
 

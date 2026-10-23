@@ -1,12 +1,12 @@
 # Templates upgrade — plan
 
-Agreed with Erik 2026-10-20. Orion's **kinds → templates** work is the basis. Every template
+Agreed with Erik 2026-10-20. The companion's **kinds → templates** work is the basis. Every template
 mechanism the app has today (tag matching, the ten built-ins, Recipe Styles, Build Recipes from Form,
 the Manage templates screen) is obsolete and goes once its replacement is in.
 
 ## Where things stand (2026-10-20)
 
-- Orion `products.db`: **68 recipe kinds** mined from 16 projects (`recipe_kinds`: design DL/LIN/PS,
+- The companion `products.db`: **68 recipe kinds** mined from 16 projects (`recipe_kinds`: design DL/LIN/PS,
   driver local/remote/integral, secondary CC/CV, defining jobs, slots, positions, projects).
 - `psr_templates`: 1 published (`LIN+Tape+Profile-r`), 2 drafts (`LIN+Flex+Mount-r`, `kind-1`). Columns:
   `applicable_tags`, `ingredients`, `replaces`, `from_kind`. **No rule.** Served at
@@ -24,19 +24,19 @@ A template is **a kind's recipe, plus a rule saying which positions it is for**.
   columns stay available. **Tags are not a rule column.**
 - Seeded from `from_kind`: `Design is LIN and DriverLocation is remote and DriverType is CV and Jobs
   has PROFILE and Jobs has TAPE`.
-- Global templates are authored on Orion. Personal and project templates are authored in the app, and
-  "Suggest to Orion" sends one there as a draft.
+- Global templates are authored on the companion. Personal and project templates are authored in the app, and
+  "Suggest globally" sends one there as a draft.
 
 ## Phases
 
 Each phase ships as its own PR with tests. The old mechanism is only removed once its replacement is in.
 
-### 1. Orion: rules and coverage (datajoin_mx)
+### 1. The companion: rules and coverage (datajoin_mx)
 - `psr_templates.rule TEXT` (JSON). Migration: seed from `from_kind`. `templates()` serves `rule`, and
   `applicable_tags`/`replaces` are dropped from the served shape.
 - /psr → Recipes: "Draft from kind" for the kinds with no template, ordered by positions. Shows the
   rule as words and lets you edit it. Publish as today.
-- `recipe_kinds.template` re-points at Orion template ids. Built-in ids are no longer referenced.
+- `recipe_kinds.template` re-points at the companion template ids. Built-in ids are no longer referenced.
 - Accept suggestions: `POST /gateway/psr/templates/suggest` → a `draft` row with `suggested_by` and
   origin project. The bridge gets `POST /api/recipes/templates/suggest` (feature `templates`).
 - **Gate:** Erik publishes enough templates to cover the main kinds before phase 3 removes anything.
@@ -62,13 +62,13 @@ Each phase ships as its own PR with tests. The old mechanism is only removed onc
 - New drawer tab `templates` (icon `dashboard_customize`) beside Form spec / Connectors /
   ElementTypes / Positions like this one. `TemplatesPane.jsx`.
 - **Matches this position** (default) and an **All templates** toggle. Each card shows name, origin
-  (Orion / project / mine), rule in words, the rows, "why not?" for non-matches.
+  (the companion / project / mine), rule in words, the rows, "why not?" for non-matches.
 - **Apply** reuses `applyTaughtTemplate` / `proposalFromTemplate`, the Form-ingest method, not a new
   one:
   1. Preview: the rows with products filled from the Form, each saying where it came from; unknowns
      marked.
   2. The person confirms the template is right for this position (recorded as an outcome, so
-     Orion learns from it).
+     the companion learns from it).
   3. Write. Rows that need checking stay flagged.
 - **N empty positions match → Apply to all**, with a preview per position and one Undo, using the
   same method.
@@ -85,9 +85,9 @@ Each phase ships as its own PR with tests. The old mechanism is only removed onc
   matrix): rule (`RuleBuilder` over kind and DesignDB columns), slot list (slot, ElementType/job,
   section, design/contract, qty, dim multiplier, integer), and "Check a position" / "why doesn't X
   match?".
-- Orion templates are read-only here. "Copy to mine" makes an editable personal copy.
+- The companion templates are read-only here. "Copy to mine" makes an editable personal copy.
 - "Save as template" from a position seeds the rule from that position's kind.
-- A subtle **Suggest to Orion** button on personal/project templates (Connected only) → phase 1
+- A subtle **Suggest globally** button on personal/project templates (Connected only) → phase 1
   endpoint.
 
 ### 7. Retire Recipe Styles and Build Recipes from Form

@@ -315,7 +315,7 @@ export function proposalFromTemplate(template, posRef, ctx) {
       }
       continue
     }
-    // A job slot (an Orion template's "PROFILE"): this position's Form product doing that job, else
+    // A job slot (a companion template's "PROFILE"): this position's Form product doing that job, else
     // the part that fits its profile, else empty and flagged. Its label is a name, never a ref.
     if (i.slotKey && !i.exact && !etRefs.has(up(i.slotLabel))) {
       const mine = base.products.filter(p => !placed.has(p.ref) && fitsSlot(jobOfRef(p.ref), i.slotKey))
