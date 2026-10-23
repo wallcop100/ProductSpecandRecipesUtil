@@ -43,6 +43,7 @@ export const RELEASES = [
       'Back up and restore all your work from the start page',
       'Tutorial cards on every pane, and right-click anything to write a bug note',
       'A steadier DesignDB patch: tree order, whole rows moved, and it runs in Office Scripts',
+      'A sent bug note names its code, and the build name in the corner says which version you are on',
     ],
   },
 ]
