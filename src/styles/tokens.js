@@ -30,6 +30,9 @@ export const C = {
   dangerInk:  '#842029',
   // companion purple — anything learned from or linked to the companion
   companion:  '#8b5cf6',
+  // quiet lavender for an ElementType ref pill in a list: reads as a label, not a call to action
+  refTint:    '#f0ecfb',
+  refInk:     '#5b3fa8',
   // ✓ only
   success:    '#198754',
 }
