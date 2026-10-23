@@ -72,6 +72,9 @@ describe('deleting from inside a shared wrapper', () => {
     renderRow(SHARED[2])
     fireEvent.click(screen.getByTitle(/Mark IsDeleted/))
     expect(screen.getByText(/Fork for C01r/)).toBeTruthy()
+    // #73: changing it for everyone is the default; Fork is the secondary choice
+    expect(screen.getByText('Delete from all').className).toMatch(/btn-primary/)
+    expect(screen.getByText(/Fork for C01r/).closest('button').className).toMatch(/btn-outline-secondary/)
   })
 
   test('Cancel does nothing at all', () => {

@@ -66,11 +66,12 @@ export default function SharedEditGuard({
       <Modal.Footer className="d-flex justify-content-between">
         <Button variant="link" size="sm" className="text-muted px-0" onClick={onCancel}>Cancel</Button>
         <div className="d-flex gap-2">
-          <Button variant="outline-danger" size="sm" onClick={onProceed}>
-            {v.proceed}
-          </Button>
-          <Button variant="primary" size="sm" className="d-inline-flex align-items-center gap-1" onClick={onFork}>
+          <Button variant="outline-secondary" size="sm" className="d-inline-flex align-items-center gap-1" onClick={onFork}>
             <MaterialIcon name="call_split" size={14} /> Fork for {posRef}
+          </Button>
+          {/* The usual intent is to change the assembly for everyone (#73); forking is the exception. */}
+          <Button variant="primary" size="sm" autoFocus onClick={onProceed}>
+            {v.proceed}
           </Button>
         </div>
       </Modal.Footer>
