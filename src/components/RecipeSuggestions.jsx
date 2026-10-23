@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Button, Dropdown, Form } from 'react-bootstrap'
+import { membership } from '../utils/connectorGroups'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { useCompanion } from '../platform/companion'
@@ -106,7 +107,15 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
   const same = useMemo(() => sameKindAs(posRef, state, idx).slice(0, 1), [posRef, idx])        // eslint-disable-line react-hooks/exhaustive-deps
   const kind = useMemo(() => matchKind(me, kinds || []), [me, kinds])
   const missing = useMemo(() => usuallyMissing(me, kind), [me, kind])
-  const connectors = useMemo(() => usualConnectors(me, kind, state, idx), [me, kind, idx])   // eslint-disable-line react-hooks/exhaustive-deps
+  // A connector template (or "Not this template") is the authority on this position's connectors: the kind's usual set only guesses.
+  const etCollections = useStore(s => s.etCollections)
+  const connectorPins = useStore(s => s.connectorPins)
+  const connectorExcludes = useStore(s => s.connectorExcludes)
+  const templated = useMemo(() => {
+    const m = membership([posRef], etCollections, connectorPins, useStore.getState()._templateRecOf(), connectorExcludes).get(posRef)
+    return !!m && (m.templates.length > 0 || !!m.pinnedTo || Object.values(connectorExcludes || {}).some(r => r.includes(posRef)))
+  }, [posRef, etCollections, connectorPins, connectorExcludes])
+  const connectors = useMemo(() => (templated ? null : usualConnectors(me, kind, state, idx)), [templated, me, kind, idx])   // eslint-disable-line react-hooks/exhaustive-deps
 
   // The profile / channel this recipe is built on: its kit and its range are looked up by maker + code.
   const profile = useMemo(() => anchorOf(me, idx), [me, idx])
