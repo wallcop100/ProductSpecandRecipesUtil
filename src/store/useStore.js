@@ -15,7 +15,7 @@ import { planFamilyMove } from '../utils/etSeed.js'
 import { reconcileAll, stampExported, hasUnexported } from '../utils/reconcile.js'
 import { jobOf, linearWrapperFamily } from '../utils/codeJobs.js'
 import { loadReports, saveReports } from '../utils/bugReports.js'
-import { connectorSignature, templateParts, partsToIngredients, diffParts, isConnectorPart, DEFAULT_CONNECTOR_FAMILIES, sortParts, signatureKey, membership } from '../utils/connectorGroups.js'
+import { connectorSignature, templateParts, partsToIngredients, diffParts, isConnectorPart, DEFAULT_CONNECTOR_FAMILIES, sortParts, signatureKey, membership, signatures } from '../utils/connectorGroups.js'
 import { globalConnector, setConnectorLibrary, suggestRef, partName, sectionOf, supersededBy, WAGO } from '../data/globalConnectors.js'
 import { templateRecords, templateRule, specificityScope } from '../utils/templateRules.js'
 
@@ -2914,12 +2914,15 @@ const useStore = create((set, get) => ({
       || c.positionUI !== positionUI || c.connectorFamilies !== connectorFamilies || c.formCaptures !== formCaptures) {
       const opts = get()._connectorOpts()
       const map = templateRecords({ positionTypes, recipes, psRows, elementTypes, positionUI, formCaptures, isConnector: ref => isConnectorPart(ref, opts) })
-      templateRecCache = { positionTypes, recipes, psRows, elementTypes, positionUI, connectorFamilies, formCaptures, map, scope: specificityScope(map.values()) }
+      templateRecCache = { positionTypes, recipes, psRows, elementTypes, positionUI, connectorFamilies, formCaptures, map,
+        scope: specificityScope(map.values()), sigs: signatures(positionTypes, recipes, opts) }
     }
     const map = templateRecCache.map
     const recOf = ref => map.get(ref) || { Tags: positionUI[ref]?.tags || [] }
     // What a template rule's specificity is measured against: the whole project.
     recOf.scope = templateRecCache.scope
+    // Each position's connectors: what membership decides between matching templates by (#66).
+    recOf.sigs = templateRecCache.sigs
     return recOf
   },
 

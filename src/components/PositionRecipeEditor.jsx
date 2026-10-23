@@ -77,7 +77,9 @@ export default function PositionRecipeEditor({
 
   const ref = posRef
   const { statusOf } = usePositionList()
-  const headerStatus = statusOf(useStore(s => s.positionTypes).find(pt => pt.PositionTypeRef === ref) || { PositionTypeRef: ref })
+  const pt = useStore(s => s.positionTypes).find(p => p.PositionTypeRef === ref)
+  const headerStatus = statusOf(pt || { PositionTypeRef: ref })
+  const description = String(pt?.Description ?? '').trim()
   const grouped = getRecipeForPosition(recipes, ref)
 
   function filterDeleted(rows) {
@@ -125,7 +127,7 @@ export default function PositionRecipeEditor({
   return (
     <div style={outerStyle} data-debug-id="PositionRecipeEditor">
       {/* Header */}
-      <div className="d-flex align-items-center gap-2 px-3 py-2 border-bottom bg-white" style={{ flexShrink: 0 }}>
+      <div className={`d-flex align-items-center gap-2 px-3 py-2 bg-white${description ? '' : ' border-bottom'}`} style={{ flexShrink: 0 }}>
         {showBack && (
           <IconButton variant="outline-secondary" bsSize="sm" style={{ fontSize: 11 }}
             icon={ACTION_ICONS.back} title={backTitle} onClick={onBack} />
@@ -181,6 +183,12 @@ export default function PositionRecipeEditor({
         </Dropdown>
         <StatusPip posRef={ref} status={headerStatus} size={12} />
       </div>
+      {/* The DesignDB's own words for the position (#67). */}
+      {description && (
+        <div className="px-3 pb-2 border-bottom bg-white text-muted fst-italic" style={{ flexShrink: 0, fontSize: 12, marginTop: -4 }} data-testid="position-description">
+          {description}
+        </div>
+      )}
 
       {/* Selection bar */}
       {selectedRowIds.length > 0 && (
