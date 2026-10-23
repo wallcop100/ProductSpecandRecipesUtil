@@ -89,3 +89,10 @@ test('a queued new row with no ContextRef leaves the queue: it can never be writ
   expect(r.rs.keep).toEqual([])
   expect(r.rs.dropped).toEqual([phantom])
 })
+
+it('report #55: a DesignDB ET created then deleted does not wait once the file lacks it', () => {
+  const e = { elementTypeRef: 'ET-GONE', updates: { Name: 'x', IsDeleted: 'Y' }, before: {}, _isNew: true, batch: 1, exported: { Name: 'x', IsDeleted: 'Y' } }
+  const r = reconcileAll({ db: [e] }, { elementTypes: [], collectionRefs: [] })
+  expect(r.db.keep).toEqual([])
+  expect(r.db.applied).toEqual([e])
+})
