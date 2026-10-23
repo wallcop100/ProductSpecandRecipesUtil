@@ -64,6 +64,7 @@ function kitsFor(companion, anchor, project) {
   }
   return mine.get(key)
 }
+const chipMemory = new Map()   // `${project}|${posRef}` → chips
 const DISMISSED = n => `psr-suggestions-dismissed:${n || '-'}`
 export function readDismissed(n) {
   try { return new Set(JSON.parse(localStorage.getItem(DISMISSED(n)) || '[]')) } catch { return new Set() }
@@ -91,7 +92,10 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
   const [pick, setPick] = useState({})
   const [hidden, setHidden] = useState(() => new Set())   // × — for now, this position
   const [asking, setAsking] = useState(null)              // the line whose Add is waiting on the check popup
-  const [chips, setChips] = useState([])                  // added likely lines: "Is this right? 👍 👎"
+  // Added likely lines: "Is this right? 👍 👎". Kept per position past a remount, so a redo finds them (#72).
+  const chipKey = `${projectNumber}|${posRef}`
+  const [chips, setChipsHere] = useState(() => chipMemory.get(chipKey) || [])
+  const setChips = f => setChipsHere(cs => { const next = f(cs); chipMemory.set(chipKey, next); return next })
   useEffect(() => {
     const reread = () => setDismissed(readDismissed(projectNumber))
     reread()
@@ -301,7 +305,9 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
     if (watch) useStore.getState().setCompanionPending(posRef, fromCompanion)   // the visible copy starts empty and would blink the pip off
     // No reset on unmount: a watcher handing over to the open editor would wipe the pip the editor still shows.
   }, [posRef, fromCompanion, watch])
-  if (watch || (!shown.length && !chips.length)) return null
+  // A chip stands while its part does: an undo brings the line back instead, a redo the chip.
+  const standing = kitsLoaded ? chips.filter(c => !lines.some(l => l.key === c.key)) : []
+  if (watch || (!shown.length && !standing.length)) return null
 
   const checks = !!companion?.features?.has?.('checks')
   const strip = key => key.replace(/^(same|kit|kind|tbc|connector)\|/, '')
@@ -355,7 +361,7 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
   const range = kits.filter(k => k.range).map(k => k.part)
 
   return (
-    <div className={`mb-3 px-3 py-2 rounded${fromCompanion || chips.length ? ' companion-card' : ''}`} data-testid="recipe-suggestions" style={{ background: C.accentTint, border: `1px solid ${C.accentEdge}`, fontSize: 12 }}>
+    <div className={`mb-3 px-3 py-2 rounded${fromCompanion || standing.length ? ' companion-card' : ''}`} data-testid="recipe-suggestions" style={{ background: C.accentTint, border: `1px solid ${C.accentEdge}`, fontSize: 12 }}>
       {shown.map(l => (
         <div key={l.key} className="d-flex align-items-center gap-2 py-1" data-testid={`suggestion-${l.kind}`} data-source={SOURCE[l.kind]}>
           <MaterialIcon name={l.icon} size={13} style={{ color: C.accent, flexShrink: 0 }} />
@@ -381,7 +387,7 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
           </Button>
         </div>
       ))}
-      {chips.map(l => (
+      {standing.map(l => (
         <div key={`chip|${l.key}`} className="d-flex align-items-center gap-2 py-1 text-muted" data-testid="suggestion-check-chip">
           <MaterialIcon name="fact_check" size={13} style={{ color: C.companion, flexShrink: 0 }} />
           <span style={{ flex: 1 }}>{l.kind === 'tbc' ? 'Set' : 'Added'} <span className="font-monospace">{l.check.part?.code || l.supplied}</span>.

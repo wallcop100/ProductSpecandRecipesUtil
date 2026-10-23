@@ -152,10 +152,11 @@ export function describeParts(parts) {
  * pins: { [collectionId]: [posRef] }. recOf(pos) → the position's record
  * (templateRules.templateRecords), or a bare tag list (read as { Tags }).
  *
- * A pin wins. Otherwise every template whose rule matches is a candidate and the MOST
- * SPECIFIC rule wins (templateRules.mostSpecific, measured against `scope`, which defaults
- * to recOf.scope — the store's recOf carries the whole project); the ones it beats are
- * `alsoMatched`. Two equally specific winners are a clash.
+ * A pin wins. Otherwise every template whose rule matches is a candidate. With the
+ * project's connectors (recOf.sigs, as the store's recOf carries) the evidence decides
+ * (byEvidence); without them the MOST SPECIFIC rule wins (templateRules.mostSpecific,
+ * measured against `scope`, which defaults to recOf.scope). The ones beaten are
+ * `alsoMatched`; winners left level are a clash.
  */
 export function membership(positionRefs, collections, pins = {}, recOf = () => [], excludes = {}, scope = recOf?.scope) {
   const pinnedTo = new Map()
@@ -176,10 +177,43 @@ export function membership(positionRefs, collections, pins = {}, recOf = () => [
     const cands = (collections || [])
       .filter(c => !removed(c.CollectionId, pos) && filterMatches(c, rec, { hasPins: (pins?.[c.CollectionId] || []).length > 0 }))
       .map(c => ({ id: c.CollectionId, rule: templateRule(c) }))
-    const { winners, beaten } = mostSpecific(cands, scope)
+    const { winners, beaten } = recOf?.sigs && cands.length > 1
+      ? byEvidence(pos, cands, collections, recOf, pins)
+      : mostSpecific(cands, scope)
     out.set(pos, { templates: winners, pinnedTo: null, clash: winners.length > 1, alsoMatched: beaten })
   }
   return out
+}
+
+/**
+ * Several templates' rules hold for one position (#66): what the project is doing decides,
+ * not how specific the rules are. A ruled template beats an apply-everywhere one; then the
+ * template nearest this position's own connectors; then the one more positions are built
+ * exactly like. When neither tells them apart, all are winners and offered equally.
+ * recOf.sigs: Map(posRef → connector parts), as the store's recOf carries.
+ */
+function byEvidence(pos, cands, collections, recOf, pins) {
+  const tpl = id => (collections || []).find(c => c.CollectionId === id)
+  const best = (list, score) => {
+    const s = new Map(list.map(c => [c.id, score(c)]))
+    const top = Math.max(...s.values())
+    const lead = list.filter(c => s.get(c.id) === top)
+    return lead.length < list.length ? lead : list
+  }
+  let alive = best(cands, c => (ruleIsEmpty(c.rule) ? 0 : 1))
+  const have = recOf.sigs.get(pos) || []
+  if (have.length) alive = best(alive, c => -diffSize(diffParts(have, templateParts(tpl(c.id)))))
+  alive = best(alive, c => {
+    const key = signatureKey(templateParts(tpl(c.id)))
+    let n = 0
+    for (const [ref, parts] of recOf.sigs) {
+      if (ref !== pos && signatureKey(parts) === key
+        && filterMatches(tpl(c.id), recOf(ref), { hasPins: (pins?.[c.id] || []).length > 0 })) n++
+    }
+    return n
+  })
+  const winners = alive.map(c => c.id)
+  return { winners, beaten: cands.filter(c => !winners.includes(c.id)).map(c => c.id) }
 }
 
 /**

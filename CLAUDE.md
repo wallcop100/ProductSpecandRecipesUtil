@@ -63,6 +63,10 @@ curl -s https://wallcop100.github.io/ProductSpecandRecipesUtil/ | grep -o 'build
 - (2026-10-22) The browser app never loads the DesignDB's Elements or LinksMap, so it cannot tell whether an ElementType is placed there. Anything that retires ETs (merge, #29) must warn instead of check.
 - (2026-10-22) Position status is ONE pip (`StatusPip`, levels from `utils/positionHealth.js`) in the rail and the recipe header; it replaced the grey symbols of 2026-10-20, which existed because status had been shown three ways. Add new status signals to `positionHealth`, not as another icon. A purple pip needs `RecipeSuggestions` mounted (it sets `companionPending`), so only visited positions show it.
 
+- (2026-10-23) Sibling components keyed by position need distinct keys (`suggest|${ref}`, `wago|${ref}`). Two `key={ref}` siblings left a stale suggestion card mounted (#71).
+- (2026-10-23) Anything that decides which connector template applies takes `membership()`, never the bare rule; `connectorGapsForPosition` without `member` falls back to every matching rule (#54). With the store's `recOf` (it carries `.sigs`) membership decides by what positions carry, and a tie is a clash; rule specificity only decides without `.sigs` (#66).
+- (2026-10-23) Never put a suggestion rule that names several alternative sets on a template: whichever is used first claims every position the rule matches (#66).
+
 - (2026-10-21) Companion-sourced UI (kits, kinds, served templates, other-project codes) is purple: `.companion-card` (glistening outline) for a card, `.companion-dot` for a lone item, never both (`src/debug.css`, `C.companion`). `!important` on a `background` shorthand pins `background-position`, so the glisten animates a registered `--glisten` angle instead.
 - (2026-10-17) `.gitignore` has `*.md`, so `CLAUDE.md`, `STATE.md`, `AGENTS.md` are untracked unless force-added.
 - (2026-10-17) `openwiki/quickstart.md` has ~38 broken `../` links; use `openwiki/index.md` instead.

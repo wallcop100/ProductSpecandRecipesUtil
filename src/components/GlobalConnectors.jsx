@@ -106,7 +106,9 @@ export function WagoLibrary() {
 
 /**
  * WagoSuggestion — in the drawer, for a position with no template: the Wago template its
- * control and driver location suggest, with Use (the others as "or …").
+ * control and driver location suggest, with Use (the others as "or …"). When several fit,
+ * the one more of this project's positions are built like leads; with no such lead they are
+ * offered side by side (#66). A rule two sets share is never put on either's template.
  */
 export function WagoSuggestion({ posRef, inRecipe = false }) {
   const served = useStore(s => s.library?.connectors)
@@ -118,14 +120,16 @@ export function WagoSuggestion({ posRef, inRecipe = false }) {
   const [busy, setBusy] = useState(false)
   const rec = groups.recOf(posRef)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const sugg = useMemo(() => suggestConnectors(rec), [rec])
-  const [pick, setPick] = useState(0)
+  const all = useMemo(() => suggestConnectors(rec), [rec])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const plans = useMemo(() => all.map(o => planGlobalConnector(o.key)), [all, etCollections, psRows])
+  const sugg = all.filter((_, i) => plans[i])
+  const planOf = o => plans[all.indexOf(o)]
+  const [pick, setPick] = useState(null)
   const companion = useCompanion()
   const projectNumber = useStore(st => st.projectNumber)
-  const [asking, setAsking] = useState(false)
+  const [asking, setAsking] = useState(null)              // the option being checked
   const [chip, setChip] = useState(null)                 // { name, key, voted }: a served set used, "is this right?"
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const plan = useMemo(() => (sugg[pick] ? planGlobalConnector(sugg[pick].key) : null), [sugg, pick, etCollections, psRows])
   const vote = (key, v, note = null) => shareOutcomes(companion, projectNumber, [{ kind: 'connector', key: String(key), tier: 'connector',
     source: '', supplied: String(key), final: v === 'rejected' ? null : String(key), outcome: v, note }])
   const thumb = v => { setChip(c => ({ ...c, voted: v })); vote(chip.key, v) }
@@ -145,67 +149,119 @@ export function WagoSuggestion({ posRef, inRecipe = false }) {
   )
   // In the recipe editor only where this project's recipes already use connectors, and this position has no template yet.
   const m = groups.members.get(posRef)
-  if (!sugg.length || !plan || (inRecipe && (!groups.sigs.size || m?.templates.length || m?.clash))) return chipCard || null
-  const s = sugg[pick]
-  const others = groups.scoped.filter(pt => pt.PositionTypeRef !== posRef
-    && suggestConnectors(groups.recOf(pt.PositionTypeRef))[0]?.key === s.key).length
-  // A served set is voted on by its id (datajoin `connectors()` serves its `votes`); the bundle is not.
-  const votes = served && companion ? [...WAGO_COMBOS, ...WAGO_TEMPLATES].find(e => e.key === s.key)?.votes : null
-
-  async function apply() {
-    setBusy(true)
-    try { await applyGlobalConnector(s.key, { posRefs: [posRef], rule: pick === 0 ? s.rule : null }) } finally { setBusy(false) }
+  if (!sugg.length || (inRecipe && (!groups.sigs.size || m?.templates.length || m?.clash))) return chipCard || null
+  // What the project does (#66), by product code: the set this position already carries most
+  // of leads; failing that, the one most other positions carry most of.
+  const codeOf = new Map((psRows || []).map(r => [String(r.ElementTypeRef || r.elementTypeRef || '').toLowerCase(), String(r.ProductCode || '').toUpperCase()]))
+  const setCodes = sugg.map(o => globalConnectors().find(g => g.key === o.key).parts.map(p => String(p.code).toUpperCase()))
+  const carried = ref => {
+    const have = new Set((groups.sigs.get(ref) || []).map(p => codeOf.get(p.ref.toLowerCase())).filter(Boolean))
+    return setCodes.map(cs => cs.filter(c => have.has(c)).length)
   }
-  async function use() {
+  const strictBest = ns => { const top = Math.max(...ns); return top > 0 && ns.filter(n => n === top).length === 1 ? ns.indexOf(top) : null }
+  const own = carried(posRef)
+  const counts = sugg.map(() => 0)
+  for (const r of groups.sigs.keys()) {
+    const i = r === posRef ? null : strictBest(carried(r))
+    if (i != null) counts[i]++
+  }
+  const lead = sugg.length === 1 ? 0 : strictBest(own) ?? strictBest(counts)
+  const cur = pick ?? lead
+  // A rule that suggests several sets would hand every position it matches to whichever was used first.
+  const ruleFor = o => (all.filter(x => x.why === o.why).length === 1 ? o.rule : null)
+  const othersFor = o => groups.scoped.filter(pt => pt.PositionTypeRef !== posRef
+    && suggestConnectors(groups.recOf(pt.PositionTypeRef))[0]?.key === o.key).length
+  // A served set is voted on by its id (datajoin `connectors()` serves its `votes`); the bundle is not.
+  const votesOf = o => (served && companion ? [...WAGO_COMBOS, ...WAGO_TEMPLATES].find(e => e.key === o.key)?.votes : null)
+
+  async function apply(o) {
+    setBusy(true)
+    try { await applyGlobalConnector(o.key, { posRefs: [posRef], rule: ruleFor(o) }) } finally { setBusy(false) }
+  }
+  async function use(o) {
     if (served && companion) {
+      const votes = votesOf(o)
       const level = levelOf({ votes, projects: 2 }, !!companion?.features?.has?.('checks'))
-      if (level === 'unsure' && mayAsk(projectNumber, `connector|${s.key}`, votes)) { setAsking(true); return }
-      if (level !== 'sure') setChip({ key: s.key, name: plan.collection?.Name || s.name })
+      if (level === 'unsure' && mayAsk(projectNumber, `connector|${o.key}`, votes)) { setAsking(o); return }
+      if (level !== 'sure') setChip({ key: o.key, name: planOf(o).collection?.Name || o.name })
     }
-    await apply()
+    await apply(o)
   }
   function checked(v, { note }) {
-    setAsking(false)
-    noteAsked(projectNumber, `connector|${s.key}`, votes, v)
-    vote(s.key, v, note)
-    if (v !== 'rejected') apply()
+    const o = asking
+    setAsking(null)
+    noteAsked(projectNumber, `connector|${o.key}`, votesOf(o), v)
+    vote(o.key, v, note)
+    if (v !== 'rejected') apply(o)
   }
+  const useButton = o => (
+    <Button size="sm" variant="primary" className="py-0" style={{ fontSize: 10 }} disabled={busy} onClick={() => use(o)} data-testid="wago-use">Use</Button>
+  )
+  const reportButton = (
+    <Button size="sm" variant="link" className="text-muted p-0" style={{ fontSize: 10 }} data-testid="report-suggestion" title="Report a problem with this suggestion"
+      onClick={e => useStore.getState().requestBugNote(e.currentTarget.closest('[data-testid="wago-suggestion"]'))}><MaterialIcon name="flag" size={13} /></Button>
+  )
+  const s = cur == null ? null : sugg[cur]
+  const plan = s && planOf(s)
+  const creates = o => planOf(o).parts.filter(p => !planOf(o).collection && p.action === 'create')
 
   return (<>
     {chipCard}
     <div className={`p-2 rounded mb-2${served ? ' companion-card' : ''}`} style={{ background: C.accentTint, border: `1px solid ${C.accentEdge}` }} data-testid="wago-suggestion" data-source={served ? 'companion' : 'app'}>
-      <div className="d-flex align-items-center gap-1">
-        <MaterialIcon name="auto_awesome" size={13} style={{ color: C.accent }} />
-        <span style={{ flex: 1 }}>Suggested: <strong>{plan.collection?.Name || s.name}</strong></span>
-        <Button size="sm" variant="primary" className="py-0" style={{ fontSize: 10 }} disabled={busy} onClick={use} data-testid="wago-use">Use</Button>
-        <Button size="sm" variant="link" className="text-muted p-0" style={{ fontSize: 10 }} data-testid="report-suggestion" title="Report a problem with this suggestion"
-          onClick={e => useStore.getState().requestBugNote(e.currentTarget.closest('[data-testid="wago-suggestion"]'))}><MaterialIcon name="flag" size={13} /></Button>
-      </div>
-      <div className="text-muted" style={{ fontSize: 10 }}>
-        {s.why}
-        {plan.collection && plan.collection.Name !== s.name ? <> · the project's {s.name}</> : null}
-        {pick === 0 && others > 0 ? <> · suits {others} other position{others === 1 ? '' : 's'} too</> : null}
-      </div>
-      <div className="mt-1"><CodePills parts={globalConnectors().find(g => g.key === s.key).parts} /></div>
-      {!plan.collection && plan.parts.some(p => p.action === 'create') && (
-        <div className="text-muted" style={{ fontSize: 10 }} title={plan.parts.filter(p => p.action === 'create').map(p => p.ref).join('\n')}>
-          Use adds {plan.parts.filter(p => p.action === 'create').length} ElementType{plan.parts.filter(p => p.action === 'create').length === 1 ? '' : 's'} to the Product Spec
+      {s ? (<>
+        <div className="d-flex align-items-center gap-1">
+          <MaterialIcon name="auto_awesome" size={13} style={{ color: C.accent }} />
+          <span style={{ flex: 1 }}>Suggested: <strong>{plan.collection?.Name || s.name}</strong></span>
+          {useButton(s)}
+          {reportButton}
         </div>
-      )}
-      {sugg.length > 1 && (
-        <div className="d-flex flex-wrap align-items-center gap-1 mt-1" style={{ fontSize: 10 }}>
-          <span className="text-muted">or</span>
-          {sugg.map((o, i) => i !== pick && (
-            <span key={o.key} role="button" className="rounded-pill px-2" style={{ ...pill, fontFamily: undefined }}
-              onClick={() => setPick(i)} data-testid="wago-alt">{o.name.replace(/^Wago /, '')}</span>
-          ))}
+        <div className="text-muted" style={{ fontSize: 10 }}>
+          {s.why}
+          {plan.collection && plan.collection.Name !== s.name ? <> · the project's {s.name}</> : null}
+          {own[cur] > 0 ? <> · {posRef} has {own[cur]} of its parts</> : null}
+          {counts[cur] > 0 ? <> · {counts[cur]} other position{counts[cur] === 1 ? ' uses' : 's use'} it</> : null}
+          {ruleFor(s) && othersFor(s) > 0 ? <> · suits {othersFor(s)} other position{othersFor(s) === 1 ? '' : 's'} too</> : null}
         </div>
-      )}
+        <div className="mt-1"><CodePills parts={globalConnectors().find(g => g.key === s.key).parts} /></div>
+        {creates(s).length > 0 && (
+          <div className="text-muted" style={{ fontSize: 10 }} title={creates(s).map(p => p.ref).join('\n')}>
+            Use adds {creates(s).length} ElementType{creates(s).length === 1 ? '' : 's'} to the Product Spec
+          </div>
+        )}
+        {sugg.length > 1 && (
+          <div className="d-flex flex-wrap align-items-center gap-1 mt-1" style={{ fontSize: 10 }}>
+            <span className="text-muted">or</span>
+            {sugg.map((o, i) => i !== cur && (
+              <span key={o.key} role="button" className="rounded-pill px-2" style={{ ...pill, fontFamily: undefined }}
+                onClick={() => setPick(i)} data-testid="wago-alt">{o.name.replace(/^Wago /, '')}</span>
+            ))}
+          </div>
+        )}
+      </>) : (<>
+        {/* Nothing in the project picks one: each is offered the same way. */}
+        <div className="d-flex align-items-center gap-1">
+          <MaterialIcon name="call_split" size={13} style={{ color: C.accent }} />
+          <span style={{ flex: 1 }}>{sugg.length} Wago sets fit {posRef} ({sugg[0].why}); nothing in the project picks one</span>
+          {reportButton}
+        </div>
+        {sugg.map(o => (
+          <div key={o.key} className="mt-1 pt-1 border-top" data-testid="wago-option">
+            <div className="d-flex align-items-center gap-1">
+              <strong style={{ flex: 1 }}>{planOf(o).collection?.Name || o.name}</strong>
+              {useButton(o)}
+            </div>
+            <CodePills parts={globalConnectors().find(g => g.key === o.key).parts} />
+            {creates(o).length > 0 && (
+              <div className="text-muted" style={{ fontSize: 10 }}>Use adds {creates(o).length} ElementType{creates(o).length === 1 ? '' : 's'} to the Product Spec</div>
+            )}
+          </div>
+        ))}
+      </>)}
       {asking && (
-        <ConfirmSuggestionModal onCancel={() => setAsking(false)} onAnswer={checked}
-          check={{ key: s.key, posRef, job: 'connector set', rule: s.why, noCode: true, unsureLabel: 'Not sure: use it',
-            part: { code: globalConnectors().find(g => g.key === s.key).parts.map(p => p.code).join(' + '), name: s.name },
-            evidence: ['a Wago set published on Orion for positions like this', saidOf(votes)].filter(Boolean).join('; ') }} />
+        <ConfirmSuggestionModal onCancel={() => setAsking(null)} onAnswer={checked}
+          check={{ key: asking.key, posRef, job: 'connector set', rule: asking.why, noCode: true, unsureLabel: 'Not sure: use it',
+            part: { code: globalConnectors().find(g => g.key === asking.key).parts.map(p => p.code).join(' + '), name: asking.name },
+            evidence: ['a Wago set published on Orion for positions like this', saidOf(votesOf(asking))].filter(Boolean).join('; ') }} />
       )}
     </div>
   </>)

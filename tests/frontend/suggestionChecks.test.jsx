@@ -102,6 +102,17 @@ describe('the check popup', () => {
     expect(api.current.shareOutcomes).toHaveBeenLastCalledWith('7900', [expect.objectContaining({ key: CAP.key, outcome: 'confirmed' })])
   })
 
+  test('undo takes the chip away with the part; redo brings it back (#72)', async () => {
+    await setup([CAP], [])
+    await setCode()
+    expect(screen.getByTestId('suggestion-check-chip')).toBeTruthy()
+    await act(async () => { useStore.getState().undo() })
+    expect(screen.queryByTestId('suggestion-check-chip')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Set code' })).toBeTruthy()
+    await act(async () => { useStore.getState().redo() })
+    expect(screen.getByTestId('suggestion-check-chip')).toBeTruthy()
+  })
+
   test('without the checks feature nothing halts', async () => {
     await setup([CAP], [])
     await setCode()

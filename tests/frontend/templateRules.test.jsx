@@ -76,15 +76,35 @@ describe('template rules', () => {
     const orluna = { CollectionId: 'orluna', Rule: { match: 'all', conditions: [
       { column: 'DriverLocation', op: 'equals', value: 'LOCAL' }, { column: 'Tags', op: 'equals', value: 'Orluna' },
     ] } }
-    const m = G.membership(ALL, [local, orluna], {}, recOf())
+    // Without the project's connectors (no recOf.sigs) the rules alone decide.
+    const rulesOnly = () => { const r = recOf(); const f = x => r(x); f.scope = r.scope; return f }
+    const m = G.membership(ALL, [local, orluna], {}, rulesOnly())
     expect(m.get('A01')).toMatchObject({ templates: ['orluna'], clash: false, alsoMatched: ['local'] })
     expect(m.get('A04')).toMatchObject({ templates: ['local'], clash: false })
     expect(m.get('B01').templates).toEqual([])
     const twin = { ...orluna, CollectionId: 'twin' }
-    expect(G.membership(['A01'], [local, orluna, twin], {}, recOf()).get('A01')).toMatchObject({ templates: ['orluna', 'twin'], clash: true })
+    expect(G.membership(['A01'], [local, orluna, twin], {}, rulesOnly()).get('A01')).toMatchObject({ templates: ['orluna', 'twin'], clash: true })
     // An OR rule counts as one condition.
     const any = { CollectionId: 'any', Rule: { ...orluna.Rule, match: 'any' } }
     expect(T.ruleSpecificity(any.Rule)).toBe(1)
+  })
+
+  test('with the project\'s connectors, what is built decides, not specificity; no evidence is a clash (#66)', () => {
+    const sigs = recOf().sigs
+    const tpl = (id, parts, conditions) => ({ CollectionId: id, Ingredients: G.partsToIngredients(parts), Rule: { match: 'all', conditions } })
+    const LOCAL = { column: 'DriverLocation', op: 'equals', value: 'LOCAL' }
+    const ORLUNA = { column: 'Tags', op: 'equals', value: 'Orluna' }
+    // The narrower Orluna rule asks for A04's parts; the wider Local one for A01's.
+    const local = tpl('local', sigs.get('A01'), [LOCAL]), orluna = tpl('orluna', sigs.get('A04'), [LOCAL, ORLUNA])
+    const m = G.membership(ALL, [local, orluna], {}, recOf())
+    expect(m.get('A01')).toMatchObject({ templates: ['local'], clash: false, alsoMatched: ['orluna'] })
+    // Equally far from both: the one more positions are built like (A02, A03) wins.
+    useStore.setState({ recipes: useStore.getState().recipes.filter(r => r.PositionTypeRef !== 'A01' || !/PIN/.test(r.ElementTypeRef)) })
+    expect(G.membership(['A01'], [local, orluna], {}, recOf()).get('A01').templates).toEqual(['local'])
+    // Nothing tells them apart: both are offered.
+    const bare = tpl('bare', [{ ref: 'ET-X', section: 'position', quantity: 1 }], [LOCAL])
+    const bare2 = tpl('bare2', [{ ref: 'ET-Y', section: 'position', quantity: 1 }], [LOCAL, ORLUNA])
+    expect(G.membership(['A01'], [bare, bare2], {}, recOf()).get('A01')).toMatchObject({ templates: ['bare', 'bare2'], clash: true })
   })
 
   test('a rule is suggested from the positions with the same connectors, precedent fields first', () => {

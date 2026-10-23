@@ -124,17 +124,40 @@ describe('where it shows', () => {
     expect(c.Rule.conditions.map(x => x.column)).toContain('ControlTypeRef')
   })
 
-  test('drawer: a position with no template is offered the suggestion; Use pins it; "or 5-pin" switches', async () => {
+  test('drawer: with nothing in the project to go on, both DALI sets are offered alike; Use pins one, with no rule (#66)', async () => {
     setup()
     render(<ConnectorsPane posRef="A01" />)
-    expect(screen.getByTestId('wago-suggestion')).toHaveTextContent('Suggested: Wago 2-pin DALI + 3-pin LEN')
-    expect(screen.getByTestId('wago-suggestion')).toHaveTextContent('DALI · local driver')
-    fireEvent.click(screen.getByTestId('wago-alt'))
-    expect(screen.getByTestId('wago-suggestion')).toHaveTextContent('Suggested: Wago 5-pin DALI + perm')
-    await act(async () => { fireEvent.click(screen.getByTestId('wago-use')) })
+    expect(screen.getByTestId('wago-suggestion')).toHaveTextContent('2 Wago sets fit A01 (DALI · local driver)')
+    expect(screen.getAllByTestId('wago-option').map(o => o.textContent)).toEqual([
+      expect.stringContaining('Wago 2-pin DALI + 3-pin LEN'), expect.stringContaining('Wago 5-pin DALI + perm')])
+    await act(async () => { fireEvent.click(screen.getAllByTestId('wago-use')[1]) })
     const s = useStore.getState()
     expect(s.etCollections[0].Name).toBe('Wago 5-pin DALI + perm')
+    expect(s.etCollections[0].Rule ?? null).toBeNull()        // the rule is both sets', so neither keeps it
     expect(s.connectorPins[s.etCollections[0].CollectionId]).toEqual(['A01'])
+  })
+
+  test('drawer: the set whose codes the position already carries leads (#66)', () => {
+    setup({ psRows: [{ ElementTypeRef: 'ET-2P', ProductCode: '770-1102' }, { ElementTypeRef: 'ET-3P', ProductCode: '770-203' }],
+      recipes: ['ET-2P', 'ET-3P'].map((ref, i) => ({ _id: `y${i}`, _row_num: 1, PositionTypeRef: 'A01', ContextType: 'PositionType', ContextRef: 'A01', ElementTypeRef: ref, Quantity: 1 })),
+      elementTypes: [{ ElementTypeRef: 'ET-2P', Family: 'ET-CONNECTORS' }, { ElementTypeRef: 'ET-3P', Family: 'ET-CONNECTORS' }], connectorFamilies: ['ET-CONNECTORS'] })
+    render(<ConnectorsPane posRef="A01" />)
+    expect(screen.getByTestId('wago-suggestion')).toHaveTextContent('Suggested: Wago 2-pin DALI + 3-pin LEN')
+    expect(screen.getByTestId('wago-suggestion')).toHaveTextContent('A01 has 2 of its parts')
+  })
+
+  test('drawer: the set another position is built with leads', async () => {
+    setup({ positionTypes: [PT('A01', 'DALI', 'Local to fitting'), PT('A05', 'DALI', 'Local to fitting')] })
+    await act(async () => { await useStore.getState().applyGlobalConnector('5pin-dali-perm', { posRefs: ['A05'] }) })
+    const c = useStore.getState().etCollections[0]
+    const row = (ref, i, inWrapper) => ({ _id: `x${i}`, _row_num: 1, PositionTypeRef: 'A05', ContextType: inWrapper ? 'ElementType' : 'PositionType',
+      ContextRef: inWrapper ? 'ET-DL-A05' : 'A05', ElementTypeRef: ref, Quantity: 1 })
+    useStore.setState({ recipes: [{ ...row('ET-DL-A05', 'dl'), IsDesign: 'Y' }, ...templateParts(c).map((p, i) => row(p.ref, i, p.section === 'internal'))] })
+    render(<ConnectorsPane posRef="A01" />)
+    expect(screen.getByTestId('wago-suggestion')).toHaveTextContent('Suggested: Wago 5-pin DALI + perm')
+    expect(screen.getByTestId('wago-suggestion')).toHaveTextContent('1 other position uses it')
+    fireEvent.click(screen.getByTestId('wago-alt'))
+    expect(screen.getByTestId('wago-suggestion')).toHaveTextContent('Suggested: Wago 2-pin DALI + 3-pin LEN')
   })
 
   test('existing project: a template whose parts are Wago codes is named; superseded codes are offered an upgrade', async () => {
@@ -218,7 +241,7 @@ describe('checking a served set', () => {
 
   test('a set someone said was wrong halts Use; Yes uses it and votes', async () => {
     const apply = served({ yes: 1, no: 1, origins: 2, openNo: true })
-    await act(async () => { fireEvent.click(screen.getByTestId('wago-use')) })
+    await act(async () => { fireEvent.click(screen.getAllByTestId('wago-use')[0]) })
     expect(apply).not.toHaveBeenCalled()
     expect(screen.getByText(/your input helps future projects/)).toBeInTheDocument()
     expect(screen.queryByLabelText('Right code')).toBeNull()
@@ -229,7 +252,7 @@ describe('checking a served set', () => {
 
   test('an unchallenged set is used at once, then asked with a chip', async () => {
     const apply = served({ yes: 0, no: 0, origins: 0, openNo: false })
-    await act(async () => { fireEvent.click(screen.getByTestId('wago-use')) })
+    await act(async () => { fireEvent.click(screen.getAllByTestId('wago-use')[0]) })
     expect(apply).toHaveBeenCalled()
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'No, this is wrong' })) })
     expect(api.current.shareOutcomes.mock.calls[0][1][0]).toMatchObject({ kind: 'connector', outcome: 'rejected', final: null })
