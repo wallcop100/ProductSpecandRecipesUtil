@@ -168,4 +168,22 @@ describe('recipe suggestions', () => {
       recipes: useStore.getState().recipes.filter(r => r.ElementTypeRef !== 'ET-LIN-CLIP-01') }))
     expect(screen.queryByTestId('suggestion-kind')).toBeNull()
   })
+
+  test('the kind\'s usual connectors yield to a connector template, and to "Not this template"', async () => {
+    api.current = { kits: vi.fn(async () => []), shareOutcomes: vi.fn(async () => ({ stored: 1 })) }
+    const kind = { ...KIND, positions: 10, connectors: [{ set: ['2pin-plug@lin'], positions: 8 }] }
+    const plug = { ElementTypeRef: 'ET-2Pin-LIN-Plug', Family: 'ET-CONNECTION' }
+    const go = async () => { const r = setup(); useStore.setState({ library: { kinds: [kind] }, elementTypes: [...useStore.getState().elementTypes, plug], etCollections: [] }); r.unmount(); const u = render(<RecipeSuggestions posRef="C05r" />); await act(async () => {}); return u }
+    useStore.setState({ connectorPins: {}, connectorExcludes: {} })
+    let u = await go()
+    expect(screen.queryByText(/usually carry connectors/)).not.toBeNull()
+    u.unmount()
+    useStore.setState({ etCollections: [{ CollectionId: 'T1', Name: 'T' }], connectorPins: { T1: ['C05r'] } })
+    u = render(<RecipeSuggestions posRef="C05r" />); await act(async () => {})
+    expect(screen.queryByText(/usually carry connectors/)).toBeNull()
+    u.unmount()
+    useStore.setState({ connectorPins: {}, connectorExcludes: { T1: ['C05r'] } })
+    render(<RecipeSuggestions posRef="C05r" />); await act(async () => {})
+    expect(screen.queryByText(/usually carry connectors/)).toBeNull()
+  })
 })
