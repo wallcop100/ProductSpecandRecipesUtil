@@ -19,6 +19,11 @@ Templates drawer (#101, #102 merged): one line per part in human words ("tape", 
 
 ## Log
 
+### 2026-10-23 (reports #73, #75; resolved #63, #66, #67, #72)
+- #103: the shared-assembly guard's "Delete from all" is the primary, focused button and Fork is secondary (#73). "Maker's newer code" explains itself in a Popover (#75). Resolve both once Connected serves 9c710d7.
+- Resolved #63 (fixed in #97), #66, #67 (seen on D06r), #72. #70 stays open until Erik has seen #102. #74 ("Explode Internals" view, balloon animation) needs a demo agreed with Erik first.
+- Orion: 11 EldoLED supersessions to LIN200D-D2Z*D3/C3, confirmed by erik (including typo spellings LN200D-*). LIN200D-D272C2 is left unmarked until Erik decides.
+
 ### 2026-10-23 (C05r clips, #102)
 - C05r has no clips line or purple pip because the companion knows the FPS2020 range (end caps, diffusers, no clip), and the #43 rule suppresses the line. #101 did not cause this. `/gateway/psr/kits` returns 502 intermittently (3 seen in 20 min). A failed lookup leaves the range unknown, so a clips placeholder can come and go. Cause of the 502s not chased.
 - #102: dropped "· job · position|inside"; the design row reads "LIN Wrapper" with its ET in the pill; pills are lavender (`C.refTint`/`refInk`), not ElementType orange.
