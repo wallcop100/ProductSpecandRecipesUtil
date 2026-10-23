@@ -12,9 +12,18 @@ function buildCommit() {
   catch { return 'unknown' }
 }
 
+// The tree (the files) this build is of: a "Ship dev" merge makes a new commit but keeps dev's tree, so
+// the build name (App.jsx) stays the same from dev to prod. A Docker context passes BUILD_TREE.
+function buildTree() {
+  if (process.env.BUILD_TREE) return process.env.BUILD_TREE
+  try { return execSync('git rev-parse HEAD^{tree}', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() }
+  catch { return 'unknown' }
+}
+
 const stampCommit = {
   name: 'stamp-commit',
-  transformIndexHtml: () => [{ tag: 'meta', attrs: { name: 'build-commit', content: buildCommit() }, injectTo: 'head' }],
+  transformIndexHtml: () => [{ tag: 'meta', attrs: { name: 'build-commit', content: buildCommit() }, injectTo: 'head' },
+    { tag: 'meta', attrs: { name: 'build-tree', content: buildTree() }, injectTo: 'head' }],
 }
 
 export default defineConfig({

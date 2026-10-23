@@ -28,9 +28,10 @@ const ANIMALS = ['Otter', 'Badger', 'Fox', 'Heron', 'Hare', 'Owl', 'Wren', 'Robi
   'Falcon', 'Beaver', 'Moose', 'Newt', 'Orca', 'Raven', 'Stoat', 'Tiger', 'Walrus', 'Yak', 'Zebra', 'Dingo', 'Ferret', 'Ibex', 'Mole', 'Swan',
   'Alpaca', 'Bear', 'Camel', 'Crane', 'Deer', 'Dolphin', 'Eagle', 'Elk', 'Finch', 'Gazelle', 'Goose', 'Hedgehog', 'Jaguar', 'Kestrel', 'Lemur', 'Lion',
   'Magpie', 'Marten', 'Meerkat', 'Osprey', 'Panther', 'Pelican', 'Penguin', 'Rabbit', 'Salmon', 'Sparrow', 'Squirrel', 'Starling', 'Toucan', 'Turtle', 'Vole', 'Wolf']
-// The build's name, picked by its commit (bug reports carry the full hash): 4,096 names, so a repeat is rare.
-const BUILD_NAME = /^[0-9a-f]{4}/.test(BUILD)
-  ? `${ADJECTIVES[parseInt(BUILD.slice(0, 2), 16) % 64]} ${ANIMALS[parseInt(BUILD.slice(2, 4), 16) % 64]}` : BUILD
+// The build's name, picked by its tree so dev and the prod it ships as share it (vite.config.js): 4,096 names, so a repeat is rare.
+const TREE = document.querySelector('meta[name="build-tree"]')?.getAttribute('content') || ''
+const BUILD_NAME = /^[0-9a-f]{4}/.test(TREE)
+  ? `${ADJECTIVES[parseInt(TREE.slice(0, 2), 16) % 64]} ${ANIMALS[parseInt(TREE.slice(2, 4), 16) % 64]}` : BUILD
 
 /**
  * App — top-level screen router.
