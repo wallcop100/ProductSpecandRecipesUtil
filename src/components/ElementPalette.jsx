@@ -26,7 +26,7 @@ export default function ElementPalette({ pickTarget, onPickET, onPickETMulti, on
   const [ownSearch, setSearch] = useState('')
   const search = query ?? ownSearch
   const [familyFilter, setFamilyFilter] = useState('')
-  const [expanded, setExpanded] = useState({})
+  const [collapsed, setCollapsed] = useState({})
   const [multiAdd, setMultiAdd] = useState(false)
 
   // Reset multi-add when pick mode ends
@@ -127,17 +127,18 @@ export default function ElementPalette({ pickTarget, onPickET, onPickETMulti, on
   }, [filtered, mode])
 
   const forceOpen = search.trim() !== '' || familyFilter !== ''
-  const isOpen = family => forceOpen || !!expanded[family]
+  // Groups start open (#69); `collapsed` holds the ones closed by hand.
+  const isOpen = family => forceOpen || !collapsed[family]
 
   function toggle(family) {
-    setExpanded(prev => ({ ...prev, [family]: !prev[family] }))
+    setCollapsed(prev => ({ ...prev, [family]: !prev[family] }))
   }
-  function expandAll() {
+  function expandAll() { setCollapsed({}) }
+  function collapseAll() {
     const next = {}
     for (const family of grouped.keys()) next[family] = true
-    setExpanded(next)
+    setCollapsed(next)
   }
-  function collapseAll() { setExpanded({}) }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>

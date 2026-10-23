@@ -58,6 +58,12 @@ describe('connectorGapsForPosition (from the user\'s Connector Templates)', () =
     expect(gaps.every(g => !/2PIN|SOCKET/.test(g.ref))).toBe(true)
   })
 
+  test('with membership, only the template the position belongs to is checked (#54)', () => {
+    const recipes = [posRow('ET-WHATEVER-SOCK-1234')]
+    expect(connectorGapsForPosition(recipes, 'P1', ['Local'], [collection], undefined, { templates: ['other'] })).toHaveLength(0)
+    expect(connectorGapsForPosition(recipes, 'P1', ['Local'], [collection], undefined, { templates: ['c1'] }).length).toBeGreaterThan(0)
+  })
+
   test('a fully-satisfied template yields no gaps (arbitrary real refs)', () => {
     const recipes = [
       posRow('ET-WHATEVER-SOCK-1234'),

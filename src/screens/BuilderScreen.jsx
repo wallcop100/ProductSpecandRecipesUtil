@@ -29,6 +29,7 @@ import SurfaceSwitch from '../components/SurfaceSwitch'
 import ConnectorsPane from '../components/ConnectorsPane'
 import ConnectorAutoJoin from '../components/ConnectorAutoJoin'
 import { connectorGapsForPosition } from '../utils/collectionStatus'
+import { membership } from '../utils/connectorGroups'
 import TemplatesPane from '../components/TemplatesPane'
 import useTemplateMatches, { useHintsOff, hintOff } from '../components/useTemplateMatches'
 import PasteMergeModal from '../components/PasteMergeModal'
@@ -385,9 +386,14 @@ export default function BuilderScreen({
   const containerETRefs = useStore(s => s.containerETRefs)
   const drawerPos = rootView === 'positions' && allPositionTypes.some(p => p.PositionTypeRef === activePositionRef) ? activePositionRef : null
   // Connector gaps on the open position: a dot on the drawer's Connectors tab.
-  const connectorGaps = useMemo(() => (drawerPos
-    ? connectorGapsForPosition(recipes, drawerPos, useStore.getState()._templateRecOf()(drawerPos), etCollections, containerETRefs).length : 0),
-  [drawerPos, recipes, etCollections, containerETRefs])
+  const connectorPins = useStore(s => s.connectorPins)
+  const connectorExcludes = useStore(s => s.connectorExcludes)
+  const connectorGaps = useMemo(() => {
+    if (!drawerPos) return 0
+    const recOf = useStore.getState()._templateRecOf()
+    const member = membership([drawerPos], etCollections, connectorPins, recOf, connectorExcludes).get(drawerPos)
+    return connectorGapsForPosition(recipes, drawerPos, recOf(drawerPos), etCollections, containerETRefs, member).length
+  }, [drawerPos, recipes, etCollections, containerETRefs, connectorPins, connectorExcludes])
   // Dot on the Templates tab: the open position is empty and a template fits it (unless its hint was dismissed).
   const hintsOff = useHintsOff()
   const drawerMatches = useTemplateMatches(drawerPos ? [drawerPos] : [])

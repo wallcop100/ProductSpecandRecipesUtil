@@ -316,7 +316,7 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
               updatePSRow(selectedRef, { ProductCode: v })
               // A code swapped for another under the same maker is evidence of a renumbering. Noted
               // in the background (reviewed before it is ever relied on); nothing is shown here.
-              if (productCode && v && manufacturer && !/^tbc$/i.test(productCode)) {
+              if (productCode && v && manufacturer && !/^tbc$/i.test(productCode) && !/^tbc$/i.test(v)) {
                 getCompanion().then(api => api?.contribute?.({ kind: 'supersession', code: productCode, replacement: v, manufacturer }))
               }
             }}
@@ -328,8 +328,8 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
 
         {retired && !isDeleted && (
           <div className="mb-3 d-flex align-items-center gap-1" style={{ fontSize: 11, color: C.muted, marginTop: -8 }} data-testid="retired">
-            <span className="companion-dot" /> replaced by{' '}
-            <span style={{ fontFamily: 'monospace' }}>{retired.replacement}</span> — check the current code
+            <span className="companion-dot" /> maker's newer code:{' '}
+            <span style={{ fontFamily: 'monospace' }}>{retired.replacement}</span> — check which code to order
           </div>
         )}
 

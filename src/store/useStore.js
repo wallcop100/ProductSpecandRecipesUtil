@@ -15,7 +15,7 @@ import { planFamilyMove } from '../utils/etSeed.js'
 import { reconcileAll, stampExported, hasUnexported } from '../utils/reconcile.js'
 import { jobOf, linearWrapperFamily } from '../utils/codeJobs.js'
 import { loadReports, saveReports } from '../utils/bugReports.js'
-import { connectorSignature, templateParts, partsToIngredients, diffParts, isConnectorPart, DEFAULT_CONNECTOR_FAMILIES, sortParts, signatureKey } from '../utils/connectorGroups.js'
+import { connectorSignature, templateParts, partsToIngredients, diffParts, isConnectorPart, DEFAULT_CONNECTOR_FAMILIES, sortParts, signatureKey, membership } from '../utils/connectorGroups.js'
 import { globalConnector, setConnectorLibrary, suggestRef, partName, sectionOf, supersededBy, WAGO } from '../data/globalConnectors.js'
 import { templateRecords, templateRule, specificityScope } from '../utils/templateRules.js'
 
@@ -1112,7 +1112,8 @@ const useStore = create((set, get) => ({
     set(s => {
       const next = { ...s.retiredCodes }
       for (const r of rows) {
-        if (r?.code && r.replacement) next[String(r.code).trim().toUpperCase()] = { replacement: r.replacement, retired: r.retired || null }
+        // "Replaced by TBC" is a code being blanked, not a maker's renumbering (#64, #65).
+        if (r?.code && r.replacement && !/^tbc$/i.test(String(r.replacement).trim())) next[String(r.code).trim().toUpperCase()] = { replacement: r.replacement, retired: r.retired || null }
       }
       return { retiredCodes: next }
     })
@@ -3783,8 +3784,10 @@ const useStore = create((set, get) => ({
 
     const dbData = { element_types: elementTypes, position_types: positionTypes }
     const ignoredPosRefs = ignoredPositionRefs({ positionTypes, positionUI, ignoredPositionFamilies })
+    const recOf = get()._templateRecOf()
+    const posRefs = [...new Set(recipes.map(r => r.PositionTypeRef || r.positionTypeRef).filter(Boolean))]
     const results = runValidation(dbData, psRows, recipes, positionUI, {
-      recOf: get()._templateRecOf(),
+      recOf, members: membership(posRefs, etCollections, get().connectorPins, recOf, get().connectorExcludes),
       collections: etCollections, containerETRefs, collectionRefs: dbCollectionRefs, ignoredPosRefs,
     })
 

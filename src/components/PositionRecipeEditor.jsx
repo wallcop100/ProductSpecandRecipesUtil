@@ -213,9 +213,10 @@ export default function PositionRecipeEditor({
           </div>
         )}
         <RecipeErrorBanner />
-        <RecipeSuggestions key={ref} posRef={ref} />
+        {/* Sibling keys must differ: a shared key left the old position's card mounted (#71). */}
+        <RecipeSuggestions key={`suggest|${ref}`} posRef={ref} />
         <ConnectorSuggestions posRef={ref} />
-        <WagoSuggestion key={ref} posRef={ref} inRecipe />
+        <WagoSuggestion key={`wago|${ref}`} posRef={ref} inRecipe />
         <RecipeSection
           title="PositionType Level"
           sectionKey="position"

@@ -3,6 +3,7 @@ import { Button, Dropdown } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { connectorGapsForPosition } from '../utils/collectionStatus'
+import { membership } from '../utils/connectorGroups'
 import { C } from '../styles/tokens'
 
 /**
@@ -42,10 +43,14 @@ export default function ConnectorSuggestions({ posRef }) {
   const moveRecipeRowToSection = useStore(s => s.moveRecipeRowToSection)
   const updateRecipeRow = useStore(s => s.updateRecipeRow)
 
-  const gaps = useMemo(
-    () => connectorGapsForPosition(recipes, posRef, useStore.getState()._templateRecOf()(posRef), etCollections, containerETRefs),
-    [recipes, posRef, positionUI, etCollections, containerETRefs]
-  )
+  const connectorPins = useStore(s => s.connectorPins)
+  const connectorExcludes = useStore(s => s.connectorExcludes)
+
+  const gaps = useMemo(() => {
+    const recOf = useStore.getState()._templateRecOf()
+    const member = membership([posRef], etCollections, connectorPins, recOf, connectorExcludes).get(posRef)
+    return connectorGapsForPosition(recipes, posRef, recOf(posRef), etCollections, containerETRefs, member)
+  }, [recipes, posRef, positionUI, etCollections, containerETRefs, connectorPins, connectorExcludes])
 
   if (gaps.length === 0) return null
 
