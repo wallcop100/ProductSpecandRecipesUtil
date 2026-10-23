@@ -9,7 +9,7 @@ vi.mock('../../src/utils/backend.js', () => ({
 }))
 
 const { default: FolderSetupScreen } = await import('../../src/screens/FolderSetupScreen.jsx')
-const { CHANGELOG } = await import('../../src/changelog.js')
+const { LATEST } = await import('../../src/changelog.js')
 
 const PROJECTS = [
   { id: 1, folder_path: 'key-a', project_number: '5642', project_label: 'LIGHTING', config_name: 'Base', db_filename: 'db.xlsx', last_opened: new Date(Date.now() - 7200e3).toISOString(), unexported: 3, taggedPositions: 12, overlayRows: 0 },
@@ -232,12 +232,13 @@ describe('someone who has never used this', () => {
     expect(document.querySelector('a[href*="github.com"]')).toBeNull()
   })
 
-  test('the latest changelog note is hidden until what’s new is opened', async () => {
+  test('the latest release is hidden until what’s new is opened', async () => {
     render(<FolderSetupScreen onProjectLoaded={() => {}} />)
     await screen.findByText('Open the folder with your DesignDB →')
-    expect(screen.queryByText(CHANGELOG[0].note, { exact: false })).toBeNull()
+    expect(screen.getByTitle('What changed recently').textContent).toContain(LATEST.version)
+    expect(screen.queryByText(LATEST.highlights[0].title)).toBeNull()
     fireEvent.click(screen.getByTitle('What changed recently'))
-    expect(screen.getAllByText(CHANGELOG[0].note, { exact: false }).length).toBeGreaterThan(0)
+    for (const h of LATEST.highlights) expect(screen.getByText(h.title)).toBeTruthy()
   })
 })
 
