@@ -133,4 +133,15 @@ describe('the hint on an empty matching position', () => {
     expect(useStore.getState().drawerTab).toBe('templates')
     expect(useStore.getState().activePositionRef).toBe('L01')
   })
+  test('NRWJH9: no TBC placeholder for a job the suggestion card offers a real part for', () => {
+    const tpl = { ...LIN, rule: { match: 'all', conditions: [{ column: 'Family', op: 'equals', value: 'LN' }] }, ingredients: [
+      { slotKey: 'CLIPS', slotLabel: 'clips', section: 'internal' },
+    ] }
+    setup({ templates: [tpl], positionTypes: [{ PositionTypeRef: 'L01', ParentRef: 'LN' }],
+      recipes: [{ PositionTypeRef: 'L01', ContextType: 'PositionType', ContextRef: 'L01', ElementTypeRef: 'ET-PROF-01', _id: 'r1' }] })
+    render(<TemplatesPane posRef="L01" />)
+    expect(screen.getByTestId('tpl-add-placeholder')).toBeTruthy()
+    act(() => { useStore.getState().setOfferedJobs('L01', 'CLIPS+END_CAPS') })
+    expect(screen.queryByTestId('tpl-add-placeholder')).toBeNull()
+  })
 })

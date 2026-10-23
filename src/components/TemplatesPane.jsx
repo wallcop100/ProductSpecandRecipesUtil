@@ -55,6 +55,7 @@ export default function TemplatesPane({ posRef }) {
   const setTemplateChecks = useStore(s => s.setTemplateChecks)
   const setActivePosition = useStore(s => s.setActivePosition)
   const companion = useCompanion()
+  const offered = useStore(s => s.offeredJobs[posRef] || '').split('+')
   const [showAll, setShowAll] = useState(false)
   const [whyOpen, setWhyOpen] = useState(() => new Set())
   const [preview, setPreview] = useState(null)   // { template, refs }
@@ -91,6 +92,8 @@ export default function TemplatesPane({ posRef }) {
     if (i.exact || !i.slotKey) return own.idx.etByRef.has(String(i.slotLabel).toUpperCase()) ? { ref: i.slotLabel, kind: 'template' } : null
     const fit = fitFor(i.slotKey, anchor, own.ctx, own.idx)
     if (fit) return { ref: fit.etRef, kind: 'learned', why: fit.why }
+    // The suggestion card already offers a real part for this job: a TBC placeholder would contradict it (NRWJH9).
+    if (offered.includes(i.slotKey)) return null
     return familyForJob({ slot: i.slotKey }) ? { kind: 'placeholder' } : null
   }
   function add(i, t) {
