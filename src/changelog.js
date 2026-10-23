@@ -3,7 +3,7 @@
  *
  * Versions are Year.release (2026.1, 2026.2 …; the count restarts each year). To ship one,
  * add a release on top of RELEASES: a version, the date, a one-line tagline, three or four
- * highlights (a Material icon, a short title, one or two sentences) and an optional `also`
+ * highlights (a Material icon, a short title, one short line) and an optional `also`
  * list of smaller things. Newest first. Write it for the people using the tool, not for us:
  * what they can do now, not how it was built. Keep anything companion-only out of it, since
  * the GitHub Pages release has no companion.
@@ -12,22 +12,22 @@ export const RELEASES = [
   {
     version: '2026.1',
     date: '2026-10-23',
-    tagline: 'From the Form to finished recipes, with the connectors done for you.',
+    tagline: '2026 Alpha Build - From form to finished recipes.',
     highlights: [
       {
         icon: 'brush',
         title: 'Import the Form by painting it',
-        blurb: 'Paint product codes straight onto the Form, one position at a time if you like. The tool learns how each project writes its codes and files new ElementTypes into the company families. When the Form changes on disk it offers a Refresh and shows what moved.',
+        blurb: 'Paint codes onto the Form; new ElementTypes file themselves into the company families.',
       },
       {
         icon: 'cable',
         title: 'Connector templates',
-        blurb: 'Make a template from positions built the same way, or start from the Wago library. Templates apply by rule (tags, DesignDB columns, what the recipe holds), and the Connectors tab shows what each position is missing.',
+        blurb: 'Made from positions built alike or the Wago library, applied by rule.',
       },
       {
         icon: 'view_sidebar',
         title: 'A calmer builder',
-        blurb: 'Positions sit in a sidebar, each with one status pip that explains itself. The Form sits beside the recipe, wrappers can be exploded into editable parts, and Ctrl+Z / Ctrl+Y work on every screen.',
+        blurb: 'A position sidebar, one status pip each, and undo on every screen.',
       },
     ],
     also: [
