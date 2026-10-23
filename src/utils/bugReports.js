@@ -42,7 +42,7 @@ export function describeElement(el) {
   const tag = el.tagName.toLowerCase()
   const role = el.getAttribute('role') || (['button', 'a', 'input', 'select', 'textarea', 'th', 'td'].includes(tag) ? tag : '')
   const text = label || (tag === 'input' || tag === 'textarea' ? el.value || el.placeholder : el.textContent)
-  return [role, clip(text, 60) && `“${clip(text, 60)}”`].filter(Boolean).join(' ')
+  return [role, clip(text) && `“${clip(text)}”`].filter(Boolean).join(' ')
 }
 
 const REF_RE = /\bET-[A-Z0-9][A-Z0-9-]*\b/gi
@@ -69,6 +69,30 @@ export function domContext(target) {
   return { element: describeElement(el), areas, dialogs, row, refs, code: attrs['data-code'] || null, source: attrs['data-source'] || null }
 }
 
+/**
+ * What is open on the page, whatever the target: pressed/selected tabs and toggles, active nav
+ * links, open windows. Says "Templates drawer" even when the note was written from the ▾ (#70).
+ */
+export function openContext(root = document) {
+  const out = []
+  for (const n of root.querySelectorAll('[aria-pressed="true"],[aria-selected="true"],.nav-link.active,.modal.show .modal-title,.offcanvas.show')) {
+    if (n.closest('[data-bug-reporter]')) continue
+    const label = n.getAttribute('data-testid') || n.getAttribute('aria-label') || clip(n.textContent, 40)
+    if (label && !out.includes(label)) out.push(label)
+    if (out.length >= 8) break
+  }
+  return out
+}
+
+/** Which build is serving this page and where: the commit vite stamps, and the host. */
+export function pageContext() {
+  if (typeof document === 'undefined') return {}
+  return {
+    commit: document.querySelector('meta[name="build-commit"]')?.getAttribute('content') || null,
+    host: typeof location !== 'undefined' ? location.host || null : null,
+  }
+}
+
 /** What the app was doing: where you were and how big the project is. */
 export function appContext(state, screen) {
   const recipes = (state.recipes || []).filter(live)
@@ -77,6 +101,8 @@ export function appContext(state, screen) {
     project: state.projectLabel || state.projectNumber || (state.projectId != null ? `#${state.projectId}` : null),
     position: state.activePositionRef || null,
     elementType: state.activeETRef || null,
+    drawer: screen === 'builder' && state.drawerOpen ? state.drawerTab || null : null,
+    open: typeof document !== 'undefined' ? openContext() : [],
     teaching: state.teaching ? `${state.teaching.label} on ${state.teaching.posRef}` : null,
     form: state.formCaptures?.source?.name || (state.formCaptures ? 'attached' : null),
     counts: {
@@ -89,7 +115,8 @@ export function appContext(state, screen) {
   }
 }
 
-export function buildReport({ note, kind = 'bug', target, state, screen, trail = [], capture = true, now = new Date(), taken = [] }) {
+/** `via: 'last-click'` when no element was pointed at and `target` is the last thing clicked. */
+export function buildReport({ note, kind = 'bug', target, via, state, screen, trail = [], capture = true, companion = false, now = new Date(), taken = [] }) {
   return {
     id: newReportId(taken),
     at: now.toISOString(),
@@ -97,9 +124,11 @@ export function buildReport({ note, kind = 'bug', target, state, screen, trail =
     ...(kind === 'feature' ? { kind: 'feature' } : {}),
     version: APP_VERSION,
     build: CHANGELOG[0]?.date || null,
+    ...pageContext(),
+    companion: !!companion,
     ...(capture ? {
       app: appContext(state, screen),
-      dom: domContext(target),
+      dom: { ...domContext(target), ...(via ? { via } : {}) },
       trail: trail.slice(-10),
       viewport: typeof window !== 'undefined' ? `${window.innerWidth}×${window.innerHeight}` : null,
     } : {}),
@@ -117,16 +146,19 @@ export function reportsToMarkdown(reports, { title = 'Bug reports' } = {}) {
     const a = r.app, d = r.dom
     const meta = [
       line('When', r.at?.replace('T', ' ').slice(0, 19)),
-      line('Version', [r.version, r.build && `build ${r.build}`].filter(Boolean).join(', ')),
+      line('Version', [r.version, r.build && `build ${r.build}`, r.commit && `commit ${r.commit}`].filter(Boolean).join(', ')),
+      line('Host', r.host && `${r.host}${r.companion ? ' (companion)' : ''}`),
       a && line('Project', a.project),
       a && line('Screen', a.screen),
       d && line('Window', d.dialogs),
+      a && line('Drawer', a.drawer),
+      a && line('Open', a.open),
       d && line('Suggestion source', d.source),
       a && line('Position', a.position),
       a && line('ElementType', a.elementType),
       a && line('Setting up', a.teaching),
       a && line('Form', a.form),
-      d && line('Clicked', d.element),
+      d && line(d.via === 'last-click' ? 'Last clicked' : 'Clicked', d.element),
       d && line('Area', d.areas.length ? d.areas.map(x => `\`${x}\``) : null),
       d && line('Refs', d.refs),
       d && line('Code', d.code),

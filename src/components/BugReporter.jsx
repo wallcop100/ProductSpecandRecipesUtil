@@ -34,6 +34,7 @@ export default function BugReporter({ screen }) {
   const canSend = !!companion?.report
   const bugRef = useRef(null)
   const trail = useRef([])
+  const lastClicked = useRef(null)   // what "this" probably is when the note is opened from the ▾
   const noteRef = useRef(null)
   const screenRef = useRef(screen)
   screenRef.current = screen
@@ -42,6 +43,7 @@ export default function BugReporter({ screen }) {
   useEffect(() => {
     const onClick = e => {
       if (e.target?.closest?.('[data-bug-reporter]')) return
+      lastClicked.current = e.target
       const label = describeElement(e.target?.closest?.('button,a,[role=button],input,select,td,th,label') || e.target)
       if (!label) return
       trail.current = [...trail.current.slice(-9), { at: new Date().toISOString(), screen: screenRef.current, label }]
@@ -75,7 +77,7 @@ export default function BugReporter({ screen }) {
 
   function build(kind) {
     return buildReport({
-      note: draft.note, kind, target: draft.target, state: useStore.getState(), screen: screenRef.current,
+      note: draft.note, kind, target: draft.target, via: draft.via, companion: !!companion, state: useStore.getState(), screen: screenRef.current,
       trail: trail.current, capture: draft.capture, taken: useStore.getState().bugReports.map(r => r.id),
     })
   }
@@ -115,11 +117,13 @@ export default function BugReporter({ screen }) {
   /** A note under the bug, or under the element it was asked from (a suggestion's ⋯ menu). */
   function openNote() {
     const target = useStore.getState().bugNoteTarget?.isConnected ? useStore.getState().bugNoteTarget : null
+    const last = !target && lastClicked.current?.isConnected ? lastClicked.current : null
     const b = (target || bugRef.current)?.getBoundingClientRect()
-    const d = target ? domContext(target) : null
+    const d = target || last ? domContext(target || last) : null
     setDraft({
-      host: document.body, x: b ? (target ? b.left : b.left - 140) : 80, y: b ? b.bottom + 6 : 40, target, note: '', capture: true,
-      preview: target ? [screenRef.current, d.areas[0], d.element].filter(Boolean).join(' · ') : screenRef.current || '',
+      host: document.body, x: b ? (target ? b.left : b.left - 140) : 80, y: b ? b.bottom + 6 : 40, target: target || last,
+      via: last ? 'last-click' : undefined, note: '', capture: true,
+      preview: d ? [screenRef.current, d.areas[0], last ? `last clicked ${d.element}` : d.element].filter(Boolean).join(' · ') : screenRef.current || '',
     })
   }
 
