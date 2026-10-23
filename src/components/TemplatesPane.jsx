@@ -72,11 +72,12 @@ export default function TemplatesPane({ posRef }) {
   const byPos = useTemplateMatches(refs)
   const { matches = [], others = [] } = byPos.get(posRef) || {}
   const isEmpty = emptyRefs.includes(posRef)
+  // Keyed on every input proposalContext reads: a code edited in Product Spec changes the profile and its parts.
   const own = useMemo(() => {
     const { combined, wrapperRefs } = positionRecipeWithWrapperInternals(recipes, posRef)
     const ctx = proposalContext(state, library)
     return { rows: combined, wrapperRefs, ctx, idx: kindIndexes(ctx) }
-  }, [recipes, posRef, library])   // eslint-disable-line react-hooks/exhaustive-deps
+  }, [recipes, posRef, library, positionTypes, state.elementTypes, state.psRows, state.formCaptures, state.containerETRefs, state.recipeChoices])   // eslint-disable-line react-hooks/exhaustive-deps
   // Report #48: the design ingredient names the position's own design ElementType, not "design element".
   const designRef = own.rows.find(r => live(r) && (r.IsDesign || r.isDesign) === 'Y')
   const designName = designRef && (designRef.ElementTypeRef || designRef.elementTypeRef)
