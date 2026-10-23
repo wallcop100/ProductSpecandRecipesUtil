@@ -859,8 +859,9 @@ function ProductInline({ etRef, manufacturer, productCode, onOpenProductSpec }) 
         <MaterialIcon name="edit" size={12} style={{ color: C.faint }} />
       </button>
       {retired && (
-        <span className="d-inline-flex align-items-center gap-1" style={{ fontSize: 10, color: C.muted }} data-testid="retired">
-          <span className="companion-dot" /> replaced by <span className="font-monospace">{retired.replacement}</span>
+        <span className="d-inline-flex align-items-center gap-1" style={{ fontSize: 10, color: C.muted }} data-testid="retired"
+          title={`Other projects show ${manufacturer || 'the maker'} now sells ${productCode} as ${retired.replacement}. Check which code to order, then change it in Product Spec.`}>
+          <span className="companion-dot" /> maker's newer code: <span className="font-monospace">{retired.replacement}</span>
         </span>
       )}
     </span>

@@ -213,7 +213,7 @@ const SECTION_PHRASE = {
  * Returns [{ ref, section, collectionName }] — ref/section straight from the
  * template ingredient.
  */
-export function connectorGapsForPosition(recipes, posRef, tags, collections, containerETRefs = new Set()) {
+export function connectorGapsForPosition(recipes, posRef, tags, collections, containerETRefs = new Set(), member = null) {
   const rec = asRecord(tags)
   const { combined, wrapperRefs } = positionRecipeWithWrapperInternals(recipes, posRef)
   const presence = buildPresence(combined, wrapperRefs)
@@ -227,7 +227,8 @@ export function connectorGapsForPosition(recipes, posRef, tags, collections, con
   const seen = new Set()
 
   for (const collection of collections || []) {
-    if (!ruleAppliesTo(collection, rec)) continue
+    // With membership (pins, most specific rule) only this position's own template counts, as in the drawer (#54).
+    if (member ? !member.templates.includes(collection.CollectionId) : !ruleAppliesTo(collection, rec)) continue
 
     const ings = parseIngredients(collection).filter(i => ingredientRef(i))
     if (ings.length === 0) continue

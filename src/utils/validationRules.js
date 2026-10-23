@@ -61,7 +61,7 @@ const refOf = r => r.elementTypeRef || r.ElementTypeRef || ''
 const SPEC_RULES = new Set(['DUPLICATE_PRODUCT_CODE', 'MISSING_PRODUCT_CODE', 'MISSING_PRODUCT_SPEC_ROW', 'ELEMENT_TYPE_NOT_IN_DB'])
 
 export function runValidation(dbData, psRows, rsRows, positionUI,
-  { collections = [], containerETRefs = new Set(), collectionRefs = [], ignoredPosRefs = new Set(), recOf = null } = {}) {
+  { collections = [], containerETRefs = new Set(), collectionRefs = [], ignoredPosRefs = new Set(), recOf = null, members = null } = {}) {
   const issues = []
 
   issues.push(...checkMissingIsDesign(rsRows, positionUI))
@@ -73,7 +73,7 @@ export function runValidation(dbData, psRows, rsRows, positionUI,
   issues.push(...checkQtyAndDimMult(rsRows))
   issues.push(...checkMissingClipsDimQty(rsRows, positionUI))
   issues.push(...checkLocalDriverRequirements(rsRows, positionUI))
-  issues.push(...checkConnectorSetIncomplete(rsRows, positionUI, collections, recOf))
+  issues.push(...checkConnectorSetIncomplete(rsRows, positionUI, collections, recOf, members))
   issues.push(...checkUnresolvedTemplateSlots(rsRows))
   issues.push(...checkExteriorIPConnectors(rsRows, positionUI))
   issues.push(...checkMissingProductSpecs(psRows))
@@ -505,14 +505,14 @@ function checkLocalDriverRequirements(rsRows, positionUI) {
 // gaps come straight from the user's Connector Templates (real refs), never
 // guessed. See connectorGapsForPosition.
 // ---------------------------------------------------------------------------
-function checkConnectorSetIncomplete(rsRows, positionUI, collections, recOf) {
+function checkConnectorSetIncomplete(rsRows, positionUI, collections, recOf, members = null) {
   if (!collections || collections.length === 0) return []
   const issues = []
   const posRefs = [...new Set(rsRows.map(r => r.positionTypeRef || r.PositionTypeRef).filter(Boolean))]
 
   for (const ref of posRefs) {
     const rec = recOf ? recOf(ref) : (positionUI?.[ref]?.tags || [])
-    const gaps = connectorGapsForPosition(rsRows, ref, rec, collections)
+    const gaps = connectorGapsForPosition(rsRows, ref, rec, collections, undefined, members?.get(ref))
     for (const g of gaps) {
       issues.push({
         severity: 'warning',
