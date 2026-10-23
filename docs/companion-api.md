@@ -157,6 +157,11 @@ plus `project` (the project number) and `learned` (`[{ kind, key, value, tier, s
 learned values behind the code in view) → `{ "received": true, "id" }`. A server should cap the
 size and rate, and treat the content as untrusted text for a person to read.
 
+`id` is the report's code, six characters from `A–Z 2–9` and never all digits. It is the report's own
+`id` (`newReportId`) when that is free, otherwise a new one; the app shows "Sent as K7QF3M". A commit
+that fixes a report says `Fixes K7QF3M` in its **message** (a PR description is not read): when a
+deploy carrying it is up, the report is marked in dev, then live and resolved, with the build name.
+
 ## jobs
 
 `POST api/products/jobs` with `{ "codes": [{ code, manufacturer }] }` → `{ "jobs": [{ code, maker_key, slot, variant, category }] }`.
