@@ -3790,13 +3790,7 @@ const useStore = create((set, get) => ({
 
     // Ignored positions/families are out-of-scope — drop their issues so they
     // don't count toward validation totals.
-    const ignoredFamilies = new Set(ignoredPositionFamilies)
-    const isIgnored = (ref) => {
-      if (!ref) return false
-      if (positionUI[ref]?.ignored) return true
-      const pt = positionTypes.find(p => p.PositionTypeRef === ref)
-      return pt ? ignoredFamilies.has(positionFamilyOf(pt)) : false
-    }
+    const isIgnored = (ref) => !!ref && ignoredPosRefs.has(String(ref).toLowerCase())
     const filtered = results.filter(i => !isIgnored(i.ref))
 
     set({ validationResults: filtered })

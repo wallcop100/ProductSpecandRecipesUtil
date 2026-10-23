@@ -159,3 +159,15 @@ describe('invariant 1 — the DesignDB is the master', () => {
     expect(alignmentGaps({ psRows: [psRow('ET-GONE', { IsDeleted: 'Y' })] }).dbRows).toEqual([])
   })
 })
+
+describe('soft-deleted positions (reports #61-#63)', () => {
+  test('a deleted position is ignored, so its ETs are not flagged for a missing spec row', async () => {
+    const { ignoredPositionRefs } = await import('../../src/utils/positionFamily.js')
+    const positionTypes = [{ PositionTypeRef: 'B02wE', IsDeleted: 'Y' }, { PositionTypeRef: 'B03', IsDeleted: null }]
+    const ignoredPosRefs = ignoredPositionRefs({ positionTypes })
+    expect([...ignoredPosRefs]).toEqual(['b02we'])
+    const g = alignmentGaps({ recipes: [pos('B02wE', 'ET-DL-08'), pos('B03', 'ET-DL-09')], ignoredPosRefs })
+    expect(g.specRows.products.map(p => p.ref)).toEqual(['ET-DL-09'])
+    expect(g.dbRows.map(d => d.ref)).toEqual(['ET-DL-09'])
+  })
+})
