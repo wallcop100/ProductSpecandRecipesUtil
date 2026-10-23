@@ -31,8 +31,8 @@ export const RELEASES = [
       },
       {
         icon: 'auto_awesome',
-        title: 'Suggestions from the companion',
-        blurb: 'Purple cards propose recipe lines from your kits and positions built alike.',
+        title: 'Connected Learning Suggestions',
+        blurb: 'Purple cards propose suggestions based on other product spec and recipe work across the team.',
         companion: true,
       },
     ],
