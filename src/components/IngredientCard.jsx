@@ -859,10 +859,17 @@ function ProductInline({ etRef, manufacturer, productCode, onOpenProductSpec }) 
         <MaterialIcon name="edit" size={12} style={{ color: C.faint }} />
       </button>
       {retired && (
-        <span className="d-inline-flex align-items-center gap-1" style={{ fontSize: 10, color: C.muted }} data-testid="retired"
-          title={`Other projects show ${manufacturer || 'the maker'} now sells ${productCode} as ${retired.replacement}. Check which code to order, then change it in Product Spec.`}>
-          <span className="companion-dot" /> maker's newer code: <span className="font-monospace">{retired.replacement}</span>
-        </span>
+        <OverlayTrigger placement="auto" trigger={['hover', 'focus']} overlay={
+          <Popover style={{ maxWidth: 320 }} data-testid="retired-pop">
+            <Popover.Body style={{ fontSize: 12, lineHeight: 1.45 }}>
+              Other projects show {manufacturer || 'the maker'} now sells <span className="font-monospace">{productCode}</span> as{' '}
+              <span className="font-monospace">{retired.replacement}</span>. Check which code to order, then change it in Product Spec.
+            </Popover.Body>
+          </Popover>}>
+          <span className="d-inline-flex align-items-center gap-1" style={{ fontSize: 10, color: C.muted, cursor: 'help' }} data-testid="retired" tabIndex={0}>
+            <span className="companion-dot" /> maker's newer code: <span className="font-monospace">{retired.replacement}</span>
+          </span>
+        </OverlayTrigger>
       )}
     </span>
   )
