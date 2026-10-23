@@ -29,7 +29,7 @@ export default function BugReporter({ screen }) {
   const clearBugReports = useStore(s => s.clearBugReports)
   const [draft, setDraft] = useState(null)   // { x, y, target, note, capture, preview }
   const [copied, setCopied] = useState(false)
-  const [sent, setSent] = useState(null)      // 'sent' | 'kept' | 'n sent' — a moment's word beside the bug
+  const [sent, setSent] = useState(null)      // 'sent as CODE' | 'kept' | 'n sent' — a moment's word beside the bug
   const companion = useCompanion()
   const canSend = !!companion?.report
   const bugRef = useRef(null)
@@ -99,9 +99,10 @@ export default function BugReporter({ screen }) {
     if (!draft?.note.trim() || !canSend) return
     const r = build(kind)
     setDraft(null)
-    const ok = await deliver(r)
-    if (!ok) addBugReport(r)
-    say(ok ? 'sent' : 'kept')
+    const got = await deliver(r)
+    if (!got) addBugReport(r)
+    // the companion's code for it (a fix commit says "Fixes K7QF3M"); usually the one the app drew
+    say(got ? `sent as ${got.id || r.id}` : 'kept')
   }
 
   /** The reports kept here (written before, or that could not go): send them, keeping what fails. */
@@ -175,7 +176,7 @@ export default function BugReporter({ screen }) {
           </Dropdown>
         </ButtonGroup>
         {sent && <span className="ms-1 small" role="status" style={{ background: C.surface, borderRadius: 4, padding: '1px 6px', boxShadow: '0 1px 4px rgba(0,0,0,.25)' }}>
-          {sent === 'sent' ? 'Sent, thank you' : sent === 'kept' ? 'Kept with your bug reports' : sent.endsWith('kept') ? sent : `${sent}, thank you`}</span>}
+          {sent.startsWith('sent as') ? `Sent as ${sent.slice(8)}, thank you` : sent === 'kept' ? 'Kept with your bug reports' : sent.endsWith('kept') ? sent : `${sent}, thank you`}</span>}
       </div>
 
       {draft && createPortal(

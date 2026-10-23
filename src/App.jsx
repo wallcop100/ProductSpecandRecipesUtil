@@ -19,19 +19,8 @@ import { C } from './styles/tokens'
 
 // The short commit this build was made from; 'local' when there is no stamp (tests, an unstamped build).
 const BUILD = (document.querySelector('meta[name="build-commit"]')?.getAttribute('content') || 'local').slice(0, 7)
-// Positive adjectives and colours: either reads well before an animal, so both widen the name space.
-const ADJECTIVES = ['Brave', 'Bright', 'Calm', 'Clever', 'Cosy', 'Daring', 'Eager', 'Gentle', 'Glad', 'Happy', 'Jolly', 'Keen', 'Kind', 'Lucky', 'Merry', 'Mighty',
-  'Nimble', 'Noble', 'Plucky', 'Proud', 'Quick', 'Quiet', 'Sunny', 'Swift', 'Tidy', 'Trusty', 'Witty', 'Zesty', 'Bold', 'Cheery', 'Fair', 'Wise',
-  'Amber', 'Azure', 'Coral', 'Crimson', 'Cobalt', 'Copper', 'Golden', 'Indigo', 'Ivory', 'Jade', 'Lemon', 'Lilac', 'Magenta', 'Maroon', 'Mint', 'Navy',
-  'Olive', 'Peach', 'Pearl', 'Plum', 'Rose', 'Ruby', 'Russet', 'Saffron', 'Sage', 'Scarlet', 'Silver', 'Teal', 'Topaz', 'Violet', 'Amethyst', 'Emerald']
-const ANIMALS = ['Otter', 'Badger', 'Fox', 'Heron', 'Hare', 'Owl', 'Wren', 'Robin', 'Seal', 'Puffin', 'Lynx', 'Panda', 'Koala', 'Gecko', 'Llama', 'Bison',
-  'Falcon', 'Beaver', 'Moose', 'Newt', 'Orca', 'Raven', 'Stoat', 'Tiger', 'Walrus', 'Yak', 'Zebra', 'Dingo', 'Ferret', 'Ibex', 'Mole', 'Swan',
-  'Alpaca', 'Bear', 'Camel', 'Crane', 'Deer', 'Dolphin', 'Eagle', 'Elk', 'Finch', 'Gazelle', 'Goose', 'Hedgehog', 'Jaguar', 'Kestrel', 'Lemur', 'Lion',
-  'Magpie', 'Marten', 'Meerkat', 'Osprey', 'Panther', 'Pelican', 'Penguin', 'Rabbit', 'Salmon', 'Sparrow', 'Squirrel', 'Starling', 'Toucan', 'Turtle', 'Vole', 'Wolf']
-// The build's name, picked by its tree so dev and the prod it ships as share it (vite.config.js): 4,096 names, so a repeat is rare.
-const TREE = document.querySelector('meta[name="build-tree"]')?.getAttribute('content') || ''
-const BUILD_NAME = /^[0-9a-f]{4}/.test(TREE)
-  ? `${ADJECTIVES[parseInt(TREE.slice(0, 2), 16) % 64]} ${ANIMALS[parseInt(TREE.slice(2, 4), 16) % 64]}` : BUILD
+// The build's name ("Magenta Starling"), stamped by vite.config.js from the tree so dev and the prod it ships as share it.
+const BUILD_NAME = document.querySelector('meta[name="build-name"]')?.getAttribute('content') || BUILD
 
 /**
  * App — top-level screen router.
