@@ -5,8 +5,8 @@
  * add a release on top of RELEASES: a version, the date, a one-line tagline, three or four
  * highlights (a Material icon, a short title, one short line) and an optional `also`
  * list of smaller things. Newest first. Write it for the people using the tool, not for us:
- * what they can do now, not how it was built. Keep anything companion-only out of it, since
- * the GitHub Pages release has no companion.
+ * what they can do now, not how it was built. Mark a companion-only highlight `companion: true`:
+ * the GitHub Pages release has no companion, so WhatsNew hides it there.
  */
 export const RELEASES = [
   {
@@ -28,6 +28,12 @@ export const RELEASES = [
         icon: 'view_sidebar',
         title: 'A calmer builder',
         blurb: 'A position sidebar, one status pip each, and undo on every screen.',
+      },
+      {
+        icon: 'auto_awesome',
+        title: 'Suggestions from the companion',
+        blurb: 'Purple cards propose recipe lines from your kits and positions built alike.',
+        companion: true,
       },
     ],
     also: [
