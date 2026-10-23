@@ -21,6 +21,7 @@ speaks this protocol, it adds three optional features:
 | `connectors`    | The Wago connector library (`globalTemplates.json` `connectors` shape), in place of the one bundled with the app. |
 | `kits`          | The parts used with a profile / channel on other projects. Inline suggestions in the ElementType review and the recipe editor. |
 | `templates`     | Global templates, each with a rule saying which positions it is for (read-only), and a way to suggest one back. |
+| `proof`         | A project's own rows (`projects`, `outcomes`, a whole-project `library` replace) open only to someone holding its DesignDB. The app proves it on open and sends the token with each project call. |
 | `checks`        | The server counts people's checks of suggestions (`outcomes` `confirmed` / `rejected` / `unsure` / `proposed`) and serves them back as `votes`. With it, Add on a suggestion the app is unsure of opens a popup that asks; without it nothing halts and a likely suggestion only gets a 👍/👎 chip. |
 
 All paths are **relative to the page** (`./api/...`), so a build needs no configuration. If any
@@ -49,13 +50,14 @@ Any other answer disables the companion: a 404, a non-JSON body (a static host s
   "manufacturer": "Acme",
   "retired": false,
   "replacement": null,
-  "families": [{ "family": "ET-LIN-TAPE", "projects": ["4756", "5139"], "tier": "mined" }],
+  "families": [{ "family": "ET-LIN-TAPE", "projects": 2, "tier": "mined" }],
   "refsUsed": [{ "ref": "ET-DL-01", "count": 3, "confirmed": true }],
   "facts": [{ "attribute": "ElementTypes.MaxPower(W)", "value": "60", "tier": "vendor", "source": "datasheet" }]
 }
 ```
 
-`families` is what the app shows: a ref is per project, but the family travels. `tier` is
+`families` is what the app shows: a ref is per project, but the family travels. `projects` is a count,
+not the numbers. `tier` is
 `confirmed` (a person said so), `mined` or `observed` (seen on a project). `refsUsed` is still
 answered for older builds.
 
@@ -88,11 +90,11 @@ it should queue them for a person to review, not apply them.
 
 - `GET api/library?makers=<a,b>&exclude=<project>` → `{ "exemplars": [{ maker, code, family, ref,
   name, description, source }] }`. These are exemplars from other projects, in the app's
-  `style_exemplars` shape. `source` says where each one came from (for example `shared · 4756`),
-  and the app's family seeding shows that as its reason.
+  `style_exemplars` shape. `source` is set only on the asker's own rows (same project, same
+  origin) and blank on everyone else's, so the answer names no other project.
 - `POST api/library` with `{ "project", "exemplars": [...] }` sends the exemplars harvested when a
   project opens. A server should replace that project's previous set, because the latest harvest is
-  the whole truth.
+  the whole truth. With `proof`, a replace needs the project's token (`X-PSR-Proof`).
 
 ## projects
 
@@ -107,6 +109,8 @@ Nothing is applied without a click.
   "rejected" }`. A server should stop offering an item that is rejected more often than it is
   accepted, until it is changed.
 
+With `proof`, each of these needs the project's token in `X-PSR-Proof`; without it the answer is `403`.
+
 | kind | key | value |
 |---|---|---|
 | `assignment` | `MAKER\|CODE` | `{ ref, code, maker }` |
@@ -114,9 +118,27 @@ Nothing is applied without a click.
 | `rule` | token | `{ role, maker }` (code-column dialect) |
 | `pair` | sorted codes joined by `\|` | `{ verdict: "same" \| "different" }` |
 
+## proof
+
+The project number alone is not enough to read or write a project's rows: the app proves it holds the
+project's DesignDB.
+
+1. `GET api/proof` → `{ "nonce" }`, valid 10 minutes.
+2. `POST api/projects/<number>/proof` with `{ "nonce", "hashes": [...] }`. Each hash is the first 16 hex
+   of `sha256(nonce|Ref|TypeRef)` for a Position the app loaded (at most 15,000). Only hashes leave the
+   browser.
+3. → `{ "token" }` (valid 12 hours) or `403`. The server passes it when enough of the project's
+   committed Positions that no other project has are among the hashes, and most of what was sent
+   belongs to the project. The answer is pass or fail only.
+4. The app sends the token as `X-PSR-Proof` on `projects`, `outcomes` and the `library` replace for that
+   project. Reopening the project proves again.
+
+A project with too few distinctive Positions cannot be proven; it gets no per-project items, and the
+precedent shared across projects still works.
+
 ## outcomes
 
-`POST api/projects/<number>/outcomes` with `{ "outcomes": [{ kind, key, tier, source, supplied,
+`POST api/projects/<number>/outcomes` (with `proof`, needs `X-PSR-Proof`) with `{ "outcomes": [{ kind, key, tier, source, supplied,
 final, outcome }] }`. A key is sent again only when its outcome changes. Nothing reads these back.
 
 | field | meaning |
