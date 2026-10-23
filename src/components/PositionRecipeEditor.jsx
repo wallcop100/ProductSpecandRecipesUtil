@@ -24,6 +24,7 @@ import { openTemplates } from './useTemplateMatches'
 import { colorsForType, ICONS, ACTION_ICONS } from '../utils/entityStyle'
 import { CONCEPTS } from './ConceptCard'
 import { C } from '../styles/tokens'
+import { wrapperUsedBy } from '../utils/collectionStatus'
 
 // Group container-internal rows by ContextRef so each container gets a section
 // titled by its ElementTypeRef.
@@ -265,12 +266,19 @@ export default function PositionRecipeEditor({
         {internals ? (
           // One section per wrapper, named by the wrapper (the dl/lin split goes by each part's own ref).
           groupByContainer(filterDeleted([...grouped.dlInternal, ...grouped.linInternal]))
-            .map(g => ({ ...g, lin: g.contextRef.toUpperCase().includes('LIN') }))
+            .map(g => ({ ...g, lin: g.contextRef.toUpperCase().includes('LIN'), shared: wrapperUsedBy(recipes, g.contextRef).filter(p => p !== ref) }))
             .map((g, i) => (
               <div key={g.contextRef} className={exploded && !document.startViewTransition ? 'balloon-in' : undefined}
                 style={{ '--i': i }}>
                 <RecipeSection sectionKey={g.lin ? 'lin_internal' : 'dl_internal'}
-                  title={<span className="d-inline-flex align-items-center gap-2">{g.lin ? 'LIN' : 'DL'} Wrapper <EntityPill type="ElementType" label={g.contextRef} /></span>}
+                  title={<span className="d-inline-flex align-items-center gap-2">{g.lin ? 'LIN' : 'DL'} Wrapper <EntityPill type="ElementType" label={g.contextRef} />
+                    {/* Edits here change every position's copy; order can't be dragged, as in Edit internals. */}
+                    {g.shared.length > 0 && <span className="rounded px-1 d-inline-flex align-items-center gap-1" data-testid="wrapper-shared"
+                      style={{ fontSize: 10, fontWeight: 400, background: C.subtle, color: C.muted, border: `1px solid ${C.border}` }}
+                      title={`Edits here also change ${g.shared.join(', ')}`}>
+                      <MaterialIcon name="group" size={11} /> shared with {g.shared.join(', ')} — edits apply to all
+                    </span>}</span>}
+                  disableSorting={g.shared.length > 0}
                   rows={g.rows} posRef={ref} onOpenProductSpec={onOpenProductSpec}
                   onAddRow={onAddRow} onNewET={onNewET} onReplace={onReplace} />
               </div>

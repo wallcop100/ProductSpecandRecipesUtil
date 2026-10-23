@@ -67,6 +67,8 @@ curl -s https://wallcop100.github.io/ProductSpecandRecipesUtil/ | grep -o 'build
 - (2026-10-23) Anything that decides which connector template applies takes `membership()`, never the bare rule; `connectorGapsForPosition` without `member` falls back to every matching rule (#54). With the store's `recOf` (it carries `.sigs`) membership decides by what positions carry, and a tie is a clash; rule specificity only decides without `.sigs` (#66).
 - (2026-10-23) Never put a suggestion rule that names several alternative sets on a template: whichever is used first claims every position the rule matches (#66).
 
+- (2026-10-23) Edits to wrapper internals propagate in the store whatever `activeContextType` is (`wrapperCopies` in useStore). Never gate propagation on Edit internals again: Explode and Review edited one copy silently. Anything that renumbers RecipeIndex inside a shared wrapper must refuse or apply to every copy, because copies are matched by index.
+
 - (2026-10-21) Companion-sourced UI (kits, kinds, served templates, other-project codes) is purple: `.companion-card` (glistening outline) for a card, `.companion-dot` for a lone item, never both (`src/debug.css`, `C.companion`). `!important` on a `background` shorthand pins `background-position`, so the glisten animates a registered `--glisten` angle instead.
 - (2026-10-17) `.gitignore` has `*.md`, so `CLAUDE.md`, `STATE.md`, `AGENTS.md` are untracked unless force-added.
 - (2026-10-17) `openwiki/quickstart.md` has ~38 broken `../` links; use `openwiki/index.md` instead.

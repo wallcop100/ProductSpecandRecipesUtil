@@ -44,3 +44,26 @@ test('an exploded shared wrapper still guards a delete', () => {
   expect(screen.getByText(/Delete from a shared assembly/)).toBeTruthy()
   expect(removeRecipeRow).not.toHaveBeenCalled()
 })
+
+test('an exploded shared wrapper names who else it changes, and cannot be dragged', () => {
+  renderEditor()
+  toggle()
+  expect(screen.getByTestId('wrapper-shared').textContent).toMatch(/shared with C03r — edits apply to all/)
+})
+
+test('"Delete from all" in the exploded view really deletes C03r\'s copy too (real store)', () => {
+  const real = useStore.getInitialState().removeRecipeRow
+  useStore.setState({
+    recipes: [...RECIPES, { _id: 'i3', _row_num: 9, PositionTypeRef: 'C03r', ContextType: 'ElementType', ContextRef: 'ET-LIN-01', ElementTypeRef: 'ET-PROF-01', Quantity: 1 }]
+      .map(r => r._id === 'i1' ? { ...r, _row_num: 5 } : r),
+    removeRecipeRow: real, rsChanges: [], activeContextType: 'PositionType', activeETRef: null,
+  })
+  renderEditor()
+  toggle()
+  const section = screen.getByText(/^LIN Wrapper/).closest('[data-debug-id="RecipeSection:lin_internal"]')
+  fireEvent.click(within(section).getByTitle(/Mark IsDeleted/))
+  fireEvent.click(screen.getByText('Delete from all'))
+  const st = useStore.getState().recipes
+  expect(st.find(r => r._id === 'i1').IsDeleted).toBe('Y')
+  expect(st.find(r => r._id === 'i3').IsDeleted).toBe('Y')
+})
