@@ -83,6 +83,33 @@ describe('bug reports', () => {
     expect(reportsToMarkdown([r])).toContain(`## ${r.id} · Feature request · Swap all at once`)
   })
 
+  test('"Write a report…" records the last click, what is open and which build (#70)', () => {
+    setup()
+    useStore.setState({ drawerOpen: true, drawerTab: 'templates' })
+    const meta = document.createElement('meta')
+    meta.setAttribute('name', 'build-commit'); meta.setAttribute('content', 'abc1234')
+    document.head.appendChild(meta)
+    const tab = document.createElement('button')
+    tab.setAttribute('data-testid', 'drawer-tab-templates'); tab.setAttribute('aria-pressed', 'true')
+    document.body.appendChild(tab)
+    fireEvent.click(screen.getByText('Swap'))
+    fireEvent.click(screen.getByLabelText('Bug report options'))
+    fireEvent.click(screen.getByTestId('report-write'))
+    expect(screen.getByTestId('bug-note')).toHaveTextContent('last clicked button “Swap”')
+    fireEvent.change(screen.getByLabelText('Bug note'), { target: { value: 'this looks off' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    const r = useStore.getState().bugReports.at(-1)
+    expect(r).toMatchObject({ commit: 'abc1234', host: location.host, companion: false })
+    expect(r.app).toMatchObject({ drawer: 'templates', open: ['drawer-tab-templates'] })
+    expect(r.dom).toMatchObject({ via: 'last-click', element: 'button “Swap”', areas: ['ing-row', 'PositionRecipeEditor'] })
+    const md = reportsToMarkdown([r])
+    expect(md).toContain('commit abc1234')
+    expect(md).toContain('- **Drawer:** templates')
+    expect(md).toContain('- **Last clicked:** button “Swap”')
+    meta.remove(); tab.remove()
+  })
+
   test('Shift + right-click keeps the normal menu', () => {
     setup()
     fireEvent.click(screen.getByTestId('bug-toggle'))

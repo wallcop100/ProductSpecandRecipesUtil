@@ -764,7 +764,7 @@ export default function BuilderScreen({
                   ['similar', 'compare_arrows', 'Positions like this one'],
                   ['templates', 'dashboard_customize', 'Templates'],
                 ].map(([k, icon, label]) => (
-                  <Button key={k} variant={rightTab === k ? 'primary' : 'outline-secondary'} title={label} aria-label={label}
+                  <Button key={k} variant={rightTab === k ? 'primary' : 'outline-secondary'} title={label} aria-label={label} aria-pressed={rightTab === k}
                     data-testid={`drawer-tab-${k}`} onClick={() => setRightTab(k)} style={{ padding: '1px 4px', position: 'relative' }}>
                     <MaterialIcon name={icon} size={15} />
                     {k === 'templates' && templateHint && (
