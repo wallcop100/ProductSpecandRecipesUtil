@@ -377,6 +377,48 @@ export function getRecipeForPosition(recipes, posRef) {
  * Resolution goes through containerForPosition, which also accepts a wrapper that
  * is not the design element and one that holds no internals yet.
  */
+/**
+ * A wrapper's contents are copied onto every position that uses it: one row per position,
+ * the same ContextRef, RecipeIndex and ElementTypeRef. These are `row`'s copies on the OTHER
+ * positions. An edit to one copy is an edit to the assembly, so it goes to all of them in
+ * every view, not only in Edit internals (the exploded view and the Review window edited
+ * one position's copy, silently, until 2026-10-23). The ElementTypeRef must agree too, so a
+ * copy whose order has drifted is never overwritten with another part's edit.
+ */
+export function wrapperCopies(recipes, row) {
+  if (!row || (row.ContextType || row.contextType) !== 'ElementType') return []
+  const cr = row.ContextRef || row.contextRef
+  const ri = row.RecipeIndex ?? row.recipeIndex
+  const et = String(row.ElementTypeRef || row.elementTypeRef || '').toLowerCase()
+  const pr = row.PositionTypeRef ?? row.positionTypeRef
+  return recipes.filter(r => r._id !== row._id
+    && (r.ContextType || r.contextType) === 'ElementType'
+    && (r.ContextRef || r.contextRef) === cr
+    && (r.RecipeIndex ?? r.recipeIndex) === ri
+    && String(r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === et
+    && (r.PositionTypeRef ?? r.positionTypeRef) !== pr)
+}
+
+/** The other positions holding a copy of `wrapperRef`'s contents. */
+function wrapperHolders(recipes, wrapperRef, posRef) {
+  return [...new Set(recipes
+    .filter(r => (r.ContextType || r.contextType) === 'ElementType' && (r.ContextRef || r.contextRef) === wrapperRef)
+    .map(r => r.PositionTypeRef || r.positionTypeRef)
+    .filter(p => p && p !== posRef))]
+}
+
+/**
+ * Reordering or moving a part in or out of a shared wrapper would change one position's
+ * copy only, and the copies are matched by RecipeIndex. Returns the refusal, or null.
+ */
+function sharedWrapperRefusal(recipes, posRef, contextRefs, what) {
+  for (const cr of contextRefs) {
+    const others = cr ? wrapperHolders(recipes, cr, posRef) : []
+    if (others.length) return `Cannot ${what}: ${cr} is shared with ${others.join(', ')}, and only ${posRef}'s copy would change. Fork it for ${posRef} first.`
+  }
+  return null
+}
+
 function contextForSection(section, posRef, recipes, containerETRefs = new Set()) {
   if (section === 'dl_internal' || section === 'lin_internal') {
     return { contextType: 'ElementType', contextRef: containerForPosition(recipes, posRef, containerETRefs) }
@@ -1802,16 +1844,6 @@ const useStore = create((set, get) => ({
     }
     // === END ET MODE ===
 
-    const sectionRows = recipes.filter(r => {
-      const ptRef = r.positionTypeRef || r.PositionTypeRef
-      return ptRef === posRef && sectionOfRow(r) === section
-    })
-
-    const maxIndex = sectionRows.reduce(
-      (max, r) => Math.max(max, r.RecipeIndex ?? r.recipeIndex ?? 0),
-      0
-    )
-
     const etRef = ingredientData.elementTypeRef || ingredientData.ElementTypeRef || null
     const etToken = etRef ? etRef.toUpperCase() : ''
 
@@ -1824,6 +1856,19 @@ const useStore = create((set, get) => ({
       set({ recipeError: `Cannot place ${etRef || 'this element'} inside a wrapper on ${posRef}: no container found.` })
       return null
     }
+
+    // Inside a wrapper the part goes into every position's copy, at one shared RecipeIndex,
+    // so the copies stay matched (wrapperCopies).
+    const holders = contextType === 'ElementType' ? wrapperHolders(recipes, contextRef, posRef) : []
+    const sectionRows = recipes.filter(r => contextType === 'ElementType'
+      ? (r.ContextType || r.contextType) === 'ElementType' && (r.ContextRef || r.contextRef) === contextRef
+        && [posRef, ...holders].includes(r.PositionTypeRef || r.positionTypeRef)
+      : (r.positionTypeRef || r.PositionTypeRef) === posRef && sectionOfRow(r) === section)
+
+    const maxIndex = sectionRows.reduce(
+      (max, r) => Math.max(max, r.RecipeIndex ?? r.recipeIndex ?? 0),
+      0
+    )
 
     // Design-or-contract, always. A design row stays a design row (never also contract);
     // everything else defaults to contract when the caller has not said.
@@ -1879,11 +1924,13 @@ const useStore = create((set, get) => ({
       _id: uuidv4(),
     }
 
+    // The Form provenance is this position's, not the other holders'.
+    const { _origin, _formCode, _formNote, ...shared } = newRow
+    const copies = holders.map(p => ({ ...shared, positionTypeRef: p, PositionTypeRef: p, _id: uuidv4() }))
     set({
-      recipes: [...recipes, newRow],
-      rsChanges: mergeRsChanges(rsChanges, [
-        { _id: newRow._id, positionTypeRef: posRef, action: 'upsert', row: newRow },
-      ], recipes),
+      recipes: [...recipes, newRow, ...copies],
+      rsChanges: mergeRsChanges(rsChanges, [newRow, ...copies].map(row =>
+        ({ _id: row._id, positionTypeRef: row.PositionTypeRef, action: 'upsert', row })), recipes),
       lastAddedRowId: newRow._id,
     })
 
@@ -2217,6 +2264,10 @@ const useStore = create((set, get) => ({
     }
     if ((row.ContextType || row.contextType) === contextType &&
         (row.ContextRef || row.contextRef) === contextRef) return row   // already there
+    const refused = sharedWrapperRefusal(recipes, posRef,
+      [(row.ContextType || row.contextType) === 'ElementType' && (row.ContextRef || row.contextRef), contextType === 'ElementType' && contextRef],
+      `move ${row.ElementTypeRef || row.elementTypeRef}`)
+    if (refused) { set({ recipeError: refused }); return null }
 
     if (recordHistory) get()._pushHistory()
 
@@ -3161,7 +3212,7 @@ const useStore = create((set, get) => ({
    * In ET mode, propagates to all position copies of that row.
    */
   updateRecipeRow(posRef, rowId, rawUpdates, { recordHistory = true } = {}) {
-    const { recipes, rsChanges, activeContextType, activeETRef } = get()
+    const { recipes, rsChanges } = get()
 
     // Write every RS field under both casings — see normalizeRsUpdates. Without this a
     // camelCase-only edit is invisible to the export diff.
@@ -3175,32 +3226,15 @@ const useStore = create((set, get) => ({
 
     if (recordHistory) get()._pushHistory()
 
-    let updatedRecipes = recipes.map(row => {
-      if (row._id !== rowId) return row
-      return { ...row, ...updates }
+    // The row and, inside a wrapper, its copies on every other position (wrapperCopies).
+    const copyIds = new Set(wrapperCopies(recipes, recipes.find(r => r._id === rowId)).map(r => r._id))
+    const newChanges = []
+    const updatedRecipes = recipes.map(row => {
+      if (row._id !== rowId && !copyIds.has(row._id)) return row
+      const updated = { ...row, ...updates }
+      newChanges.push({ _id: row._id, positionTypeRef: row._id === rowId ? posRef : (row.PositionTypeRef ?? row.positionTypeRef), action: 'upsert', row: updated })
+      return updated
     })
-
-    const primaryRow = updatedRecipes.find(r => r._id === rowId)
-    const newChanges = [{ _id: rowId, positionTypeRef: posRef, action: 'upsert', row: primaryRow }]
-
-    // Propagate to all position copies in ET mode
-    if (activeContextType === 'ElementType' && activeETRef && primaryRow) {
-      const primaryIndex = primaryRow.RecipeIndex ?? primaryRow.recipeIndex
-      const primaryPosRef = primaryRow.PositionTypeRef ?? primaryRow.positionTypeRef
-      updatedRecipes = updatedRecipes.map(row => {
-        if (row._id === rowId) return row
-        const ct = row.ContextType || row.contextType
-        const cr = row.ContextRef || row.contextRef
-        const ri = row.RecipeIndex ?? row.recipeIndex
-        const pr = row.PositionTypeRef ?? row.positionTypeRef
-        if (ct === 'ElementType' && cr === activeETRef && ri === primaryIndex && pr !== primaryPosRef) {
-          const updated = { ...row, ...updates }
-          newChanges.push({ _id: row._id, positionTypeRef: pr, action: 'upsert', row: updated })
-          return updated
-        }
-        return row
-      })
-    }
 
     set({ recipes: updatedRecipes, rsChanges: mergeRsChanges(rsChanges, newChanges, recipes) })
   },
@@ -3211,29 +3245,15 @@ const useStore = create((set, get) => ({
    * In ET mode, propagates removal to all position copies.
    */
   removeRecipeRow(posRef, rowId, { recordHistory = true } = {}) {
-    const { recipes, rsChanges, activeContextType, activeETRef } = get()
+    const { recipes, rsChanges } = get()
 
     const removedRow = recipes.find(r => r._id === rowId)
     if (!removedRow) return
 
     if (recordHistory) get()._pushHistory()
 
-    // Which rows this delete affects: the target + its ET-mode position copies
-    const affected = [removedRow]
-    if (activeContextType === 'ElementType' && activeETRef) {
-      const primaryIndex = removedRow.RecipeIndex ?? removedRow.recipeIndex
-      const primaryPosRef = removedRow.PositionTypeRef ?? removedRow.positionTypeRef
-      for (const row of recipes) {
-        if (row._id === rowId) continue
-        const ct = row.ContextType || row.contextType
-        const cr = row.ContextRef || row.contextRef
-        const ri = row.RecipeIndex ?? row.recipeIndex
-        const pr = row.PositionTypeRef ?? row.positionTypeRef
-        if (ct === 'ElementType' && cr === activeETRef && ri === primaryIndex && pr !== primaryPosRef) {
-          affected.push(row)
-        }
-      }
-    }
+    // Which rows this delete affects: the target + its copies on the wrapper's other positions
+    const affected = [removedRow, ...wrapperCopies(recipes, removedRow)]
 
     // New rows (never synced to the source file) are hard-removed; rows that
     // exist in the file are soft-deleted (IsDeleted=Y) so the change syncs out.
@@ -3273,13 +3293,17 @@ const useStore = create((set, get) => ({
   reorderIngredients(posRef, section, oldIndex, newIndex) {
     const { recipes, rsChanges } = get()
 
-    get()._pushHistory()
-
     // Separate section rows from the rest
     const sectionRows = recipes.filter(
       r => (r.positionTypeRef || r.PositionTypeRef) === posRef &&
            sectionOfRow(r) === section
     )
+    const refused = sharedWrapperRefusal(recipes, posRef,
+      sectionRows.filter(r => (r.ContextType || r.contextType) === 'ElementType').map(r => r.ContextRef || r.contextRef),
+      'reorder inside a wrapper')
+    if (refused) { set({ recipeError: refused }); return }
+
+    get()._pushHistory()
     const otherRows = recipes.filter(
       r => !((r.positionTypeRef || r.PositionTypeRef) === posRef &&
              sectionOfRow(r) === section)
@@ -3314,9 +3338,13 @@ const useStore = create((set, get) => ({
     const sourceSection = sectionOfRow(rowToMove)
     if (sourceSection === targetSection) return
 
-    get()._pushHistory()
-
     const { contextType, contextRef } = contextForSection(targetSection, posRef, recipes)
+    const refused = sharedWrapperRefusal(recipes, posRef,
+      [(rowToMove.ContextType || rowToMove.contextType) === 'ElementType' && (rowToMove.ContextRef || rowToMove.contextRef), contextType === 'ElementType' && contextRef],
+      `move ${rowToMove.ElementTypeRef || rowToMove.elementTypeRef}`)
+    if (refused) { set({ recipeError: refused }); return }
+
+    get()._pushHistory()
 
     const movedRow = {
       ...rowToMove,

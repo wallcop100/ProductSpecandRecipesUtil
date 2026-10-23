@@ -19,6 +19,9 @@ Templates drawer (#101, #102 merged): one line per part in human words ("tape", 
 
 ## Log
 
+### 2026-10-23 (shared wrapper edits, critical)
+A wrapper's internals are copied per position. Edits, deletes, restores and replaces went to the other positions' copies only from Edit internals (`activeContextType === 'ElementType'`). In Explode internals and the Review window they changed only the current position's copy, and adds went to one position. Fixed in the store, so it no longer depends on the view: `wrapperCopies` (the same ContextRef, RecipeIndex and ElementTypeRef on other positions) drives `updateRecipeRow` and `removeRecipeRow`, and an internal `addRecipeRow` writes to every holder at one shared RecipeIndex. Reorder and move into or out of a shared wrapper are refused with `recipeError` (fork first), and exploded shared sections say "shared with … — edits apply to all" and don't sort. `tests/frontend/sharedWrapperEdits.test.js` runs every case in both modes; with the old behaviour put back, 8 tests fail. Checked on 5642: deleting C01r's ET-LIN-CAP-04 in the exploded view removed it from C03r. Updated FWEJ93 (bugBatch0930), because an add into A05E's shared ET-DL-05 now lands on A05 too.
+
 ### 2026-10-23 (#74 explode internals, #104 merged)
 ⋯ → View → Explode internals renders every wrapper's internals as its own editable section, using the existing `showInternals` path. It persists as `screenView.recipes.explode`. The sections inflate with a balloon keyframe (`.balloon-in` in `debug.css`), plus a View Transition where the browser supports one. After Erik's review each part's contents-tree line morphs into its card, and the heading uses the orange ElementType pill (purple is reserved for the companion). Caveat: Add Entity in an internal section goes to `containerForPosition`, the position's one container, so on a position with two wrappers the second section's Add would land in the first. ReviewModal already has this problem.
 

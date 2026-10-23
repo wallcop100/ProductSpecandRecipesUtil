@@ -65,9 +65,11 @@ describe('FWEJ93 / CLMJX9: the connector cell, slot by slot', () => {
     expect(add).toHaveLength(1)
     fireEvent.click(add[0])
     expect(screen.getByText('2/2 ingredients present')).toBeInTheDocument()
-    // Remove takes it out of one place only.
+    // Remove takes it out of one place only: the site row goes, the wrapper's part stays.
+    // The wrapper is shared with A05, so its part is on both copies (2026-10-23).
     fireEvent.click(screen.getAllByRole('button', { name: 'Remove' })[0])
-    expect(useStore.getState().recipes.filter(r => r.ElementTypeRef === 'ET-PHOS-2PIN' && r.IsDeleted !== 'Y')).toHaveLength(1)
+    const left = useStore.getState().recipes.filter(r => r.ElementTypeRef === 'ET-PHOS-2PIN' && r.IsDeleted !== 'Y')
+    expect(left.map(r => `${r.PositionTypeRef}:${r.ContextType}`).sort()).toEqual(['A05:ElementType', 'A05E:ElementType'])
   })
 
   test('a part for inside the wrapper cannot be added where there is no wrapper', () => {
