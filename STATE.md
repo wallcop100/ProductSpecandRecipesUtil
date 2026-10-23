@@ -2,7 +2,7 @@
 Updated: 2026-10-23
 
 ## Now
-Branch `reports-66-72` fixes #66 (connector choice follows what the project carries), #67 (PositionType Description under the header) and #72 (the check chip follows undo/redo). #70 (restyle the connectors drawer: optional / can add / have) waits on a talk with Erik, then a demo before any code. Reports #54, #64, #65, #68, #69, #71 are resolved; #71 was checked on Connected dd32e06.
+Branch `templates-drawer-70` (#70): the Templates drawer keeps one line per part; a ticked part ends in its ElementType as a pill (hover: maker and code), a part fewer than all the template's positions have shows "n of m · %", and a missing part's Add says what it writes (solid = the template's own ElementType, dashed ✨ = one the project's data points to, dashed grey = a TBC placeholder). #100 (report context: drawer, open tabs, last click, commit, host) is merged; datajoin_mx PR #9 lists those fields in `psr_reports`. Resolve #66, #67, #72 (and #70 after a look) once Connected serves them.
 
 ## Next
 - 4746: the "clips (71%)" placeholder is offered on C1/C3/C5-C7/XC1 (1009 profile) and C15 (1019), though no position with that profile has clips. Consider skipping the placeholder when every same-profile position lacks the job.
@@ -18,6 +18,10 @@ Branch `reports-66-72` fixes #66 (connector choice follows what the project carr
 (nothing)
 
 ## Log
+
+### 2026-10-23 (report #70, reporter context)
+- #70 was raised in the Templates drawer, but the report only said "builder, C05r", and the first demo was of the Connectors drawer. #100 adds the open drawer, open tabs, last click, commit and host to every report; datajoin_mx #9 shows them in `psr_reports`.
+- Templates drawer: ElementType pills, usage share per part across the template's positions, Add buttons styled by source. Unit-tested; not seen in a browser (the local copy has no templates).
 - 2026-10-23 (reports #66, #67, #72): #66: when several templates' rules hold, `membership()` now decides by evidence (a ruled template beats a catch-all; then the template nearest the position's own connectors; then the one more positions are built like), and a tie is a clash offered equally. Without `recOf.sigs` the old specificity rules still decide. The Wago card ranks sets by product codes carried (A06m: 8 of 8 for 2+3 → 2+3 leads), offers both side by side on a tie, and never attaches a rule two sets share. That shared rule was how the "5-pin DALI + perm" template claimed every DALI-local position on 5642. #72: chips were local state. Undo left a stale "Added X" chip, and a remount lost them. A chip now stands only while its line's part is present, and is remembered per position.
 - 2026-10-23 (reports #64-#72, PR #98): Reproduced on Connected e49a5b2 with the 5642 fixture. #71 was a regression from ce0e0b9: two siblings keyed `{ref}` left the old card mounted. #54 was the banner/dot/validation checking every rule-matching template, not the membership the drawer uses. #64/#65: companion held `FPS2021ECG → TBC` (observed, 2026-10-22) from a code edited to TBC; the app now neither sends nor shows those. datajoin `products.db` still holds that row, plus `PLASTER IN KIT → NA-TFR-WT-V2-PRE` and an `FPS2020BG2000/FPS2021BG2000` slash code: ordinary edits recorded as supersessions.
 - 2026-10-23 (reports #52-#63): Six agent branches merged without conflicts into `reports-50-63`; 881 files / 11,601 tests pass. Browser check on 5642 could not reproduce the reporter's state (template pins, deleted positions live in their browser), so #52/53, #54, #56/57, #61-63 are unit-tested only; #54 not reproduced. Not done: toast for #52, `usage.js` still counts live rows on deleted positions. Side effect: an empty-rule connector template hides the "usually carry connectors" line everywhere.
