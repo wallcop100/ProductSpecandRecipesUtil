@@ -31,6 +31,7 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
   const updatePSRow  = useStore(s => s.updatePSRow)
   const addPSRow     = useStore(s => s.addPSRow)
   const deletePSRow  = useStore(s => s.deletePSRow)
+  const deleteElementType = useStore(s => s.deleteElementType)
   const elementTypes = useStore(s => s.elementTypes)
   const alignmentGaps = useStore(s => s.alignmentGaps)
 
@@ -247,7 +248,7 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
   function bulkDelete() {
     for (const key of bulkSelected) {
       const ref = psRows.find(r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === key)
-      if (ref) deletePSRow(ref.ElementTypeRef || ref.elementTypeRef)
+      if (ref) { deletePSRow(ref.ElementTypeRef || ref.elementTypeRef); deleteElementType(ref.ElementTypeRef || ref.elementTypeRef) }
     }
     clearBulk()
   }
