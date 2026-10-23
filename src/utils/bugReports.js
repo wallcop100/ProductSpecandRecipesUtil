@@ -5,7 +5,7 @@
  *
  * Nothing here reads file contents: only what the clicked element shows and a few counts.
  */
-import { CHANGELOG } from '../changelog'
+import { LATEST } from '../changelog'
 
 const KEY = 'bugReports'
 const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev'
@@ -123,7 +123,7 @@ export function buildReport({ note, kind = 'bug', target, via, state, screen, tr
     note: String(note || '').trim(),
     ...(kind === 'feature' ? { kind: 'feature' } : {}),
     version: APP_VERSION,
-    build: CHANGELOG[0]?.date || null,
+    build: LATEST?.version || null,
     ...pageContext(),
     companion: !!companion,
     ...(capture ? {

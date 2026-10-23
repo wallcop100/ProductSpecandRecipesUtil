@@ -12,12 +12,12 @@ import ProjectIdPill from '../components/ProjectIdPill'
 import StageBar from '../components/StageBar'
 import MaterialIcon from '../components/MaterialIcon'
 import { ACTION_ICONS } from '../utils/entityStyle'
-import { CHANGELOG } from '../changelog'
+import { LATEST } from '../changelog'
+import WhatsNew from '../components/WhatsNew'
 import BackupPanel from '../components/BackupPanel'
 import { C } from '../styles/tokens'
 import { askConfirm } from '../components/ConfirmHost'
 
-const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev'
 
 
 /**
@@ -424,18 +424,10 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
             <h4 className="mb-1">Recipe Builder</h4>
             <button className="btn btn-link p-0 ms-auto text-muted" style={{ fontSize: 11 }}
               onClick={() => setShowChangelog(v => !v)} title="What changed recently">
-              v{APP_VERSION} · what’s new {showChangelog ? '▴' : '▾'}
+              {LATEST.version} · what’s new {showChangelog ? '▴' : '▾'}
             </button>
           </div>
-          {showChangelog && (
-            <div className="mb-3 px-2 py-2 rounded" style={{ background: C.subtle, border: `1px solid ${C.border}`, maxHeight: 180, overflowY: 'auto' }}>
-              {CHANGELOG.map((c, i) => (
-                <div key={i} className="text-muted" style={{ fontSize: 10, lineHeight: 1.6 }}>
-                  <span className="fw-semibold">{c.date}</span> · {c.note}
-                </div>
-              ))}
-            </div>
-          )}
+          {showChangelog && <WhatsNew release={LATEST} />}
 
           {unsupported && <Alert variant="danger" className="py-2"><strong>Unsupported browser:</strong> {unsupported}</Alert>}
 
