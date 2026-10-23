@@ -100,13 +100,15 @@ describe('bug reports', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     const r = useStore.getState().bugReports.at(-1)
-    expect(r).toMatchObject({ commit: 'abc1234', host: location.host, companion: false })
+    expect(r).toMatchObject({ commit: 'abc1234', host: location.host, companion: false, channel: 'prod' })
     expect(r.app).toMatchObject({ drawer: 'templates', open: ['drawer-tab-templates'] })
     expect(r.dom).toMatchObject({ via: 'last-click', element: 'button “Swap”', areas: ['ing-row', 'PositionRecipeEditor'] })
     const md = reportsToMarkdown([r])
     expect(md).toContain('commit abc1234')
     expect(md).toContain('- **Drawer:** templates')
     expect(md).toContain('- **Last clicked:** button “Swap”')
+    expect(md).not.toContain('DEV build')
+    expect(reportsToMarkdown([{ ...r, channel: 'dev' }])).toContain('commit abc1234, DEV build')
     meta.remove(); tab.remove()
   })
 

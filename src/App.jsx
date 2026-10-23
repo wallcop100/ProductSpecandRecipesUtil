@@ -15,6 +15,7 @@ import PatchSyncPanel from './components/PatchSyncPanel'
 import FindPalette from './components/FindPalette'
 import ErrorBoundary from './components/ErrorBoundary'
 import ConfirmHost from './components/ConfirmHost'
+import { APP_CHANNEL } from './utils/bugReports'
 
 /**
  * App — top-level screen router.
@@ -92,7 +93,7 @@ export default function App() {
       <Badge bg="secondary" data-testid="alpha-badge"
         style={{ position: 'fixed', bottom: 6, left: 6, zIndex: 2000,
           pointerEvents: 'none', fontSize: 9, letterSpacing: 1, padding: '3px 6px', opacity: 0.85 }}>
-        ALPHA
+        {APP_CHANNEL === 'dev' ? 'ALPHA · DEV' : 'ALPHA'}
       </Badge>
       <BugReporter screen={activeScreen} />
       <FindPalette screen={activeScreen} />
