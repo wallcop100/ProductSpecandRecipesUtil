@@ -8,18 +8,18 @@ export default function WhatsNew({ release }) {
   const [showAlso, setShowAlso] = useState(false)
   return (
     <div className="mb-3 rounded" data-debug-id="WhatsNew"
-      style={{ border: `1px solid ${C.border}`, background: C.surface, overflow: 'hidden' }}>
-      <div className="px-3 py-2" style={{ background: C.subtle, borderBottom: `1px solid ${C.border}` }}>
+      style={{ border: `1px solid ${C.accentEdge}`, background: C.surface, overflow: 'hidden' }}>
+      <div className="px-3 py-2" style={{ background: C.accentTint, borderBottom: `1px solid ${C.accentEdge}` }}>
         <div className="d-flex align-items-baseline gap-2">
-          <span className="fw-bold" style={{ color: C.ink, fontSize: 14 }}>{version}</span>
-          <span className="ms-auto" style={{ color: C.faint, fontSize: 11 }}>{date}</span>
+          <span className="fw-bold" style={{ color: C.accentInk, fontSize: 15 }}>{version}</span>
+          <span className="ms-auto" style={{ color: C.muted, fontSize: 11 }}>{date}</span>
         </div>
-        {tagline && <div style={{ color: C.muted, fontSize: 12 }}>{tagline}</div>}
+        {tagline && <div style={{ color: C.accentInk, fontSize: 12 }}>{tagline}</div>}
       </div>
       <div className="px-3 py-2">
         {highlights.map(h => (
           <div key={h.title} className="d-flex gap-2" style={{ fontSize: 12, lineHeight: 1.6, marginBottom: 4 }}>
-            <MaterialIcon name={h.icon} size={16} style={{ color: C.muted, marginTop: 1 }} />
+            <MaterialIcon name={h.icon} size={16} style={{ color: C.accent, marginTop: 1 }} />
             <div>
               <span className="fw-semibold" style={{ color: C.ink }}>{h.title}</span>
               <span style={{ color: C.muted }}> · {h.blurb}</span>
