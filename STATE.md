@@ -2,7 +2,7 @@
 Updated: 2026-10-23
 
 ## Now
-Branch `templates-drawer-70` (#70): the Templates drawer keeps one line per part; a ticked part ends in its ElementType as a pill (hover: maker and code), a part fewer than all the template's positions have shows "n of m · %", and a missing part's Add says what it writes (solid = the template's own ElementType, dashed ✨ = one the project's data points to, dashed grey = a TBC placeholder). #100 (report context: drawer, open tabs, last click, commit, host) is merged; datajoin_mx PR #9 lists those fields in `psr_reports`. Resolve #66, #67, #72 (and #70 after a look) once Connected serves them.
+Templates drawer (#101, #102 merged): one line per part in human words ("tape", "LIN Wrapper"), its ElementType in a lavender pill, "n of m · %" when not every position on the template has it, and an Add styled by what it writes. Offered, not built: the drawer's Add should take the purple card's combined source (companion kits + project data) and show purple when the companion supplied it. datajoin_mx PR #9 (report fields in `psr_reports`) is open. Resolve #66, #67, #70, #72 once checked on Connected.
 
 ## Next
 - 4746: the "clips (71%)" placeholder is offered on C1/C3/C5-C7/XC1 (1009 profile) and C15 (1019), though no position with that profile has clips. Consider skipping the placeholder when every same-profile position lacks the job.
@@ -18,6 +18,11 @@ Branch `templates-drawer-70` (#70): the Templates drawer keeps one line per part
 (nothing)
 
 ## Log
+
+### 2026-10-23 (C05r clips, #102)
+- C05r has no clips line or purple pip because the companion knows the FPS2020 range (end caps, diffusers, no clip), and the #43 rule suppresses the line. #101 did not cause this. `/gateway/psr/kits` returns 502 intermittently (3 seen in 20 min). A failed lookup leaves the range unknown, so a clips placeholder can come and go. Cause of the 502s not chased.
+- #102: dropped "· job · position|inside"; the design row reads "LIN Wrapper" with its ET in the pill; pills are lavender (`C.refTint`/`refInk`), not ElementType orange.
+- Stale agent copies in `.claude/worktrees/` double `npm test` past 5 minutes; `npx vitest run --dir tests` runs only the real suite.
 
 ### 2026-10-23 (report #70, reporter context)
 - #70 was raised in the Templates drawer, but the report only said "builder, C05r", and the first demo was of the Connectors drawer. #100 adds the open drawer, open tabs, last click, commit and host to every report; datajoin_mx #9 shows them in `psr_reports`.
