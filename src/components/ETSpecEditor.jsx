@@ -237,7 +237,10 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
 
         {isDeleted && (
           <div className="alert alert-secondary py-1 px-2 mb-3 d-flex align-items-center gap-2" style={{ fontSize: 11 }}>
-            <span className="flex-grow-1">Marked IsDeleted.</span>
+            <span className="flex-grow-1">
+              Marked IsDeleted.
+              {!(usage?.positions?.size || usage?.elements?.size) && <strong className="ms-1" data-testid="unused-badge">Unused: no live position uses it.</strong>}
+            </span>
             <button className="btn btn-link btn-sm p-0" style={{ fontSize: 11 }} onClick={() => updatePSRow(selectedRef, { IsDeleted: null })}>Restore</button>
           </div>
         )}

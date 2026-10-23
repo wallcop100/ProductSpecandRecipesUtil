@@ -32,6 +32,7 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
   const addPSRow     = useStore(s => s.addPSRow)
   const deletePSRow  = useStore(s => s.deletePSRow)
   const elementTypes = useStore(s => s.elementTypes)
+  const positionTypes = useStore(s => s.positionTypes)
   const alignmentGaps = useStore(s => s.alignmentGaps)
 
   const undo = useStore(s => s.undo)
@@ -79,7 +80,12 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
   // Usage map: ET ref (lower) → { positions: Set, elements: Set }
   const etUsedIn = useMemo(() => {
     const map = {}
+    const deletedPos = new Set(positionTypes.filter(p => (p.IsDeleted || p.isDeleted) === 'Y')
+      .map(p => String(p.PositionTypeRef || p.positionTypeRef).toLowerCase()))
     for (const row of recipes) {
+      // Deleted rows and deleted positions use nothing (report #61).
+      if ((row.IsDeleted || row.isDeleted) === 'Y') continue
+      if (deletedPos.has(String(row.PositionTypeRef || row.positionTypeRef || '').toLowerCase())) continue
       const etRef      = row.ElementTypeRef || row.elementTypeRef
       const ctxType    = row.ContextType    || row.contextType
       const ctxRef     = row.ContextRef     || row.contextRef
@@ -90,7 +96,7 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
       else if (ctxType === 'ElementType') map[key].elements.add(ctxRef)
     }
     return map
-  }, [recipes])
+  }, [recipes, positionTypes])
 
   // ETs a recipe uses with no PS row. One definition, shared with validation and
   // the export summary (specAlignment) — this screen used to compute its own and
