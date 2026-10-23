@@ -10,9 +10,10 @@ import { proposalContext, proposalFromTemplate } from '../utils/recipeProposal'
 import { describeRule } from '../utils/templateRules'
 import { positionRecipeWithWrapperInternals } from '../utils/collectionStatus'
 import { buildPresence, ingredientPresence, wantedSlots } from '../utils/recipePresence'
-import { indexes as kindIndexes, rowJob, jobLabel, anchorOf, fitFor, positionMakeup } from '../utils/recipeKinds'
-import { jobKey } from '../utils/codeJobs'
-import { ACTION_ICONS } from '../utils/entityStyle'
+import { indexes as kindIndexes, rowJob, jobLabel, anchorOf, fitFor, positionMakeup, sectionFor } from '../utils/recipeKinds'
+import { jobKey, familyForJob } from '../utils/codeJobs'
+import { nextRef } from '../utils/etSeed'
+import { ACTION_ICONS, TYPE_COLORS } from '../utils/entityStyle'
 import { C } from '../styles/tokens'
 
 const mono = { fontFamily: 'monospace' }
@@ -64,7 +65,9 @@ export default function TemplatesPane({ posRef }) {
     const has = new Set(recipes.filter(live).map(r => r.PositionTypeRef || r.positionTypeRef))
     return positionTypes.map(p => p.PositionTypeRef).filter(r => !has.has(r))
   }, [recipes, positionTypes])
-  const refs = useMemo(() => [...new Set([posRef, ...emptyRefs])], [posRef, emptyRefs])
+  // Every position, so a part's share across the template's positions can be shown (#70).
+  // shortcut: matches every position on each data change; scope it to shown templates if big projects lag.
+  const refs = useMemo(() => [...new Set([posRef, ...positionTypes.map(p => p.PositionTypeRef)])], [posRef, positionTypes])
   const byPos = useTemplateMatches(refs)
   const { matches = [], others = [] } = byPos.get(posRef) || {}
   const isEmpty = emptyRefs.includes(posRef)
@@ -78,16 +81,49 @@ export default function TemplatesPane({ posRef }) {
   const designName = designRef && (designRef.ElementTypeRef || designRef.elementTypeRef)
   const shown = showAll ? [...matches.map(t => ({ t, fits: true })), ...others.map(t => ({ t, fits: false }))] : matches.map(t => ({ t, fits: true }))
   // Report #49: which ET holds a ticked part; for a missing one, the ET and code it would become.
-  const anchor = useMemo(() => anchorOf(positionMakeup(posRef, own.ctx, own.idx), own.idx), [posRef, own])
-  const etCode = ref => { const ps = own.idx.psByRef.get(String(ref).toUpperCase()); return ps ? `${ref} · ${ps.ProductCode || ps.productCode || 'no code'}` : ref }
-  function holder(i, mark) {
-    if (String(i.slotKey || '').startsWith('DESIGN_ELEMENT')) return null   // its label is already the design ref
-    const row = mark?.rows?.[0]
-    if (row) return `held by ${etCode(row.ElementTypeRef || row.elementTypeRef)}`
-    if (mark?.status !== 'missing') return null
-    if (i.slotKey && !i.exact) { const fit = fitFor(i.slotKey, anchor, own.ctx, own.idx); return fit ? `would be ${etCode(fit.etRef)}` : null }
-    return own.idx.etByRef.has(String(i.slotLabel).toUpperCase()) ? `would be ${etCode(i.slotLabel)}` : null
+  const makeup = useMemo(() => positionMakeup(posRef, own.ctx, own.idx), [posRef, own])
+  const anchor = useMemo(() => anchorOf(makeup, own.idx), [makeup, own])
+  const codeOf = ref => { const ps = own.idx.psByRef.get(String(ref).toUpperCase()); return ps ? `${ps.Manufacturer || ps.manufacturer || ''} ${ps.ProductCode || ps.productCode || 'no code'}`.trim() : 'not in the Product Spec' }
+  const holderRef = mark => { const row = mark?.rows?.[0]; return row && (row.ElementTypeRef || row.elementTypeRef) }
+  // What a missing part's Add writes: the template's own ElementType, one the project's data points to, or a TBC placeholder.
+  function target(i) {
+    if (i.newWrapper || i.fromForm || String(i.slotKey || '').startsWith('DESIGN_ELEMENT')) return null
+    if (i.exact || !i.slotKey) return own.idx.etByRef.has(String(i.slotLabel).toUpperCase()) ? { ref: i.slotLabel, kind: 'template' } : null
+    const fit = fitFor(i.slotKey, anchor, own.ctx, own.idx)
+    if (fit) return { ref: fit.etRef, kind: 'learned', why: fit.why }
+    return familyForJob({ slot: i.slotKey }) ? { kind: 'placeholder' } : null
   }
+  function add(i, t) {
+    const st = useStore.getState()
+    let ref = t.ref
+    if (t.kind === 'placeholder') {
+      const label = `TBC - ${jobLabel(i.slotKey)} for ${posRef}`
+      ref = st.elementTypes.find(e => e.Name === label)?.ElementTypeRef
+      if (!ref) {
+        const house = familyForJob({ slot: i.slotKey })
+        ref = nextRef(house.head, st.elementTypes.map(e => e.ElementTypeRef))
+        st.createElementType({ ref, name: label, family: house.family })
+        st.addPSRow(ref, { IsTBC: 'Y', ComponentDescription: label.replace(/^TBC - /, '') })
+      }
+    }
+    st.addRecipeRow(posRef, sectionFor(i, makeup.design), { elementTypeRef: ref, quantity: i.quantity ?? null }, { asPosition: true })
+  }
+  // For each fitting template: per part, how many of its positions with a recipe have it (#70).
+  const shareOf = useMemo(() => {
+    const cache = new Map()
+    return t => {
+      if (cache.has(t.id)) return cache.get(t.id)
+      const members = refs.filter(r => !emptyRefs.includes(r) && (byPos.get(r)?.matches || []).some(m => m.id === t.id))
+      const have = (t.ingredients || []).map(() => 0)
+      for (const r of members) {
+        const { combined, wrapperRefs } = positionRecipeWithWrapperInternals(recipes, r)
+        alignment(t.ingredients || [], combined, wrapperRefs, own.idx).forEach((m, k) => { if (m?.status === 'present') have[k]++ })
+      }
+      const out = { of: members.length, have }
+      cache.set(t.id, out)
+      return out
+    }
+  }, [refs, emptyRefs, byPos, recipes, own])
   const alsoEmpty = t => emptyRefs.filter(r => r !== posRef && (byPos.get(r)?.matches || []).some(m => m.id === t.id))
 
   const toCheck = Object.keys(templateChecks || {}).filter(r => !emptyRefs.includes(r) && positionTypes.some(p => p.PositionTypeRef === r))
@@ -156,15 +192,44 @@ export default function TemplatesPane({ posRef }) {
             </div>
             <div className="text-muted" style={{ fontSize: 11 }}>{describeRule(t.rule)}</div>
             <div style={{ fontSize: 11 }}>
-              {(t.ingredients || []).map((i, k) => (
-                <div key={k}>
-                  {marks[k] && (() => {
-                    const [icon, color, tip] = TICK[marks[k].status] || ['warning', C.attnInk, marks[k].status === 'short' ? `Only ${marks[k].have} of ${marks[k].need}` : 'In the recipe, but in the wrong place']
-                    return <span title={tip} data-testid={`tpl-${marks[k].status}`} style={{ color, marginRight: 4 }}><MaterialIcon name={icon} size={13} /></span>
-                  })()}<span style={mono}>{i.fromForm ? `from the Form (${i.fromForm})` : (i.newWrapper ? 'new wrapper' : String(i.slotKey || '').startsWith('DESIGN_ELEMENT') && designName ? designName : i.slotLabel)}</span>
-                  <span className="text-muted"> · {i.slotKey ? jobLabel(i.slotKey) : ''} · {i.section === 'position' ? 'position' : 'inside'}</span>
-                  {marks[k] && holder(i, marks[k]) && <div className="text-muted ms-3" style={mono} data-testid="tpl-holder">{holder(i, marks[k])}</div>}</div>
-              ))}
+              {(t.ingredients || []).map((i, k) => {
+                const mark = marks[k]
+                const held = mark?.status !== 'missing' && holderRef(mark)
+                const isDesign = String(i.slotKey || '').startsWith('DESIGN_ELEMENT')
+                const t2 = mark?.status === 'missing' ? target(i) : null
+                const sh = mark ? shareOf(t) : null
+                const n = sh ? sh.have[k] : 0
+                return (
+                  <div key={k} className="d-flex align-items-center gap-1" style={{ minHeight: 22 }} data-testid="tpl-line">
+                    {mark && (() => {
+                      const [icon, color, tip] = TICK[mark.status] || ['warning', C.attnInk, mark.status === 'short' ? `Only ${mark.have} of ${mark.need}` : 'In the recipe, but in the wrong place']
+                      return <span title={tip} data-testid={`tpl-${mark.status}`} style={{ color }}><MaterialIcon name={icon} size={13} /></span>
+                    })()}
+                    <span style={mono}>{i.fromForm ? `from the Form (${i.fromForm})` : (i.newWrapper ? 'new wrapper' : isDesign && designName ? designName : i.slotLabel)}</span>
+                    <span className="text-muted">· {i.slotKey ? jobLabel(i.slotKey) : ''} · {i.section === 'position' ? 'position' : 'inside'}</span>
+                    {sh && sh.of > 1 && n < sh.of && (
+                      <span className="ms-auto text-nowrap" style={{ fontSize: 10, color: C.muted }} data-testid="tpl-share"
+                        title={`${n} of the ${sh.of} positions on this template have it`}>{n} of {sh.of} · {Math.round((100 * n) / sh.of)}%</span>
+                    )}
+                    {held && !isDesign && (
+                      <span className={`${sh && sh.of > 1 && n < sh.of ? '' : 'ms-auto '}rounded-pill px-2`} style={{ ...mono, fontSize: 10, background: TYPE_COLORS.ElementType.fill, color: TYPE_COLORS.ElementType.accent }}
+                        title={codeOf(held)} data-testid="tpl-holder">{held}</span>
+                    )}
+                    {t2 && (
+                      <Button size="sm" variant={t2.kind === 'placeholder' ? 'outline-secondary' : 'outline-primary'}
+                        className={sh && sh.of > 1 && n < sh.of ? '' : 'ms-auto'} data-testid={`tpl-add-${t2.kind}`}
+                        style={{ fontSize: 10, padding: '0 6px', ...(t2.kind === 'template' ? {} : { borderStyle: 'dashed' }) }}
+                        title={t2.kind === 'template' ? `Add ${t2.ref} (${codeOf(t2.ref)}), the template's part`
+                          : t2.kind === 'learned' ? `Add ${t2.ref} (${codeOf(t2.ref)}): ${t2.why}`
+                            : `Nothing known fits: adds a TBC placeholder ElementType for you to fill in`}
+                        onClick={() => add(i, t2)}>
+                        {t2.kind === 'learned' && <MaterialIcon name="auto_awesome" size={11} />}{' '}
+                        {t2.kind === 'placeholder' ? '+ TBC placeholder' : <>+ <span style={mono}>{t2.ref}</span></>}
+                      </Button>
+                    )}
+                  </div>
+                )
+              })}
             </div>
             {fits && !isEmpty && <div className="text-muted fst-italic" style={{ fontSize: 11 }}>{posRef} already has a recipe.</div>}
             {fits && isEmpty && more.length > 0 && (

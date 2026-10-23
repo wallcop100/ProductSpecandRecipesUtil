@@ -86,7 +86,26 @@ describe('a position that already has a recipe', () => {
       psRows: [{ ElementTypeRef: 'ET-PROF-01', ProductCode: 'FPS2020' }, { ElementTypeRef: 'ET-DRV-09', ProductCode: 'LCM-25' }],
       recipes: [{ PositionTypeRef: 'L01', ContextType: 'PositionType', ContextRef: 'L01', ElementTypeRef: 'ET-PROF-01', _id: 'r1' }] })
     render(<TemplatesPane posRef="L01" />)
-    expect(screen.getAllByTestId('tpl-holder').map(e => e.textContent)).toEqual(['held by ET-PROF-01 · FPS2020', 'would be ET-DRV-09 · LCM-25'])
+    expect(screen.getByTestId('tpl-holder').textContent).toBe('ET-PROF-01')
+    expect(screen.getByTestId('tpl-holder').title).toBe('FPS2020')
+    expect(screen.getByTestId('tpl-add-template').textContent).toMatch(/ET-DRV-09/)
+    expect(screen.getByTestId('tpl-add-template').title).toMatch(/LCM-25/)
+  })
+
+  test('report #70: a part fewer than all the template\'s positions have shows its share; Add writes the template\'s part', () => {
+    const tpl = { ...LIN, rule: { match: 'all', conditions: [{ column: 'Family', op: 'equals', value: 'LN' }] }, ingredients: [
+      { slotKey: 'X', slotLabel: 'ET-PROF-01', exact: true, section: 'position' },
+      { slotKey: 'X', slotLabel: 'ET-DRV-09', exact: true, section: 'position' },
+    ] }
+    const row = (p, et) => ({ PositionTypeRef: p, ContextType: 'PositionType', ContextRef: p, ElementTypeRef: et, _id: `${p}-${et}` })
+    setup({ templates: [tpl], positionTypes: ['L01', 'L02', 'L03'].map(r => ({ PositionTypeRef: r, ParentRef: 'LN' })),
+      elementTypes: [{ ElementTypeRef: 'ET-PROF-01' }, { ElementTypeRef: 'ET-DRV-09' }],
+      recipes: [row('L01', 'ET-PROF-01'), row('L02', 'ET-PROF-01'), row('L03', 'ET-PROF-01'), row('L03', 'ET-DRV-09')] })
+    render(<TemplatesPane posRef="L01" />)
+    expect(screen.getAllByTestId('tpl-share').map(e => e.textContent)).toEqual(['1 of 3 · 33%'])
+    act(() => { fireEvent.click(screen.getByTestId('tpl-add-template')) })
+    expect(useStore.getState().recipes.some(r => r.PositionTypeRef === 'L01' && r.ElementTypeRef === 'ET-DRV-09')).toBe(true)
+    expect(screen.getByTestId('tpl-share').textContent).toBe('2 of 3 · 67%')
   })
 })
 
