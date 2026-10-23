@@ -238,7 +238,7 @@ describe('someone who has never used this', () => {
     expect(screen.getByTitle('What changed recently').textContent).toContain(LATEST.version)
     expect(screen.queryByText(LATEST.highlights[0].title)).toBeNull()
     fireEvent.click(screen.getByTitle('What changed recently'))
-    for (const h of LATEST.highlights) expect(screen.getByText(h.title)).toBeTruthy()
+    for (const h of LATEST.highlights.filter(h => !h.companion)) expect(screen.getByText(h.title)).toBeTruthy()
   })
 })
 

@@ -1,23 +1,28 @@
 import React, { useState } from 'react'
 import MaterialIcon from './MaterialIcon'
 import { C } from '../styles/tokens'
+import { useCompanion } from '../platform/companion'
 
 /** One release from changelog.js as a card: version, tagline, one line per highlight, the smaller things folded. */
 export default function WhatsNew({ release }) {
   const { version, date, tagline, highlights = [], also = [] } = release
   const [showAlso, setShowAlso] = useState(false)
+  // Served with the companion ("Connected"): the card goes purple and companion-only highlights show.
+  const companion = useCompanion()
+  const ink = companion ? C.companion : C.accentInk
+  const edge = companion ? C.companion : C.accentEdge
   return (
-    <div className="mb-3 rounded" data-debug-id="WhatsNew"
+    <div className={`mb-3 rounded${companion ? ' companion-card' : ''}`} data-debug-id="WhatsNew"
       style={{ border: `1px solid ${C.accentEdge}`, background: C.surface, overflow: 'hidden' }}>
-      <div className="px-3 py-2" style={{ background: C.accentTint, borderBottom: `1px solid ${C.accentEdge}` }}>
+      <div className="px-3 py-2" style={{ background: companion ? 'transparent' : C.accentTint, borderBottom: `1px solid ${edge}` }}>
         <div className="d-flex align-items-baseline gap-2">
-          <span className="fw-bold" style={{ color: C.accentInk, fontSize: 15 }}>{version}</span>
+          <span className="fw-bold" style={{ color: ink, fontSize: 15 }}>{version}</span>
           <span className="ms-auto" style={{ color: C.muted, fontSize: 11 }}>{date}</span>
         </div>
-        {tagline && <div style={{ color: C.accentInk, fontSize: 12 }}>{tagline}</div>}
+        {tagline && <div style={{ color: ink, fontSize: 12 }}>{tagline}</div>}
       </div>
       <div className="px-3 py-2">
-        {highlights.map(h => (
+        {highlights.filter(h => companion || !h.companion).map(h => (
           <div key={h.title} className="d-flex gap-2" style={{ fontSize: 12, lineHeight: 1.6, marginBottom: 4 }}>
             <MaterialIcon name={h.icon} size={16} style={{ color: C.accent, marginTop: 1 }} />
             <div>
