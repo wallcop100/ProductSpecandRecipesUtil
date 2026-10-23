@@ -11,7 +11,7 @@ import { C } from '../styles/tokens'
 import { askConfirm } from './ConfirmHost'
 
 /**
- * BugReporter — the alpha's bug-report mode. The bug beside ALPHA turns it on; then a
+ * BugReporter — the alpha's bug-report mode. The bug at the bottom centre turns it on; then a
  * right-click anywhere opens a note at the pointer and saves it with what was on screen
  * (bugReports.js). Shift + right-click keeps the browser's own menu. The ▾ beside the bug
  * copies or saves every report as Markdown; the export window has the same, per report.
@@ -137,7 +137,7 @@ export default function BugReporter({ screen }) {
 
   return (
     <>
-      <div data-bug-reporter style={{ position: 'fixed', bottom: 4, left: 56, zIndex: 2000 }}>
+      <div data-bug-reporter style={{ position: 'fixed', bottom: 4, left: '50%', transform: 'translateX(-50%)', zIndex: 2000 }}>
         <ButtonGroup size="sm">
           <Button ref={bugRef} variant={bugMode ? 'danger' : 'light'} onClick={() => setBugMode(!bugMode)} data-testid="bug-toggle"
             aria-pressed={bugMode} title={bugMode ? 'Bug reports on: right-click anything to report it (Shift + right-click for the normal menu). Click to turn off.' : 'Report bugs: turn on, then right-click anything'}

@@ -17,11 +17,15 @@ import ErrorBoundary from './components/ErrorBoundary'
 import ConfirmHost from './components/ConfirmHost'
 import { APP_CHANNEL } from './utils/bugReports'
 
+// The short commit this build was made from; 'local' when there is no stamp (tests, an unstamped build).
+const BUILD = (document.querySelector('meta[name="build-commit"]')?.getAttribute('content') || 'local').slice(0, 7)
+
 /**
  * App — top-level screen router.
  * Screens: 'folder-setup' | 'builder' | 'template-editor' | 'product-spec' |
  *          'product-code-import' | 'connectors'
  */
+
 export default function App() {
   const [activeScreen, setActiveScreen] = useState('folder-setup')
   // scrollToRef: ET ref to auto-scroll to when opening Product Spec
@@ -89,11 +93,11 @@ export default function App() {
 
   return (
     <div className={debugIds ? 'debug-ids' : ''} data-screen={activeScreen} style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* This is an alpha: said on every page, bottom-left, beside the bug button, never in the way of a click. */}
-      <Badge bg="secondary" data-testid="alpha-badge"
-        style={{ position: 'fixed', bottom: 6, left: 6, zIndex: 2000,
+      {/* The build this is (index.html's build-commit stamp), bottom-right on every page so a screenshot names it; never in the way of a click. */}
+      <Badge bg="secondary" data-testid="build-badge"
+        style={{ position: 'fixed', bottom: 6, right: 6, zIndex: 2000,
           pointerEvents: 'none', fontSize: 9, letterSpacing: 1, padding: '3px 6px', opacity: 0.85 }}>
-        {APP_CHANNEL === 'dev' ? 'ALPHA · DEV' : 'ALPHA'}
+        {APP_CHANNEL === 'dev' ? 'DEV · ' : ''}{BUILD}
       </Badge>
       <BugReporter screen={activeScreen} />
       <FindPalette screen={activeScreen} />
