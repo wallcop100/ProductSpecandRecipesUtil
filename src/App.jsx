@@ -3,7 +3,6 @@ import UndoShortcut from './components/UndoShortcut'
 import DesignPickerModal from './components/DesignPickerModal'
 import { SaveShortcut } from './components/SaveStatus'
 import React, { useState, useEffect } from 'react'
-import { Badge } from 'react-bootstrap'
 import useStore from './store/useStore'
 import FolderSetupScreen from './screens/FolderSetupScreen'
 import BuilderScreen from './screens/BuilderScreen'
@@ -95,11 +94,11 @@ export default function App() {
     <div className={debugIds ? 'debug-ids' : ''} data-screen={activeScreen} style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* The build this is (index.html's build-commit stamp), bottom-right on every page so a screenshot names it; never in the way of a click. */}
       {/* Dev is always red, so a dev screenshot can't pass for prod. */}
-      <Badge bg={APP_CHANNEL === 'dev' ? 'light' : 'secondary'} text={APP_CHANNEL === 'dev' ? 'danger' : undefined} data-testid="build-badge"
-        style={{ position: 'fixed', bottom: 6, right: 6, zIndex: 2000, border: APP_CHANNEL === 'dev' ? '1px solid currentColor' : undefined,
-          pointerEvents: 'none', fontSize: 9, letterSpacing: 1, padding: '3px 6px', opacity: 0.85 }}>
+      <span data-testid="build-badge"
+        style={{ position: 'fixed', bottom: 4, right: 8, zIndex: 2000, pointerEvents: 'none',
+          fontFamily: 'Arial, sans-serif', fontSize: 11, color: APP_CHANNEL === 'dev' ? '#d1242f' : '#8c959f' }}>
         {APP_CHANNEL === 'dev' ? 'DEV · ' : ''}{BUILD}
-      </Badge>
+      </span>
       <BugReporter screen={activeScreen} />
       <FindPalette screen={activeScreen} />
       <PatchSyncPanel />
