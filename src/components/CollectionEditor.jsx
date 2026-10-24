@@ -3,6 +3,7 @@ import { Modal, Button, Form, Badge } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import InfoTip from './InfoTip'
+import { askConfirm } from './ConfirmHost'
 import ConnectorBoard from './ConnectorBoard'
 import RuleBuilder from './RuleBuilder'
 import useConnectorGroups from './useConnectorGroups'
@@ -169,6 +170,9 @@ export default function CollectionEditor({ show, onHide, collection, initialTags
 
   async function handleSave() {
     if (!name.trim()) return
+    // Two templates of one name make "completes "Local"" ambiguous (5642)
+    const twin = (etCollections || []).some(c => c.CollectionId !== collection?.CollectionId && c.Name?.trim().toLowerCase() === name.trim().toLowerCase())
+    if (twin && !(await askConfirm(`Another template is called ${name.trim()}. Save anyway?`, { ok: 'Save anyway' }))) return
     const cleanIngredients = partsToIngredients(ingredients.filter(p => p.ref?.trim()))
 
     setSaving(true)

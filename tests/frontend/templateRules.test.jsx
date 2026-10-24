@@ -19,6 +19,7 @@ const { default: ConnectorsScreen } = await import('../../src/screens/Connectors
 const T = await import('../../src/utils/templateRules.js')
 const { specificityScope, ruleSpecificity, mostSpecific, specificityText } = T
 const { default: CollectionEditor } = await import('../../src/components/CollectionEditor.jsx')
+const { default: ConfirmHost } = await import('../../src/components/ConfirmHost.jsx')
 
 let n = 0
 const pos = (p, ref, extra = {}) => ({ _id: `r${n++}`, _row_num: 1, PositionTypeRef: p, ContextType: 'PositionType', ContextRef: p, ElementTypeRef: ref, Quantity: 1, ...extra })
@@ -155,6 +156,18 @@ describe('template rules', () => {
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save changes' })) })
     const t = useStore.getState().etCollections.find(c => c.CollectionId === saved.CollectionId)
     expect(t.Rule).toEqual({ match: 'all', conditions: [{ column: 'DriverLocation', op: 'equals', value: 'LOCAL' }] })
+  })
+
+  test('editor: a name another template has asks first, and Cancel keeps the old name', async () => {
+    const parts = G.partsToIngredients(G.connectorSignature(useStore.getState().recipes, 'A01'))
+    await useStore.getState().createCollection('Local', parts, [], [])
+    const other = await useStore.getState().createCollection('Remote', parts, [], [])
+    render(<><ConfirmHost /><CollectionEditor show onHide={vi.fn()} collection={other} /></>)
+    fireEvent.change(screen.getByPlaceholderText('e.g. 5-pin WAGO Local'), { target: { value: 'local ' } })
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save changes' })) })
+    const ask = await screen.findByText('Another template is called local. Save anyway?')
+    await act(async () => { fireEvent.click(within(ask.closest('.modal')).getByText('Cancel')) })
+    expect(useStore.getState().etCollections.find(c => c.CollectionId === other.CollectionId).Name).toBe('Remote')
   })
 })
 
