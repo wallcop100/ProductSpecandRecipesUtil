@@ -54,15 +54,36 @@ const Dots = React.forwardRef(({ onClick }, ref) => (
     aria-label="More" title="More" onClick={e => { e.preventDefault(); onClick(e) }}>⋯</button>
 ))
 let libraryAsked = false
-// One lookup per profile, shared by every copy (the rail mounts one per position) so the bridge's rate limit is not hit.
-const kitCache = new WeakMap()   // per companion connection
+// One lookup per profile, shared by every copy (the rail mounts one per position). The profiles asked for in
+// the same tick go in one call: opening a project asks for ~60 at once.
+const kitCache = new WeakMap()   // per companion connection → { cache, queue }
 function kitsFor(companion, anchor, project) {
   const key = `${project}|${anchor.manufacturer}|${anchor.code}`
-  const mine = kitCache.get(companion) || kitCache.set(companion, new Map()).get(companion)
-  if (!mine.has(key)) {
-    mine.set(key, companion.kits([anchor], project).then(k => { if (!k) mine.delete(key); return k }))   // a failure is retried, not remembered
+  const mine = kitCache.get(companion) || kitCache.set(companion, { cache: new Map(), queue: [] }).get(companion)
+  if (!mine.cache.has(key)) {
+    let done
+    mine.cache.set(key, new Promise(r => { done = r }))
+    if (!mine.queue.length) queueMicrotask(() => sendKits(companion, mine))
+    mine.queue.push({ key, anchor, project, done })
   }
-  return mine.get(key)
+  return mine.cache.get(key)
+}
+const kitFits = (row, a) => String(row?.code).toUpperCase() === String(a.code).trim().toUpperCase()
+  && (!row.maker_key || !makerKey(a.manufacturer) || row.maker_key === makerKey(a.manufacturer))
+function sendKits(companion, mine) {
+  const asked = mine.queue.splice(0)
+  for (const project of new Set(asked.map(a => a.project))) {
+    const all = asked.filter(a => a.project === project)
+    for (let i = 0; i < all.length; i += 200) {   // the companion takes 200 codes a call
+      const batch = all.slice(i, i + 200)
+      companion.kits(batch.map(a => a.anchor), project).catch(() => null).then(k => {
+        for (const a of batch) {
+          if (!k) mine.cache.delete(a.key)   // a failure is retried, not remembered
+          a.done(k && k.filter(r => kitFits(r.anchor, a.anchor)))
+        }
+      })
+    }
+  }
 }
 const chipMemory = new Map()   // `${project}|${posRef}` → chips
 const DISMISSED = n => `psr-suggestions-dismissed:${n || '-'}`
