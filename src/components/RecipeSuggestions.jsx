@@ -96,6 +96,13 @@ export function writeDismissed(n, set) {
   window.dispatchEvent(new Event('psr-dismissed'))   // the watchers (below) re-read
 }
 
+/** Every position's watcher, beside a companion: the rail and the overview show the same pips (X2C689). */
+export function SuggestionWatchers() {
+  const positionTypes = useStore(s => s.positionTypes)
+  const companion = useCompanion()
+  return companion ? positionTypes.map(pt => <RecipeSuggestions key={pt.PositionTypeRef} posRef={pt.PositionTypeRef} watch />) : null
+}
+
 /** `watch`: renders nothing, only keeps this position's purple pip right while it is not open. */
 // Whose suggestion each line is (reports carry it): served by the companion, built into the app, or read from this project's own recipes.
 const SOURCE = { kit: 'companion', kind: 'companion', connector: 'companion', tbc: 'companion', same: 'project' }

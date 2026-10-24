@@ -13,6 +13,7 @@ import useStore, { getRecipeForPosition } from '../store/useStore'
 import { getUsedIn } from '../utils/containerUtils'
 import { wrapperEditContext } from '../utils/collectionStatus'
 import ProjectTreeView from '../components/ProjectTreeView'
+import { SuggestionWatchers } from '../components/RecipeSuggestions'
 import ElementTypeTreeView from '../components/ElementTypeTreeView'
 import RecipeSection from '../components/RecipeSection'
 import DuplicateETModal from '../components/DuplicateETModal'
@@ -489,6 +490,7 @@ export default function BuilderScreen({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }} data-debug-id="BuilderScreen">
+      <SuggestionWatchers />
       {/* Toolbar */}
       <div
         className="d-flex align-items-center gap-2 px-3 py-2 border-bottom bg-white"

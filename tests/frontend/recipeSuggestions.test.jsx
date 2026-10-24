@@ -228,3 +228,14 @@ describe('recipe suggestions', () => {
     expect(screen.queryByText(/usually carry connectors/)).toBeNull()
   })
 })
+
+describe('the pips, before any position is opened (X2C689)', () => {
+  test('SuggestionWatchers marks every position a companion line waits on, none open', async () => {
+    const { SuggestionWatchers } = await import('../../src/components/RecipeSuggestions.jsx')
+    api.current = { kits: vi.fn(async () => [KIT]), shareOutcomes: vi.fn() }
+    setup().unmount()
+    useStore.setState({ companionPending: {} })
+    await act(async () => { render(<SuggestionWatchers />) })
+    expect(useStore.getState().companionPending).toMatchObject({ C01r: true, C05r: true })
+  })
+})
