@@ -91,6 +91,7 @@ export function pageContext() {
   if (typeof document === 'undefined') return {}
   return {
     commit: document.querySelector('meta[name="build-commit"]')?.getAttribute('content') || null,
+    buildName: document.querySelector('meta[name="build-name"]')?.getAttribute('content') || null,
     host: typeof location !== 'undefined' ? location.host || null : null,
   }
 }

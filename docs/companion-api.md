@@ -157,6 +157,11 @@ plus `project` (the project number) and `learned` (`[{ kind, key, value, tier, s
 learned values behind the code in view) → `{ "received": true, "id" }`. A server should cap the
 size and rate, and treat the content as untrusted text for a person to read.
 
+`id` is the report's code, six characters from `A–Z 2–9` and never all digits. It is the report's own
+`id` (`newReportId`) when that is free, otherwise a new one; the app shows "Sent as K7QF3M". A commit
+that fixes a report says `Fixes K7QF3M` in its **message** (a PR description is not read): when a
+deploy carrying it is up, the report is marked in dev, then live and resolved, with the build name.
+
 ## jobs
 
 `POST api/products/jobs` with `{ "codes": [{ code, manufacturer }] }` → `{ "jobs": [{ code, maker_key, slot, variant, category }] }`.
@@ -171,7 +176,10 @@ size and rate, and treat the content as untrusted text for a person to read.
 - `GET api/recipes/connectors` → `{ "connectors": {source, manufacturer, templates, combos, superseded} | null }`; an entry may carry `rule` (a template rule: where it is suggested) and `why`, and then the served rules replace the bundled ones. Null until one is loaded
   (server: meta `global_connectors`); the app also refuses one that lacks a key its suggestion rules name.
 - `POST api/recipes/kits` with `{ "codes": [{ code, manufacturer }], "project" }` → `{ "kits": [{ key, anchor, part:
-  { code, slot, name }, share, qty, dim, integer, contract }] }`.
+  { code, slot, name }, share, qty, dim, integer, contract }] }`. At most 200 codes a call; each row's `anchor`
+  (`{ maker_key, code, slot }`) says which asked code it is for. The app sends every profile asked for in the
+  same tick as one call (`kitsFor` in `RecipeSuggestions.jsx`; a project open was ~60 calls) and splits the
+  answer by `anchor`. The companion runs PS&R calls one at a time (datajoin #16), so a burst queues, it doesn't fail.
 - `GET api/recipes/templates` → `{ "templates": [{ id, name, rule, from_kind, ingredients, version }] }`. `rule` is
   `{ match: "all", conditions: [{ column, op, value }] }` over `Design`, `DriverLocation`, `DriverType`, `Jobs`
   (or null: any position); `from_kind` is the kind it was made from.
