@@ -16,6 +16,7 @@ import { CANON_FAMILIES } from '../data/etCanon'
 import { planFamilyMove } from '../utils/etSeed'
 import { familyFix, codeElsewhere, refNumberFix } from '../utils/specSuggest'
 import { C } from '../styles/tokens'
+import { looksLikeProductCode } from '../utils/codeHeuristics'
 
 /**
  * ETSpecEditor — right-panel form for editing a single ET's product spec.
@@ -314,9 +315,10 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
               const v = e.target.value.trim()
               if (v === productCode) return
               updatePSRow(selectedRef, { ProductCode: v })
-              // A code swapped for another under the same maker is evidence of a renumbering. Noted
-              // in the background (reviewed before it is ever relied on); nothing is shown here.
-              if (productCode && v && manufacturer && !/^tbc$/i.test(productCode) && !/^tbc$/i.test(v)) {
+              // A code swapped for another under the same maker may be a renumbering. Noted in the
+              // background; it counts only once two people make the same swap. A name ("Plaster In Kit")
+              // filled in with a code is not one.
+              if (manufacturer && looksLikeProductCode(productCode) && looksLikeProductCode(v)) {
                 getCompanion().then(api => api?.contribute?.({ kind: 'supersession', code: productCode, replacement: v, manufacturer }))
               }
             }}
