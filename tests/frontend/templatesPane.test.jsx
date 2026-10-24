@@ -133,4 +133,27 @@ describe('the hint on an empty matching position', () => {
     expect(useStore.getState().drawerTab).toBe('templates')
     expect(useStore.getState().activePositionRef).toBe('L01')
   })
+  test('NRWJH9: no TBC placeholder for a job the suggestion card offers a real part for', () => {
+    const tpl = { ...LIN, rule: { match: 'all', conditions: [{ column: 'Family', op: 'equals', value: 'LN' }] }, ingredients: [
+      { slotKey: 'CLIPS', slotLabel: 'clips', section: 'internal' },
+    ] }
+    setup({ templates: [tpl], positionTypes: [{ PositionTypeRef: 'L01', ParentRef: 'LN' }],
+      recipes: [{ PositionTypeRef: 'L01', ContextType: 'PositionType', ContextRef: 'L01', ElementTypeRef: 'ET-PROF-01', _id: 'r1' }] })
+    render(<TemplatesPane posRef="L01" />)
+    expect(screen.getByTestId('tpl-add-placeholder')).toBeTruthy()
+    act(() => { useStore.getState().setOfferedJobs('L01', 'CLIPS+END_CAPS') })
+    expect(screen.queryByTestId('tpl-add-placeholder')).toBeNull()
+  })
+  test('a code edited in Product Spec shows in the drawer without a remount', () => {
+    const tpl = { ...LIN, rule: { match: 'all', conditions: [{ column: 'Family', op: 'equals', value: 'LN' }] }, ingredients: [
+      { slotKey: 'X', slotLabel: 'ET-PROF-01', exact: true, section: 'position' },
+    ] }
+    setup({ templates: [tpl], positionTypes: [{ PositionTypeRef: 'L01', ParentRef: 'LN' }],
+      elementTypes: [{ ElementTypeRef: 'ET-PROF-01' }], psRows: [{ ElementTypeRef: 'ET-PROF-01', ProductCode: 'FPS2020' }],
+      recipes: [{ PositionTypeRef: 'L01', ContextType: 'PositionType', ContextRef: 'L01', ElementTypeRef: 'ET-PROF-01', _id: 'r1' }] })
+    render(<TemplatesPane posRef="L01" />)
+    expect(screen.getByTestId('tpl-holder').title).toBe('FPS2020')
+    act(() => { useStore.getState().updatePSRow('ET-PROF-01', { ProductCode: 'FPS2411BG2000' }) })
+    expect(screen.getByTestId('tpl-holder').title).toBe('FPS2411BG2000')
+  })
 })

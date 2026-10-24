@@ -2212,6 +2212,8 @@ const useStore = create((set, get) => ({
   // Find → "report a bug": the bug reporter opens its note.
   // Positions whose open recipe shows companion suggestions: the status pip turns purple (RecipeSuggestions sets it).
   companionPending: {},
+  offeredJobs: {},   // posRef → 'CLIPS+END_CAP': jobs a suggestion line offers a real part for
+  setOfferedJobs(ref, jobs) { set(s => ((s.offeredJobs[ref] || '') === jobs ? s : { offeredJobs: { ...s.offeredJobs, [ref]: jobs } })) },
   setCompanionPending(ref, on) { set(s => (!!s.companionPending[ref] === on ? s : { companionPending: { ...s.companionPending, [ref]: on } })) },
   bugNoteRequest: null,
   bugNoteTarget: null,   // the element the note is about (a suggestion row), if it was asked from one

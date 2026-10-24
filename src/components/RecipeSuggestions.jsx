@@ -164,7 +164,7 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
     const key = `same|${s.posRef}>${posRef}|${s.adds.map(a => a.job).sort().join('+')}`
     const what = s.adds.map(a => jobLabel(a.job)).join(', ')
     const built = [me.defining.map(jobLabel).join(' + '), [me.driver, me.secondary].filter(Boolean).join(' ')].filter(Boolean).join(', ')
-    lines.push({ key, kind: 'same', icon: 'content_copy',
+    lines.push({ key, kind: 'same', icon: 'content_copy', jobs: s.adds.map(a => a.job),
       text: s.basis === 'profile'
         ? <span title={`${s.posRef} is built on the same profile, so its parts fit this one`}>
             Same profile as <b>{s.posRef}</b> <span className="font-monospace">({s.anchor.ref})</span>: {what}</span>
@@ -192,7 +192,7 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
       if (tbc) useStore.getState().updatePSRow(ref, { IsTBC: 'Y' })
       useStore.getState().addRecipeRow(posRef, sectionFor(kindSlot || rule, me.design), rowFromSlot(kindSlot ? { ...rule, ...kindSlot } : rule, ref), { asPosition: true })
     }
-    lines.push({ key: `kit|${k.key}`, kind: 'kit', icon: 'extension',
+    lines.push({ key: `kit|${k.key}`, kind: 'kit', icon: 'extension', jobs: [job],
       check: { vkey: k.key, job, part: k.part, rule: ruleText(rule), votes: k.votes, projects: k.projects, proposed: k.proposed, alsoWith: k.alsoWith,
         own: !!existing, apply: (vote, code) => vote === 'rejected' ? code && addPart({ code }) : addPart(k.part, vote === 'unsure') },
       text: <>Usually with this profile: <b>{jobLabel(job)}</b> <span className="font-monospace">{existing ? existing.ElementTypeRef : k.part.code}</span>
@@ -212,7 +212,7 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
     if (fitsProfile && !kitsLoaded) continue   // the maker's range may rule this line out
     const fit = fitsProfile ? fitFor(s.slot, profile, state, idx) : null
     if (fit) {
-      lines.push({ ...base, supplied: fit.etRef, add: () => addRow(fit.etRef),
+      lines.push({ ...base, jobs: [s.slot], supplied: fit.etRef, add: () => addRow(fit.etRef),
         text: <>{head}: <span className="font-monospace">{fit.etRef}</span> <span className="text-muted">— {fit.why}</span></> })
       continue
     }
@@ -228,7 +228,7 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
         if (tbc) useStore.getState().updatePSRow(ref, { IsTBC: 'Y' })
         addRow(ref)
       }
-      lines.push({ ...base, supplied: part.code, add: () => addPart(part),
+      lines.push({ ...base, jobs: [s.slot], supplied: part.code, add: () => addPart(part),
         check: { vkey: k.key, job: s.slot, part, rule: ruleText(s), votes: k.votes, range: !!k.range, projects: k.projects, alsoWith: k.alsoWith, own: !!own,
           apply: (vote, code) => vote === 'rejected' ? code && addPart({ code }) : addPart(part, vote === 'unsure') },
         text: <>{head}: <span className="font-monospace">{own ? own.ElementTypeRef : part.code}</span>
@@ -301,6 +301,9 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
   const here = l => `${posRef}|${l.key}`
   const shown = lines.filter(l => !dismissed.has(l.key) && !dismissed.has(here(l)) && !hidden.has(here(l)))
   const fromCompanion = shown.some(l => SOURCE[l.kind] === 'companion')
+  // Jobs a line here offers a real part for: the Templates drawer offers no TBC placeholder for them (NRWJH9).
+  const offered = [...new Set(shown.flatMap(l => l.jobs || []))].sort().join('+')
+  useEffect(() => { if (watch) useStore.getState().setOfferedJobs(posRef, offered) }, [posRef, offered, watch])
   useEffect(() => {
     if (watch) useStore.getState().setCompanionPending(posRef, fromCompanion)   // the visible copy starts empty and would blink the pip off
     // No reset on unmount: a watcher handing over to the open editor would wipe the pip the editor still shows.
