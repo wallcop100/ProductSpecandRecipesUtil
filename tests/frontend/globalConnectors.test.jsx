@@ -145,6 +145,14 @@ describe('where it shows', () => {
     expect(screen.getByTestId('wago-suggestion')).toHaveTextContent('A01 has 2 of its parts')
   })
 
+  test('drawer: connectors already here that share no part with a suggested set: no suggestion (UJU4XA)', () => {
+    setup({ psRows: [{ ElementTypeRef: 'ET-MY-CONN', ProductCode: 'XYZ-1' }],
+      recipes: [{ _id: 'z', _row_num: 1, PositionTypeRef: 'A01', ContextType: 'PositionType', ContextRef: 'A01', ElementTypeRef: 'ET-MY-CONN', Quantity: 1 }],
+      elementTypes: [{ ElementTypeRef: 'ET-MY-CONN', Family: 'ET-CONNECTORS' }], connectorFamilies: ['ET-CONNECTORS'] })
+    render(<ConnectorsPane posRef="A01" />)
+    expect(screen.queryByTestId('wago-suggestion')).toBeNull()
+  })
+
   test('drawer: the set another position is built with leads', async () => {
     setup({ positionTypes: [PT('A01', 'DALI', 'Local to fitting'), PT('A05', 'DALI', 'Local to fitting')] })
     await act(async () => { await useStore.getState().applyGlobalConnector('5pin-dali-perm', { posRefs: ['A05'] }) })
@@ -189,6 +197,16 @@ describe('a companion can serve the library', () => {
     expect(G.globalConnector('2pin-dali').name).toBe('Served 2-pin')      // still the served one
     expect(G.setConnectorLibrary(null)).toBe(true)
     expect(G.globalConnector('2pin-dali').name).toBe(bundled.templates.find(t => t.key === '2pin-dali').name)
+  })
+
+  test('a served combo naming a set still in draft takes its parts from the bundle, not its rule (UJU4XA)', () => {
+    const rule = { match: 'all', conditions: [{ column: 'ControlTypeRef', op: 'contains', value: 'DALI' }] }
+    const served = { ...bundled, templates: bundled.templates.filter(t => t.key !== '2pin-dali'),
+      combos: bundled.combos.map(c => ({ ...c, rule, why: 'DALI' })) }
+    expect(G.setConnectorLibrary(served)).toBe(true)
+    expect(G.globalConnector('dali-2+3').parts).toHaveLength(8)
+    expect(G.suggestConnectors({ ControlTypeRef: 'DALI' }).map(x => x.key)).toEqual(['dali-2+3'])
+    G.setConnectorLibrary(null)
   })
 
   test('served entries carry their own rule: it decides, in the served order', () => {

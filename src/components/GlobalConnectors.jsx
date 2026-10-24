@@ -163,6 +163,8 @@ export function WagoSuggestion({ posRef, inRecipe = false }) {
   }
   const strictBest = ns => { const top = Math.max(...ns); return top > 0 && ns.filter(n => n === top).length === 1 ? ns.indexOf(top) : null }
   const own = carried(posRef)
+  // Connectors already here that no suggested set shares a part with: this position is wired its own way (UJU4XA).
+  if ((groups.sigs.get(posRef) || []).length && own.every(n => n === 0)) return chipCard || null
   const counts = sugg.map(() => 0)
   for (const r of groups.sigs.keys()) {
     const i = r === posRef ? null : strictBest(carried(r))
