@@ -31,7 +31,7 @@ export function Scope({ name, scope, setScope, note, setNote }) {
       ))}
     </div>
     {scope !== 'project' && <Form.Control size="sm" value={note} onChange={e => setNote(e.target.value)}
-      placeholder="Why? (optional, checked before others see it)" aria-label="Note" />}
+      placeholder="Why?" aria-label="Note" />}
   </>
 }
 

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { Button } from 'react-bootstrap'
+import { Button, Dropdown } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import useConnectorGroups from './useConnectorGroups'
@@ -10,6 +10,8 @@ import { useCompanion } from '../platform/companion'
 import { shareOutcomes } from '../platform/outcomes'
 import { levelOf, saidOf, mayAsk, noteAsked } from '../utils/certainty'
 import ConfirmSuggestionModal from './ConfirmSuggestionModal'
+import { Dots } from './RecipeSuggestions'
+import { NotRightModal, sendNote } from './Corrections'
 
 const pill = { fontSize: 10, lineHeight: '18px', background: C.surface, border: `1px solid ${C.border}`, fontFamily: 'monospace' }
 const ruleFor = key => [...WAGO_COMBOS, ...WAGO_TEMPLATES].find(e => e.key === key)?.rule || SUGGESTIONS.find(s => s.keys.includes(key))?.rule || null
@@ -130,8 +132,9 @@ export function WagoSuggestion({ posRef, inRecipe = false }) {
   const projectNumber = useStore(st => st.projectNumber)
   const [asking, setAsking] = useState(null)              // the option being checked
   const [chip, setChip] = useState(null)                 // { name, key, voted }: a served set used, "is this right?"
-  const vote = (key, v, note = null) => shareOutcomes(companion, projectNumber, [{ kind: 'connector', key: String(key), tier: 'connector',
-    source: '', supplied: String(key), final: v === 'rejected' ? null : String(key), outcome: v, note }])
+  const [wrong, setWrong] = useState(false)
+  const vote = (key, v, note = null, extra = {}) => shareOutcomes(companion, projectNumber, [{ kind: 'connector', key: String(key), tier: 'connector',
+    source: '', supplied: String(key), final: v === 'rejected' ? null : String(key), outcome: v, note, ...extra }])
   const thumb = v => { setChip(c => ({ ...c, voted: v })); vote(chip.key, v) }
   // The chip outlives the card, which goes once the position has the template.
   const chipCard = chip && (
@@ -197,10 +200,27 @@ export function WagoSuggestion({ posRef, inRecipe = false }) {
   const useButton = o => (
     <Button size="sm" variant="primary" className="py-0" style={{ fontSize: 10 }} disabled={busy} onClick={() => use(o)} data-testid="wago-use">Use</Button>
   )
-  const reportButton = (
+  const report = e => useStore.getState().requestBugNote(e.currentTarget.closest('[data-testid="wago-suggestion"]'))
+  // A served set is disagreed with by Not right… (its popup carries the report link); the bundled one is only reported.
+  const reportButton = served && companion ? (
+    <Dropdown align="end">
+      <Dropdown.Toggle as={Dots} />
+      <Dropdown.Menu style={{ fontSize: 12 }}>
+        <Dropdown.Item className="fw-semibold" data-testid="not-right-suggestion" onClick={() => setWrong(true)}>
+          <MaterialIcon name="thumb_down" size={13} /> Not right…</Dropdown.Item>
+      </Dropdown.Menu>
+    </Dropdown>
+  ) : (
     <Button size="sm" variant="link" className="text-muted p-0" style={{ fontSize: 10 }} data-testid="report-suggestion" title="Report a problem with this suggestion"
-      onClick={e => useStore.getState().requestBugNote(e.currentTarget.closest('[data-testid="wago-suggestion"]'))}><MaterialIcon name="flag" size={13} /></Button>
+      onClick={report}><MaterialIcon name="flag" size={13} /></Button>
   )
+  /** Not right…: every set offered here is voted down; "Just this project" says nothing back. */
+  function notRight({ scope, note }) {
+    if (scope === 'project') return
+    for (const o of s ? [s] : sugg) vote(o.key, 'rejected', null, scope === 'sometimes' ? { scope } : {})
+    sendNote(note, `Not right: connector ${(s ? [s] : sugg).map(o => o.key).join(', ')} at ${posRef}`)
+    if (projectNumber) useStore.getState().toast(`Saved for ${projectNumber}. Thank you for your contribution.`)
+  }
   const s = cur == null ? null : sugg[cur]
   const plan = s && planOf(s)
   const creates = o => planOf(o).parts.filter(p => !planOf(o).collection && p.action === 'create')
@@ -257,6 +277,10 @@ export function WagoSuggestion({ posRef, inRecipe = false }) {
           </div>
         ))}
       </>)}
+      {wrong && (
+        <NotRightModal show onHide={() => setWrong(false)} onSend={notRight} title={<>What's not right about the connectors for {posRef}?</>}
+          placeholder="e.g. a Wago code" facts={[['Suggested', (s ? [s] : sugg).map(o => planOf(o).collection?.Name || o.name).join(' or ')], ['Because', (s || sugg[0]).why]]} />
+      )}
       {asking && (
         <ConfirmSuggestionModal onCancel={() => setAsking(null)} onAnswer={checked}
           check={{ key: asking.key, posRef, job: 'connector set', rule: asking.why, noCode: true, unsureLabel: 'Not sure: use it',

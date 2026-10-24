@@ -89,6 +89,20 @@ describe('recipe suggestions', () => {
     expect(api.current.shareOutcomes).toHaveBeenLastCalledWith('7900', [expect.objectContaining({ kind: 'kind', key: '2|DIFFUSER', outcome: 'dismissed' })])
   })
 
+  test('⋯ → Not right… on a companion line: the right code goes in, and a Sometimes answer is sent as a rejected vote', async () => {
+    api.current = { kits: vi.fn(async () => [KIT]), shareOutcomes: vi.fn(async () => ({ stored: 1 })) }
+    await act(async () => { setup() })
+    const kit = screen.getByTestId('suggestion-kit')
+    fireEvent.click(kit.querySelector('[aria-label="More"]'))
+    expect(screen.queryByTestId('report-suggestion')).toBeNull()   // the popup carries it instead
+    fireEvent.click(screen.getByTestId('not-right-suggestion'))
+    fireEvent.change(screen.getByPlaceholderText('instead of 021-8810-11'), { target: { value: '021-8810-12' } })
+    await act(async () => { fireEvent.click(screen.getByText("It's wrong: don't add it")) })
+    expect(useStore.getState().psRows.some(r => r.ProductCode === '021-8810-12')).toBe(true)
+    expect(api.current.shareOutcomes).toHaveBeenLastCalledWith('7900', [expect.objectContaining({ kind: 'kit', key: KIT.key, outcome: 'rejected', final: '021-8810-12', scope: 'sometimes' })])
+    expect(screen.queryByTestId('suggestion-kit')).toBeNull()
+  })
+
   test('caps, diffusers and clips come from THIS profile: its range part is made as an ElementType', async () => {
     const range = code => ({ key: `ledflex|FPS1709BG2000>range|${code}`, range: 'FPS1709', anchor: { code: 'FPS1709BG2000' },
       part: { maker_key: 'ledflex', code, slot: 'CLIPS', name: 'FLEX PROFILE SURFACE 1709 MOUNTING CLIP' }, share: null, contract: true })
