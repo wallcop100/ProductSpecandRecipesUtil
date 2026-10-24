@@ -5,7 +5,9 @@ import { useScrollMemory } from './useScreenView'
 import { getUsedIn } from '../utils/containerUtils'
 import FlagPill from './FlagPill'
 import { getCompanion } from '../platform/companion'
-import { retiredFor } from '../platform/retired'
+import { retiredFor, fitsRecipe, newerCodes } from '../platform/retired'
+import { MaybeReplaced, NotRightModal, sendCorrection, sendNote } from './Corrections'
+import { looksLikeProductCode } from '../utils/codeHeuristics'
 import CopyButton from './CopyButton'
 import EntityPill from './EntityPill'
 import MaterialIcon from './MaterialIcon'
@@ -108,6 +110,7 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
 
   const [dismissedSimilar, setDismissedSimilar] = useState(false)
   const [showNotes, setShowNotes] = useState(false)
+  const [notRight, setNotRight] = useState(false)
 
   useEffect(() => { setDismissedSimilar(false); setShowNotes(false) }, [selectedRef])
 
@@ -326,11 +329,36 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
           />
         </Form.Group>
 
-        {retired && !isDeleted && (
-          <div className="mb-3 d-flex align-items-center gap-1" style={{ fontSize: 11, color: C.muted, marginTop: -8 }} data-testid="retired">
-            <span className="companion-dot" /> maker's newer code:{' '}
-            <span style={{ fontFamily: 'monospace' }}>{retired.replacement}</span> — check which code to order
+        {retired?.options && !isDeleted && (
+          <MaybeReplaced key={productCode} code={productCode} options={retired.options} generic={!looksLikeProductCode(productCode)}
+            fit={fitsRecipe(retired.options, selectedRef, recipes, psRows)}
+            onUse={code => {
+              updatePSRow(selectedRef, { ProductCode: code })
+              // the pick is one more answer for this code, never a rule for every project
+              getCompanion().then(api => api?.contribute?.({ kind: 'supersession', code: productCode, replacement: code,
+                manufacturer, project: projectNumber || '', scope: 'sometimes' }))
+            }}
+            onNotRight={() => setNotRight(true)} />
+        )}
+        {retired?.replacement && !isDeleted && (
+          <div className="px-2 py-1 mb-3 rounded companion-card d-flex align-items-center gap-2" style={{ fontSize: 11, marginTop: -8 }} data-testid="retired">
+            <span className="companion-dot" />
+            <span style={{ flex: 1 }}>Replaced by <span className="font-monospace">{retired.replacement}</span>{' '}
+              <span className="text-muted">· {manufacturer || 'Manufacturer'}{retired.tier === 'confirmed' ? ' · confirmed' : retired.tier === 'vendor' ? "'s list" : ''}</span></span>
+            <Button size="sm" variant="outline-primary" style={{ fontSize: 11, padding: '0 8px' }}
+              onClick={() => updatePSRow(selectedRef, { ProductCode: retired.replacement })}>Use</Button>
+            <Button size="sm" variant="link" className="p-0 text-muted" style={{ fontSize: 11 }} onClick={() => setNotRight(true)}>Not right…</Button>
           </div>
+        )}
+        {retired && (
+          <NotRightModal key={`nr-${productCode}`} show={notRight} onHide={() => setNotRight(false)}
+            title={`What's not right about the newer code for ${productCode}?`} placeholder="e.g. the code to order now"
+            facts={[['Code', <span className="font-monospace">{productCode}</span>], ['Suggested', <span className="font-monospace">{newerCodes(retired)}</span>]]}
+            onSend={a => {
+              if (a.right) updatePSRow(selectedRef, { ProductCode: a.right })
+              if (a.right) sendCorrection(a, { kind: 'supersession', code: productCode, replacement: a.right, manufacturer })
+              else sendNote(`Not right: ${productCode} → ${newerCodes(retired)}${a.note ? `\n${a.note}` : ''}`, `supersession ${productCode}`)
+            }} />
         )}
 
         {/* Description */}

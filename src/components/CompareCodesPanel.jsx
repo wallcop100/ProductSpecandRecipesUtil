@@ -7,6 +7,7 @@ import CopyButton from './CopyButton'
 import StatusChip from './StatusChip'
 import { codeDiff } from '../utils/etRefSuggest'
 import { C } from '../styles/tokens'
+import { newerCodes } from '../platform/retired'
 
 /**
  * CompareCodesPanel — the distinct codes, and where each one is going.
@@ -142,8 +143,8 @@ export default function CompareCodesPanel({ entries, knownPTs, ptTarget, onCreat
             {e.retired && (
               <div className="d-flex align-items-center gap-1" style={{ fontSize: 10, color: C.muted }} data-testid="retired"
                 title={e.retired.retired ? `Replaced by the manufacturer (${e.retired.retired})` : 'Replaced by the manufacturer'}>
-                <span className="companion-dot" /> replaced by{' '}
-                <span style={{ fontFamily: 'monospace' }}>{e.retired.replacement}</span> — check the current code
+                <span className="companion-dot" /> {e.retired.options ? 'maybe replaced by' : 'replaced by'}{' '}
+                <span style={{ fontFamily: 'monospace' }}>{newerCodes(e.retired)}</span> — check the current code
               </div>
             )}
 
