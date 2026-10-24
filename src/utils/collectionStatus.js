@@ -261,11 +261,21 @@ export function connectorGapsForPosition(recipes, posRef, tags, collections, con
         container,
         blocked,
         collectionName: collection.Name,
-        label: gapLabel(r, ref, section, collection.Name, container, blocked),
+        label: gapLabel(r, ref, section, templateName(collection, collections, ings), container, blocked),
       })
     }
   }
   return gaps
+}
+
+/** "Local", or "Local" (with ET-…) when another template has the same name: an ingredient only this one has. */
+function templateName(collection, collections, ings) {
+  const same = c => c !== collection && c.Name?.trim().toLowerCase() === collection.Name?.trim().toLowerCase()
+  const twins = (collections || []).filter(same)
+  if (!twins.length) return `"${collection.Name}"`
+  const theirs = new Set(twins.flatMap(c => parseIngredients(c).map(i => ingredientRef(i)?.toLowerCase())))
+  const own = ings.map(ingredientRef).find(r => !theirs.has(r.toLowerCase())) || ingredientRef(ings[0])
+  return `"${collection.Name}" (with ${own})`
 }
 
 /** Human phrasing for a gap — what is wrong, and what the button will do. */
@@ -280,12 +290,12 @@ function gapLabel(r, ref, section, collectionName, container, blocked) {
     const at = r.foundAt?.section === INTERNAL
       ? `inside ${r.foundAt.container}`
       : 'at position level'
-    return `Move ${ref} — it sits ${at}, but "${collectionName}" wants it ${where}`
+    return `Move ${ref} — it sits ${at}, but ${collectionName} wants it ${where}`
   }
   if (r.status === 'short') {
-    return `Raise ${ref} to ×${r.need} ${where} (only ×${r.have} present) — completes "${collectionName}"`
+    return `Raise ${ref} to ×${r.need} ${where} (only ×${r.have} present) — completes ${collectionName}`
   }
-  return `Add ${ref} ${where} — completes "${collectionName}"`
+  return `Add ${ref} ${where} — completes ${collectionName}`
 }
 
 /**
