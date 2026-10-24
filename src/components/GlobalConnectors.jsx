@@ -3,7 +3,7 @@ import { Button, Dropdown } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import useConnectorGroups from './useConnectorGroups'
-import { globalConnectors, suggestConnectors, recogniseCodes, SUGGESTIONS, WAGO_PAGE, WAGO_TEMPLATES, WAGO_COMBOS } from '../data/globalConnectors'
+import { globalConnectors, suggestConnectors, setInRecipe, recogniseCodes, SUGGESTIONS, WAGO_PAGE, WAGO_TEMPLATES, WAGO_COMBOS } from '../data/globalConnectors'
 import { templateParts } from '../utils/connectorGroups'
 import { C } from '../styles/tokens'
 import { useCompanion } from '../platform/companion'
@@ -121,8 +121,12 @@ export function WagoSuggestion({ posRef, inRecipe = false }) {
   const applyGlobalConnector = useStore(s => s.applyGlobalConnector)
   const [busy, setBusy] = useState(false)
   const rec = groups.recOf(posRef)
+  const codeOf = new Map((psRows || []).map(r => [String(r.ElementTypeRef || r.elementTypeRef || '').toLowerCase(), String(r.ProductCode || '').toUpperCase()]))
+  const codesHere = ref => (groups.sigs.get(ref) || []).map(p => codeOf.get(p.ref.toLowerCase())).filter(Boolean)
+  const mine = codesHere(posRef).sort().join('|')
+  // Connectors in the recipe decide which set this is; the position's columns only suggest one for an empty recipe.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const all = useMemo(() => suggestConnectors(rec), [rec])
+  const all = useMemo(() => ((groups.sigs.get(posRef) || []).length ? setInRecipe(mine ? mine.split('|') : []) : suggestConnectors(rec)), [rec, mine])
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const plans = useMemo(() => all.map(o => planGlobalConnector(o.key)), [all, etCollections, psRows])
   const sugg = all.filter((_, i) => plans[i])
@@ -155,16 +159,13 @@ export function WagoSuggestion({ posRef, inRecipe = false }) {
   if (!sugg.length || (inRecipe && (!groups.sigs.size || m?.templates.length || m?.clash))) return chipCard || null
   // What the project does (#66), by product code: the set this position already carries most
   // of leads; failing that, the one most other positions carry most of.
-  const codeOf = new Map((psRows || []).map(r => [String(r.ElementTypeRef || r.elementTypeRef || '').toLowerCase(), String(r.ProductCode || '').toUpperCase()]))
   const setCodes = sugg.map(o => globalConnectors().find(g => g.key === o.key).parts.map(p => String(p.code).toUpperCase()))
   const carried = ref => {
-    const have = new Set((groups.sigs.get(ref) || []).map(p => codeOf.get(p.ref.toLowerCase())).filter(Boolean))
+    const have = new Set(codesHere(ref))
     return setCodes.map(cs => cs.filter(c => have.has(c)).length)
   }
   const strictBest = ns => { const top = Math.max(...ns); return top > 0 && ns.filter(n => n === top).length === 1 ? ns.indexOf(top) : null }
   const own = carried(posRef)
-  // Connectors already here that no suggested set shares a part with: this position is wired its own way (UJU4XA).
-  if ((groups.sigs.get(posRef) || []).length && own.every(n => n === 0)) return chipCard || null
   const counts = sugg.map(() => 0)
   for (const r of groups.sigs.keys()) {
     const i = r === posRef ? null : strictBest(carried(r))
