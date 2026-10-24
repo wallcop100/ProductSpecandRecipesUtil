@@ -131,6 +131,22 @@ describe('recipe suggestions', () => {
     expect(screen.getByText(/^ET-LIN-CLIP-01/)).toBeInTheDocument()
   })
 
+  test('the profiles asked for together go in one kits call, and each copy gets its own profile\'s parts', async () => {
+    const cap = (anchor, code) => ({ ...KIT, key: `ledflex|${anchor}>ledflex|${code}`, anchor: { maker_key: 'ledflex', code: anchor }, part: { ...KIT.part, code } })
+    api.current = { kits: vi.fn(async () => [cap('021-8810-02', 'CAP-A'), cap('FPS1709BG2000', 'CAP-B')]), shareOutcomes: vi.fn(async () => ({ stored: 1 })) }
+    setup().unmount()
+    api.current = { ...api.current, kits: vi.fn(api.current.kits) }   // a new connection: nothing cached
+    useStore.setState({ psRows: [...useStore.getState().psRows, { ElementTypeRef: 'ET-LIN-PROF-09', Manufacturer: 'LEDFlex', ProductCode: 'FPS1709BG2000' }],
+      elementTypes: [...useStore.getState().elementTypes, { ElementTypeRef: 'ET-LIN-PROF-09', Family: 'ET-LIN-PROF' }],
+      recipes: useStore.getState().recipes.map(r => (r.PositionTypeRef === 'C01r' && r.ElementTypeRef === 'ET-LIN-PROF-01' ? { ...r, ElementTypeRef: 'ET-LIN-PROF-09' } : r)) })
+    await act(async () => { render(<><RecipeSuggestions posRef="C01r" /><RecipeSuggestions posRef="C05r" /></>) })
+    expect(api.current.kits).toHaveBeenCalledTimes(1)
+    expect(api.current.kits.mock.calls[0][0]).toHaveLength(2)
+    const kits = screen.getAllByTestId('suggestion-kit').map(l => l.textContent)
+    expect(kits).toEqual([expect.stringMatching(/CAP-B/), expect.stringMatching(/CAP-A/)])
+    expect(kits.join()).not.toMatch(/CAP-B.*CAP-B|CAP-A.*CAP-A/)
+  })
+
   test('a failed kit lookup shows none of the profile\'s lines, so the pip stays off', async () => {
     api.current = { kits: vi.fn(async () => null), shareOutcomes: vi.fn(async () => ({ stored: 1 })) }
     const CLIPS = { ...KIND, slots: [{ slot: 'CLIPS', core: false, share: 0.92, section: 'lin_internal' }] }
@@ -174,7 +190,9 @@ describe('recipe suggestions', () => {
     const CLIPS = { ...KIND, slots: [{ slot: 'CLIPS', core: false, share: 0.92, section: 'lin_internal' }] }
     await act(async () => { setup() })
     await act(async () => useStore.setState({ library: { patterns: [], exemplars: [], kinds: [CLIPS] },
+      psRows: [{ ElementTypeRef: 'ET-LIN-PROF-01', Manufacturer: 'LEDFlex', ProductCode: 'FPS2020BG2000' }],
       recipes: useStore.getState().recipes.filter(r => r.ElementTypeRef !== 'ET-LIN-CLIP-01') }))
+    expect(api.current.kits).toHaveBeenLastCalledWith([{ code: 'FPS2020BG2000', manufacturer: 'LEDFlex' }], '7900')
     expect(screen.queryByTestId('suggestion-kind')).toBeNull()
   })
 
