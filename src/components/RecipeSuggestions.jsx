@@ -129,7 +129,8 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
     setKitsLoaded(!companion?.kits || !anchor)
     if (!companion?.kits || !anchor) return
     let live = true
-    kitsFor(companion, anchor, projectNumber).then(k => { if (live) { if (k) setKits(k); setKitsLoaded(true) } }, () => { if (live) setKitsLoaded(true) })
+    // A failed lookup leaves the profile's lines unknown: shown unfiltered they lit the rail's pip for nothing
+    kitsFor(companion, anchor, projectNumber).then(k => { if (live && k) { setKits(k); setKitsLoaded(true) } }, () => {})
     return () => { live = false }
   }, [companion, anchor?.code, anchor?.manufacturer, projectNumber])   // eslint-disable-line react-hooks/exhaustive-deps
 

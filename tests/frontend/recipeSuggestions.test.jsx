@@ -131,6 +131,15 @@ describe('recipe suggestions', () => {
     expect(screen.getByText(/^ET-LIN-CLIP-01/)).toBeInTheDocument()
   })
 
+  test('a failed kit lookup shows none of the profile\'s lines, so the pip stays off', async () => {
+    api.current = { kits: vi.fn(async () => null), shareOutcomes: vi.fn(async () => ({ stored: 1 })) }
+    const CLIPS = { ...KIND, slots: [{ slot: 'CLIPS', core: false, share: 0.92, section: 'lin_internal' }] }
+    await act(async () => { setup() })
+    await act(async () => useStore.setState({ library: { patterns: [], exemplars: [], kinds: [CLIPS] },
+      recipes: useStore.getState().recipes.filter(r => r.ElementTypeRef !== 'ET-LIN-CLIP-01') }))
+    expect(screen.queryByTestId('suggestion-kind')).toBeNull()
+  })
+
   test('a TBC part of the recipe gets the code of this profile\'s range', async () => {
     const cap = { key: 'r', range: 'FPSC0808', anchor: { code: 'FPSC0808BG2000' }, part: { maker_key: 'ledflex', code: 'FPSC0808ECG', slot: 'END_CAPS', name: 'FLEX PROFILE SURFACE CORNER 0808 END CAP SET GREY' } }
     api.current = { kits: vi.fn(async () => [cap]), shareOutcomes: vi.fn(async () => ({ stored: 1 })) }
