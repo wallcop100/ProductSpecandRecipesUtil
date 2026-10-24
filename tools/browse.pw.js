@@ -45,6 +45,16 @@ async (page) => {
   })
   await ctx.addInitScript(() => {
     const q = new URLSearchParams(location.search).get('bed')
+    // a bed starts clean: nothing this browser kept from an earlier run (edits, exports, dismissals)
+    // (deleting the database is blocked while an earlier page holds it open, so each run gets its own)
+    if (q && sessionStorage.getItem('psr-bed-wiped') !== q) {
+      localStorage.clear()
+      sessionStorage.setItem('psr-bed-wiped', q)
+      sessionStorage.setItem('psr-bed-run', `${q}-${Date.now()}`)
+    }
+    const run = sessionStorage.getItem('psr-bed-run')
+    const open = indexedDB.open.bind(indexedDB)
+    if (run) indexedDB.open = (n, v) => open(n === 'recipe-builder' ? `${n}-bed-${run}` : n, v)
     if (q) sessionStorage.setItem('psr-bed', q)
     window.showDirectoryPicker = async () => {
       const b = sessionStorage.getItem('psr-bed') || ''
