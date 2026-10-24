@@ -74,6 +74,20 @@ export function recogniseCodes(codes) {
 }
 
 /**
+ * The library set a recipe's connector codes belong to: the one sharing most of them, then the one
+ * with fewest parts of its own (770-203 alone is 3-pin LEN, not 2+3). → [{ key, name, why, rule: null }] | []
+ * What the recipe carries decides, never the position's columns (UJU4XA).
+ */
+export function setInRecipe(codes) {
+  const have = new Set([...codes].map(c => norm(supersededBy(c) || c)))
+  if (!have.size) return []
+  const scored = globalConnectors().map(g => ({ g, n: g.parts.filter(p => have.has(norm(p.code))).length }))
+    .filter(x => x.n).sort((a, b) => b.n - a.n || a.g.parts.length - b.g.parts.length)
+  const top = scored[0]
+  return top ? [{ key: top.g.key, name: top.g.name, why: 'from the connectors in this recipe', rule: null }] : []
+}
+
+/**
  * suggestConnectors(rec) → [{ key, name, why, rule }], best first. rec is a position's
  * record (templateRules.templateRecords): its DesignDB columns.
  */
@@ -128,7 +142,10 @@ export function setConnectorLibrary(block) {
   const ok = b.templates.every(t => t?.key && Array.isArray(t.site) && Array.isArray(t.driver))
     && (b.templates.some(t => t.rule) || (b.combos || []).some(c => c.rule) || SUGGESTIONS.every(sg => sg.keys.every(k => keys.has(k))))
   if (!ok) return false
-  C = { combos: [], superseded: {}, source: {}, ...b }
+  // A served combo can name a set that is still a draft there (2pin-dali, UJU4XA): take its parts from the bundle, never its rule.
+  const missing = (b.combos || []).flatMap(c => c.of || []).filter(k => !keys.has(k))
+  const filled = GLOBAL.connectors.templates.filter(t => missing.includes(t.key)).map(({ rule, why, ...t }) => t)   // eslint-disable-line no-unused-vars
+  C = { combos: [], superseded: {}, source: {}, ...b, templates: [...b.templates, ...filled] }
   WAGO_PAGE = C.source; WAGO_TEMPLATES = C.templates; WAGO_COMBOS = C.combos; WAGO_SUPERSEDED = C.superseded
   return true
 }

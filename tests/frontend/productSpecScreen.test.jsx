@@ -121,6 +121,19 @@ describe('Checks skip cable families (K7N6MT)', () => {
   })
 })
 
+describe('the search filters the problem sections too (Z5EFWE)', () => {
+  test('a search that matches nothing hides Partial spec', () => {
+    useStore.setState({
+      psRows: [{ _id: 'p', ElementTypeRef: 'LP1', Manufacturer: '', ProductCode: '' }],
+      elementTypes: [{ ElementTypeRef: 'LP1' }], recipes: [], specCheckSkip: [],
+    })
+    render1()
+    expect(screen.getByText(/Partial spec/)).toBeInTheDocument()
+    fireEvent.change(screen.getByPlaceholderText('Search…'), { target: { value: '021-1111' } })
+    expect(screen.queryByText(/Partial spec/)).toBeNull()
+  })
+})
+
 describe('the page is sticky across visits', () => {
   const editorShows = ref => within(document.querySelector('[data-debug-id="ProductSpecScreen"]')).queryAllByText(ref).length > 0
 

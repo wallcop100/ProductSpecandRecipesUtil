@@ -116,17 +116,10 @@ export default function ETSpecBrowser({
     return [...set].sort()
   }, [allRefs, viewMode, psRowMap, etObjMap])
 
-  // Problem-state indices (shown as their own heading sections, like Missing).
-  const partialRefs = useMemo(
-    () => allRefs.filter(r => completenessOf(r, psRowMap, missingSet, duplicateCodes, skippedRefs) === 'partial'),
-    [allRefs, psRowMap, missingSet, duplicateCodes])
-  const duplicateRefs = useMemo(
-    () => allRefs.filter(r => completenessOf(r, psRowMap, missingSet, duplicateCodes, skippedRefs) === 'duplicate'),
-    [allRefs, psRowMap, missingSet, duplicateCodes])
-
-  const filtered = useMemo(() => {
+  // One filter for every list, the Missing / Partial / Duplicate sections included (Z5EFWE).
+  const shows = useMemo(() => {
     const q = search.toLowerCase().trim()
-    return allRefs.filter(ref => {
+    return ref => {
       const key = ref.toLowerCase()
       const psRow = psRowMap.get(key)
       const status = completenessOf(ref, psRowMap, missingSet, duplicateCodes, skippedRefs)
@@ -167,8 +160,17 @@ export default function ETSpecBrowser({
         (psRow?.ProductCode  || '').toLowerCase().includes(q) ||
         (psRow?.Manufacturer || '').toLowerCase().includes(q) ||
         group.toLowerCase().includes(q)
-    })
-  }, [allRefs, search, groupFilter, statusFilters, usageFilters, psRowMap, missingSet, duplicateCodes, etUsedIn, viewMode, etObjMap])
+    }
+  }, [search, groupFilter, statusFilters, usageFilters, psRowMap, missingSet, duplicateCodes, etUsedIn, viewMode, etObjMap])
+
+  const filtered = useMemo(() => allRefs.filter(shows), [allRefs, shows])
+  const shownMissing = useMemo(() => missingETs.filter(shows), [missingETs, shows])
+  const partialRefs = useMemo(
+    () => filtered.filter(r => completenessOf(r, psRowMap, missingSet, duplicateCodes, skippedRefs) === 'partial'),
+    [filtered, psRowMap, missingSet, duplicateCodes, skippedRefs])
+  const duplicateRefs = useMemo(
+    () => filtered.filter(r => completenessOf(r, psRowMap, missingSet, duplicateCodes, skippedRefs) === 'duplicate'),
+    [filtered, psRowMap, missingSet, duplicateCodes, skippedRefs])
 
   const grouped = useMemo(() => {
     const m = new Map()
@@ -198,7 +200,7 @@ export default function ETSpecBrowser({
     if (e.key === 'ArrowUp' && idx > 0) { e.preventDefault(); onSelect(flat[idx - 1]) }
   }
 
-  const allVisibleRefs = [...missingETs, ...filtered]
+  const allVisibleRefs = [...shownMissing, ...filtered]
 
   return (
     <div
@@ -292,7 +294,7 @@ export default function ETSpecBrowser({
       {/* List */}
       <div ref={listRef} style={{ flex: 1, overflowY: 'auto' }}>
         {/* Missing ETs section */}
-        {missingETs.length > 0 && (
+        {shownMissing.length > 0 && (
           <div style={{ borderBottom: `1px solid ${C.attnTint}` }}>
             <div
               className="d-flex align-items-center gap-1 px-2 py-1"
@@ -304,10 +306,10 @@ export default function ETSpecBrowser({
                 Missing spec
               </span>
               <span style={{ marginLeft: 4, background: C.attn, color: C.surface, borderRadius: 10, padding: '0 6px', fontSize: 10 }}>
-                {missingETs.length}
+                {shownMissing.length}
               </span>
             </div>
-            {missingOpen && missingETs.map(ref => (
+            {missingOpen && shownMissing.map(ref => (
               <BrowserRow
                 key={ref}
                 ref_={ref}
@@ -382,7 +384,7 @@ export default function ETSpecBrowser({
           </div>
         ))}
 
-        {grouped.size === 0 && missingETs.length === 0 && (
+        {grouped.size === 0 && shownMissing.length === 0 && (
           <div className="text-muted small text-center py-4">No element types found.</div>
         )}
       </div>
