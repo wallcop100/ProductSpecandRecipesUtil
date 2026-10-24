@@ -5,6 +5,7 @@ import useStore from '../store/useStore'
 import { getCompanion } from '../platform/companion'
 import { buildReport } from '../utils/bugReports'
 import { C } from '../styles/tokens'
+import { askConfirm } from './ConfirmHost'
 
 // Companion corrections, all purple: a popup is a `.companion-card`, a Maybe waiting for a pick is
 // `.companion-maybe` (dashed). No condition chips: what decides between options is read from the context
@@ -57,6 +58,32 @@ export async function sendCorrection({ scope, note }, payload) {
     sendNote(note, `${payload.kind} ${payload.code}`)
   }
   if (project) useStore.getState().toast(`Saved for ${project}. Thank you for your contribution.`)
+}
+
+const alnum = s => String(s).toUpperCase().replace(/[^A-Z0-9]/g, '')
+/** Near enough to be a slip or a renumbering: same first 4 letters-and-digits, or one or two characters apart. */
+export function codesAlike(a, b) {
+  const x = alnum(a), y = alnum(b)
+  if (!x || !y || x === y) return x === y && !!x
+  if (x.length >= 4 && x.slice(0, 4) === y.slice(0, 4)) return true
+  const d = Array.from({ length: y.length + 1 }, (_, j) => j)
+  for (let i = 1; i <= x.length; i++) {
+    let prev = d[0]; d[0] = i
+    for (let j = 1; j <= y.length; j++) { const t = d[j]; d[j] = Math.min(d[j] + 1, d[j - 1] + 1, prev + (x[i - 1] === y[j - 1] ? 0 : 1)); prev = t }
+  }
+  return d[y.length] <= 2
+}
+
+/**
+ * A code edited to one like it (UZBVDG): ask whether it corrects the old one or is another product. Only a
+ * correction teaches the companion; a code unlike the old one is taken as a different product and asks nothing.
+ */
+export async function noteCodeChange(code, next, manufacturer) {
+  if (!code || !next || !manufacturer || /^tbc$/i.test(code) || /^tbc$/i.test(next) || !codesAlike(code, next)) return
+  const api = await getCompanion()
+  if (!api?.contribute) return
+  if (await askConfirm(`${code} → ${next}\n\nA correction (the same product, mistyped or renumbered), or a different product?`, { ok: 'Correction', cancel: 'Different product' }))
+    api.contribute({ kind: 'supersession', code, replacement: next, manufacturer, project: useStore.getState().projectNumber || '' })
 }
 
 /**

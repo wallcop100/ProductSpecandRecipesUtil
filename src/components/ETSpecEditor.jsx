@@ -4,9 +4,9 @@ import useStore from '../store/useStore'
 import { useScrollMemory } from './useScreenView'
 import { getUsedIn } from '../utils/containerUtils'
 import FlagPill from './FlagPill'
-import { getCompanion } from '../platform/companion'
+import { getCompanion, useCompanion } from '../platform/companion'
 import { retiredFor, fitsRecipe, newerCodes } from '../platform/retired'
-import { MaybeReplaced, NotRightModal, sendCorrection, sendNote } from './Corrections'
+import { MaybeReplaced, NotRightModal, sendCorrection, sendNote, noteCodeChange } from './Corrections'
 import { looksLikeProductCode } from '../utils/codeHeuristics'
 import CopyButton from './CopyButton'
 import EntityPill from './EntityPill'
@@ -111,6 +111,7 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
   const [dismissedSimilar, setDismissedSimilar] = useState(false)
   const [showNotes, setShowNotes] = useState(false)
   const [notRight, setNotRight] = useState(false)
+  const companion = useCompanion()
 
   useEffect(() => { setDismissedSimilar(false); setShowNotes(false) }, [selectedRef])
 
@@ -308,6 +309,10 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
         <Form.Group className="mb-3">
           <Form.Label style={{ fontSize: 12, fontWeight: 600 }}>
             Product Code{!productCode && !isDeleted && <span className="text-danger ms-1" style={{ fontSize: 10 }}>needed</span>}
+            {companion && productCode && !retired && !isDeleted && (
+              <Button size="sm" variant="link" className="p-0 ms-2 text-muted align-baseline" style={{ fontSize: 11 }}
+                onClick={() => setNotRight(true)} data-testid="code-not-right">Not right…</Button>
+            )}
           </Form.Label>
           <Form.Control
             size="sm"
@@ -317,11 +322,7 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
               const v = e.target.value.trim()
               if (v === productCode) return
               updatePSRow(selectedRef, { ProductCode: v })
-              // A code swapped for another under the same maker is evidence of a renumbering. Noted
-              // in the background (reviewed before it is ever relied on); nothing is shown here.
-              if (productCode && v && manufacturer && !/^tbc$/i.test(productCode) && !/^tbc$/i.test(v)) {
-                getCompanion().then(api => api?.contribute?.({ kind: 'supersession', code: productCode, replacement: v, manufacturer }))
-              }
+              noteCodeChange(productCode, v, manufacturer)
             }}
             onKeyDown={e => { if (e.key === 'Enter') e.target.blur() }}
             style={{ fontSize: 12, ...(!productCode && !isDeleted ? { borderColor: C.dangerTint, background: C.dangerTint } : null) }}
@@ -349,6 +350,16 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
               onClick={() => updatePSRow(selectedRef, { ProductCode: retired.replacement })}>Use</Button>
             <Button size="sm" variant="link" className="p-0 text-muted" style={{ fontSize: 11 }} onClick={() => setNotRight(true)}>Not right…</Button>
           </div>
+        )}
+        {!retired && productCode && (
+          <NotRightModal key={`nr-${productCode}`} show={notRight} onHide={() => setNotRight(false)}
+            title={`What's wrong with ${productCode}?`} placeholder="e.g. the code to order"
+            facts={[['Code', <span className="font-monospace">{productCode}</span>], ['Manufacturer', manufacturer || '(blank)']]}
+            onSend={a => {
+              if (a.right) updatePSRow(selectedRef, { ProductCode: a.right })
+              if (a.right) sendCorrection(a, { kind: 'supersession', code: productCode, replacement: a.right, manufacturer })
+              else sendNote(`Bad code: ${manufacturer} ${productCode} (${selectedRef})${a.note ? `\n${a.note}` : ''}`, `code ${productCode}`)
+            }} />
         )}
         {retired && (
           <NotRightModal key={`nr-${productCode}`} show={notRight} onHide={() => setNotRight(false)}
