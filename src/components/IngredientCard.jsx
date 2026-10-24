@@ -20,6 +20,7 @@ import { roleOf, QTY_CONFIRM_ROLES } from '../utils/recipePatterns'
 import { C } from '../styles/tokens'
 import { retiredFor, newerCodes } from '../platform/retired'
 import { useScreenView } from './useScreenView'
+import { noteCodeChange } from './Corrections'
 
 // A part's tree line in its wrapper's contents and its card when exploded share this, so one morphs into the other (#74).
 const partTransitionName = (container, ref) => `part-${`${container}-${ref}`.toLowerCase().replace(/[^a-z0-9-]/g, '-')}`
@@ -841,6 +842,7 @@ function ProductInline({ etRef, manufacturer, productCode, onOpenProductSpec }) 
     if (mfr.trim() !== String(manufacturer || '')) upd.Manufacturer = mfr.trim()
     if (code.trim() && code.trim() !== String(productCode || '')) upd.ProductCode = code.trim()
     if (Object.keys(upd).length) updatePSRow(etRef, upd)
+    if (upd.ProductCode) noteCodeChange(productCode, upd.ProductCode, upd.Manufacturer ?? manufacturer)
   }
   const onKey = e => {
     if (e.key === 'Enter') { e.preventDefault(); save() }
