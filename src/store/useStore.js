@@ -1155,7 +1155,9 @@ const useStore = create((set, get) => ({
       const next = { ...s.retiredCodes }
       for (const r of rows) {
         // "Replaced by TBC" is a code being blanked, not a maker's renumbering (#64, #65).
-        if (r?.code && r.replacement && !/^tbc$/i.test(String(r.replacement).trim())) next[String(r.code).trim().toUpperCase()] = { replacement: r.replacement, retired: r.retired || null }
+        const options = (r?.maybe ? r.options || [] : []).filter(o => o.option && !/^tbc$/i.test(o.option))
+        if (r?.code && options.length) next[String(r.code).trim().toUpperCase()] = { replacement: null, options: options.map(o => ({ code: o.option, used: o.used || 0 })) }
+        else if (r?.code && r.replacement && !/^tbc$/i.test(String(r.replacement).trim())) next[String(r.code).trim().toUpperCase()] = { replacement: r.replacement, retired: r.retired || null, tier: r.tier || null }
       }
       return { retiredCodes: next }
     })

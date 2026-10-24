@@ -18,7 +18,7 @@ import { familyOf } from '../utils/etRef'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { roleOf, QTY_CONFIRM_ROLES } from '../utils/recipePatterns'
 import { C } from '../styles/tokens'
-import { retiredFor } from '../platform/retired'
+import { retiredFor, newerCodes } from '../platform/retired'
 import { useScreenView } from './useScreenView'
 
 // A part's tree line in its wrapper's contents and its card when exploded share this, so one morphs into the other (#74).
@@ -873,12 +873,14 @@ function ProductInline({ etRef, manufacturer, productCode, onOpenProductSpec }) 
         <OverlayTrigger placement="auto" trigger={['hover', 'focus']} overlay={
           <Popover style={{ maxWidth: 320 }} data-testid="retired-pop">
             <Popover.Body style={{ fontSize: 12, lineHeight: 1.45 }}>
-              Other projects show {manufacturer || 'the maker'} now sells <span className="font-monospace">{productCode}</span> as{' '}
-              <span className="font-monospace">{retired.replacement}</span>. Check which code to order, then change it in Product Spec.
+              {retired.options
+                ? <>{manufacturer || 'The Manufacturer'} replaced <span className="font-monospace">{productCode}</span> with more than one code. Pick the right one in Product Spec.</>
+                : <>Other projects show {manufacturer || 'the Manufacturer'} now sells <span className="font-monospace">{productCode}</span> as{' '}
+                  <span className="font-monospace">{retired.replacement}</span>. Check which code to order, then change it in Product Spec.</>}
             </Popover.Body>
           </Popover>}>
           <span className="d-inline-flex align-items-center gap-1" style={{ fontSize: 10, color: C.muted, cursor: 'help' }} data-testid="retired" tabIndex={0}>
-            <span className="companion-dot" /> maker's newer code: <span className="font-monospace">{retired.replacement}</span>
+            <span className="companion-dot" /> {retired.options ? 'Maybe newer code' : "Manufacturer's newer code"}: <span className="font-monospace">{newerCodes(retired)}</span>
           </span>
         </OverlayTrigger>
       )}

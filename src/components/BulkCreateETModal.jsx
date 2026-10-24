@@ -41,7 +41,8 @@ import { C } from '../styles/tokens'
  */
 
 const WHY = {
-  stem: 'same product line',
+  // Its own words would hide the code: "ZH-INFD-… (Finish: RAL 9010)".
+  stem: r => (r.kin?.length ? `like ${r.kin.map(c => c.split(' (')[0]).join(', ')} here` : 'same product line'),
   shape: r => `code shaped like ${r.shapedOn?.example} (${r.shapedOn?.n} known)`,
   canon: r => `company family — ${r.canon}`,
   style: r => `styled like ${r.styledOn?.ref}${r.styledOn?.source ? ` (${r.styledOn.source})` : ''}`,
@@ -463,7 +464,7 @@ export default function BulkCreateETModal({
                                   {r.alternatives?.length > 0 && <> — or {r.alternatives.join(', ')}</>}
                                 </div>
                               )}
-                              {!verified(r) && whyText(r) && (
+                              {(!verified(r) || r.kin?.length > 0) && whyText(r) && (
                                 <div className="text-muted" style={{ fontSize: 9 }}>
                                   {whyText(r)}{r.spread > 1 ? ` · used under ${r.spread} families` : ''}
                                 </div>

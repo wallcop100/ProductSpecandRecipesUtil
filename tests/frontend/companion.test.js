@@ -20,6 +20,22 @@ describe('companion discovery', () => {
     vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('offline') }))
     expect(await getCompanion()).toBeNull()
   })
+  it('a code with two successors is a Maybe in the store, not one replacement', async () => {
+    const { default: useStore } = await import('../../src/store/useStore')
+    const { sweepCodes, retiredFor, newerCodes, resetRetired } = await import('../../src/platform/retired')
+    resetRetired()
+    vi.stubGlobal('fetch', vi.fn(async url => (String(url).includes('capabilities')
+      ? json({ protocol: PROTOCOL, features: ['sweep'] })
+      : json({ retired: [{ code: 'OLD-1', replacement: 'NEW-1' }],
+        maybe: [{ code: '021-1102', options: [{ option: 'FPS2020BG2000', used: 2 }, { option: 'FPS2021BG2000', used: 0 }] }] }))))
+    await sweepCodes([{ code: 'OLD-1' }, { code: '021-1102' }])
+    const { retiredCodes } = useStore.getState()
+    expect(retiredFor(retiredCodes, 'OLD-1')).toEqual({ replacement: 'NEW-1', retired: null, tier: null })
+    const m = retiredFor(retiredCodes, '021-1102')
+    expect(m.replacement).toBeNull()
+    expect(m.options).toEqual([{ code: 'FPS2020BG2000', used: 2 }, { code: 'FPS2021BG2000', used: 0 }])
+    expect(newerCodes(m)).toBe('FPS2020BG2000 or FPS2021BG2000')
+  })
   it('is null for an unknown protocol', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => json({ protocol: 'something-else/9', features: ['sweep'] })))
     expect(await getCompanion()).toBeNull()
