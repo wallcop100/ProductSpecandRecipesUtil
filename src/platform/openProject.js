@@ -58,6 +58,7 @@ export async function openProject({
   const positions = db_data?.positions ?? []
   // Collections are stripped from element_types but ARE in the master list.
   const dbCollectionRefs = db_data?.collection_refs ?? []
+  const dbDeletedRefs = db_data?.deleted_et_refs ?? []
 
   // Beside a companion, prove this project's DesignDB is open here, so its own rows open to us.
   const proved = projectNumber
@@ -222,6 +223,7 @@ export async function openProject({
     positionTypes,
     positions,
     dbCollectionRefs,
+    dbDeletedRefs,
     psRows: ps_rows,
     recipes: rs_rows,
     templates,
@@ -270,6 +272,9 @@ export async function openProject({
       applied && `${applied} saved change${applied === 1 ? ' is' : 's are'} in the workbooks now, so ${applied === 1 ? 'it' : 'they'} left the queue.`,
     ].filter(Boolean).join(' '))
   }
+
+  // After the restore, so a queued row it brought back is not queued twice.
+  useStore.getState().queuePsOnlyETs()
 
   return { projectId, project, restored }
 }

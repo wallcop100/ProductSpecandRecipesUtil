@@ -11,7 +11,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { findBestTemplate, recipeTemplateFromRows, isRecipeTemplate, isFormTemplate } from '../utils/templateLoader.js'
 import { proposeRecipe, proposalFromTemplate, proposalContext } from '../utils/recipeProposal.js'
 import { roleOf } from '../utils/recipePatterns.js'
-import { planFamilyMove } from '../utils/etSeed.js'
+import { planFamilyMove, proposeElementTypes } from '../utils/etSeed.js'
 import { reconcileAll, stampExported, hasUnexported } from '../utils/reconcile.js'
 import { jobOf, linearWrapperFamily } from '../utils/codeJobs.js'
 import { loadReports, saveReports } from '../utils/bugReports.js'
@@ -600,6 +600,7 @@ const useStore = create((set, get) => ({
 
   // DesignDB writes are opt-in per project (off by default, easily enabled).
   dbCollectionRefs: [],   // ElementType collections parseDb strips; still in the master
+  dbDeletedRefs: [],      // ElementTypes the DesignDB has marked IsDeleted
 
   // Locally-created ETs (SQLite staging) — kept to re-merge after a DB reload.
   localElementTypes: [],
@@ -777,6 +778,7 @@ const useStore = create((set, get) => ({
       containerETRefs: containerInfo.refs,
       containerReasons: containerInfo.reasons,
       dbCollectionRefs: data.dbCollectionRefs ?? [],
+      dbDeletedRefs: data.dbDeletedRefs ?? [],
       localElementTypes: data.localElementTypes ?? [],
       formCaptures: formCaptures ?? null,
       importDraft: importDraft ?? null,
@@ -3922,8 +3924,9 @@ const useStore = create((set, get) => ({
     const { psChanges, rsChanges, dbChanges } = get()
     const r = reconcileAll({ ps: psChanges, rs: rsChanges, db: dbChanges }, fresh)
     if (data.db?.position_types) set({ positionTypes: data.db.position_types })
-    set({ dbCollectionRefs: fresh.collectionRefs })
+    set({ dbCollectionRefs: fresh.collectionRefs, dbDeletedRefs: data.db?.deleted_et_refs ?? [] })
     get()._settle(fresh, r)
+    get().queuePsOnlyETs()
     return r.counts
   },
 
@@ -4358,6 +4361,75 @@ const useStore = create((set, get) => ({
       get().addPSRow(next, copy)
     }
     return next
+  },
+
+  /**
+   * Every live Product Spec row whose ElementType the DesignDB lacks is queued for it, so the next
+   * patch adds it: Product Spec ✓ with DesignDB ✗ is never left to a separate step. Its family is
+   * estimated the way a Form import's is (etSeed), and a family the project lacks is queued too.
+   * Idempotent: a queued row is in dbChanges from then on. → refs queued
+   */
+  queuePsOnlyETs() {
+    const { psRows, recipes, elementTypes, dbCollectionRefs = [], dbDeletedRefs = [], positionTypes, library } = get()
+    // A row the DesignDB marked deleted is not re-added: the patch upserts by ref and never clears
+    // IsDeleted, so it would stay deleted and be queued again on every open. It keeps the mark.
+    // Only real DesignDB rows and queued changes count: a local ET kept from an earlier session
+    // (no _row_num, nothing queued) is still missing from the DesignDB.
+    const { dbChanges } = get()
+    const known = new Set([...elementTypes.filter(e => e._row_num != null).map(e => e.ElementTypeRef || e.elementTypeRef),
+      ...dbChanges.map(c => c.elementTypeRef), ...dbCollectionRefs, ...dbDeletedRefs]
+      .filter(Boolean).map(r => String(r).toLowerCase()))
+    const missing = new Map()   // lc ref -> psRow
+    for (const r of psRows) {
+      const ref = String(r.ElementTypeRef || r.elementTypeRef || '').trim()
+      if (ref && (r.IsDeleted || r.isDeleted) !== 'Y' && !known.has(ref.toLowerCase())) missing.set(ref.toLowerCase(), r)
+    }
+    if (!missing.size) return []
+    const live = recipes.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
+    const entries = [...missing.values()].map(r => {
+      const ref = String(r.ElementTypeRef || r.elementTypeRef).trim()
+      const uses = live.filter(x => String(x.ElementTypeRef || x.elementTypeRef || '').toLowerCase() === ref.toLowerCase())
+      const code = String(r.ProductCode || r.productCode || '').trim()
+      return {
+        ref, row: r, text: code, manufacturers: [r.Manufacturer || r.manufacturer || ''],
+        variants: [{ note: r.Description || r.description || '' }],
+        positionTypes: [...new Set(uses.filter(x => (x.ContextType || x.contextType) !== 'ElementType')
+          .map(x => x.PositionTypeRef || x.positionTypeRef).filter(Boolean))],
+        lead: uses.some(x => (x.IsDesign || x.isDesign) === 'Y'),
+        // No product code yet: estimated as a wanted product, like a TBC placeholder.
+        placeholder: hasProductIdentity(code) ? null : { formRef: ref },
+      }
+    })
+    const { proposals, newFamilies } = proposeElementTypes(entries, {
+      elementTypes, psRows, recipes, positionTypes, collectionRefs: dbCollectionRefs,
+      roleOf: e => (e.lead ? 'lead' : 'extra'), library: library?.exemplars || [],
+    })
+    // Parents first, so a family's own row is in place before its members.
+    for (const f of [...newFamilies].reverse()) {
+      get().createElementType({ ref: f.ref, description: f.description, family: f.parent, isCollection: true })
+    }
+    entries.forEach((e, i) => {
+      const description = e.row.Description || e.row.description || null
+      const local = get().elementTypes.find(x => String(x.ElementTypeRef || x.elementTypeRef || '').toLowerCase() === e.ref.toLowerCase())
+      if (!local) return get().createElementType({ ref: e.ref, description, family: proposals[i]?.family || null })
+      // Already local: queue it as it stands, filling only what it lacks.
+      const fill = {
+        Family: local.Family || proposals[i]?.family || null,
+        Description: local.Description || description,
+      }
+      set(s => ({
+        elementTypes: s.elementTypes.map(x => x === local ? { ...x, ...fill } : x),
+        dbChanges: mergeDbChanges(s.dbChanges, {
+          elementTypeRef: local.ElementTypeRef || local.elementTypeRef,
+          updates: {
+            ElementTypeRef: local.ElementTypeRef || local.elementTypeRef, Name: local.Name ?? null,
+            IsCollection: local.IsCollection ?? null, SortOrder: local.SortOrder ?? get().suggestSortOrder(fill.Family), ...fill,
+          },
+          _isNew: true,
+        }),
+      }))
+    })
+    return entries.map(e => e.ref)
   },
 
   createElementType({ ref, name = null, description = null, family = null, isCollection = false } = {}) {

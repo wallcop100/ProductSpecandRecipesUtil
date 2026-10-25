@@ -8,6 +8,7 @@ import { getCompanion, useCompanion } from '../platform/companion'
 import { retiredFor, fitsRecipe, newerCodes } from '../platform/retired'
 import { MaybeReplaced, NotRightModal, sendCorrection, sendNote, noteCodeChange } from './Corrections'
 import CopyButton from './CopyButton'
+import PsOnlyChip, { usePsOnlyRefs } from './PsOnlyChip'
 import EntityPill from './EntityPill'
 import MaterialIcon from './MaterialIcon'
 import IconButton from './IconButton'
@@ -74,6 +75,7 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
     )
   , [elementTypes, selectedRef])
   const etFamily = selectedRef ? familyOf(selectedRef, etObj) : null
+  const psOnly = usePsOnlyRefs()
 
   const similar = useMemo(() => {
     if (!selectedRef || !etFamily || !psRow) return null
@@ -196,7 +198,8 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
         {/* Header row */}
         <div className="d-flex align-items-start gap-2 mb-3">
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="fw-semibold" style={{ fontSize: 14, wordBreak: 'break-all' }}>{selectedRef}</div>
+            <div className="fw-semibold" style={{ fontSize: 14, wordBreak: 'break-all' }}>{selectedRef}
+              {psOnly.has(String(selectedRef).toLowerCase()) && <span className="ms-2 align-middle"><PsOnlyChip /></span>}</div>
             {etFamily && <div className="text-muted" style={{ fontSize: 11 }}>{etFamily}
               {fix && (
                 <Button variant="link" size="sm" className="p-0 ms-2 align-baseline" style={{ fontSize: 11 }} data-testid="family-fix"
