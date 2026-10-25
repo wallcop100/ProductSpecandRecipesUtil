@@ -88,7 +88,7 @@ export default function PositionRecipeEditor({
   const [forking, setForking] = useState(false)
   const showDeletedRows = useStore(s => s.showDeleted)
   const toggleShowDeleted = useStore(s => s.toggleShowDeleted)
-  const wrappersOpen = useStore(s => s.screenView.recipes?.wrappers?.all) === true
+  const wrappersOpen = useStore(s => s.screenView.recipes?.wrappers?.all) !== false
   const exploded = useStore(s => s.screenView.recipes?.explode) === true
   const internals = showInternals || exploded
   const [savingTemplate, setSavingTemplate] = useState(false)

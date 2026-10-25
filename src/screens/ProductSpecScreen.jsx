@@ -1,3 +1,4 @@
+import CompanionStatus from '../components/CompanionStatus'
 import NewETModal from '../components/NewETModal'
 import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { Button, Form, Popover, Overlay, Dropdown } from 'react-bootstrap'
@@ -301,6 +302,7 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
           title="Undo (Ctrl+Z)" disabled={!canUndo} onClick={undo} />
         <IconButton variant="outline-secondary" bsSize="sm" icon="redo"
           title="Redo (Ctrl+Shift+Z)" disabled={!canRedo} onClick={redo} />
+        <CompanionStatus />
         <Button variant="outline-secondary" size="sm" className="d-inline-flex align-items-center gap-1 ms-2"
           style={{ fontSize: 11 }} onClick={() => setNewEtOpen(true)} data-testid="spec-new-et"
           title="Create a new ElementType and its Product Spec row">

@@ -12,6 +12,7 @@ import SwapEverywhereModal from './SwapEverywhereModal'
 import ForkPositionModal from './ForkPositionModal'
 import NewETWizardModal from './NewETWizardModal'
 import { C } from '../styles/tokens'
+import { wordRule, queryRefs } from '../utils/positionQuery'
 
 /**
  * FindPalette — Ctrl+K (or Find beside Recipes | Product Spec): say what you want to do, in your own words, and go
@@ -22,8 +23,8 @@ import { C } from '../styles/tokens'
  * Every search ends as an outcome (beside a companion): the result picked, or nothing — which is how
  * the missing words and the features nobody can find show up on the companion. Nothing here says so.
  */
-const KIND_ICON = { et: 'category', position: 'place', template: 'dashboard_customize', family: 'folder', formcode: 'description' }
-const KIND_LABEL = { et: 'ElementType', position: 'position', template: 'template', family: 'family', formcode: 'Form code' }
+const KIND_ICON = { et: 'category', position: 'place', template: 'dashboard_customize', family: 'folder', formcode: 'description', filter: 'filter_alt' }
+const KIND_LABEL = { et: 'ElementType', position: 'position', template: 'template', family: 'family', formcode: 'Form code', filter: 'filter' }
 const SHORTCUTS = [['Ctrl+K', 'Find'], ['Ctrl+Z', 'Undo'], ['Ctrl+Y', 'Redo'], ['Ctrl+S', 'Save now'],
   ['Ctrl+C / Ctrl+V', 'Copy / paste selected recipe rows'], ['↑ / ↓', 'Previous / next position (in the list)'], ['Esc', 'Close a window']]
 
@@ -85,10 +86,22 @@ export default function FindPalette({ screen }) {
     const host = (kind, props) => (kind === 'report' ? useStore.getState().requestBugNote() : setHosted({ kind, props: props || {} }))
     const ctx = contextFor({ ref: r.ref, pos: r.pos, host, tutorial: setTutorial })
     if (r.kind === 'action') return r.action.run(ctx)
+    if (r.kind === 'et' && screen === 'builder') {
+      // In Recipes an ElementType is a question: which positions hold it? Product Spec still opens its row.
+      const query = { rule: { match: 'all', conditions: [{ column: 'Recipe.ElementType', op: 'equals', value: r.ref }] }, label: r.ref }
+      if (queryRefs(query, useStore.getState())?.size) {
+        useStore.getState().showPositionQuery(query)
+        return ctx.openPosition(useStore.getState().activePositionRef)
+      }
+    }
     if (r.kind === 'et') return ctx.spec(r.ref)
     if (r.kind === 'position') return ctx.openPosition(r.ref)
     if (r.kind === 'template') return ctx.go('template-editor')
     if (r.kind === 'formcode') return ctx.openPosition(r.ref)
+    if (r.kind === 'filter') {
+      useStore.getState().showPositionQuery({ rule: wordRule(r.ref), label: `“${r.ref}”` })
+      return ctx.openPosition(useStore.getState().activePositionRef)
+    }
     if (r.kind === 'family') { const st = useStore.getState(); const first = st.elementTypes.find(e => String(e.Family || '').toUpperCase() === r.ref); return ctx.spec(first?.ElementTypeRef || null) }
   }
   const onKeyDown = e => {

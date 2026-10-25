@@ -12,13 +12,13 @@ const { ACTIONS } = await import('../../src/help/actions.js')
 const { UI_REQUESTS } = await import('../../src/help/uiRequests.js')
 const { contextFor } = await import('../../src/help/run.js')
 
-function setup() {
+function setup(view = 'builder') {
   useStore.setState({
     projectNumber: '5642', specIntent: null, uiRequest: null, pendingScreen: null,
     elementTypes: [{ ElementTypeRef: 'ET-PS-MINI-TINI' }, { ElementTypeRef: 'ET-PS-01' }, { ElementTypeRef: 'ET-PS-02' }, { ElementTypeRef: 'ET-PS-03' }],
     positionTypes: [{ PositionTypeRef: 'C01r' }], psRows: [], recipes: [], psChanges: [], rsChanges: [], dbChanges: [],
   })
-  return render(<FindPalette screen="builder" />)
+  return render(<FindPalette screen={view} />)
 }
 
 describe('Find (Ctrl+K)', () => {
@@ -67,5 +67,28 @@ describe('Find (Ctrl+K)', () => {
     window.confirm = confirm
     const real = useStore.getState()
     for (const k of called) expect(typeof real[k], k).toBe('function')
+  })
+})
+
+describe('Find: an ElementType', () => {
+  beforeEach(() => { api.current = null })
+  const pick = view => {
+    setup(view)
+    useStore.setState({ recipes: [{ _id: 'r1', PositionTypeRef: 'C01r', ContextType: 'PositionType', ContextRef: 'C01r', ElementTypeRef: 'ET-PS-01', Quantity: 1 }],
+      positionList: { ...useStore.getState().positionList, query: null } })
+    act(() => { useStore.getState().requestFind() })
+    fireEvent.change(screen.getByLabelText('Find'), { target: { value: 'ET-PS-01' } })
+    const opt = screen.getAllByRole('option').find(o => /ET-PS-01/.test(o.textContent) && !/Show positions/.test(o.textContent))
+    act(() => { fireEvent.click(opt) })
+    return useStore.getState()
+  }
+  test('in Recipes it filters the list to the positions holding it', () => {
+    const s = pick()
+    expect(s.positionList.query?.rule.conditions[0]).toMatchObject({ column: 'Recipe.ElementType', value: 'ET-PS-01' })
+  })
+  test('in Product Spec it still opens its row', () => {
+    const s = pick('product-spec')
+    expect(s.positionList.query).toBeNull()
+    expect(s.specIntent).toMatchObject({ ref: 'ET-PS-01' })
   })
 })
