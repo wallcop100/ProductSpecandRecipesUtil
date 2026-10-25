@@ -7,7 +7,6 @@ import FlagPill from './FlagPill'
 import { getCompanion, useCompanion } from '../platform/companion'
 import { retiredFor, fitsRecipe, newerCodes } from '../platform/retired'
 import { MaybeReplaced, NotRightModal, sendCorrection, sendNote, noteCodeChange } from './Corrections'
-import { looksLikeProductCode } from '../utils/codeHeuristics'
 import CopyButton from './CopyButton'
 import EntityPill from './EntityPill'
 import MaterialIcon from './MaterialIcon'
@@ -18,6 +17,7 @@ import { CANON_FAMILIES } from '../data/etCanon'
 import { planFamilyMove } from '../utils/etSeed'
 import { familyFix, codeElsewhere, refNumberFix } from '../utils/specSuggest'
 import { C } from '../styles/tokens'
+import { looksLikeProductCode } from '../utils/codeHeuristics'
 
 /**
  * ETSpecEditor — right-panel form for editing a single ET's product spec.

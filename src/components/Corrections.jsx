@@ -6,6 +6,7 @@ import { getCompanion } from '../platform/companion'
 import { buildReport } from '../utils/bugReports'
 import { C } from '../styles/tokens'
 import { askConfirm } from './ConfirmHost'
+import { looksLikeProductCode } from '../utils/codeHeuristics'
 
 // Companion corrections, all purple: a popup is a `.companion-card`, a Maybe waiting for a pick is
 // `.companion-maybe` (dashed). No condition chips: what decides between options is read from the context
@@ -80,6 +81,8 @@ export function codesAlike(a, b) {
  */
 export async function noteCodeChange(code, next, manufacturer) {
   if (!code || !next || !manufacturer || /^tbc$/i.test(code) || /^tbc$/i.test(next) || !codesAlike(code, next)) return
+  // A name ("Plaster In Kit") filled in with a code is not a renumbering (2YVPVS).
+  if (!looksLikeProductCode(code) || !looksLikeProductCode(next)) return
   const api = await getCompanion()
   if (!api?.contribute) return
   if (await askConfirm(`${code} → ${next}\n\nA correction (the same product, mistyped or renumbered), or a different product?`, { ok: 'Correction', cancel: 'Different product' }))
