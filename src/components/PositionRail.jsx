@@ -3,8 +3,6 @@ import { Form, OverlayTrigger, Tooltip } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import StatusPip from './StatusPip'
-import RecipeSuggestions from './RecipeSuggestions'
-import { useCompanion } from '../platform/companion'
 import IconButton from './IconButton'
 import PositionListMenu from './PositionListMenu'
 import usePositionList from './usePositionList'
@@ -14,6 +12,7 @@ import { formDiffStates } from '../utils/formImpact'
 import { buildMaster } from '../utils/productCodes'
 import { buildRefMap, targetFor } from '../utils/ptResolve'
 import { C } from '../styles/tokens'
+import { describeQuery } from '../utils/positionQuery'
 
 /** The Form compared with an older one (862MB6): what moved for each position. */
 export const DIFF_SYMBOL = { add: '+', omit: '−', mixed: '±' }
@@ -36,7 +35,6 @@ export default function PositionRail({ onReviewEmpty, onReviewDrift }) {
   const formCaptures = useStore(s => s.formCaptures)
   const positionTypes = useStore(s => s.positionTypes)
   const list = usePositionList()
-  const companion = useCompanion()
   const importDraft = useStore(s => s.importDraft)
   const psRows = useStore(s => s.psRows)
   const diffStates = useMemo(() => {
@@ -55,7 +53,8 @@ export default function PositionRail({ onReviewEmpty, onReviewDrift }) {
   // The current position's family is always open, so the highlight is never hidden.
   const activePt = positionTypes.find(pt => pt.PositionTypeRef === activeRef)
   const activeFam = activePt ? (positionFamilyOf(activePt) || '(no family)') : null
-  const isCollapsed = fam => fam !== activeFam && view.collapsed.includes(fam)
+  // A query opens every family, so no match is hidden.
+  const isCollapsed = fam => !view.query && fam !== activeFam && view.collapsed.includes(fam)
   const toggleFam = fam => setView(v => ({ collapsed: v.collapsed.includes(fam) ? v.collapsed.filter(f => f !== fam) : [...v.collapsed, fam] }))
 
   const listRef = useRef(null)
@@ -160,6 +159,16 @@ export default function PositionRail({ onReviewEmpty, onReviewDrift }) {
         <IconButton icon="first_page" size={16} title="Hide PositionTypes"
           onClick={() => setPrefs(p => ({ ...p, collapsed: true }))} />
       </div>
+      {view.query && (
+        <div data-testid="rail-query" className="d-flex align-items-center gap-1 px-2 py-1 border-bottom"
+          style={{ flexShrink: 0, fontSize: 11, background: C.accentTint, color: C.accentInk }}>
+          <MaterialIcon name="filter_alt" size={14} />
+          <span className="text-truncate" title={describeQuery(view.query)}>{describeQuery(view.query)}</span>
+          <span className="ms-auto fw-bold" title="Positions that match">{order.length}</span>
+          <IconButton icon="edit" size={14} title="Edit the filter" onClick={() => useStore.getState().requestUi('review')} />
+          <IconButton icon="close" size={14} title="Clear the filter" onClick={() => useStore.getState().showPositionQuery(null)} />
+        </div>
+      )}
       {showTags && (
         <div className="d-flex flex-wrap gap-1 px-2 py-1 border-bottom" style={{ flexShrink: 0 }}>
           {availableTags.map(t => {
@@ -172,10 +181,6 @@ export default function PositionRail({ onReviewEmpty, onReviewDrift }) {
         </div>
       )}
       <div ref={listRef} style={{ flex: 1, overflowY: 'auto', paddingBottom: 8 }}>
-        {/* Suggestions are worked out per position; these keep every pip right, the open one included. */}
-        {companion && positionTypes.map(pt => (
-          <RecipeSuggestions key={pt.PositionTypeRef} posRef={pt.PositionTypeRef} watch />
-        ))}
         {groups.map(renderGroup)}
         {view.showIgnored && ignoredGroups.length > 0 && (
           <>

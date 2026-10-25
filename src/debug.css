@@ -31,6 +31,10 @@
 /* !important beats the inline blue background; the sweep animates a registered variable because !important background shorthand would pin background-position. */
 .companion-card { border: 1px solid transparent !important; background: linear-gradient(#f5f0ff, #f5f0ff) padding-box, conic-gradient(from var(--glisten), #8b5cf6, #ddd6fe 12%, #8b5cf6 25%, #8b5cf6 50%, #ddd6fe 62%, #8b5cf6 75%, #8b5cf6) border-box !important; animation: companion-glisten 3.5s linear infinite; }
 @keyframes companion-glisten { to { --glisten: 360deg; } }
+/* Maybe: the companion knows several answers and can't tell which applies here. Never applied by itself. */
+.companion-maybe { border: 1px dashed #8b5cf6; border-radius: 6px; background: #f5f0ff; }
+.companion-maybe .btn-outline-primary { --bs-btn-color: #7c3aed; --bs-btn-border-color: #7c3aed; --bs-btn-hover-color: #fff; --bs-btn-hover-bg: #7c3aed; --bs-btn-hover-border-color: #7c3aed; }
+.companion-maybe .btn-link { color: #7c3aed; }
 @media (prefers-reduced-motion: reduce) { .companion-card { animation: none; } }
 /* Controls and icons inside a companion card are a matching solid purple (not shimmering). */
 .companion-card .material-icons { color: #7c3aed !important; }

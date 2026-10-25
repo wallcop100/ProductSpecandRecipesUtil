@@ -18,6 +18,7 @@ import { loadReports, saveReports } from '../utils/bugReports.js'
 import { connectorSignature, templateParts, partsToIngredients, diffParts, isConnectorPart, DEFAULT_CONNECTOR_FAMILIES, sortParts, signatureKey, membership, signatures } from '../utils/connectorGroups.js'
 import { globalConnector, setConnectorLibrary, suggestRef, partName, sectionOf, supersededBy, WAGO } from '../data/globalConnectors.js'
 import { templateRecords, templateRule, specificityScope } from '../utils/templateRules.js'
+import { queryRefs } from '../utils/positionQuery.js'
 
 /** _templateRecOf's cache: not state (no re-render), keyed on the arrays it reads. */
 let templateRecCache = null
@@ -555,8 +556,21 @@ const useStore = create((set, get) => ({
   },
   deleteBugReport(id) { const next = get().bugReports.filter(r => r.id !== id); saveReports(next); set({ bugReports: next }) },
   clearBugReports() { saveReports([]); set({ bugReports: [] }) },
-  positionList: { text: '', tags: [], formOnly: false, emptyOnly: false, showIgnored: false, showTags: false, sort: 'ref', collapsed: [] },
+  positionList: { text: '', tags: [], formOnly: false, emptyOnly: false, showIgnored: false, showTags: false, sort: 'ref', collapsed: [], query: null },
   setPositionList(patch) { set(s => ({ positionList: { ...s.positionList, ...(typeof patch === 'function' ? patch(s.positionList) : patch) } })) },
+  /**
+   * Filter the rail to a question (positionQuery.js; null clears it) and open a match unless
+   * the open position is one. Wrappers reopen, so a matching part inside one shows.
+   */
+  showPositionQuery(query) {
+    set(s => ({ positionList: { ...s.positionList, query } }))
+    if (!query) return
+    get().setScreenView('recipes', { wrappers: {} })
+    const refs = queryRefs(query, get())
+    const { activePositionRef, positionTypes } = get()
+    const first = positionTypes.find(p => refs?.has(p.PositionTypeRef))?.PositionTypeRef
+    if (first && !refs.has(activePositionRef)) get().setActivePosition(first)
+  },
   // What each screen was last showing (filters, selection, scroll) so leaving and coming back
   // returns you to it: { [screen]: { ... } } — components/useScreenView. Session only.
   screenView: {},
@@ -777,6 +791,7 @@ const useStore = create((set, get) => ({
       fileWatchAlert: null,
       activePositionRef: null, positionHistory: [], returnScreen: null,
       screenView: {},
+      positionList: { ...get().positionList, query: null },
       activeContextType: 'PositionType',
       activeETRef: null,
       showContextTree: false,
@@ -1155,7 +1170,9 @@ const useStore = create((set, get) => ({
       const next = { ...s.retiredCodes }
       for (const r of rows) {
         // "Replaced by TBC" is a code being blanked, not a maker's renumbering (#64, #65).
-        if (r?.code && r.replacement && !/^tbc$/i.test(String(r.replacement).trim())) next[String(r.code).trim().toUpperCase()] = { replacement: r.replacement, retired: r.retired || null }
+        const options = (r?.maybe ? r.options || [] : []).filter(o => o.option && !/^tbc$/i.test(o.option))
+        if (r?.code && options.length) next[String(r.code).trim().toUpperCase()] = { replacement: null, options: options.map(o => ({ code: o.option, used: o.used || 0 })) }
+        else if (r?.code && r.replacement && !/^tbc$/i.test(String(r.replacement).trim())) next[String(r.code).trim().toUpperCase()] = { replacement: r.replacement, retired: r.retired || null, tier: r.tier || null }
       }
       return { retiredCodes: next }
     })

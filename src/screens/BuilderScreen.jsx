@@ -12,7 +12,9 @@ import {
 import useStore, { getRecipeForPosition } from '../store/useStore'
 import { getUsedIn } from '../utils/containerUtils'
 import { wrapperEditContext } from '../utils/collectionStatus'
+import CompanionStatus from '../components/CompanionStatus'
 import ProjectTreeView from '../components/ProjectTreeView'
+import { SuggestionWatchers } from '../components/RecipeSuggestions'
 import ElementTypeTreeView from '../components/ElementTypeTreeView'
 import RecipeSection from '../components/RecipeSection'
 import DuplicateETModal from '../components/DuplicateETModal'
@@ -108,26 +110,22 @@ export default function BuilderScreen({
     return !!r?.ok
   }
   const [showReview, setShowReview] = useState(false)
-  const [reviewInitialRefs, setReviewInitialRefs] = useState(null)
 
-  /** Step through the positions the Form is not yet satisfied on. */
+  /** Filter the rail to the positions the Form is not yet satisfied on. */
   function startReconcile(refs) {
     if (!refs?.length) return
-    setReviewInitialRefs(refs)
-    setShowReview(true)
+    useStore.getState().showPositionQuery({ refs, label: 'Positions the Form named' })
   }
 
-  // Arriving with positions to review (e.g. from the product-code import): first offer to
-  // build them all from the Form, then ReviewModal walks through them. Consume once so it
-  // doesn't reopen on its own.
+  // Arriving with positions to review (e.g. from the product-code import): the rail filters
+  // to them. Consume once so it doesn't refilter on its own.
   const formCaptures = useStore(s => s.formCaptures)
   const [formBuild, setFormBuild] = useState(null)   // { refs, thenReview }
   const [showStyles, setShowStyles] = useState(false)
   useEffect(() => {
     if (pendingReviewRefs && pendingReviewRefs.length > 0) {
-      setReviewInitialRefs(pendingReviewRefs)
       // Straight to the positions: "Build recipes from the Form" is under ⋯, never pushed (CWF8ZQ).
-      setShowReview(true)
+      startReconcile(pendingReviewRefs)
       onConsumePendingReview?.()
     }
   }, [pendingReviewRefs, onConsumePendingReview])   // eslint-disable-line react-hooks/exhaustive-deps
@@ -152,12 +150,11 @@ export default function BuilderScreen({
     }
     return null
   }, [hideNextStep, recipes, formCaptures, onOpenCodeImport])
-  const closeFormBuild = () => { const then = formBuild?.thenReview; setFormBuild(null); if (then) setShowReview(true) }
+  const closeFormBuild = () => setFormBuild(null)
   const [addRowTarget, setAddRowTarget] = useState(null)      // { posRef, sectionKey }
   const [addAnywhereState, setAddAnywhereState] = useState(null) // { etRef, sectionKey, excludePosRef, startPosRef }
   const [newETTarget, setNewETTarget] = useState(null)        // { posRef, sectionKey }
   const [justAdded, setJustAdded] = useState(null)           // { etRef, posRef, sectionKey }
-  const [reviewAddCtx, setReviewAddCtx] = useState(null)     // { unit, filters } for review→add priming
   const [showFixer, setShowFixer] = useState(false)
   // The drawer's tab and open state live in the store, so a banner can open it at a tab.
   const rightTab = useStore(s => s.drawerTab)
@@ -234,7 +231,6 @@ export default function BuilderScreen({
   function handlePickET(etRef) {
     if (!addRowTarget) return
     if (addRowTarget.mode === 'replace') { doReplace(addRowTarget, etRef); setAddRowTarget(null); return }
-    if (addRowTarget.mode === 'reviewAdd') { setAddRowTarget(null); openReviewAddAnywhere(etRef); return }
     // Streamlined existing-pick: add the row and exit pick mode. Adding an
     // EXISTING ET to several positions is the "Add to multiple" toggle's job.
     addRecipeRow(addRowTarget.posRef, addRowTarget.sectionKey, { elementTypeRef: etRef, ElementTypeRef: etRef })
@@ -243,20 +239,14 @@ export default function BuilderScreen({
 
   // Replace a row's ElementType in place (Existing/New fork). keepFields
   // preserves quantity/flags; otherwise they reset to defaults for the new ET.
-  function handleReplace(posRef, rowId, { mode, keepFields, resumeReview } = {}) {
+  function handleReplace(posRef, rowId, { mode, keepFields } = {}) {
     if (mode === 'new') {
-      setNewETTarget({ posRef, sectionKey: null, mode: 'replace', rowId, keepFields, resumeReview })
+      setNewETTarget({ posRef, sectionKey: null, mode: 'replace', rowId, keepFields })
     } else {
-      setAddRowTarget({ posRef, sectionKey: null, mode: 'replace', rowId, keepFields, resumeReview })
+      setAddRowTarget({ posRef, sectionKey: null, mode: 'replace', rowId, keepFields })
       setRightOpen(true)
       setRightTab('palette')
     }
-  }
-
-  // From the review modal: close it, run the replace pick, reopen when done.
-  function handleReplaceFromReview(posRef, rowId, opts) {
-    setShowReview(false)
-    handleReplace(posRef, rowId, { ...opts, resumeReview: true })
   }
 
   function doReplace(target, etRef) {
@@ -275,7 +265,6 @@ export default function BuilderScreen({
     }
     updateRecipeRow(posRef, rowId, patch)
     ensurePSRow(etRef)
-    if (target.resumeReview) setShowReview(true)
   }
 
   function handleAddToMultiple() {
@@ -288,43 +277,14 @@ export default function BuilderScreen({
   function handlePickETMulti(etRef) {
     if (!addRowTarget) return
     if (addRowTarget.mode === 'replace') { doReplace(addRowTarget, etRef); setAddRowTarget(null); return }
-    if (addRowTarget.mode === 'reviewAdd') { setAddRowTarget(null); openReviewAddAnywhere(etRef); return }
     // Multi-add: don't insert yet — open step-through for all positions starting at the current one
     setAddAnywhereState({ etRef, sectionKey: addRowTarget.sectionKey, excludePosRef: null, startPosRef: addRowTarget.posRef })
     setAddRowTarget(null)
   }
 
   function handleCancelPick() {
-    const backToReview = addRowTarget?.mode === 'reviewAdd' || addRowTarget?.resumeReview
     setAddRowTarget(null)
     setJustAdded(null)
-    if (backToReview) { setReviewAddCtx(null); setShowReview(true) }
-  }
-
-  // Review → Add Entity: close the review, run the Existing/New pick, then open
-  // the step-through primed with the review's own filter, and reopen the review
-  // when done.
-  function handleReviewAddEntity({ mode, unit, filters } = {}) {
-    setShowReview(false)
-    const ctx = { unit, filters }
-    setReviewAddCtx(ctx)
-    if (mode === 'new') {
-      setNewETTarget({ posRef: null, sectionKey: 'position', mode: 'reviewAdd' })
-    } else {
-      setAddRowTarget({ posRef: null, sectionKey: 'position', mode: 'reviewAdd' })
-      setRightOpen(true)
-      setRightTab('palette')
-    }
-  }
-
-  function openReviewAddAnywhere(etRef) {
-    setAddAnywhereState({
-      etRef, sectionKey: 'position',
-      initialFilters: reviewAddCtx?.filters,
-      initialUnit: reviewAddCtx?.unit,
-      resumeReview: true,
-    })
-    setReviewAddCtx(null)
   }
 
   function handleNewET(posRef, sectionKey, extra) {
@@ -334,7 +294,6 @@ export default function BuilderScreen({
   function handleNewETDone(etRef) {
     if (!newETTarget) return
     if (newETTarget.mode === 'replace') { doReplace(newETTarget, etRef); setNewETTarget(null); return }
-    if (newETTarget.mode === 'reviewAdd') { setNewETTarget(null); openReviewAddAnywhere(etRef); return }
     if (newETTarget.mode === 'slot') {
       // Fill a primed template slot with the freshly created ET (T-R1)
       resolveSlot(newETTarget.posRef, newETTarget.slotKey, etRef)
@@ -489,6 +448,7 @@ export default function BuilderScreen({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }} data-debug-id="BuilderScreen">
+      <SuggestionWatchers />
       {/* Toolbar */}
       <div
         className="d-flex align-items-center gap-2 px-3 py-2 border-bottom bg-white"
@@ -518,6 +478,7 @@ export default function BuilderScreen({
           <IconButton variant="outline-secondary" icon={ACTION_ICONS.redo}
             onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)" />
         </ButtonGroup>
+        <CompanionStatus />
 
         <div className="flex-grow-1" />
         {/* The once-in-a-while ones. They were four more icons competing with Export for
@@ -830,14 +791,7 @@ export default function BuilderScreen({
       <RecipeStylesWindow show={showStyles} onHide={() => setShowStyles(false)} />
       <FormRecipesModal show={formBuild != null} posRefs={formBuild?.refs || []} focusGroup={formBuild?.focus || null} onHide={closeFormBuild}
         onOpenPosition={p => { setFormBuild(null); useStore.getState().setActivePosition(p) }} />
-      <ReviewModal
-        show={showReview}
-        onHide={() => { setShowReview(false); setReviewInitialRefs(null) }}
-        onOpenProductSpec={onOpenProductSpec}
-        onAddEntity={handleReviewAddEntity}
-        onReplaceInReview={handleReplaceFromReview}
-        initialRefs={reviewInitialRefs}
-      />
+      <ReviewModal show={showReview} onHide={() => setShowReview(false)} />
 
       <Modal show={confirmClose} onHide={() => setConfirmClose(false)} centered size="sm">
         <Modal.Header closeButton><Modal.Title style={{ fontSize: 15 }}>Close this project?</Modal.Title></Modal.Header>
@@ -875,26 +829,16 @@ export default function BuilderScreen({
 
       <AddAnywhereModal
         show={!!addAnywhereState}
-        onHide={() => {
-          const resume = addAnywhereState?.resumeReview
-          setAddAnywhereState(null)
-          if (resume) setShowReview(true)   // continue the review where it left off
-        }}
+        onHide={() => setAddAnywhereState(null)}
         etRef={addAnywhereState?.etRef}
         sectionKey={addAnywhereState?.sectionKey}
         excludePosRef={addAnywhereState?.excludePosRef}
         startPosRef={addAnywhereState?.startPosRef}
-        initialFilters={addAnywhereState?.initialFilters}
-        initialUnit={addAnywhereState?.initialUnit}
       />
 
       <NewETWizardModal
         show={!!newETTarget}
-        onHide={() => {
-          const backToReview = newETTarget?.mode === 'reviewAdd' || newETTarget?.resumeReview
-          setNewETTarget(null)
-          if (backToReview) { setReviewAddCtx(null); setShowReview(true) }
-        }}
+        onHide={() => setNewETTarget(null)}
         posRef={newETTarget?.posRef}
         sectionKey={newETTarget?.sectionKey}
         onDone={handleNewETDone}

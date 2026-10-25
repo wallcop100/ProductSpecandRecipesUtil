@@ -58,6 +58,14 @@ describe('connectorGapsForPosition (from the user\'s Connector Templates)', () =
     expect(gaps.every(g => !/2PIN|SOCKET/.test(g.ref))).toBe(true)
   })
 
+  test('two templates of one name: each gap names an ingredient only its own template has', () => {
+    const twin = { ...collection, CollectionId: 'c2', Ingredients: [collection.Ingredients[0], { ElementTypeRef: 'ET-OTHER-SR', section: 'position' }] }
+    const labels = connectorGapsForPosition([posRow('ET-WHATEVER-SOCK-1234')], 'P1', ['Local'], [collection, twin]).map(g => g.label)
+    expect(labels).toContain('Add ET-BLAH-SR-77 at free-issue (PositionType) level — completes "Site kit" (with ET-BLAH-SR-77)')
+    expect(labels).toContain('Add ET-OTHER-SR at free-issue (PositionType) level — completes "Site kit" (with ET-OTHER-SR)')
+    expect(connectorGapsForPosition([posRow('ET-WHATEVER-SOCK-1234')], 'P1', ['Local'], [collection])[0].label).toMatch(/completes "Site kit"$/)
+  })
+
   test('with membership, only the template the position belongs to is checked (#54)', () => {
     const recipes = [posRow('ET-WHATEVER-SOCK-1234')]
     expect(connectorGapsForPosition(recipes, 'P1', ['Local'], [collection], undefined, { templates: ['other'] })).toHaveLength(0)

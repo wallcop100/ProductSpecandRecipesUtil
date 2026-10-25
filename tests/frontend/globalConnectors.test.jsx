@@ -71,6 +71,25 @@ describe('suggestions from control and driver location', () => {
   })
 })
 
+describe('the set a recipe carries (UJU4XA)', () => {
+  test('most shared parts, then the smallest set; superseded codes count; nothing shared is nothing', () => {
+    const keys = codes => G.setInRecipe(codes).map(s => s.key)
+    expect(keys(['770-1102', '770-203', '770-503', '770-502/041-000'])).toEqual(['dali-2+3'])
+    expect(keys(['770-203'])).toEqual(['3pin-len'])
+    expect(keys(['770-243'])).toEqual(['3pin-len'])          // superseded by 770-203
+    expect(keys(['XYZ-1'])).toEqual([])
+  })
+
+  test('drawer: a DALI-local position wired 3-pin is offered 3-pin, whatever its columns say', () => {
+    setup({ psRows: [{ ElementTypeRef: 'ET-3P', ProductCode: '770-203' }],
+      recipes: [{ _id: 'w', _row_num: 1, PositionTypeRef: 'A01', ContextType: 'PositionType', ContextRef: 'A01', ElementTypeRef: 'ET-3P', Quantity: 1 }],
+      elementTypes: [{ ElementTypeRef: 'ET-3P', Family: 'ET-CONNECTORS' }], connectorFamilies: ['ET-CONNECTORS'] })
+    render(<ConnectorsPane posRef="A01" />)
+    expect(screen.getByTestId('wago-suggestion')).toHaveTextContent('Suggested: Wago 3-pin LEN')
+    expect(screen.getByTestId('wago-suggestion')).toHaveTextContent('from the connectors in this recipe')
+  })
+})
+
 describe('applying a global template', () => {
   test('makes the ElementTypes, Product Spec rows and one template; again makes nothing; one Undo takes the ETs back', async () => {
     setup()
@@ -145,6 +164,14 @@ describe('where it shows', () => {
     expect(screen.getByTestId('wago-suggestion')).toHaveTextContent('A01 has 2 of its parts')
   })
 
+  test('drawer: connectors already here that share no part with a suggested set: no suggestion (UJU4XA)', () => {
+    setup({ psRows: [{ ElementTypeRef: 'ET-MY-CONN', ProductCode: 'XYZ-1' }],
+      recipes: [{ _id: 'z', _row_num: 1, PositionTypeRef: 'A01', ContextType: 'PositionType', ContextRef: 'A01', ElementTypeRef: 'ET-MY-CONN', Quantity: 1 }],
+      elementTypes: [{ ElementTypeRef: 'ET-MY-CONN', Family: 'ET-CONNECTORS' }], connectorFamilies: ['ET-CONNECTORS'] })
+    render(<ConnectorsPane posRef="A01" />)
+    expect(screen.queryByTestId('wago-suggestion')).toBeNull()
+  })
+
   test('drawer: the set another position is built with leads', async () => {
     setup({ positionTypes: [PT('A01', 'DALI', 'Local to fitting'), PT('A05', 'DALI', 'Local to fitting')] })
     await act(async () => { await useStore.getState().applyGlobalConnector('5pin-dali-perm', { posRefs: ['A05'] }) })
@@ -189,6 +216,16 @@ describe('a companion can serve the library', () => {
     expect(G.globalConnector('2pin-dali').name).toBe('Served 2-pin')      // still the served one
     expect(G.setConnectorLibrary(null)).toBe(true)
     expect(G.globalConnector('2pin-dali').name).toBe(bundled.templates.find(t => t.key === '2pin-dali').name)
+  })
+
+  test('a served combo naming a set still in draft takes its parts from the bundle, not its rule (UJU4XA)', () => {
+    const rule = { match: 'all', conditions: [{ column: 'ControlTypeRef', op: 'contains', value: 'DALI' }] }
+    const served = { ...bundled, templates: bundled.templates.filter(t => t.key !== '2pin-dali'),
+      combos: bundled.combos.map(c => ({ ...c, rule, why: 'DALI' })) }
+    expect(G.setConnectorLibrary(served)).toBe(true)
+    expect(G.globalConnector('dali-2+3').parts).toHaveLength(8)
+    expect(G.suggestConnectors({ ControlTypeRef: 'DALI' }).map(x => x.key)).toEqual(['dali-2+3'])
+    G.setConnectorLibrary(null)
   })
 
   test('served entries carry their own rule: it decides, in the served order', () => {

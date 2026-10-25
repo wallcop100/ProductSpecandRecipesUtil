@@ -257,7 +257,8 @@ export async function openProject({
   try {
     const raw = projectId != null ? await window.electronAPI.db.getPref(projectId, 'patch_batch') : null
     const batch = raw ? JSON.parse(raw) : null
-    if (batch?.n) useStore.setState({ patchBatch: batch })
+    // A batch with no saved changes behind it has nothing left to run (UYTZXP: a fresh import showed it).
+    if (batch?.n && pendingChanges) useStore.setState({ patchBatch: batch })
   } catch { /* no batch */ }
   if (pendingChanges) {
     const counts = useStore.getState().restorePendingChanges(pendingChanges)

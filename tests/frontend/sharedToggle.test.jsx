@@ -64,7 +64,6 @@ test('GHVUMD: a wrapper content item edits in place too', () => {
     containerETRefs: new Set(['et-dl-01']) })
   const r = useStore.getState().recipes.find(x => x._id === 'a')
   render(<IngredientCard row={r} posRef="A01" sectionKey="position" />)
-  fireEvent.click(screen.getByTitle('Show contents'))
   fireEvent.click(screen.getByText('Orluna – ZH-1'))
   fireEvent.change(screen.getByLabelText('Product code'), { target: { value: 'ZH-2' } })
   fireEvent.keyDown(screen.getByLabelText('Product code'), { key: 'Enter' })
@@ -76,7 +75,6 @@ test('8D9XNH: a wrapper item’s name that only repeats maker – code is not sh
     elementTypes: [{ ElementTypeRef: 'ET-DL-01' }, { ElementTypeRef: 'ET-PS-01', Name: 'LEDFlex - NF240272009' }] })
   const r = useStore.getState().recipes.find(x => x._id === 'a')
   render(<IngredientCard row={r} posRef="A01" sectionKey="position" />)
-  fireEvent.click(screen.getByTitle('Show contents'))
   expect(screen.getByTestId('contents-item').textContent).not.toMatch(/— LEDFlex/)
 })
 
@@ -129,13 +127,16 @@ describe('quiet row: selection checkbox and shared icon', () => {
   })
 })
 
-test('wrapper contents stay open across remounts; the toolbar collapses them all', () => {
+test('W47AXP: wrapper contents start open, a closed one stays closed across remounts; the toolbar collapses them all', () => {
   useStore.setState({ containerETRefs: new Set(['et-dl-01']) })
   const r = useStore.getState().recipes.find(x => x._id === 'a')
   const { unmount } = render(<IngredientCard row={r} posRef="A01" sectionKey="position" />)
-  fireEvent.click(screen.getByTitle('Show contents'))
+  expect(screen.getByTestId('contents-item')).toBeInTheDocument()
+  fireEvent.click(screen.getByTitle('Hide contents'))
   unmount()
   render(<IngredientCard row={r} posRef="A01" sectionKey="position" />)
+  expect(screen.queryByTestId('contents-item')).toBeNull()
+  act(() => useStore.getState().setScreenView('recipes', { wrappers: {} }))
   expect(screen.getByTestId('contents-item')).toBeInTheDocument()
   act(() => useStore.getState().setScreenView('recipes', { wrappers: { all: false } }))
   expect(screen.queryByTestId('contents-item')).toBeNull()

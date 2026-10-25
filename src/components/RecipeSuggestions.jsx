@@ -8,6 +8,7 @@ import { shareOutcomes } from '../platform/outcomes'
 import { levelOf, evidenceOf, mayAsk, noteAsked } from '../utils/certainty'
 import { makerKey } from '../utils/codeShapes'
 import ConfirmSuggestionModal from './ConfirmSuggestionModal'
+import { NotRightModal, sendNote } from './Corrections'
 import { familiesForJob, familyForJob, jobOf } from '../utils/codeJobs'
 import { nextRef } from '../utils/etSeed'
 import {
@@ -49,20 +50,41 @@ import { C } from '../styles/tokens'
  * position only (and is the dismissal that feeds back). An added line goes because the part is
  * there, and comes back if it is removed.
  */
-const Dots = React.forwardRef(({ onClick }, ref) => (
+export const Dots = React.forwardRef(({ onClick }, ref) => (
   <button ref={ref} type="button" className="btn btn-link btn-sm text-muted p-0" style={{ fontSize: 13, lineHeight: 1 }}
     aria-label="More" title="More" onClick={e => { e.preventDefault(); onClick(e) }}>⋯</button>
 ))
 let libraryAsked = false
-// One lookup per profile, shared by every copy (the rail mounts one per position) so the bridge's rate limit is not hit.
-const kitCache = new WeakMap()   // per companion connection
+// One lookup per profile, shared by every copy (the rail mounts one per position). The profiles asked for in
+// the same tick go in one call: opening a project asks for ~60 at once.
+const kitCache = new WeakMap()   // per companion connection → { cache, queue }
 function kitsFor(companion, anchor, project) {
   const key = `${project}|${anchor.manufacturer}|${anchor.code}`
-  const mine = kitCache.get(companion) || kitCache.set(companion, new Map()).get(companion)
-  if (!mine.has(key)) {
-    mine.set(key, companion.kits([anchor], project).then(k => { if (!k) mine.delete(key); return k }))   // a failure is retried, not remembered
+  const mine = kitCache.get(companion) || kitCache.set(companion, { cache: new Map(), queue: [] }).get(companion)
+  if (!mine.cache.has(key)) {
+    let done
+    mine.cache.set(key, new Promise(r => { done = r }))
+    if (!mine.queue.length) queueMicrotask(() => sendKits(companion, mine))
+    mine.queue.push({ key, anchor, project, done })
   }
-  return mine.get(key)
+  return mine.cache.get(key)
+}
+const kitFits = (row, a) => String(row?.code).toUpperCase() === String(a.code).trim().toUpperCase()
+  && (!row.maker_key || !makerKey(a.manufacturer) || row.maker_key === makerKey(a.manufacturer))
+function sendKits(companion, mine) {
+  const asked = mine.queue.splice(0)
+  for (const project of new Set(asked.map(a => a.project))) {
+    const all = asked.filter(a => a.project === project)
+    for (let i = 0; i < all.length; i += 200) {   // the companion takes 200 codes a call
+      const batch = all.slice(i, i + 200)
+      companion.kits(batch.map(a => a.anchor), project).catch(() => null).then(k => {
+        for (const a of batch) {
+          if (!k) mine.cache.delete(a.key)   // a failure is retried, not remembered
+          a.done(k && k.filter(r => kitFits(r.anchor, a.anchor)))
+        }
+      })
+    }
+  }
 }
 const chipMemory = new Map()   // `${project}|${posRef}` → chips
 const DISMISSED = n => `psr-suggestions-dismissed:${n || '-'}`
@@ -72,6 +94,13 @@ export function readDismissed(n) {
 export function writeDismissed(n, set) {
   try { localStorage.setItem(DISMISSED(n), JSON.stringify([...set].slice(-500))) } catch { /* a convenience only */ }
   window.dispatchEvent(new Event('psr-dismissed'))   // the watchers (below) re-read
+}
+
+/** Every position's watcher, beside a companion: the rail and the overview show the same pips (X2C689). */
+export function SuggestionWatchers() {
+  const positionTypes = useStore(s => s.positionTypes)
+  const companion = useCompanion()
+  return companion ? positionTypes.map(pt => <RecipeSuggestions key={pt.PositionTypeRef} posRef={pt.PositionTypeRef} watch />) : null
 }
 
 /** `watch`: renders nothing, only keeps this position's purple pip right while it is not open. */
@@ -92,6 +121,7 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
   const [pick, setPick] = useState({})
   const [hidden, setHidden] = useState(() => new Set())   // × — for now, this position
   const [asking, setAsking] = useState(null)              // the line whose Add is waiting on the check popup
+  const [wrong, setWrong] = useState(null)                // the line "Not right…" is open on
   // Added likely lines: "Is this right? 👍 👎". Kept per position past a remount, so a redo finds them (#72).
   const chipKey = `${projectNumber}|${posRef}`
   const [chips, setChipsHere] = useState(() => chipMemory.get(chipKey) || [])
@@ -129,7 +159,8 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
     setKitsLoaded(!companion?.kits || !anchor)
     if (!companion?.kits || !anchor) return
     let live = true
-    kitsFor(companion, anchor, projectNumber).then(k => { if (live) { if (k) setKits(k); setKitsLoaded(true) } }, () => { if (live) setKitsLoaded(true) })
+    // A failed lookup leaves the profile's lines unknown: shown unfiltered they lit the rail's pip for nothing
+    kitsFor(companion, anchor, projectNumber).then(k => { if (live && k) { setKits(k); setKitsLoaded(true) } }, () => {})
     return () => { live = false }
   }, [companion, anchor?.code, anchor?.manufacturer, projectNumber])   // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -356,6 +387,19 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
     setChips(cs => cs.map(x => x.key === l.key ? { ...x, voted: vote } : x))
     shareOutcomes(companion, projectNumber, [voteRow(l, vote)])
   }
+  /** "Not right…": hidden here whatever the scope; a right code goes in its place. Only "Just this project" teaches nothing. */
+  function notRight(l, { right, scope, note }) {
+    const code = right.toUpperCase() || null
+    if (code) l.check?.apply?.('rejected', code)
+    const next = new Set(dismissed); next.add(here(l))
+    setDismissed(next); writeDismissed(projectNumber, next)
+    if (scope === 'project') return answer(l, 'dismissed')
+    const row = l.check ? voteRow(l, 'rejected', { code })
+      : { kind: l.kind, key: strip(l.key), tier: l.kind, source: kind ? String(kind.id) : '', supplied: l.supplied || null, final: code, outcome: 'rejected' }
+    shareOutcomes(companion, projectNumber, [{ ...row, ...(scope === 'sometimes' ? { scope } : {}) }])
+    sendNote(note, `Not right: ${l.kind} ${strip(l.key)} at ${posRef}`)
+    if (projectNumber) useStore.getState().toast(`Saved for ${projectNumber}. Thank you for your contribution.`)
+  }
   const profileRow = profile && {
     ...profile,
     name: idx.psByRef.get(String(profile.ref || '').toUpperCase())?.ComponentDescription
@@ -381,7 +425,11 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
                 <Dropdown.Divider />
               </>}
               <Dropdown.Item onClick={() => answer(l, 'dismissed')}>Don't show this again for {posRef}</Dropdown.Item>
-              <Dropdown.Item data-testid="report-suggestion" onClick={e => useStore.getState().requestBugNote(e.currentTarget.closest('[data-testid^="suggestion-"]'))}>Report a problem with this suggestion…</Dropdown.Item>
+              {/* a companion line's Not right… popup carries the report link instead */}
+              {companion && SOURCE[l.kind] === 'companion' ? (
+                <Dropdown.Item className="fw-semibold" data-testid="not-right-suggestion" onClick={() => setWrong(l)}>
+                  <MaterialIcon name="thumb_down" size={13} /> Not right…</Dropdown.Item>
+              ) : <Dropdown.Item data-testid="report-suggestion" onClick={e => useStore.getState().requestBugNote(e.currentTarget.closest('[data-testid^="suggestion-"]'))}>Report a problem with this suggestion…</Dropdown.Item>}
             </Dropdown.Menu>
           </Dropdown>
           <Button size="sm" variant="link" className="text-muted p-0" style={{ fontSize: 11 }} aria-label="Hide" title="Not now"
@@ -403,6 +451,12 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
           </>}
         </div>
       ))}
+      {wrong && (
+        <NotRightModal show onHide={() => setWrong(null)} onSend={a => notRight(wrong, a)}
+          title={<>What's not right here for {posRef}?</>}
+          placeholder={wrong.check?.part?.code ? `instead of ${wrong.check.part.code}` : 'e.g. FPS2021ECG'}
+          facts={[['Suggested', wrong.text], ...(wrong.supplied ? [['Code', <span key="c" className="font-monospace">{wrong.supplied}</span>]] : [])]} />
+      )}
       {asking && (
         <ConfirmSuggestionModal onCancel={() => setAsking(null)} onAnswer={checked}
           check={{

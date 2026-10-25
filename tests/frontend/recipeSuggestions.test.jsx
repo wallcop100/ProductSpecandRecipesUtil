@@ -89,6 +89,20 @@ describe('recipe suggestions', () => {
     expect(api.current.shareOutcomes).toHaveBeenLastCalledWith('7900', [expect.objectContaining({ kind: 'kind', key: '2|DIFFUSER', outcome: 'dismissed' })])
   })
 
+  test('⋯ → Not right… on a companion line: the right code goes in, and a Sometimes answer is sent as a rejected vote', async () => {
+    api.current = { kits: vi.fn(async () => [KIT]), shareOutcomes: vi.fn(async () => ({ stored: 1 })) }
+    await act(async () => { setup() })
+    const kit = screen.getByTestId('suggestion-kit')
+    fireEvent.click(kit.querySelector('[aria-label="More"]'))
+    expect(screen.queryByTestId('report-suggestion')).toBeNull()   // the popup carries it instead
+    fireEvent.click(screen.getByTestId('not-right-suggestion'))
+    fireEvent.change(screen.getByPlaceholderText('instead of 021-8810-11'), { target: { value: '021-8810-12' } })
+    await act(async () => { fireEvent.click(screen.getByText("It's wrong: don't add it")) })
+    expect(useStore.getState().psRows.some(r => r.ProductCode === '021-8810-12')).toBe(true)
+    expect(api.current.shareOutcomes).toHaveBeenLastCalledWith('7900', [expect.objectContaining({ kind: 'kit', key: KIT.key, outcome: 'rejected', final: '021-8810-12', scope: 'sometimes' })])
+    expect(screen.queryByTestId('suggestion-kit')).toBeNull()
+  })
+
   test('caps, diffusers and clips come from THIS profile: its range part is made as an ElementType', async () => {
     const range = code => ({ key: `ledflex|FPS1709BG2000>range|${code}`, range: 'FPS1709', anchor: { code: 'FPS1709BG2000' },
       part: { maker_key: 'ledflex', code, slot: 'CLIPS', name: 'FLEX PROFILE SURFACE 1709 MOUNTING CLIP' }, share: null, contract: true })
@@ -131,6 +145,31 @@ describe('recipe suggestions', () => {
     expect(screen.getByText(/^ET-LIN-CLIP-01/)).toBeInTheDocument()
   })
 
+  test('the profiles asked for together go in one kits call, and each copy gets its own profile\'s parts', async () => {
+    const cap = (anchor, code) => ({ ...KIT, key: `ledflex|${anchor}>ledflex|${code}`, anchor: { maker_key: 'ledflex', code: anchor }, part: { ...KIT.part, code } })
+    api.current = { kits: vi.fn(async () => [cap('021-8810-02', 'CAP-A'), cap('FPS1709BG2000', 'CAP-B')]), shareOutcomes: vi.fn(async () => ({ stored: 1 })) }
+    setup().unmount()
+    api.current = { ...api.current, kits: vi.fn(api.current.kits) }   // a new connection: nothing cached
+    useStore.setState({ psRows: [...useStore.getState().psRows, { ElementTypeRef: 'ET-LIN-PROF-09', Manufacturer: 'LEDFlex', ProductCode: 'FPS1709BG2000' }],
+      elementTypes: [...useStore.getState().elementTypes, { ElementTypeRef: 'ET-LIN-PROF-09', Family: 'ET-LIN-PROF' }],
+      recipes: useStore.getState().recipes.map(r => (r.PositionTypeRef === 'C01r' && r.ElementTypeRef === 'ET-LIN-PROF-01' ? { ...r, ElementTypeRef: 'ET-LIN-PROF-09' } : r)) })
+    await act(async () => { render(<><RecipeSuggestions posRef="C01r" /><RecipeSuggestions posRef="C05r" /></>) })
+    expect(api.current.kits).toHaveBeenCalledTimes(1)
+    expect(api.current.kits.mock.calls[0][0]).toHaveLength(2)
+    const kits = screen.getAllByTestId('suggestion-kit').map(l => l.textContent)
+    expect(kits).toEqual([expect.stringMatching(/CAP-B/), expect.stringMatching(/CAP-A/)])
+    expect(kits.join()).not.toMatch(/CAP-B.*CAP-B|CAP-A.*CAP-A/)
+  })
+
+  test('a failed kit lookup shows none of the profile\'s lines, so the pip stays off', async () => {
+    api.current = { kits: vi.fn(async () => null), shareOutcomes: vi.fn(async () => ({ stored: 1 })) }
+    const CLIPS = { ...KIND, slots: [{ slot: 'CLIPS', core: false, share: 0.92, section: 'lin_internal' }] }
+    await act(async () => { setup() })
+    await act(async () => useStore.setState({ library: { patterns: [], exemplars: [], kinds: [CLIPS] },
+      recipes: useStore.getState().recipes.filter(r => r.ElementTypeRef !== 'ET-LIN-CLIP-01') }))
+    expect(screen.queryByTestId('suggestion-kind')).toBeNull()
+  })
+
   test('a TBC part of the recipe gets the code of this profile\'s range', async () => {
     const cap = { key: 'r', range: 'FPSC0808', anchor: { code: 'FPSC0808BG2000' }, part: { maker_key: 'ledflex', code: 'FPSC0808ECG', slot: 'END_CAPS', name: 'FLEX PROFILE SURFACE CORNER 0808 END CAP SET GREY' } }
     api.current = { kits: vi.fn(async () => [cap]), shareOutcomes: vi.fn(async () => ({ stored: 1 })) }
@@ -165,7 +204,9 @@ describe('recipe suggestions', () => {
     const CLIPS = { ...KIND, slots: [{ slot: 'CLIPS', core: false, share: 0.92, section: 'lin_internal' }] }
     await act(async () => { setup() })
     await act(async () => useStore.setState({ library: { patterns: [], exemplars: [], kinds: [CLIPS] },
+      psRows: [{ ElementTypeRef: 'ET-LIN-PROF-01', Manufacturer: 'LEDFlex', ProductCode: 'FPS2020BG2000' }],
       recipes: useStore.getState().recipes.filter(r => r.ElementTypeRef !== 'ET-LIN-CLIP-01') }))
+    expect(api.current.kits).toHaveBeenLastCalledWith([{ code: 'FPS2020BG2000', manufacturer: 'LEDFlex' }], '7900')
     expect(screen.queryByTestId('suggestion-kind')).toBeNull()
   })
 
@@ -185,5 +226,16 @@ describe('recipe suggestions', () => {
     useStore.setState({ connectorPins: {}, connectorExcludes: { T1: ['C05r'] } })
     render(<RecipeSuggestions posRef="C05r" />); await act(async () => {})
     expect(screen.queryByText(/usually carry connectors/)).toBeNull()
+  })
+})
+
+describe('the pips, before any position is opened (X2C689)', () => {
+  test('SuggestionWatchers marks every position a companion line waits on, none open', async () => {
+    const { SuggestionWatchers } = await import('../../src/components/RecipeSuggestions.jsx')
+    api.current = { kits: vi.fn(async () => [KIT]), shareOutcomes: vi.fn() }
+    setup().unmount()
+    useStore.setState({ companionPending: {} })
+    await act(async () => { render(<SuggestionWatchers />) })
+    expect(useStore.getState().companionPending).toMatchObject({ C01r: true, C05r: true })
   })
 })

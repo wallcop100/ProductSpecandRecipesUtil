@@ -6,6 +6,7 @@ import { positionPaintStatus } from '../utils/formPositions'
 import { buildRefMap, targetFor } from '../utils/ptResolve'
 import { positionFormDone } from '../utils/formDone'
 import { positionHealth } from '../utils/positionHealth'
+import { queryRefs } from '../utils/positionQuery'
 
 /**
  * usePositionList — the PositionTypes list, filtered, sorted and grouped by family, with a
@@ -77,11 +78,17 @@ export default function usePositionList() {
     return [...present].sort((a, b) => a.localeCompare(b))
   }, [positionUI])
 
+  const elementTypes = useStore(s => s.elementTypes)
+  const queried = useMemo(
+    () => queryRefs(view.query, { positionTypes, recipes, psRows, elementTypes, positionUI, formCaptures }),
+    [view.query, positionTypes, recipes, psRows, elementTypes, positionUI, formCaptures])
+
   const q = view.text.trim().toLowerCase()
   const visible = positionTypes.filter(pt => {
     const ref = pt.PositionTypeRef || ''
     const name = pt.Name || pt.name || ''
     const tags = positionUI[ref]?.tags || []
+    if (queried && !queried.has(ref)) return false
     if (view.tags.length > 0 && !view.tags.every(t => tags.includes(t))) return false
     if (view.formOnly && !incompleteRefs.has(ref)) return false
     if (view.emptyOnly && countByRef[ref]) return false
@@ -113,7 +120,7 @@ export default function usePositionList() {
   const active = visible.filter(pt => !isIgnored(pt))
   const ignored = visible.filter(pt => isIgnored(pt))
   return {
-    view, countByRef, incompleteRefs, availableTags, statusOf, isIgnored, ignoredFamilySet,
+    view, queried, countByRef, incompleteRefs, availableTags, statusOf, isIgnored, ignoredFamilySet,
     active, ignored, groups: group(active), ignoredGroups: group(ignored),
     // Every visible position in display order (families, then within), for ↑ / ↓.
     order: [...group(active), ...(view.showIgnored ? group(ignored) : [])].flatMap(([, list]) => list.map(pt => pt.PositionTypeRef)),

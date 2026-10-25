@@ -59,8 +59,12 @@ function build(features) {
   return {
     features,
 
-    /** → [{ code, manufacturer, replacement, retired }] for codes their maker has replaced. */
-    sweep: has('sweep') ? async codes => (await quiet(post('./api/products/sweep', { codes })))?.retired || [] : null,
+    /** → [{ code, manufacturer, replacement, retired }] for codes their maker has replaced, then
+     *  [{ code, manufacturer, options: [{ option, used }], maybe: true }] for those with several possible successors. */
+    sweep: has('sweep') ? async codes => {
+      const r = await quiet(post('./api/products/sweep', { codes }))
+      return [...(r?.retired || []), ...(r?.maybe || []).map(m => ({ ...m, maybe: true }))]
+    } : null,
 
     /** Exemplars from OTHER projects for these makers, in style_exemplars row shape. */
     /** `prefer`: this project's rows come first, newest first (its own corrections win). */

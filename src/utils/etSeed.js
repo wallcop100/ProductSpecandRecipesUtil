@@ -50,6 +50,7 @@ import { jobOf, familyForJob, familiesForJob } from './codeJobs'
 import shippedShapes from '../data/codeShapes.json'
 
 const lc = s => String(s ?? '').trim().toLowerCase()
+const alnum = s => String(s ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '')
 const refOf = e => e.ElementTypeRef || e.elementTypeRef || ''
 const famOf = e => e.Family || e.family || ''
 const ptRefOf = p => p.PositionTypeRef || p.positionTypeRef || ''
@@ -117,19 +118,37 @@ function mostCommon(values) {
  * `flag` means "a guess worth checking" — the review marks the ref.
  */
 export function pickFamily(signals, ctx) {
-  const done = (family, why, extra = {}) => ({ family, head: family, why, flag: false, spread: 1, ...extra })
+  let split = false
+  // Similar codes here that disagree make whatever the later rules say a guess worth checking.
+  const done = (family, why, extra = {}) => ({ family, head: family, why, spread: 1, ...extra, flag: !!(extra.flag || split) })
 
-  // stem: the same maker's product line, already filed somewhere in this project
+  // stem: the family this project files the same maker's most similar codes under: the longest
+  // shared prefix (3+ characters) that at least two of them have, agreeing 80%+. One sibling is
+  // only a guess (tools/backtest-inprogress.py: ~92% right with two that agree, ~80% on one).
   // An extra (frame, louvre…) often shares its luminaire's stem; the luminaire's family is
   // then the wrong answer for it.
-  let best = null
+  const kin = new Map()   // norm code -> { code, family, stem }
   for (const { code, maker, family } of ctx.products || []) {
-    if (!family || maker !== lc(signals.manufacturer)) continue
+    if (!family || maker !== lc(signals.manufacturer) || norm(code) === norm(signals.code)) continue
     if (signals.role === 'extra' && lc(family) === lc(POINT)) continue
-    const stem = sharedStem(signals.code, code)
-    if (stem >= 4 && (!best || stem > best.stem)) best = { family, stem }
+    // Letters and digits only: "NA-" is not a 3-character stem.
+    const stem = sharedStem(alnum(signals.code), alnum(code))
+    if (stem >= 3 && !kin.has(norm(code))) kin.set(norm(code), { code, family, stem })
   }
-  if (best) return done(best.family, 'stem')
+  const stems = [...new Set([...kin.values()].map(k => k.stem))].sort((a, b) => b - a)
+  for (const n of stems) {
+    const near = [...kin.values()].filter(k => k.stem >= n)
+    if (near.length < 2) continue
+    const top = mostCommon(near.map(k => k.family))
+    if (top.count / near.length >= 0.8) {
+      return done(top.value, 'stem', { kin: near.filter(k => k.family === top.value).map(k => k.code).slice(0, 3) })
+    }
+    split = true
+    break
+  }
+  // Otherwise the single closest sibling is still the best guess, flagged.
+  const closest = [...kin.values()].filter(k => k.stem === stems[0])
+  if (closest.length === 1 && stems[0] >= 4) return done(closest[0].family, 'stem', { kin: [closest[0].code], flag: true })
 
   // On a track position (the DesignDB files it under a TRACK family): the track itself, or a
   // fitting that sits on it. Before shapes and style: a Flos spot on track is not an ET-PS.
@@ -351,6 +370,7 @@ export function proposeElementTypes(entries = [], project = {}) {
       placeholder: e.placeholder || null,
       description: pick.seen?.description || [context, note].map(s => String(s).trim()).filter(Boolean).join(' — '),
       why: pick.why,
+      kin: pick.kin || null,
       parent: pick.parent || null,
       spread: pick.spread,
       styledOn: pick.seen ? { ref: pick.seen.ref, code: pick.seen.code, source: pick.seen.source,

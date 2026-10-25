@@ -8,9 +8,9 @@ import { Modal, Button } from 'react-bootstrap'
  */
 let open = null
 
-export function askConfirm(message, { ok = 'OK', danger = false } = {}) {
+export function askConfirm(message, { ok = 'OK', cancel = 'Cancel', danger = false } = {}) {
   if (!open) return Promise.resolve(window.confirm(message))
-  return new Promise(resolve => open({ message, ok, danger, resolve }))
+  return new Promise(resolve => open({ message, ok, cancel, danger, resolve }))
 }
 
 export default function ConfirmHost() {
@@ -25,7 +25,7 @@ export default function ConfirmHost() {
     <Modal show={!!ask} onHide={() => done(false)} centered size="sm" data-testid="confirm-modal" style={{ zIndex: 1070 }} backdropClassName="confirm-backdrop">
       <Modal.Body style={{ whiteSpace: 'pre-line', fontSize: 13 }}>{ask?.message}</Modal.Body>
       <Modal.Footer className="py-1">
-        <Button size="sm" variant="link" className="text-muted" onClick={() => done(false)}>Cancel</Button>
+        <Button size="sm" variant="link" className="text-muted" onClick={() => done(false)}>{ask?.cancel}</Button>
         <Button size="sm" variant={ask?.danger ? 'danger' : 'primary'} autoFocus onClick={() => done(true)}>{ask?.ok}</Button>
       </Modal.Footer>
     </Modal>

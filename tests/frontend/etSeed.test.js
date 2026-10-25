@@ -75,6 +75,36 @@ describe('an early project: company families, from the Form and the shape table'
     expect(newFamilies).toEqual([])   // an existing family is never proposed as new
   })
 
+  // Similar codes in this project (tools/backtest-inprogress.py): two that agree are an answer,
+  // one is a guess to check, and two that disagree leave it to the other rules, flagged.
+  const kinProject = (rows) => ({ ...base,
+    elementTypes: [...ETS, ...rows.map(([code, fam], i) => ({ ElementTypeRef: `K${i}`, Family: fam }))],
+    psRows: [...PS, ...rows.map(([code], i) => ({ ElementTypeRef: `K${i}`, Manufacturer: 'Acme', ProductCode: code }))] })
+
+  test('two similar codes here that agree settle the family, and say which', () => {
+    const { proposals } = proposeElementTypes([entry('XQZ-300', 'Acme', ['A1b'])],
+      kinProject([['XQZ-100', 'ET-DRIVERS'], ['XQZ-210', 'ET-DRIVERS']]))
+    expect(proposals[0]).toMatchObject({ family: 'ET-DRIVERS', why: 'stem', checkRef: false, kin: ['XQZ-100', 'XQZ-210'] })
+  })
+
+  test('one similar code is only a guess', () => {
+    const { proposals } = proposeElementTypes([entry('XQZ-300', 'Acme', ['A1b'])], kinProject([['XQZ-310', 'ET-DRIVERS']]))
+    expect(proposals[0]).toMatchObject({ family: 'ET-DRIVERS', why: 'stem', checkRef: true, kin: ['XQZ-310'] })
+  })
+
+  test('a shared dash is not a stem', () => {
+    const { proposals } = proposeElementTypes([entry('NA-TFR-V3', 'Acme', ['A1b'])],
+      kinProject([['NA-EY-TF', 'ET-DRIVERS'], ['NA-PA-BT', 'ET-DRIVERS']]))
+    expect(proposals[0].why).not.toBe('stem')
+  })
+
+  test('similar codes that disagree are not followed, and whatever answers is flagged', () => {
+    const { proposals } = proposeElementTypes([entry('XQZ-300', 'Acme', ['A1b'])],
+      kinProject([['XQZ-310', 'ET-DRIVERS'], ['XQZ-320', 'ET-CABLES']]))
+    expect(proposals[0].why).not.toBe('stem')
+    expect(proposals[0].checkRef).toBe(true)
+  })
+
   test('once recipes exist, the position\'s design element family wins over the parent', () => {
     const recipes = [{ PositionTypeRef: 'A1b', ElementTypeRef: 'LC1', IsDesign: 'Y' }]
     const { proposals } = proposeElementTypes([entry('NEW-1', 'Acme', ['A1b'])], { ...base, recipes })
