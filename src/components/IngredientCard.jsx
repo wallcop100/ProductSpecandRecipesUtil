@@ -21,6 +21,7 @@ import { C } from '../styles/tokens'
 import { retiredFor, newerCodes } from '../platform/retired'
 import { useScreenView } from './useScreenView'
 import { noteCodeChange } from './Corrections'
+import { partMatches } from '../utils/positionQuery'
 
 // A part's tree line in its wrapper's contents and its card when exploded share this, so one morphs into the other (#74).
 const partTransitionName = (container, ref) => `part-${`${container}-${ref}`.toLowerCase().replace(/[^a-z0-9-]/g, '-')}`
@@ -181,8 +182,13 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
     && (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === etRef.toLowerCase())?._id === rowId
     ? partTransitionName(container, etRef) : undefined
   const wrapKey = (etRef || '').toLowerCase()
-  const showContents = wrapView[wrapKey] ?? wrapView.all ?? false
-  const setShowContents = f => setWrapView(v => ({ ...v, [wrapKey]: f(v[wrapKey] ?? v.all ?? false) }))
+  // Wrappers start open (W47AXP): a part inside one is part of the recipe you are reading.
+  const showContents = wrapView[wrapKey] ?? wrapView.all ?? true
+  const setShowContents = f => setWrapView(v => ({ ...v, [wrapKey]: f(v[wrapKey] ?? v.all ?? true) }))
+  // The rail's question (Review recipes, Find): highlight the parts it names.
+  const queryRule = useStore(s => s.positionList.query?.rule)
+  const elementTypesAll = useStore(s => s.elementTypes)
+  const hit = ref => !!queryRule && partMatches(queryRule, ref, { psRows, elementTypes: elementTypesAll })
   const [forking, setForking] = useState(false)
   const [guard, setGuard] = useState(null)   // { verb, run } — a destructive edit inside a shared wrapper
   const [forkContainer, setForkContainer] = useState(false)
@@ -261,7 +267,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
           borderLeft: `3px solid ${leftColor}`,
           borderRadius: 6,
           background,
-          boxShadow: isSelected ? `0 0 0 1px ${C.accent}` : undefined,
+          boxShadow: isSelected ? `0 0 0 1px ${C.accent}` : hit(etRef) ? `0 0 0 2px ${C.attn}` : undefined,
           opacity: isDeleted ? 0.65 : 1,
           position: 'relative',
         }}
@@ -484,7 +490,8 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                           const maker = spec?.Manufacturer || spec?.manufacturer
                           return (
                             <div key={item.ref} className="d-flex align-items-center gap-1 pb-1 position-relative" data-testid="contents-item"
-                              style={{ viewTransitionName: partTransitionName(etRef, item.ref) }}>
+                              data-hit={hit(item.ref) ? 'true' : undefined}
+                              style={{ viewTransitionName: partTransitionName(etRef, item.ref), ...(hit(item.ref) && { background: C.attnTint, borderRadius: 4 }) }}>
                               {/* Tree branch: ├ for each part, └ on the last. */}
                               <span aria-hidden style={{ position: 'absolute', left: -10, top: 0, bottom: i === internalItems.length - 1 ? '50%' : 0, borderLeft: `1px solid ${C.faint}` }} />
                               <span aria-hidden style={{ position: 'absolute', left: -10, width: 8, top: 'calc(50% - 2px)', borderTop: `1px solid ${C.faint}` }} />

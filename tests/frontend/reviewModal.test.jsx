@@ -1,70 +1,78 @@
 import { describe, test, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 
-window.electronAPI = { db: { setPref: vi.fn().mockResolvedValue(undefined) } }
+window.electronAPI = { db: { setPref: vi.fn().mockResolvedValue(undefined), getPref: vi.fn().mockResolvedValue(null) } }
+Element.prototype.scrollIntoView = vi.fn()
 vi.mock('../../src/utils/backend.js', () => ({
   importFiles: vi.fn(), detectFiles: vi.fn(), readSheet: vi.fn(),
   registerFile: vi.fn(), setActiveDirectory: vi.fn(), getActiveDirectory: vi.fn(), fileMeta: vi.fn(),
 }))
 
 const { default: useStore } = await import('../../src/store/useStore.js')
-const { default: ReviewModal } = await import('../../src/components/ReviewModal.jsx')
+const { default: ReviewModal, ruleOfSet } = await import('../../src/components/ReviewModal.jsx')
+const { default: PositionRail } = await import('../../src/components/PositionRail.jsx')
+const { queryRefs, partMatches, wordRule } = await import('../../src/utils/positionQuery.js')
+const { find, positionsHolding } = await import('../../src/help/search.js')
 
-const pos = (posRef, ref) => ({
-  _id: `${posRef}-${ref}`, PositionTypeRef: posRef, ContextType: 'PositionType',
-  ContextRef: posRef, ElementTypeRef: ref, Quantity: 1,
-})
+const pos = (posRef, ref) => ({ _id: `${posRef}-${ref}`, PositionTypeRef: posRef, ContextType: 'PositionType', ContextRef: posRef, ElementTypeRef: ref, Quantity: 1 })
+const psRows = [{ ElementTypeRef: 'ET-X', Manufacturer: 'Acme', ProductCode: 'AC-1' }, { ElementTypeRef: 'ET-Y', Manufacturer: 'Bolt', ProductCode: 'BO-2', ComponentDescription: 'Acme driver' }]
 
 function setup() {
+  localStorage.clear()
   useStore.setState({
     projectId: 1, positionTypes: [{ PositionTypeRef: 'A1' }, { PositionTypeRef: 'A2' }, { PositionTypeRef: 'A3' }],
     recipes: [pos('A1', 'ET-X'), pos('A2', 'ET-X'), pos('A3', 'ET-Y')],
-    containerETRefs: new Set(), psRows: [], elementTypes: [], positionUI: {},
-    formCaptures: { version: 1, byPosition: { A1: [{ elementTypeRef: 'ET-X' }], A2: [{ elementTypeRef: 'ET-X' }], A3: [{ elementTypeRef: 'ET-Z' }] } },
+    containerETRefs: new Set(), psRows, elementTypes: [], positionUI: {}, formCaptures: null,
+    validationResults: [], ignoredPositionFamilies: [], tagDrift: {}, activePositionRef: 'A3',
+    positionList: { text: '', tags: [], formOnly: false, emptyOnly: false, showIgnored: false, showTags: false, sort: 'ref', collapsed: [], query: null },
   })
-  return render(<ReviewModal show onHide={vi.fn()} initialRefs={['A1', 'A2', 'A3']} />)
 }
+const byMaker = { match: 'all', conditions: [{ column: 'Recipe.Manufacturer', op: 'equals', value: 'Acme' }] }
 
-describe('ReviewModal footer', () => {
-  test('Next is the primary action; Close is not in the bottom-right corner', () => {
+describe('positionQuery', () => {
+  test('a rule picks the positions whose recipe holds it; refs pass through', () => {
     setup()
-    const footer = document.querySelector('.modal-footer')
-    const buttons = [...footer.querySelectorAll('button')]
-    expect(buttons[0].textContent).toBe('Close')
-    expect(buttons.at(-1).textContent).not.toBe('Close')
-    expect(screen.getByTestId('review-counter')).toHaveTextContent('1 of 3')
+    expect([...queryRefs({ rule: byMaker }, useStore.getState())].sort()).toEqual(['A1', 'A2'])
+    expect([...queryRefs({ refs: ['A3'] }, useStore.getState())]).toEqual(['A3'])
+    expect(queryRefs(null, useStore.getState())).toBeNull()
   })
-
-  test('Next and ← / → step through', () => {
-    setup()
-    fireEvent.click(screen.getByText('Next ›'))
-    expect(screen.getByTestId('review-counter')).toHaveTextContent('2 of 3')
-    fireEvent.keyDown(window, { key: 'ArrowLeft' })
-    expect(screen.getByTestId('review-counter')).toHaveTextContent('1 of 3')
-    fireEvent.keyDown(window, { key: 'ArrowRight' })
-    expect(screen.getByTestId('review-counter')).toHaveTextContent('2 of 3')
-  })
-
-  test('Next unreconciled skips positions the Form is satisfied on', () => {
-    setup()
-    fireEvent.click(screen.getByText(/Next unreconciled/))
-    expect(screen.getByTestId('review-counter')).toHaveTextContent('3 of 3')
+  test('a part is highlighted when it satisfies a positive recipe condition', () => {
+    expect(partMatches(byMaker, 'ET-X', { psRows })).toBe(true)
+    expect(partMatches(byMaker, 'ET-Y', { psRows })).toBe(false)
+    expect(partMatches({ match: 'all', conditions: [{ column: 'Recipe.Manufacturer', op: 'notEquals', value: 'Bolt' }] }, 'ET-X', { psRows })).toBe(false)
+    expect(partMatches(wordRule('bo-2'), 'ET-Y', { psRows })).toBe(true)
   })
 })
 
-describe('ReviewModal settles the design item on the way out', () => {
-  test('Next asks for the design item when several rows have none', async () => {
-    const { default: DesignPickerModal } = await import('../../src/components/DesignPickerModal.jsx')
-    useStore.setState({
-      projectId: 1, positionTypes: [{ PositionTypeRef: 'A1' }, { PositionTypeRef: 'A2' }],
-      recipes: [pos('A1', 'ET-X'), pos('A1', 'ET-Y'), pos('A2', 'ET-X')],
-      containerETRefs: new Set(), psRows: [], elementTypes: [], positionUI: {}, formCaptures: null, designPrompt: null,
-    })
-    render(<><ReviewModal show onHide={vi.fn()} initialRefs={['A1', 'A2']} /><DesignPickerModal /></>)
-    fireEvent.click(screen.getByText('Next ›'))
-    expect(screen.getByTestId('review-counter')).toHaveTextContent('1 of 2')
-    fireEvent.click(await screen.findByRole('button', { name: 'ET-Y' }))
-    expect(screen.getByTestId('review-counter')).toHaveTextContent('2 of 2')
-    expect(useStore.getState().recipes.find(r => r._id === 'A1-ET-Y').IsDesign).toBe('Y')
+describe('Review recipes → the rail', () => {
+  test('Show in list filters the rail, opens a match, and the chip clears it', async () => {
+    setup()
+    const onHide = vi.fn()
+    useStore.setState({ positionList: { ...useStore.getState().positionList, query: { rule: byMaker } } })
+    render(<><ReviewModal show onHide={onHide} /><PositionRail /></>)
+    expect(await screen.findByText('2 positions match')).toBeInTheDocument()
+    fireEvent.click(screen.getByText(/Show 2 in list/))
+    expect(onHide).toHaveBeenCalled()
+    expect(useStore.getState().activePositionRef).toBe('A1')
+    expect(screen.getByTestId('rail-A1')).toBeInTheDocument()
+    expect(screen.queryByTestId('rail-A3')).toBeNull()
+    fireEvent.click(screen.getByTitle('Clear the filter'))
+    expect(screen.getByTestId('rail-A3')).toBeInTheDocument()
+  })
+  test('old saved sets read across', () => {
+    expect(ruleOfSet({ unit: 'position', filter: { match: 'all', conditions: [{ field: 'Contains', op: 'text', value: 'DL' }, { field: 'Rows', op: 'gt', value: 1 }] } }))
+      .toEqual({ match: 'all', conditions: [{ column: 'Recipe.ElementType', op: 'matches', value: '*DL*' }] })
+  })
+})
+
+describe('Find', () => {
+  test('a word some recipe holds offers to filter the list', () => {
+    setup()
+    expect(positionsHolding('acme', useStore.getState())).toBe(3)   // A3 by its description, as the rule reads it
+    expect(queryRefs({ rule: wordRule('acme') }, useStore.getState()).size).toBe(3)
+    const r = find('acme', { state: useStore.getState() }).find(x => x.kind === 'filter')
+    expect(r.title).toBe('Show positions with “acme”')
+    expect(r.sub).toMatch(/^3 positions/)
+    expect(find('zzz', { state: useStore.getState() }).some(x => x.kind === 'filter')).toBe(false)
   })
 })
