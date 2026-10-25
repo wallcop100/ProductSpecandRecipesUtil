@@ -99,3 +99,21 @@ describe('Positions held by a template respect its tags', () => {
     await waitFor(() => expect(unpinPositions).toHaveBeenCalledWith(5, ['A1']))
   })
 })
+
+describe('Product Spec: a row the DesignDB lacks', () => {
+  test('still offers Change family or ref; Apply queues its ElementTypes row, then moves it', () => {
+    useStore.setState({
+      projectId: 1, dbChanges: [], psChanges: [], rsChanges: [], past: [], future: [],
+      elementTypes: [{ ElementTypeRef: 'ET-REMOTE-DRIVERS-01', Family: 'ET-REMOTE-DRIVERS' }],
+      psRows: [{ ElementTypeRef: 'ET-CCR-D-500-1CH-01', Manufacturer: 'EldoLED', ProductCode: 'SL0360A6-500mA', Description: 'SOLODrive' }],
+      recipes: [],
+    })
+    render(<ETSpecEditor selectedRef="ET-CCR-D-500-1CH-01" onRenamed={vi.fn()} />)
+    fireEvent.click(screen.getByTestId('family-ref-open'))
+    fireEvent.change(screen.getByLabelText('Family'), { target: { value: 'ET-REMOTE-DRIVERS' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
+    const s = useStore.getState()
+    expect(s.elementTypes.find(e => e.ElementTypeRef === 'ET-CCR-D-500-1CH-01')).toMatchObject({ Family: 'ET-REMOTE-DRIVERS', Description: 'SOLODrive' })
+    expect(s.dbChanges.some(c => c.elementTypeRef === 'ET-CCR-D-500-1CH-01' && c._isNew)).toBe(true)
+  })
+})
