@@ -228,8 +228,9 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
 
         {/* Any ElementType but a family row (one others name as their ParentRef) can be renamed or
             refiled — wrappers too. */}
-        {etObj && !elementTypes.some(e => String(e.Family || e.family || '').toLowerCase() === String(selectedRef).toLowerCase()) && (
-          <FamilyAndRef key={selectedRef} et={etObj} onRenamed={onRenamed} />
+        {(etObj || psRow) && !elementTypes.some(e => String(e.Family || e.family || '').toLowerCase() === String(selectedRef).toLowerCase()) && (
+          <FamilyAndRef key={selectedRef} et={etObj || { ElementTypeRef: selectedRef, Family: etFamily, Description: psRow.Description }}
+            inDb={!!etObj} onRenamed={onRenamed} />
         )}
         {numberFix && (
           <div className="alert alert-info py-1 px-2 mb-3 d-flex align-items-center gap-2" style={{ fontSize: 12 }} data-testid="number-fix">
@@ -464,11 +465,12 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
  * ElementTypes window) or type a new ref. Either cascades through the Product Spec and
  * Recipes; nothing happens until Apply.
  */
-function FamilyAndRef({ et, onRenamed }) {
+function FamilyAndRef({ et, inDb, onRenamed }) {
   const elementTypes = useStore(s => s.elementTypes)
   const moveElementTypesToFamily = useStore(s => s.moveElementTypesToFamily)
   const renameElementType = useStore(s => s.renameElementType)
   const forkElementType = useStore(s => s.forkElementType)
+  const createElementType = useStore(s => s.createElementType)
   const ref = et.ElementTypeRef || et.elementTypeRef
   const family = et.Family || et.family || ''
   // Opened from Find or a hint: already open, with the suggested ref typed in.
@@ -494,8 +496,11 @@ function FamilyAndRef({ et, onRenamed }) {
   // Picking a family changes only the family; its next ref is offered, never forced (5WZXN9).
   function pickFamily(f) { setFam(f) }
   const suggested = fam && fam !== family ? planFamilyMove([ref], fam, elementTypes).moves[0]?.to : null
+  // A Product Spec row the DesignDB lacks: its ElementTypes row is queued first, so the move has one to change.
+  const ensure = f => { if (!inDb) createElementType({ ref, description: et.Description || null, family: f || null }) }
   function apply() {
     const target = newRef.trim()
+    ensure(fam)
     if (fam !== family) moveElementTypesToFamily([ref], fam, { renumber: false })
     if (target && target !== ref) renameElementType(ref, target)
     setOpen(false)
@@ -511,7 +516,7 @@ function FamilyAndRef({ et, onRenamed }) {
         </Button>
         <Button variant="link" size="sm" className="p-0 ms-3" style={{ fontSize: 11 }} data-testid="fork-et"
           title="Fork: a new ElementType in the same family with a copy of this one's Product Spec, to change on its own"
-          onClick={() => { const r = forkElementType(ref); if (r) onRenamed?.(r) }}>
+          onClick={() => { ensure(family); const r = forkElementType(ref); if (r) onRenamed?.(r) }}>
           <MaterialIcon name="call_split" size={13} /> Fork
         </Button>
       </div>
@@ -537,6 +542,7 @@ function FamilyAndRef({ et, onRenamed }) {
         <Button size="sm" variant="link" className="text-muted p-0" onClick={() => setOpen(false)}>Cancel</Button>
       </div>
       <div className="text-muted mt-1" style={{ fontSize: 10 }}>
+        {!inDb && <>Not in the DesignDB's ElementTypes: Apply adds it there. </>}
         {bad ? <span className="text-danger">{bad}</span>
           : newRef.trim() !== ref ? <>Renames {ref} → {newRef.trim()} in the Product Spec and Recipes. Not on Undo: change it back to reverse.</>
             : fam !== family ? <>Moves {ref} into {fam || 'no family'}; the ref stays as it is.</>
