@@ -12,6 +12,7 @@ import {
 import useStore, { getRecipeForPosition } from '../store/useStore'
 import { getUsedIn } from '../utils/containerUtils'
 import { wrapperEditContext } from '../utils/collectionStatus'
+import CompanionStatus from '../components/CompanionStatus'
 import ProjectTreeView from '../components/ProjectTreeView'
 import { SuggestionWatchers } from '../components/RecipeSuggestions'
 import ElementTypeTreeView from '../components/ElementTypeTreeView'
@@ -477,6 +478,7 @@ export default function BuilderScreen({
           <IconButton variant="outline-secondary" icon={ACTION_ICONS.redo}
             onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)" />
         </ButtonGroup>
+        <CompanionStatus />
 
         <div className="flex-grow-1" />
         {/* The once-in-a-while ones. They were four more icons competing with Export for
