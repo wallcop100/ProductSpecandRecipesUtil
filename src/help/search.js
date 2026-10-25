@@ -124,12 +124,37 @@ export function find(query, { actions = [], state = {}, screen = '', limit = 14,
   // A query that looks like a ref or a code (one word, a digit or a hyphen) is after a thing first.
   const refLike = !/\s/.test(q.trim()) && /[\d-]/.test(q)
   for (const t of things) results.push({ ...t, score: t.score * (refLike ? 1.6 : 0.8) })
+  // Any word some recipe holds can filter the rail to those positions (REVIEW_PLAN.md).
+  const filterWord = refs.et ? norm(refs.et) : needle
+  const n = !refs.pos && filterWord.length >= 2 ? positionsHolding(filterWord, state) : 0
+  if (n) results.push({ kind: 'filter', ref: refs.et || refs.rest.join(' ') || q, title: `Show positions with “${refs.et || refs.rest.join(' ') || q}”`,
+    sub: `${n} position${n === 1 ? '' : 's'} · filters the list`, score: 4.9 * (refLike ? 1.6 : 0.8) })
 
   results.sort((x, y) => y.score - x.score)
   // Neither kind crowds the other out: up to 10 things, and room for the best actions.
   const acts = results.filter(r => r.kind === 'action').slice(0, Math.max(5, limit - 10))
   const found = results.filter(r => r.kind !== 'action').slice(0, refLike ? 12 : 8)
   return [...acts, ...found].sort((x, y) => y.score - x.score).slice(0, limit + 4)
+}
+
+/**
+ * How many positions have a recipe row whose ElementType, product code, manufacturer or
+ * description holds the word: positionQuery's wordRule, counted without its imports.
+ */
+export function positionsHolding(word, { recipes = [], psRows = [] } = {}) {
+  const spec = new Map()   // the first spec row of each ET, as recipeTagIndex reads it
+  for (const p of psRows) {
+    const k = norm(p.ElementTypeRef || p.elementTypeRef)
+    if (!spec.has(k)) spec.set(k, [p.ProductCode || p.productCode, p.Manufacturer || p.manufacturer, p.ComponentDescription || p.componentDescription].map(norm).join('\n'))
+  }
+  const hit = new Set()
+  for (const r of recipes) {
+    if ((r.IsDeleted || r.isDeleted) === 'Y') continue
+    const et = norm(r.ElementTypeRef || r.elementTypeRef)
+    if (et.includes(word) || (spec.get(et) || '').includes(word)) hit.add(r.PositionTypeRef || r.positionTypeRef)
+  }
+  hit.delete(undefined)
+  return hit.size
 }
 
 /** How well a field holds the needle: the whole of it 10, its start 7, inside it 4. */

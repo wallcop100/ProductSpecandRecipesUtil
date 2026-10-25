@@ -117,7 +117,6 @@ describe('a wrapper\'s contents show each part\'s product (PZJYJT)', () => {
       elementTypes: [], containerETRefs: new Set(['et-lin-01']), containerReasons: {}, selectedRowIds: [],
     })
     renderRow(SHARED[0])
-    fireEvent.click(screen.getByTitle('Show contents'))
     const items = screen.getAllByTestId('contents-item').map(i => i.textContent)
     expect(items.find(t => t.includes('ET-PROF-01'))).toContain('Klus – PDS-4')
     expect(items.find(t => t.includes('ET-TAPE-02'))).toContain('no product spec')
