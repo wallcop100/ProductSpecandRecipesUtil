@@ -240,9 +240,10 @@ export function parseDb(data) {
   const rawEts = parseSheetByHeaders(wb.Sheets.ElementTypes, ET_COLUMN_MAP, ET_FLAG_COLS, false, ET_TEXT_COLS)
   const etCollections = collectionRefs(rawEts, 'Family')
   const element_types = []
+  const deleted_et_refs = []
   for (const r of rawEts) {
     if (!r.ElementTypeRef) continue
-    if (r.IsDeleted === 'Y') continue
+    if (r.IsDeleted === 'Y') { deleted_et_refs.push(r.ElementTypeRef); continue }
     if (etCollections.has(r.ElementTypeRef)) continue
     delete r.IsDeleted
     element_types.push(r)
@@ -271,7 +272,7 @@ export function parseDb(data) {
     }
   }
 
-  return { element_types, position_types, positions, collection_refs: [...etCollections] }
+  return { element_types, position_types, positions, collection_refs: [...etCollections], deleted_et_refs }
 }
 
 /** Parse a Product Spec workbook → rows that have an ElementTypeRef. */
@@ -429,9 +430,11 @@ export function mergeDbs(parsed = []) {
   const ets = union('element_types', 'ElementTypeRef')
   const pts = union('position_types', 'PositionTypeRef')
   const collections = new Set()
+  const deleted = new Set()
   const positions = []
   for (const { data } of parsed) {
     for (const c of data.collection_refs || []) collections.add(c)
+    for (const d of data.deleted_et_refs || []) deleted.add(d)
     positions.push(...(data.positions || []))
   }
 
@@ -440,6 +443,7 @@ export function mergeDbs(parsed = []) {
     position_types: pts.rows,
     positions,
     collection_refs: [...collections],
+    deleted_et_refs: [...deleted],
     sources: parsed.map(({ name, data }) => ({
       name,
       element_types: data.element_types?.length || 0,

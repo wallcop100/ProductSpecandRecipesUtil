@@ -81,6 +81,7 @@ export default function BuilderScreen({
   const positionUI = useStore(s => s.positionUI)
   const psChanges = useStore(s => s.psChanges)
   const rsChanges = useStore(s => s.rsChanges)
+  const dbChanges = useStore(s => s.dbChanges)
   const past = useStore(s => s.past)
   const future = useStore(s => s.future)
 
@@ -440,7 +441,7 @@ export default function BuilderScreen({
     setChangeSummary(true)
   }
 
-  const hasDirtyChanges = psChanges.length > 0 || rsChanges.length > 0
+  const hasDirtyChanges = psChanges.length > 0 || rsChanges.length > 0 || dbChanges.length > 0
 
   // -------------------------------------------------------------------------
   // Render

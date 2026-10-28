@@ -1165,6 +1165,41 @@ describe('dirty registry — coalescing + field-level entries', () => {
 // DesignDB catalogue (EXPORT_PLAN §4)
 // ---------------------------------------------------------------------------
 
+describe('queuePsOnlyETs — Product Spec ✓ · DesignDB ✗', () => {
+  test('queues each live Product Spec row the DesignDB lacks, with an estimated family, once', () => {
+    const et = (ref, n) => ({ ElementTypeRef: ref, Family: 'ET-TAPE', _row_num: n })
+    const ps = (ref, code, extra = {}) => ({ ElementTypeRef: ref, Manufacturer: 'Acme', ProductCode: code, Description: 'Tape', ...extra })
+    resetStore({
+      elementTypes: [et('ET-TAPE-01', 2), et('ET-TAPE-02', 3)], dbCollectionRefs: ['ET-TAPE'], dbChanges: [], recipes: [],
+      psRows: [ps('ET-TAPE-01', 'LT2440A'), ps('ET-TAPE-02', 'LT2440B'), ps('ET-X-99', 'LT2440C'),
+        ps('ET-GONE-01', 'LT2440D', { IsDeleted: 'Y' }), ps('ET-DEL-01', 'LT2440E')],
+      dbDeletedRefs: ['ET-DEL-01'],
+    })
+    expect(useStore.getState().queuePsOnlyETs()).toEqual(['ET-X-99'])
+    const s = useStore.getState()
+    expect(s.dbChanges).toHaveLength(1)
+    expect(s.dbChanges[0]).toMatchObject({ elementTypeRef: 'ET-X-99', _isNew: true })
+    expect(s.dbChanges[0].updates.Family).toBe('ET-TAPE')
+    expect(useStore.getState().queuePsOnlyETs()).toEqual([])
+    expect(useStore.getState().dbChanges).toHaveLength(1)
+  })
+
+  test('a local ET kept from an earlier session, with nothing queued, is queued and its family filled', () => {
+    resetStore({
+      elementTypes: [{ ElementTypeRef: 'ET-TAPE-01', Family: 'ET-TAPE', _row_num: 2 }, { ElementTypeRef: 'ET-X-99', Family: null, _row_num: null }],
+      dbCollectionRefs: ['ET-TAPE'], dbDeletedRefs: [], dbChanges: [], recipes: [],
+      psRows: [{ ElementTypeRef: 'ET-TAPE-01', Manufacturer: 'Acme', ProductCode: 'LT2440A' },
+        { ElementTypeRef: 'ET-X-99', Manufacturer: 'Acme', ProductCode: 'LT2440C', Description: 'Tape' }],
+    })
+    expect(useStore.getState().queuePsOnlyETs()).toEqual(['ET-X-99'])
+    const s = useStore.getState()
+    expect(s.elementTypes).toHaveLength(2)
+    expect(s.dbChanges).toHaveLength(1)
+    expect(s.dbChanges[0]).toMatchObject({ elementTypeRef: 'ET-X-99', _isNew: true })
+    expect(s.dbChanges[0].updates).toMatchObject({ Family: 'ET-TAPE', Description: 'Tape' })
+  })
+})
+
 describe('catalogue — createElementType / rename / delete', () => {
   /**
    * The DesignDB is the master list and a patch script is the only way in. Queuing

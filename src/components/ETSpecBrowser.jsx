@@ -4,6 +4,7 @@ import { useScreenView, useScrollMemory } from './useScreenView'
 import useStore from '../store/useStore'
 import { skippedRefs as skippedRefsFor } from '../utils/specChecks'
 import MaterialIcon from './MaterialIcon'
+import PsOnlyChip, { usePsOnlyRefs } from './PsOnlyChip'
 import { familyOf } from '../utils/etRef'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { productKey, duplicateProductKeys, hasProductIdentity } from '../utils/productCodes'
@@ -58,6 +59,7 @@ export default function ETSpecBrowser({
   const psRows      = useStore(s => s.psRows)
   const recipes     = useStore(s => s.recipes)
   const psChanges   = useStore(s => s.psChanges)
+  const psOnly      = usePsOnlyRefs()
 
   // ET refs with an unsynced product-spec change (cleared on export)
   const dirtyRefs = useMemo(() => {
@@ -319,6 +321,7 @@ export default function ETSpecBrowser({
                 isChecked={bulkSelected.has(ref.toLowerCase())}
                 onSelect={() => onSelect(ref)}
                 onCheck={() => onBulkToggle(ref.toLowerCase())}
+                psOnly={psOnly.has(ref.toLowerCase())}
                 rowBg={C.attnTint}
               />
             ))}
@@ -332,7 +335,7 @@ export default function ETSpecBrowser({
           selectedRef={selectedRef} bulkSelected={bulkSelected}
           onSelect={onSelect} onBulkToggle={onBulkToggle}
           statusFor={r => completenessOf(r, psRowMap, missingSet, duplicateCodes, skippedRefs)}
-          psRowMap={psRowMap}
+          psRowMap={psRowMap} psOnly={psOnly}
         />
 
         {/* Duplicate section */}
@@ -342,7 +345,7 @@ export default function ETSpecBrowser({
           selectedRef={selectedRef} bulkSelected={bulkSelected}
           onSelect={onSelect} onBulkToggle={onBulkToggle}
           statusFor={r => completenessOf(r, psRowMap, missingSet, duplicateCodes, skippedRefs)}
-          psRowMap={psRowMap}
+          psRowMap={psRowMap} psOnly={psOnly}
         />
 
         {/* Grouped list */}
@@ -378,6 +381,7 @@ export default function ETSpecBrowser({
                   isNew={!!psRow && psRow._row_num == null && isDirty}
                   onSelect={() => onSelect(ref)}
                   onCheck={() => onBulkToggle(ref.toLowerCase())}
+                  psOnly={psOnly.has(ref.toLowerCase())}
                 />
               )
             })}
@@ -394,7 +398,7 @@ export default function ETSpecBrowser({
 
 // A collapsible problem-state heading section (Partial / Duplicate), mirroring
 // the Missing-spec section.
-function ProblemSection({ title, refs, open, setOpen, headBg, border, textColor, badgeBg, selectedRef, bulkSelected, onSelect, onBulkToggle, statusFor, psRowMap }) {
+function ProblemSection({ title, refs, open, setOpen, headBg, border, textColor, badgeBg, selectedRef, bulkSelected, onSelect, onBulkToggle, statusFor, psRowMap, psOnly }) {
   if (refs.length === 0) return null
   return (
     <div style={{ borderBottom: `1px solid ${border}` }}>
@@ -425,6 +429,7 @@ function ProblemSection({ title, refs, open, setOpen, headBg, border, textColor,
             isChecked={bulkSelected.has(ref.toLowerCase())}
             onSelect={() => onSelect(ref)}
             onCheck={() => onBulkToggle(ref.toLowerCase())}
+            psOnly={psOnly.has(ref.toLowerCase())}
           />
         )
       })}
@@ -432,7 +437,7 @@ function ProblemSection({ title, refs, open, setOpen, headBg, border, textColor,
   )
 }
 
-function BrowserRow({ ref_, status, productCode, manufacturer, isTBC, isSelected, isChecked, isDirty, isNew, onSelect, onCheck, rowBg }) {
+function BrowserRow({ ref_, status, productCode, manufacturer, isTBC, isSelected, isChecked, isDirty, isNew, psOnly, onSelect, onCheck, rowBg }) {
   const specLabel = [manufacturer, productCode].filter(Boolean).join(' – ')
   return (
     <div
@@ -466,6 +471,7 @@ function BrowserRow({ ref_, status, productCode, manufacturer, isTBC, isSelected
         <span className="badge" style={{ background: C.subtle, color: C.ink, border: `1px solid ${C.border}`, fontSize: 9, flexShrink: 0 }}
           title="New — added this session, not yet exported">New</span>
       )}
+      {psOnly && <PsOnlyChip short />}
       {isTBC && (
         <span className="badge" style={{ background: C.attnTint, color: C.attnInk, border: `1px solid ${C.attn}`, fontSize: 9, flexShrink: 0 }}
           title="Marked TBC — spec to be confirmed">TBC</span>
