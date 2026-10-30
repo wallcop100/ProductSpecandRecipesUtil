@@ -27,6 +27,7 @@
  * about who answers. Failures are quiet: a companion that is down is the same as none.
  */
 import { useEffect, useState } from 'react'
+import { APP_CHANNEL } from '../utils/bugReports'
 
 export const PROTOCOL = 'psr-companion/1'
 
@@ -132,6 +133,9 @@ function build(features) {
       for (const j of body?.jobs || []) out.set(`${String(j.maker_key || '').toLowerCase()}|${String(j.code || '').toUpperCase()}`, j)
       return out
     } : null,
+
+    /** Count this open, once per tab (companion-kit useOpened): usage on projects.wallcop.org. */
+    opened: has('opened') ? () => quiet(post('./api/opened', { channel: APP_CHANNEL })) : null,
 
     /** One report (bugReports.js shape) → { received, id } | null. */
     report: has('reports') ? report => quiet(post('./api/reports', report)) : null,

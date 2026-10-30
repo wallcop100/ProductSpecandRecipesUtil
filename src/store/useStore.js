@@ -556,6 +556,7 @@ const useStore = create((set, get) => ({
   },
   deleteBugReport(id) { const next = get().bugReports.filter(r => r.id !== id); saveReports(next); set({ bugReports: next }) },
   clearBugReports() { saveReports([]); set({ bugReports: [] }) },
+  setBugReports(list) { saveReports(list); set({ bugReports: list }) },
   positionList: { text: '', tags: [], formOnly: false, emptyOnly: false, showIgnored: false, showTags: false, sort: 'ref', collapsed: [], query: null },
   setPositionList(patch) { set(s => ({ positionList: { ...s.positionList, ...(typeof patch === 'function' ? patch(s.positionList) : patch) } })) },
   /**
