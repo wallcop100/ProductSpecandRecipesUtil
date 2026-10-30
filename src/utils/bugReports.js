@@ -119,9 +119,9 @@ export function appContext(state, screen) {
 }
 
 /** `via: 'last-click'` when no element was pointed at and `target` is the last thing clicked. */
-export function buildReport({ note, kind = 'bug', target, via, state, screen, trail = [], capture = true, companion = false, now = new Date(), taken = [] }) {
+export function buildReport({ note, kind = 'bug', target, via, state, screen, trail = [], capture = true, companion = false, now = new Date(), taken = [], id }) {
   return {
-    id: newReportId(taken),
+    id: id || newReportId(taken),
     at: now.toISOString(),
     note: String(note || '').trim(),
     ...(kind === 'feature' ? { kind: 'feature' } : {}),

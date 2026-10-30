@@ -38,7 +38,8 @@ describe('the bug reporter sends, beside a companion with reports', () => {
   })
 
   test('sends a report with the project and the learned values in view', async () => {
-    api.current = { report: vi.fn(async () => ({ received: true, id: 1 })) }
+    api.current = { report: vi.fn(async () => ({ received: true, id: 1 })), opened: vi.fn() }
+    sessionStorage.clear()
     noteSupplied({ kind: 'family', key: 'ACME|ZZ-1', tier: 'library', source: '5642', value: 'ET-DL', code: 'ZZ-1' })
     setup()
     fireEvent.click(screen.getByTestId('bug-toggle'))
@@ -50,6 +51,7 @@ describe('the bug reporter sends, beside a companion with reports', () => {
     expect(sent.learned).toEqual([{ kind: 'family', key: 'ACME|ZZ-1', value: 'ET-DL', tier: 'library', source: '5642' }])
     expect(useStore.getState().bugReports).toHaveLength(0)
     expect(screen.getByRole('status').textContent).toMatch(/Sent/)
+    expect(api.current.opened).toHaveBeenCalledTimes(1)   // usage: once per tab
   })
 
   test('"Write a report…" opens a note; a feature request is sent as one; what cannot go is kept, then sent from the ▾', async () => {

@@ -25,6 +25,7 @@
     "@dnd-kit/sortable": "^8.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "bootstrap": "^5.3.0",
+    "companion-kit": "https://api.github.com/repos/wallcop100/companionkit/tarball/4872ca0ea2afb08f833e56abdd871a382776f39a",
     "dompurify": "^3.1.0",
     "js-yaml": "^5.1.0",
     "material-icons": "^1.13.12",
