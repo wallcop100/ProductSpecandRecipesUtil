@@ -896,7 +896,7 @@ function ProductInline({ etRef, manufacturer, productCode, onOpenProductSpec }) 
       )}
       {/* the same answer as the Product Spec's, where the line is read (9NDTLH) */}
       {retired && <>
-        <button type="button" className="btn btn-link p-0 text-muted" style={{ fontSize: 10, lineHeight: 1 }} data-testid="retired-not-right" onClick={() => setNotRight(true)}>Not right…</button>
+        <button type="button" className="btn btn-link p-0 text-muted text-nowrap flex-shrink-0" style={{ fontSize: 10, lineHeight: 1 }} data-testid="retired-not-right" onClick={() => setNotRight(true)}>Not right…</button>
         <NotRightModal key={`nr-${productCode}`} show={notRight} onHide={() => setNotRight(false)}
           title={`What's not right about the newer code for ${productCode}?`} placeholder="e.g. the code to order now"
           facts={[['Code', <span className="font-monospace">{productCode}</span>], ['Suggested', <span className="font-monospace">{newerCodes(retired)}</span>]]}
