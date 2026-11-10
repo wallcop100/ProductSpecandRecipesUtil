@@ -4,6 +4,7 @@ import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { positionHealth, STATUS_LABEL } from '../utils/positionHealth'
 import { C } from '../styles/tokens'
+import { retiredFor } from '../platform/retired'
 
 const COLOR = { red: C.danger, amber: C.attn, green: C.success, purple: C.companion, grey: C.faint }
 const HEAD = { red: 'Needs fixing', amber: 'Needs a decision', green: 'Done', purple: 'Suggestions waiting', grey: '' }
@@ -25,6 +26,12 @@ const CHECKED = [
 export default function StatusPip({ posRef, status, size = 9 }) {
   const results = useStore(s => s.validationResults)
   const companion = useStore(s => !!s.companionPending[posRef])
+  const newerCode = useStore(s => {
+    if (!Object.keys(s.retiredCodes).length) return false
+    const live = r => (r.IsDeleted || r.isDeleted) !== 'Y'
+    const refs = new Set(s.recipes.filter(r => live(r) && (r.PositionTypeRef || r.positionTypeRef) === posRef).map(r => String(r.ElementTypeRef || r.elementTypeRef || '').toUpperCase()))
+    return s.psRows.some(r => live(r) && refs.has(String(r.ElementTypeRef || r.elementTypeRef || '').toUpperCase()) && !!retiredFor(s.retiredCodes, r.ProductCode || r.productCode))
+  })
   const focusPosition = useStore(s => s.focusPosition)
   const here = useStore(s => s.activePositionRef === posRef && s.rootView === 'positions')
   const [show, setShow] = useState(false)
@@ -33,7 +40,7 @@ export default function StatusPip({ posRef, status, size = 9 }) {
   const later = () => { timer.current = setTimeout(() => setShow(false), 150) }
 
   const issues = useMemo(() => results.filter(i => i.fixKind !== 'spec' && i.ref === posRef), [results, posRef])
-  const { level, reasons } = positionHealth({ status, issues, companion })
+  const { level, reasons } = positionHealth({ status, issues, companion, newerCode })
   const half = level === 'amber' && reasons.every(r => r.kind !== 'validation')
   const head = HEAD[level] || STATUS_LABEL[status] || ''
   const go = () => { setShow(false); focusPosition(posRef) }
