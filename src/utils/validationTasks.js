@@ -115,6 +115,16 @@ export function buildTasks(issues = [], changes = {}) {
         }, { ...base, queued: queued.db.has(lc(ref)) })
         break
 
+      case 'CURRENT_MISMATCH':
+        put('currentMismatch', {
+          title: 'driver codes set to a different current',
+          titleOne: 'driver code set to a different current',
+          hint: 'The code names one current and the ElementType another. The code is what gets ordered.',
+          action: ACTIONS.OPEN_SPEC,
+          blocking: false,
+        }, base)
+        break
+
       case 'MISSING_PRODUCT_CODE':
         put('completeSpecRows', {
           title: 'spec rows with no product code',

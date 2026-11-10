@@ -58,7 +58,7 @@ const refOf = r => r.elementTypeRef || r.ElementTypeRef || ''
  */
 // Rules whose fix lives on the Product Spec screen (ref is an ET ref); all
 // others are recipe rules whose ref is a PositionTypeRef.
-const SPEC_RULES = new Set(['DUPLICATE_PRODUCT_CODE', 'MISSING_PRODUCT_CODE', 'MISSING_PRODUCT_SPEC_ROW', 'ELEMENT_TYPE_NOT_IN_DB'])
+const SPEC_RULES = new Set(['DUPLICATE_PRODUCT_CODE', 'MISSING_PRODUCT_CODE', 'MISSING_PRODUCT_SPEC_ROW', 'ELEMENT_TYPE_NOT_IN_DB', 'CURRENT_MISMATCH'])
 
 export function runValidation(dbData, psRows, rsRows, positionUI,
   { collections = [], containerETRefs = new Set(), collectionRefs = [], ignoredPosRefs = new Set(), recOf = null, members = null } = {}) {
@@ -78,6 +78,7 @@ export function runValidation(dbData, psRows, rsRows, positionUI,
   issues.push(...checkExteriorIPConnectors(rsRows, positionUI))
   issues.push(...checkMissingProductSpecs(psRows))
   issues.push(...checkDanglingElementTypeRefs(dbData, psRows, rsRows))
+  issues.push(...checkCurrentMismatch(dbData, psRows))
   issues.push(...checkBlankRecipeContainer(rsRows))
   issues.push(...checkSpecAlignment(dbData, psRows, rsRows, ignoredPosRefs, containerETRefs, collectionRefs))
 
@@ -567,6 +568,34 @@ function checkMissingProductSpecs(psRows) {
       message: `"${r.ElementTypeRef || r.elementTypeRef}" has no ProductCode and is not marked TBC.`,
       ref: r.ElementTypeRef || r.elementTypeRef || null,
     }))
+}
+
+// ---------------------------------------------------------------------------
+// Rule — CURRENT_MISMATCH
+// A driver's code ends in the current it is set to (SL0560A3-700mA). When the
+// ElementType's ref (ET-CCR-D-350-…) or its description ("mA: 350") names another,
+// one of them is wrong and the code is what gets ordered (5489, 5351).
+// ---------------------------------------------------------------------------
+function checkCurrentMismatch(dbData, psRows) {
+  const descOf = new Map(((dbData && dbData.element_types) || []).map(e =>
+    [String(e.ElementTypeRef || e.elementTypeRef || '').toUpperCase(), String(e.Description || e.description || '')]))
+  const issues = []
+  for (const r of psRows) {
+    if ((r.IsDeleted || r.isDeleted) === 'Y') continue
+    const ref = String(r.ElementTypeRef || r.elementTypeRef || '')
+    const code = String(r.ProductCode || r.productCode || '').trim()
+    const mA = /-(\d{2,4})\s*mA\b/i.exec(code)?.[1]
+    if (!mA) continue
+    const inRef = /^ET-CC\w*-\w-(\d{2,4})-/i.exec(ref)?.[1]
+    // one current in the description, or it is a range and says nothing about the setting
+    const inDesc = [...new Set([...(descOf.get(ref.toUpperCase()) || '').matchAll(/\bmA\s*:\s*(\d{2,4})\b|(?<![\d-])(\d{2,4})\s*mA\b/gi)].map(m => m[1] || m[2]))]
+    const other = inRef && inRef !== mA ? ['ref', inRef] : inDesc.length === 1 && inDesc[0] !== mA ? ['description', inDesc[0]] : null
+    if (other) issues.push({
+      severity: 'warning', rule: 'CURRENT_MISMATCH', ref,
+      message: `${ref} has a ${mA}mA code (${code}), but its ${other[0]} says ${other[1]}mA. Check the code before it is ordered.`,
+    })
+  }
+  return issues
 }
 
 // ---------------------------------------------------------------------------
