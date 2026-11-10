@@ -473,6 +473,8 @@ function sameSlotAs(row, partSection, partContainer = null) {
 // Store
 // ---------------------------------------------------------------------------
 
+let libraryLoading = null
+
 const useStore = create((set, get) => ({
   // -------------------------------------------------------------------------
   // State
@@ -1199,7 +1201,9 @@ const useStore = create((set, get) => ({
 
   // The tool-wide library: recipe patterns and products of every project opened before.
   library: { patterns: [], exemplars: [] },
-  async loadLibrary() {
+  // Asked for from several places as a project opens: one load at a time serves them all.
+  loadLibrary() { return (libraryLoading ||= get()._loadLibrary().finally(() => { libraryLoading = null })) },
+  async _loadLibrary() {
     try {
       const [patterns, exemplars] = await Promise.all([
         window.electronAPI?.db?.getRecipePatterns?.() ?? [],
