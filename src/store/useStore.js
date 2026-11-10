@@ -1168,16 +1168,20 @@ const useStore = create((set, get) => ({
   // Product codes their manufacturer has replaced: CODE -> { replacement, retired }. Filled
   // quietly by platform/retired.js when a companion knows; empty otherwise.
   retiredCodes: {},
+  // What a code's own body says of the fitting: CODE -> { says: 'trimmed' | 'trimless', segment }. Same source.
+  codeSays: {},
   noteRetired(rows = []) {
     set(s => {
       const next = { ...s.retiredCodes }
+      const says = { ...s.codeSays }
       for (const r of rows) {
+        if (r?.code && r.says) { says[String(r.code).trim().toUpperCase()] = { says: r.says, segment: r.segment || '' }; continue }
         // "Replaced by TBC" is a code being blanked, not a maker's renumbering (#64, #65).
         const options = (r?.maybe ? r.options || [] : []).filter(o => o.option && !/^tbc$/i.test(o.option))
         if (r?.code && options.length) next[String(r.code).trim().toUpperCase()] = { replacement: null, options: options.map(o => ({ code: o.option, used: o.used || 0 })) }
         else if (r?.code && r.replacement && !/^tbc$/i.test(String(r.replacement).trim())) next[String(r.code).trim().toUpperCase()] = { replacement: r.replacement, retired: r.retired || null, tier: r.tier || null }
       }
-      return { retiredCodes: next }
+      return { retiredCodes: next, codeSays: says }
     })
   },
 
@@ -3841,7 +3845,7 @@ const useStore = create((set, get) => ({
     const posRefs = [...new Set(recipes.map(r => r.PositionTypeRef || r.positionTypeRef).filter(Boolean))]
     const results = runValidation(dbData, psRows, recipes, positionUI, {
       recOf, members: membership(posRefs, etCollections, get().connectorPins, recOf, get().connectorExcludes),
-      collections: etCollections, containerETRefs, collectionRefs: dbCollectionRefs, ignoredPosRefs,
+      collections: etCollections, containerETRefs, collectionRefs: dbCollectionRefs, ignoredPosRefs, codeSays: get().codeSays,
     })
 
     // Ignored positions/families are out-of-scope — drop their issues so they
@@ -4697,7 +4701,7 @@ let _validateTimer = null
 useStore.subscribe((state, prev) => {
   if (state.recipes === prev.recipes && state.psRows === prev.psRows && state.elementTypes === prev.elementTypes
     && state.positionTypes === prev.positionTypes && state.positionUI === prev.positionUI
-    && state.ignoredPositionFamilies === prev.ignoredPositionFamilies) return
+    && state.ignoredPositionFamilies === prev.ignoredPositionFamilies && state.codeSays === prev.codeSays) return
   if (!state.positionTypes?.length) return
   clearTimeout(_validateTimer)
   _validateTimer = setTimeout(() => { try { useStore.getState().runValidation() } catch { /* the next change retries */ } }, 400)

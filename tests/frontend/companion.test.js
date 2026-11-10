@@ -27,9 +27,12 @@ describe('companion discovery', () => {
     vi.stubGlobal('fetch', vi.fn(async url => (String(url).includes('capabilities')
       ? json({ protocol: PROTOCOL, features: ['sweep'] })
       : json({ retired: [{ code: 'OLD-1', replacement: 'NEW-1' }],
-        maybe: [{ code: '021-1102', options: [{ option: 'FPS2020BG2000', used: 2 }, { option: 'FPS2021BG2000', used: 0 }] }] }))))
+        maybe: [{ code: '021-1102', options: [{ option: 'FPS2020BG2000', used: 2 }, { option: 'FPS2021BG2000', used: 0 }] }],
+        says: [{ code: 'zh-infd-27', says: 'trimmed', segment: 'INFD', projects: 1 }] }))))
     await sweepCodes([{ code: 'OLD-1' }, { code: '021-1102' }])
     const { retiredCodes } = useStore.getState()
+    expect(useStore.getState().codeSays).toEqual({ 'ZH-INFD-27': { says: 'trimmed', segment: 'INFD' } })
+    expect(retiredFor(retiredCodes, 'zh-infd-27')).toBeNull()
     expect(retiredFor(retiredCodes, 'OLD-1')).toEqual({ replacement: 'NEW-1', retired: null, tier: null })
     const m = retiredFor(retiredCodes, '021-1102')
     expect(m.replacement).toBeNull()
