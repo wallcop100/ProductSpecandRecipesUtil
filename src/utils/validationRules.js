@@ -12,6 +12,7 @@ import { productKey, hasProductIdentity } from './productCodes'
 import { DIM_QTY_COMPONENTS } from './constants.js'
 import { connectorGapsForPosition } from './collectionStatus.js'
 import { alignmentGaps } from './specAlignment.js'
+import { jobOf } from './codeJobs.js'
 
 // Ref-token vocabularies for tag-driven recipe checks. Tokens are matched as
 // hyphen-delimited segments of the (uppercased) ElementTypeRef, which avoids the
@@ -110,6 +111,8 @@ function checkTrimMismatch(dbData, psRows, rsRows, codeSays) {
       if ((r.PositionTypeRef || r.positionTypeRef) !== pos || !live(r) || seen.has(ref.toUpperCase())) continue
       seen.add(ref.toUpperCase())
       const code = codeOf.get(ref.toUpperCase()) || ''
+      // Only the fitting: a plaster-in frame is named trimless whatever sits in it.
+      if (jobOf({ ref, code }).slot !== 'FITTING') continue
       const c = codeSays[code.toUpperCase()]
       if (c && c.says !== said[0]) issues.push({
         severity: 'warning', rule: 'TRIM_MISMATCH', ref: pos,

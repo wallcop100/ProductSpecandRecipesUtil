@@ -39,6 +39,16 @@ describe('companion discovery', () => {
     expect(m.options).toEqual([{ code: 'FPS2020BG2000', used: 2 }, { code: 'FPS2021BG2000', used: 0 }])
     expect(newerCodes(m)).toBe('FPS2020BG2000 or FPS2021BG2000')
   })
+  it('a code typed after the project opened is asked about', async () => {
+    const { default: useStore } = await import('../../src/store/useStore')
+    const { resetRetired } = await import('../../src/platform/retired')
+    resetRetired()
+    vi.stubGlobal('fetch', vi.fn(async url => (String(url).includes('capabilities')
+      ? json({ protocol: PROTOCOL, features: ['sweep'] })
+      : json({ retired: [], maybe: [], says: [{ code: 'NT-INXD-T1', says: 'trimmed', segment: 'INXD', projects: 1 }] }))))
+    useStore.setState({ psRows: [{ ElementTypeRef: 'ET-PS-01', ProductCode: 'NT-INXD-T1', Manufacturer: 'Orluna' }] })
+    await vi.waitFor(() => expect(useStore.getState().codeSays['NT-INXD-T1']?.says).toBe('trimmed'), { timeout: 4000 })
+  })
   it('is null for an unknown protocol', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => json({ protocol: 'something-else/9', features: ['sweep'] })))
     expect(await getCompanion()).toBeNull()

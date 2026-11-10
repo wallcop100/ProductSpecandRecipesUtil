@@ -791,4 +791,10 @@ describe('TRIM_MISMATCH', () => {
   test('silent when nothing is known about the codes', () => {
     expect(found({})).toEqual([])
   })
+  test('only the fitting is read: a frame named trimless on a trimmed position is not flagged', () => {
+    const frame = [makePsRow('ET-FRAME-01', 'JIGSAW/MIDI/INFINITY')]
+    const rows = [makeRsRow({ positionTypeRef: 'A06m', contextRef: 'A06m', elementTypeRef: 'ET-FRAME-01', isContractItem: 'Y' })]
+    const issues = runValidation(db, frame, rows, {}, { codeSays: { 'JIGSAW/MIDI/INFINITY': { says: 'trimless', segment: 'JIGSAW' } } })
+    expect(issues.filter(i => i.rule === 'TRIM_MISMATCH')).toEqual([])
+  })
 })
