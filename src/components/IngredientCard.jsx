@@ -20,7 +20,7 @@ import { roleOf, QTY_CONFIRM_ROLES } from '../utils/recipePatterns'
 import { C } from '../styles/tokens'
 import { retiredFor, newerCodes } from '../platform/retired'
 import { useScreenView } from './useScreenView'
-import { noteCodeChange } from './Corrections'
+import { noteCodeChange, NotRightModal, sendCorrection, sendNote } from './Corrections'
 import { partMatches } from '../utils/positionQuery'
 
 // A part's tree line in its wrapper's contents and its card when exploded share this, so one morphs into the other (#74).
@@ -839,6 +839,7 @@ function FieldInput({ label, value, onChange, width = 80, type = 'text', min, st
 function ProductInline({ etRef, manufacturer, productCode, onOpenProductSpec }) {
   const updatePSRow = useStore(s => s.updatePSRow)
   const retired = useStore(s => retiredFor(s.retiredCodes, productCode))
+  const [notRight, setNotRight] = useState(false)
   const [editing, setEditing] = useState(false)
   const [mfr, setMfr] = useState('')
   const [code, setCode] = useState('')
@@ -893,6 +894,18 @@ function ProductInline({ etRef, manufacturer, productCode, onOpenProductSpec }) 
           </span>
         </OverlayTrigger>
       )}
+      {/* the same answer as the Product Spec's, where the line is read (9NDTLH) */}
+      {retired && <>
+        <button type="button" className="btn btn-link p-0 text-muted text-nowrap flex-shrink-0" style={{ fontSize: 10, lineHeight: 1 }} data-testid="retired-not-right" onClick={() => setNotRight(true)}>Not right…</button>
+        <NotRightModal key={`nr-${productCode}`} show={notRight} onHide={() => setNotRight(false)}
+          title={`What's not right about the newer code for ${productCode}?`} placeholder="e.g. the code to order now"
+          facts={[['Code', <span className="font-monospace">{productCode}</span>], ['Suggested', <span className="font-monospace">{newerCodes(retired)}</span>]]}
+          onSend={a => {
+            if (a.right) updatePSRow(etRef, { ProductCode: a.right })
+            if (a.right) sendCorrection(a, { kind: 'supersession', code: productCode, replacement: a.right, manufacturer })
+            else sendNote(`Not right: ${productCode} → ${newerCodes(retired)}${a.note ? `\n${a.note}` : ''}`, `supersession ${productCode}`)
+          }} />
+      </>}
     </span>
   )
 }

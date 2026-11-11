@@ -1,4 +1,5 @@
 import React from 'react'
+import { OverlayTrigger, Popover } from 'react-bootstrap'
 import MaterialIcon from './MaterialIcon'
 import { useCompanion } from '../platform/companion'
 import { C } from '../styles/tokens'
@@ -12,10 +13,14 @@ import { C } from '../styles/tokens'
 export default function CompanionStatus() {
   const companion = useCompanion()
   if (typeof location !== 'undefined' && location.hostname.endsWith('github.io')) return null
+  // The same popover as the Saved chip beside it (58QRQM): it opens where there is room, not upward off the toolbar.
   return (
-    <span className="ms-2 d-inline-flex" data-testid="companion-status" data-connected={companion ? 'true' : 'false'}>
-      <MaterialIcon name={companion ? 'cloud' : 'cloud_off'} size={18} style={{ color: companion ? C.companion : C.muted }}
-        title={companion ? 'Connected' : 'Offline: nothing is learned or shared'} />
-    </span>
+    <OverlayTrigger placement="auto" trigger={['hover', 'focus']} overlay={
+      <Popover style={{ maxWidth: 320 }}><Popover.Body style={{ fontSize: 12 }}>{companion ? 'Connected' : 'Offline: nothing is learned or shared'}</Popover.Body></Popover>
+    }>
+      <span className="ms-2 d-inline-flex" tabIndex={0} style={{ cursor: 'help' }} data-testid="companion-status" data-connected={companion ? 'true' : 'false'}>
+        <MaterialIcon name={companion ? 'cloud' : 'cloud_off'} size={18} style={{ color: companion ? C.companion : C.muted }} />
+      </span>
+    </OverlayTrigger>
   )
 }
