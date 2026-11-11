@@ -58,7 +58,7 @@ const refOf = r => r.elementTypeRef || r.ElementTypeRef || ''
  */
 // Rules whose fix lives on the Product Spec screen (ref is an ET ref); all
 // others are recipe rules whose ref is a PositionTypeRef.
-const SPEC_RULES = new Set(['DUPLICATE_PRODUCT_CODE', 'MISSING_PRODUCT_CODE', 'MISSING_PRODUCT_SPEC_ROW', 'ELEMENT_TYPE_NOT_IN_DB', 'CURRENT_MISMATCH'])
+const SPEC_RULES = new Set(['DUPLICATE_PRODUCT_CODE', 'MISSING_PRODUCT_CODE', 'MISSING_PRODUCT_SPEC_ROW', 'ELEMENT_TYPE_NOT_IN_DB'])
 
 export function runValidation(dbData, psRows, rsRows, positionUI,
   { collections = [], containerETRefs = new Set(), collectionRefs = [], ignoredPosRefs = new Set(), recOf = null, members = null } = {}) {
@@ -78,7 +78,7 @@ export function runValidation(dbData, psRows, rsRows, positionUI,
   issues.push(...checkExteriorIPConnectors(rsRows, positionUI))
   issues.push(...checkMissingProductSpecs(psRows))
   issues.push(...checkDanglingElementTypeRefs(dbData, psRows, rsRows))
-  issues.push(...checkCurrentMismatch(dbData, psRows))
+  issues.push(...checkCurrentMismatch(dbData, psRows, rsRows))
   issues.push(...checkBlankRecipeContainer(rsRows))
   issues.push(...checkSpecAlignment(dbData, psRows, rsRows, ignoredPosRefs, containerETRefs, collectionRefs))
 
@@ -576,7 +576,7 @@ function checkMissingProductSpecs(psRows) {
 // ElementType's ref (ET-CCR-D-350-…) or its description ("mA: 350") names another,
 // one of them is wrong and the code is what gets ordered (5489, 5351).
 // ---------------------------------------------------------------------------
-function checkCurrentMismatch(dbData, psRows) {
+function checkCurrentMismatch(dbData, psRows, rsRows) {
   const descOf = new Map(((dbData && dbData.element_types) || []).map(e =>
     [String(e.ElementTypeRef || e.elementTypeRef || '').toUpperCase(), String(e.Description || e.description || '')]))
   const issues = []
@@ -590,8 +590,11 @@ function checkCurrentMismatch(dbData, psRows) {
     // one current in the description, or it is a range and says nothing about the setting
     const inDesc = [...new Set([...(descOf.get(ref.toUpperCase()) || '').matchAll(/\bmA\s*:\s*(\d{2,4})\b|(?<![\d-])(\d{2,4})\s*mA\b/gi)].map(m => m[1] || m[2]))]
     const other = inRef && inRef !== mA ? ['ref', inRef] : inDesc.length === 1 && inDesc[0] !== mA ? ['description', inDesc[0]] : null
-    if (other) issues.push({
-      severity: 'warning', rule: 'CURRENT_MISMATCH', ref,
+    // one per position that uses it: the position's pip is where a warning is seen
+    const users = new Set(rsRows.filter(x => (x.IsDeleted || x.isDeleted) !== 'Y' && String(x.ElementTypeRef || x.elementTypeRef || '').toUpperCase() === ref.toUpperCase())
+      .map(x => x.PositionTypeRef || x.positionTypeRef).filter(Boolean))
+    if (other) for (const pos of users) issues.push({
+      severity: 'warning', rule: 'CURRENT_MISMATCH', ref: pos,
       message: `${ref} has a ${mA}mA code (${code}), but its ${other[0]} says ${other[1]}mA. Check the code before it is ordered.`,
     })
   }

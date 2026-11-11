@@ -4,7 +4,7 @@ import { runValidation } from '../../src/utils/validationRules.js'
 describe('CURRENT_MISMATCH', () => {
   const run = (ref, code, description = '') => runValidation(
     { element_types: [{ ElementTypeRef: ref, Description: description }], position_types: [] },
-    [{ ElementTypeRef: ref, Manufacturer: 'EldoLED', ProductCode: code }], [], {},
+    [{ ElementTypeRef: ref, Manufacturer: 'EldoLED', ProductCode: code }], [{ PositionTypeRef: 'D01', ElementTypeRef: ref }], {},
   ).filter(i => i.rule === 'CURRENT_MISMATCH')
 
   test('a code set to another current than the ref or the description is flagged', () => {
@@ -12,7 +12,7 @@ describe('CURRENT_MISMATCH', () => {
     expect(run('ET-CCR-D-350-2CH-02', 'SL0560A3-700MA', 'for remote fittings (mA: 350)')[0].message).toMatch(/700mA code.*ref says 350mA/)
     // 5351: ref and code agree, the description is the odd one
     expect(run('ET-CCR-D-250-2CH-01', 'DL0562A3-250mA', 'with lightshape (mA:350)')[0].message).toMatch(/description says 350mA/)
-    expect(run('ET-CCR-D-250-2CH-01', 'DL0562A3-250mA', 'with lightshape (mA:350)')[0].fixKind).toBe('spec')
+    expect(run('ET-CCR-D-250-2CH-01', 'DL0562A3-250mA', 'with lightshape (mA:350)')[0].ref).toBe('D01')
   })
 
   test('agreement, a range, and codes with no current say nothing', () => {
