@@ -64,7 +64,8 @@ function build(features) {
      *  [{ code, manufacturer, options: [{ option, used }], maybe: true }] for those with several possible successors. */
     sweep: has('sweep') ? async codes => {
       const r = await quiet(post('./api/products/sweep', { codes }))
-      return [...(r?.retired || []), ...(r?.maybe || []).map(m => ({ ...m, maybe: true }))]
+      // then [{ code, says: 'trimmed' | 'trimless', segment }] for codes whose body says which (validation's TRIM_MISMATCH)
+      return [...(r?.retired || []), ...(r?.maybe || []).map(m => ({ ...m, maybe: true })), ...(r?.says || [])]
     } : null,
 
     /** Exemplars from OTHER projects for these makers, in style_exemplars row shape. */

@@ -772,3 +772,29 @@ describe('ROW_HAS_NO_ROLE — every row is design or contract', () => {
     expect(issues.filter(i => i.rule === 'ROW_HAS_NO_ROLE')).toHaveLength(0)
   })
 })
+
+describe('TRIM_MISMATCH', () => {
+  const db = { element_types: [], position_types: [
+    { PositionTypeRef: 'A02m', Description: 'Trimless adjustable downlight. Medium beam.' },
+    { PositionTypeRef: 'A06m', Description: 'Trimmed adjustable downlight' },
+    { PositionTypeRef: 'A09', Description: 'Downlight' }] }
+  const ps = [makePsRow('ET-PS-03', 'ZH-INFD-27-D-M-NA-AWB-54 (Finish: RAL 9010)')]
+  const rs = ['A02m', 'A06m', 'A09'].map(p => makeRsRow({ positionTypeRef: p, contextRef: p, elementTypeRef: 'ET-PS-03', isContractItem: 'Y' }))
+  const codeSays = { 'ZH-INFD-27-D-M-NA-AWB-54 (FINISH: RAL 9010)': { says: 'trimmed', segment: 'INFD' } }
+  const found = opts => runValidation(db, ps, rs, {}, opts).filter(i => i.rule === 'TRIM_MISMATCH')
+
+  test('a trimless position with a trimmed code is flagged; a trimmed or unstated one is not', () => {
+    const issues = found({ codeSays })
+    expect(issues.map(i => i.ref)).toEqual(['A02m'])
+    expect(issues[0].message).toContain('described as trimless, but ET-PS-03 has a trimmed code')
+  })
+  test('silent when nothing is known about the codes', () => {
+    expect(found({})).toEqual([])
+  })
+  test('only the fitting is read: a frame named trimless on a trimmed position is not flagged', () => {
+    const frame = [makePsRow('ET-FRAME-01', 'JIGSAW/MIDI/INFINITY')]
+    const rows = [makeRsRow({ positionTypeRef: 'A06m', contextRef: 'A06m', elementTypeRef: 'ET-FRAME-01', isContractItem: 'Y' })]
+    const issues = runValidation(db, frame, rows, {}, { codeSays: { 'JIGSAW/MIDI/INFINITY': { says: 'trimless', segment: 'JIGSAW' } } })
+    expect(issues.filter(i => i.rule === 'TRIM_MISMATCH')).toEqual([])
+  })
+})

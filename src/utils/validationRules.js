@@ -12,6 +12,7 @@ import { productKey, hasProductIdentity } from './productCodes'
 import { DIM_QTY_COMPONENTS } from './constants.js'
 import { connectorGapsForPosition } from './collectionStatus.js'
 import { alignmentGaps } from './specAlignment.js'
+import { jobOf } from './codeJobs.js'
 
 // Ref-token vocabularies for tag-driven recipe checks. Tokens are matched as
 // hyphen-delimited segments of the (uppercased) ElementTypeRef, which avoids the
@@ -61,7 +62,7 @@ const refOf = r => r.elementTypeRef || r.ElementTypeRef || ''
 const SPEC_RULES = new Set(['DUPLICATE_PRODUCT_CODE', 'MISSING_PRODUCT_CODE', 'MISSING_PRODUCT_SPEC_ROW', 'ELEMENT_TYPE_NOT_IN_DB'])
 
 export function runValidation(dbData, psRows, rsRows, positionUI,
-  { collections = [], containerETRefs = new Set(), collectionRefs = [], ignoredPosRefs = new Set(), recOf = null, members = null } = {}) {
+  { collections = [], containerETRefs = new Set(), collectionRefs = [], ignoredPosRefs = new Set(), recOf = null, members = null, codeSays = {} } = {}) {
   const issues = []
 
   issues.push(...checkMissingIsDesign(rsRows, positionUI))
@@ -79,11 +80,46 @@ export function runValidation(dbData, psRows, rsRows, positionUI,
   issues.push(...checkMissingProductSpecs(psRows))
   issues.push(...checkDanglingElementTypeRefs(dbData, psRows, rsRows))
   issues.push(...checkBlankRecipeContainer(rsRows))
+  issues.push(...checkTrimMismatch(dbData, psRows, rsRows, codeSays))
   issues.push(...checkSpecAlignment(dbData, psRows, rsRows, ignoredPosRefs, containerETRefs, collectionRefs))
 
   // Tag each issue with where its "fix" lives so the UI can route correctly.
   for (const i of issues) i.fixKind = SPEC_RULES.has(i.rule) ? 'spec' : 'position'
 
+  return issues
+}
+
+// ---------------------------------------------------------------------------
+// Rule — TRIM_MISMATCH
+// The position is described as trimless and a part's code is a trimmed one, or the
+// other way round. What a code says comes from a companion (codeSays); without one
+// the rule is silent. On 5642 this difference had the wrong fittings ordered.
+// ---------------------------------------------------------------------------
+const TRIM_WORDS = [['trimless', /\btrim\s?-?\s?less\b/i], ['trimmed', /\btrimmed\b/i]]
+function checkTrimMismatch(dbData, psRows, rsRows, codeSays) {
+  if (!Object.keys(codeSays || {}).length) return []
+  const live = r => (r.IsDeleted || r.isDeleted) !== 'Y'
+  const codeOf = new Map(psRows.filter(live).map(r => [String(r.ElementTypeRef || r.elementTypeRef || '').toUpperCase(), String(r.ProductCode || r.productCode || '').trim()]))
+  const issues = []
+  for (const pt of dbData?.position_types || []) {
+    const pos = pt.PositionTypeRef || pt.positionTypeRef
+    const said = TRIM_WORDS.filter(([, rx]) => rx.test(pt.Description || pt.description || '')).map(([w]) => w)
+    if (!pos || said.length !== 1) continue
+    const seen = new Set()
+    for (const r of rsRows) {
+      const ref = r.ElementTypeRef || r.elementTypeRef || ''
+      if ((r.PositionTypeRef || r.positionTypeRef) !== pos || !live(r) || seen.has(ref.toUpperCase())) continue
+      seen.add(ref.toUpperCase())
+      const code = codeOf.get(ref.toUpperCase()) || ''
+      // Only the fitting: a plaster-in frame is named trimless whatever sits in it.
+      if (jobOf({ ref, code }).slot !== 'FITTING') continue
+      const c = codeSays[code.toUpperCase()]
+      if (c && c.says !== said[0]) issues.push({
+        severity: 'warning', rule: 'TRIM_MISMATCH', ref: pos,
+        message: `${pos} is described as ${said[0]}, but ${ref} has a ${c.says} code (${code}${c.segment ? `: ${c.segment} is the ${c.says} body` : ''}). Check the code before it is ordered.`,
+      })
+    }
+  }
   return issues
 }
 

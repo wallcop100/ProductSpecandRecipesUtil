@@ -30,6 +30,15 @@ export async function sweepCodes(codes = []) {
   }
 }
 
+// A code typed or corrected after the project opened is asked about too; one already asked is skipped.
+let _sweepTimer = null
+useStore.subscribe((state, prev) => {
+  if (state.psRows === prev.psRows) return
+  clearTimeout(_sweepTimer)
+  _sweepTimer = setTimeout(() => sweepCodes((useStore.getState().psRows || []).filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
+    .map(r => ({ code: r.ProductCode || r.productCode, manufacturer: r.Manufacturer || r.manufacturer }))).catch(() => {}), 1500)
+})
+
 /** The replacement for a code, or null. */
 export const retiredFor = (retiredCodes, code) => retiredCodes?.[String(code || '').trim().toUpperCase()] || null
 
