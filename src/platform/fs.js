@@ -22,6 +22,7 @@
  */
 
 import { idbGet, idbSet, idbDel } from './idb'
+import { fixtureDirectory } from './fixture'
 
 const HANDLE_KEY = 'project-dirs'   // { [projectKey]: { handle, name } }
 
@@ -102,7 +103,7 @@ export async function duplicateGroups() {
 export async function pickDirectory() {
   assertSupported()
   // 'read' — the forms are never written. Snapshotting escalates on demand.
-  const handle = await window.showDirectoryPicker({ id: 'recipe-builder-project', mode: 'read' })
+  const handle = (await fixtureDirectory()) || await window.showDirectoryPicker({ id: 'recipe-builder-project', mode: 'read' })
 
   const existing = await findHandleKey(handle)
   if (existing) {

@@ -106,4 +106,36 @@ describe('companion discovery', () => {
     await c.projectItems('4343')
     expect(f.mock.calls[4][1].headers['X-PSR-Proof']).toBe('1761200000.' + 'a'.repeat(32))
   })
+
+  it('proves again and retries once when a project call is refused (the token ran out)', async () => {
+    let token = 0, refuse = false
+    const f = vi.fn(async (url, init) => {
+      const u = String(url)
+      if (u.includes('capabilities')) return json({ protocol: PROTOCOL, features: ['projects', 'proof'] })
+      if (u === './api/proof') return json({ nonce: 'N' })
+      if (u.endsWith('/proof')) return json({ token: `t${++token}` })
+      if (refuse && init.headers['X-PSR-Proof'] === 't1') return json({ error: 'forbidden' }, { status: 403 })
+      return json({ items: [init.headers['X-PSR-Proof']] })
+    })
+    vi.stubGlobal('fetch', f)
+    const c = await getCompanion()
+    await c.prove('4343', [{ Ref: 'A1', TypeRef: 'T' }])
+    refuse = true
+    expect(await c.projectItems('4343')).toEqual({ items: ['t2'] })
+    // never proven here: a refusal stays a quiet null, with no proof attempt
+    const before = f.mock.calls.length
+    refuse = false
+    vi.stubGlobal('fetch', vi.fn(async () => json({}, { status: 403 })))
+    expect(await c.projectItems('9999')).toBeNull()
+    expect(before).toBe(f.mock.calls.length)
+  })
+
+  it('gives up on a call that never answers', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url, init) => {
+      if (String(url).includes('capabilities')) return json({ protocol: PROTOCOL, features: ['kinds'] })
+      expect(init.signal).toBeInstanceOf(AbortSignal)
+      throw new DOMException('timed out', 'TimeoutError')
+    }))
+    expect(await (await getCompanion()).kinds()).toBeNull()
+  })
 })
