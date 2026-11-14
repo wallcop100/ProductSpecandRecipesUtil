@@ -494,12 +494,15 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     const known_ = new Set(resolutions.map(r => String(r.formRef).toLowerCase()))
     const added = map.pt ? resolveFormRefs(built.map(r => r.positionType).filter(f => !known_.has(String(f).trim().toLowerCase())), positionTypes) : []
     const nextRes = [...resolutions, ...added]
+    // Detached while the file was being read: the Form is gone, and this must not put it back.
+    if (detached()) return 0
     setCompareBase({ name: `${source?.name || 'the Form'} (before refresh)`, rows: rows.map(diffRow) })
     session.load({ rows: built, rules, assignments, refOverrides, keptSeparate, dirStats })
     setResolutions(nextRes)
     setStagedRefs(s => s.filter(f => !changed.has(f)))
     setFilepath(token); setHeaders(data.headers); setRawRows(data.rows)
     const meta = await fileMeta(token)
+    if (detached()) return 0
     setSource(meta)
     const compare = { name: `${source?.name || 'the Form'} (before refresh)`, rows: rows.map(diffRow) }
     // Saved now: this screen may close before the debounced save would run.

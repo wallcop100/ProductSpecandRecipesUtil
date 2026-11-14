@@ -474,6 +474,7 @@ function sameSlotAs(row, partSection, partContainer = null) {
 // ---------------------------------------------------------------------------
 
 let libraryLoading = null
+let _checkRun = 0   // checkFiles: the latest run
 
 const useStore = create((set, get) => ({
   // -------------------------------------------------------------------------
@@ -786,7 +787,11 @@ const useStore = create((set, get) => ({
       formCaptures: formCaptures ?? null,
       importDraft: importDraft ?? null,
       pendingScreen: null,
-      // Reset transient state
+      // Reset transient state: nothing held for the last project carries into this one.
+      designPrompt: null, recipeError: null, pendingPaste: null, pendingPaletteTab: null,
+      uiRequest: null, specIntent: null, teaching: null, lastAddedRowId: null,
+      selectedRowIds: [], selectMode: false, companionPending: {}, offeredJobs: {},
+      patchBatch: null, syncStatus: null,
       psChanges: [],
       rsChanges: [],
       dbChanges: [],
@@ -920,7 +925,6 @@ const useStore = create((set, get) => ({
   goBackPosition() {
     const h = get().positionHistory
     if (h.length === 0) return
-    set({ positionHistory: h.slice(0, -1) })
     get().setActivePosition(h[h.length - 1], { back: true })
   },
 
@@ -934,21 +938,27 @@ const useStore = create((set, get) => ({
 
   /** Open a position from another screen, remembering that screen for Back. */
   openPositionFrom(screen, ref) {
-    get().setActivePosition(ref)
-    set({ positionHistory: [], returnScreen: screen })
+    get().setActivePosition(ref, { returnScreen: screen })
   },
 
-  setActivePosition(ref, { back = false } = {}) {
+  /**
+   * `back`: this is Back, so the position gone back to leaves the history. `returnScreen`: opened
+   * from another screen, which Back returns to. Nothing changes until the move happens: held at
+   * the design prompt, "Stay" leaves the history, the return screen and any error as they were.
+   */
+  setActivePosition(ref, { back = false, returnScreen } = {}) {
     const from = get().activePositionRef
+    if (from && ref !== from && get().settleDesign(from) === 'choose') {
+      set({ designPrompt: { posRef: from, then: () => get().setActivePosition(ref, { back, returnScreen }) } })
+      return
+    }
     if (!ref) set({ returnScreen: null })
     // An error about another position (a refused add) must not follow you here (Y7QVN4).
     if (ref !== from && get().recipeError) set({ recipeError: null })
-    if (from && ref !== from && get().settleDesign(from) === 'choose') {
-      set({ designPrompt: { posRef: from, then: () => get().setActivePosition(ref, { back }) } })
-      return
-    }
+    if (returnScreen !== undefined) set({ positionHistory: [], returnScreen })
+    else if (back) set(s => ({ positionHistory: s.positionHistory.slice(0, -1) }))
     // Where you came from, so Next can be undone with Back.
-    if (from && ref !== from && !back) {
+    else if (from && ref !== from) {
       set(s => ({ positionHistory: [...s.positionHistory, from].slice(-50) }))
     }
     // Going to another position leaves any ElementType editor. Left open, it kept
@@ -3913,16 +3923,27 @@ const useStore = create((set, get) => ({
    * → counts, or null when the files could not be read (a half-synced file: try again).
    */
   async checkFiles() {
-    const { paths, localElementTypes = [] } = get()
+    const { paths } = get()
     if (!paths?.ps && !paths?.rs && !paths?.db) return null
+    // Only the latest check of the project still open settles: a slower, older read (two
+    // workbooks settling apart, or a project opened meanwhile) must not put its rows in.
+    const run = ++_checkRun
+    const stale = () => run !== _checkRun || get().paths !== paths
     set(s => ({ syncStatus: { ...(s.syncStatus || {}), checking: true, error: null } }))
+    const failed = err => {
+      if (!stale()) set(s => ({ syncStatus: { ...(s.syncStatus || {}), checking: false, error: err?.message || String(err) } }))
+      return null
+    }
     let data
     try {
       data = await importFiles({ db: paths.dbs || (paths.db ? [paths.db] : []), ps: paths.ps, rs: paths.rs })
-    } catch (err) {
-      set(s => ({ syncStatus: { ...(s.syncStatus || {}), checking: false, error: err?.message || String(err) } }))
-      return null
-    }
+    } catch (err) { return failed(err) }
+    if (stale()) return null
+    try { return get()._applyCheck(data) } catch (err) { return failed(err) }   // never left "checking"
+  },
+
+  _applyCheck(data) {
+    const { localElementTypes = [] } = get()
     const dbEts = data.db?.element_types ?? []
     const dbRefs = new Set(dbEts.map(e => String(e.ElementTypeRef || '').toLowerCase()))
     const fresh = {
@@ -4737,10 +4758,15 @@ export async function savePendingNow() {
     await api.setPendingChanges(projectId, psChanges, rsChanges)
     if (api.setPref) await api.setPref(projectId, 'pending_db_changes', JSON.stringify(dbChanges))
     if (api.flush) await api.flush()
-    useStore.setState({ saveStatus: 'saved', savedAt: Date.now() })
+    // Changed while it was being written (or another project opened): what is on screen is not
+    // saved yet. The change's own timer saves it; until then the indicator stays on "Saving…".
+    const now = useStore.getState()
+    if (now.projectId === projectId && now.psChanges === psChanges && now.rsChanges === rsChanges && now.dbChanges === dbChanges) {
+      useStore.setState({ saveStatus: 'saved', savedAt: Date.now() })
+    }
     return true
   } catch {
-    useStore.setState({ saveStatus: 'error' })
+    if (useStore.getState().projectId === projectId) useStore.setState({ saveStatus: 'error' })
     return false
   }
 }
