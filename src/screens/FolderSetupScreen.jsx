@@ -1,5 +1,5 @@
 import InfoTip from '../components/InfoTip'
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import {
   Container, Card, Button, Alert, Spinner, Badge, Form, Row, Col, Dropdown,
 } from 'react-bootstrap'
@@ -103,7 +103,15 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
    * a permission request inside the user gesture that triggered it, and any earlier await
    * ends that gesture. Do not reorder this.
    */
+  // One open at a time: `opening` / `detecting` only disable the cards once the browser's
+  // access prompt is answered, and a second click before that opened two projects at once.
+  const openingSaved = useRef(false)
   async function handleOpenSaved(p) {
+    if (openingSaved.current) return
+    openingSaved.current = true
+    try { await openSaved(p) } finally { openingSaved.current = false }
+  }
+  async function openSaved(p) {
     setDetectError(null)
     const granted = await window.electronAPI.requestFolderAccess?.(p.folder_path)
     if (!granted) {
@@ -363,7 +371,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
     const absDbs = override?.files?.dbs ?? dbFilenames
     const absPs = override?.files?.ps ?? psFilename
     const absRs = override?.files?.rs ?? rsFilename
-    if (!absDbs.length) return
+    if (!absDbs.length || opening) return
     const restoring = override ? null : restore
 
     setOpening(true)

@@ -212,6 +212,14 @@ export async function openProject({
   let ignoredPositionFamilies = []
   try { ignoredPositionFamilies = JSON.parse(ignoredFamiliesPref || '[]') } catch { /* ignore */ }
 
+  // Read before loadProject: from there to the restore nothing may wait, or the save that
+  // loadProject's empty queues start could write them over the saved changes.
+  let savedBatch = null
+  try {
+    const raw = projectId != null ? await window.electronAPI.db.getPref(projectId, 'patch_batch') : null
+    savedBatch = raw ? JSON.parse(raw) : null
+  } catch { /* no batch */ }
+
   loadProject({
     projectId,
     projectNumber,
@@ -256,12 +264,8 @@ export async function openProject({
   // They meet the workbooks as they are now (reconcile.js): whatever a patch put in while the app
   // was closed leaves the queue here instead of being pushed back in.
   let restored = 0
-  try {
-    const raw = projectId != null ? await window.electronAPI.db.getPref(projectId, 'patch_batch') : null
-    const batch = raw ? JSON.parse(raw) : null
-    // A batch with no saved changes behind it has nothing left to run (UYTZXP: a fresh import showed it).
-    if (batch?.n && pendingChanges) useStore.setState({ patchBatch: batch })
-  } catch { /* no batch */ }
+  // A batch with no saved changes behind it has nothing left to run (UYTZXP: a fresh import showed it).
+  if (savedBatch?.n && pendingChanges) useStore.setState({ patchBatch: savedBatch })
   if (pendingChanges) {
     const counts = useStore.getState().restorePendingChanges(pendingChanges)
     const sum = k => Object.values(counts).reduce((n, c) => n + c[k], 0)
