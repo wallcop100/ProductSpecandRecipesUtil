@@ -69,7 +69,6 @@ export default function NewETModal({
   const [family, setFamily]         = useState('')
   const [manufacturer, setMfr]      = useState('')
   const [productCode, setCode]      = useState('')
-  const [psDesc, setPsDesc]         = useState('')
   const [isTBC, setTBC]             = useState(null)
   const [isPropTBC, setPropTBC]     = useState(null)
   const [notes, setNotes]           = useState('')
@@ -80,7 +79,7 @@ export default function NewETModal({
   const formRow = useMemo(() => show ? formColumnsFor(importDraft, formRefs || importContext?.positionTypes, importContext?.code || prefill?.productCode, { buildRefMap, targetFor }) : null,
     [show, importDraft, formRefs, importContext, prefill?.productCode])
   const lastField = useRef('name')
-  const setters = { ref: setRef, name: setName, description: setDescription, family: setFamily, manufacturer: setMfr, productCode: setCode, psDesc: setPsDesc, notes: setNotes, extNotes: setExtNotes, finish: setFinish }
+  const setters = { ref: setRef, name: setName, description: setDescription, family: setFamily, manufacturer: setMfr, productCode: setCode, notes: setNotes, extNotes: setExtNotes, finish: setFinish }
   const putValue = v => { const set = setters[lastField.current]; set?.(cur => cur.trim() ? `${cur.trimEnd()} ${v}` : v) }
 
   // Seed on open, but ONLY for a draft we have not started. The modal stays mounted,
@@ -94,11 +93,10 @@ export default function NewETModal({
 
     setRef(prefill.ref || '')
     setName(prefill.name || '')
-    setDescription(prefill.description || '')
+    setDescription(prefill.description || prefill.componentDescription || '')   // one description, shared with the Product Spec
     setFamily(prefill.family || '')
     setMfr(prefill.manufacturer || '')
     setCode(prefill.productCode || '')
-    setPsDesc(prefill.componentDescription || '')
     setTBC(null); setPropTBC(null); setNotes(''); setExtNotes('')
     setFinish('')
     setSaving(false)
@@ -196,11 +194,12 @@ export default function NewETModal({
         const canon = CANON_FAMILIES.find(f => f.ref.toLowerCase() === family.trim().toLowerCase())
         createElementType({ ref: family.trim(), description: canon?.description || null, family: familyParent.trim() || canon?.parent || null, isCollection: true })
       }
+      const fullDesc = finish.trim() ? withFinish(description, finish.trim()) : description.trim()
       createElementType({
         ref: trimRef,
         name: name.trim() || null,
         // Finish goes in brackets after both descriptions (NQLUFQ).
-        description: (finish.trim() ? withFinish(description, finish.trim()) : description.trim()) || null,
+        description: fullDesc || null,
         family: family.trim() || null,
       })
 
@@ -209,13 +208,13 @@ export default function NewETModal({
       if (manufacturer.trim()) psDefaults.Manufacturer = manufacturer.trim()
       if (productCode.trim())  psDefaults.ProductCode  = productCode.trim()
       const existing = psRows.find(p => (p.ElementTypeRef || p.elementTypeRef || '').toLowerCase() === trimRef.toLowerCase())
-      if (psDesc.trim())       psDefaults.ComponentDescription = psDesc.trim()
       // Product Spec and ElementType both get these (92YN3U); addPSRow carries them across.
       if (isTBC)               psDefaults.IsTBC = 'Y'
       if (isPropTBC)           psDefaults.IsPropertiesTBC = 'Y'
       if (notes.trim())        psDefaults.InternalNotesText = notes.trim()
       if (extNotes.trim())     psDefaults.ExternalNotesText = extNotes.trim()
-      if (finish.trim())       psDefaults.ComponentDescription = withFinish(psDesc.trim() || existing?.ComponentDescription, finish.trim())
+      // The description is shared, but alone it does not make a Product Spec row.
+      if (fullDesc && (existing || Object.keys(psDefaults).length)) psDefaults.ComponentDescription = fullDesc
       if (Object.keys(psDefaults).length) {
         if (existing) updatePSRow(trimRef, psDefaults)
         else addPSRow(trimRef, psDefaults)
@@ -366,6 +365,24 @@ export default function NewETModal({
           )}
         </Form.Group>
 
+        {/* Shared by the ElementType and its Product Spec row (kept in step, 92YN3U). */}
+        <div className="d-flex align-items-center gap-2 mb-3">
+          <FlagPill label="TBC" value={isTBC} onChange={setTBC} activeVariant="danger" />
+          <FlagPill label="Properties TBC" value={isPropTBC} onChange={setPropTBC} activeVariant="warning" />
+        </div>
+        <div className="row g-2 mb-3">
+          <div className="col-6">
+            <Form.Label style={{ fontSize: 12, fontWeight: 600 }}>Internal Notes <span className="text-muted fw-normal">(optional)</span></Form.Label>
+            <Form.Control as="textarea" rows={2} size="sm" value={notes} data-field="notes" onChange={e => setNotes(e.target.value)}
+              placeholder="Anything to query…" style={{ fontSize: 12, resize: 'vertical' }} />
+          </div>
+          <div className="col-6">
+            <Form.Label style={{ fontSize: 12, fontWeight: 600 }}>External Notes <span className="text-muted fw-normal">(optional)</span></Form.Label>
+            <Form.Control as="textarea" rows={2} size="sm" value={extNotes} data-field="extNotes" onChange={e => setExtNotes(e.target.value)}
+              placeholder="Shown on the Product Spec…" style={{ fontSize: 12, resize: 'vertical' }} />
+          </div>
+        </div>
+
         {/* The DesignDB is the master list, so this is not a choice. Say so once. */}
         <div className="rounded p-2 mb-3" style={{ background: C.accentTint, border: `1px solid ${C.accentEdge}` }}>
           <div style={{ fontSize: 12, fontWeight: 600 }}>
@@ -374,11 +391,11 @@ export default function NewETModal({
           </div>
         </div>
 
-        {/* Product Spec: always open, the product is defined here as much as in the ElementType. */}
+        {/* Product Spec: always open; only what is the Product Spec's own. */}
         <div className="border rounded p-2" style={{ background: C.subtle }}>
           <div className="d-flex align-items-center gap-1" style={{ fontSize: 12, color: C.muted }}>
             <span className="fw-semibold">Product Spec</span>
-            <span className="text-muted fw-normal ms-1">— Manufacturer, Code, Description</span>
+            <span className="text-muted fw-normal ms-1">— Manufacturer, Code, Finish</span>
           </div>
             <div className="mt-2">
               <div className="row g-2">
@@ -394,25 +411,6 @@ export default function NewETModal({
                   <Form.Label style={{ fontSize: 11, color: C.muted }}>Product Code</Form.Label>
                   <Form.Control size="sm" value={productCode} data-field="productCode" onChange={e => setCode(e.target.value)}
                     placeholder="e.g. LEDTAPE-3000K" style={{ fontSize: 11 }} />
-                </div>
-                <div className="col-12">
-                  <Form.Label style={{ fontSize: 11, color: C.muted }}>PS Description</Form.Label>
-                  <Form.Control size="sm" value={psDesc} data-field="psDesc" onChange={e => setPsDesc(e.target.value)}
-                    placeholder="Component description…" style={{ fontSize: 11 }} />
-                </div>
-                <div className="col-12 d-flex align-items-center gap-2">
-                  <FlagPill label="TBC" value={isTBC} onChange={setTBC} activeVariant="danger" />
-                  <FlagPill label="Properties TBC" value={isPropTBC} onChange={setPropTBC} activeVariant="warning" />
-                </div>
-                <div className="col-6">
-                  <Form.Label style={{ fontSize: 11, color: C.muted }}>Internal Notes</Form.Label>
-                  <Form.Control as="textarea" rows={2} size="sm" value={notes} data-field="notes" onChange={e => setNotes(e.target.value)}
-                    placeholder="Anything to query…" style={{ fontSize: 11, resize: 'vertical' }} />
-                </div>
-                <div className="col-6">
-                  <Form.Label style={{ fontSize: 11, color: C.muted }}>External Notes</Form.Label>
-                  <Form.Control as="textarea" rows={2} size="sm" value={extNotes} data-field="extNotes" onChange={e => setExtNotes(e.target.value)}
-                    placeholder="Shown on the Product Spec…" style={{ fontSize: 11, resize: 'vertical' }} />
                 </div>
                 <div className="col-12">
                   <Form.Label style={{ fontSize: 11, color: C.muted }}>Finish</Form.Label>
