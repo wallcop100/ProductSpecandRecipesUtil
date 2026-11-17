@@ -33,6 +33,7 @@ const ET_COLUMN_MAP = {
   IsTBC: 'IsTBC',
   IsPropertiesTBC: 'IsPropertiesTBC',
   InternalNotesText: 'InternalNotesText',
+  ExternalNotesText: 'ExternalNotesText',
 }
 
 const PT_COLUMN_MAP = {
@@ -59,6 +60,7 @@ const PS_COLUMN_MAP = {
   ProductCode: 'ProductCode',
   ComponentDescription: 'ComponentDescription',
   InternalNotesText: 'InternalNotesText',
+  ExternalNotesText: 'ExternalNotesText',
   IsTBC: 'IsTBC',
   IsDeleted: 'IsDeleted',
   IsPropertiesTBC: 'IsPropertiesTBC',
@@ -85,10 +87,10 @@ const RS_COLUMN_MAP = {
 // Identifier and free-text fields are always strings. Excel stores an all-digit value
 // (a ProductCode like 39012025, a Ref like 101) as a NUMBER, and every consumer
 // downstream calls .trim()/.toLowerCase() on these — one numeric cell crashed the load.
-const ET_TEXT_COLS = new Set(['ElementTypeRef', 'Name', 'Description', 'Family', 'InternalNotesText'])
+const ET_TEXT_COLS = new Set(['ElementTypeRef', 'Name', 'Description', 'Family', 'InternalNotesText', 'ExternalNotesText'])
 const PT_TEXT_COLS = new Set(['PositionTypeRef', 'Name', 'Description', 'ParentRef', 'DriverLocation', 'SecondaryPowerType', 'ControlTypeRef', 'ExtRef'])
 const POS_TEXT_COLS = new Set(['Ref', 'TypeRef'])
-const PS_TEXT_COLS = new Set(['ElementTypeRef', 'Manufacturer', 'ProductCode', 'ComponentDescription', 'InternalNotesText'])
+const PS_TEXT_COLS = new Set(['ElementTypeRef', 'Manufacturer', 'ProductCode', 'ComponentDescription', 'InternalNotesText', 'ExternalNotesText'])
 const RS_TEXT_COLS = new Set(['ContextType', 'ContextRef', 'ElementTypeRef', 'Notes'])
 
 const ET_FLAG_COLS = new Set(['IsCollection', 'IsDeleted', 'IsTBC', 'IsPropertiesTBC'])

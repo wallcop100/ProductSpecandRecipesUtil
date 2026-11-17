@@ -34,8 +34,8 @@ const IGNORED = new Set(['SortOrder', 'ElementTypeRef'])
 // What the app's parsers read back (platform/xlsx.js). A column a patch writes but the parser
 // never reads (the DesignDB's Details) cannot be checked, so it never decides either.
 const READS = {
-  ps: new Set(['Manufacturer', 'ProductCode', 'ComponentDescription', 'InternalNotesText', 'IsTBC', 'IsDeleted', 'IsPropertiesTBC']),
-  db: new Set(['Name', 'Description', 'Family', 'IsCollection', 'IsDeleted', 'IsTBC', 'IsPropertiesTBC', 'InternalNotesText']),
+  ps: new Set(['Manufacturer', 'ProductCode', 'ComponentDescription', 'InternalNotesText', 'ExternalNotesText', 'IsTBC', 'IsDeleted', 'IsPropertiesTBC']),
+  db: new Set(['Name', 'Description', 'Family', 'IsCollection', 'IsDeleted', 'IsTBC', 'IsPropertiesTBC', 'InternalNotesText', 'ExternalNotesText']),
 }
 
 const RS_KEY_FIELDS = ['ContextType', 'ContextRef', 'RecipeIndex', 'ElementTypeRef']

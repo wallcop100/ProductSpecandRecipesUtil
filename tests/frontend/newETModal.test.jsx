@@ -146,3 +146,29 @@ describe('HYQ246: a placeholder code is not a duplicate', () => {
     expect(screen.getByText('Use existing ET-PROF-01')).toBeInTheDocument()
   })
 })
+
+test('the Form row shows beside the fields (n/a left out), and a click puts a value into the last field', () => {
+  useStore.setState({ importDraft: { map: { mfr: 'ManufacturerName', code: 'ProductCode' }, rows: [
+    { positionType: 'C03', rawText: 'OTHER1', manufacturer: 'X', context: { ProductName: 'Wrong row' } },
+    { positionType: 'C03', rawText: 'LL240272024', manufacturer: 'LEDFlex', context: { SortOrder: 19, ProductName: 'Lumen Line 240', Finish: 'n/a', Codes: 'LL240272024' } },
+  ] } })
+  setup({ importContext: null, prefill: { productCode: 'LL240272024' }, formRefs: ['C03'], draftKey: 'formrow' })
+  const side = screen.getByTestId('newet-form-row')
+  expect(side).toHaveTextContent('ManufacturerNameLEDFlex')
+  expect(side).toHaveTextContent('ProductNameLumen Line 240')
+  expect(side).not.toHaveTextContent('Finish')
+  expect(side).not.toHaveTextContent('Codes')
+  expect(side).not.toHaveTextContent('SortOrder')
+  const name = document.querySelector('[data-field="name"]')
+  fireEvent.focus(name)
+  fireEvent.click(screen.getByRole('button', { name: 'Lumen Line 240' }))
+  expect(name).toHaveValue('Lumen Line 240')
+  useStore.setState({ importDraft: null })
+})
+
+test('External Notes goes onto the new Product Spec row, beside Internal Notes', () => {
+  setup({ prefill: { ref: 'ET-EXT-01' }, importContext: null, draftKey: 'ext' })
+  fireEvent.change(document.querySelector('[data-field="extNotes"]'), { target: { value: 'Supplied by others' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Create Element Type' }))
+  expect(useStore.getState().psRows.find(r => r.ElementTypeRef === 'ET-EXT-01').ExternalNotesText).toBe('Supplied by others')
+})

@@ -9,6 +9,8 @@ import { getNextAvailableRef } from '../utils/containerUtils'
 import { hasProductIdentity } from '../utils/productCodes'
 import { CANON_FAMILIES } from '../data/etCanon'
 import { C } from '../styles/tokens'
+import { formColumnsFor } from '../utils/formPositions'
+import { buildRefMap, targetFor } from '../utils/ptResolve'
 
 /**
  * NewETModal — the one place a brand-new element type is created.
@@ -45,6 +47,8 @@ export default function NewETModal({
    * code, and come back. A different draftKey seeds fresh.
    */
   draftKey = null,
+  /** Positions whose Form row shows beside the fields (default: importContext.positionTypes). */
+  formRefs = null,
 }) {
   const elementTypes      = useStore(s => s.elementTypes)
   const dbCollectionRefs  = useStore(s => s.dbCollectionRefs)
@@ -53,6 +57,7 @@ export default function NewETModal({
   const createElementType = useStore(s => s.createElementType)
   const addPSRow          = useStore(s => s.addPSRow)
   const updatePSRow       = useStore(s => s.updatePSRow)
+  const importDraft       = useStore(s => s.importDraft)
 
   const uid = useId()
   const familyListId = `newet-family-${uid}`
@@ -69,8 +74,14 @@ export default function NewETModal({
   const [isPropTBC, setPropTBC]     = useState(null)
   const [notes, setNotes]           = useState('')
   const [finish, setFinish]         = useState('')
-  const [showSpec, setShowSpec]     = useState(true)
+  const [extNotes, setExtNotes]     = useState('')
   const [saving, setSaving]         = useState(false)
+  // The Form's row, beside the fields; a click on a value puts it into the last field you were in.
+  const formRow = useMemo(() => show ? formColumnsFor(importDraft, formRefs || importContext?.positionTypes, importContext?.code || prefill?.productCode, { buildRefMap, targetFor }) : null,
+    [show, importDraft, formRefs, importContext, prefill?.productCode])
+  const lastField = useRef('name')
+  const setters = { ref: setRef, name: setName, description: setDescription, family: setFamily, manufacturer: setMfr, productCode: setCode, psDesc: setPsDesc, notes: setNotes, extNotes: setExtNotes, finish: setFinish }
+  const putValue = v => { const set = setters[lastField.current]; set?.(cur => cur.trim() ? `${cur.trimEnd()} ${v}` : v) }
 
   // Seed on open, but ONLY for a draft we have not started. The modal stays mounted,
   // so re-opening the same draftKey returns you to exactly what you had typed.
@@ -88,9 +99,8 @@ export default function NewETModal({
     setMfr(prefill.manufacturer || '')
     setCode(prefill.productCode || '')
     setPsDesc(prefill.componentDescription || '')
-    setTBC(null); setPropTBC(null); setNotes('')
+    setTBC(null); setPropTBC(null); setNotes(''); setExtNotes('')
     setFinish('')
-    setShowSpec(true)
     setSaving(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show, draftKey])
@@ -204,6 +214,7 @@ export default function NewETModal({
       if (isTBC)               psDefaults.IsTBC = 'Y'
       if (isPropTBC)           psDefaults.IsPropertiesTBC = 'Y'
       if (notes.trim())        psDefaults.InternalNotesText = notes.trim()
+      if (extNotes.trim())     psDefaults.ExternalNotesText = extNotes.trim()
       if (finish.trim())       psDefaults.ComponentDescription = withFinish(psDesc.trim() || existing?.ComponentDescription, finish.trim())
       if (Object.keys(psDefaults).length) {
         if (existing) updatePSRow(trimRef, psDefaults)
@@ -218,7 +229,7 @@ export default function NewETModal({
   }
 
   return (
-    <Modal show={show} onHide={onHide} size="md" centered>
+    <Modal show={show} onHide={onHide} size={formRow ? 'lg' : 'md'} centered scrollable>
       <Modal.Header closeButton>
         <Modal.Title style={{ fontSize: 14 }}>
           <MaterialIcon name="add_circle" size={16} style={{ verticalAlign: 'middle', marginRight: 6, color: C.success }} />
@@ -227,7 +238,8 @@ export default function NewETModal({
         </Modal.Title>
       </Modal.Header>
 
-      <Modal.Body>
+      <Modal.Body className={formRow ? 'd-flex gap-3' : undefined}>
+       <div style={{ flex: 1, minWidth: 0 }} onFocusCapture={e => { if (setters[e.target.dataset?.field]) lastField.current = e.target.dataset.field }}>
         {/* What the Form actually said. Read-only: it is evidence, not a field. */}
         {importContext && (
           <div className="mb-3 px-2 py-2 rounded" style={{ background: C.subtle, border: `1px solid ${C.border}`, fontSize: 11 }}>
@@ -270,7 +282,7 @@ export default function NewETModal({
           <Form.Control
             size="sm"
             value={ref}
-            onChange={e => setRef(e.target.value)}
+            data-field="ref" onChange={e => setRef(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && canSave) handleSave() }}
             placeholder="e.g. ET-TAPE-004"
             isInvalid={alreadyExists}
@@ -305,7 +317,7 @@ export default function NewETModal({
           <Form.Control
             size="sm"
             value={name}
-            onChange={e => setName(e.target.value)}
+            data-field="name" onChange={e => setName(e.target.value)}
             placeholder="Short display name…"
             style={{ fontSize: 12 }}
           />
@@ -321,7 +333,7 @@ export default function NewETModal({
             rows={2}
             size="sm"
             value={description}
-            onChange={e => setDescription(e.target.value)}
+            data-field="description" onChange={e => setDescription(e.target.value)}
             placeholder="What is this element type?…"
             style={{ fontSize: 12, resize: 'none' }}
           />
@@ -336,7 +348,7 @@ export default function NewETModal({
             size="sm"
             list={familyListId}
             value={family}
-            onChange={e => setFamily(e.target.value)}
+            data-field="family" onChange={e => setFamily(e.target.value)}
             placeholder="e.g. TAPE, PROFILE, CLIP…"
             style={{ fontSize: 12 }}
           />
@@ -362,32 +374,17 @@ export default function NewETModal({
           </div>
         </div>
 
-        {/* Product Spec (collapsible) */}
+        {/* Product Spec: always open, the product is defined here as much as in the ElementType. */}
         <div className="border rounded p-2" style={{ background: C.subtle }}>
-          <button
-            className="btn btn-link p-0 d-flex align-items-center gap-1 w-100 text-start"
-            style={{ fontSize: 12, color: C.muted, textDecoration: 'none' }}
-            onClick={() => setShowSpec(v => !v)}
-          >
-            <MaterialIcon name={showSpec ? 'expand_more' : 'chevron_right'} size={16} />
+          <div className="d-flex align-items-center gap-1" style={{ fontSize: 12, color: C.muted }}>
             <span className="fw-semibold">Product Spec</span>
             <span className="text-muted fw-normal ms-1">— Manufacturer, Code, Description</span>
-            {!showSpec && (manufacturer || productCode) && (
-              <span className="ms-auto text-success" style={{ fontSize: 11 }}>
-                <MaterialIcon name="check" size={12} /> filled
-              </span>
-            )}
-            {!showSpec && !manufacturer && !productCode && (
-              <span className="ms-auto text-muted" style={{ fontSize: 10 }}>optional — skip if in a rush</span>
-            )}
-          </button>
-
-          {showSpec && (
+          </div>
             <div className="mt-2">
               <div className="row g-2">
                 <div className="col-6">
                   <Form.Label style={{ fontSize: 11, color: C.muted }}>Manufacturer</Form.Label>
-                  <Form.Control size="sm" value={manufacturer} onChange={e => setMfr(e.target.value)}
+                  <Form.Control size="sm" value={manufacturer} data-field="manufacturer" onChange={e => setMfr(e.target.value)}
                     placeholder="e.g. Osram" list={mfrListId} style={{ fontSize: 11 }} />
                   <datalist id={mfrListId}>
                     {mfrOptions.map(m => <option key={m} value={m} />)}
@@ -395,26 +392,31 @@ export default function NewETModal({
                 </div>
                 <div className="col-6">
                   <Form.Label style={{ fontSize: 11, color: C.muted }}>Product Code</Form.Label>
-                  <Form.Control size="sm" value={productCode} onChange={e => setCode(e.target.value)}
+                  <Form.Control size="sm" value={productCode} data-field="productCode" onChange={e => setCode(e.target.value)}
                     placeholder="e.g. LEDTAPE-3000K" style={{ fontSize: 11 }} />
                 </div>
                 <div className="col-12">
                   <Form.Label style={{ fontSize: 11, color: C.muted }}>PS Description</Form.Label>
-                  <Form.Control size="sm" value={psDesc} onChange={e => setPsDesc(e.target.value)}
+                  <Form.Control size="sm" value={psDesc} data-field="psDesc" onChange={e => setPsDesc(e.target.value)}
                     placeholder="Component description…" style={{ fontSize: 11 }} />
                 </div>
                 <div className="col-12 d-flex align-items-center gap-2">
                   <FlagPill label="TBC" value={isTBC} onChange={setTBC} activeVariant="danger" />
                   <FlagPill label="Properties TBC" value={isPropTBC} onChange={setPropTBC} activeVariant="warning" />
                 </div>
-                <div className="col-12">
-                  <Form.Label style={{ fontSize: 11, color: C.muted }}>Internal notes</Form.Label>
-                  <Form.Control as="textarea" rows={2} size="sm" value={notes} onChange={e => setNotes(e.target.value)}
+                <div className="col-6">
+                  <Form.Label style={{ fontSize: 11, color: C.muted }}>Internal Notes</Form.Label>
+                  <Form.Control as="textarea" rows={2} size="sm" value={notes} data-field="notes" onChange={e => setNotes(e.target.value)}
                     placeholder="Anything to query…" style={{ fontSize: 11, resize: 'vertical' }} />
+                </div>
+                <div className="col-6">
+                  <Form.Label style={{ fontSize: 11, color: C.muted }}>External Notes</Form.Label>
+                  <Form.Control as="textarea" rows={2} size="sm" value={extNotes} data-field="extNotes" onChange={e => setExtNotes(e.target.value)}
+                    placeholder="Shown on the Product Spec…" style={{ fontSize: 11, resize: 'vertical' }} />
                 </div>
                 <div className="col-12">
                   <Form.Label style={{ fontSize: 11, color: C.muted }}>Finish</Form.Label>
-                  <Form.Control size="sm" value={finish} onChange={e => setFinish(e.target.value)}
+                  <Form.Control size="sm" value={finish} data-field="finish" onChange={e => setFinish(e.target.value)}
                     placeholder="e.g. RAL 9010 — added in brackets to both descriptions" style={{ fontSize: 11 }} />
                 </div>
               </div>
@@ -442,8 +444,27 @@ export default function NewETModal({
                 </div>
               )}
             </div>
-          )}
         </div>
+       </div>
+        {formRow && (
+          <aside data-testid="newet-form-row" aria-label="From the Form"
+            style={{ width: 250, flexShrink: 0, borderLeft: `1px solid ${C.border}`, paddingLeft: 12, fontSize: 11,
+              alignSelf: 'flex-start', position: 'sticky', top: 0, maxHeight: '65vh', overflowY: 'auto' }}>
+            <div className="text-muted fw-semibold mb-1" style={{ fontSize: 10, letterSpacing: '0.04em' }}>FROM THE FORM · {formRow.ref}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, max-content) 1fr', columnGap: 8, rowGap: 2 }}>
+              {formRow.cols.map(([col, value]) => (
+                <React.Fragment key={col}>
+                  <span className="text-muted text-truncate" style={{ fontSize: 10, maxWidth: 90 }} title={col}>{col}</span>
+                  <button type="button" className="btn btn-link p-0 text-start text-reset text-decoration-none"
+                    style={{ fontSize: 11, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+                    onMouseDown={e => e.preventDefault()} onClick={() => putValue(value)}
+                    title="Put into the field you were in">{value}</button>
+                </React.Fragment>
+              ))}
+            </div>
+            <div className="text-muted mt-2" style={{ fontSize: 10 }}>Click a value to put it into the field you were in.</div>
+          </aside>
+        )}
       </Modal.Body>
 
       <Modal.Footer>
