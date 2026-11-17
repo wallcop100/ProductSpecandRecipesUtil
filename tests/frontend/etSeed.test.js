@@ -181,6 +181,12 @@ describe('the tool-wide style library', () => {
     expect(newFamilies.map(f => f.ref)).toEqual(['ET-LIN-TAPE', 'ET-LIN-INGREDIENTS'])   // with its canon parent
   })
 
+  test('the very same product elsewhere lends its family, never its number', () => {
+    const lib = [{ maker: 'LightGraphix', code: 'LD53', ref: 'ET-PS-22', family: 'ET-PS', name: '', description: '', source: '4746' }]
+    const { proposals } = proposeElementTypes([entry('LD53', 'LightGraphix', ['H254'])], { ...base, library: lib })
+    expect(proposals[0]).toMatchObject({ family: 'ET-PS', ref: 'ET-PS-01', why: 'library' })
+  })
+
   test('this project\'s own product line still wins over the library', () => {
     const lib = [{ maker: 'Phos', code: 'INF105006D', ref: 'ET-ELSEWHERE-01', family: 'ET-ELSEWHERE', name: '', description: '', source: 'P9' }]
     const { proposals } = proposeElementTypes([entry('INF105008D', 'Phos', ['A1b'])], { ...base, library: lib })

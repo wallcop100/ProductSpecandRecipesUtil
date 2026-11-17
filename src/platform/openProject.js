@@ -19,7 +19,6 @@ import { harvestPatterns } from '../utils/recipePatterns'
 import { getCompanion } from './companion'
 import { sweepCodes } from './retired'
 import { pullConfig } from './projectConfig'
-import { primeLearning } from './learning'
 
 export async function openProject({
   projectNumber, configName, folderPath: folder, folderName: label, files, restoring = null,
@@ -75,8 +74,6 @@ export async function openProject({
     // …and, beside a companion, to the library other projects learn from; and ask which of
     // this spec's codes have since been replaced. Both silent; both need nothing back.
     if (projectNumber) proved.then(() => getCompanion()).then(api => api?.shareLibrary?.(projectNumber, exemplars))
-    // What the project says as it opens is the baseline; only later edits are corrections.
-    primeLearning(projectNumber, { elementTypes, psRows: ps_rows ?? [] })
     sweepCodes((ps_rows ?? []).filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
       .map(r => ({ code: r.ProductCode || r.productCode, manufacturer: r.Manufacturer || r.manufacturer })))
   } catch { /* the library is a convenience, never a reason not to open */ }

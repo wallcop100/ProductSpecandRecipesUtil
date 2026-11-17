@@ -1,7 +1,7 @@
 import { getNextAvailableRef } from '../utils/containerUtils'
 import useImportSession from './import/useImportSession'
 import { useCompanion } from '../platform/companion'
-import useProjectKnowledge, { learnedRef, localEtsNeeded, shareDecisions, offerAssignments, orderLibrary, assignmentKey } from './import/useProjectKnowledge'
+import useProjectKnowledge, { learnedRef, shareDecisions, offerAssignments, orderLibrary, assignmentKey } from './import/useProjectKnowledge'
 import { noteSupplied, forgetSupplied, settle, shareOutcomes } from '../platform/outcomes'
 import { sweepCodes, retiredFor } from '../platform/retired'
 import InfoTip from '../components/InfoTip'
@@ -874,19 +874,6 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   const retiredCodes = useStore(s => s.retiredCodes)
   const [mergedKeys, setMergedKeys] = useState(() => new Set())
 
-  // Every code in the Form, confirmed or not: a learned ElementType made only on confirm would
-  // turn a card's proposal into an assignment mid-click and shift every ref after it.
-  const formCodes = useMemo(() => resolved.flatMap(r => isTbc(r, captureOpts) ? []
-    : deriveCaptures(r, captureOpts).captures.map(c => ({ text: c.code, manufacturers: r.manufacturer ? [r.manufacturer] : [] }))),
-  [resolved, captureOpts])
-  // Learned local ElementTypes this Form's codes were given before: made here first, so the
-  // learned assignment can stand (it is dropped if the ref cannot be resolved).
-  useEffect(() => {
-    for (const et of localEtsNeeded(knowledge, formCodes, knownRefs)) {
-      createElementType({ ref: et.ref, name: et.name || null, description: et.description || null, family: et.family || null })
-    }
-  }, [knowledge, formCodes, knownRefs])   // eslint-disable-line react-hooks/exhaustive-deps
-
   // The code-column dialect and near-miss rulings learned on this project (and dialect agreed
   // across projects): seeded once, under the person's own — theirs always win.
   const seededFrom = useRef(null)
@@ -1356,7 +1343,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
 
     // Learning, in the background and never awaited: staging does not depend on it. The
     // project's decisions (latest wins), and evidence for the catalogue (reviewed elsewhere).
-    offerAssignments(companion, allEntries.filter(e => e.status !== 'green' && entryInScope(e)), {
+    // Not a ref made here and not exported yet: only what the DesignDB holds is evidence.
+    const madeHere = new Set(localElementTypes.map(et => norm(et.ref || '')))
+    offerAssignments(companion, allEntries.filter(e => e.status !== 'green' && entryInScope(e) && !madeHere.has(norm(e.etRef || ''))), {
       project: String(projectNumber || projectLabel),
       familyOf: ref => {
         const et = useStore.getState().elementTypes.find(x => norm(x.ElementTypeRef || x.elementTypeRef || '') === norm(ref))

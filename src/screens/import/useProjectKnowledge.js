@@ -96,27 +96,19 @@ export function learnedRef(knowledge, entry, knownRefs) {
   return knownRefs.has(norm(ref)) ? ref : null
 }
 
-/** Learned local ElementTypes this Form's codes need and this project does not have yet. */
-export function localEtsNeeded(knowledge, entries, knownRefs) {
-  if (!knowledge?.ready) return []
-  const out = new Map()
-  for (const e of entries) {
-    const maker = e.manufacturers?.length === 1 ? e.manufacturers[0] : ''
-    const ref = knowledge.assignments.get(assignmentKey(e.text, maker))
-    const et = ref && !knownRefs.has(norm(ref)) ? knowledge.localEts.get(norm(ref)) : null
-    if (et) out.set(norm(ref), et)
-  }
-  return [...out.values()]
-}
-
-/** What this session decided, for the next session on the project. Background; latest wins. */
+/**
+ * What this session decided, for the next session on the project. Background; latest wins.
+ * Only what the DesignDB holds is learned: a code given an ElementType made here (`localEts`,
+ * not exported yet) is not, so a fresh import or a Discard never brings that ref back.
+ */
 export function shareDecisions(api, projectNumber, { entries = [], rules = {}, keptSeparate = new Set(),
   merged = [], localEts = [] } = {}) {
   const number = String(projectNumber || '').trim()
   if (!api?.shareProjectItems || !number) return Promise.resolve(null)
+  const local = new Set(localEts.map(et => norm(et.ref || '')))
   const items = []
   for (const e of entries) {
-    if (!e.etRef || e.placeholder) continue
+    if (!e.etRef || e.placeholder || local.has(norm(e.etRef))) continue
     const maker = e.manufacturers?.length === 1 ? e.manufacturers[0] : ''
     items.push({ kind: 'assignment', key: assignmentKey(e.text, maker), value: { ref: e.etRef, code: e.text, maker } })
   }
@@ -126,9 +118,6 @@ export function shareDecisions(api, projectNumber, { entries = [], rules = {}, k
   }
   for (const k of keptSeparate) items.push({ kind: 'pair', key: k, value: { verdict: 'different' } })
   for (const k of merged) items.push({ kind: 'pair', key: k, value: { verdict: 'same' } })
-  for (const et of localEts) {
-    if (et.ref) items.push({ kind: 'local-et', key: et.ref, value: { name: et.name || '', description: et.description || '', family: et.family || '' } })
-  }
   return items.length ? api.shareProjectItems(number, items.slice(0, 2000)) : Promise.resolve(null)
 }
 
