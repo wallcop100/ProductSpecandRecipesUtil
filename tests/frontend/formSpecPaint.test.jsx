@@ -248,6 +248,31 @@ test('4746 G353 480: a code read as the same as an existing ElementType gets a F
   expect(['ET-PS-01', 'ET-PS-03', 'ET-PS-04']).not.toContain(ref)
 })
 
+test('a card ref holds no number for codes elsewhere in the Form: same ref with or without them', async () => {
+  const draft = rows => ({
+    version: 1, step: 'review', source: { name: 'form.xlsx', sheet: 'S' },
+    map: { pt: '', code: 'ProductCode', mfr: 'ManufacturerName', exclude: '', acc: '', context: [] },
+    rules: {}, assignments: {}, resolutions: [], refOverrides: {}, dirStats: { forward: 0, backward: 0 }, stagedRefs: [], keptSeparate: [], rows,
+  })
+  const row = (id, code, pt, confirmed) => ({ id, rawText: code, positionType: pt, manufacturer: 'iGuzzini', context: {}, overrides: {}, noteOverride: {}, confirmed })
+  const refFor = async rows => {
+    useStore.setState({ formCaptures: null, importDraft: draft(rows) })
+    const v = render(<FormSpecPane posRef="C02" />)
+    await screen.findByTestId('compact-painter')
+    const ref = screen.getByLabelText('Ref for QC59').value
+    v.unmount()
+    return ref
+  }
+  useStore.setState({
+    elementTypes: ['ET-PS-01', 'ET-PS-03'].map(r => ({ ElementTypeRef: r, Family: 'ET-PS' })),
+    recipes: ['C01', 'C02', 'C03'].map(pt => ({ _id: pt, PositionTypeRef: pt, ContextType: 'PositionType', ContextRef: pt, ElementTypeRef: 'ET-PS-01', Quantity: 1 })),
+  })
+  const alone = await refFor([row(0, 'QC59', 'C02', false)])
+  const others = await refFor([row(0, 'QC57', 'C01', true), row(1, 'QC58', 'C03', true), row(2, 'QC59', 'C02', false)])
+  expect(alone).toBeTruthy()
+  expect(others).toBe(alone)
+})
+
 test('S3JLGL: Detach with the painter open closes it, and the open painter does not write the Form back', async () => {
   useStore.setState({ formCaptures: null, importDraft: {
     version: 1, step: 'review', source: { name: 'form.xlsx', sheet: 'S' },

@@ -1462,11 +1462,14 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   const scopeRows = useMemo(() => (inSelection ? formOrder.filter(inSelection) : formOrder), [formOrder, inSelection])
   // The Form pane's cards show a ref and family before anything is confirmed: the same proposal
   // pressing + would make, as if this position's rows were confirmed (nothing is changed).
+  // Only this position's codes are numbered: a ref is never held for a code elsewhere in the Form
+  // that has no ElementType yet, so the next free ref is worked out afresh on every view.
   const cardProposals = useMemo(() => {
-    const extra = embedded ? scopeRows.filter(r => !r.confirmed && !isTbc(r, captureOpts)) : []
-    const all = extra.length ? toEntries([...confirmed, ...extra]) : entries
-    const props = extra.length
-      ? proposeFor([...all.filter(e => !e.etRef && !hasNoteCollision(e)), ...tbcEntries.filter(e => !e.etRef)], [...confirmed, ...extra]).proposals
+    const here = embedded ? scopeRows.filter(r => !isTbc(r, captureOpts)) : []
+    const ids = new Set(scopeRows.map(r => r.id))
+    const all = here.length ? toEntries(here) : entries
+    const props = here.length
+      ? proposeFor([...all.filter(e => !e.etRef && !hasNoteCollision(e)), ...tbcEntries.filter(e => !e.etRef && (e.rowRefs || []).some(id => ids.has(id)))], here).proposals
       : proposals
     // No family (or a reuse guess) means no proposed ref: show what the + window opens with.
     const fresh = new Map(all.map(e => [norm(e.text), e.fresh]))
