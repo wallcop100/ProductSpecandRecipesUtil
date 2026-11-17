@@ -130,7 +130,9 @@ const FORM_HOUSEKEEPING = new Set(['sortorder', 'pagetype', 'positiontypedescrip
 export function formColumnsFor(draft, refs = [], code = '', opts = {}) {
   const c = String(code || '').trim().toUpperCase()
   for (const ref of (refs || []).filter(Boolean)) {
-    const st = positionPaintStatus(draft, ref, opts)
+    // A Form ref with no PositionType yet only matches itself (B206 "no match").
+    let st = positionPaintStatus(draft, ref, opts)
+    if (!st.formRows?.length) st = positionPaintStatus(draft, ref)
     const rows = st.formRows || []
     const i = Math.max(0, c ? rows.findIndex(r => String(r.rawText || '').toUpperCase().includes(c)) : 0)
     const raw = String(rows[i]?.rawText || '').trim()
