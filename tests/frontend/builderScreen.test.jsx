@@ -221,3 +221,23 @@ test('98GPK7: the Product Spec has the same Recipes | Product Spec switch; Recip
   fireEvent.click(screen.getByTestId('view-recipes'))
   expect(back).toHaveBeenCalled()
 })
+
+describe('the right drawer resizes', () => {
+  test('dragging its left edge widens it, within limits, and the width is remembered', () => {
+    localStorage.removeItem('builderDrawerWidth')
+    useStore.setState({ drawerOpen: true })
+    render(<BuilderScreen onBackToSetup={vi.fn()} onOpenProductSpec={vi.fn()} onOpenTemplateEditor={vi.fn()}
+      onOpenCodeImport={vi.fn()} onOpenConnectors={vi.fn()} />)
+    const drawer = document.querySelector('[data-debug-id="BuilderScreen/RightDrawer"]')
+    expect(drawer.style.width).toBe('340px')
+    const handle = screen.getByTestId('drawer-resize')
+    fireEvent.mouseDown(handle, { clientX: 700 })
+    fireEvent.mouseMove(window, { clientX: 600 })
+    expect(drawer.style.width).toBe('440px')
+    fireEvent.mouseMove(window, { clientX: 900 })
+    expect(drawer.style.width).toBe('280px')
+    fireEvent.mouseMove(window, { clientX: 650 })
+    fireEvent.mouseUp(window)
+    expect(localStorage.getItem('builderDrawerWidth')).toBe('390')
+  })
+})
