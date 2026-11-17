@@ -42,7 +42,7 @@
 
 import { sharedStem } from './etRefSuggest'
 import { hasProductIdentity, norm } from './productCodes'
-import { styleFor } from './styleLibrary'
+import { styleFor, harvestExemplars, codeTokens } from './styleLibrary'
 import { matchShape, makerKey } from './codeShapes'
 import { productLineFor } from '../data/productLines'
 import { CANON_FAMILIES, classifyText } from '../data/etCanon'
@@ -55,6 +55,8 @@ const refOf = e => e.ElementTypeRef || e.elementTypeRef || ''
 const famOf = e => e.Family || e.family || ''
 const ptRefOf = p => p.PositionTypeRef || p.positionTypeRef || ''
 const COUNTER_RE = /^(.*)-(\d+)$/
+// The family rules a sitting's own choice may overrule: defaults, not evidence. ('' = no clue at all.)
+const SESSION_OVERRIDES = new Set(['canon', 'job', ''])
 
 export const ACCESSORIES = 'ET-PS-ACCESSORIES'
 /** Wrappers are assembled in the recipe, never a product: ET-DL-NN, ET-LIN-NN. */
@@ -84,13 +86,39 @@ export function familyDescription(parent) {
   return `${words[0].toUpperCase()}${words.slice(1)} family`
 }
 
+// What a family is about, minus the words every family shares: ET-REMOTE-DRIVERS → REMOTE, DRIVER.
+const GENERIC = new Set(['ET', 'LIN', 'PS', 'ACCESSORIES', 'ACCESSORY', 'INGREDIENTS', 'COMPONENTS'])
+const coreOf = f => String(f ?? '').toUpperCase().split(/[-/\s]+/).map(t => t.replace(/S$/, '')).filter(t => t && !GENERIC.has(t) && !GENERIC.has(`${t}S`))
+
+/** How this project heads each family's refs, when it has a habit: ET-LIN-PROF → ET-PROF (ET-PROF-1009…). → Map lc family → head */
+export function familyHeads(elementTypes = []) {
+  const all = new Map()
+  for (const et of elementTypes) {
+    const f = famOf(et), m = String(refOf(et) || '').match(COUNTER_RE)
+    if (!f || !m || isWrapperFamily(f)) continue
+    const body = m[1]
+    const head = lc(body) === lc(f) || lc(body).startsWith(lc(f) + '-') ? f : body.split('-').slice(0, 2).join('-')
+    if (!all.has(lc(f))) all.set(lc(f), [])
+    all.get(lc(f)).push(head)
+  }
+  // A habit, not one-off: one ET-GS-WIBRE-01 does not make every accessory ET-GS. (A majority rule
+  // cost 4 points of right heads on the mirrors; a mixed family like ET-LIN-INGREDIENTS still heads by its most common kind.)
+  const out = new Map()
+  for (const [f, heads] of all) {
+    const top = mostCommon(heads)
+    if (top.count >= 2) out.set(f, top.value)
+  }
+  return out
+}
+
 /** The next free `<family>-NN`, counting refs already taken AND refs handed out in this batch. */
 export function nextRef(family, taken, width = 2) {
   const base = lc(family)
   let max = 0
   for (const r of taken) {
     const m = String(r).match(COUNTER_RE)
-    if (m && lc(m[1]) === base) max = Math.max(max, parseInt(m[2], 10))
+    // A 4-digit tail is a product number (ET-PROF-1009), not a counter.
+    if (m && m[2].length <= 3 && lc(m[1]) === base) max = Math.max(max, parseInt(m[2], 10))
   }
   return `${family}-${String(max + 1).padStart(width, '0')}`
 }
@@ -197,11 +225,10 @@ export function pickFamily(signals, ctx) {
   }
   if (words) return done(words.family, 'canon', { head: words.head, canon: words.keyword, flag: mixed })
 
-  const parent = mostCommon(signals.parents || [])
-  if (parent.value) {
-    return done(familyRefFor(parent.value), 'parent', { parent: parent.value, spread: parent.distinct, flag: true })
-  }
-  return { family: '', head: '', why: null, flag: false, spread: 0 }
+  // Nothing to go on. The position's parent (DOWNLIGHT) is not a family — 2% right on the
+  // mirrors (tools/backtest-forms.mjs); the house default for the product's role is, half the time.
+  if (!(signals.parents || []).length) return { family: '', head: '', why: null, flag: false, spread: 0 }
+  return done(signals.role === 'extra' ? ACCESSORIES : POINT, 'canon', { canon: 'a position, no other clue', flag: true })
 }
 
 /**
@@ -224,6 +251,8 @@ export function proposeElementTypes(entries = [], project = {}) {
     elementTypes = [], psRows = [], recipes = [], positionTypes = [], collectionRefs = [],
     ptTarget = r => r, contextFor = () => '', roleOf = () => 'lead', pageTypeFor = () => '', library = [],
     shapes = shippedShapes.shapes || [], families = CANON_FAMILIES, jobs = null,
+    // This sitting's decisions, oldest first: { code, maker, proposed: {family, ref, name}, kept: {...} }.
+    session = [],
   } = project
   const canonByRef = new Map(families.map(f => [lc(f.ref), f]))
 
@@ -263,9 +292,48 @@ export function proposeElementTypes(entries = [], project = {}) {
 
   // Taken = any ref the project names anywhere, as NewETModal checks: a Product Spec or recipe ref
   // the DesignDB lacks still exists (4746: ET-PS-ACCESSORIES-02 proposed, then "already exists").
-  const taken = new Set([...elementTypes, ...psRows, ...recipes].map(refOf).filter(Boolean))
+  const taken = new Set([...elementTypes, ...psRows, ...recipes, ...session.map(s => ({ ElementTypeRef: s.kept?.ref }))].map(refOf).filter(Boolean))
   const newFamilies = new Map()   // lc ref -> { ref, description, include, from }
   const proposals = []
+
+  // How this project names each family's members: its products (to style a ref on the nearest
+  // sibling) and the most common ref head (ET-PROF for ET-LIN-PROF, ET-GS for ET-PS-ACCESSORIES).
+  const ownExemplars = harvestExemplars({ elementTypes, psRows, source: 'project' })
+  const heads = familyHeads(elementTypes)
+  // The ref base for a new member of `family`, best first: its nearest sibling's ref here, a
+  // library product's ref carried over whole, the family's usual head here, the family itself.
+  const refBaseFor = (family, code, maker, text, pick) => {
+    const own = styleFor(code, maker, ownExemplars.filter(ex => lc(ex.family) === lc(family)), text)
+    if (own && !own.partial) return { base: own.refBase, from: 'sibling', example: own.exemplar.ref }
+    // No near sibling: the last one you made in this family for this maker, this sitting.
+    const last = [...session].reverse().find(s => s.kept?.ref && lc(s.kept.family) === lc(family) && makerKey(s.maker) === makerKey(maker))
+    if (last) return { base: String(last.kept.ref).replace(/-\d+[a-z]?$/i, ''), from: 'session', example: last.kept.ref }
+    // A library style that kept a middle (ET-PS-CURVE) is worth more than a bare head, even flagged.
+    if (pick.style && lc(pick.style.family) === lc(family) && lc(pick.style.refBase) !== lc(family)) {
+      return { base: pick.style.refBase, from: 'library', example: pick.style.exemplar.ref }
+    }
+    if (heads.has(lc(family))) return { base: heads.get(lc(family)), from: 'family' }
+    return { base: pick.style?.refBase || pick.head || family, from: 'default' }
+  }
+
+  // A name in the style of its nearest sibling here ("LED Flex - 1009 End Cap" → 1019), when the
+  // sibling's name holds no code token that this code changes or lacks. null → the house default.
+  const nameLike = (family, code, maker) => {
+    const sib = styleFor(code, maker, ownExemplars.filter(ex => lc(ex.family) === lc(family)))?.exemplar
+    if (!sib?.name) return null
+    const a = codeTokens(sib.code), b = codeTokens(code)
+    if (a.length !== b.length) return null
+    // Every token that changed must be in the name, or the name describes the sibling, not this.
+    let name = sib.name
+    for (let i = 0; i < a.length; i++) {
+      if (lc(a[i]) === lc(b[i])) continue
+      if (a[i].length < 3) return null   // "2" in "2-pin plug" is prose, not the code
+      const at = new RegExp(`(?<![A-Za-z0-9])${a[i]}(?![A-Za-z0-9])`, 'gi')
+      if (!at.test(name)) return null
+      name = name.replace(at, b[i])
+    }
+    return name
+  }
 
   for (const e of entries) {
     const manufacturer = e.manufacturers?.[0] || ''
@@ -338,6 +406,23 @@ export function proposeElementTypes(entries = [], project = {}) {
       }
     }
 
+    // A family this project lacks, where it files the same kind under its own spelling
+    // (ET-DRIVER-ACCESSORIES / ET-DRIVERS here ET-DRIVER): use the project's, flagged.
+    if (!same && pick.family && !existingFamilies.has(lc(pick.family))) {
+      const mine = [...existingFamilies].filter(f => coreOf(f).some(t => coreOf(pick.family).includes(t)))
+      if (mine.length === 1) {
+        const ref = elementTypes.map(famOf).find(f => lc(f) === mine[0]) || mine[0].toUpperCase()
+        Object.assign(pick, { family: ref, head: ref, was: pick.family, flag: true })
+      }
+    }
+    // Only a default to go on (a lead is ET-PS, a job's house family): the family you kept for
+    // this maker's last product this sitting is a better guess. Flagged: it is a guess.
+    if (!same && SESSION_OVERRIDES.has(pick.why || '')) {
+      const last = [...session].reverse().find(s => s.kept?.family && makerKey(s.maker) === makerKey(manufacturer))
+      if (last && lc(last.kept.family) !== lc(pick.family)) {
+        Object.assign(pick, { family: last.kept.family, head: last.kept.family, why: 'session', was: pick.family || null, flag: true, session: last })
+      }
+    }
     const family = pick.family
     // Propose the family, and any parent of it the project lacks, from the canon.
     const propose = (ref, from) => {
@@ -353,12 +438,14 @@ export function proposeElementTypes(entries = [], project = {}) {
       if (canon?.parent) propose(canon.parent)
     }
     if (family && !same) propose(family, pick.parent)
+    let refFrom = null
     const ref = !family || same ? ''
         // A TBC placeholder is an ordinary ref: TBC lives on its spec (IsTBC) and name, never in the ref.
         : e.placeholder ? nextRef(pick.head || family, taken)
-          : nextRef(pick.style?.refBase || pick.head || family, taken)
+          : nextRef((refFrom = refBaseFor(family, e.text, manufacturer, `${context} ${note}`, pick)).base, taken)
     if (ref) taken.add(ref)
     const old = !e.placeholder && matchShape(e.text, manufacturer, shapes).superseded
+    const liked = !pick.seen?.name && !e.placeholder && family && !same ? nameLike(family, e.text, manufacturer) : ''
 
     proposals.push({
       code: e.text,
@@ -368,7 +455,7 @@ export function proposeElementTypes(entries = [], project = {}) {
       reuseRef: same?.ref || null,
       family: same ? '' : family,
       ref,
-      name: pick.seen?.name || (e.placeholder ? `${e.placeholder.formRef} TBC${manufacturer ? ` (${manufacturer})` : ''}` : seedName(manufacturer, e.text)),
+      name: pick.seen?.name || liked || (e.placeholder ? `${e.placeholder.formRef} TBC${manufacturer ? ` (${manufacturer})` : ''}` : seedName(manufacturer, e.text)),
       placeholder: e.placeholder || null,
       description: pick.seen?.description || [context, note].map(s => String(s).trim()).filter(Boolean).join(', '),
       why: pick.why,
@@ -381,9 +468,14 @@ export function proposeElementTypes(entries = [], project = {}) {
         : pick.style ? { ref: pick.style.exemplar.ref, code: pick.style.exemplar.code, source: pick.style.exemplar.source } : null,
       job: pick.job || null,
       wasFamily: pick.was || null,
+      session: pick.session ? { code: pick.session.code, family: pick.session.kept.family } : null,
       shapedOn: pick.shape ? { shape: pick.shape.shape, example: pick.shape.example, n: pick.shape.n } : null,
       canon: pick.canon || null,
       checkRef: !!pick.flag,
+      // Where the ref's shape came from: a sibling here, the library, the family's usual head, or nothing.
+      refFrom: refFrom ? { from: refFrom.from, example: refFrom.example || null } : null,
+      // How the name was made, for the audit trail: the same product seen elsewhere, a sibling's name, or maker + code.
+      nameFrom: pick.seen?.name ? 'seen' : liked ? 'sibling' : e.placeholder ? 'placeholder' : 'maker-code',
       alternatives: pick.style?.alternatives || [],
       superseded: old ? { shape: old.shape, example: old.example } : null,
     })
@@ -398,12 +490,14 @@ export function proposeElementTypes(entries = [], project = {}) {
 export function refamily(proposals, indices, family, elementTypes = []) {
   const pick = new Set(indices)
   const taken = new Set(elementTypes.map(refOf))
+  const heads = familyHeads(elementTypes)
   proposals.forEach((p, i) => { if (!pick.has(i) && p.ref) taken.add(p.ref) })
   return proposals.map((p, i) => {
     if (!pick.has(i)) return p
-    const ref = family ? nextRef(family, taken) : ''
+    const ref = family ? nextRef(heads.get(lc(family)) || family, taken) : ''
     if (ref) taken.add(ref)
-    return { ...p, family, ref, why: family === p.family ? p.why : 'you' }
+    if (family === p.family) return { ...p, family, ref }
+    return { ...p, family, ref, why: 'you', refFrom: { from: heads.has(lc(family)) ? 'family' : 'default', example: null } }
   })
 }
 
@@ -445,6 +539,18 @@ export function planFamilyMove(refs, family, elementTypes = [], { renumber = tru
 }
 
 /** Why a proposal was placed where it was, in words — Bulk and the single New ElementType modal (ZAJ889). */
+/** One line on where a proposal's ref came from, or '' when it is only the next free number. */
+export function refFromText(r) {
+  const f = r.refFrom
+  if (!f || !r.ref) return ''
+  const shape = String(r.ref).replace(COUNTER_RE, '$1')
+  if (f.from === 'sibling') return `ref like ${f.example} here`
+  if (f.from === 'library') return `ref like ${f.example} elsewhere`
+  if (f.from === 'session') return `ref like ${f.example}, your last one in ${r.family}`
+  if (f.from === 'family') return `ref as ${r.family} names its members (${shape}-NN)`
+  return `ref: next free ${shape}-NN, no pattern to follow`
+}
+
 const WHY = {
   // Its own words would hide the code: "ZH-INFD-… (Finish: RAL 9010)".
   stem: r => (r.kin?.length ? `like ${r.kin.map(c => c.split(' (')[0]).join(', ')} here` : 'same product line'),
@@ -458,6 +564,7 @@ const WHY = {
   parent: p => `position parent ${p} (not a company family)`,
   extra: 'extra code in its cell',
   you: 'you chose it',
+  session: r => `you filed ${r.manufacturer}'s last one (${r.session?.code}) here this sitting${r.wasFamily ? ` (not ${r.wasFamily})` : ''}`,
   kit: r => `usually with ${r.kitOf}`,
   job: r => `${JOB_LABEL[r.job?.slot === 'TAPE' ? `TAPE:${r.job.variant}` : r.job?.slot] || 'its job'}${r.wasFamily ? ` (not ${r.wasFamily})` : ''}`,
 }

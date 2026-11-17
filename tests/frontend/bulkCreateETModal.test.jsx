@@ -81,7 +81,14 @@ describe('moving codes between families', () => {
     renderIt([P('A1', 'ET-PS-02', 'ET-PS', { why: 'canon', canon: 'Point page' }), P('A2', 'ET-PS-03', 'ET-PS', { why: 'canon', canon: 'Point page' })], [])
     expect(screen.getAllByTestId('verified')).toHaveLength(2)
     expect(screen.queryByText(/company family — Point page/)).toBeNull()
-    expect(screen.getAllByTestId('verified')[0].getAttribute('title')).toBe('company family — Point page')
+    expect(screen.getAllByTestId('verified')[0].getAttribute('title')).toBe('Family by rule: company family — Point page')
+  })
+
+  test('each ref says where its shape came from', () => {
+    renderIt([P('A1', 'ET-PROF-1010', 'ET-LIN-PROF', { why: 'stem', refFrom: { from: 'sibling', example: 'ET-PROF-1009' } }),
+      P('A2', 'ET-X-01', 'ET-X', { why: 'canon', refFrom: { from: 'default', example: null } })], [])
+    const lines = screen.getAllByTestId('ref-from').map(n => n.textContent)
+    expect(lines).toEqual(['ref like ET-PROF-1009 here', 'ref: next free ET-X-NN, no pattern to follow'])
   })
 
   test('one code moves from its own menu, and its ref renumbers in the new family', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { noteSupplied, settle, outcomeOf, shareOutcomes, learnedInView, forgetSupplied, resetOutcomes } from '../../src/platform/outcomes'
+import { noteSupplied, settle, outcomeOf, shareOutcomes, learnedInView, forgetSupplied, resetOutcomes, noteProposal, settleCreated } from '../../src/platform/outcomes'
 
 describe('what became of learned defaults', () => {
   beforeEach(() => resetOutcomes())
@@ -45,5 +45,24 @@ describe('what became of learned defaults', () => {
     expect(learnedInView([])).toEqual([])
     forgetSupplied()
     expect(learnedInView(['C1'])).toEqual([])
+  })
+})
+
+describe('audit trail of a proposed ElementType', () => {
+  beforeEach(() => resetOutcomes())
+  it('records how each field was suggested, and whether it was kept or changed', () => {
+    noteProposal({ action: 'create', code: 'zz-1', manufacturer: 'Acme', family: 'ET-PS', why: 'session', session: { code: 'ZZ-0' },
+      ref: 'ET-PS-ZZ-02', refFrom: { from: 'session', example: 'ET-PS-ZZ-01' }, name: 'Acme - ZZ-1', nameFrom: 'maker-code' })
+    const rows = settleCreated('7900', [{ code: 'ZZ-1', manufacturer: 'ACME', family: 'ET-PS', ref: 'ET-PS-ZZ-02', name: 'Acme - ZZ1 Spot' }])
+    const by = Object.fromEntries(rows.map(r => [r.kind, r]))
+    expect(by.family).toMatchObject({ tier: 'session', source: 'ZZ-0', outcome: 'kept' })
+    expect(by.ref).toMatchObject({ tier: 'session', source: 'ET-PS-ZZ-01', supplied: 'ET-PS-ZZ-02', outcome: 'kept' })
+    expect(by.name).toMatchObject({ tier: 'maker-code', supplied: 'Acme - ZZ-1', final: 'Acme - ZZ1 Spot', outcome: 'changed' })
+    expect(settleCreated('7900', [{ code: 'other', manufacturer: 'Acme', ref: 'X' }])).toEqual([])
+  })
+  it('a reuse or placeholder is not a proposal', () => {
+    noteProposal({ action: 'reuse', code: 'A', ref: '' })
+    noteProposal({ action: 'create', code: 'B', placeholder: { formRef: 'X1' }, ref: 'ET-1' })
+    expect(settleCreated('7900', [{ code: 'A', family: 'F' }, { code: 'B', ref: 'ET-1' }])).toEqual([])
   })
 })

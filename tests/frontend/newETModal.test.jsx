@@ -199,7 +199,8 @@ test('ZAJ889: a proposal fills the fields with wands; the Form\'s Finish waits, 
   setup({ importContext: null, formRefs: ['H351'], draftKey: 'zaj889', onBulk, bulkCount: 4,
     prefill: { ref: 'ET-PS-07', name: 'LightGraphix - LD53', family: 'ET-SPIKE', manufacturer: 'LightGraphix', productCode: 'LD53', description: 'LD53', why: 'like LD51 here' } })
   for (const f of ['ref', 'name', 'family', 'manufacturer', 'productCode']) expect(screen.getByTestId(`wand-${f}`)).toBeInTheDocument()
-  expect(screen.getByTestId('wand-ref').title).toBe('Filled in: like LD51 here')
+  expect(screen.getByTestId('wand-ref').title).toBe('Suggested: like LD51 here')
+  expect(screen.getByTestId('wand-manufacturer').title).toMatch(/^Filled in/)   // copied from the Form, not learned
   expect(screen.queryByTestId('wand-description')).toBeNull()        // only the code again: nothing proposed
   const finish = document.querySelector('[data-field="finish"]')
   expect(finish).toHaveValue('')
@@ -246,5 +247,47 @@ describe('placeIn: the footer puts the new ElementType where you say', () => {
     expect(place(wrapped, 'newet-ps-only')).toHaveBeenCalledWith('ET-PROF-02', 'ps')
     expect(rowsOf('ET-PROF-02')).toHaveLength(0)
     expect(useStore.getState().psRows.some(r => r.ElementTypeRef === 'ET-PROF-02')).toBe(true)
+  })
+})
+
+describe('a Form card Create proposes, and learns from this sitting', () => {
+  const et = (ref, family, name) => ({ ElementTypeRef: ref, Family: family, Name: name, _row_num: 1 })
+  const ps = (ref, maker, code) => ({ ElementTypeRef: ref, Manufacturer: maker, ProductCode: code })
+  const open = (code, key) => render(<NewETModal show onHide={vi.fn()} onCreated={vi.fn()} draftKey={key}
+    prefill={{ manufacturer: 'LEDFlex', productCode: code }} importContext={{ code, manufacturer: 'LEDFlex', positionTypes: ['C9'] }} />)
+  const field = f => document.querySelector(`[data-field="${f}"]`)
+
+  test('family, ref and name from the project, each saying where it came from', () => {
+    useStore.setState({ projectId: 42, recipes: [], positionTypes: [], sitting: [], psChanges: [], dbChanges: [], past: [], future: [],
+      elementTypes: [et('ET-PROF-1009-01', 'ET-LIN-PROF', 'LEDFlex - 1009 Profile')], psRows: [ps('ET-PROF-1009-01', 'LEDFlex', '012-1009-SL')] })
+    open('012-1019-SL', '::a')
+    expect(field('family')).toHaveValue('ET-LIN-PROF')
+    expect(field('ref')).toHaveValue('ET-PROF-1019-01')
+    expect(field('name')).toHaveValue('LEDFlex - 1019 Profile')
+    expect(screen.getByTestId('ref-from')).toHaveTextContent('ref like ET-PROF-1009-01 here')
+    // A learned suggestion wears companion purple.
+    expect(screen.getByTestId('ref-from').querySelector('.companion-dot')).not.toBeNull()
+    expect(screen.getByTestId('family-from').querySelector('.companion-dot')).not.toBeNull()
+    expect(screen.getByTestId('family-from')).toBeInTheDocument()
+  })
+
+  test('with nothing else to go on, the maker\'s last family this sitting', () => {
+    useStore.setState({ projectId: 42, recipes: [], positionTypes: [], elementTypes: [], psRows: [], psChanges: [], dbChanges: [], past: [], future: [],
+      sitting: [{ code: 'ZZ-1', maker: 'LEDFlex', kept: { family: 'ET-LIN-CLIPS', ref: 'ET-CLIP-FLEX-01', name: '' } }] })
+    useStore.getState().noteKept({ code: 'QQ-9', maker: 'Other', family: 'ET-PS', ref: 'ET-PS-07' })
+    open('XK-77', '::b')
+    expect(field('family')).toHaveValue('ET-LIN-CLIPS')
+    expect(field('ref')).toHaveValue('ET-CLIP-FLEX-02')
+    expect(screen.getByTestId('family-from')).toHaveTextContent("a guess: you filed LEDFlex's last one (ZZ-1) here this sitting")
+    expect(screen.getByTestId('ref-from')).toHaveTextContent('your last one in ET-LIN-CLIPS')
+  })
+
+  test('creating one adds it to the sitting', () => {
+    useStore.setState({ projectId: 42, recipes: [], positionTypes: [], elementTypes: [], psRows: [], sitting: [], psChanges: [], dbChanges: [], past: [], future: [] })
+    open('XK-78', '::c')
+    fireEvent.change(field('family'), { target: { value: 'ET-LIN-CLIPS' } })
+    fireEvent.change(field('ref'), { target: { value: 'ET-CLIP-FLEX-01' } })
+    fireEvent.click(screen.getByRole('button', { name: /Create Element Type/ }))
+    expect(useStore.getState().sitting).toMatchObject([{ code: 'XK-78', maker: 'LEDFlex', kept: { family: 'ET-LIN-CLIPS', ref: 'ET-CLIP-FLEX-01' } }])
   })
 })
