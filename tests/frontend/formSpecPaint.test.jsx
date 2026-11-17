@@ -93,6 +93,14 @@ describe('D4Z9CX: paint one position from the builder', () => {
     expect(positionPaintStatus(draft, 'C01', helpers).state).toBe('absent')
     expect(positionPaintStatus(null, 'C01r').state).toBe('noForm')
   })
+
+  test('U737Z6: a confirmed entry whose code has no ElementType is not "ready"', () => {
+    const draft = { rows: [{ positionType: 'H356', rawText: 'LD53', manufacturer: 'X', confirmed: true }] }
+    const st = positionPaintStatus(draft, 'H356', { knows: () => false })
+    expect(st.state).toBe('todo')
+    expect(st.newCodes).toBe(1)
+    expect(positionPaintStatus(draft, 'H356', { knows: () => true }).state).toBe('ready')
+  })
 })
 
 describe('ZEM43Y / 859SCF: nothing to add is nothing to do', () => {
@@ -322,4 +330,39 @@ test('the pane starts as a view; ⋯ Paint from the Form opens the painter, and 
   fireEvent.click(await screen.findByText(/View only/))
   await waitFor(() => expect(screen.queryByTestId('paint-panel')).toBeNull())
   expect(screen.queryByTestId('paint-position')).toBeNull()
+})
+
+test('KU9NQJ: the brush sets paint mode for every position, and it is remembered across reloads', async () => {
+  const draft = rows => ({
+    version: 1, step: 'review', source: { name: 'form.xlsx', sheet: 'S' },
+    map: { pt: '', code: 'ProductCode', mfr: 'ManufacturerName', exclude: '', acc: '', context: [] },
+    rules: {}, assignments: {}, resolutions: [], refOverrides: {}, dirStats: { forward: 0, backward: 0 }, stagedRefs: [], keptSeparate: [], rows,
+  })
+  const row = (id, code, pt) => ({ id, rawText: code, positionType: pt, manufacturer: 'iGuzzini', context: {}, overrides: {}, noteOverride: {}, confirmed: false })
+  useStore.getState().setFormPaintMode(true)
+  useStore.setState({ importDraft: draft([row(0, 'NEW98', 'C01'), row(1, 'NEW99', 'C02')]) })
+  const view = render(<FormSpecPane posRef="C01" />)
+  expect(await screen.findByTestId('paint-panel')).toBeInTheDocument()
+  fireEvent.click(screen.getByLabelText('Stop painting'))
+  expect(useStore.getState().formPaintMode).toBe(false)
+  expect(localStorage.getItem('formPaintMode')).toBe('0')
+  view.rerender(<FormSpecPane posRef="C02" />)   // the next position stays stopped
+  expect(screen.queryByTestId('paint-panel')).toBeNull()
+  fireEvent.click(screen.getByTestId('paint-position'))
+  expect(localStorage.getItem('formPaintMode')).toBe('1')
+  view.rerender(<FormSpecPane posRef="C01" />)   // and once started, the next one paints too
+  expect(await screen.findByTestId('paint-panel')).toBeInTheDocument()
+})
+
+test('43B4AM: the raw product code in the pane has a copy button; manufacturer does not', () => {
+  useStore.setState({ formPaintMode: false, importDraft: {
+    version: 1, step: 'review', source: { name: 'form.xlsx', sheet: 'S' },
+    map: { pt: '', code: 'ProductCode', mfr: 'ManufacturerName', exclude: '', acc: '', context: [] },
+    rules: {}, assignments: {}, resolutions: [], refOverrides: {}, dirStats: { forward: 0, backward: 0 }, stagedRefs: [], keptSeparate: [],
+    rows: [{ id: 0, rawText: 'NEW99', positionType: 'C01', manufacturer: 'iGuzzini', context: {}, overrides: {}, noteOverride: {}, confirmed: false }],
+  }, formCaptures: { version: 1, byPosition: { C01: [{ elementTypeRef: 'ET-PS-OLD', code: 'OLD1', manufacturer: 'iGuzzini' }] } } })
+  render(<FormSpecPane posRef="C01" />)
+  const raw = screen.getByTestId('form-raw')
+  expect(within(raw).getByTitle('Copy code NEW99')).toBeInTheDocument()
+  expect(within(raw).queryByTitle(/Copy code iGuzzini/)).toBeNull()
 })

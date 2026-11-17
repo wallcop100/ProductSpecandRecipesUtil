@@ -99,3 +99,33 @@ describe('YCU5SZ: a code that needs an ElementType is orange', () => {
     expect(screen.getAllByLabelText('The Form asks for something it lacks, or a code needs an ElementType')).toHaveLength(2)
   })
 })
+
+describe('VKPCNG: right-click the rail to Ignore', () => {
+  test('a position is ignored at once', async () => {
+    setup()
+    useStore.setState({ toggleIgnorePosition: vi.fn() })
+    fireEvent.contextMenu(screen.getByTestId('rail-A10'))
+    fireEvent.click(screen.getByTestId('rail-menu-ignore'))
+    expect(useStore.getState().toggleIgnorePosition).toHaveBeenCalledWith('A10')
+    expect(screen.queryByTestId('rail-menu')).toBeNull()
+  })
+
+  test('a family asks first, naming every position it would hide', async () => {
+    setup()
+    window.confirm = vi.fn(() => true)
+    const famRow = document.querySelector('[data-rail-family]')
+    const fam = famRow.dataset.railFamily
+    const refs = [...famRow.parentElement.querySelectorAll('[data-testid^="rail-"]')].map(e => e.dataset.testid.slice(5)).filter(r => /^[A-Z]\d+$/.test(r))
+    fireEvent.contextMenu(famRow)
+    await act(async () => { fireEvent.click(screen.getByTestId('rail-menu-ignore')) })
+    expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining(refs.join(', ')))
+    expect(useStore.getState().ignoredPositionFamilies).toEqual([fam])
+  })
+
+  test('Escape closes the menu without ignoring anything', () => {
+    setup()
+    fireEvent.contextMenu(screen.getByTestId('rail-A10'))
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(screen.queryByTestId('rail-menu')).toBeNull()
+  })
+})

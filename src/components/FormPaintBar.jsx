@@ -4,6 +4,7 @@ import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import StatusChip from './StatusChip'
 import IconButton from './IconButton'
+import CopyButton from './CopyButton'
 import ProductCodeImportScreen from '../screens/ProductCodeImportScreen'
 import { positionPaintStatus } from '../utils/formPositions'
 import { buildRefMap, targetFor } from '../utils/ptResolve'
@@ -74,9 +75,10 @@ export default function FormPaintBar({ posRef, open = false, onOpenChange = () =
     <div className="mb-2" data-testid="form-paint-bar">
       <div className="d-flex align-items-center gap-1 flex-wrap">
         {state === 'noForm' && !paintMode && formCaptures ? null : state !== 'noForm' ? (!paintMode && formCaptures ? null : (
-          // Paint mode is a toggle: the brush, lit while painting (W24D3V).
+          // Paint mode is a toggle: the brush, lit while painting (W24D3V). It sets the mode for
+          // every position, so stopping here stops the next one too (KU9NQJ).
           <IconButton bsSize="sm" variant={open ? 'primary' : work ? 'outline-primary' : 'outline-secondary'} icon="brush" size={13}
-            onClick={() => { onLoaded.current = true; if (!open) setPaintMode(true); setOpen(!open) }} data-testid="paint-position" aria-pressed={open}
+            onClick={() => { onLoaded.current = true; setPaintMode(!open); setOpen(!open) }} data-testid="paint-position" aria-pressed={open}
             aria-label={open ? 'Stop painting' : `Paint ${posRef} from the Form`}
             title={open ? 'Stop painting' : `Paint ${posRef}'s product codes from the Form: give each an ElementType, then it goes in the recipe`} />
         )) : <Button size="sm" variant="primary" style={{ fontSize: 10 }}
@@ -99,10 +101,12 @@ export default function FormPaintBar({ posRef, open = false, onOpenChange = () =
               {st.cells.map(row => row.filter(c => allCols || !c.more)).filter(row => row.length).map((row, i) => (
                 <div key={i} className={i ? 'border-top pt-1 mt-1' : ''}
                   style={{ display: 'grid', gridTemplateColumns: 'minmax(0, max-content) 1fr', columnGap: 8 }}>
-                  {row.map(({ col, value, more: m }) => (
+                  {row.map(({ col, value, more: m, code }) => (
                     <React.Fragment key={col}>
                       <span className="text-muted text-truncate" style={{ fontSize: 10, maxWidth: 120, fontStyle: m ? 'italic' : undefined }} title={col}>{col}</span>
-                      <span style={{ fontFamily: 'monospace', color: m ? C.muted : C.ink, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{value}</span>
+                      <span style={{ fontFamily: 'monospace', color: m ? C.muted : C.ink, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                        {value}{code && <CopyButton text={value} what={`code ${value}`} size={11} style={{ marginLeft: 4, verticalAlign: 'middle' }} />}
+                      </span>
                     </React.Fragment>
                   ))}
                 </div>

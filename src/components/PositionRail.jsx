@@ -13,6 +13,7 @@ import { buildMaster } from '../utils/productCodes'
 import { buildRefMap, targetFor } from '../utils/ptResolve'
 import { C } from '../styles/tokens'
 import { describeQuery } from '../utils/positionQuery'
+import { askConfirm } from './ConfirmHost'
 
 /** The Form compared with an older one (862MB6): what moved for each position. */
 export const DIFF_SYMBOL = { add: '+', omit: '−', mixed: '±' }
@@ -56,6 +57,30 @@ export default function PositionRail({ onReviewEmpty, onReviewDrift }) {
   // A query opens every family, so no match is hidden.
   const isCollapsed = fam => !view.query && fam !== activeFam && view.collapsed.includes(fam)
   const toggleFam = fam => setView(v => ({ collapsed: v.collapsed.includes(fam) ? v.collapsed.filter(f => f !== fam) : [...v.collapsed, fam] }))
+
+  // Right-click menu (VKPCNG): Ignore one position, or a whole family after naming what it hides.
+  const [menu, setMenu] = useState(null)   // { x, y, ref } | { x, y, fam, pts }
+  const ignoredFamilies = useStore(s => s.ignoredPositionFamilies)
+  const positionUI = useStore(s => s.positionUI)
+  useEffect(() => {
+    if (!menu) return
+    const close = () => setMenu(null)
+    const onKey = e => { if (e.key === 'Escape') close() }
+    window.addEventListener('mousedown', close); window.addEventListener('keydown', onKey); window.addEventListener('scroll', close, true)
+    return () => { window.removeEventListener('mousedown', close); window.removeEventListener('keydown', onKey); window.removeEventListener('scroll', close, true) }
+  }, [menu])
+  const openMenu = (e, target) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY, ...target }) }
+  async function ignoreFromMenu() {
+    const m = menu
+    setMenu(null)
+    const st = useStore.getState()
+    if (m.ref) return st.toggleIgnorePosition(m.ref)
+    if (ignoredFamilies.includes(m.fam)) return st.toggleIgnorePositionFamily(m.fam)
+    const refs = m.pts.map(pt => pt.PositionTypeRef)
+    const ok = await askConfirm(`Ignore the whole “${m.fam}” family? This hides ${refs.length} position${refs.length === 1 ? '' : 's'}:\n\n${refs.join(', ')}`,
+      { ok: 'Ignore family', danger: true })
+    if (ok) await st.toggleIgnorePositionFamily(m.fam)
+  }
 
   const listRef = useRef(null)
   useEffect(() => {
@@ -102,7 +127,8 @@ export default function PositionRail({ onReviewEmpty, onReviewDrift }) {
     const built = pts.filter(pt => statusOf(pt) === 'done').length
     return (
       <div key={fam}>
-        <div role="button" onClick={() => toggleFam(fam)} className="d-flex align-items-center gap-1 px-2 py-1 text-uppercase"
+        <div role="button" onClick={() => toggleFam(fam)} onContextMenu={e => openMenu(e, { fam, pts })} data-rail-family={fam}
+          className="d-flex align-items-center gap-1 px-2 py-1 text-uppercase"
           style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, color: C.muted, userSelect: 'none', cursor: 'pointer' }}>
           <MaterialIcon name={collapsed ? ACTION_ICONS.collapse : ACTION_ICONS.expand} size={14} />
           <span className="text-truncate" title={fam}>{fam}</span>
@@ -117,7 +143,7 @@ export default function PositionRail({ onReviewEmpty, onReviewDrift }) {
             <OverlayTrigger key={ref} placement="right" delay={{ show: 250, hide: 0 }}
               overlay={<Tooltip>{name && name !== ref ? name : ref}</Tooltip>}>
             <div role="button" data-active={on ? 'true' : undefined} data-testid={`rail-${ref}`}
-              onClick={() => go(ref)}
+              onClick={() => go(ref)} onContextMenu={e => openMenu(e, { ref })}
               className="d-flex align-items-center gap-2 ps-4 pe-2"
               style={{
                 fontSize: 12, lineHeight: '22px', cursor: 'pointer', fontFamily: 'monospace',
@@ -190,6 +216,17 @@ export default function PositionRail({ onReviewEmpty, onReviewDrift }) {
         )}
         {order.length === 0 && <div className="text-muted small text-center mt-3">Nothing matches.</div>}
       </div>
+      {menu && (
+        <div className="dropdown-menu show shadow-sm" role="menu" data-testid="rail-menu"
+          style={{ position: 'fixed', left: menu.x, top: menu.y, fontSize: 12, zIndex: 1060 }}
+          onMouseDown={e => e.stopPropagation()}>
+          <button type="button" role="menuitem" className="dropdown-item d-flex align-items-center gap-2" onClick={ignoreFromMenu} data-testid="rail-menu-ignore">
+            {(menu.ref ? positionUI?.[menu.ref]?.ignored : ignoredFamilies.includes(menu.fam))
+              ? <><MaterialIcon name="do_not_disturb_off" size={14} /> Stop ignoring {menu.ref || `the “${menu.fam}” family`}</>
+              : <><MaterialIcon name="do_not_disturb_on" size={14} /> Ignore {menu.ref || `the “${menu.fam}” family…`}</>}
+          </button>
+        </div>
+      )}
       <div onMouseDown={startResize} title="Drag to resize"
         style={{ position: 'absolute', top: 0, right: -3, width: 6, height: '100%', cursor: 'col-resize', zIndex: 3 }} />
     </div>

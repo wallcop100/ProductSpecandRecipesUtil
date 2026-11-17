@@ -684,10 +684,10 @@ const useStore = create((set, get) => ({
   // Bumped by Detach: an import screen still open (the painter, a hidden auto-save) holds
   // the old Form in memory and must not write it back (S3JLGL).
   formGen: 0,
-  // The Form pane starts as a view; once painting is chosen (pane ⋯) every position opens
-  // its painter until View only is chosen again. Session-only on purpose.
-  formPaintMode: false,
-  setFormPaintMode: on => set({ formPaintMode: !!on }),
+  // The Form pane starts as a view; once painting is chosen (the brush or pane ⋯) every
+  // position opens its painter until it is stopped. Remembered across reloads (KU9NQJ).
+  formPaintMode: (() => { try { return localStorage.getItem('formPaintMode') === '1' } catch { return false } })(),
+  setFormPaintMode(on) { try { localStorage.setItem('formPaintMode', on ? '1' : '0') } catch { /* session only */ } set({ formPaintMode: !!on }) },
 
   // A one-shot screen request from deep in the tree (App consumes it). Mirrors
   // pendingReviewRefs — the pane is nested too far to reach App's navigateTo.
