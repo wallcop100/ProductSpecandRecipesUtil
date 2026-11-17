@@ -36,7 +36,7 @@ describe('the import\'s context travels into the modal', () => {
 
   test('the captured code, maker and note are shown as evidence', () => {
     setup()
-    const panel = screen.getByText('From the Form').parentElement
+    const panel = screen.getByText('Form Template Data').parentElement
     expect(panel).toHaveTextContent('FPS2020BG2000')
     expect(panel).toHaveTextContent('Flexalighting')
     expect(panel).toHaveTextContent('note: Profile 2020')
@@ -63,7 +63,7 @@ describe('the import\'s context travels into the modal', () => {
 
   test('with no import context the panel is absent', () => {
     setup({ importContext: null })
-    expect(screen.queryByText('From the Form')).toBeNull()
+    expect(screen.queryByText('Form Template Data')).toBeNull()
   })
 })
 
@@ -123,7 +123,7 @@ test('92YN3U: TBC, Properties TBC and a note go to both the Product Spec and the
 
 test('NQLUFQ: Finish lands in brackets after the description, which the Product Spec shares', () => {
   setup({ prefill: { ref: 'ET-DL-09', description: 'Downlight', manufacturer: 'Acme' }, importContext: null, draftKey: 'nqlufq' })
-  fireEvent.change(screen.getByPlaceholderText(/added in brackets/), { target: { value: 'RAL 9010' } })
+  fireEvent.change(screen.getByPlaceholderText(/RAL 9010/), { target: { value: 'RAL 9010' } })
   fireEvent.click(screen.getByRole('button', { name: 'Create Element Type' }))
   const s = useStore.getState()
   expect(s.elementTypes.find(e => e.ElementTypeRef === 'ET-DL-09').Description).toBe('Downlight (RAL 9010)')

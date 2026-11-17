@@ -1,4 +1,3 @@
-import InfoTip from './InfoTip'
 import React, { useRef, useState, useMemo, useEffect, useId } from 'react'
 import { Modal, Button, Form } from 'react-bootstrap'
 import useStore, { withFinish } from '../store/useStore'
@@ -243,7 +242,7 @@ export default function NewETModal({
   }
 
   return (
-    <Modal show={show} onHide={onHide} size={formRow ? 'lg' : 'md'} centered scrollable>
+    <Modal show={show} onHide={onHide} size={formRow ? 'xl' : 'lg'} centered scrollable>
       <Modal.Header closeButton>
         <Modal.Title style={{ fontSize: 14 }}>
           <MaterialIcon name="add_circle" size={16} style={{ verticalAlign: 'middle', marginRight: 6, color: C.success }} />
@@ -258,7 +257,7 @@ export default function NewETModal({
         {importContext && (
           <div className="mb-3 px-2 py-2 rounded" style={{ background: C.subtle, border: `1px solid ${C.border}`, fontSize: 11 }}>
             <div className="fw-semibold text-muted mb-1" style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '.05em' }}>
-              From the Form
+              Form Template Data
             </div>
             <div className="d-flex align-items-baseline gap-2">
               <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{importContext.code}</span>
@@ -296,8 +295,9 @@ export default function NewETModal({
           </div>
         )}
 
+        <div className="row g-3 mb-3">
         {/* Ref field */}
-        <Form.Group className="mb-3">
+        <Form.Group className="col-6">
           <Form.Label style={{ fontSize: 12, fontWeight: 600 }}>
             Element Type Ref <span className="text-danger">*</span><Wand field="ref" value={ref} />
           </Form.Label>
@@ -332,7 +332,7 @@ export default function NewETModal({
         </Form.Group>
 
         {/* Name */}
-        <Form.Group className="mb-3">
+        <Form.Group className="col-6">
           <Form.Label style={{ fontSize: 12, fontWeight: 600 }}>
             Name <span className="text-muted fw-normal">(optional)</span><Wand field="name" value={name} />
           </Form.Label>
@@ -346,7 +346,7 @@ export default function NewETModal({
         </Form.Group>
 
         {/* Description */}
-        <Form.Group className="mb-3">
+        <Form.Group className="col-6">
           <Form.Label style={{ fontSize: 12, fontWeight: 600 }}>
             Description <span className="text-muted fw-normal">(optional)</span><Wand field="description" value={description} />
           </Form.Label>
@@ -362,7 +362,7 @@ export default function NewETModal({
         </Form.Group>
 
         {/* Family / ParentRef */}
-        <Form.Group className="mb-3">
+        <Form.Group className="col-6">
           <Form.Label style={{ fontSize: 12, fontWeight: 600 }}>
             Family <span className="text-muted fw-normal">(optional)</span><Wand field="family" value={family} />
           </Form.Label>
@@ -386,14 +386,15 @@ export default function NewETModal({
               <datalist id={`${familyListId}-parent`}>{familyOptions.map(f => <option key={f} value={f} />)}</datalist>
             </div>
           )}
+          <div className="d-flex align-items-center gap-2 mt-2">
+            <FlagPill label="TBC" value={isTBC} onChange={setTBC} activeVariant="danger" />
+            <FlagPill label="Properties TBC" value={isPropTBC} onChange={setPropTBC} activeVariant="warning" />
+          </div>
         </Form.Group>
+        </div>
 
         {/* Shared by the ElementType and its Product Spec row (kept in step, 92YN3U). */}
-        <div className="d-flex align-items-center gap-2 mb-3">
-          <FlagPill label="TBC" value={isTBC} onChange={setTBC} activeVariant="danger" />
-          <FlagPill label="Properties TBC" value={isPropTBC} onChange={setPropTBC} activeVariant="warning" />
-        </div>
-        <div className="row g-2 mb-3">
+        <div className="row g-3 mb-3">
           <div className="col-6">
             <Form.Label style={{ fontSize: 12, fontWeight: 600 }}>Internal Notes <span className="text-muted fw-normal">(optional)</span></Form.Label>
             <Form.Control as="textarea" rows={2} size="sm" value={notes} data-field="notes" onChange={e => setNotes(e.target.value)}
@@ -406,23 +407,15 @@ export default function NewETModal({
           </div>
         </div>
 
-        {/* The DesignDB is the master list, so this is not a choice. Say so once. */}
-        <div className="rounded p-2 mb-3" style={{ background: C.accentTint, border: `1px solid ${C.accentEdge}` }}>
-          <div style={{ fontSize: 12, fontWeight: 600 }}>
-            <MaterialIcon name="hub" size={13} /> Added to the DesignDB ElementTypes table{' '}
-            <InfoTip>The DesignDB is the master list of ElementTypes: anything in the Product Spec or a recipe has to exist there too. This lands in the ElementTypes patch script at export.</InfoTip>
-          </div>
-        </div>
-
         {/* Product Spec: always open; only what is the Product Spec's own. */}
         <div className="border rounded p-2" style={{ background: C.subtle }}>
           <div className="d-flex align-items-center gap-1" style={{ fontSize: 12, color: C.muted }}>
             <span className="fw-semibold">Product Spec</span>
-            <span className="text-muted fw-normal ms-1">— Manufacturer, Code, Finish</span>
+            <span className="text-muted fw-normal ms-1">— Manufacturer, Code, Finish (added in brackets to both descriptions)</span>
           </div>
             <div className="mt-2">
               <div className="row g-2">
-                <div className="col-6">
+                <div className="col-4">
                   <Form.Label style={{ fontSize: 11, color: C.muted }}>Manufacturer<Wand field="manufacturer" value={manufacturer} /></Form.Label>
                   <Form.Control size="sm" value={manufacturer} data-field="manufacturer" onChange={e => setMfr(e.target.value)}
                     placeholder="e.g. Osram" list={mfrListId} style={{ fontSize: 11 }} />
@@ -430,18 +423,18 @@ export default function NewETModal({
                     {mfrOptions.map(m => <option key={m} value={m} />)}
                   </datalist>
                 </div>
-                <div className="col-6">
+                <div className="col-4">
                   <Form.Label style={{ fontSize: 11, color: C.muted }}>Product Code<Wand field="productCode" value={productCode} /></Form.Label>
                   <Form.Control size="sm" value={productCode} data-field="productCode" onChange={e => setCode(e.target.value)}
                     placeholder="e.g. LEDTAPE-3000K" style={{ fontSize: 11 }} />
                 </div>
-                <div className="col-12">
+                <div className="col-4">
                   <Form.Label style={{ fontSize: 11, color: C.muted }}>Finish
                     {finishHint && finish === finishHint && <Wand field="finish" value={finish} why="the Form's Finish" />}</Form.Label>
                   <Form.Control size="sm" value={finish} data-field="finish" onChange={e => setFinish(e.target.value)}
                     onClick={() => { if (!finish && finishHint) { seeded.current.finish = finishHint; setFinish(finishHint) } }}
                     title={finishHint && !finish ? `Click to use the Form's finish: ${finishHint}` : undefined}
-                    placeholder={finishHint || 'e.g. RAL 9010 — added in brackets to both descriptions'} style={{ fontSize: 11 }} />
+                    placeholder={finishHint || 'e.g. RAL 9010'} style={{ fontSize: 11 }} />
                 </div>
               </div>
 
@@ -471,14 +464,14 @@ export default function NewETModal({
         </div>
        </div>
         {formRow && (
-          <aside data-testid="newet-form-row" aria-label="From the Form"
-            style={{ width: 250, flexShrink: 0, borderLeft: `1px solid ${C.border}`, paddingLeft: 12, fontSize: 11,
+          <aside data-testid="newet-form-row" aria-label="Form Template Data"
+            style={{ width: 340, flexShrink: 0, borderLeft: `1px solid ${C.border}`, paddingLeft: 12, fontSize: 11,
               alignSelf: 'flex-start', position: 'sticky', top: 0, maxHeight: '65vh', overflowY: 'auto' }}>
-            <div className="text-muted fw-semibold mb-1" style={{ fontSize: 10, letterSpacing: '0.04em' }}>FROM THE FORM · {formRow.ref}</div>
+            <div className="text-muted fw-semibold mb-1" style={{ fontSize: 10, letterSpacing: '0.04em' }}>FORM TEMPLATE DATA · {formRow.ref}</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, max-content) 1fr', columnGap: 8, rowGap: 2 }}>
-              {formRow.cols.map(([col, value]) => (
-                <React.Fragment key={col}>
-                  <span className="text-muted text-truncate" style={{ fontSize: 10, maxWidth: 90 }} title={col}>{col}</span>
+              {formRow.cols.map(([col, value], i) => (
+                <React.Fragment key={`${col}-${i}`}>
+                  <span className="text-muted text-truncate" style={{ fontSize: 10, maxWidth: 120 }} title={col}>{col}</span>
                   <button type="button" className="btn btn-link p-0 text-start text-reset text-decoration-none"
                     // Long LINK/ProductCode cells run to 8 lines: show two, the whole value on hover.
                     style={{ fontSize: 11, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
