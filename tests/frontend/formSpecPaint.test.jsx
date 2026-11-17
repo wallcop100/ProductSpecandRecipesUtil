@@ -231,6 +231,23 @@ test('TKJTDE: ⋯ shows and hides the other Form columns', async () => {
   expect(screen.getByTestId('form-raw')).toHaveTextContent(/Notes\s*white finish/)
 })
 
+test('4746 G353 480: a code read as the same as an existing ElementType gets a FREE ref on the card, never that one', async () => {
+  useStore.setState({
+    elementTypes: [...useStore.getState().elementTypes, { ElementTypeRef: 'ET-PS-04', Family: 'ET-PS', Description: 'kit with QC51' }],
+    psRows: [...useStore.getState().psRows, { ElementTypeRef: 'ET-PS-04', Manufacturer: 'iGuzzini', ProductCode: 'QC51-KIT' }],
+    formCaptures: null, importDraft: {
+      version: 1, step: 'review', source: { name: 'form.xlsx', sheet: 'S' },
+      map: { pt: '', code: 'ProductCode', mfr: 'ManufacturerName', exclude: '', acc: '', context: [] },
+      rules: {}, assignments: {}, resolutions: [], refOverrides: {}, dirStats: { forward: 0, backward: 0 }, stagedRefs: [], keptSeparate: [],
+      rows: [{ id: 0, rawText: 'QC51', positionType: 'C02', manufacturer: 'iGuzzini', context: {}, overrides: {}, noteOverride: {}, confirmed: false }],
+    } })
+  render(<FormSpecPane posRef="C02" />)
+  await screen.findByTestId('compact-painter')
+  const ref = screen.getByLabelText('Ref for QC51').value
+  expect(ref).toMatch(/^ET-PS-\d+$/)
+  expect(['ET-PS-01', 'ET-PS-03', 'ET-PS-04']).not.toContain(ref)
+})
+
 test('S3JLGL: Detach with the painter open closes it, and the open painter does not write the Form back', async () => {
   useStore.setState({ formCaptures: null, importDraft: {
     version: 1, step: 'review', source: { name: 'form.xlsx', sheet: 'S' },
@@ -296,6 +313,21 @@ test('4MYUQ7: Detach takes the Form off the whole project, session included', as
   expect(useStore.getState().formCaptures).toBeNull()
   expect(useStore.getState().importDraft).toBeNull()
 })
+
+test('Detach while the background save is running: nothing is written back', async () => {
+  const { default: FormAutoSaveAll } = await import('../../src/components/FormAutoSaveAll.jsx')
+  useStore.setState({ formCaptures: null, importDraft: {
+    version: 1, step: 'review', source: { name: 'form.xlsx', sheet: 'S' },
+    map: { pt: '', code: 'ProductCode', mfr: 'ManufacturerName', exclude: '', acc: '', context: [] },
+    rules: {}, assignments: { QC51: 'ET-PS-03' }, resolutions: [], refOverrides: {}, dirStats: { forward: 0, backward: 0 }, stagedRefs: [], keptSeparate: [],
+    rows: [{ id: 0, rawText: 'QC51', positionType: 'C02', manufacturer: 'iGuzzini', context: {}, overrides: {}, noteOverride: {}, confirmed: false }],
+  } })
+  render(<FormAutoSaveAll />)
+  await act(async () => { await useStore.getState().detachForm() })
+  await act(async () => { await new Promise(r => setTimeout(r, 4500)) })
+  expect(useStore.getState().formCaptures).toBeNull()
+  expect(useStore.getState().importDraft).toBeNull()
+}, 10000)
 
 test('2K4TCY: every known position is saved at once; the chip counts the whole Form', async () => {
   const { default: FormAutoSaveAll } = await import('../../src/components/FormAutoSaveAll.jsx')

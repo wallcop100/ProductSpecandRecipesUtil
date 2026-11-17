@@ -443,7 +443,11 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
     if (psRows.some(r => String(r.ProductCode || r.productCode || '').trim())) {
       return (
         <div className={paneClass} style={paneStyle} data-painting={painting || undefined}>
-          <SectionLabel>Form spec</SectionLabel>
+          <div className="d-flex align-items-center gap-1">
+            <SectionLabel className="mb-0">Form spec</SectionLabel>
+            {/* A Form loaded but nothing saved yet can still be detached. */}
+            {importDraft && <span className="ms-auto"><PaneMenu onReimport={handleReimport} onDetach={handleDetach} {...compareProps} /></span>}
+          </div>
           {diffBlock}
           {paintBar}
           {!painting && (
