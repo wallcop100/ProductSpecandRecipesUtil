@@ -6,7 +6,7 @@ import {
 } from '@dnd-kit/core'
 import MaterialIcon from './MaterialIcon'
 import IconButton from './IconButton'
-import { refamily, ACCESSORIES, nextRef, whyText } from '../utils/etSeed'
+import { refamily, ACCESSORIES, nextRef, whyText, refFromText } from '../utils/etSeed'
 import { useCompanion } from '../platform/companion'
 import { shareOutcomes } from '../platform/outcomes'
 import { familyForJob } from '../utils/codeJobs'
@@ -258,7 +258,7 @@ export default function BulkCreateETModal({
           <div className="text-muted d-flex align-items-center gap-2" style={{ fontSize: 11 }}>
             <span><MaterialIcon name="check_box" size={12} /> untick what is wrong</span>
             <span><MaterialIcon name="drag_indicator" size={12} /> drag to another family</span>
-            <span><MaterialIcon name="verified" size={12} style={{ color: C.success }} /> firm rule</span>
+            <span><MaterialIcon name="verified" size={12} style={{ color: C.success }} /> family by firm rule</span>
             <InfoTip>
               Drag a code by its grip onto another family, or move a whole group from its header;
               refs renumber as you go. Edit any ref, name or description in place. A green tick means
@@ -411,7 +411,7 @@ export default function BulkCreateETModal({
                                   style={{ fontFamily: 'monospace', fontSize: 11 }}
                                   onChange={e => patch(i, { ref: e.target.value })} />
                                 {verified(r) && (
-                                  <span title={whyText(r)} aria-label={`Placed by rule: ${whyText(r)}`} data-testid="verified">
+                                  <span title={`Family by rule: ${whyText(r)}`} aria-label={`Family placed by rule: ${whyText(r)}`} data-testid="verified">
                                     <MaterialIcon name="verified" size={14} style={{ color: C.success }} />
                                   </span>
                                 )}
@@ -441,6 +441,11 @@ export default function BulkCreateETModal({
                                   title="A guess worth checking: part of an example's ref could not be confirmed, examples disagree, or no rule placed it firmly">
                                   <MaterialIcon name="warning" size={10} /> check ref
                                   {r.alternatives?.length > 0 && <> — or {r.alternatives.join(', ')}</>}
+                                </div>
+                              )}
+                              {refFromText(r) && (
+                                <div className="text-muted" style={{ fontSize: 9, fontStyle: r.refFrom?.from === 'default' ? 'italic' : undefined }} data-testid="ref-from">
+                                  {refFromText(r)}
                                 </div>
                               )}
                               {(!verified(r) || r.kin?.length > 0) && whyText(r) && (
