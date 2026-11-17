@@ -188,3 +188,26 @@ test('the Form pane and diff Create (position passed as import context) show the
   expect(screen.getByTestId('newet-form-row')).toHaveTextContent('ProductNameLumen Line 240')
   useStore.setState({ importDraft: null })
 })
+
+test('ZAJ889: a proposal fills the fields with wands; the Form\'s Finish waits, muted, until clicked', () => {
+  useStore.setState({ importDraft: { map: { mfr: 'ManufacturerName', code: 'ProductCode' }, rows: [
+    { positionType: 'H351', rawText: 'LD53', manufacturer: 'LightGraphix', context: { ProductName: 'LD53', Finish: 'Classic bronze' } },
+  ] } })
+  const onBulk = vi.fn()
+  setup({ importContext: null, formRefs: ['H351'], draftKey: 'zaj889', onBulk, bulkCount: 4,
+    prefill: { ref: 'ET-PS-07', name: 'LightGraphix - LD53', family: 'ET-SPIKE', manufacturer: 'LightGraphix', productCode: 'LD53', description: 'LD53', why: 'like LD51 here' } })
+  for (const f of ['ref', 'name', 'family', 'manufacturer', 'productCode']) expect(screen.getByTestId(`wand-${f}`)).toBeInTheDocument()
+  expect(screen.getByTestId('wand-ref').title).toBe('Filled in: like LD51 here')
+  expect(screen.queryByTestId('wand-description')).toBeNull()        // only the code again: nothing proposed
+  const finish = document.querySelector('[data-field="finish"]')
+  expect(finish).toHaveValue('')
+  expect(finish.placeholder).toBe('Classic bronze')
+  fireEvent.click(finish)
+  expect(finish).toHaveValue('Classic bronze')
+  expect(screen.getByTestId('wand-finish')).toBeInTheDocument()
+  fireEvent.change(document.querySelector('[data-field="name"]'), { target: { value: 'Spike' } })
+  expect(screen.queryByTestId('wand-name')).toBeNull()
+  fireEvent.click(screen.getByTestId('newet-do-all'))
+  expect(onBulk).toHaveBeenCalled()
+  useStore.setState({ importDraft: null })
+})

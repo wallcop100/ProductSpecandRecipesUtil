@@ -441,3 +441,26 @@ export function planFamilyMove(refs, family, elementTypes = [], { renumber = tru
   }
   return { moves, newFamilies }
 }
+
+/** Why a proposal was placed where it was, in words — Bulk and the single New ElementType modal (ZAJ889). */
+const WHY = {
+  // Its own words would hide the code: "ZH-INFD-… (Finish: RAL 9010)".
+  stem: r => (r.kin?.length ? `like ${r.kin.map(c => c.split(' (')[0]).join(', ')} here` : 'same product line'),
+  shape: r => `code shaped like ${r.shapedOn?.example} (${r.shapedOn?.n} known)`,
+  canon: r => `company family — ${r.canon}`,
+  style: r => `styled like ${r.styledOn?.ref}${r.styledOn?.source ? ` (${r.styledOn.source})` : ''}`,
+  line: 'known product line',
+  track: r => `track — ${r.canon}`,
+  library: r => `same product on ${r.styledOn?.source || 'an earlier project'} (${r.styledOn?.ref})`,
+  design: "position's design element",
+  parent: p => `position parent ${p} (not a company family)`,
+  extra: 'extra code in its cell',
+  you: 'you chose it',
+  kit: r => `usually with ${r.kitOf}`,
+  job: r => `${JOB_LABEL[r.job?.slot === 'TAPE' ? `TAPE:${r.job.variant}` : r.job?.slot] || 'its job'}${r.wasFamily ? ` (not ${r.wasFamily})` : ''}`,
+}
+const JOB_LABEL = { 'TAPE:tape': 'LED tape', 'TAPE:flex': 'neon / flex', 'TAPE:fixed': 'fixed linear', PROFILE: 'a profile', DIFFUSER: 'a diffuser',
+  END_CAPS: 'end caps', CLIPS: 'clips', MOUNT_CHANNEL: 'a mounting channel', MOUNT_COLLAR: 'a mounting collar / frame', LOCAL_DRIVER: 'a driver',
+  REMOTE_DRIVER: 'a driver', EMERGENCY: 'an emergency pack', OPTIC_ACCESSORY: 'an optic accessory', ACCESSORY: 'an accessory', FIRE_HOOD: 'a fire hood',
+  LOCKING_LEVER: 'a locking lever', TRACK_ACCESSORY: 'a track accessory' }
+export const whyText = r => (typeof WHY[r.why] === 'function' ? WHY[r.why](r.why === 'parent' ? r.parent : r) : WHY[r.why] || '')

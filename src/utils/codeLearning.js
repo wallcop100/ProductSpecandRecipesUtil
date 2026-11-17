@@ -332,7 +332,29 @@ export function suggestCodes(row, rules = {}, signals = {}) {
 
     if (byShape || byContext || byLook || byMaker) out.push(i)
   })
-  return out
+  return bridgeBrackets(row, out)
+}
+
+const depth = text => [...String(text)].reduce((d, ch) => d + (ch === '(' ? 1 : ch === ')' ? -1 : 0), 0)
+
+/**
+ * A lone bracket token joins the code it balances (ZAJ889): in "LD53 (LT2000)/927/PCBRZ"
+ * the "(" closes inside the next code word, and in "GS38(PFAB )" the ")" closes the one
+ * the code left open, so either way it is one code, not two (or one missing its ")").
+ */
+function bridgeBrackets(row, picked) {
+  const isCode = new Set(picked)
+  row.tokens.forEach((_, i) => { if (row.roles?.[i] === 'code') isCode.add(i) })
+  const out = [...picked]
+  const toks = row.tokens
+  toks.forEach((t, i) => {
+    if (isCode.has(i) || (row.overrides && row.overrides[i])) return
+    const prev = i > 0 && !t.lineBreakBefore && isCode.has(i - 1)
+    const next = i + 1 < toks.length && !toks[i + 1].lineBreakBefore && isCode.has(i + 1)
+    if (t.text === '(' && prev && next && depth(toks[i + 1].text) < 0) { out.push(i); isCode.add(i) }
+    if (t.text === ')' && prev && depth(toks[i - 1].text) > 0) { out.push(i); isCode.add(i) }
+  })
+  return out.sort((a, b) => a - b)
 }
 
 /** Accept a row's suggestions as row-local overrides (the `A` key, and Confirm). */
