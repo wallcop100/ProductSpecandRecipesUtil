@@ -140,7 +140,7 @@ function normalizeRsUpdates(updates = {}) {
  * The ElementType and its Product Spec row both define the product, so these stay in step
  * (92YN3U). The Product Spec is where they are edited; updatePSRow / addPSRow carry them on.
  */
-export const DEFINITION_SYNCED = ['IsTBC', 'IsPropertiesTBC', 'InternalNotesText']
+export const DEFINITION_SYNCED = ['IsTBC', 'IsPropertiesTBC', 'InternalNotesText', 'ExternalNotesText']
 const definitionFields = updates => Object.fromEntries(
   DEFINITION_SYNCED.filter(k => updates && k in updates).map(k => [k, updates[k] ?? null]))
 
@@ -3493,7 +3493,7 @@ const useStore = create((set, get) => ({
       ElementTypeRef: elementTypeRef,
       elementTypeRef,
       ProductCode: null, Manufacturer: null, ComponentDescription: null,
-      InternalNotesText: null, IsTBC: null, IsDeleted: null, IsPropertiesTBC: null,
+      InternalNotesText: null, ExternalNotesText: null, IsTBC: null, IsDeleted: null, IsPropertiesTBC: null,
       _id: uuidv4(), _row_num: null,
     }]
 
@@ -3567,6 +3567,7 @@ const useStore = create((set, get) => ({
       Manufacturer: defaults.Manufacturer ?? null,
       ComponentDescription: defaults.ComponentDescription ?? null,
       InternalNotesText: defaults.InternalNotesText ?? null,
+      ExternalNotesText: defaults.ExternalNotesText ?? null,
       IsTBC: defaults.IsTBC ?? null,
       IsDeleted: null,
       IsPropertiesTBC: defaults.IsPropertiesTBC ?? null,
@@ -3591,6 +3592,7 @@ const useStore = create((set, get) => ({
           Manufacturer: newRow.Manufacturer,
           ComponentDescription: newRow.ComponentDescription,
           InternalNotesText: newRow.InternalNotesText,
+          ExternalNotesText: newRow.ExternalNotesText,
           IsTBC: newRow.IsTBC,
           IsPropertiesTBC: newRow.IsPropertiesTBC,
         },

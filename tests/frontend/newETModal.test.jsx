@@ -121,13 +121,13 @@ test('92YN3U: TBC, Properties TBC and a note go to both the Product Spec and the
   }
 })
 
-test('NQLUFQ: Finish lands in brackets after both descriptions', () => {
-  setup({ prefill: { ref: 'ET-DL-09', description: 'Downlight', componentDescription: 'Trim ring' }, importContext: null, draftKey: 'nqlufq' })
+test('NQLUFQ: Finish lands in brackets after the description, which the Product Spec shares', () => {
+  setup({ prefill: { ref: 'ET-DL-09', description: 'Downlight', manufacturer: 'Acme' }, importContext: null, draftKey: 'nqlufq' })
   fireEvent.change(screen.getByPlaceholderText(/added in brackets/), { target: { value: 'RAL 9010' } })
   fireEvent.click(screen.getByRole('button', { name: 'Create Element Type' }))
   const s = useStore.getState()
   expect(s.elementTypes.find(e => e.ElementTypeRef === 'ET-DL-09').Description).toBe('Downlight (RAL 9010)')
-  expect(s.psRows.find(r => r.ElementTypeRef === 'ET-DL-09').ComponentDescription).toBe('Trim ring (RAL 9010)')
+  expect(s.psRows.find(r => r.ElementTypeRef === 'ET-DL-09').ComponentDescription).toBe('Downlight (RAL 9010)')
 })
 
 describe('HYQ246: a placeholder code is not a duplicate', () => {
@@ -145,4 +145,46 @@ describe('HYQ246: a placeholder code is not a duplicate', () => {
     open('Flexalighting', 'FPS2020BG2000')
     expect(screen.getByText('Use existing ET-PROF-01')).toBeInTheDocument()
   })
+})
+
+test('the Form row shows beside the fields (n/a left out), and a click puts a value into the last field', () => {
+  useStore.setState({ importDraft: { map: { mfr: 'ManufacturerName', code: 'ProductCode' }, rows: [
+    { positionType: 'C03', rawText: 'OTHER1', manufacturer: 'X', context: { ProductName: 'Wrong row' } },
+    { positionType: 'C03', rawText: 'LL240272024', manufacturer: 'LEDFlex', context: { SortOrder: 19, ProductName: 'Lumen Line 240', Finish: 'n/a', Codes: 'LL240272024' } },
+  ] } })
+  setup({ importContext: null, prefill: { productCode: 'LL240272024' }, formRefs: ['C03'], draftKey: 'formrow' })
+  const side = screen.getByTestId('newet-form-row')
+  expect(side).toHaveTextContent('ManufacturerNameLEDFlex')
+  expect(side).toHaveTextContent('ProductNameLumen Line 240')
+  expect(side).not.toHaveTextContent('Finish')
+  expect(side).not.toHaveTextContent('Codes')
+  expect(side).not.toHaveTextContent('SortOrder')
+  const name = document.querySelector('[data-field="name"]')
+  fireEvent.focus(name)
+  fireEvent.click(screen.getByRole('button', { name: 'Lumen Line 240' }))
+  expect(name).toHaveValue('Lumen Line 240')
+  useStore.setState({ importDraft: null })
+})
+
+test('External Notes goes onto the new Product Spec row, beside Internal Notes', () => {
+  setup({ prefill: { ref: 'ET-EXT-01' }, importContext: null, draftKey: 'ext' })
+  fireEvent.change(document.querySelector('[data-field="extNotes"]'), { target: { value: 'Supplied by others' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Create Element Type' }))
+  expect(useStore.getState().psRows.find(r => r.ElementTypeRef === 'ET-EXT-01').ExternalNotesText).toBe('Supplied by others')
+})
+
+test('a ref that already has a Product Spec row cannot be created, so its description is never overwritten', () => {
+  setup({ prefill: { ref: 'ET-KEEP-01', description: 'New words' }, importContext: null, draftKey: 'keep' })
+  act(() => useStore.setState({ psRows: [{ ElementTypeRef: 'ET-KEEP-01', ComponentDescription: 'Old words' }] }))
+  expect(screen.getByRole('button', { name: 'Create Element Type' })).toBeDisabled()
+  expect(useStore.getState().psRows[0].ComponentDescription).toBe('Old words')
+})
+
+test('the Form pane and diff Create (position passed as import context) show the Form row too', () => {
+  useStore.setState({ importDraft: { map: { mfr: 'ManufacturerName' }, rows: [
+    { positionType: 'C03', rawText: 'LL240272024', manufacturer: 'LEDFlex', context: { ProductName: 'Lumen Line 240' } },
+  ] } })
+  setup({ importContext: { code: 'LL240272024', positionTypes: ['C03'], rowCount: 1 }, prefill: {}, draftKey: 'ctxrow' })
+  expect(screen.getByTestId('newet-form-row')).toHaveTextContent('ProductNameLumen Line 240')
+  useStore.setState({ importDraft: null })
 })

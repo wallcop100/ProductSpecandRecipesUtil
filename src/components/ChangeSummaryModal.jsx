@@ -37,6 +37,7 @@ const PS_FIELD_LABELS = {
   Manufacturer: 'Manufacturer',
   ComponentDescription: 'Description',
   InternalNotesText: 'Notes',
+  ExternalNotesText: 'External notes',
 }
 
 // DesignDB ElementTypes columns.

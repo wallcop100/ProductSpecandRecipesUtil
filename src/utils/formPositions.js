@@ -109,3 +109,25 @@ export function positionPaintStatus(draft, posRef, { buildRefMap, targetFor, kno
   const state = unconfirmed ? 'todo' : formRefs.every(f => staged.has(f)) ? 'added' : 'ready'
   return { state, rows: rows.length, unconfirmed, newCodes, formRefs, texts, cells, formRows: rows }
 }
+
+/**
+ * The Form's row for a code at these positions, as the pane shows it (positionPaintStatus
+ * cells), for the New ElementType dialog's side column: the row naming the code, else the
+ * first. "n/a" values and a column repeating the code text are left out.
+ * → { ref, cols: [[column, value]] } | null
+ */
+// The Form's own bookkeeping, nothing about the product: left out of the dialog's side column.
+const FORM_HOUSEKEEPING = new Set(['sortorder', 'pagetype', 'positiontypedescription'])
+
+export function formColumnsFor(draft, refs = [], code = '', opts = {}) {
+  const c = String(code || '').trim().toUpperCase()
+  for (const ref of (refs || []).filter(Boolean)) {
+    const st = positionPaintStatus(draft, ref, opts)
+    const rows = st.formRows || []
+    const i = Math.max(0, c ? rows.findIndex(r => String(r.rawText || '').toUpperCase().includes(c)) : 0)
+    const raw = String(rows[i]?.rawText || '').trim()
+    const cols = (st.cells?.[i] || []).filter(x => !(x.more && x.value === raw) && !isNothingText(x.value) && !FORM_HOUSEKEEPING.has(x.col.toLowerCase())).map(x => [x.col, x.value])
+    if (cols.length) return { ref: st.formRefs?.[0] || ref, cols }
+  }
+  return null
+}

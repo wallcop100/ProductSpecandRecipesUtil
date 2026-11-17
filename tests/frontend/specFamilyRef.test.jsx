@@ -117,3 +117,18 @@ describe('Product Spec: a row the DesignDB lacks', () => {
     expect(s.dbChanges.some(c => c.elementTypeRef === 'ET-CCR-D-500-1CH-01' && c._isNew)).toBe(true)
   })
 })
+
+test('External notes can be edited on the Product Spec, beside Internal notes', () => {
+  useStore.setState({
+    projectId: 1, dbChanges: [], psChanges: [], rsChanges: [], past: [], future: [], recipes: [],
+    elementTypes: [{ ElementTypeRef: 'ET-EXT-02' }],
+    psRows: [{ ElementTypeRef: 'ET-EXT-02', Manufacturer: 'Acme', ExternalNotesText: 'Old' }],
+  })
+  render(<ETSpecEditor selectedRef="ET-EXT-02" />)
+  fireEvent.click(screen.getByRole('button', { name: /Notes/ }))
+  const ext = screen.getByLabelText('External notes')
+  expect(ext).toHaveValue('Old')
+  fireEvent.change(ext, { target: { value: 'Supplied by others' } })
+  fireEvent.blur(ext)
+  expect(useStore.getState().psRows[0].ExternalNotesText).toBe('Supplied by others')
+})

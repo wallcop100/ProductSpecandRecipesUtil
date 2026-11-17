@@ -29,6 +29,7 @@ const PS_FIELD_TO_EXCEL = {
   ProductCode: 'ProductCode',
   ComponentDescription: 'ComponentDescription',
   InternalNotesText: 'InternalNotesText',
+  ExternalNotesText: 'ExternalNotesText',
   IsTBC: 'IsTBC',
   IsDeleted: 'IsDeleted',
   IsPropertiesTBC: 'IsPropertiesTBC',
@@ -65,6 +66,7 @@ const DB_FIELD_TO_EXCEL = {
   IsTBC: 'IsTBC',
   IsPropertiesTBC: 'IsPropertiesTBC',
   InternalNotesText: 'InternalNotesText',
+  ExternalNotesText: 'ExternalNotesText',
 }
 
 // RS row objects may carry camelCase aliases; changedFields/before are PascalCase.

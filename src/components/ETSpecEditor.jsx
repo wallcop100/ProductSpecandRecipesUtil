@@ -188,6 +188,7 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
   const manufacturer  = psRow.Manufacturer || psRow.manufacturer || ''
   const description   = psRow.ComponentDescription || psRow.componentDescription || ''
   const notes         = psRow.InternalNotesText || psRow.internalNotesText || ''
+  const extNotes      = psRow.ExternalNotesText || psRow.externalNotesText || ''
   const isTBC         = psRow.IsTBC || psRow.isTBC || null
   const isPropTBC     = psRow.IsPropertiesTBC || psRow.isPropertiesTBC || null
   const isDeleted     = (psRow.IsDeleted || psRow.isDeleted) === 'Y'
@@ -409,24 +410,27 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
           </div>
         </div>
 
-        {/* Internal notes (collapsed) */}
+        {/* Internal and external notes (collapsed) */}
         <div className="mb-3">
           <button
             className="btn btn-link btn-sm p-0 d-inline-flex align-items-center gap-1"
             style={{ fontSize: 11, textDecoration: 'none', color: C.muted }}
             onClick={() => setShowNotes(v => !v)}
           >
-            <MaterialIcon name={showNotes ? ACTION_ICONS.expand : ACTION_ICONS.collapse} size={14} /> Internal notes
+            <MaterialIcon name={showNotes ? ACTION_ICONS.expand : ACTION_ICONS.collapse} size={14} /> Notes
           </button>
-          {showNotes && (
-            <Form.Control
-              as="textarea" rows={3} size="sm"
-              key={`notes-${selectedRef}-${showNotes}`}
-              defaultValue={notes}
-              onBlur={e => { const v = e.target.value.trim(); if (v !== notes) updatePSRow(selectedRef, { InternalNotesText: v }) }}
-              style={{ fontSize: 12, resize: 'vertical', marginTop: 6 }}
-            />
-          )}
+          {showNotes && [['Internal notes', 'InternalNotesText', notes], ['External notes', 'ExternalNotesText', extNotes]].map(([label, col, val]) => (
+            <Form.Group key={col} className="mt-2">
+              <Form.Label className="text-muted mb-1" style={{ fontSize: 11 }}>{label}</Form.Label>
+              <Form.Control
+                as="textarea" rows={3} size="sm" aria-label={label}
+                key={`${col}-${selectedRef}`}
+                defaultValue={val}
+                onBlur={e => { const v = e.target.value.trim(); if (v !== val) updatePSRow(selectedRef, { [col]: v }) }}
+                style={{ fontSize: 12, resize: 'vertical' }}
+              />
+            </Form.Group>
+          ))}
         </div>
 
         {/* Used-in */}

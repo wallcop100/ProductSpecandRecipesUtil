@@ -18,6 +18,7 @@ export default function NewETWizardModal({ show, onHide, posRef, onDone }) {
     <NewETModal
       show={show}
       onHide={onHide}
+      formRefs={posRef ? [posRef] : null}
       onCreated={onDone}
       contextLabel={posRef ? `into ${posRef}` : null}
       confirmLabel="Create + add to recipe →"
