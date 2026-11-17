@@ -9,6 +9,7 @@
 
 import { isNothingText } from './obviousRows'
 import { looksLikeProductCode } from './codeHeuristics'
+import { deriveCaptures, hasProductIdentity } from './productCodes'
 
 /** Rows grouped by Form ref, in the order the Form first mentions each. */
 export function groupPositions(rows = []) {
@@ -88,10 +89,10 @@ export function positionPaintStatus(draft, posRef, { buildRefMap, targetFor, kno
     const acc = r.accFrom === 0 ? raw : cut != null ? raw.slice(cut) : ''
     return [
       [draft.map?.mfr || 'Manufacturer', r.manufacturer],
-      [draft.map?.code || 'Product code', code],
+      [draft.map?.code || 'Product code', code, false, true],
       [draft.map?.acc || 'Accessories', acc],
       ...Object.entries(r.context || {}).map(([c, v]) => [c, v, true]),
-    ].map(([col, v, more]) => ({ col, value: String(v ?? '').trim(), more: !!more })).filter(c => c.value)
+    ].map(([col, v, more, isCode]) => ({ col, value: String(v ?? '').trim(), more: !!more, ...(isCode && { code: true }) })).filter(c => c.value)
   })
   // No product anywhere in its rows ("n/a", "by others"): nothing to add, nothing to do.
   if (rows.every(r => isNothingText(r.rawText))) return { state: 'nothing', rows: rows.length, unconfirmed: 0, formRefs: groups.map(g => g.formRef), texts, cells }
@@ -104,10 +105,17 @@ export function positionPaintStatus(draft, posRef, { buildRefMap, targetFor, kno
     if (!ws.length) return n + 1
     return n + (knows ? ws.filter(w => !knows(r.manufacturer, w)).length : ws.length)
   }, 0)
+  // Confirmed entries can still hold a code with no ElementType (U737Z6): those count too,
+  // read as the painter reads them, so the chip never says "ready" while the painter asks.
+  const codesOf = r => (r.tokens && r.roles ? deriveCaptures(r).captures.map(c => c.code).filter(hasProductIdentity)
+    : String(r.rawText || '').split(/\s+/).filter(w => w && looksLikeProductCode(w)))
+  const waitingEt = knows ? rows.filter(r => r.confirmed)
+    .reduce((n, r) => n + codesOf(r).filter(c => !knows(r.manufacturer, c)).length, 0) : 0
   const staged = new Set(draft.stagedRefs || [])
   const formRefs = groups.map(g => g.formRef)
-  const state = unconfirmed ? 'todo' : formRefs.every(f => staged.has(f)) ? 'added' : 'ready'
-  return { state, rows: rows.length, unconfirmed, newCodes, formRefs, texts, cells, formRows: rows }
+  const added = formRefs.every(f => staged.has(f))
+  const state = unconfirmed || (waitingEt && !added) ? 'todo' : added ? 'added' : 'ready'
+  return { state, rows: rows.length, unconfirmed, newCodes: newCodes + (added ? 0 : waitingEt), formRefs, texts, cells, formRows: rows }
 }
 
 /**
