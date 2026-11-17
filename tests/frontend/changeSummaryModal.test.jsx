@@ -92,3 +92,16 @@ describe('nothing pending', () => {
     expect(screen.getByText('No pending changes.')).toBeTruthy()
   })
 })
+
+describe('report 4XJLAE: an ElementType added this session reaches the DesignDB patch', () => {
+  test('opening Export queues a Product Spec row the DesignDB lacks', () => {
+    useStore.setState({
+      ...baseState, dbDeletedRefs: [],
+      elementTypes: [{ ElementTypeRef: 'ET-TAPE-01', Family: 'ET-TAPE', _row_num: 2 }], dbCollectionRefs: ['ET-TAPE'],
+      psRows: [{ ElementTypeRef: 'ET-TAPE-01', Manufacturer: 'Acme', ProductCode: 'LT2440A' },
+        { ElementTypeRef: 'ET-NEW-01', Manufacturer: 'Acme', ProductCode: 'LT2440C', Description: 'Tape' }],
+    })
+    render(<ChangeSummaryModal show onHide={() => {}} />)
+    expect(useStore.getState().dbChanges.map(c => c.elementTypeRef)).toContain('ET-NEW-01')
+  })
+})
