@@ -29,6 +29,10 @@ const ET_COLUMN_MAP = {
   IsCollection: 'IsCollection',
   IsDeleted: 'IsDeleted',
   SortOrder: 'SortOrder',
+  // kept in step with the Product Spec row (92YN3U)
+  IsTBC: 'IsTBC',
+  IsPropertiesTBC: 'IsPropertiesTBC',
+  InternalNotesText: 'InternalNotesText',
 }
 
 const PT_COLUMN_MAP = {
@@ -74,18 +78,20 @@ const RS_COLUMN_MAP = {
   IsTRItem: 'IsTRItem',
   Dim_QuantityMultiplier: 'Dim_QuantityMultiplier',
   IsInteger: 'IsInteger',
+  // a note per recipe row (92YN3U); the patch adds the column when a sheet lacks it
+  InternalNotesText: 'Notes',
 }
 
 // Identifier and free-text fields are always strings. Excel stores an all-digit value
 // (a ProductCode like 39012025, a Ref like 101) as a NUMBER, and every consumer
 // downstream calls .trim()/.toLowerCase() on these — one numeric cell crashed the load.
-const ET_TEXT_COLS = new Set(['ElementTypeRef', 'Name', 'Description', 'Family'])
+const ET_TEXT_COLS = new Set(['ElementTypeRef', 'Name', 'Description', 'Family', 'InternalNotesText'])
 const PT_TEXT_COLS = new Set(['PositionTypeRef', 'Name', 'Description', 'ParentRef', 'DriverLocation', 'SecondaryPowerType', 'ControlTypeRef', 'ExtRef'])
 const POS_TEXT_COLS = new Set(['Ref', 'TypeRef'])
 const PS_TEXT_COLS = new Set(['ElementTypeRef', 'Manufacturer', 'ProductCode', 'ComponentDescription', 'InternalNotesText'])
-const RS_TEXT_COLS = new Set(['ContextType', 'ContextRef', 'ElementTypeRef'])
+const RS_TEXT_COLS = new Set(['ContextType', 'ContextRef', 'ElementTypeRef', 'Notes'])
 
-const ET_FLAG_COLS = new Set(['IsCollection', 'IsDeleted'])
+const ET_FLAG_COLS = new Set(['IsCollection', 'IsDeleted', 'IsTBC', 'IsPropertiesTBC'])
 const PT_FLAG_COLS = new Set(['IsCollection', 'IsDeleted'])
 const PS_FLAG_COLS = new Set(['IsTBC', 'IsDeleted', 'IsPropertiesTBC'])
 const RS_FLAG_COLS = new Set(['IsDesign', 'IsContractItem', 'IsTRItem', 'IsInteger', 'IsDeleted'])

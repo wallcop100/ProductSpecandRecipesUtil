@@ -35,16 +35,17 @@ const IGNORED = new Set(['SortOrder', 'ElementTypeRef'])
 // never reads (the DesignDB's Details) cannot be checked, so it never decides either.
 const READS = {
   ps: new Set(['Manufacturer', 'ProductCode', 'ComponentDescription', 'InternalNotesText', 'IsTBC', 'IsDeleted', 'IsPropertiesTBC']),
-  db: new Set(['Name', 'Description', 'Family', 'IsCollection', 'IsDeleted']),
+  db: new Set(['Name', 'Description', 'Family', 'IsCollection', 'IsDeleted', 'IsTBC', 'IsPropertiesTBC', 'InternalNotesText']),
 }
 
 const RS_KEY_FIELDS = ['ContextType', 'ContextRef', 'RecipeIndex', 'ElementTypeRef']
 const RS_FIELDS = ['ContextType', 'ContextRef', 'RecipeIndex', 'ElementTypeRef', 'Quantity', 'PackQuantity',
-  'IsDeleted', 'IsDesign', 'IsContractItem', 'IsTRItem', 'Dim_QuantityMultiplier', 'IsInteger']
+  'IsDeleted', 'IsDesign', 'IsContractItem', 'IsTRItem', 'Dim_QuantityMultiplier', 'IsInteger', 'Notes']
 const RS_ALIASES = {
   ContextType: 'contextType', ContextRef: 'contextRef', RecipeIndex: 'recipeIndex', ElementTypeRef: 'elementTypeRef',
   Quantity: 'quantity', PackQuantity: 'packQuantity', IsDeleted: 'isDeleted', IsDesign: 'isDesign',
   IsContractItem: 'isContractItem', IsTRItem: 'isTRItem', Dim_QuantityMultiplier: 'dimQtyMultiplier', IsInteger: 'isInteger',
+  Notes: 'notes',
 }
 const rsv = (row, f) => (row?.[f] !== undefined ? row[f] : row?.[RS_ALIASES[f]])
 

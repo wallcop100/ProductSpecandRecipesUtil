@@ -104,3 +104,19 @@ test('report #30: the Product Spec fields open expanded even with nothing prefil
   setup({ prefill: {}, importContext: null, draftKey: 'blank' })
   expect(screen.getByPlaceholderText('e.g. Osram')).toBeInTheDocument()
 })
+
+test('92YN3U: TBC, Properties TBC and a note go to both the Product Spec and the ElementType', () => {
+  setup({ prefill: { ref: 'ET-LIN-TAPE-09', manufacturer: 'LEDFlex', productCode: 'TBC' }, importContext: null, draftKey: '92yn3u' })
+  fireEvent.click(screen.getByRole('switch', { name: 'TBC' }))
+  fireEvent.click(screen.getByRole('switch', { name: 'Properties TBC' }))
+  fireEvent.change(screen.getByPlaceholderText('Anything to query…'), { target: { value: 'Which CCT?' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Create Element Type' }))
+  const s = useStore.getState()
+  const ps = s.psRows.find(r => r.ElementTypeRef === 'ET-LIN-TAPE-09')
+  const et = s.elementTypes.find(e => e.ElementTypeRef === 'ET-LIN-TAPE-09')
+  for (const row of [ps, et]) {
+    expect(row.IsTBC).toBe('Y')
+    expect(row.IsPropertiesTBC).toBe('Y')
+    expect(row.InternalNotesText).toBe('Which CCT?')
+  }
+})

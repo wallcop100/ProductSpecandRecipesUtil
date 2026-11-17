@@ -61,6 +61,7 @@ function excel(name, sheets) {
     const range = (r, c, h, w) => ({
       getValues: () => grid.slice(r, r + h).map(row => row.slice(c, c + w).map(v => v ?? '')),
       setValues: vals => vals.forEach((row, i) => row.forEach((v, j) => { grid[r + i][c + j] = v })),
+      setValue: v => { grid[r][c] = v },
       getFormulas: () => grid.slice(r, r + h).map(row => row.slice(c, c + w).map(v => v ?? '')),
       setFormulas: vals => vals.forEach((row, i) => row.forEach((v, j) => { grid[r + i][c + j] = v })),
       getFormat: () => ({ getFill: () => ({ setColor() {}, clear() {} }), getFont: () => ({ setColor() {}, setBold() {} }) }),
@@ -225,5 +226,46 @@ describe('the patch round trip', () => {
     expect(await useStore.getState().checkFiles()).toBeNull()
     expect(pendingCount()).toBe(before)
     expect(useStore.getState().syncStatus.error).toMatch(/Unsupported/)
+  })
+})
+
+describe('92YN3U: TBC and notes', () => {
+  let files
+  beforeEach(() => {
+    files = workbooks()
+    // The DesignDB template has these; the Recipes Spec here, like 5642's, has no InternalNotesText.
+    const et = files.db.ElementTypes
+    et[0].push('IsTBC', 'IsPropertiesTBC', 'InternalNotesText'); et.slice(1).forEach(r => r.push('', '', ''))
+    open(files)
+  })
+
+  test('a Product Spec edit keeps the ElementType in step, and one Undo takes both back', () => {
+    useStore.getState().updatePSRow('ET-LIN-TAPE-01', { IsTBC: 'Y', InternalNotesText: 'Ask about 24V' })
+    const et = () => useStore.getState().elementTypes.find(e => e.ElementTypeRef === 'ET-LIN-TAPE-01')
+    expect(et().IsTBC).toBe('Y')
+    expect(et().InternalNotesText).toBe('Ask about 24V')
+    useStore.getState().undo()
+    expect(et().IsTBC ?? null).toBeNull()
+    expect(useStore.getState().psRows.find(r => r.ElementTypeRef === 'ET-LIN-TAPE-01').IsTBC ?? null).toBeNull()
+  })
+
+  test('a recipe note adds the column once, lands on its row, and the files then agree', async () => {
+    useStore.getState().updatePSRow('ET-LIN-TAPE-01', { IsPropertiesTBC: 'Y', InternalNotesText: 'Ask about 24V' })
+    const tape = useStore.getState().recipes.find(r => r.ElementTypeRef === 'ET-LIN-TAPE-01')
+    useStore.getState().updateRecipeRow('C01r', tape._id, { notes: 'Length to confirm on site' })
+    const scripts = exportBatch()
+    const logs = patch(files, scripts)
+    expect(logs.rs).toContain('Added column InternalNotesText.')
+    const rs = files.rs.Form, c = rs[0].indexOf('InternalNotesText')
+    expect(rs.find(r => r[4] === 'ET-LIN-TAPE-01')[c]).toBe('Length to confirm on site')
+    const db = files.db.ElementTypes, row = db.find(r => r[0] === 'ET-LIN-TAPE-01')
+    expect(row[db[0].indexOf('IsPropertiesTBC')]).toBe('Y')
+    expect(row[db[0].indexOf('InternalNotesText')]).toBe('Ask about 24V')
+    // a second run adds no second column
+    patch(files, scripts, ['rs'])
+    expect(rs[0].filter(h => h === 'InternalNotesText')).toHaveLength(1)
+    await check(files)
+    expect(pendingCount()).toBe(0)
+    expect(useStore.getState().recipes.find(r => r.ElementTypeRef === 'ET-LIN-TAPE-01').Notes).toBe('Length to confirm on site')
   })
 })
