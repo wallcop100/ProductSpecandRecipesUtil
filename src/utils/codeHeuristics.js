@@ -10,6 +10,8 @@
 const SPEC_VALUE = [
   /^\d{3,5}K$/i, /^IP\d{2}$/i, /^\d+(\.\d+)?(mm|cm|m|w|v|ma|a|deg|lm|hz)$/i,
   /^RAL\d+/i, /^\d{1,4}[x×]\d{1,4}/i, /^CRI\d+/i, /^(AISI|SS|GR)\d{3}[A-Z]?$/i, /^[LHWD]\d{2,4}$/i,
+  /^(GU10|GU5\.3|GX53|GX5\.3|GZ10|MR11|MR16|AR111|PAR(16|20|30|38))$/i,  // named exactly: AR413 is a real code   // lamp bases and reflector sizes: GU10, GX53, MR16, AR111
+
 ]
 
 export function looksLikeProductCode(text) {
