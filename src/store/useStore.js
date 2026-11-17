@@ -92,7 +92,7 @@ function stampIds(rows) {
 const RS_EXPORT_FIELDS = [
   'ContextType', 'ContextRef', 'RecipeIndex', 'ElementTypeRef', 'SortOrder',
   'Quantity', 'PackQuantity', 'IsDeleted', 'IsDesign', 'IsContractItem',
-  'IsTRItem', 'Dim_QuantityMultiplier', 'IsInteger',
+  'IsTRItem', 'Dim_QuantityMultiplier', 'IsInteger', 'Notes',
 ]
 
 const RS_FIELD_ALIASES = {
@@ -100,7 +100,7 @@ const RS_FIELD_ALIASES = {
   ElementTypeRef: 'elementTypeRef', SortOrder: 'sortOrder', Quantity: 'quantity',
   PackQuantity: 'packQuantity', IsDeleted: 'isDeleted', IsDesign: 'isDesign',
   IsContractItem: 'isContractItem', IsTRItem: 'isTRItem',
-  Dim_QuantityMultiplier: 'dimQtyMultiplier', IsInteger: 'isInteger',
+  Dim_QuantityMultiplier: 'dimQtyMultiplier', IsInteger: 'isInteger', Notes: 'notes',
 }
 
 function rsValue(row, field) {
@@ -135,6 +135,14 @@ function normalizeRsUpdates(updates = {}) {
   }
   return out
 }
+
+/**
+ * The ElementType and its Product Spec row both define the product, so these stay in step
+ * (92YN3U). The Product Spec is where they are edited; updatePSRow / addPSRow carry them on.
+ */
+export const DEFINITION_SYNCED = ['IsTBC', 'IsPropertiesTBC', 'InternalNotesText']
+const definitionFields = updates => Object.fromEntries(
+  DEFINITION_SYNCED.filter(k => updates && k in updates).map(k => [k, updates[k] ?? null]))
 
 /** Loose equality: null == '' , 1 == '1'. */
 function looseEqual(a, b) {
@@ -3488,6 +3496,7 @@ const useStore = create((set, get) => ({
       containerReasons: containerInfo.reasons,
       psChanges: mergePsChanges(psChanges, { elementTypeRef, updates, before }),
     })
+    get().updateElementType(elementTypeRef, definitionFields(updates), { recordHistory: false })
   },
 
   /**
@@ -3540,7 +3549,7 @@ const useStore = create((set, get) => ({
       ProductCode: defaults.ProductCode ?? null,
       Manufacturer: defaults.Manufacturer ?? null,
       ComponentDescription: defaults.ComponentDescription ?? null,
-      InternalNotesText: null,
+      InternalNotesText: defaults.InternalNotesText ?? null,
       IsTBC: defaults.IsTBC ?? null,
       IsDeleted: null,
       IsPropertiesTBC: defaults.IsPropertiesTBC ?? null,
@@ -3564,12 +3573,14 @@ const useStore = create((set, get) => ({
           ProductCode: newRow.ProductCode,
           Manufacturer: newRow.Manufacturer,
           ComponentDescription: newRow.ComponentDescription,
+          InternalNotesText: newRow.InternalNotesText,
           IsTBC: newRow.IsTBC,
           IsPropertiesTBC: newRow.IsPropertiesTBC,
         },
         _isNew: true,
       }),
     })
+    get().updateElementType(trimmed, definitionFields(newRow), { recordHistory: false })
 
     return newRow
   },
@@ -4510,7 +4521,7 @@ const useStore = create((set, get) => ({
    * Like every catalogue write, the DesignDB row is only queued when DB writes
    * are enabled — otherwise the change stays project-local.
    */
-  updateElementType(ref, updates = {}) {
+  updateElementType(ref, updates = {}, { recordHistory = true } = {}) {
     const trimmed = (ref || '').trim()
     if (!trimmed || Object.keys(updates).length === 0) return
     const { elementTypes, dbChanges, projectId } = get()
@@ -4525,7 +4536,7 @@ const useStore = create((set, get) => ({
     }
     if (Object.keys(changed).length === 0) return
 
-    get()._pushHistory()
+    if (recordHistory) get()._pushHistory()
 
     const patch = {
       elementTypes: elementTypes.map(e =>

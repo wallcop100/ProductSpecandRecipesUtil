@@ -203,6 +203,9 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
     !!(row.isTRItem || row.IsTRItem)
   )
   const [showExtra, setShowExtra] = useState(false)
+  // The row's own InternalNotesText in the Recipes Spec (92YN3U).
+  const note = row.Notes ?? row.notes ?? ''
+  const [editNote, setEditNote] = useState(false)
   // Setting up a group on this position: clips, tape, profile, mount and caps must have
   // their quantity confirmed — it pulses until you do, even if it came prefilled.
   const teaching = useStore(s => s.teaching)
@@ -320,6 +323,9 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                 <Dropdown.Item disabled={extraInUse || qtyToConfirm} onClick={() => setShowExtra(v => !v)}>
                   <MaterialIcon name={showExtraControls ? ACTION_ICONS.remove : ACTION_ICONS.more} size={14} />
                   {showExtraControls ? ' Hide DimMult, PackQty, TRItem' : ' Show DimMult, PackQty, TRItem'}
+                </Dropdown.Item>
+                <Dropdown.Item onClick={() => setEditNote(true)}>
+                  <MaterialIcon name="sticky_note_2" size={14} /> {note ? 'Edit note' : 'Add note'}
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown>
@@ -600,6 +606,16 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                   </>
                 ) : null}
               </div>
+              {editNote ? (
+                <Form.Control as="textarea" rows={2} size="sm" autoFocus defaultValue={note} aria-label="Recipe row note"
+                  placeholder="Note for this row…" style={{ fontSize: 11, resize: 'vertical' }}
+                  onBlur={e => { const v = e.target.value.trim(); setEditNote(false); if (v !== note) handleFieldChange('Notes', v || null) }} />
+              ) : note ? (
+                <button type="button" className="btn btn-link p-0 text-start text-muted d-flex align-items-start gap-1" data-testid="row-note"
+                  style={{ fontSize: 11, textDecoration: 'none' }} title="Edit note" onClick={() => setEditNote(true)}>
+                  <MaterialIcon name="sticky_note_2" size={12} style={{ marginTop: 1 }} /> <span style={{ whiteSpace: 'pre-wrap' }}>{note}</span>
+                </button>
+              ) : null}
             </div>
 
             {/* Delete / restore */}

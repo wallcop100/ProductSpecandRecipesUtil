@@ -48,6 +48,7 @@ const RS_FIELD_TO_EXCEL = {
   IsTRItem: 'IsTRItem',
   Dim_QuantityMultiplier: 'Dim_QuantityMultiplier',
   IsInteger: 'IsInteger',
+  Notes: 'InternalNotesText',
 }
 
 const DB_FIELD_TO_EXCEL = {
@@ -61,6 +62,9 @@ const DB_FIELD_TO_EXCEL = {
   IsCollection: 'IsCollection',
   IsDeleted: 'IsDeleted',
   SortOrder: 'SortOrder',
+  IsTBC: 'IsTBC',
+  IsPropertiesTBC: 'IsPropertiesTBC',
+  InternalNotesText: 'InternalNotesText',
 }
 
 // RS row objects may carry camelCase aliases; changedFields/before are PascalCase.
@@ -69,7 +73,7 @@ const RS_FIELD_ALIASES = {
   ElementTypeRef: 'elementTypeRef', SortOrder: 'sortOrder', Quantity: 'quantity',
   PackQuantity: 'packQuantity', IsDeleted: 'isDeleted', IsDesign: 'isDesign',
   IsContractItem: 'isContractItem', IsTRItem: 'isTRItem',
-  Dim_QuantityMultiplier: 'dimQtyMultiplier', IsInteger: 'isInteger',
+  Dim_QuantityMultiplier: 'dimQtyMultiplier', IsInteger: 'isInteger', Notes: 'notes',
 }
 
 const RS_KEY_FIELDS = ['ContextType', 'ContextRef', 'RecipeIndex', 'ElementTypeRef']
@@ -193,14 +197,27 @@ function fillUsed(script, used) {
  * metadata only, no cell values), the column map from a single bounded header read, and
  * the append cursor. `indexLine` builds whichever key index the caller needs.
  */
-function preamble(sheet, indexLine) {
+function preamble(sheet, indexLine, ensure = []) {
+  // `ensure`: headers added at the end of row 1 when the sheet has none (a Recipes Spec
+  // made before InternalNotesText was used, 92YN3U). Never moves or renames a column.
+  const add = ensure.length ? [
+    '    {',
+    '      const h = S.getRangeByIndexes(0, 0, 1, nCols).getValues()[0].map(v => String(v).trim());',
+    `      for (const name of ${JSON.stringify(ensure)}) {`,
+    '        if (h.indexOf(name) >= 0) continue;',
+    '        S.getRangeByIndexes(0, nCols, 1, 1).setValue(name); nCols++;',
+    '        console.log("Added column " + name + ".");',
+    '      }',
+    '    }',
+  ] : []
   return [
     `    const S = workbook.getWorksheet(${q(sheet)});`,
     `    if (!S) { console.log(${q(`STOP: no sheet "${sheet}" in this workbook - is it the right file? Nothing was changed.`)}); return; }`,
     '    const used = S.getUsedRange(true);   // valuesOnly: ignore formatting-only padding',
     '    if (!used) { console.log("Sheet has no data - nothing to patch."); return; }',
     '    const nRows = used.getRowCount();',
-    '    const nCols = used.getColumnCount();',
+    `    ${ensure.length ? 'let' : 'const'} nCols = used.getColumnCount();`,
+    ...add,
     '    const col = colMap(S.getRangeByIndexes(0, 0, 1, nCols).getValues()[0], USED);',
     indexLine,
     '    let apR = nRows;',
@@ -485,6 +502,7 @@ export function buildRsScript(rsChanges, filename = 'Recipe Spec', { project = '
 
   const blocks = [...otherBlocks, ...appendBlocks]
   const keyCols = RS_KEY_FIELDS.map(f => `col[${q(RS_FIELD_TO_EXCEL[f])}]`).join(', ')
-  const pre = preamble('Form', `    const rowOf = compositeIndex(S, [${keyCols}], nRows);`)
+  const ensure = used.has('InternalNotesText') ? ['InternalNotesText'] : []
+  const pre = preamble('Form', `    const rowOf = compositeIndex(S, [${keyCols}], nRows);`, ensure)
   return fillUsed(wrapScript(filename, pre, blocks, { project }), used)
 }
