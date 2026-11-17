@@ -4,17 +4,18 @@ import { C } from '../styles/tokens'
 
 const lc = s => String(s || '').toLowerCase()
 
-/** lc refs a live Product Spec row names that are no loaded DesignDB ElementType: the next patch adds them. */
+/** lc refs a live Product Spec row names that the DesignDB lacks and no queued change adds (those show "New"). */
 export function usePsOnlyRefs() {
   const psRows = useStore(s => s.psRows)
   const elementTypes = useStore(s => s.elementTypes)
   const dbCollectionRefs = useStore(s => s.dbCollectionRefs)
+  const dbChanges = useStore(s => s.dbChanges)
   return useMemo(() => {
     const inDb = new Set([...elementTypes.filter(e => e._row_num != null).map(e => lc(e.ElementTypeRef || e.elementTypeRef)),
-      ...(dbCollectionRefs || []).map(lc)])
+      ...(dbCollectionRefs || []).map(lc), ...(dbChanges || []).map(c => lc(c.elementTypeRef))])
     return new Set(psRows.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y').map(r => lc(r.ElementTypeRef || r.elementTypeRef))
       .filter(r => r && !inDb.has(r)))
-  }, [psRows, elementTypes, dbCollectionRefs])
+  }, [psRows, elementTypes, dbCollectionRefs, dbChanges])
 }
 
 // `short` for a list row, where the full words would crush the ref.

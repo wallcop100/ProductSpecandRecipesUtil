@@ -11,6 +11,7 @@ import { C } from '../styles/tokens'
 import { copyText } from './CopyButton'
 import { formColumnsFor } from '../utils/formPositions'
 import { buildRefMap, targetFor } from '../utils/ptResolve'
+import { containerForPosition } from '../utils/recipePresence'
 const norm = s => String(s ?? '').trim().toLowerCase()
 
 /**
@@ -63,6 +64,12 @@ export default function NewETModal({
   formRefs = null,
   /** "Do all N at once": closes this and opens Bulk on every code (ZAJ889). */
   onBulk = null, bulkCount = 0,
+  /**
+   * The position to put it in. Given, the footer offers only the places that exist: Product
+   * Spec only, into the position's wrapper, into the position. The modal places it, then
+   * calls onCreated(ref, where) with where = 'ps' | 'wrapper' | 'position'.
+   */
+  placeIn = null,
 }) {
   const elementTypes      = useStore(s => s.elementTypes)
   const dbCollectionRefs  = useStore(s => s.dbCollectionRefs)
@@ -72,6 +79,8 @@ export default function NewETModal({
   const addPSRow          = useStore(s => s.addPSRow)
   const updatePSRow       = useStore(s => s.updatePSRow)
   const importDraft       = useStore(s => s.importDraft)
+  const containerETRefs   = useStore(s => s.containerETRefs)
+  const wrapperRef = useMemo(() => (placeIn ? containerForPosition(recipes, placeIn, containerETRefs) : null), [placeIn, recipes, containerETRefs])
 
   const uid = useId()
   const familyListId = `newet-family-${uid}`
@@ -199,7 +208,8 @@ export default function NewETModal({
 
   const canSave = ref.trim() && !alreadyExists && !saving
 
-  async function handleSave() {
+  const saveTitle = alreadyExists ? 'Ref already exists' : !ref.trim() ? 'Enter a ref first' : ''
+  async function handleSave(where = null) {
     const trimRef = ref.trim()
     if (!trimRef || alreadyExists) return
     setSaving(true)
@@ -237,7 +247,14 @@ export default function NewETModal({
       }
 
       clearSeed()
-      onCreated(trimRef)
+      if (where) {
+        const st = useStore.getState()
+        const row = { elementTypeRef: trimRef, ElementTypeRef: trimRef }
+        if (where === 'position') st.addRecipeRow(placeIn, 'position', row, { asPosition: true })
+        if (where === 'wrapper') st.addRecipeRow(placeIn, /LIN/i.test(wrapperRef) ? 'lin_internal' : 'dl_internal', row, { asPosition: true })
+        st.ensurePSRow(trimRef)
+      }
+      onCreated(trimRef, where)
     } finally {
       setSaving(false)
     }
@@ -255,8 +272,15 @@ export default function NewETModal({
 
       <Modal.Body className={formRow ? 'd-flex gap-3' : undefined}>
        <div style={{ flex: 1, minWidth: 0 }} onFocusCapture={e => { if (setters[e.target.dataset?.field]) lastField.current = e.target.dataset.field }}>
-        {/* What the Form actually said. Read-only: it is evidence, not a field. */}
-        {importContext && (
+        {/* What the Form actually said. Read-only: it is evidence, not a field. The Form row
+            panel on the right says it in full, so this shows only without it; a merge still warns. */}
+        {importContext && formRow && importContext.mergedCodes?.length > 1 && (
+          <div className="mb-3" style={{ color: C.attnInk, fontSize: 11 }}>
+            <MaterialIcon name="merge" size={11} /> merging {importContext.mergedCodes.length} codes onto one
+            ElementType: <span style={{ fontFamily: 'monospace' }}>{importContext.mergedCodes.join(', ')}</span>
+          </div>
+        )}
+        {importContext && !formRow && (
           <div className="mb-3 px-2 py-2 rounded" style={{ background: C.subtle, border: `1px solid ${C.border}`, fontSize: 11 }}>
             <div className="fw-semibold text-muted mb-1" style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '.05em' }}>
               Form Template Data
@@ -307,7 +331,7 @@ export default function NewETModal({
             size="sm"
             value={ref}
             data-field="ref" onChange={e => setRef(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && canSave) handleSave() }}
+            onKeyDown={e => { if (e.key === 'Enter' && canSave) handleSave(placeIn ? 'position' : null) }}
             placeholder="e.g. ET-TAPE-004"
             isInvalid={alreadyExists}
             style={{ fontSize: 12, fontFamily: 'monospace' }}
@@ -318,7 +342,8 @@ export default function NewETModal({
               This ref already exists — use "Pick existing" to add it.
             </Form.Text>
           )}
-          {!alreadyExists && suggested && suggested !== ref.trim() && (
+          {/* A full free ref is the user's (or a proposal's, numbered past refs other new codes hold): no nudge. */}
+          {!alreadyExists && suggested && suggested !== ref.trim() && (notCapitalised || !/-\d+$/.test(ref.trim())) && (
             <div style={{ fontSize: 11, marginTop: 4, color: C.accent }}>
               <MaterialIcon name="lightbulb" size={12} style={{ verticalAlign: 'middle', marginRight: 3 }} />
               {notCapitalised ? 'Suggested (capitalised):' : 'Next available:'}{' '}
@@ -492,14 +517,18 @@ export default function NewETModal({
 
       <Modal.Footer>
         <Button variant="link" size="sm" onClick={onHide} style={{ fontSize: 12 }}>Cancel</Button>
-        <Button
-          variant="primary" size="sm" style={{ fontSize: 12 }}
-          onClick={handleSave}
-          disabled={!canSave}
-          title={alreadyExists ? 'Ref already exists' : !ref.trim() ? 'Enter a ref first' : ''}
-        >
-          {saving ? 'Creating…' : confirmLabel}
-        </Button>
+        {placeIn ? <>
+          <Button variant="outline-secondary" size="sm" style={{ fontSize: 12 }} className="me-auto order-first" data-testid="newet-ps-only"
+            onClick={() => handleSave('ps')} disabled={!canSave} title={saveTitle}>Product Spec only</Button>
+          {wrapperRef && <Button variant="outline-primary" size="sm" style={{ fontSize: 12 }} data-testid="newet-into-wrapper"
+            onClick={() => handleSave('wrapper')} disabled={!canSave} title={saveTitle}>Add into {wrapperRef}</Button>}
+          <Button variant="primary" size="sm" style={{ fontSize: 12 }} data-testid="newet-into-position"
+            onClick={() => handleSave('position')} disabled={!canSave} title={saveTitle}>{saving ? 'Creating…' : `Add into ${placeIn}`}</Button>
+        </> : (
+          <Button variant="primary" size="sm" style={{ fontSize: 12 }} onClick={() => handleSave()} disabled={!canSave} title={saveTitle}>
+            {saving ? 'Creating…' : confirmLabel}
+          </Button>
+        )}
       </Modal.Footer>
     </Modal>
   )

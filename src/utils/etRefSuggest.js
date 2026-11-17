@@ -223,7 +223,8 @@ export function suggestRef(code, note, manufacturer, convention, elementTypes = 
   const variant = cands.find(c => c.score >= 0.5)
   if (variant) {
     const stem = variant.ref.match(COUNTER_RE)?.[1]
-    const next = stem && getNextAvailableRef(`${stem}-01`, elementTypes)
+    // A ref only the Product Spec uses still exists (4746: ET-PS-ACCESSORIES-02 offered, then "already exists").
+    const next = stem && getNextAvailableRef(`${stem}-01`, [...elementTypes, ...psRows])
     if (next) return { ref: next, reason: 'variant', candidate: variant }
   }
 

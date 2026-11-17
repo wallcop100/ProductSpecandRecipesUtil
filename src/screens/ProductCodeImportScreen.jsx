@@ -1447,10 +1447,14 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   // pressing + would make, as if this position's rows were confirmed (nothing is changed).
   const cardProposals = useMemo(() => {
     const extra = embedded ? scopeRows.filter(r => !r.confirmed && !isTbc(r, captureOpts)) : []
-    if (!extra.length) return proposals
-    const ents = toEntries([...confirmed, ...extra]).filter(e => !e.etRef && !hasNoteCollision(e))
-    return proposeFor([...ents, ...tbcEntries.filter(e => !e.etRef)], [...confirmed, ...extra]).proposals
-  }, [embedded, scopeRows, captureOpts, proposals, toEntries, confirmed, proposeFor, tbcEntries])
+    const all = extra.length ? toEntries([...confirmed, ...extra]) : entries
+    const props = extra.length
+      ? proposeFor([...all.filter(e => !e.etRef && !hasNoteCollision(e)), ...tbcEntries.filter(e => !e.etRef)], [...confirmed, ...extra]).proposals
+      : proposals
+    // No family means no proposed ref; show the ref the + window opens with instead.
+    const suggested = new Map(all.map(e => [norm(e.text), e.suggested?.ref]))
+    return props.map(p => (p.ref || p.action !== 'create' || !suggested.get(norm(p.code)) ? p : { ...p, ref: suggested.get(norm(p.code)) }))
+  }, [embedded, scopeRows, captureOpts, proposals, entries, toEntries, confirmed, proposeFor, tbcEntries])
   // In the builder's painter, an entry whose every code already has an ElementType (from
   // the spec, this import, or an earlier project) is confirmed: nothing is left to decide
   // there, and a tick no one is offered must not hold the position back (WYZ3NN).
@@ -2317,6 +2321,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
           why: creatingFor.why,
         } : {}}
         bulkCount={proposals.length}
+        placeIn={embedded?.posRef || null}
         onBulk={() => { setCreatingFor(null); setMergingGroup(null); openBulkCreate() }}
         onCreated={etRef => {
           // Its family may be one the seed proposed and nobody has created yet.

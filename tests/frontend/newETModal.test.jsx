@@ -186,6 +186,8 @@ test('the Form pane and diff Create (position passed as import context) show the
   ] } })
   setup({ importContext: { code: 'LL240272024', positionTypes: ['C03'], rowCount: 1 }, prefill: {}, draftKey: 'ctxrow' })
   expect(screen.getByTestId('newet-form-row')).toHaveTextContent('ProductNameLumen Line 240')
+  // The right panel says it in full: no second Form Template Data box on the left.
+  expect(screen.queryByText('Form Template Data')).toBeNull()
   useStore.setState({ importDraft: null })
 })
 
@@ -210,4 +212,39 @@ test('ZAJ889: a proposal fills the fields with wands; the Form\'s Finish waits, 
   fireEvent.click(screen.getByTestId('newet-do-all'))
   expect(onBulk).toHaveBeenCalled()
   useStore.setState({ importDraft: null })
+})
+
+describe('placeIn: the footer puts the new ElementType where you say', () => {
+  const wrapped = [{ PositionTypeRef: 'D74', ContextType: 'PositionType', ContextRef: 'D74', ElementTypeRef: 'ET-DL-04', IsDesign: 'Y' }]
+  const place = (recipes, testId) => {
+    useStore.setState({ projectId: 42, elementTypes: [], psRows: [], recipes, containerETRefs: new Set(['et-dl-04']),
+      dbWriteEnabled: false, psChanges: [], rsChanges: [], dbChanges: [], past: [], future: [] })
+    const onCreated = vi.fn()
+    render(<NewETModal show onHide={vi.fn()} onCreated={onCreated} prefill={prefill} importContext={ctx} draftKey={`::${testId}`} placeIn="D74" />)
+    if (testId) fireEvent.click(screen.getByTestId(testId))
+    return onCreated
+  }
+  const rowsOf = et => useStore.getState().recipes.filter(r => r.ElementTypeRef === et)
+
+  test('no wrapper on the position, no wrapper button', () => {
+    place([], null)
+    expect(screen.queryByTestId('newet-into-wrapper')).toBeNull()
+    expect(screen.getByTestId('newet-into-position')).toHaveTextContent('Add into D74')
+  })
+
+  test('into the position', () => {
+    expect(place(wrapped, 'newet-into-position')).toHaveBeenCalledWith('ET-PROF-02', 'position')
+    expect(rowsOf('ET-PROF-02')).toMatchObject([{ ContextType: 'PositionType', ContextRef: 'D74' }])
+  })
+
+  test('into the wrapper', () => {
+    expect(place(wrapped, 'newet-into-wrapper')).toHaveBeenCalledWith('ET-PROF-02', 'wrapper')
+    expect(rowsOf('ET-PROF-02')).toMatchObject([{ ContextType: 'ElementType', ContextRef: 'ET-DL-04' }])
+  })
+
+  test('Product Spec only: a spec row, no recipe row', () => {
+    expect(place(wrapped, 'newet-ps-only')).toHaveBeenCalledWith('ET-PROF-02', 'ps')
+    expect(rowsOf('ET-PROF-02')).toHaveLength(0)
+    expect(useStore.getState().psRows.some(r => r.ElementTypeRef === 'ET-PROF-02')).toBe(true)
+  })
 })

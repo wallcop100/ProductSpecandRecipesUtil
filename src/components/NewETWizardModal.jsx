@@ -11,15 +11,17 @@ import NewETModal from './NewETModal'
  *   show, onHide
  *   posRef      — originating position (for context label)
  *   sectionKey  — section the new row will land in (unused here; kept for callers)
- *   onDone(etRef) — called on save; caller inserts the row + opens AddAnywhereModal
+ *   placeIn     — position the footer offers to place it in (NewETModal placeIn)
+ *   onDone(etRef, where) — called on save; without placeIn the caller inserts the row
  */
-export default function NewETWizardModal({ show, onHide, posRef, onDone }) {
+export default function NewETWizardModal({ show, onHide, posRef, onDone, placeIn = null }) {
   return (
     <NewETModal
       show={show}
       onHide={onHide}
       formRefs={posRef ? [posRef] : null}
       onCreated={onDone}
+      placeIn={placeIn}
       contextLabel={posRef ? `into ${posRef}` : null}
       confirmLabel="Create + add to recipe →"
     />
