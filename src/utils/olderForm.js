@@ -19,15 +19,8 @@ const isExcluded = v => { const s = String(v ?? '').trim(); return s !== '' && !
  * readable message when the sheet has no product code / PositionType column.
  */
 export async function readOlderForm(path, map = {}, { readSheet, fileMeta }) {
-  let data = await readSheet(path, null)
   const col = (mapped, want, hs) => (mapped && hs.includes(mapped) ? mapped : detect(hs, want))
-  if (!col(map.code, 'productcode', data.headers || [])) {
-    for (const sname of data.sheets || []) {
-      if (sname === data.sheet) continue
-      const alt = await readSheet(path, sname)
-      if (col(map.code, 'productcode', alt.headers || [])) { data = alt; break }
-    }
-  }
+  const data = await readSheet(path, null, { key: 'productcode', header: map.code })
   const hs = data.headers || []
   const c = {
     pt: col(map.pt, 'positiontype', hs), code: col(map.code, 'productcode', hs),
