@@ -466,3 +466,17 @@ test('ZAJ889: a lone bracket joins the code it balances, so the code is not spli
   expect(caps('LD38C-C1-350/LW27/EOB/PFAB + GS38(PFAB )')).toEqual(['LD38C-C1-350/LW27/EOB/PFAB', 'GS38(PFAB )'])
   expect(caps('(FPSN0809BG2000)')).toEqual(['FPSN0809BG2000'])
 })
+
+test('Villa Form: a lamp base is not a code, a code repeated in its note is one capture, "+" stays out of notes', () => {
+  const caps = text => {
+    const r = acceptSuggestions(makeRow(0, text, { manufacturer: 'M' }))
+    return deriveCaptures({ ...r, roles: r.tokens.map((_, i) => r.overrides[i] || r.roles[i]) }).captures.map(c => [c.code, c.note])
+  }
+  expect(caps('1317003 + 6004162\nLED Lamp GU10').map(c => c[0])).toEqual(['1317003', '6004162'])
+  expect(caps('4.0050.30.12 + 9.0050.00.70\n1/2 Anti-glare ring 9.0050.00.70,')).toEqual([
+    ['4.0050.30.12', ''], ['9.0050.00.70', '1/2 Anti-glare ring 9.0050.00.70'],
+  ])
+  expect(caps('LD51-C1-700/LW27/WB/PCBRZ + HC51/PCBRZ\nGround spike')).toEqual([
+    ['LD51-C1-700/LW27/WB/PCBRZ', ''], ['HC51/PCBRZ', 'Ground spike'],
+  ])
+})

@@ -213,7 +213,13 @@ export function noteOwnerOf(row, tokenIdx, runs = codeRuns(row), opts = {}) {
  * surface as `unattachedNote`.
  */
 export function deriveCaptures(row, opts = {}) {
-  const runs = codeRuns(row)
+  // The same code again in the cell ("… 9.0050.00.70⏎Anti-glare ring 9.0050.00.70") is
+  // talk about it, not a second product: those words are its note.
+  const seen = new Set()
+  const runs = codeRuns(row).filter(([a, b]) => {
+    const k = norm(row.rawText.slice(row.tokens[a].start, row.tokens[b].end))
+    return !seen.has(k) && seen.add(k)
+  })
   const captures = runs.map(([a, b]) => ({
     code: row.rawText.slice(row.tokens[a].start, row.tokens[b].end).trim(),
     note: '',
@@ -240,6 +246,7 @@ export function deriveCaptures(row, opts = {}) {
       const glued = k > 0 && prev === i - 1 && row.tokens[prev].end === row.tokens[i].start
       return (k > 0 && !glued ? ' ' : '') + row.tokens[i].text
     }).join('').trim()
+      .replace(/^[\s+,;&|]+|[\s+,;&|]+$/g, '')   // the "+" or "," between codes is not part of either note
     const edited = row.noteOverride && row.noteOverride[c.code]
     if (edited != null) { c.note = edited; c.noteEdited = true }
   }
