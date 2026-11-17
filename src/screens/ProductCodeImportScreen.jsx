@@ -44,7 +44,7 @@ import {
   discardsFromNoteEdit, pickExamples, learnCodeTokens, clearOverridesFor,
 } from '../utils/codeLearning'
 import { inferConvention, reuseCandidates, suggestRef } from '../utils/etRefSuggest'
-import { proposeElementTypes, familyDescription, whyText } from '../utils/etSeed'
+import { proposeElementTypes, familyDescription, whyText, refFromText } from '../utils/etSeed'
 import { matchShape } from '../utils/codeShapes'
 import shippedShapes from '../data/codeShapes.json'
 import { resolveFormRefs, buildRefMap, targetFor } from '../utils/ptResolve'
@@ -900,6 +900,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   // What job each code does (tape, profile, clips …), where the companion knows: it settles the
   // ElementType family (etSeed.js). Without one, codeJobs.js reads it from the code and its words.
   const [codeJobsKnown, setCodeJobsKnown] = useState(null)
+  const sitting = useStore(s => s.sitting)
   useEffect(() => {
     if (!companion?.jobs || !entries.length) return
     let live = true
@@ -1055,8 +1056,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       // latest decisions (corrections included), then this browser's library, then other projects.
       library: sharedLibrary.length ? orderLibrary(sharedLibrary, styleLibrary, projectNumber) : styleLibrary,
       jobs: codeJobsKnown,
+      session: sitting,
     })
-  }, [captureOpts, elementTypes, psRows, recipes, positionTypes, dbCollectionRefs, map.pt, ptTarget, styleLibrary, sharedLibrary, codeJobsKnown])
+  }, [captureOpts, elementTypes, psRows, recipes, positionTypes, dbCollectionRefs, map.pt, ptTarget, styleLibrary, sharedLibrary, codeJobsKnown, sitting])
   const { proposals, newFamilies } = useMemo(() => proposeFor(unassigned, confirmed), [proposeFor, unassigned, confirmed])
 
   // A family the library supplied (the same product elsewhere, or a maker's product line).
@@ -1137,6 +1139,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       positionTypes: e.positionTypes,
       rowCount: e.rowRefs.length,
       why: p ? whyText(p) || 'proposed like Bulk' : '',
+      refWhy: p && !seed.ref ? refFromText(p) : '',
     })
   }, [etPending, entries, proposals, etSeed])
 
@@ -1182,6 +1185,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       if (psRows.some(r => (r.ElementTypeRef || '').toLowerCase() === ref.toLowerCase())) updatePSRow(ref, spec)
       else addPSRow(ref, spec)
       assignET(p.code, ref)
+      if (!p.placeholder) useStore.getState().noteKept({ code: p.code, maker: p.manufacturer, family: p.family, ref, name: p.name.trim() })
     }
     setBulkProposals(null); setBulkOpen(false)
   }
@@ -2338,6 +2342,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
           productCode: creatingFor.text,
           description: creatingFor.description,
           why: creatingFor.why,
+          refWhy: creatingFor.refWhy,
         } : {}}
         bulkCount={proposals.length}
         placeIn={embedded?.posRef || null}

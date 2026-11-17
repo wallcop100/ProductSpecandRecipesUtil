@@ -12,6 +12,7 @@ import { copyText } from './CopyButton'
 import { formColumnsFor } from '../utils/formPositions'
 import { buildRefMap, targetFor } from '../utils/ptResolve'
 import { containerForPosition } from '../utils/recipePresence'
+import { proposeElementTypes, refFromText, whyText, seedName } from '../utils/etSeed'
 const norm = s => String(s ?? '').trim().toLowerCase()
 
 /**
@@ -116,16 +117,38 @@ export default function NewETModal({
     : null
   // The Form's Finish is offered, muted, and only taken when you click the field.
   const finishHint = String(formRow?.cols.find(([c]) => /finish/i.test(c))?.[1] ?? '').trim()
+  // Opened without a proposal (a Form card's Create): make one, from the project and from what
+  // you kept earlier this sitting. Same code as the Bulk review, so the two never disagree.
+  const own = useRef(null)
+  // Where the proposed ref's shape came from, shown under it while it is untouched.
+  const refWhy = own.current ? refFromText(own.current) : prefill.refWhy || ''
+  const proposeOne = () => {
+    const code = String(prefill.productCode || '').trim()
+    if (prefill.why || prefill.ref || !hasProductIdentity(code)) return null
+    const st = useStore.getState()
+    const pts = (formRefs || importContext?.positionTypes || []).filter(Boolean)
+    // A position that already has its design element wants an extra, not another lead.
+    const hasLead = pts.some(pt => st.recipes.some(r => (r.IsDeleted || r.isDeleted) !== 'Y' && (r.IsDesign || r.isDesign) === 'Y'
+      && norm(r.PositionTypeRef || r.positionTypeRef) === norm(pt)))
+    const p = proposeElementTypes([{ text: code, manufacturers: [prefill.manufacturer || ''],
+      variants: [{ note: importContext?.note || '' }], positionTypes: pts, reuse: [] }], {
+      elementTypes: st.elementTypes, psRows: st.psRows, recipes: st.recipes, positionTypes: st.positionTypes,
+      collectionRefs: st.dbCollectionRefs, roleOf: () => (hasLead ? 'extra' : 'lead'),
+      library: st.library?.exemplars || [], session: st.sitting,
+    }).proposals[0]
+    return p?.action === 'create' && p.family ? p : null
+  }
   useEffect(() => {
     if (!show) return
     const key = draftKey ?? prefill.ref ?? prefill.productCode ?? null
     if (seededFor.current === key) return
     seededFor.current = key
+    const p = own.current = proposeOne()
 
-    setRef(prefill.ref || '')
-    setName(prefill.name || '')
+    setRef(prefill.ref || p?.ref || '')
+    setName(prefill.name || p?.name || '')
     setDescription(prefill.description || prefill.componentDescription || '')   // one description, shared with the Product Spec
-    setFamily(prefill.family || '')
+    setFamily(prefill.family || p?.family || '')
     setMfr(prefill.manufacturer || '')
     setCode(prefill.productCode || '')
     setTBC(null); setPropTBC(null); setNotes(''); setExtNotes('')
@@ -133,7 +156,8 @@ export default function NewETModal({
     setSaving(false)
     // Filled from the Bulk proposal: each field keeps its wand until you change it (ZAJ889).
     seeded.current = prefill.why ? { ref: prefill.ref, name: prefill.name, family: prefill.family, manufacturer: prefill.manufacturer,
-      productCode: prefill.productCode, description: norm(prefill.description) === norm(prefill.productCode) ? null : prefill.description } : {}
+      productCode: prefill.productCode, description: norm(prefill.description) === norm(prefill.productCode) ? null : prefill.description }
+      : p ? { ref: p.ref, name: p.name, family: p.family } : {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show, draftKey])
 
@@ -246,6 +270,7 @@ export default function NewETModal({
         else addPSRow(trimRef, psDefaults)
       }
 
+      if (productCode.trim()) useStore.getState().noteKept({ code: productCode.trim(), maker: manufacturer.trim(), family: family.trim(), ref: trimRef, name: name.trim() })
       clearSeed()
       if (where) {
         const st = useStore.getState()
@@ -325,7 +350,7 @@ export default function NewETModal({
         {/* Ref field */}
         <Form.Group className="col-6">
           <Form.Label style={{ fontSize: 12, fontWeight: 600 }}>
-            Element Type Ref <span className="text-danger">*</span><Wand field="ref" value={ref} />
+            Element Type Ref <span className="text-danger">*</span><Wand field="ref" value={ref} why={refWhy || prefill.why} />
           </Form.Label>
           <Form.Control
             size="sm"
@@ -337,6 +362,11 @@ export default function NewETModal({
             style={{ fontSize: 12, fontFamily: 'monospace' }}
             autoFocus
           />
+          {refWhy && ref === seeded.current.ref && (
+            <div className="text-muted" style={{ fontSize: 10, marginTop: 2, fontStyle: /no pattern/.test(refWhy) ? 'italic' : 'normal' }} data-testid="ref-from">
+              {refWhy}
+            </div>
+          )}
           {alreadyExists && (
             <Form.Text className="text-danger" style={{ fontSize: 11 }}>
               This ref already exists — use "Pick existing" to add it.
@@ -361,7 +391,7 @@ export default function NewETModal({
         {/* Name */}
         <Form.Group className="col-6">
           <Form.Label style={{ fontSize: 12, fontWeight: 600 }}>
-            Name <span className="text-muted fw-normal">(optional)</span><Wand field="name" value={name} />
+            Name <span className="text-muted fw-normal">(optional)</span><Wand field="name" value={name} why={!own.current ? prefill.why : name === seedName(manufacturer, productCode) ? 'maker and code' : 'in the style of this family here'} />
           </Form.Label>
           <Form.Control
             size="sm"
@@ -391,7 +421,7 @@ export default function NewETModal({
         {/* Family / ParentRef */}
         <Form.Group className="col-6">
           <Form.Label style={{ fontSize: 12, fontWeight: 600 }}>
-            Family <span className="text-muted fw-normal">(optional)</span><Wand field="family" value={family} />
+            Family <span className="text-muted fw-normal">(optional)</span><Wand field="family" value={family} why={own.current ? whyText(own.current) : prefill.why} />
           </Form.Label>
           <Form.Control
             size="sm"
@@ -404,6 +434,11 @@ export default function NewETModal({
           <datalist id={familyListId}>
             {familyOptions.map(f => <option key={f} value={f} />)}
           </datalist>
+          {own.current && family === seeded.current.family && (
+            <div className="text-muted" style={{ fontSize: 10, marginTop: 2 }} data-testid="family-from">
+              {own.current.checkRef ? 'a guess: ' : ''}{whyText(own.current)}
+            </div>
+          )}
           {familyIsNew && (
             <div className="d-flex align-items-center gap-2 mt-1" style={{ fontSize: 11 }} data-testid="new-family">
               <MaterialIcon name="create_new_folder" size={13} style={{ color: C.accent }} />

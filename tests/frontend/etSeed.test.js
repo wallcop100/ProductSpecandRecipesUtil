@@ -341,8 +341,11 @@ describe('a ref, family and name the way this project writes them', () => {
     elementTypes: [
       { ElementTypeRef: 'ET-PROF-1009', Family: 'ET-LIN-PROF', Name: 'LED Flex - 1009 Profile' },
       { ElementTypeRef: 'ET-PROF-3509', Family: 'ET-LIN-PROF', Name: 'LED Flex - 3509 Profile' },
+      // A family's head counts once it is a habit (2+ members): one ET-GS-WIBRE-01 alone is not.
       { ElementTypeRef: 'ET-GS-WIBRE-01', Family: 'ET-PS-ACCESSORIES' },
+      { ElementTypeRef: 'ET-GS-WIBRE-02', Family: 'ET-PS-ACCESSORIES' },
       { ElementTypeRef: 'ET-DRV-01', Family: 'ET-DRIVER' },
+      { ElementTypeRef: 'ET-DRV-02', Family: 'ET-DRIVER' },
     ],
     psRows: [
       { ElementTypeRef: 'ET-PROF-1009', Manufacturer: 'LEDFlex', ProductCode: '021-1009' },
@@ -367,10 +370,38 @@ describe('a ref, family and name the way this project writes them', () => {
 
   test('a borrowed family spelled differently here takes this project\'s spelling', () => {
     const p = one('DRV-77', 'Acme', { library: [{ maker: 'Acme', code: 'DRV-7700', family: 'ET-DRIVERS', ref: 'ET-DRIVERS-01' }] })
-    expect(p).toMatchObject({ family: 'ET-DRIVER', ref: 'ET-DRV-02', checkRef: true })
+    expect(p).toMatchObject({ family: 'ET-DRIVER', ref: 'ET-DRV-03', checkRef: true })
+  })
+
+  test('one member is not a habit: no head from it', () => {
+    const p = one('HC51', 'LightGraphix', { elementTypes: [{ ElementTypeRef: 'ET-GS-WIBRE-01', Family: 'ET-PS-ACCESSORIES' }], psRows: [] })
+    expect(p.ref).not.toMatch(/^ET-GS-/)
   })
 
   test('a 4-digit tail is a product number, not a counter', () => {
     expect(nextRef('ET-PROF', ['ET-PROF-1009', 'ET-PROF-01'])).toBe('ET-PROF-02')
+  })
+})
+
+describe('this sitting: what you kept a moment ago', () => {
+  const entry = (text, maker = 'ATEA') => ({ text, manufacturers: [maker], variants: [{ note: '' }], positionTypes: [], reuse: [] })
+  const sat = [{ code: 'A4333', maker: 'ATEA', kept: { family: 'ET-LIN-RAIL', ref: 'ET-RAIL-ATEA-01', name: 'ATEA rail' } }]
+
+  test('a maker\'s last family beats a default, flagged, and its ref is followed', () => {
+    const [p] = proposeElementTypes([entry('B9000')], { session: sat }).proposals
+    expect(p).toMatchObject({ family: 'ET-LIN-RAIL', why: 'session', checkRef: true, ref: 'ET-RAIL-ATEA-02' })
+    expect(p.refFrom.from).toBe('session')
+  })
+
+  test('another maker is not affected', () => {
+    const [p] = proposeElementTypes([entry('B9000', 'Other')], { session: sat }).proposals
+    expect(p.why).not.toBe('session')
+  })
+
+  test('evidence from the project still wins over the sitting', () => {
+    const elementTypes = [{ ElementTypeRef: 'ET-TAPE-01', Family: 'ET-LIN-TAPE' }]
+    const psRows = [{ ElementTypeRef: 'ET-TAPE-01', Manufacturer: 'ATEA', ProductCode: 'A4333.18.927' }]
+    const [p] = proposeElementTypes([entry('A4333.18.930')], { elementTypes, psRows, session: sat }).proposals
+    expect(p.family).toBe('ET-LIN-TAPE')
   })
 })

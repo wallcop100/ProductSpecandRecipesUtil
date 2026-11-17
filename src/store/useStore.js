@@ -622,6 +622,8 @@ const useStore = create((set, get) => ({
 
   // Locally-created ETs (SQLite staging) — kept to re-merge after a DB reload.
   localElementTypes: [],
+  // This sitting's new products as kept, oldest first: what proposals learn from live (etSeed `session`).
+  sitting: [],
 
   // _id of the most recently added recipe row — the card scrolls itself into view.
   lastAddedRowId: null,
@@ -814,7 +816,7 @@ const useStore = create((set, get) => ({
       pendingScreen: null,
       // Reset transient state: nothing held for the last project carries into this one.
       designPrompt: null, recipeError: null, pendingPaste: null, pendingPaletteTab: null,
-      uiRequest: null, specIntent: null, teaching: null, lastAddedRowId: null,
+      uiRequest: null, specIntent: null, teaching: null, lastAddedRowId: null, sitting: [],
       selectedRowIds: [], selectMode: false, companionPending: {}, offeredJobs: {},
       patchBatch: null, syncStatus: null,
       psChanges: [],
@@ -4501,6 +4503,12 @@ const useStore = create((set, get) => ({
       }))
     })
     return entries.map(e => e.ref)
+  },
+
+  /** A new product as you kept it: the next proposal this sitting starts from it. */
+  noteKept({ code, maker, family, ref, name }) {
+    if (!code || !ref) return
+    set(s => ({ sitting: [...s.sitting.slice(-49), { code, maker: maker || '', kept: { family: family || '', ref, name: name || '' } }] }))
   },
 
   createElementType({ ref, name = null, description = null, family = null, isCollection = false } = {}) {

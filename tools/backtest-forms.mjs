@@ -40,11 +40,13 @@ function cases(p) {
   return out
 }
 
-function propose(p, c, mode) {
+function propose(p, c, mode, later = null, session = []) {
   const hide = lc(c.et.ElementTypeRef)
-  const keep = mode === 'loo'
-  const elementTypes = keep ? p.elementTypes.filter(e => live(e) && lc(e.ElementTypeRef) !== hide) : []
-  const psRows = keep ? p.psRows.filter(r => lc(r.ElementTypeRef) !== hide) : []
+  const keep = mode === 'loo' || mode === 'session'
+  // session: replayed in ref-counter order; this product and every later one are not made yet.
+  const gone = later || new Set([hide])
+  const elementTypes = keep ? p.elementTypes.filter(e => live(e) && !gone.has(lc(e.ElementTypeRef))) : []
+  const psRows = keep ? p.psRows.filter(r => !gone.has(lc(r.ElementTypeRef))) : []
   const recipes = keep ? p.recipes : []
   const library = [...exemplars].flatMap(([proj, ex]) => proj !== p.project ? ex : keep ? ex.filter(e => lc(e.ref) !== hide) : [])
   const uses = p.recipes.filter(x => live(x) && lc(x.ElementTypeRef) === hide && x.ContextType !== 'ElementType')
@@ -55,20 +57,27 @@ function propose(p, c, mode) {
   }
   const { proposals } = proposeElementTypes([entry], {
     elementTypes, psRows, recipes, positionTypes: keep ? p.positionTypes : [],
-    roleOf: e => (e.lead ? 'lead' : 'extra'), library,
+    roleOf: e => (e.lead ? 'lead' : 'extra'), library, session,
   })
   return proposals[0]
 }
 
 const tally = () => ({ n: 0, family: 0, head: 0, ref: 0, name: 0, why: {} })
-const total = { loo: tally(), fresh: tally() }
+const MODES = (process.env.MODES || 'loo,fresh,session').split(',')
+const total = Object.fromEntries(MODES.map(m => [m, tally()]))
+const counter = ref => Number(String(ref).match(/-(\d+)[a-z]?$/i)?.[1] ?? 999)
 const rows = []
 for (const p of projects) {
   if (only.length && !only.includes(p.project)) continue
-  const per = { loo: tally(), fresh: tally() }
-  for (const c of cases(p)) {
-    for (const mode of ['loo', 'fresh']) {
-      const got = propose(p, c, mode)
+  const per = Object.fromEntries(MODES.map(m => [m, tally()]))
+  // A sitting, approximated: products made in ref-counter order (every -01 before any -02).
+  const order = cases(p).map((c, i) => ({ c, i })).sort((a, b) => counter(a.c.et.ElementTypeRef) - counter(b.c.et.ElementTypeRef) || a.i - b.i).map(x => x.c)
+  const session = []
+  for (const [k, c] of order.entries()) {
+    const later = new Set(order.slice(k).map(x => lc(x.et.ElementTypeRef)))
+    for (const mode of MODES) {
+      const got = mode === 'session' ? propose(p, c, mode, later, session) : propose(p, c, mode)
+      if (mode === 'session') session.push({ code: c.code, maker: c.maker, proposed: { family: got.family, ref: got.ref, name: got.name }, kept: { family: c.et.Family, ref: c.et.ElementTypeRef, name: c.et.Name } })
       const ok = {
         family: lc(got.family) === lc(c.et.Family),
         ref: stem(got.ref) === stem(c.et.ElementTypeRef),
@@ -84,9 +93,10 @@ for (const p of projects) {
     }
   }
   const pct = (t, k) => (t.n ? Math.round(100 * t[k] / t.n) : 0)
-  if (per.loo.n) console.log(`${p.project.padEnd(5)} n=${String(per.loo.n).padStart(3)}  loo fam ${pct(per.loo, 'family')}% head ${pct(per.loo, 'head')}% ref ${pct(per.loo, 'ref')}% name ${pct(per.loo, 'name')}%   fresh fam ${pct(per.fresh, 'family')}% ref ${pct(per.fresh, 'ref')}% name ${pct(per.fresh, 'name')}%`)
+  const t0 = Object.values(per)[0]
+  if (t0.n) console.log(`${p.project.padEnd(5)} n=${String(t0.n).padStart(3)}  ` + MODES.map(m => `${m} fam ${pct(per[m], 'family')}% head ${pct(per[m], 'head')}% ref ${pct(per[m], 'ref')}% name ${pct(per[m], 'name')}%`).join('   '))
 }
-for (const mode of ['loo', 'fresh']) {
+for (const mode of MODES) {
   const t = total[mode]
   console.log(`\nALL ${mode}: n=${t.n} family ${Math.round(100 * t.family / t.n)}% head ${Math.round(100 * t.head / t.n)}% ref ${Math.round(100 * t.ref / t.n)}% name ${Math.round(100 * t.name / t.n)}%`)
   for (const [w, v] of Object.entries(t.why).sort((a, b) => b[1].n - a[1].n)) console.log(`   ${w.padEnd(9)} n=${String(v.n).padStart(4)} family ${Math.round(100 * v.family / v.n)}% ref ${Math.round(100 * v.ref / v.n)}%`)

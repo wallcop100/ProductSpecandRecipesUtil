@@ -55,6 +55,8 @@ const refOf = e => e.ElementTypeRef || e.elementTypeRef || ''
 const famOf = e => e.Family || e.family || ''
 const ptRefOf = p => p.PositionTypeRef || p.positionTypeRef || ''
 const COUNTER_RE = /^(.*)-(\d+)$/
+// The family rules a sitting's own choice may overrule: defaults, not evidence. ('' = no clue at all.)
+const SESSION_OVERRIDES = new Set(['canon', 'job', ''])
 
 export const ACCESSORIES = 'ET-PS-ACCESSORIES'
 /** Wrappers are assembled in the recipe, never a product: ET-DL-NN, ET-LIN-NN. */
@@ -249,6 +251,8 @@ export function proposeElementTypes(entries = [], project = {}) {
     elementTypes = [], psRows = [], recipes = [], positionTypes = [], collectionRefs = [],
     ptTarget = r => r, contextFor = () => '', roleOf = () => 'lead', pageTypeFor = () => '', library = [],
     shapes = shippedShapes.shapes || [], families = CANON_FAMILIES, jobs = null,
+    // This sitting's decisions, oldest first: { code, maker, proposed: {family, ref, name}, kept: {...} }.
+    session = [],
   } = project
   const canonByRef = new Map(families.map(f => [lc(f.ref), f]))
 
@@ -288,7 +292,7 @@ export function proposeElementTypes(entries = [], project = {}) {
 
   // Taken = any ref the project names anywhere, as NewETModal checks: a Product Spec or recipe ref
   // the DesignDB lacks still exists (4746: ET-PS-ACCESSORIES-02 proposed, then "already exists").
-  const taken = new Set([...elementTypes, ...psRows, ...recipes].map(refOf).filter(Boolean))
+  const taken = new Set([...elementTypes, ...psRows, ...recipes, ...session.map(s => ({ ElementTypeRef: s.kept?.ref }))].map(refOf).filter(Boolean))
   const newFamilies = new Map()   // lc ref -> { ref, description, include, from }
   const proposals = []
 
@@ -301,6 +305,9 @@ export function proposeElementTypes(entries = [], project = {}) {
   const refBaseFor = (family, code, maker, text, pick) => {
     const own = styleFor(code, maker, ownExemplars.filter(ex => lc(ex.family) === lc(family)), text)
     if (own && !own.partial) return { base: own.refBase, from: 'sibling', example: own.exemplar.ref }
+    // No near sibling: the last one you made in this family for this maker, this sitting.
+    const last = [...session].reverse().find(s => s.kept?.ref && lc(s.kept.family) === lc(family) && makerKey(s.maker) === makerKey(maker))
+    if (last) return { base: String(last.kept.ref).replace(/-\d+[a-z]?$/i, ''), from: 'session', example: last.kept.ref }
     // A library style that kept a middle (ET-PS-CURVE) is worth more than a bare head, even flagged.
     if (pick.style && lc(pick.style.family) === lc(family) && lc(pick.style.refBase) !== lc(family)) {
       return { base: pick.style.refBase, from: 'library', example: pick.style.exemplar.ref }
@@ -408,6 +415,14 @@ export function proposeElementTypes(entries = [], project = {}) {
         Object.assign(pick, { family: ref, head: ref, was: pick.family, flag: true })
       }
     }
+    // Only a default to go on (a lead is ET-PS, a job's house family): the family you kept for
+    // this maker's last product this sitting is a better guess. Flagged: it is a guess.
+    if (!same && SESSION_OVERRIDES.has(pick.why || '')) {
+      const last = [...session].reverse().find(s => s.kept?.family && makerKey(s.maker) === makerKey(manufacturer))
+      if (last && lc(last.kept.family) !== lc(pick.family)) {
+        Object.assign(pick, { family: last.kept.family, head: last.kept.family, why: 'session', was: pick.family || null, flag: true, session: last })
+      }
+    }
     const family = pick.family
     // Propose the family, and any parent of it the project lacks, from the canon.
     const propose = (ref, from) => {
@@ -452,6 +467,7 @@ export function proposeElementTypes(entries = [], project = {}) {
         : pick.style ? { ref: pick.style.exemplar.ref, code: pick.style.exemplar.code, source: pick.style.exemplar.source } : null,
       job: pick.job || null,
       wasFamily: pick.was || null,
+      session: pick.session ? { code: pick.session.code, family: pick.session.kept.family } : null,
       shapedOn: pick.shape ? { shape: pick.shape.shape, example: pick.shape.example, n: pick.shape.n } : null,
       canon: pick.canon || null,
       checkRef: !!pick.flag,
@@ -527,6 +543,7 @@ export function refFromText(r) {
   const shape = String(r.ref).replace(COUNTER_RE, '$1')
   if (f.from === 'sibling') return `ref like ${f.example} here`
   if (f.from === 'library') return `ref like ${f.example} elsewhere`
+  if (f.from === 'session') return `ref like ${f.example}, your last one in ${r.family}`
   if (f.from === 'family') return `ref as ${r.family} names its members (${shape}-NN)`
   return `ref: next free ${shape}-NN, no pattern to follow`
 }
@@ -544,6 +561,7 @@ const WHY = {
   parent: p => `position parent ${p} (not a company family)`,
   extra: 'extra code in its cell',
   you: 'you chose it',
+  session: r => `you filed ${r.manufacturer}'s last one (${r.session?.code}) here this sitting${r.wasFamily ? ` (not ${r.wasFamily})` : ''}`,
   kit: r => `usually with ${r.kitOf}`,
   job: r => `${JOB_LABEL[r.job?.slot === 'TAPE' ? `TAPE:${r.job.variant}` : r.job?.slot] || 'its job'}${r.wasFamily ? ` (not ${r.wasFamily})` : ''}`,
 }
