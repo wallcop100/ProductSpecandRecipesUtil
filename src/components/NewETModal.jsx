@@ -1,7 +1,7 @@
 import InfoTip from './InfoTip'
 import React, { useRef, useState, useMemo, useEffect, useId } from 'react'
 import { Modal, Button, Form } from 'react-bootstrap'
-import useStore from '../store/useStore'
+import useStore, { withFinish } from '../store/useStore'
 import { familyRowExists } from '../utils/collectionGuess'
 import MaterialIcon from './MaterialIcon'
 import FlagPill from './FlagPill'
@@ -68,6 +68,7 @@ export default function NewETModal({
   const [isTBC, setTBC]             = useState(null)
   const [isPropTBC, setPropTBC]     = useState(null)
   const [notes, setNotes]           = useState('')
+  const [finish, setFinish]         = useState('')
   const [showSpec, setShowSpec]     = useState(true)
   const [saving, setSaving]         = useState(false)
 
@@ -88,6 +89,7 @@ export default function NewETModal({
     setCode(prefill.productCode || '')
     setPsDesc(prefill.componentDescription || '')
     setTBC(null); setPropTBC(null); setNotes('')
+    setFinish('')
     setShowSpec(true)
     setSaving(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -187,7 +189,8 @@ export default function NewETModal({
       createElementType({
         ref: trimRef,
         name: name.trim() || null,
-        description: description.trim() || null,
+        // Finish goes in brackets after both descriptions (NQLUFQ).
+        description: (finish.trim() ? withFinish(description, finish.trim()) : description.trim()) || null,
         family: family.trim() || null,
       })
 
@@ -195,13 +198,14 @@ export default function NewETModal({
       const psDefaults = {}
       if (manufacturer.trim()) psDefaults.Manufacturer = manufacturer.trim()
       if (productCode.trim())  psDefaults.ProductCode  = productCode.trim()
+      const existing = psRows.find(p => (p.ElementTypeRef || p.elementTypeRef || '').toLowerCase() === trimRef.toLowerCase())
       if (psDesc.trim())       psDefaults.ComponentDescription = psDesc.trim()
       // Product Spec and ElementType both get these (92YN3U); addPSRow carries them across.
       if (isTBC)               psDefaults.IsTBC = 'Y'
       if (isPropTBC)           psDefaults.IsPropertiesTBC = 'Y'
       if (notes.trim())        psDefaults.InternalNotesText = notes.trim()
+      if (finish.trim())       psDefaults.ComponentDescription = withFinish(psDesc.trim() || existing?.ComponentDescription, finish.trim())
       if (Object.keys(psDefaults).length) {
-        const existing = psRows.find(p => (p.ElementTypeRef || p.elementTypeRef || '').toLowerCase() === trimRef.toLowerCase())
         if (existing) updatePSRow(trimRef, psDefaults)
         else addPSRow(trimRef, psDefaults)
       }
@@ -407,6 +411,11 @@ export default function NewETModal({
                   <Form.Label style={{ fontSize: 11, color: C.muted }}>Internal notes</Form.Label>
                   <Form.Control as="textarea" rows={2} size="sm" value={notes} onChange={e => setNotes(e.target.value)}
                     placeholder="Anything to query…" style={{ fontSize: 11, resize: 'vertical' }} />
+                </div>
+                <div className="col-12">
+                  <Form.Label style={{ fontSize: 11, color: C.muted }}>Finish</Form.Label>
+                  <Form.Control size="sm" value={finish} onChange={e => setFinish(e.target.value)}
+                    placeholder="e.g. RAL 9010 — added in brackets to both descriptions" style={{ fontSize: 11 }} />
                 </div>
               </div>
 

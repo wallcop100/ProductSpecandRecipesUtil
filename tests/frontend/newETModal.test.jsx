@@ -121,6 +121,15 @@ test('92YN3U: TBC, Properties TBC and a note go to both the Product Spec and the
   }
 })
 
+test('NQLUFQ: Finish lands in brackets after both descriptions', () => {
+  setup({ prefill: { ref: 'ET-DL-09', description: 'Downlight', componentDescription: 'Trim ring' }, importContext: null, draftKey: 'nqlufq' })
+  fireEvent.change(screen.getByPlaceholderText(/added in brackets/), { target: { value: 'RAL 9010' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Create Element Type' }))
+  const s = useStore.getState()
+  expect(s.elementTypes.find(e => e.ElementTypeRef === 'ET-DL-09').Description).toBe('Downlight (RAL 9010)')
+  expect(s.psRows.find(r => r.ElementTypeRef === 'ET-DL-09').ComponentDescription).toBe('Trim ring (RAL 9010)')
+})
+
 describe('HYQ246: a placeholder code is not a duplicate', () => {
   const taken = [{ ElementTypeRef: 'ET-LIN-01', Manufacturer: 'Ideaworks', ProductCode: 'N/A' },
                  { ElementTypeRef: 'ET-PROF-01', Manufacturer: 'Flexalighting', ProductCode: 'FPS2020BG2000' }]
