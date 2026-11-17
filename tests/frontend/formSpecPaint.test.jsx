@@ -36,7 +36,8 @@ beforeEach(() => {
   for (const k of Object.keys(prefs)) delete prefs[k]
   readSheet.mockReset().mockResolvedValue({ sheets: ['S'], sheet: 'S', headers: HEAD, rows: ROWS })
   window.electronAPI.openXlsxDialog.mockClear()
-  useStore.setState({
+  useStore.setState({ formPaintMode: true,   // these test painting; view-first is tested below
+   
     projectId: 1, importDraft: null, formCaptures: null, containerETRefs: new Set(),
     recipes: [{ _id: 'r1', PositionTypeRef: 'C01', ContextType: 'PositionType', ContextRef: 'C01', ElementTypeRef: 'ET-PS-OLD', Quantity: 1 }],
     positionTypes: ['C01', 'C02', 'C03'].map(r => ({ PositionTypeRef: r })),
@@ -301,4 +302,24 @@ test('2K4TCY: every known position is saved at once; the chip counts the whole F
   render(<><FormAutoSaveAll /><FormProgressChip onReconcile={() => {}} /></>)
   await waitFor(() => expect(Object.keys(useStore.getState().formCaptures?.byPosition || {}).sort()).toEqual(['C01', 'C03']))
   expect(screen.getByText(/Form \d\/3/)).toBeInTheDocument()
+})
+
+test('the pane starts as a view; ⋯ Paint from the Form opens the painter, and View only closes it', async () => {
+  useStore.setState({ formPaintMode: false, importDraft: {
+    version: 1, step: 'review', source: { name: 'form.xlsx', sheet: 'S' },
+    map: { pt: '', code: 'ProductCode', mfr: 'ManufacturerName', exclude: '', acc: '', context: [] },
+    rules: {}, assignments: {}, resolutions: [], refOverrides: {}, dirStats: { forward: 0, backward: 0 }, stagedRefs: [], keptSeparate: [],
+    rows: [{ id: 0, rawText: 'NEW99', positionType: 'C01', manufacturer: 'iGuzzini', context: {}, overrides: {}, noteOverride: {}, confirmed: false }],
+  }, formCaptures: { version: 1, byPosition: { C01: [{ elementTypeRef: 'ET-PS-OLD', code: 'OLD1', manufacturer: 'iGuzzini' }] } } })
+  render(<FormSpecPane posRef="C01" />)
+  expect(screen.queryByTestId('paint-position')).toBeNull()
+  expect(screen.queryByTestId('paint-panel')).toBeNull()
+  expect(screen.getByTestId('form-raw')).toHaveTextContent('NEW99')
+  fireEvent.click(screen.getByTitle('Form template options'))
+  fireEvent.click(await screen.findByTestId('paint-mode'))
+  expect(await screen.findByTestId('paint-panel')).toBeInTheDocument()
+  fireEvent.click(screen.getByTitle('Form template options'))
+  fireEvent.click(await screen.findByText(/View only/))
+  await waitFor(() => expect(screen.queryByTestId('paint-panel')).toBeNull())
+  expect(screen.queryByTestId('paint-position')).toBeNull()
 })

@@ -45,7 +45,7 @@ function setup(over = {}) {
   // Only OUR key. Clearing all of localStorage also clears rb-tutorial-seen, which re-arms
   // the pane's auto-opening tutorial card — a second dialog in every getByRole('dialog').
   window.localStorage.removeItem('rb-form-columns')
-  useStore.setState({
+  useStore.setState({ formPaintMode: false,
     projectId: 42, recipes: recipes(), containerETRefs: new Set(['et-lin-01']),
     formCaptures: captures, psRows: [], elementTypes: [], rsChanges: [], past: [], future: [],
     // psRows can be overridden per-test to exercise the shopping-list lookup

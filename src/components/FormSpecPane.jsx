@@ -142,6 +142,8 @@ function RailToggle({ id, icon, count, open, onToggle, title, tone }) {
  */
 function PaneMenu({ onColumns, onReimport, onDetach, columnsDisabled, onCompare, onClearCompare }) {
   const [about, setAbout] = useState(false)
+  const paintMode = useStore(s => s.formPaintMode)
+  const setPaintMode = useStore(s => s.setFormPaintMode)
   return (
     <>
     <ConceptCard concept={CONCEPTS.INTENT} show={about} onHide={() => setAbout(false)} />
@@ -149,6 +151,10 @@ function PaneMenu({ onColumns, onReimport, onDetach, columnsDisabled, onCompare,
       <Dropdown.Toggle as={IconButton} icon={ACTION_ICONS.more} size={14}
         title="Form template options" className="p-0 text-muted" />
       <Dropdown.Menu style={{ fontSize: 11 }}>
+        <Dropdown.Item onClick={() => setPaintMode(!paintMode)} data-testid="paint-mode">
+          <MaterialIcon name={paintMode ? 'visibility' : 'brush'} size={12} /> {paintMode ? 'View only' : 'Paint from the Form'}
+        </Dropdown.Item>
+        <Dropdown.Divider />
         {onColumns && (
           <>
             <Dropdown.Item onClick={onColumns} disabled={columnsDisabled}>

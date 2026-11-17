@@ -40,7 +40,13 @@ export default function FormPaintBar({ posRef, open = false, onOpenChange = () =
   const st = positionPaintStatus(importDraft, posRef, { buildRefMap, targetFor, knows: (m, c) => !!findProductET(psRows, m, c) || !!importDraft?.assignments?.[String(c || '').trim().toUpperCase()] })
   // On each position: the painter is open, inline, when it has Form rows to confirm;
   // otherwise closed (known codes save themselves, below).
-  useEffect(() => { setOpen(st.state === 'todo') }, [posRef])   // eslint-disable-line react-hooks/exhaustive-deps
+  // Only in paint mode; the pane is a view until painting is chosen from its ⋯ menu.
+  const paintMode = useStore(s => s.formPaintMode)
+  const setPaintMode = useStore(s => s.setFormPaintMode)
+  useEffect(() => { setOpen(paintMode && st.state === 'todo') }, [posRef])   // eslint-disable-line react-hooks/exhaustive-deps
+  // Switching mode from the menu opens or closes this position's painter there and then.
+  const modeSeen = useRef(paintMode)
+  useEffect(() => { if (modeSeen.current !== paintMode) { modeSeen.current = paintMode; setOpen(paintMode) } }, [paintMode])   // eslint-disable-line react-hooks/exhaustive-deps
   // Detached (for the whole project): the painter closes with it (S3JLGL).
   const formGen = useStore(s => s.formGen)
   const seenGen = useRef(formGen)
@@ -67,14 +73,14 @@ export default function FormPaintBar({ posRef, open = false, onOpenChange = () =
   return (
     <div className="mb-2" data-testid="form-paint-bar">
       <div className="d-flex align-items-center gap-1 flex-wrap">
-        {state !== 'noForm' ? (
+        {state === 'noForm' && !paintMode && formCaptures ? null : state !== 'noForm' ? (!paintMode && formCaptures ? null : (
           // Paint mode is a toggle: the brush, lit while painting (W24D3V).
           <IconButton bsSize="sm" variant={open ? 'primary' : work ? 'outline-primary' : 'outline-secondary'} icon="brush" size={13}
-            onClick={() => { onLoaded.current = true; setOpen(!open) }} data-testid="paint-position" aria-pressed={open}
+            onClick={() => { onLoaded.current = true; if (!open) setPaintMode(true); setOpen(!open) }} data-testid="paint-position" aria-pressed={open}
             aria-label={open ? 'Stop painting' : `Paint ${posRef} from the Form`}
             title={open ? 'Stop painting' : `Paint ${posRef}'s product codes from the Form: give each an ElementType, then it goes in the recipe`} />
-        ) : <Button size="sm" variant="primary" style={{ fontSize: 10 }}
-          onClick={() => { onLoaded.current = false; setOpen(true) }} data-testid="paint-position"
+        )) : <Button size="sm" variant="primary" style={{ fontSize: 10 }}
+          onClick={() => { onLoaded.current = false; setPaintMode(true); setOpen(true) }} data-testid="paint-position"
           title="Load the Form spreadsheet once for the project, then paint just this position">
           <MaterialIcon name="upload_file" size={12} /> Load the Form and paint this position
         </Button>}
