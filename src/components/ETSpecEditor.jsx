@@ -40,6 +40,7 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
   const psRows      = useStore(s => s.psRows)
   const recipes     = useStore(s => s.recipes)
   const updatePSRow = useStore(s => s.updatePSRow)
+  const applyFinish = useStore(s => s.applyFinish)
   const addPSRow    = useStore(s => s.addPSRow)
   const elementTypes = useStore(s => s.elementTypes)
   const mfrInputRef = useRef(null)
@@ -387,6 +388,12 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
             style={{ fontSize: 12, resize: 'vertical' }}
             disabled={isDeleted}
           />
+          {/* Finish: appended in brackets to this and the ElementType's Description (NQLUFQ). */}
+          {!isDeleted && (
+            <Form.Control size="sm" className="mt-1" key={`finish-${selectedRef}-${description}`} aria-label="Finish"
+              placeholder="Add finish, e.g. RAL 9010 ↵" style={{ fontSize: 11, maxWidth: 260 }}
+              onKeyDown={e => { if (e.key === 'Enter' && e.target.value.trim()) { e.preventDefault(); applyFinish(selectedRef, e.target.value) } }} />
+          )}
         </Form.Group>
 
         {/* Flags + delete */}

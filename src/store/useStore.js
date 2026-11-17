@@ -484,6 +484,12 @@ function sameSlotAs(row, partSection, partContainer = null) {
 let libraryLoading = null
 let _checkRun = 0   // checkFiles: the latest run
 
+/** `<text> (<finish>)`; already there → unchanged. */
+export const withFinish = (text, finish) => {
+  const t = (text || '').trim(), tail = `(${finish})`
+  return t.endsWith(tail) ? t : (t ? `${t} ${tail}` : tail)
+}
+
 const useStore = create((set, get) => ({
   // -------------------------------------------------------------------------
   // State
@@ -3455,6 +3461,17 @@ const useStore = create((set, get) => ({
    * updatePSRow(elementTypeRef, updates)
    * Updates a PS row and records it in psChanges (with before/after for change log).
    */
+  /** Finish goes in brackets after both descriptions, one Undo step (NQLUFQ). */
+  applyFinish(elementTypeRef, finish) {
+    const f = (finish || '').trim(), lc = (elementTypeRef || '').trim().toLowerCase()
+    if (!f || !lc) return
+    const ps = get().psRows.find(r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === lc)
+    const et = get().elementTypes.find(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === lc)
+    get()._pushHistory()
+    get().updatePSRow(ps?.ElementTypeRef || elementTypeRef, { ComponentDescription: withFinish(ps?.ComponentDescription, f) }, { recordHistory: false })
+    if (et) get().updateElementType(elementTypeRef, { Description: withFinish(et.Description, f) }, { recordHistory: false })
+  },
+
   updatePSRow(elementTypeRef, updates, { recordHistory = true } = {}) {
     const { psRows, psChanges, containerETManualRefs, containerETExcludeRefs, elementTypes, recipes } = get()
 
