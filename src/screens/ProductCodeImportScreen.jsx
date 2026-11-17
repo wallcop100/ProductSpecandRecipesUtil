@@ -874,13 +874,18 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   const retiredCodes = useStore(s => s.retiredCodes)
   const [mergedKeys, setMergedKeys] = useState(() => new Set())
 
+  // Every code in the Form, confirmed or not: a learned ElementType made only on confirm would
+  // turn a card's proposal into an assignment mid-click and shift every ref after it.
+  const formCodes = useMemo(() => resolved.flatMap(r => isTbc(r, captureOpts) ? []
+    : deriveCaptures(r, captureOpts).captures.map(c => ({ text: c.code, manufacturers: r.manufacturer ? [r.manufacturer] : [] }))),
+  [resolved, captureOpts])
   // Learned local ElementTypes this Form's codes were given before: made here first, so the
   // learned assignment can stand (it is dropped if the ref cannot be resolved).
   useEffect(() => {
-    for (const et of localEtsNeeded(knowledge, entries, knownRefs)) {
+    for (const et of localEtsNeeded(knowledge, formCodes, knownRefs)) {
       createElementType({ ref: et.ref, name: et.name || null, description: et.description || null, family: et.family || null })
     }
-  }, [knowledge, entries, knownRefs])   // eslint-disable-line react-hooks/exhaustive-deps
+  }, [knowledge, formCodes, knownRefs])   // eslint-disable-line react-hooks/exhaustive-deps
 
   // The code-column dialect and near-miss rulings learned on this project (and dialect agreed
   // across projects): seeded once, under the person's own — theirs always win.
@@ -1397,8 +1402,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   // ---- the table ------------------------------------------------------------
   /** The ElementType a code already has: the spec first, then your choice, then last import's. */
   const etFor = useCallback((code, manufacturer) =>
-    classify(code, ctx, manufacturer).elementTypeRef || assignments[norm(code)] || priorEtByCode.get(norm(code)) || null,
-  [ctx, assignments, priorEtByCode])
+    classify(code, ctx, manufacturer).elementTypeRef || assignments[norm(code)] || priorEtByCode.get(norm(code))
+      || learnedRef(knowledge, { text: code, manufacturers: manufacturer ? [manufacturer] : [] }, knownRefs) || null,
+  [ctx, assignments, priorEtByCode, knowledge, knownRefs])
 
   /** Where each Form ref goes, by ref: 'ok' | 'redirect' | 'missing' | 'ambiguous'. */
   const refState = useMemo(() => {

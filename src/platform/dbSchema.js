@@ -760,8 +760,10 @@ function setPendingChanges(projectId, ps, rs) {
     .run({ id: projectId, ps: JSON.stringify(ps || []), rs: JSON.stringify(rs || []), ts: now() })
 }
 
+// Discard: the ElementTypes made here go with the changes, or they come back on reopen.
 function clearPendingChanges(projectId) {
   getDb().prepare('DELETE FROM pending_changes WHERE project_id = ?').run(projectId)
+  getDb().prepare('DELETE FROM local_element_types WHERE project_id = ?').run(projectId)
 }
 
 // ---------------------------------------------------------------------------
