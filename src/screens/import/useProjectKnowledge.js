@@ -57,11 +57,30 @@ export default function useProjectKnowledge(projectNumber) {
     setData(null)
     if (!api?.projectItems || !number) return
     let live = true
-    api.projectItems(number).then(d => { if (live && d) setData(d) })
+    api.projectItems(number).then(d => { if (live && d) setData(sinceDiscard(d, number)) })
     return () => { live = false }
   }, [api, number])
 
   return useMemo(() => (data ? { ready: true, ...digest(data) } : { ready: false, ...digest() }), [data])
+}
+
+const discardKey = n => `rb-discarded-${n}`
+
+/** Discard is scorched earth: what this project learned up to now is ignored in this browser. */
+export async function forgetLearning(api, projectNumber) {
+  const n = String(projectNumber || '').trim()
+  if (!api?.projectItems || !n) return
+  const d = await api.projectItems(n)
+  // The server's own clock, so the cut compares like with like.
+  const cut = (d?.items || []).reduce((m, it) => (it.updated_at > m ? it.updated_at : m), '')
+  if (cut) try { localStorage.setItem(discardKey(n), cut) } catch { /* learning comes back */ }
+}
+
+/** The learning without what came before this project's last Discard. Pure apart from the read. */
+export function sinceDiscard(data, projectNumber) {
+  let cut = ''
+  try { cut = localStorage.getItem(discardKey(String(projectNumber || '').trim())) || '' } catch { /* none */ }
+  return cut ? { ...data, items: (data.items || []).filter(it => (it.updated_at || '') > cut) } : data
 }
 
 /**

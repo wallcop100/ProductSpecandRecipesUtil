@@ -664,10 +664,17 @@ const useStore = create((set, get) => ({
     try {
       await window.electronAPI?.db?.clearPendingChanges?.(projectId)
       await window.electronAPI?.db?.setPref?.(projectId, 'pending_db_changes', '[]')
+      await window.electronAPI?.db?.setPref?.(projectId, 'patch_batch', 'null')
       // The browser DB persists on a debounce; without this the reload restores what was discarded.
       await window.electronAPI?.db?.flush?.()
     } catch { /* best-effort */ }
-    set({ psChanges: [], rsChanges: [], dbChanges: [] })
+    // What this project learned so far would make the same ElementTypes again on reopen.
+    try {
+      const { getCompanion } = await import('../platform/companion.js')
+      const { forgetLearning } = await import('../screens/import/useProjectKnowledge.js')
+      await forgetLearning(await getCompanion(), get().projectNumber)
+    } catch { /* no companion: nothing learned */ }
+    set({ psChanges: [], rsChanges: [], dbChanges: [], localElementTypes: [], past: [], future: [] })
     // The rows on screen still carry them: reopen from the workbooks.
     if (typeof window !== 'undefined' && window.location && import.meta.env?.MODE !== 'test') window.location.reload()
   },

@@ -147,9 +147,11 @@ describe('project-scoped data survives a round trip', () => {
   test('pending changes (the crash-safe dirty registry)', () => {
     expect(schema.getPendingChanges(pid)).toEqual({ ps: [], rs: [] })
     schema.setPendingChanges(pid, [{ elementTypeRef: 'ET-A' }], [{ _id: 'r1' }])
+    schema.upsertLocalElementType(pid, { ref: 'ET-MADE-HERE', family: 'TAPE' })
     expect(schema.getPendingChanges(pid).ps[0].elementTypeRef).toBe('ET-A')
     schema.clearPendingChanges(pid)
     expect(schema.getPendingChanges(pid)).toEqual({ ps: [], rs: [] })
+    expect(schema.getLocalElementTypes(pid)).toHaveLength(0)   // Discard takes them too, or they come back
   })
 
   test('local element types', () => {

@@ -84,6 +84,7 @@ export default function BuilderScreen({
   const psChanges = useStore(s => s.psChanges)
   const rsChanges = useStore(s => s.rsChanges)
   const dbChanges = useStore(s => s.dbChanges)
+  const localEtCount = useStore(s => s.localElementTypes.length)
   const past = useStore(s => s.past)
   const future = useStore(s => s.future)
 
@@ -554,10 +555,12 @@ export default function BuilderScreen({
             <Dropdown.Item onClick={saveBackup}>
               <MaterialIcon name="save_alt" size={14} /> Save project settings (.config.yaml)…
             </Dropdown.Item>
-            {psChanges.length + rsChanges.length > 0 && (
+            {/* Everything made here goes, the ElementTypes made in the app included: they are kept apart and would come back. */}
+            {psChanges.length + rsChanges.length + dbChanges.length + localEtCount > 0 && (
               <Dropdown.Item className="text-danger" onClick={async () => {
-                const n = psChanges.length + rsChanges.length
-                if (await askConfirm(`Discard all ${n} unexported changes? This cannot be undone.`, { ok: 'Discard', danger: true })) useStore.getState().discardPendingChanges()
+                const n = psChanges.length + rsChanges.length + dbChanges.length
+                const ets = localEtCount ? ` and the ${localEtCount} ElementType${localEtCount === 1 ? '' : 's'} made here` : ''
+                if (await askConfirm(`Discard all ${n} unexported changes${ets}, and reopen from the workbooks? This cannot be undone.`, { ok: 'Discard', danger: true })) useStore.getState().discardPendingChanges()
               }}>
                 <MaterialIcon name="delete_sweep" size={14} /> Discard unexported changes…
               </Dropdown.Item>

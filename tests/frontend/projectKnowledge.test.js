@@ -66,3 +66,18 @@ describe('learning from the session', () => {
     expect(await offerAssignments({ contribute }, entries)).toBe(0)
   })
 })
+
+describe('Discard forgets what the project learned', () => {
+  it('ignores items up to the cut and keeps later ones', async () => {
+    const { forgetLearning, sinceDiscard } = await import('../../src/screens/import/useProjectKnowledge')
+    const items = [
+      { kind: 'local-et', key: 'ET-OLD-01', value: {}, updated_at: '2026-11-17T16:05:00' },
+      { kind: 'assignment', key: '|QC57', value: { ref: 'ET-OLD-01' }, updated_at: '2026-11-17T15:00:00' },
+    ]
+    await forgetLearning({ projectItems: async () => ({ items }) }, '9901')
+    const later = { kind: 'assignment', key: '|QC58', value: { ref: 'ET-NEW-01' }, updated_at: '2026-11-17T16:06:00' }
+    expect(sinceDiscard({ items: [...items, later] }, '9901').items).toEqual([later])
+    expect(sinceDiscard({ items }, '9902').items).toHaveLength(2)
+    localStorage.removeItem('rb-discarded-9901')
+  })
+})
