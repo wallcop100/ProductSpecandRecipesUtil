@@ -210,23 +210,15 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
 
   // ---- load -----------------------------------------------------------------
   /** `path` is the opaque token for the picked workbook (see utils/backend.js). */
-  async function readSheet(path, sheetName) {
-    return readSheetFrom(path, sheetName || undefined)
+  async function readSheet(path, sheetName, want) {
+    return readSheetFrom(path, sheetName || undefined, want)
   }
 
   /** Default to the first sheet that actually has a product-code column. */
   async function loadWorkbook(path) {
     setBusy(true); setError(null)
     try {
-      let data = await readSheet(path, null)
-      if (!detect(data.headers, 'productcode')) {
-        for (const s of data.sheets) {
-          if (s === data.sheet) continue
-          const alt = await readSheet(path, s)
-          if (detect(alt.headers, 'productcode')) { data = alt; break }
-        }
-      }
-      applySheet(data)
+      applySheet(await readSheet(path, null, { key: 'productcode' }))
     } catch (err) {
       setError(err.response?.data?.error || err.message)
     } finally {

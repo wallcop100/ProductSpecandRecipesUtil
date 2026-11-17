@@ -27,6 +27,7 @@
     "bootstrap": "^5.3.0",
     "companion-kit": "https://api.github.com/repos/wallcop100/companionkit/tarball/4872ca0ea2afb08f833e56abdd871a382776f39a",
     "dompurify": "^3.1.0",
+    "fflate": "^0.8.3",
     "js-yaml": "^5.1.0",
     "material-icons": "^1.13.12",
     "react": "^18.2.0",

@@ -14,6 +14,7 @@ import PatchSyncPanel from './components/PatchSyncPanel'
 import FindPalette from './components/FindPalette'
 import ErrorBoundary from './components/ErrorBoundary'
 import ConfirmHost from './components/ConfirmHost'
+import ParsingBar from './components/ParsingBar'
 import { APP_CHANNEL } from './utils/bugReports'
 import { C } from './styles/tokens'
 
@@ -97,6 +98,7 @@ export default function App() {
     <div className={debugIds ? 'debug-ids' : ''} data-screen={activeScreen} style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* The build this is (index.html's build-commit stamp), bottom-right on every page so a screenshot names it; never in the way of a click. */}
       {/* Dev is always red, so a dev screenshot can't pass for prod. */}
+      <ParsingBar />
       <span data-testid="build-badge"
         style={{ position: 'fixed', bottom: 4, right: 8, zIndex: 2000, pointerEvents: 'none',
           fontFamily: 'Arial, sans-serif', fontSize: 11, color: APP_CHANNEL === 'dev' ? C.danger : C.muted }}>
