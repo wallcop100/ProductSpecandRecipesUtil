@@ -662,3 +662,11 @@ describe('note clashes only when the notes really differ', () => {
     expect([...noteGist('with Clips & caps')].sort()).toEqual(['cap', 'clip'])
   })
 })
+
+test("noteOverride[''] replaces the words on no code, once a code exists", () => {
+  const row = { ...makeRow(0, 'QC50 + QC51'), roles: ['code', 'note', 'code'] }
+  const plain = { ...makeRow(1, 'Ground spike'), roles: ['note', 'note'] }
+  expect(deriveCaptures(setNoteOverride(row, '', 'spike'), {}).unattachedNote).toBe('spike')
+  // With no code at all there is nothing to move words onto: the Form's words stand.
+  expect(deriveCaptures(setNoteOverride(plain, '', ''), {}).unattachedNote).toBe('Ground spike')
+})

@@ -73,7 +73,8 @@ export function tokenize(rawText) {
  *   roles        resolved from the learned rules + per-row overrides; all 'note'
  *                until something is classified (principle 1). See codeLearning.js.
  *   overrides    tokenIdx -> role, wins over a batch-wide rule ("only here")
- *   noteOverride code text -> free-text note, replacing the derived one entirely
+ *   noteOverride code text -> free-text note, replacing the derived one entirely;
+ *                key '' is the words on no code (unattachedNote)
  */
 export function makeRow(id, rawText, extra = {}) {
   const tokens = tokenize(rawText)
@@ -250,7 +251,8 @@ export function deriveCaptures(row, opts = {}) {
     const edited = row.noteOverride && row.noteOverride[c.code]
     if (edited != null) { c.note = edited; c.noteEdited = true }
   }
-  return { captures, discarded, unattachedNote: unattached.join(' ').trim() }
+  const loose = row.noteOverride && row.noteOverride['']
+  return { captures, discarded, unattachedNote: loose != null && captures.length ? loose : unattached.join(' ').trim() }
 }
 
 /** Convenience: just the code strings this row yields. */
