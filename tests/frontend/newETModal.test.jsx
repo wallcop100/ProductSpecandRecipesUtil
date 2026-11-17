@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 
 window.electronAPI = { db: { setPref: vi.fn().mockResolvedValue(undefined) } }
 vi.mock('../../src/utils/backend.js', () => ({
@@ -128,4 +128,21 @@ test('NQLUFQ: Finish lands in brackets after both descriptions', () => {
   const s = useStore.getState()
   expect(s.elementTypes.find(e => e.ElementTypeRef === 'ET-DL-09').Description).toBe('Downlight (RAL 9010)')
   expect(s.psRows.find(r => r.ElementTypeRef === 'ET-DL-09').ComponentDescription).toBe('Trim ring (RAL 9010)')
+})
+
+describe('HYQ246: a placeholder code is not a duplicate', () => {
+  const taken = [{ ElementTypeRef: 'ET-LIN-01', Manufacturer: 'Ideaworks', ProductCode: 'N/A' },
+                 { ElementTypeRef: 'ET-PROF-01', Manufacturer: 'Flexalighting', ProductCode: 'FPS2020BG2000' }]
+  const open = (mfr, code) => {
+    setup({ prefill: { ref: 'ET-LIN-09', manufacturer: mfr, productCode: code }, importContext: null, draftKey: `hyq-${code}` })
+    act(() => useStore.setState({ psRows: taken }))
+  }
+  test('N/A with the same maker shows no warning', () => {
+    open('Ideaworks', 'n/a')
+    expect(screen.queryByText(/Use existing/)).toBeNull()
+  })
+  test('a real code still does', () => {
+    open('Flexalighting', 'FPS2020BG2000')
+    expect(screen.getByText('Use existing ET-PROF-01')).toBeInTheDocument()
+  })
 })

@@ -289,7 +289,7 @@ export const productKey = (manufacturer, code) => `${norm(manufacturer)} ${norm(
  *
  * Only the WHOLE code is a placeholder: "TBC-1000" is a real product code.
  */
-const PLACEHOLDER_CODES = new Set(['N/A', 'TBC'])
+const PLACEHOLDER_CODES = new Set(['N/A', 'NA', 'TBC', 'TBA', '-'])
 
 export const hasProductIdentity = code => {
   const n = norm(code)
