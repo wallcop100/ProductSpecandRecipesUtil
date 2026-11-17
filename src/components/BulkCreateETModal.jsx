@@ -444,8 +444,8 @@ export default function BulkCreateETModal({
                                 </div>
                               )}
                               {refFromText(r) && (
-                                <div className="text-muted" style={{ fontSize: 9, fontStyle: r.refFrom?.from === 'default' ? 'italic' : undefined }} data-testid="ref-from">
-                                  {refFromText(r)}
+                                <div className="text-muted d-flex align-items-center gap-1" style={{ fontSize: 9, fontStyle: r.refFrom?.from === 'default' ? 'italic' : undefined }} data-testid="ref-from">
+                                  {r.refFrom?.from !== 'default' && <span className="companion-dot" />}{refFromText(r)}
                                 </div>
                               )}
                               {(!verified(r) || r.kin?.length > 0) && whyText(r) && (

@@ -71,12 +71,15 @@ for (const p of projects) {
   if (only.length && !only.includes(p.project)) continue
   const per = Object.fromEntries(MODES.map(m => [m, tally()]))
   // A sitting, approximated: products made in ref-counter order (every -01 before any -02).
-  const order = cases(p).map((c, i) => ({ c, i })).sort((a, b) => counter(a.c.et.ElementTypeRef) - counter(b.c.et.ElementTypeRef) || a.i - b.i).map(x => x.c)
+  // ORDER=shuffle (seeded) or mirror checks the counter order is not leaking the answer.
+  const rnd = (seed => () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648))(Number(process.env.SEED || 7))
+  const order = cases(p).map((c, i) => ({ c, i, r: rnd() })).sort((a, b) => process.env.ORDER === 'shuffle' ? a.r - b.r : process.env.ORDER === 'mirror' ? a.i - b.i
+    : counter(a.c.et.ElementTypeRef) - counter(b.c.et.ElementTypeRef) || a.i - b.i).map(x => x.c)
   const session = []
   for (const [k, c] of order.entries()) {
     const later = new Set(order.slice(k).map(x => lc(x.et.ElementTypeRef)))
     for (const mode of MODES) {
-      const got = mode === 'session' ? propose(p, c, mode, later, session) : propose(p, c, mode)
+      const got = mode === 'session' ? propose(p, c, mode, later, process.env.NO_SITTING ? [] : session) : propose(p, c, mode)
       if (mode === 'session') session.push({ code: c.code, maker: c.maker, proposed: { family: got.family, ref: got.ref, name: got.name }, kept: { family: c.et.Family, ref: c.et.ElementTypeRef, name: c.et.Name } })
       const ok = {
         family: lc(got.family) === lc(c.et.Family),

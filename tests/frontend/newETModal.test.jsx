@@ -199,7 +199,8 @@ test('ZAJ889: a proposal fills the fields with wands; the Form\'s Finish waits, 
   setup({ importContext: null, formRefs: ['H351'], draftKey: 'zaj889', onBulk, bulkCount: 4,
     prefill: { ref: 'ET-PS-07', name: 'LightGraphix - LD53', family: 'ET-SPIKE', manufacturer: 'LightGraphix', productCode: 'LD53', description: 'LD53', why: 'like LD51 here' } })
   for (const f of ['ref', 'name', 'family', 'manufacturer', 'productCode']) expect(screen.getByTestId(`wand-${f}`)).toBeInTheDocument()
-  expect(screen.getByTestId('wand-ref').title).toBe('Filled in: like LD51 here')
+  expect(screen.getByTestId('wand-ref').title).toBe('Suggested: like LD51 here')
+  expect(screen.getByTestId('wand-manufacturer').title).toMatch(/^Filled in/)   // copied from the Form, not learned
   expect(screen.queryByTestId('wand-description')).toBeNull()        // only the code again: nothing proposed
   const finish = document.querySelector('[data-field="finish"]')
   expect(finish).toHaveValue('')
@@ -264,6 +265,9 @@ describe('a Form card Create proposes, and learns from this sitting', () => {
     expect(field('ref')).toHaveValue('ET-PROF-1019-01')
     expect(field('name')).toHaveValue('LEDFlex - 1019 Profile')
     expect(screen.getByTestId('ref-from')).toHaveTextContent('ref like ET-PROF-1009-01 here')
+    // A learned suggestion wears companion purple.
+    expect(screen.getByTestId('ref-from').querySelector('.companion-dot')).not.toBeNull()
+    expect(screen.getByTestId('family-from').querySelector('.companion-dot')).not.toBeNull()
     expect(screen.getByTestId('family-from')).toBeInTheDocument()
   })
 

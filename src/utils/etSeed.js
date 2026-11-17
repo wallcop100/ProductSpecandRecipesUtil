@@ -445,6 +445,7 @@ export function proposeElementTypes(entries = [], project = {}) {
           : nextRef((refFrom = refBaseFor(family, e.text, manufacturer, `${context} ${note}`, pick)).base, taken)
     if (ref) taken.add(ref)
     const old = !e.placeholder && matchShape(e.text, manufacturer, shapes).superseded
+    const liked = !pick.seen?.name && !e.placeholder && family && !same ? nameLike(family, e.text, manufacturer) : ''
 
     proposals.push({
       code: e.text,
@@ -454,7 +455,7 @@ export function proposeElementTypes(entries = [], project = {}) {
       reuseRef: same?.ref || null,
       family: same ? '' : family,
       ref,
-      name: pick.seen?.name || (!e.placeholder && family && !same && nameLike(family, e.text, manufacturer)) || (e.placeholder ? `${e.placeholder.formRef} TBC${manufacturer ? ` (${manufacturer})` : ''}` : seedName(manufacturer, e.text)),
+      name: pick.seen?.name || liked || (e.placeholder ? `${e.placeholder.formRef} TBC${manufacturer ? ` (${manufacturer})` : ''}` : seedName(manufacturer, e.text)),
       placeholder: e.placeholder || null,
       description: pick.seen?.description || [context, note].map(s => String(s).trim()).filter(Boolean).join(', '),
       why: pick.why,
@@ -473,6 +474,8 @@ export function proposeElementTypes(entries = [], project = {}) {
       checkRef: !!pick.flag,
       // Where the ref's shape came from: a sibling here, the library, the family's usual head, or nothing.
       refFrom: refFrom ? { from: refFrom.from, example: refFrom.example || null } : null,
+      // How the name was made, for the audit trail: the same product seen elsewhere, a sibling's name, or maker + code.
+      nameFrom: pick.seen?.name ? 'seen' : liked ? 'sibling' : e.placeholder ? 'placeholder' : 'maker-code',
       alternatives: pick.style?.alternatives || [],
       superseded: old ? { shape: old.shape, example: old.example } : null,
     })

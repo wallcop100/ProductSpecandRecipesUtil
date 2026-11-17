@@ -15,6 +15,12 @@
  *   family      `${MAKER}|${CODE}`     the family a proposal took from the library
  *   rule        token text             the token's role (code / note / discard)
  *   pair        groupKey(codes)        'different' (a near-miss ruled apart)
+ *   family      (also)                 any new ElementType's proposed family; tier = the rule (stem, session, canon…)
+ *   ref         `${MAKER}|${CODE}`     its proposed ref; tier = sibling/session/library/head/default, source = the example
+ *   name        `${MAKER}|${CODE}`     its proposed name; tier = seen/sibling/maker-code
+ *
+ * The audit trail of a proposal is these rows: how each field was suggested, and whether it was
+ * kept, changed or cleared when the ElementType was created.
  */
 import { norm } from '../utils/productCodes'
 
@@ -77,6 +83,24 @@ export function learnedInView(codes = []) {
     .filter(s => want.has(norm(s.code)) || want.has(norm(s.supplied)) || s.key.split('|').some(p => want.has(norm(p))))
     .slice(0, 20)
     .map(s => ({ kind: s.kind, key: s.key, value: s.supplied, tier: s.tier, source: s.source }))
+}
+
+// Same key as an assignment (screens/import/useProjectKnowledge.js assignmentKey).
+const keyOf = p => `${norm(p.manufacturer || '')}|${norm(p.code || '')}`
+
+/** A proposed new ElementType (utils/etSeed.js): remember how each of its fields was suggested. */
+export function noteProposal(p) {
+  if (!p || p.action !== 'create' || p.placeholder) return
+  const key = keyOf(p)
+  noteSupplied({ kind: 'family', key, tier: p.why || 'default', source: p.styledOn?.source || p.session?.code || '', value: p.family, code: p.code })
+  noteSupplied({ kind: 'ref', key, tier: p.refFrom?.from || 'default', source: p.refFrom?.example || '', value: p.ref, code: p.code })
+  noteSupplied({ kind: 'name', key, tier: p.nameFrom || '', value: p.name, code: p.code })
+}
+
+/** What was created for each proposed code: { code, manufacturer, family, ref, name } → outcome rows. */
+export function settleCreated(project, created) {
+  const by = new Map(created.map(c => [keyOf(c), c]))
+  return ['family', 'ref', 'name'].flatMap(kind => settle(project, kind, k => (by.has(k) ? (by.get(k)[kind] ?? null) : undefined)))
 }
 
 /** Tests only. */
