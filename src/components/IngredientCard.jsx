@@ -196,12 +196,11 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   const [replacing, setReplacing] = useState(false)
   const [keepFields, setKeepFields] = useState(true)
 
-  // Extra fields: show if any are set, or if user manually expanded
-  const extraInUse = (
-    (row.packQuantity != null && row.packQuantity !== '') ||
-    (row.dimQtyMultiplier != null && row.dimQtyMultiplier !== '') ||
-    !!(row.isTRItem || row.IsTRItem)
-  )
+  // Extra fields: never hidden while any holds a value. Rows read from the workbook carry
+  // the sheet's spellings (Dim_QuantityMultiplier, PackQuantity), app-made rows the camelCase.
+  const set = v => v != null && v !== ''
+  const extraInUse = set(row.packQuantity ?? row.PackQuantity) ||
+    set(row.dimQtyMultiplier ?? row.Dim_QuantityMultiplier) || !!(row.isTRItem || row.IsTRItem)
   const [showExtra, setShowExtra] = useState(false)
   // The row's own InternalNotesText in the Recipes Spec (92YN3U).
   const note = row.Notes ?? row.notes ?? ''
