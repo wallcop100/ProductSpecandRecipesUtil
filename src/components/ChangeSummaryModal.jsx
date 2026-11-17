@@ -508,7 +508,7 @@ export default function ChangeSummaryModal({ show, onHide }) {
   const [previewKey, setPreviewKey] = useState(null)
   useEffect(() => { if (show) { setCopiedKey(null); setPreviewKey(null); setTab('changes') } }, [show])
   // The patch adds every ElementType the DesignDB lacks; only a family that is not certain is left to review.
-  useEffect(() => { if (show) useStore.getState().autoQueueDbRows() }, [show])
+  useEffect(() => { if (show) { useStore.getState().autoQueueDbRows(); useStore.getState().queuePsOnlyETs() } }, [show])
 
   // Two invariants, one selector (see specAlignment): the DesignDB is the master, and a
   // recipe implies a spec.
