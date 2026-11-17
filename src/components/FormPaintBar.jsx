@@ -4,7 +4,7 @@ import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import StatusChip from './StatusChip'
 import IconButton from './IconButton'
-import CopyButton from './CopyButton'
+import { CopyText } from './CopyButton'
 import ProductCodeImportScreen from '../screens/ProductCodeImportScreen'
 import { positionPaintStatus } from '../utils/formPositions'
 import { buildRefMap, targetFor } from '../utils/ptResolve'
@@ -105,7 +105,7 @@ export default function FormPaintBar({ posRef, open = false, onOpenChange = () =
                     <React.Fragment key={col}>
                       <span className="text-muted text-truncate" style={{ fontSize: 10, maxWidth: 120, fontStyle: m ? 'italic' : undefined }} title={col}>{col}</span>
                       <span style={{ fontFamily: 'monospace', color: m ? C.muted : C.ink, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                        {value}{code && <CopyButton text={value} what={`code ${value}`} size={11} style={{ marginLeft: 4, verticalAlign: 'middle' }} />}
+                        {code ? <CopyText text={value} /> : value}
                       </span>
                     </React.Fragment>
                   ))}

@@ -354,7 +354,9 @@ test('KU9NQJ: the brush sets paint mode for every position, and it is remembered
   expect(await screen.findByTestId('paint-panel')).toBeInTheDocument()
 })
 
-test('43B4AM: the raw product code in the pane has a copy button; manufacturer does not', () => {
+test('43B4AM: clicking the raw product code copies it, with no icon; the manufacturer does not copy', async () => {
+  const writeText = vi.fn().mockResolvedValue(undefined)
+  Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
   useStore.setState({ formPaintMode: false, importDraft: {
     version: 1, step: 'review', source: { name: 'form.xlsx', sheet: 'S' },
     map: { pt: '', code: 'ProductCode', mfr: 'ManufacturerName', exclude: '', acc: '', context: [] },
@@ -363,6 +365,8 @@ test('43B4AM: the raw product code in the pane has a copy button; manufacturer d
   }, formCaptures: { version: 1, byPosition: { C01: [{ elementTypeRef: 'ET-PS-OLD', code: 'OLD1', manufacturer: 'iGuzzini' }] } } })
   render(<FormSpecPane posRef="C01" />)
   const raw = screen.getByTestId('form-raw')
-  expect(within(raw).getByTitle('Copy code NEW99')).toBeInTheDocument()
-  expect(within(raw).queryByTitle(/Copy code iGuzzini/)).toBeNull()
+  expect(raw.textContent).not.toMatch(/content_copy/)
+  await act(async () => { fireEvent.click(within(raw).getByText('NEW99')) })
+  expect(writeText).toHaveBeenCalledWith('NEW99')
+  expect(within(raw).getByText('iGuzzini').getAttribute('role')).toBeNull()
 })

@@ -9,6 +9,7 @@ import { getNextAvailableRef } from '../utils/containerUtils'
 import { hasProductIdentity } from '../utils/productCodes'
 import { CANON_FAMILIES } from '../data/etCanon'
 import { C } from '../styles/tokens'
+import { copyText } from './CopyButton'
 import { formColumnsFor } from '../utils/formPositions'
 import { buildRefMap, targetFor } from '../utils/ptResolve'
 
@@ -79,6 +80,7 @@ export default function NewETModal({
   const formRow = useMemo(() => show ? formColumnsFor(importDraft, formRefs || importContext?.positionTypes, importContext?.code || prefill?.productCode, { buildRefMap, targetFor }) : null,
     [show, importDraft, formRefs, importContext, prefill?.productCode])
   const lastField = useRef('name')
+  const [copied, setCopied] = useState(null)
   const setters = { ref: setRef, name: setName, description: setDescription, family: setFamily, manufacturer: setMfr, productCode: setCode, notes: setNotes, extNotes: setExtNotes, finish: setFinish }
   const putValue = v => { const set = setters[lastField.current]; set?.(cur => cur.trim() ? `${cur.trimEnd()} ${v}` : v) }
 
@@ -457,12 +459,14 @@ export default function NewETModal({
                     // Long LINK/ProductCode cells run to 8 lines: show two, the whole value on hover.
                     style={{ fontSize: 11, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
                       display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
-                    onMouseDown={e => e.preventDefault()} onClick={() => putValue(value)}
+                    onMouseDown={e => e.preventDefault()} onClick={() => { putValue(value); copyText(value).then(ok => ok && setCopied(value)) }}
                     title={value}>{value}</button>
                 </React.Fragment>
               ))}
             </div>
-            <div className="text-muted mt-2" style={{ fontSize: 10 }}>Click a value to put it into the field you were in.</div>
+            <div className="text-muted mt-2" style={{ fontSize: 10 }} data-testid="newet-form-hint">
+              {copied != null ? <>Copied “{copied}”, and put into the field you were in.</> : 'Click a value to copy it and put it into the field you were in.'}
+            </div>
           </aside>
         )}
       </Modal.Body>
