@@ -5,6 +5,7 @@ import useStore from '../store/useStore'
 import { familyRowExists } from '../utils/collectionGuess'
 import MaterialIcon from './MaterialIcon'
 import { getNextAvailableRef } from '../utils/containerUtils'
+import { hasProductIdentity } from '../utils/productCodes'
 import { CANON_FAMILIES } from '../data/etCanon'
 import { C } from '../styles/tokens'
 
@@ -148,7 +149,8 @@ export default function NewETModal({
   const dupSpec = useMemo(() => {
     const m = manufacturer.trim().toLowerCase()
     const c = productCode.trim().toLowerCase()
-    if (!m || !c) return null
+    // "N/A" names no product: every wrapper and LIN/DL type carries it (HYQ246).
+    if (!m || !hasProductIdentity(c)) return null
     const hit = psRows.find(r =>
       (r.Manufacturer || r.manufacturer || '').trim().toLowerCase() === m &&
       (r.ProductCode || r.productCode || '').trim().toLowerCase() === c &&
