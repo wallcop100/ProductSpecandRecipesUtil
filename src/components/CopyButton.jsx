@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import IconButton from './IconButton'
 import { C } from '../styles/tokens'
+import useStore from '../store/useStore'
 
 /**
  * CopyButton — copy a value (a product code, usually) to the clipboard, and say so.
@@ -18,7 +19,7 @@ export function CopyText({ text, children, style }) {
   const [done, setDone] = useState(false)
   async function copy(e) {
     e.stopPropagation()
-    if (await copyText(text)) { setDone(true); setTimeout(() => setDone(false), 1200) }
+    if (await copyText(text)) { setDone(true); setTimeout(() => setDone(false), 1200); useStore.getState().toast('Copied to clipboard', { tone: 'warning' }) }
   }
   return (
     <span role="button" tabIndex={0} title={done ? 'Copied' : 'Click to copy'} data-copied={done || undefined}

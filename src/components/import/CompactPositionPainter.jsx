@@ -1,8 +1,11 @@
-import React from 'react'
+import React, { useMemo, useState } from 'react'
 import { Button, Form } from 'react-bootstrap'
 import useStore from '../../store/useStore'
 import MaterialIcon from '../MaterialIcon'
 import CellTokens from './CellTokens'
+import { BRUSH } from '../CodeChips'
+import { familyOptionsOf } from '../NewETModal'
+import { CopyText } from '../CopyButton'
 import { positionRecipeWithWrapperInternals } from '../../utils/collectionStatus'
 import { C } from '../../styles/tokens'
 
@@ -22,8 +25,14 @@ const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`
  * box is only offered where an entry holds no code at all — there it is the one action.
  * The import screen owns the state; this only draws it.
  */
-export default function CompactPositionPainter({ posRef, rows, info, onSetRole, onToggleConfirm, onNeedsET, onMakeMain }) {
+export default function CompactPositionPainter({ posRef, rows, info, onSetRole, onToggleConfirm, onNeedsET, onMakeMain, proposalFor, onMoveNoteWord }) {
   const recipes = useStore(s => s.recipes)
+  const elementTypes = useStore(s => s.elementTypes)
+  const familyOptions = useMemo(() => familyOptionsOf(elementTypes || []), [elementTypes])
+  const [brush, setBrush] = useState('code')
+  const [pinned, setPinned] = usePinned()
+  const [peek, setPeek] = useState(false)
+  const [edits, setEdits] = useState({})   // code -> { ref, family } typed on its card
   if (!rows.length) {
     return <div className="text-muted fst-italic" style={{ fontSize: 11 }} data-testid="embedded-no-rows">The Form gives no product code for {posRef}.</div>
   }
@@ -53,12 +62,46 @@ export default function CompactPositionPainter({ posRef, rows, info, onSetRole, 
         </div>
       )}
 
+      {/* The main painter's three brushes, small: pick one, then click words (5 FormPane). */}
+      <div className="d-flex align-items-center gap-1 mb-1" data-testid="paint-key">
+        {!pinned && !peek ? (
+          <button type="button" className="d-inline-flex gap-1 align-items-center border-0 bg-transparent px-1" data-testid="brush-peek"
+            onClick={() => setPeek(true)} title="Click a word to cycle code → note → discard. Click here for the brushes.">
+            {['code', 'note', 'discard'].map(r => <span key={r} style={{ width: 9, height: 9, borderRadius: 2, background: BRUSH[r].swatch,
+              border: r === 'note' ? `1px solid ${C.faint}` : 'none' }} />)}
+          </button>
+        ) : (
+        <div className="d-flex rounded overflow-hidden" style={{ border: `1px solid ${C.border}` }}>
+          {['code', 'note', 'discard'].map((r, i) => {
+            const b = BRUSH[r]
+            const active = brush === r
+            return (
+              <button key={r} type="button" onClick={() => setBrush(r)} aria-pressed={active} data-testid={`brush-${r}`}
+                title={`Paint ${b.label.toLowerCase()}: click words to make them ${b.label.toLowerCase()}`}
+                className="d-inline-flex align-items-center gap-1 px-2 border-0"
+                style={{ background: active ? b.swatch : C.surface, color: active ? C.surface : C.ink, fontWeight: active ? 600 : 400,
+                  fontSize: 10, lineHeight: '18px', borderRight: i < 2 ? `1px solid ${C.border}` : 'none' }}>
+                <span style={{ width: 9, height: 9, borderRadius: 2, background: active ? C.surface : b.swatch,
+                  border: r === 'note' ? `1px solid ${C.faint}` : 'none' }} />
+                {b.label}
+              </button>
+            )
+          })}
+        </div>
+        )}
+        <button type="button" className="border-0 bg-transparent p-0 d-inline-flex" data-testid="brush-pin" aria-pressed={pinned}
+          title={pinned ? 'Brushes stay open. Click to tuck them away.' : 'Keep the brushes open'}
+          style={{ color: pinned ? C.accent : C.muted }} onClick={() => { setPinned(!pinned); setPeek(false) }}>
+          <MaterialIcon name="push_pin" size={13} />
+        </button>
+      </div>
+
       {infos.map(({ row, inf }) => (
         <div key={row.id} className="py-1 border-bottom" data-testid="compact-row">
           <div className="d-flex align-items-start gap-1">
             <div style={{ flex: 1, minWidth: 0 }}>
               {row.manufacturer && <div className="text-muted" style={{ fontSize: 10 }}>{row.manufacturer}</div>}
-              <CellTokens row={row} suggested={inf.suggested} onSetRole={(i, role) => onSetRole(row.id, i, role)} />
+              <CellTokens row={row} suggested={inf.suggested} brush={pinned || peek ? brush : null} onSetRole={(i, role) => onSetRole(row.id, i, role)} />
             </div>
             {/* No code in this entry at all: the tick is the only thing to do with it. */}
             {inf.codes.length === 0 && (
@@ -71,27 +114,24 @@ export default function CompactPositionPainter({ posRef, rows, info, onSetRole, 
               {inf.suggested?.length && !row.confirmed ? 'Underlined words look like codes: click one to use it' : (inf.status?.label || 'no code')}
             </div>
           )}
-          {inf.codes.some(c => c.etRef) && (
-            <div className="mt-1" data-testid="compact-known">
-              {inf.codes.filter(c => c.etRef).map(c => (
-                <div key={c.code} className="d-flex align-items-center gap-1" style={{ fontSize: 10 }} data-testid="known-code">
-                  {inf.codes.length > 1 && <MainStar c={c} onMakeMain={() => onMakeMain(row.id, c.code)} />}
-                  <MaterialIcon name="check_circle" size={12} style={{ color: C.success }} />
-                  <span style={{ ...mono, fontWeight: 600 }}>{c.code}</span> → <span style={mono}>{c.etRef}</span>
-                  <span className="text-muted">· {inRecipe(c.etRef) ? 'in the recipe' : 'not in the recipe yet'}</span>
-                </div>
+          {inf.codes.length > 0 && (
+            <div className="d-flex flex-column gap-1 mt-1" data-testid={inf.codes.some(c => c.etRef) ? 'compact-known' : undefined}>
+              {inf.codes.map(c => (
+                <CodeCard key={c.code} c={c} many={inf.codes.length > 1} inRecipe={inRecipe} familyOptions={familyOptions}
+                  edit={edits[c.code]} proposal={proposalFor?.(c.code)}
+                  onEdit={v => setEdits(e => ({ ...e, [c.code]: { ...e[c.code], ...v } }))}
+                  onCreate={seed => onNeedsET(c.code, seed)}
+                  onMakeMain={() => onMakeMain(row.id, c.code)}
+                  onDropWord={(from, word) => from !== c.code && onMoveNoteWord?.(row.id, from, c.code, word)} />
               ))}
+              {inf.loose && (
+                <div className="rounded px-2 py-1" style={{ border: `1px dashed ${C.faint}`, background: C.subtle }} data-testid="loose-note">
+                  <div style={{ fontSize: 10, color: C.muted }}>Not on any code: kept on the Form only</div>
+                  <div className="fst-italic">{inf.loose}</div>
+                </div>
+              )}
             </div>
           )}
-          {inf.codes.filter(c => !c.etRef).map(c => (
-            <div key={c.code} className="d-flex align-items-center gap-1 flex-wrap mt-1">
-              {inf.codes.length > 1 && <MainStar c={c} onMakeMain={() => onMakeMain(row.id, c.code)} />}
-              <Button size="sm" variant="primary" className="py-0" style={{ fontSize: 11 }} data-testid="give-et"
-                onClick={() => onNeedsET(c.code)}>
-                Give <span style={mono}>{c.code}</span> an ElementType
-              </Button>
-            </div>
-          ))}
         </div>
       ))}
     </div>
@@ -106,5 +146,79 @@ function MainStar({ c, onMakeMain }) {
       onClick={c.main ? undefined : onMakeMain}>
       <MaterialIcon name={c.main ? 'star' : 'star_border'} size={11} />
     </span>
+  )
+}
+
+/** The brushes stay open until you tuck them away; remembered per browser. */
+function usePinned() {
+  const [pinned, set] = useState(() => { try { return localStorage.getItem('psr.formPane.brushPinned') !== '0' } catch { return true } })
+  return [pinned, v => { set(v); try { localStorage.setItem('psr.formPane.brushPinned', v ? '1' : '0') } catch { /* private window */ } }]
+}
+
+/**
+ * One product code as a card: code (and main star), its ElementType or the proposed ref and
+ * family to create it with, and its note as one sentence whose words drag between cards.
+ */
+function CodeCard({ c, many, inRecipe, familyOptions, edit, proposal, onEdit, onCreate, onMakeMain, onDropWord }) {
+  const [over, setOver] = useState(false)
+  const ref = edit?.ref ?? proposal?.ref ?? ''
+  const family = edit?.family ?? proposal?.family ?? ''
+  const fams = family && !familyOptions.includes(family) ? [family, ...familyOptions] : familyOptions
+  const words = String(c.note || '').split(/\s+/).filter(Boolean)
+  const drop = {
+    onDragOver: e => { if (e.dataTransfer.types.includes('application/x-psr-word')) { e.preventDefault(); setOver(true) } },
+    onDragLeave: () => setOver(false),
+    onDrop: e => { setOver(false); const d = e.dataTransfer.getData('application/x-psr-word'); if (!d) return
+      e.preventDefault(); const { from, word } = JSON.parse(d); onDropWord(from, word) },
+  }
+  const ctl = { ...mono, fontSize: 11, height: 24, padding: '1px 5px' }
+  return (
+    <div className="rounded p-2" data-testid="code-card" {...drop}
+      style={{ border: `1px solid ${over ? C.accent : C.border}`, borderLeft: `3px solid ${C.accent}`, background: over ? C.accentTint : C.surface }}>
+      <div className="d-flex align-items-center gap-1">
+        {many && <MainStar c={c} onMakeMain={onMakeMain} />}
+        <span className="text-truncate" style={{ ...mono, fontWeight: 600 }}><CopyText text={c.code} /></span>
+        {c.etRef ? (
+          <MaterialIcon name="check_circle" size={16} className="ms-auto" style={{ color: C.success }} title="Has an ElementType" />
+        ) : (
+          <Button size="sm" variant="primary" className="ms-auto rounded-circle p-0 d-inline-flex align-items-center justify-content-center flex-shrink-0"
+            style={{ width: 22, height: 22 }} data-testid="give-et" aria-label={`Give ${c.code} an ElementType`} title={`Give ${c.code} an ElementType`}
+            onClick={() => onCreate({ ref: ref.trim(), family: family.trim() })}>
+            <MaterialIcon name="add" size={16} />
+          </Button>
+        )}
+      </div>
+      {c.etRef ? (
+        <div style={{ fontSize: 10 }} data-testid="known-code">
+          <span style={mono}>{c.code}</span> → <span style={mono}>{c.etRef}</span>
+          <span className="text-muted"> · {inRecipe(c.etRef) ? 'in the recipe' : 'not in the recipe yet'}</span>
+        </div>
+      ) : (
+        <div className="row g-1 mt-1">
+          <div className="col-7">
+            <div style={{ fontSize: 10, color: C.muted }}>Ref</div>
+            <Form.Control size="sm" style={ctl} value={ref} onChange={e => onEdit({ ref: e.target.value })} aria-label={`Ref for ${c.code}`} />
+          </div>
+          <div className="col-5">
+            <div style={{ fontSize: 10, color: C.muted }}>Family</div>
+            <Form.Select size="sm" style={{ ...ctl, paddingRight: 18, backgroundPosition: 'right 4px center' }} value={family}
+              onChange={e => onEdit({ family: e.target.value })} aria-label={`Family for ${c.code}`}>
+              <option value="">(none)</option>
+              {fams.map(f => <option key={f} value={f}>{f}</option>)}
+            </Form.Select>
+          </div>
+        </div>
+      )}
+      <div className="mt-1" style={{ fontSize: 10, color: C.muted }}>Note</div>
+      <div className="fst-italic rounded px-1" style={{ border: `1px solid ${C.border}`, minHeight: 22, lineHeight: '20px' }} data-testid="code-note">
+        {words.length === 0 && <span style={{ color: C.faint }}>no note</span>}
+        {words.map((w, i) => (
+          <React.Fragment key={i}>{i > 0 && ' '}
+            <span draggable className="note-word" title="Drag onto another code to move this word" style={{ cursor: 'grab' }}
+              onDragStart={e => e.dataTransfer.setData('application/x-psr-word', JSON.stringify({ from: c.code, word: w }))}>{w}</span>
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
   )
 }

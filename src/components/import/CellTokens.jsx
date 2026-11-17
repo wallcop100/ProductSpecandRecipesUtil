@@ -9,19 +9,20 @@ const NEXT = { code: 'note', note: 'discard', discard: 'code' }
  * to cycle it code → note → discard, for this row only. The full painter (drag, brushes,
  * teach every row) lives in the expanded row.
  */
-export default function CellTokens({ row, onSetRole, suggested = [] }) {
+export default function CellTokens({ row, onSetRole, suggested = [], brush = null }) {
   const sug = new Set(suggested)
   const parts = []
   let cursor = 0
   row.tokens.forEach((tok, i) => {
     if (tok.start > cursor) parts.push(<span key={`g${i}`} style={{ color: C.muted }}>{row.rawText.slice(cursor, tok.start)}</span>)
     const role = row.roles[i]
+    const next = brush || NEXT[role] || 'code'
     // Pre-selected by the tool and not yet touched: dashed, so a guess reads as a guess.
     const pre = role === 'code' && row.pre?.[i] === 'code' && !row.overrides?.[i]
     parts.push(
       <span key={i} role="button" tabIndex={-1}
-        onClick={e => { e.stopPropagation(); onSetRole?.(i, NEXT[role] || 'code') }}
-        title={`“${tok.text}” — ${role}${pre ? ' (pre-selected)' : ''}. Click to make it ${NEXT[role]}.`}
+        onClick={e => { e.stopPropagation(); if (next !== role) onSetRole?.(i, next) }}
+        title={`“${tok.text}” — ${role}${pre ? ' (pre-selected)' : ''}.${next !== role ? ` Click to make it ${next}.` : ''}`}
         data-role={role}
         style={{
           ...roleStyle(role), cursor: 'pointer', padding: '0 1px',
