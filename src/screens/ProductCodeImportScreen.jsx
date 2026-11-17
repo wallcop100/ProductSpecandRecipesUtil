@@ -690,11 +690,13 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   const moveNoteIn = useCallback((rowId, fromCode, toCode, word = null) => {
     const row = resolved.find(r => r.id === rowId)
     if (!row) return
-    const caps = deriveCaptures(row, captureOpts).captures
+    const d = deriveCaptures(row, captureOpts)
+    // '' is the words on no code: they can be moved onto a code, and back.
+    const caps = [...d.captures, { code: '', note: d.unattachedNote }]
     const fi = caps.findIndex(c => c.code === fromCode)
     const ti = caps.findIndex(c => c.code === toCode)
-    if (fi < 0 || ti < 0) return
-    setDirStats(s => ti < fi ? { ...s, backward: s.backward + 1 } : { ...s, forward: s.forward + 1 })
+    if (fi < 0 || ti < 0 || fi === ti) return
+    if (fromCode && toCode) setDirStats(s => ti < fi ? { ...s, backward: s.backward + 1 } : { ...s, forward: s.forward + 1 })
 
     const words = s => String(s || '').split(/\s+/).filter(Boolean)
     let moved, left
@@ -800,7 +802,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     return m
   }, [formCaptures])
 
-  const entries = useMemo(() => buildDistinct(confirmed, captureOpts).filter(e => hasProductIdentity(e.text)).map(e => {
+  // Rows → one entry per distinct product code. A function, so the Form pane can preview
+  // proposals for rows not confirmed yet (cardProposals) the same way.
+  const toEntries = useCallback(rows => buildDistinct(rows, captureOpts).filter(e => hasProductIdentity(e.text)).map(e => {
     // A product is (maker, code): the same code from another maker is another product.
     const c = classify(e.text, ctx, e.manufacturers[0] || '')
     // The spec wins; your past decision is only consulted where the spec is silent.
@@ -814,7 +818,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       suggested: suggestRef(e.text, note, e.manufacturers[0] || '', convention, elementTypes, psRows),
     }
     return { ...e, ...c, etRef, ...(fromLearning ? { etLearned: fromLearning } : {}), ...help }
-  }), [confirmed, ctx, assignments, captureOpts, psRows, elementTypes, convention, priorEtByCode, knowledge, knownRefs])
+  }), [ctx, assignments, captureOpts, psRows, elementTypes, convention, priorEtByCode, knowledge, knownRefs])
+  const entries = useMemo(() => toEntries(confirmed), [toEntries, confirmed])
 
   // Which defaults came from learning, so staging can record what became of them (outcomes.js).
   useEffect(() => { forgetSupplied() }, [projectNumber])
@@ -1006,7 +1011,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
    * A code is the LEAD of its cell (the luminaire) when it is the first capture of any
    * Form row that yields it; any other code is an extra, filed as an accessory.
    */
-  const { proposals, newFamilies } = useMemo(() => {
+  const proposeFor = useCallback((unassigned, confirmed) => {
     const byId = new Map(confirmed.map(r => [r.id, r]))
     const pick = c => {
       const keys = Object.keys(c || {})
@@ -1044,7 +1049,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       library: sharedLibrary.length ? orderLibrary(sharedLibrary, styleLibrary, projectNumber) : styleLibrary,
       jobs: codeJobsKnown,
     })
-  }, [unassigned, confirmed, captureOpts, elementTypes, psRows, recipes, positionTypes, dbCollectionRefs, map.pt, ptTarget, styleLibrary, sharedLibrary, codeJobsKnown])
+  }, [captureOpts, elementTypes, psRows, recipes, positionTypes, dbCollectionRefs, map.pt, ptTarget, styleLibrary, sharedLibrary, codeJobsKnown])
+  const { proposals, newFamilies } = useMemo(() => proposeFor(unassigned, confirmed), [proposeFor, unassigned, confirmed])
 
   // A family the library supplied (the same product elsewhere, or a maker's product line).
   useEffect(() => {
@@ -1437,6 +1443,14 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     if (projectId != null) Promise.resolve(window.electronAPI?.db?.setPref?.(projectId, 'import_mode', m)).catch(() => {})
   }
   const scopeRows = useMemo(() => (inSelection ? formOrder.filter(inSelection) : formOrder), [formOrder, inSelection])
+  // The Form pane's cards show a ref and family before anything is confirmed: the same proposal
+  // pressing + would make, as if this position's rows were confirmed (nothing is changed).
+  const cardProposals = useMemo(() => {
+    const extra = embedded ? scopeRows.filter(r => !r.confirmed && !isTbc(r, captureOpts)) : []
+    if (!extra.length) return proposals
+    const ents = toEntries([...confirmed, ...extra]).filter(e => !e.etRef && !hasNoteCollision(e))
+    return proposeFor([...ents, ...tbcEntries.filter(e => !e.etRef)], [...confirmed, ...extra]).proposals
+  }, [embedded, scopeRows, captureOpts, proposals, toEntries, confirmed, proposeFor, tbcEntries])
   // In the builder's painter, an entry whose every code already has an ElementType (from
   // the spec, this import, or an earlier project) is confirmed: nothing is left to decide
   // there, and a tick no one is offered must not hold the position back (WYZ3NN).
@@ -1758,8 +1772,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
           onSetRole={setTokenRole}
           onToggleConfirm={toggleConfirm}
           onNeedsET={openETFor}
-          proposalFor={code => proposals.find(p => norm(p.code) === norm(code))}
+          proposalFor={code => cardProposals.find(p => norm(p.code) === norm(code))}
           onMoveNoteWord={(rowId, from, to, word) => moveNoteIn(rowId, from, to, word)}
+          onEditNote={editNote}
           onMakeMain={(rowId, code) => patchRow(rowId, r => ({ ...r, leadCode: code }))}
         />
       )}

@@ -25,7 +25,7 @@ const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`
  * box is only offered where an entry holds no code at all — there it is the one action.
  * The import screen owns the state; this only draws it.
  */
-export default function CompactPositionPainter({ posRef, rows, info, onSetRole, onToggleConfirm, onNeedsET, onMakeMain, proposalFor, onMoveNoteWord }) {
+export default function CompactPositionPainter({ posRef, rows, info, onSetRole, onToggleConfirm, onNeedsET, onMakeMain, proposalFor, onMoveNoteWord, onEditNote }) {
   const recipes = useStore(s => s.recipes)
   const elementTypes = useStore(s => s.elementTypes)
   const familyOptions = useMemo(() => familyOptionsOf(elementTypes || []), [elementTypes])
@@ -121,15 +121,11 @@ export default function CompactPositionPainter({ posRef, rows, info, onSetRole, 
                   edit={edits[c.code]} proposal={proposalFor?.(c.code)}
                   onEdit={v => setEdits(e => ({ ...e, [c.code]: { ...e[c.code], ...v } }))}
                   onCreate={seed => onNeedsET(c.code, seed)}
+                  onEditNote={text => onEditNote?.(row.id, c.code, text)}
                   onMakeMain={() => onMakeMain(row.id, c.code)}
                   onDropWord={(from, word) => from !== c.code && onMoveNoteWord?.(row.id, from, c.code, word)} />
               ))}
-              {inf.loose && (
-                <div className="rounded px-2 py-1" style={{ border: `1px dashed ${C.faint}`, background: C.subtle }} data-testid="loose-note">
-                  <div style={{ fontSize: 10, color: C.muted }}>Not on any code: kept on the Form only</div>
-                  <div className="fst-italic">{inf.loose}</div>
-                </div>
-              )}
+              <LooseWords text={inf.loose} onDropWord={(from, word) => from && onMoveNoteWord?.(row.id, from, '', word)} />
             </div>
           )}
         </div>
@@ -159,22 +155,16 @@ function usePinned() {
  * One product code as a card: code (and main star), its ElementType or the proposed ref and
  * family to create it with, and its note as one sentence whose words drag between cards.
  */
-function CodeCard({ c, many, inRecipe, familyOptions, edit, proposal, onEdit, onCreate, onMakeMain, onDropWord }) {
-  const [over, setOver] = useState(false)
+function CodeCard({ c, many, inRecipe, familyOptions, edit, proposal, onEdit, onCreate, onMakeMain, onDropWord, onEditNote }) {
+  const [typing, setTyping] = useState(null)   // the note being typed, or null
+  const [over, drop] = useWordDrop(onDropWord)
   const ref = edit?.ref ?? proposal?.ref ?? ''
   const family = edit?.family ?? proposal?.family ?? ''
   const fams = family && !familyOptions.includes(family) ? [family, ...familyOptions] : familyOptions
-  const words = String(c.note || '').split(/\s+/).filter(Boolean)
-  const drop = {
-    onDragOver: e => { if (e.dataTransfer.types.includes('application/x-psr-word')) { e.preventDefault(); setOver(true) } },
-    onDragLeave: () => setOver(false),
-    onDrop: e => { setOver(false); const d = e.dataTransfer.getData('application/x-psr-word'); if (!d) return
-      e.preventDefault(); const { from, word } = JSON.parse(d); onDropWord(from, word) },
-  }
   const ctl = { ...mono, fontSize: 11, height: 24, padding: '1px 5px' }
   return (
     <div className="rounded p-2" data-testid="code-card" {...drop}
-      style={{ border: `1px solid ${over ? C.accent : C.border}`, borderLeft: `3px solid ${C.accent}`, background: over ? C.accentTint : C.surface }}>
+      style={{ borderStyle: 'solid', borderWidth: '1px 1px 1px 3px', borderColor: over ? C.accent : `${C.border} ${C.border} ${C.border} ${C.accent}`, background: over ? C.accentTint : C.surface }}>
       <div className="d-flex align-items-center gap-1">
         {many && <MainStar c={c} onMakeMain={onMakeMain} />}
         <span className="text-truncate" style={{ ...mono, fontWeight: 600 }}><CopyText text={c.code} /></span>
@@ -210,15 +200,56 @@ function CodeCard({ c, many, inRecipe, familyOptions, edit, proposal, onEdit, on
         </div>
       )}
       <div className="mt-1" style={{ fontSize: 10, color: C.muted }}>Note</div>
-      <div className="fst-italic rounded px-1" style={{ border: `1px solid ${C.border}`, minHeight: 22, lineHeight: '20px' }} data-testid="code-note">
-        {words.length === 0 && <span style={{ color: C.faint }}>no note</span>}
-        {words.map((w, i) => (
-          <React.Fragment key={i}>{i > 0 && ' '}
-            <span draggable className="note-word" title="Drag onto another code to move this word" style={{ cursor: 'grab' }}
-              onDragStart={e => e.dataTransfer.setData('application/x-psr-word', JSON.stringify({ from: c.code, word: w }))}>{w}</span>
-          </React.Fragment>
-        ))}
+      {typing != null ? (
+        <Form.Control size="sm" autoFocus className="fst-italic" style={{ fontSize: 11, height: 24, padding: '1px 4px' }} value={typing}
+          aria-label={`Note for ${c.code}`} data-testid="code-note-input"
+          onChange={e => setTyping(e.target.value)}
+          onBlur={e => { if (!e.currentTarget.dataset.cancel && typing.trim() !== (c.note || '')) onEditNote(typing.trim()); setTyping(null) }}
+          onKeyDown={e => { if (e.key === 'Escape') e.currentTarget.dataset.cancel = '1'; if (e.key === 'Enter' || e.key === 'Escape') e.currentTarget.blur() }} />
+      ) : (
+      <div className="fst-italic rounded px-1" style={{ border: `1px solid ${C.border}`, minHeight: 22, lineHeight: '20px', cursor: 'text' }}
+        data-testid="code-note" title="Click to type the note; drag a word to move it" onClick={() => setTyping(c.note || '')}>
+        <NoteWords text={c.note} from={c.code} empty="no note: click to type one" />
       </div>
+      )}
+    </div>
+  )
+}
+
+const WORD = 'application/x-psr-word'
+
+/** Drop target for a dragged note word: [isOver, handlers]. */
+function useWordDrop(onDropWord) {
+  const [over, setOver] = useState(false)
+  return [over, {
+    onDragOver: e => { if (e.dataTransfer.types.includes(WORD)) { e.preventDefault(); setOver(true) } },
+    onDragLeave: () => setOver(false),
+    onDrop: e => { setOver(false); const d = e.dataTransfer.getData(WORD); if (!d) return
+      e.preventDefault(); const { from, word } = JSON.parse(d); onDropWord(from, word) },
+  }]
+}
+
+/** A note as one sentence; each word drags on its own. `from` is its code ('' = no code). */
+function NoteWords({ text, from, empty }) {
+  const words = String(text || '').split(/\s+/).filter(Boolean)
+  if (!words.length) return <span style={{ color: C.faint }}>{empty}</span>
+  return words.map((w, i) => (
+    <React.Fragment key={i}>{i > 0 && ' '}
+      <span draggable title="Drag onto a code to move this word" style={{ cursor: 'grab' }}
+        onDragStart={e => e.dataTransfer.setData(WORD, JSON.stringify({ from, word: w }))}>{w}</span>
+    </React.Fragment>
+  ))
+}
+
+/** Words the Form gives on no code. They stay on the Form unless dragged onto a code. */
+function LooseWords({ text, onDropWord }) {
+  const [over, drop] = useWordDrop(onDropWord)
+  if (!text) return null
+  return (
+    <div className="rounded px-2 py-1" data-testid="loose-note" {...drop}
+      style={{ border: `1px dashed ${over ? C.accent : C.faint}`, background: over ? C.accentTint : C.subtle }}>
+      <div style={{ fontSize: 10, color: C.muted }}>Not on any code: kept on the Form only. Drag a word onto a code.</div>
+      <div className="fst-italic"><NoteWords text={text} from="" /></div>
     </div>
   )
 }
