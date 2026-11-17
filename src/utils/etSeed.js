@@ -296,7 +296,8 @@ export function proposeElementTypes(entries = [], project = {}) {
     }, { products, library, shapes })
 
     // The very same product on an earlier project: its ElementType comes with it — family,
-    // name, description, and its ref when this project has not used that ref yet.
+    // name and description. Never its ref: that number belonged to another set (ET-PS-22 on a
+    // project with no ET-PS yet), so this project numbers it afresh.
     // ElementTypes belong to a project, so only when this project has nothing of its own
     // to go on (a sibling product already filed here, or the positions' design element).
     const ownKnowledge = pick.why === 'stem' || pick.why === 'design'
@@ -353,7 +354,6 @@ export function proposeElementTypes(entries = [], project = {}) {
     }
     if (family && !same) propose(family, pick.parent)
     const ref = !family || same ? ''
-      : pick.seen && pick.seen.ref && !taken.has(pick.seen.ref) ? pick.seen.ref
         // A TBC placeholder is an ordinary ref: TBC lives on its spec (IsTBC) and name, never in the ref.
         : e.placeholder ? nextRef(pick.head || family, taken)
           : nextRef(pick.style?.refBase || pick.head || family, taken)
