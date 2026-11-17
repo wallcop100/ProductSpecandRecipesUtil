@@ -199,7 +199,7 @@ function CodeCard({ c, many, inRecipe, familyOptions, edit, proposal, onEdit, on
           </div>
         </div>
       )}
-      <div className="mt-1" style={{ fontSize: 10, color: C.muted }}>Note</div>
+      <div className="mt-1" style={{ fontSize: 10, color: C.muted }}>Description</div>
       {typing != null ? (
         <Form.Control size="sm" autoFocus className="fst-italic" style={{ fontSize: 11, height: 24, padding: '1px 4px' }} value={typing}
           aria-label={`Note for ${c.code}`} data-testid="code-note-input"
@@ -209,7 +209,7 @@ function CodeCard({ c, many, inRecipe, familyOptions, edit, proposal, onEdit, on
       ) : (
       <div className="fst-italic rounded px-1" style={{ border: `1px solid ${C.border}`, minHeight: 22, lineHeight: '20px', cursor: 'text' }}
         data-testid="code-note" title="Click to type the note; drag a word to move it" onClick={() => setTyping(c.note || '')}>
-        <NoteWords text={c.note} from={c.code} empty="no note: click to type one" />
+        <NoteWords text={c.note} from={c.code} empty="no description: click to type one" />
       </div>
       )}
     </div>

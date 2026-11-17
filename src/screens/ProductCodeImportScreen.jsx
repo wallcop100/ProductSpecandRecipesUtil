@@ -1,3 +1,4 @@
+import { getNextAvailableRef } from '../utils/containerUtils'
 import useImportSession from './import/useImportSession'
 import { useCompanion } from '../platform/companion'
 import useProjectKnowledge, { learnedRef, localEtsNeeded, shareDecisions, offerAssignments, orderLibrary, assignmentKey } from './import/useProjectKnowledge'
@@ -104,6 +105,18 @@ const tbcKey = row => `TBC (${row.positionType || `row ${row.id + 1}`})`
  * the chrome hidden. It is the same session (importDraft), so a position painted here is
  * done in Import too, and the Form is loaded once for every position.
  */
+/**
+ * The ref (and family) to CREATE a code's ElementType with. A 'reuse' suggestion names an
+ * existing ElementType, so creating with it collides (4746 G353 480 → ET-PS-ACCESSORIES-02):
+ * take the next free number on its stem, and its family.
+ */
+function freshRef(suggested, elementTypes, psRows, recipes) {
+  if (!suggested?.ref) return null
+  if (suggested.reason !== 'reuse') return { ref: suggested.ref, family: '' }
+  const et = elementTypes.find(x => norm(x.ElementTypeRef || x.elementTypeRef) === norm(suggested.ref))
+  return { ref: getNextAvailableRef(suggested.ref, [...elementTypes, ...psRows, ...recipes]) || '', family: et?.Family || et?.family || '' }
+}
+
 export default function ProductCodeImportScreen({ onBack, onReviewPositions, embedded = null }) {
   const psRows = useStore(s => s.psRows)
   const positionTypes = useStore(s => s.positionTypes)
@@ -813,12 +826,14 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     const etRef = own || fromLearning || null
     const note = e.variants[0]?.note || ''
     // Only unresolved codes need a suggestion / reuse candidates.
+    const suggested = etRef ? null : suggestRef(e.text, note, e.manufacturers[0] || '', convention, elementTypes, psRows)
     const help = etRef ? {} : {
       reuse: reuseCandidates(e.text, note, { psRows, elementTypes, manufacturer: e.manufacturers[0] || '' }, 3),
-      suggested: suggestRef(e.text, note, e.manufacturers[0] || '', convention, elementTypes, psRows),
+      suggested,
+      fresh: freshRef(suggested, elementTypes, psRows, recipes),
     }
     return { ...e, ...c, etRef, ...(fromLearning ? { etLearned: fromLearning } : {}), ...help }
-  }), [ctx, assignments, captureOpts, psRows, elementTypes, convention, priorEtByCode, knowledge, knownRefs])
+  }), [ctx, assignments, captureOpts, psRows, elementTypes, recipes, convention, priorEtByCode, knowledge, knownRefs])
   const entries = useMemo(() => toEntries(confirmed), [toEntries, confirmed])
 
   // Which defaults came from learning, so staging can record what became of them (outcomes.js).
@@ -1121,9 +1136,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     setMergingGroup(null)
     setCreatingFor({
       text: e.text,
-      ref: seed.ref || p?.ref || e.suggested?.ref || '',
+      ref: seed.ref || p?.ref || e.fresh?.ref || '',
       name: p?.name || '',
-      family: seed.family ?? (p?.family || ''),
+      family: seed.family || p?.family || e.fresh?.family || '',
       manufacturer: p?.manufacturer || e.manufacturers[0] || '',
       description: p?.description || e.variants[0]?.note || '',
       note: e.variants[0]?.note || '',
@@ -1355,6 +1370,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       ...settle(projectNumber, 'pair', k => (mergedKeys.has(k) ? 'same' : keptSeparate.has(k) ? 'different' : null)),
     ])
 
+    // Detached while this ran (a hidden auto-save, a painter mid-save): the Form is gone, keep it so.
+    if (detached()) return []
     if (only) {
       await saveFormCaptures(mergeCaptures(formCaptures, nextCaptures, scopeTargets, [...only]))
       setStagedRefs(prev => [...new Set([...prev, ...only])])
@@ -1445,15 +1462,21 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   const scopeRows = useMemo(() => (inSelection ? formOrder.filter(inSelection) : formOrder), [formOrder, inSelection])
   // The Form pane's cards show a ref and family before anything is confirmed: the same proposal
   // pressing + would make, as if this position's rows were confirmed (nothing is changed).
+  // Only this position's codes are numbered: a ref is never held for a code elsewhere in the Form
+  // that has no ElementType yet, so the next free ref is worked out afresh on every view.
   const cardProposals = useMemo(() => {
-    const extra = embedded ? scopeRows.filter(r => !r.confirmed && !isTbc(r, captureOpts)) : []
-    const all = extra.length ? toEntries([...confirmed, ...extra]) : entries
-    const props = extra.length
-      ? proposeFor([...all.filter(e => !e.etRef && !hasNoteCollision(e)), ...tbcEntries.filter(e => !e.etRef)], [...confirmed, ...extra]).proposals
+    const here = embedded ? scopeRows.filter(r => !isTbc(r, captureOpts)) : []
+    const ids = new Set(scopeRows.map(r => r.id))
+    const all = here.length ? toEntries(here) : entries
+    const props = here.length
+      ? proposeFor([...all.filter(e => !e.etRef && !hasNoteCollision(e)), ...tbcEntries.filter(e => !e.etRef && (e.rowRefs || []).some(id => ids.has(id)))], here).proposals
       : proposals
-    // No family means no proposed ref; show the ref the + window opens with instead.
-    const suggested = new Map(all.map(e => [norm(e.text), e.suggested?.ref]))
-    return props.map(p => (p.ref || p.action !== 'create' || !suggested.get(norm(p.code)) ? p : { ...p, ref: suggested.get(norm(p.code)) }))
+    // No family (or a reuse guess) means no proposed ref: show what the + window opens with.
+    const fresh = new Map(all.map(e => [norm(e.text), e.fresh]))
+    return props.map(p => {
+      const f = fresh.get(norm(p.code))
+      return p.ref || p.action === 'skip' || !f?.ref ? p : { ...p, ref: f.ref, family: p.family || f.family }
+    })
   }, [embedded, scopeRows, captureOpts, proposals, entries, toEntries, confirmed, proposeFor, tbcEntries])
   // In the builder's painter, an entry whose every code already has an ElementType (from
   // the spec, this import, or an earlier project) is confirmed: nothing is left to decide
@@ -1535,6 +1558,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     setAddingSel(true)
     try {
       const targets = await handleStage({ only: new Set(selectedRefs) })
+      if (detached()) return
       // Save now: the debounced draft save would die with this screen on the way out.
       await saveImportDraft({ ...draftFromState(), stagedRefs: [...new Set([...stagedRefs, ...selectedRefs])] })
       // `stay`: a quiet re-save on opening a painter on a loaded Form (the Form changed
