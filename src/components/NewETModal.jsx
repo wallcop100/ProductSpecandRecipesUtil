@@ -454,9 +454,11 @@ export default function NewETModal({
                 <React.Fragment key={col}>
                   <span className="text-muted text-truncate" style={{ fontSize: 10, maxWidth: 90 }} title={col}>{col}</span>
                   <button type="button" className="btn btn-link p-0 text-start text-reset text-decoration-none"
-                    style={{ fontSize: 11, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+                    // Long LINK/ProductCode cells run to 8 lines: show two, the whole value on hover.
+                    style={{ fontSize: 11, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                      display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
                     onMouseDown={e => e.preventDefault()} onClick={() => putValue(value)}
-                    title="Put into the field you were in">{value}</button>
+                    title={value}>{value}</button>
                 </React.Fragment>
               ))}
             </div>

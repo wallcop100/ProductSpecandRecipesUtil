@@ -172,3 +172,19 @@ test('External Notes goes onto the new Product Spec row, beside Internal Notes',
   fireEvent.click(screen.getByRole('button', { name: 'Create Element Type' }))
   expect(useStore.getState().psRows.find(r => r.ElementTypeRef === 'ET-EXT-01').ExternalNotesText).toBe('Supplied by others')
 })
+
+test('a ref that already has a Product Spec row cannot be created, so its description is never overwritten', () => {
+  setup({ prefill: { ref: 'ET-KEEP-01', description: 'New words' }, importContext: null, draftKey: 'keep' })
+  act(() => useStore.setState({ psRows: [{ ElementTypeRef: 'ET-KEEP-01', ComponentDescription: 'Old words' }] }))
+  expect(screen.getByRole('button', { name: 'Create Element Type' })).toBeDisabled()
+  expect(useStore.getState().psRows[0].ComponentDescription).toBe('Old words')
+})
+
+test('the Form pane and diff Create (position passed as import context) show the Form row too', () => {
+  useStore.setState({ importDraft: { map: { mfr: 'ManufacturerName' }, rows: [
+    { positionType: 'C03', rawText: 'LL240272024', manufacturer: 'LEDFlex', context: { ProductName: 'Lumen Line 240' } },
+  ] } })
+  setup({ importContext: { code: 'LL240272024', positionTypes: ['C03'], rowCount: 1 }, prefill: {}, draftKey: 'ctxrow' })
+  expect(screen.getByTestId('newet-form-row')).toHaveTextContent('ProductNameLumen Line 240')
+  useStore.setState({ importDraft: null })
+})
