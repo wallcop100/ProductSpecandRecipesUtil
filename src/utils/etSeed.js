@@ -261,7 +261,9 @@ export function proposeElementTypes(entries = [], project = {}) {
     designFamilyOf.get(pt).push(f)
   }
 
-  const taken = new Set(elementTypes.map(refOf))
+  // Taken = any ref the project names anywhere, as NewETModal checks: a Product Spec or recipe ref
+  // the DesignDB lacks still exists (4746: ET-PS-ACCESSORIES-02 proposed, then "already exists").
+  const taken = new Set([...elementTypes, ...psRows, ...recipes].map(refOf).filter(Boolean))
   const newFamilies = new Map()   // lc ref -> { ref, description, include, from }
   const proposals = []
 

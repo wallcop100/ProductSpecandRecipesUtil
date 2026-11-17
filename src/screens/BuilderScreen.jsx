@@ -310,8 +310,14 @@ export default function BuilderScreen({
     setNewETTarget({ posRef, sectionKey, ...(extra || {}) })
   }
 
-  function handleNewETDone(etRef) {
+  function handleNewETDone(etRef, where) {
     if (!newETTarget) return
+    if (where) {   // the modal placed it (or kept it to the Product Spec)
+      const posRef = newETTarget.posRef || activePositionRef
+      setNewETTarget(null)
+      if (where !== 'ps') { setRightOpen(true); setRightTab('palette'); setJustAdded({ etRef, posRef, sectionKey: where === 'wrapper' ? 'dl_internal' : 'position' }) }
+      return
+    }
     if (newETTarget.mode === 'replace') { doReplace(newETTarget, etRef); setNewETTarget(null); return }
     if (newETTarget.mode === 'slot') {
       // Fill a primed template slot with the freshly created ET (T-R1)
@@ -866,6 +872,7 @@ export default function BuilderScreen({
         onHide={() => setNewETTarget(null)}
         posRef={newETTarget?.posRef}
         sectionKey={newETTarget?.sectionKey}
+        placeIn={newETTarget && !newETTarget.mode ? (newETTarget.posRef || activePositionRef || null) : null}
         onDone={handleNewETDone}
       />
 
