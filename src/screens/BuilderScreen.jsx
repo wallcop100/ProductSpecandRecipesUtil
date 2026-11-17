@@ -63,8 +63,10 @@ import { askConfirm } from '../components/ConfirmHost'
  * supporting tabs. Drilling into a container element's internal recipe swaps the
  * centre for a focused ET editor.
  */
-// The right drawer: wide enough for the Form spec pane (K3LGUL).
+// The right drawer: wide enough for the Form spec pane (K3LGUL); drag its left edge to resize.
 const DRAWER_W = 340
+const DRAWER_LS = 'builderDrawerWidth'
+const clampDrawer = w => Math.max(280, Math.min(Math.round(window.innerWidth * 0.6), w))
 
 export default function BuilderScreen({
   onOpenTemplateEditor, onOpenProductSpec, onOpenConnectors, onOpenTags, onOpenCodeImport, onBackToSetup,
@@ -163,6 +165,22 @@ export default function BuilderScreen({
   const [addQuery, setAddQuery] = useState('')
   const showDeleted = useStore(s => s.showDeleted)
   const rightOpen = useStore(s => s.drawerOpen)
+  const [drawerW, setDrawerW] = useState(() => { try { return clampDrawer(Number(localStorage.getItem(DRAWER_LS)) || DRAWER_W) } catch { return DRAWER_W } })
+  const [resizing, setResizing] = useState(false)
+  const startDrawerResize = e => {
+    e.preventDefault()
+    const x0 = e.clientX, w0 = drawerW
+    let w = w0
+    setResizing(true)
+    const move = ev => { w = clampDrawer(w0 + x0 - ev.clientX); setDrawerW(w) }
+    const up = () => {
+      window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up)
+      setResizing(false)
+      try { localStorage.setItem(DRAWER_LS, String(w)) } catch { /* not remembered */ }
+    }
+    window.addEventListener('mousemove', move)
+    window.addEventListener('mouseup', up)
+  }
   const setDrawerOpen = useStore(s => s.setDrawerOpen)
   const setRightOpen = v => setDrawerOpen(typeof v === 'function' ? v(useStore.getState().drawerOpen) : v)
   const [changeSummary, setChangeSummary] = useState(false)   // open the review + copy-patches modal
@@ -582,10 +600,10 @@ export default function BuilderScreen({
           title={rightOpen ? 'Close palette' : 'Open palette'}
           style={{
             position: 'absolute',
-            right: rightOpen ? DRAWER_W : 0,
+            right: rightOpen ? drawerW : 0,
             top: '50%',
             transform: 'translateY(-50%)',
-            transition: 'right 0.2s ease',
+            transition: resizing ? 'none' : 'right 0.2s ease',
             zIndex: 10,
             background: C.subtle,
             border: `1px solid ${C.border}`,
@@ -704,16 +722,22 @@ export default function BuilderScreen({
         <div
           data-debug-id="BuilderScreen/RightDrawer"
           style={{
-            width: rightOpen ? DRAWER_W : 0,
+            width: rightOpen ? drawerW : 0,
             flexShrink: 0,
+            position: 'relative',
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
             background: C.surface,
             borderLeft: rightOpen ? `1px solid ${C.border}` : 'none',
-            transition: 'width 0.2s ease',
+            transition: resizing ? 'none' : 'width 0.2s ease',
           }}
         >
+          {rightOpen && (
+            <div onMouseDown={startDrawerResize} title="Drag to resize" data-testid="drawer-resize"
+              role="separator" aria-orientation="vertical" aria-label="Resize the side pane"
+              style={{ position: 'absolute', top: 0, left: 0, width: 6, height: '100%', cursor: 'col-resize', zIndex: 5 }} />
+          )}
           {/* The drawer: this position's Form spec first (K3LGUL), then the ways to add rows —
               ElementTypes and positions like this one — under one search box. */}
           <div style={{ flexShrink: 0, borderBottom: `1px solid ${C.border}` }} className="px-2 pt-2 pb-1">
