@@ -43,7 +43,7 @@ import {
   discardsFromNoteEdit, pickExamples, learnCodeTokens, clearOverridesFor,
 } from '../utils/codeLearning'
 import { inferConvention, reuseCandidates, suggestRef } from '../utils/etRefSuggest'
-import { proposeElementTypes, familyDescription } from '../utils/etSeed'
+import { proposeElementTypes, familyDescription, whyText } from '../utils/etSeed'
 import { matchShape } from '../utils/codeShapes'
 import shippedShapes from '../data/codeShapes.json'
 import { resolveFormRefs, buildRefMap, targetFor } from '../utils/ptResolve'
@@ -157,6 +157,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   const [refsOpen, setRefsOpen] = useState(false)
   const [reviewingExisting, setReviewingExisting] = useState(false)
   const [creatingFor, setCreatingFor] = useState(null)
+  const [etPending, setEtPending] = useState(null)
   const [staged, setStaged] = useState(null)
   const [stagedOpen, setStagedOpen] = useState(false)   // the result surfaces as a modal, not below the fold
   const [showBoundaries, setShowBoundaries] = useState(false)
@@ -1099,6 +1100,30 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     })
   }, [entries, proposals, retiredCodes])
 
+  // ZAJ889: one code's New ElementType modal, filled from the same proposal Bulk would make.
+  useEffect(() => {
+    if (!etPending) return
+    const e = entries.find(x => norm(x.text) === norm(etPending))
+    setEtPending(null)
+    // A TBC row (or anything not a plain code) has no entry of its own: Bulk handles those.
+    if (!e) { setEtFocusCode(etPending); setBulkOpen(true); return }
+    if (e.etRef) return
+    const p = proposals.find(x => norm(x.code) === norm(e.text))
+    setMergingGroup(null)
+    setCreatingFor({
+      text: e.text,
+      ref: p?.ref || e.suggested?.ref || '',
+      name: p?.name || '',
+      family: p?.family || '',
+      manufacturer: p?.manufacturer || e.manufacturers[0] || '',
+      description: p?.description || e.variants[0]?.note || '',
+      note: e.variants[0]?.note || '',
+      positionTypes: e.positionTypes,
+      rowCount: e.rowRefs.length,
+      why: p ? whyText(p) || 'proposed like Bulk' : '',
+    })
+  }, [etPending, entries, proposals])
+
   function openBulkCreate() {
     setEtFocusCode(null)
     setBulkOpen(true)
@@ -1586,8 +1611,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
         patchRow(r.id, x => ({ ...acceptSuggestions({ ...x, roles: r.roles }, rules, signals), confirmed: true }))
       }
     }
-    setEtFocusCode(code)
-    setBulkOpen(true)
+    setEtPending(code)   // opened once its rows' confirmation has produced the proposal
   }, [resolved, captureOpts, patchRow, rules, signals])
   // What the spec matched on the row being reviewed.
   const currentMatch = current && knownStats?.byRow?.get(current.id)
@@ -2268,7 +2292,10 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
           manufacturer: creatingFor.manufacturer,
           productCode: creatingFor.text,
           description: creatingFor.description,
+          why: creatingFor.why,
         } : {}}
+        bulkCount={proposals.length}
+        onBulk={() => { setCreatingFor(null); setMergingGroup(null); openBulkCreate() }}
         onCreated={etRef => {
           // Its family may be one the seed proposed and nobody has created yet.
           const et = useStore.getState().elementTypes.find(e => (e.ElementTypeRef || '').toLowerCase() === etRef.toLowerCase())

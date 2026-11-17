@@ -101,7 +101,11 @@ describe('the Form, as a table', () => {
     const word = within(table).getByTitle(/“QC50”/)
     if (word.dataset.role !== 'code') fireEvent.click(within(table).getByTitle(/“QC50”/))
     fireEvent.click(within(table).getAllByText('needs ET')[0])
-    expect(await screen.findByText(/^New \(/)).toBeInTheDocument()
+    // ZAJ889: that one code's New ElementType, filled from its Bulk proposal, with the wands
+    expect(await screen.findByText('New Element Type')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('QC50')).toBeInTheDocument()
+    expect(screen.getByTestId('wand-productCode')).toBeInTheDocument()
+    expect(screen.getByTestId('wand-ref')).toBeInTheDocument()
   })
 
   test('an Accessories code is an extra; clicking it makes it the main product', async () => {
@@ -167,15 +171,14 @@ describe('the Form, as a table', () => {
     expect(screen.queryByText(/Confirm & next|Confirmed — next/)).toBeNull()
   })
 
-  test('one place for ElementTypes: the panel button opens the New tab, the code is highlighted', async () => {
+  test('a code\'s New ElementType edited by hand loses its wand', async () => {
     const table = await toTable()
     const cycleTo = (w, role) => { while (within(table).getByTitle(new RegExp(`“${w}”`)).dataset.role !== role) fireEvent.click(within(table).getByTitle(new RegExp(`“${w}”`))) }
     cycleTo('QC50', 'code')
     fireEvent.click(within(table).getAllByText('needs ET')[0])
-    const row = await screen.findByText((_, el) => el?.dataset?.code === 'QC50' && el.tagName === 'TR')
-    expect(row.style.background).not.toBe('')
-    // no per-code Create buttons left in the panel
-    expect(screen.queryByText(/^Create /)).toBeNull()
+    const code = await screen.findByDisplayValue('QC50')
+    fireEvent.change(code, { target: { value: 'QC50X' } })
+    expect(screen.queryByTestId('wand-productCode')).toBeNull()
   })
 
   test('Add to Product Spec, then straight on to building those positions', async () => {

@@ -12,6 +12,7 @@ import { C } from '../styles/tokens'
 import { copyText } from './CopyButton'
 import { formColumnsFor } from '../utils/formPositions'
 import { buildRefMap, targetFor } from '../utils/ptResolve'
+const norm = s => String(s ?? '').trim().toLowerCase()
 
 /**
  * NewETModal — the one place a brand-new element type is created.
@@ -50,6 +51,8 @@ export default function NewETModal({
   draftKey = null,
   /** Positions whose Form row shows beside the fields (default: importContext.positionTypes). */
   formRefs = null,
+  /** "Do all N at once": closes this and opens Bulk on every code (ZAJ889). */
+  onBulk = null, bulkCount = 0,
 }) {
   const elementTypes      = useStore(s => s.elementTypes)
   const dbCollectionRefs  = useStore(s => s.dbCollectionRefs)
@@ -87,6 +90,13 @@ export default function NewETModal({
   // Seed on open, but ONLY for a draft we have not started. The modal stays mounted,
   // so re-opening the same draftKey returns you to exactly what you had typed.
   const seededFor = useRef(Symbol('none'))
+  const seeded = useRef({})
+  const Wand = ({ field, value, why = prefill.why }) => value && value === seeded.current[field]
+    ? <span title={`Filled in: ${why}`} data-testid={`wand-${field}`} style={{ marginLeft: 4 }}>
+        <MaterialIcon name="auto_fix_high" size={12} style={{ color: C.accent, verticalAlign: 'middle' }} /></span>
+    : null
+  // The Form's Finish is offered, muted, and only taken when you click the field.
+  const finishHint = String(formRow?.cols.find(([c]) => /finish/i.test(c))?.[1] ?? '').trim()
   useEffect(() => {
     if (!show) return
     const key = draftKey ?? prefill.ref ?? prefill.productCode ?? null
@@ -102,6 +112,9 @@ export default function NewETModal({
     setTBC(null); setPropTBC(null); setNotes(''); setExtNotes('')
     setFinish('')
     setSaving(false)
+    // Filled from the Bulk proposal: each field keeps its wand until you change it (ZAJ889).
+    seeded.current = prefill.why ? { ref: prefill.ref, name: prefill.name, family: prefill.family, manufacturer: prefill.manufacturer,
+      productCode: prefill.productCode, description: norm(prefill.description) === norm(prefill.productCode) ? null : prefill.description } : {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show, draftKey])
 
@@ -275,10 +288,18 @@ export default function NewETModal({
           </div>
         )}
 
+        {onBulk && bulkCount > 1 && (
+          <div className="text-end mb-2" style={{ fontSize: 11 }}>
+            <button type="button" className="btn btn-link p-0" style={{ fontSize: 11 }} onClick={onBulk} data-testid="newet-do-all">
+              Do all {bulkCount} at once →
+            </button>
+          </div>
+        )}
+
         {/* Ref field */}
         <Form.Group className="mb-3">
           <Form.Label style={{ fontSize: 12, fontWeight: 600 }}>
-            Element Type Ref <span className="text-danger">*</span>
+            Element Type Ref <span className="text-danger">*</span><Wand field="ref" value={ref} />
           </Form.Label>
           <Form.Control
             size="sm"
@@ -313,7 +334,7 @@ export default function NewETModal({
         {/* Name */}
         <Form.Group className="mb-3">
           <Form.Label style={{ fontSize: 12, fontWeight: 600 }}>
-            Name <span className="text-muted fw-normal">(optional)</span>
+            Name <span className="text-muted fw-normal">(optional)</span><Wand field="name" value={name} />
           </Form.Label>
           <Form.Control
             size="sm"
@@ -327,7 +348,7 @@ export default function NewETModal({
         {/* Description */}
         <Form.Group className="mb-3">
           <Form.Label style={{ fontSize: 12, fontWeight: 600 }}>
-            Description <span className="text-muted fw-normal">(optional)</span>
+            Description <span className="text-muted fw-normal">(optional)</span><Wand field="description" value={description} />
           </Form.Label>
           <Form.Control
             as="textarea"
@@ -343,7 +364,7 @@ export default function NewETModal({
         {/* Family / ParentRef */}
         <Form.Group className="mb-3">
           <Form.Label style={{ fontSize: 12, fontWeight: 600 }}>
-            Family <span className="text-muted fw-normal">(optional)</span>
+            Family <span className="text-muted fw-normal">(optional)</span><Wand field="family" value={family} />
           </Form.Label>
           <Form.Control
             size="sm"
@@ -402,7 +423,7 @@ export default function NewETModal({
             <div className="mt-2">
               <div className="row g-2">
                 <div className="col-6">
-                  <Form.Label style={{ fontSize: 11, color: C.muted }}>Manufacturer</Form.Label>
+                  <Form.Label style={{ fontSize: 11, color: C.muted }}>Manufacturer<Wand field="manufacturer" value={manufacturer} /></Form.Label>
                   <Form.Control size="sm" value={manufacturer} data-field="manufacturer" onChange={e => setMfr(e.target.value)}
                     placeholder="e.g. Osram" list={mfrListId} style={{ fontSize: 11 }} />
                   <datalist id={mfrListId}>
@@ -410,14 +431,17 @@ export default function NewETModal({
                   </datalist>
                 </div>
                 <div className="col-6">
-                  <Form.Label style={{ fontSize: 11, color: C.muted }}>Product Code</Form.Label>
+                  <Form.Label style={{ fontSize: 11, color: C.muted }}>Product Code<Wand field="productCode" value={productCode} /></Form.Label>
                   <Form.Control size="sm" value={productCode} data-field="productCode" onChange={e => setCode(e.target.value)}
                     placeholder="e.g. LEDTAPE-3000K" style={{ fontSize: 11 }} />
                 </div>
                 <div className="col-12">
-                  <Form.Label style={{ fontSize: 11, color: C.muted }}>Finish</Form.Label>
+                  <Form.Label style={{ fontSize: 11, color: C.muted }}>Finish
+                    {finishHint && finish === finishHint && <Wand field="finish" value={finish} why="the Form's Finish" />}</Form.Label>
                   <Form.Control size="sm" value={finish} data-field="finish" onChange={e => setFinish(e.target.value)}
-                    placeholder="e.g. RAL 9010 — added in brackets to both descriptions" style={{ fontSize: 11 }} />
+                    onClick={() => { if (!finish && finishHint) { seeded.current.finish = finishHint; setFinish(finishHint) } }}
+                    title={finishHint && !finish ? `Click to use the Form's finish: ${finishHint}` : undefined}
+                    placeholder={finishHint || 'e.g. RAL 9010 — added in brackets to both descriptions'} style={{ fontSize: 11 }} />
                 </div>
               </div>
 
