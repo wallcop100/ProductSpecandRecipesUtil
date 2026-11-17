@@ -306,6 +306,19 @@ test('44VCYZ: a code still needs an ElementType; the known ones are compared wit
   expect(screen.getByText('already an ElementType — add it')).toBeInTheDocument()
 })
 
+test('LLVJHU: clicking an ElementType ref in the Form pane opens it in the Product Spec', async () => {
+  const openSpec = vi.fn()
+  useStore.setState({ openSpec, formPaintMode: false, formCaptures: { version: 1, byPosition: { C01: [{ elementTypeRef: 'ET-PS-01', code: 'QC50' }] } }, importDraft: {
+    version: 1, step: 'review', source: { name: 'form.xlsx', sheet: 'S' },
+    map: { pt: '', code: 'ProductCode', mfr: 'ManufacturerName', exclude: '', acc: '', context: [] },
+    rules: {}, assignments: {}, resolutions: [], refOverrides: {}, dirStats: { forward: 0, backward: 0 }, stagedRefs: [], keptSeparate: [],
+    rows: [{ id: 0, rawText: 'QC50', positionType: 'C01', manufacturer: 'iGuzzini', context: {}, overrides: {}, noteOverride: {}, confirmed: true }],
+  } })
+  render(<FormSpecPane posRef="C01" />)
+  fireEvent.click(await screen.findByTestId('form-et-ref'))
+  expect(openSpec).toHaveBeenCalledWith('ET-PS-01')
+})
+
 test('WYZ3NN: an entry whose codes all have ElementTypes (here one given in this import) is confirmed and saved, not "needs an ElementType"', async () => {
   useStore.setState({ formCaptures: null, importDraft: {
     version: 1, step: 'review', source: { name: 'form.xlsx', sheet: 'S' },

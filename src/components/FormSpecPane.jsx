@@ -798,7 +798,10 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
               <div className="d-flex align-items-baseline gap-1 text-truncate">
                 {/* No "in the spec" badge (VCYTLE): an ElementType shown here is in the spec. */}
                 <UsagePopover etRef={e.elementTypeRef} placement="left">
-                  <span style={{ fontFamily: 'monospace', fontSize: 10, color: C.muted }}>{e.elementTypeRef}</span>
+                  <span role="link" tabIndex={0} title="Open in the Product Spec" data-testid="form-et-ref"
+                    onClick={ev => { ev.stopPropagation(); useStore.getState().openSpec(e.elementTypeRef) }}
+                    onKeyDown={ev => { if (ev.key === 'Enter') { ev.stopPropagation(); useStore.getState().openSpec(e.elementTypeRef) } }}
+                    style={{ fontFamily: 'monospace', fontSize: 10, color: C.muted, cursor: 'pointer' }}>{e.elementTypeRef}</span>
                 </UsagePopover>
               </div>
               {e.note && <div className="text-muted" style={{ fontSize: 10 }}>{e.note}</div>}

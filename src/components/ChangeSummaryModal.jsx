@@ -444,8 +444,9 @@ function PreExportChecklist({ show, onHide }) {
       {items.map(it => (
         <Button key={it.key} variant="link" size="sm" className="p-0 text-start text-decoration-none"
           style={{ fontSize: 12, color: it.blocking ? C.danger : C.ink }} disabled={!it.posRef}
+          title={it.posRef ? `Closes this and opens ${it.posRef}${it.count > 1 ? ', the first of them' : ''}` : undefined}
           onClick={() => { onHide(); useStore.getState().focusPosition(it.posRef) }}>
-          {it.label}{it.posRef && ' →'}
+          {it.label}{it.posRef && ` → ${it.posRef}`}
         </Button>
       ))}
     </div>
@@ -559,11 +560,11 @@ export default function ChangeSummaryModal({ show, onHide }) {
 
       {/* The patch is one click away on its own tab, never a long scroll past warnings. */}
       <div className="d-flex gap-1 px-3 pt-2" style={{ borderBottom: `1px solid ${C.border}` }}>
-        <TabBtn id="changes" tab={tab} onClick={setTab} count={changeCount}>Changes</TabBtn>
-        <TabBtn id="patches" tab={tab} onClick={setTab} count={patchFiles.length}>Patches</TabBtn>
         {resolveCount > 0 && (
           <TabBtn id="resolve" tab={tab} onClick={setTab} count={resolveCount} warn>Resolve first</TabBtn>
         )}
+        <TabBtn id="changes" tab={tab} onClick={setTab} count={changeCount}>Changes</TabBtn>
+        <TabBtn id="patches" tab={tab} onClick={setTab} count={patchFiles.length}>Patches</TabBtn>
         {bugReports.length > 0 && (
           <TabBtn id="bugs" tab={tab} onClick={setTab} count={bugReports.length}>Bug reports</TabBtn>
         )}
