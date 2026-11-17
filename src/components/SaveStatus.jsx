@@ -3,6 +3,7 @@ import { Toast, ToastContainer } from 'react-bootstrap'
 import useStore, { savePendingNow } from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import StatusChip from './StatusChip'
+import { C } from '../styles/tokens'
 
 const unexported = s => s.psChanges.length + s.rsChanges.length + (s.dbChanges?.length || 0)
 const time = t => (t ? new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '')
@@ -50,9 +51,11 @@ export function SaveShortcut() {
   }, [])
   return (
     <ToastContainer position="bottom-end" className="p-3" style={{ zIndex: 2000, position: 'fixed' }}>
-      <Toast key={toast?.at} show={!!toast} onClose={() => setToast(null)} delay={4000} autohide bg={toast?.ok === false ? 'danger' : 'light'}>
+      <Toast key={toast?.at} show={!!toast} onClose={() => setToast(null)} delay={toast?.tone ? 2000 : 4000} autohide
+        bg={toast?.ok === false ? 'danger' : toast?.tone ? undefined : 'light'} className={toast?.tone ? `alert-${toast.tone}` : undefined}
+        style={toast?.tone === 'warning' ? { background: C.attnTint, color: C.attnInk, borderColor: C.attn } : undefined}>
         <Toast.Body className="d-flex align-items-center gap-2" style={{ fontSize: 12 }} data-testid="save-toast">
-          <MaterialIcon name={toast?.ok === false ? 'warning' : 'laptop'} size={16} /> {toast?.text}
+          <MaterialIcon name={toast?.ok === false ? 'warning' : toast?.tone ? 'check' : 'laptop'} size={16} /> {toast?.text}
         </Toast.Body>
       </Toast>
     </ToastContainer>

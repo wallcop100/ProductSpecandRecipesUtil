@@ -180,7 +180,7 @@ describe('known codes save themselves to the position', () => {
     expect(screen.queryByTestId('form-autosave')).toBeNull()
     // A code needs an ElementType: the painter is open inline by itself, and is the one call.
     expect(await screen.findByTestId('compact-painter')).toBeInTheDocument()
-    expect(screen.getByTestId('give-et')).toHaveTextContent('Give QC51 an ElementType')
+    expect(screen.getByTestId('give-et')).toHaveAttribute('aria-label', 'Give QC51 an ElementType')
     expect(screen.queryByTestId('paint-status')).toBeNull()        // no second call while it is open
     expect(useStore.getState().formCaptures).toBeNull()
   })
@@ -320,7 +320,8 @@ test('the pane starts as a view; ⋯ Paint from the Form opens the painter, and 
     rows: [{ id: 0, rawText: 'NEW99', positionType: 'C01', manufacturer: 'iGuzzini', context: {}, overrides: {}, noteOverride: {}, confirmed: false }],
   }, formCaptures: { version: 1, byPosition: { C01: [{ elementTypeRef: 'ET-PS-OLD', code: 'OLD1', manufacturer: 'iGuzzini' }] } } })
   render(<FormSpecPane posRef="C01" />)
-  expect(screen.queryByTestId('paint-position')).toBeNull()
+  // The brush stays, unlit, so painting is one click away.
+  expect(screen.getByTestId('paint-position')).toHaveAttribute('aria-pressed', 'false')
   expect(screen.queryByTestId('paint-panel')).toBeNull()
   expect(screen.getByTestId('form-raw')).toHaveTextContent('NEW99')
   fireEvent.click(screen.getByTitle('Form template options'))
@@ -329,7 +330,7 @@ test('the pane starts as a view; ⋯ Paint from the Form opens the painter, and 
   fireEvent.click(screen.getByTitle('Form template options'))
   fireEvent.click(await screen.findByText(/View only/))
   await waitFor(() => expect(screen.queryByTestId('paint-panel')).toBeNull())
-  expect(screen.queryByTestId('paint-position')).toBeNull()
+  expect(screen.getByTestId('paint-position')).toHaveAttribute('aria-pressed', 'false')
 })
 
 test('KU9NQJ: the brush sets paint mode for every position, and it is remembered across reloads', async () => {

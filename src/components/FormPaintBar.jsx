@@ -74,14 +74,14 @@ export default function FormPaintBar({ posRef, open = false, onOpenChange = () =
   return (
     <div className="mb-2" data-testid="form-paint-bar">
       <div className="d-flex align-items-center gap-1 flex-wrap">
-        {state === 'noForm' && !paintMode && formCaptures ? null : state !== 'noForm' ? (!paintMode && formCaptures ? null : (
+        {state === 'noForm' && !paintMode && formCaptures ? null : state !== 'noForm' ? (
           // Paint mode is a toggle: the brush, lit while painting (W24D3V). It sets the mode for
           // every position, so stopping here stops the next one too (KU9NQJ).
           <IconButton bsSize="sm" variant={open ? 'primary' : work ? 'outline-primary' : 'outline-secondary'} icon="brush" size={13}
             onClick={() => { onLoaded.current = true; setPaintMode(!open); setOpen(!open) }} data-testid="paint-position" aria-pressed={open}
             aria-label={open ? 'Stop painting' : `Paint ${posRef} from the Form`}
             title={open ? 'Stop painting' : `Paint ${posRef}'s product codes from the Form: give each an ElementType, then it goes in the recipe`} />
-        )) : <Button size="sm" variant="primary" style={{ fontSize: 10 }}
+        ) : <Button size="sm" variant="primary" style={{ fontSize: 10 }}
           onClick={() => { onLoaded.current = false; setPaintMode(true); setOpen(true) }} data-testid="paint-position"
           title="Load the Form spreadsheet once for the project, then paint just this position">
           <MaterialIcon name="upload_file" size={12} /> Load the Form and paint this position

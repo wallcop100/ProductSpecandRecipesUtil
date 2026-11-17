@@ -158,6 +158,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   const [reviewingExisting, setReviewingExisting] = useState(false)
   const [creatingFor, setCreatingFor] = useState(null)
   const [etPending, setEtPending] = useState(null)
+  const [etSeed, setEtSeed] = useState(null)   // ref/family typed on a Form pane card, for the modal
   const [staged, setStaged] = useState(null)
   const [stagedOpen, setStagedOpen] = useState(false)   // the result surfaces as a modal, not below the fold
   const [showBoundaries, setShowBoundaries] = useState(false)
@@ -1105,6 +1106,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     if (!etPending) return
     const e = entries.find(x => norm(x.text) === norm(etPending))
     setEtPending(null)
+    const seed = etSeed || {}
+    setEtSeed(null)
     // A TBC row (or anything not a plain code) has no entry of its own: Bulk handles those.
     if (!e) { setEtFocusCode(etPending); setBulkOpen(true); return }
     if (e.etRef) return
@@ -1112,9 +1115,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     setMergingGroup(null)
     setCreatingFor({
       text: e.text,
-      ref: p?.ref || e.suggested?.ref || '',
+      ref: seed.ref || p?.ref || e.suggested?.ref || '',
       name: p?.name || '',
-      family: p?.family || '',
+      family: seed.family ?? (p?.family || ''),
       manufacturer: p?.manufacturer || e.manufacturers[0] || '',
       description: p?.description || e.variants[0]?.note || '',
       note: e.variants[0]?.note || '',
@@ -1122,7 +1125,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       rowCount: e.rowRefs.length,
       why: p ? whyText(p) || 'proposed like Bulk' : '',
     })
-  }, [etPending, entries, proposals])
+  }, [etPending, entries, proposals, etSeed])
 
   function openBulkCreate() {
     setEtFocusCode(null)
@@ -1399,7 +1402,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       }
     }
     const lead = leadOf(row, caps)
-    const codes = caps.map(c => ({ code: c.code, main: c === lead, etRef: etFor(c.code, row.manufacturer) }))
+    const codes = caps.map(c => ({ code: c.code, note: c.note || '', main: c === lead, etRef: etFor(c.code, row.manufacturer) }))
     const st = lead ? classify(lead.code, ctx, row.manufacturer).status : null
     const status = !lead
       ? (isNothingRow(row)
@@ -1408,6 +1411,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       : { tone: TONE[st], icon: ICON[st], label: STATUS_LABEL[st], tip: MEANS[st] }
     return {
       codes, status,
+      loose: deriveCaptures(row, captureOpts).unattachedNote,
       suggested: row.confirmed ? [] : suggestCodes(row, rules, signals),
       pt: map.pt ? (refState.get(norm(row.positionType)) || { state: 'ok' }) : { state: 'ok' },
     }
@@ -1602,7 +1606,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   }, [resolved, patchRow, rules, signals])
 
   /** "needs ET" on a code: its rows count as confirmed, then the ElementTypes window opens at it. */
-  const openETFor = useCallback(code => {
+  const openETFor = useCallback((code, seed = null) => {
+    setEtSeed(seed)
     for (const r of resolved) {
       if (r.confirmed) continue
       const mine = isTbc(r, captureOpts) ? norm(tbcKey(r)) === norm(code)
@@ -1753,6 +1758,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
           onSetRole={setTokenRole}
           onToggleConfirm={toggleConfirm}
           onNeedsET={openETFor}
+          proposalFor={code => proposals.find(p => norm(p.code) === norm(code))}
+          onMoveNoteWord={(rowId, from, to, word) => moveNoteIn(rowId, from, to, word)}
           onMakeMain={(rowId, code) => patchRow(rowId, r => ({ ...r, leadCode: code }))}
         />
       )}

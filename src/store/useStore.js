@@ -632,7 +632,7 @@ const useStore = create((set, get) => ({
 
   // One app-wide toast (SaveShortcut renders it): { text, ok, at }. `at` re-shows a repeat.
   toastMsg: null,
-  toast(text, { ok = true } = {}) { set({ toastMsg: { text, ok, at: Date.now() } }) },
+  toast(text, { ok = true, tone } = {}) { set({ toastMsg: { text, ok, tone, at: Date.now() } }) },
   /** Builder: "shared with" on every row, not only wrappers (5GLMMQ). Remembered in this browser. */
   // The builder's right drawer (K3LGUL): open unless closed (remembered), and its tab. A
   // banner elsewhere can open it at a tab (the Connector suggestions' "details →").

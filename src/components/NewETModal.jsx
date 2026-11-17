@@ -31,6 +31,17 @@ const norm = s => String(s ?? '').trim().toLowerCase()
  *                       `description` is the ElementType's catalogue Description.
  *                       Any spec prefill opens the Product Spec section expanded.
  */
+/** Every family there is: in use, the project's family rows, and the company's canon ones. */
+export function familyOptionsOf(elementTypes) {
+  const s = new Set()
+  for (const e of elementTypes) {
+    const f = (e.Family || e.family || '').trim(); if (f) s.add(f)
+    if ((e.IsCollection || e.isCollection) === 'Y') s.add(e.ElementTypeRef || e.elementTypeRef)
+  }
+  for (const f of CANON_FAMILIES) s.add(f.ref)
+  return [...s].filter(Boolean).sort((a, b) => a.localeCompare(b))
+}
+
 export default function NewETModal({
   show, onHide, onCreated,
   contextLabel = null,
@@ -120,16 +131,7 @@ export default function NewETModal({
   /** After a successful create, the next open of this key must seed afresh. */
   const clearSeed = () => { seededFor.current = Symbol('done') }
 
-  // Every family there is: in use, the project's family rows, and the company's canon ones.
-  const familyOptions = useMemo(() => {
-    const s = new Set()
-    for (const e of elementTypes) {
-      const f = (e.Family || e.family || '').trim(); if (f) s.add(f)
-      if ((e.IsCollection || e.isCollection) === 'Y') s.add(e.ElementTypeRef || e.elementTypeRef)
-    }
-    for (const f of CANON_FAMILIES) s.add(f.ref)
-    return [...s].filter(Boolean).sort((a, b) => a.localeCompare(b))
-  }, [elementTypes])
+  const familyOptions = useMemo(() => familyOptionsOf(elementTypes), [elementTypes])
   // A family the project has no row for yet is created with the ElementType (GX9RLV).
   // The DesignDB parse files family rows under collection_refs, not elementTypes (#59).
   const familyIsNew = family.trim() !== '' && !familyRowExists(family, elementTypes, dbCollectionRefs)
