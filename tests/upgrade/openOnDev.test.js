@@ -42,3 +42,40 @@ test.skipIf(!prod)('dev reopens prod\'s saved work: every change kept, none in c
   expectSameRows(prod.after.elementTypes, s.elementTypes, etKey)
   expectSameRows(prod.after.recipes, s.recipes, rsKey)
 })
+
+// The database prod wrote, opened by this build's schema exactly as openDatabase does: initDb runs
+// this build's migrations over prod's file. Prod's rows must come through untouched (dev may add
+// tables and columns, never drop, rename or rewrite one), and the work must reopen from the file.
+test.skipIf(!prod?.sqlite)('dev opens prod\'s SQLite file: every row kept, the work reopens', async () => {
+  const { openSqlite, dumpTables, dbApiOver } = await import('./sqlite.js')
+  const { raw, conn, schema } = await openSqlite(Buffer.from(prod.sqlite, 'base64'))
+  const before = dumpTables(raw)
+  expect(before.pending_changes.length).toBeGreaterThan(0)   // the save really reached the file
+  schema.initDb(conn)
+  schema.initDb(conn)   // a second start must change nothing either
+  const after = dumpTables(raw)
+  for (const [table, rows] of Object.entries(before)) {
+    expect([table, after[table]?.length]).toEqual([table, rows.length])
+    rows.forEach((r, i) => { for (const [c, v] of Object.entries(r)) expect([table, i, c, after[table][i][c]]).toEqual([table, i, c, v]) })
+  }
+
+  // Reopen the way openProject does, through electronAPI.db over this build's schema.
+  window.electronAPI = { db: dbApiOver(schema) }
+  const id = prod.projectId
+  expect(after.projects.find(p => p.id === id)?.project_number).toBe('U1')
+  const pending = await window.electronAPI.db.getPendingChanges(id)
+  const db = JSON.parse(await window.electronAPI.db.getPref(id, 'pending_db_changes') || '[]')
+  expect({ ...pending, db }).toEqual(JSON.parse(JSON.stringify(prod.saved)))
+  useStore.setState({ ...base(), projectId: id })
+  const counts = useStore.getState().restorePendingChanges({ ...pending, db })
+  for (const c of Object.values(counts)) expect(c.conflicts ?? 0).toBe(0)
+  const s = useStore.getState()
+  expectSameRows(prod.after.psRows, s.psRows, etKey)
+  expectSameRows(prod.after.elementTypes, s.elementTypes, etKey)
+  expectSameRows(prod.after.recipes, s.recipes, rsKey)
+  // the rest of the session, read by this build's own queries
+  expect(schema.getPositionUI(id, 'P1')).toMatchObject({ user_notes: 'ask about trim', tags: ['dl'], tag_add: ['x'] })
+  expect(schema.getFavorites().map(f => f.id)).toContain('fav1')
+  expect(schema.getLocalElementTypes(id).map(e => e.ElementTypeRef || e.elementTypeRef)).toContain('ET-B-03')
+  expect(schema.getPref(id, 'some_ui_pref')).toBe('{"a":1}')
+})
