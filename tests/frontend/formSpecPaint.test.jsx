@@ -223,7 +223,7 @@ test('TKJTDE: the raw view shows manufacturer, code and accessories; the other c
 test('TKJTDE: ⋯ shows and hides the other Form columns', async () => {
   const { default: FormPaintBar } = await import('../../src/components/FormPaintBar.jsx')
   useStore.setState({ formCaptures: { byPosition: { C01: [{ elementTypeRef: 'ET-PS-01', code: 'QC50' }] } }, importDraft: {
-    rows: [{ id: 0, rawText: 'QC50', positionType: 'C01', manufacturer: 'iGuzzini', context: { Notes: 'white finish' }, confirmed: true }],
+    rows: [{ id: 0, rawText: 'QC50', positionType: 'C01', manufacturer: 'iGuzzini', context: { FurtherInfo: 'white finish', Notes: 'never shown' }, confirmed: true }],
     map: { code: 'ProductCode', mfr: 'Maker' }, stagedRefs: ['C01'],
   } })
   localStorage.removeItem('psr.formPane.cols')
@@ -232,7 +232,12 @@ test('TKJTDE: ⋯ shows and hides the other Form columns', async () => {
   expect(raw()).toHaveTextContent(/ProductCode\s*QC50/)
   expect(raw()).not.toHaveTextContent('white finish')
   fireEvent.click(screen.getByLabelText('Many lines'))
-  expect(raw()).toHaveTextContent(/Notes\s*white finish/)
+  expect(raw()).toHaveTextContent(/Maker\s*iGuzzini\s*ProductCode\s*QC50\s*FurtherInfo\s*white finish/)
+  expect(raw()).not.toHaveTextContent('never shown')
+  // A click after the hover that opened the list keeps it open.
+  fireEvent.mouseEnter(screen.getByTestId('cols-pick'))
+  fireEvent.click(screen.getByTestId('cols-pick'))
+  expect(screen.getByTestId('cols-list')).toBeInTheDocument()
   // Custom: the checklist opens on focus; the choice is sticky.
   fireEvent.click(screen.getByLabelText('Custom'))
   fireEvent.focus(screen.getByTestId('cols-pick'))

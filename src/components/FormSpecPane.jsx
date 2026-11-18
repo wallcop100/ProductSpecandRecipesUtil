@@ -235,7 +235,20 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
   const grouped = new Set([...swaps.flatMap(c => [c.fromEt, c.toEt]), ...respecs.map(c => c.fromEt)].map(r => String(r).toUpperCase()))
   const isGrouped = ref => grouped.has(String(ref).toUpperCase())
   const addedEts = new Set(formChanges.filter(c => c.kind === 'add').map(c => String(c.toEt).toUpperCase()))
-  const plus = ref => (addedEts.has(String(ref).toUpperCase()) ? '+' : '')
+  // XVZAV8: an old code no ~ group shows goes under the Form line its row became (A02hw: the
+  // recipe holds the kit ET-PS-17, not the ET-PS-07 the diff swapped to), struck, as one ~.
+  const drops = formChanges.filter(c => c.kind === 'dropNew')
+  const olds = formChanges.filter(c => c.fromCode && (c.kind === 'dropNew' || (c.kind === 'swap' && !swaps.includes(c)) || (c.kind === 'respec' && !respecs.includes(c))))
+  const up = x => String(x || '').toUpperCase()
+  const oldOf = new Map()
+  for (const e of formEts) {
+    const add = formChanges.find(c => c.kind === 'add' && up(c.toEt) === up(e.elementTypeRef))
+    const d = olds.find(o => ![...oldOf.values()].includes(o)
+      && (add ? o.oldText === add.oldText && o.newText === add.newText : e.code && up(o.newText).includes(up(e.code))))
+    if (d) oldOf.set(up(e.elementTypeRef), d)
+  }
+  const lonelyDrops = drops.filter(d => ![...oldOf.values()].includes(d))
+  const plus = ref => (oldOf.has(String(ref).toUpperCase()) ? '~' : addedEts.has(String(ref).toUpperCase()) ? '+' : '')
 
   /** "This Form product IS that ElementType." Links it; see stampPlan for each branch. */
   async function mergePending(p, etRef) {
@@ -409,13 +422,33 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
     ...orphaned.map(o => ({ ref: o.elementTypeRef, code: null })),
     ...formChanges.filter(c => c.kind === 'remove' && c.inRecipe).map(c => ({ ref: c.fromEt, code: c.fromCode, trace: c.trace })),
   ].filter((g, i, a) => !isGrouped(g.ref) && holds(g.ref) && a.findIndex(x => x.ref.toUpperCase() === g.ref.toUpperCase()) === i)
+  const old = { opacity: 0.55, textDecoration: 'line-through' }
   const changedTip = since ? `Changed since ${since}` : 'Changed in the Form'
+  const markTip = ref => (plus(ref) === '~' ? changedTip : plus(ref) && (since ? `New since ${since}` : 'New in the Form'))
+  // The struck old code (and its ElementType) under a ~ line; Remove while the recipe still holds it.
+  const OldCode = ({ etRef: ref }) => {
+    const d = oldOf.get(String(ref).toUpperCase())
+    if (!d) return null
+    return (
+      <div style={row} data-testid="old-code">
+        <Gutter /><span style={{ width: 14 }} />
+        <span style={{ ...codeStyle, ...old, fontWeight: 400, color: C.muted }}>{d.fromCode}</span>
+        {d.fromEt && <span className="ms-auto" style={old}><EtPill etRef={d.fromEt} style={{ textDecoration: 'line-through' }} /></span>}
+        {d.fromEt && holds(d.fromEt) && <RemoveBtn etRef={d.fromEt} />}
+      </div>
+    )
+  }
+  // QFRHFW: the recipe holds one of the same family the Form no longer names (ET-LIN-DIFF-05 for -07).
+  const familyOf = ref => String(elementTypes.find(t => (t.ElementTypeRef || '').toUpperCase() === String(ref).toUpperCase())?.Family || '').toUpperCase()
+  const stem = ref => String(ref).toUpperCase().replace(/-\d+$/, '')
+  const sameFamily = (a, b) => (familyOf(a) && familyOf(a) === familyOf(b)) || stem(a) === stem(b)
+  const replaceable = ref => extra.find(x => x.elementTypeRef.toUpperCase() !== ref.toUpperCase()
+    && x.elementTypeRef.toUpperCase() !== String(container || '').toUpperCase() && sameFamily(x.elementTypeRef, ref))?.elementTypeRef || null
   const where = ref => <Where foundIn={whereOf(ref)} container={container} />
   const RemoveBtn = ({ etRef: ref }) => (
     <Button size="sm" variant="outline-danger" className="ms-auto flex-shrink-0" style={btn} data-testid="diff-remove"
       onClick={() => removeEt(ref)} title={`Remove ${ref} from ${posRef}`}>Remove</Button>
   )
-  const old = { opacity: 0.55, textDecoration: 'line-through' }
 
   return (
     <div className={paneClass} style={paneStyle}>
@@ -510,6 +543,14 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
           </div>
         )
       })}
+
+      {/* − a code gone from the Form that never had an ElementType: nothing to remove. */}
+      {lonelyDrops.map(d => (
+        <div key={`d${d.fromCode}`} className="py-1 border-bottom" data-testid="gone-code" style={row} data-trace={registerTrace(d.trace)}>
+          <Gutter mark="−" tip={since ? `Gone since ${since}` : 'No longer in the Form'} /><span style={{ width: 14 }} />
+          <span style={{ ...codeStyle, ...old, fontWeight: 400, color: C.muted }}>{d.fromCode}</span>
+        </div>
+      ))}
 
       {/* − gone from the Form, still in the recipe. */}
       {gone.map(g => {
@@ -613,15 +654,24 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
         return (
           <div key={ref} data-testid="missing-card" style={card(C.accent)}>
             <div style={row}>
-              <Gutter mark={plus(ref)} tip={plus(ref) && (since ? `New since ${since}` : 'New in the Form')} />
+              <Gutter mark={plus(ref)} tip={markTip(ref)} />
               <span style={codeStyle} title={e.manufacturer || undefined}><CopyText text={e.code || ref} /></span>
               <EtPill etRef={ref} />
               <span className="ms-auto"><Status status="addable" note={diverges(ref) ? 'The Form and the recipe disagree about where this is used' : null} /></span>
             </div>
+            <OldCode etRef={ref} />
             <div className="d-flex align-items-center gap-1 mt-1">
+              {replaceable(ref) && (
+                <Button size="sm" variant="primary" style={btn} data-testid="missing-replace"
+                  onClick={() => applyFormChange({ kind: 'swap', fromEt: replaceable(ref), toEt: ref, toCode: e.code, changing: [] }, posRef, 'swap')}
+                  title={`Put ${ref} where ${replaceable(ref)} is in ${posRef}`}>
+                  <MaterialIcon name="swap_horiz" size={12} /> Replace {replaceable(ref)}
+                </Button>
+              )}
               {opts.map(([w, icon, label]) => (
                 <Button key={w} size="sm" variant={w === usual ? 'primary' : 'outline-primary'} style={btn}
                   aria-label={w === 'internal' ? `Add ${ref} inside ${container}` : `Add ${ref} at position level`}
+                  title={w === 'internal' ? `Add ${ref} inside ${container}` : `Add ${ref} at position level`}
                   onClick={() => addNow([ref], w)}>
                   <MaterialIcon name={icon} size={12} /> {label}
                 </Button>
@@ -640,8 +690,9 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
 
       {/* Present. */}
       {lines.map(e => (
-        <div key={e.elementTypeRef} className="py-1 border-bottom" data-testid="form-line" style={row}>
-          <Gutter mark={plus(e.elementTypeRef)} tip={plus(e.elementTypeRef) && (since ? `New since ${since}` : 'New in the Form')} />
+        <div key={e.elementTypeRef} className="py-1 border-bottom">
+        <div data-testid="form-line" style={row}>
+          <Gutter mark={plus(e.elementTypeRef)} tip={markTip(e.elementTypeRef)} />
           <Status status="present" note={diverges(e.elementTypeRef) ? 'The Form and the recipe disagree about where this is used: hover the ElementType' : null} />
           <span style={codeStyle} title={e.manufacturer || undefined}><CopyText text={e.code || e.elementTypeRef} /></span>
           <span className="ms-auto" />
@@ -649,6 +700,8 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
             <span><EtPill etRef={e.elementTypeRef} /></span>
           </UsagePopover>
           <Where foundIn={e.foundIn} container={container} />
+        </div>
+        <OldCode etRef={e.elementTypeRef} />
         </div>
       ))}
 

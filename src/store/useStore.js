@@ -2192,7 +2192,8 @@ const useStore = create((set, get) => ({
     const swapIn = newRef => {
       for (const p of targets) {
         const { recipes, elementTypes } = get()
-        const row = recipes.find(r => (r.IsDeleted || r.isDeleted) !== 'Y' && (r.PositionTypeRef || r.positionTypeRef) === p
+        // QFRHFW: a shared wrapper's internals are stored under another position.
+        const row = positionRecipeWithWrapperInternals(recipes, p).combined.find(r => (r.IsDeleted || r.isDeleted) !== 'Y'
           && String(r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === String(change.fromEt).toLowerCase())
         if (!row) continue
         const w = (row.ContextType || row.contextType) === 'ElementType' ? (row.ContextRef || row.contextRef) : null
