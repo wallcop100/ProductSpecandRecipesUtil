@@ -10,6 +10,43 @@
  */
 export const RELEASES = [
   {
+    version: '2026.2',
+    date: '2026-11-18',
+    tagline: 'The Form beside every recipe: see what changed, settle it in a click.',
+    highlights: [
+      {
+        icon: 'difference',
+        title: 'The Form spec pane, redone',
+        blurb: 'Each Form entry shows its data or its paint; what changed since an older Form is marked, with Update, Replace or Add.',
+      },
+      {
+        icon: 'add_circle',
+        title: 'New ElementTypes that place themselves',
+        blurb: 'One code at a time, the Form row beside the fields, a free ref that never collides, and it lands in the position.',
+      },
+      {
+        icon: 'bolt',
+        title: 'A faster Form import',
+        blurb: 'Drawings are skipped and the sheet is read in the background; more Form spellings are understood.',
+      },
+      {
+        icon: 'auto_awesome',
+        title: 'Suggestions in your project’s style',
+        blurb: 'New refs, families and descriptions follow how this project names things, and what you just did.',
+        companion: true,
+      },
+    ],
+    also: [
+      'Export checks: Product Spec ElementTypes the DesignDB lacks are queued, and trimmed/trimless or driver current mismatches are flagged',
+      'Click a product code to copy it; click an ElementType to open it in the Product Spec',
+      'Placeholder codes (N/A, TBC, -) are no longer duplicates, and TBC and notes carry through',
+      'The finish shows in brackets after both descriptions; DimMult and PackQty show whenever they hold a value',
+      'Bad refs (spaces, empty parts) are offered a rename',
+      'The right drawer can be resized',
+      'A bug note can include your data, so the problem can be replayed exactly',
+    ],
+  },
+  {
     version: '2026.1',
     date: '2026-10-23',
     tagline: '2026 Alpha Build - From form to finished recipes.',
