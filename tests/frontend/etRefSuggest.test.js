@@ -154,6 +154,13 @@ describe('reuseCandidates respects product identity', () => {
     expect(suggest('NF240272009', 'Nichia').map(c => c.ref)).not.toContain('ET-CCL-D-250-1CH-EM-01')
   })
 
+  test('an extra described "For 480" is not the 480 (73BFE9)', () => {
+    const rows = [psRow('ET-PS-LG-01', 'LightGraphix', '480GT')]
+    const ets = [{ ElementTypeRef: 'ET-PS-LG-01', Name: 'LightGraphix - 480GT', Description: 'For 480' }]
+    const c = reuseCandidates('480', '', { psRows: rows, elementTypes: ets, manufacturer: 'LightGraphix' }, 3)
+    expect(c.find(x => x.kind === 'same')).toBeUndefined()
+  })
+
   test('suggestRef proposes a NEW ref for N/A rather than reusing a driver', () => {
     const conv = { prefix: 'ET', counterWidth: 2, stems: [] }
     const r = suggestRef('N/A', 'Pendant', 'Astro', conv, elementTypes, psRows)

@@ -184,7 +184,9 @@ export function reuseCandidates(code, note, { psRows = [], elementTypes = [], ma
 
     if (codeMatches && sameMaker(pm)) { codeScore = 1; kind = 'same' }
     else if (codeMatches) { codeScore = 0 }   // same code, another maker: another product
-    else if (haystackToks.has(nc) && sameMaker(pm)) { codeScore = 0.92; kind = 'same' }
+    // The code in a name or description only identifies an ElementType with no code of its own:
+    // an extra's description says "For 480", and 480GT is not the 480 (73BFE9).
+    else if (!pc && haystackToks.has(nc) && sameMaker(pm)) { codeScore = 0.92; kind = 'same' }
     else if (!codeMatches) {
       const sim = pc ? similarity(nc, norm(pc)) : 0
       const stem = pc ? sharedStem(nc, norm(pc)) : 0
