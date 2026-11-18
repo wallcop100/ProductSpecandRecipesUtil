@@ -6,12 +6,14 @@
  * highlights (a Material icon, a short title, one short line) and an optional `also`
  * list of smaller things. Newest first. Write it for the people using the tool, not for us:
  * what they can do now, not how it was built. Mark a companion-only highlight `companion: true`:
- * the GitHub Pages release has no companion, so WhatsNew hides it there.
+ * the GitHub Pages release has no companion, so WhatsNew hides it there. An optional `until` date
+ * (YYYY-MM-DD) stops the start page's teaser strip on that day; the what's new link stays.
  */
 export const RELEASES = [
   {
     version: '2026.2',
     date: '2026-11-18',
+    until: '2027-01-01',   // the start page's teaser strip stops showing on this day
     tagline: 'The Form beside every recipe: see what changed, settle it in a click.',
     highlights: [
       {

@@ -13,7 +13,7 @@ import StageBar from '../components/StageBar'
 import MaterialIcon from '../components/MaterialIcon'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { LATEST } from '../changelog'
-import WhatsNew from '../components/WhatsNew'
+import WhatsNew, { WhatsNewTeaser, markSeen } from '../components/WhatsNew'
 import BackupPanel from '../components/BackupPanel'
 import { C } from '../styles/tokens'
 import { askConfirm } from '../components/ConfirmHost'
@@ -431,10 +431,11 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
           <div className="d-flex align-items-baseline gap-2 mb-2">
             <h4 className="mb-1">Recipe Builder</h4>
             <button className="btn btn-link p-0 ms-auto text-muted" style={{ fontSize: 11 }}
-              onClick={() => setShowChangelog(v => !v)} title="What changed recently">
+              onClick={() => { markSeen(LATEST.version); setShowChangelog(v => !v) }} title="What changed recently">
               {LATEST.version} · what’s new {showChangelog ? '▴' : '▾'}
             </button>
           </div>
+          {!showChangelog && <WhatsNewTeaser release={LATEST} onOpen={() => { markSeen(LATEST.version); setShowChangelog(true) }} />}
           {showChangelog && <WhatsNew release={LATEST} />}
 
           {unsupported && <Alert variant="danger" className="py-2"><strong>Unsupported browser:</strong> {unsupported}</Alert>}
