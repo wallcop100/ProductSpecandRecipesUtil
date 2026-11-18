@@ -7,6 +7,7 @@ import EntityPill from './EntityPill'
 import { positionRecipeWithWrapperInternals } from '../utils/collectionStatus'
 import { C } from '../styles/tokens'
 import { askConfirm } from './ConfirmHost'
+import { live, etRefOf } from '../utils/derived'
 
 /**
  * ForkPositionModal — make one or more independent copies of a position's recipe.
@@ -20,7 +21,6 @@ import { askConfirm } from './ConfirmHost'
  */
 const lc = s => String(s || '').toLowerCase()
 const idOf = r => r._id
-const etOf = r => r.ElementTypeRef || r.elementTypeRef || ''
 const crefOf = r => r.ContextRef || r.contextRef || ''
 const isInternal = r => (r.ContextType || r.contextType) === 'ElementType'
 
@@ -32,7 +32,7 @@ export default function ForkPositionModal({ show, sourceRef, onHide }) {
   const sourceRows = useMemo(
     () => (show && sourceRef
       ? positionRecipeWithWrapperInternals(recipes, sourceRef).combined
-          .filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
+          .filter(r => live(r))
       : []),
     [show, sourceRef, recipes]
   )
@@ -55,7 +55,7 @@ export default function ForkPositionModal({ show, sourceRef, onHide }) {
   const childrenOf = useMemo(() => {
     const map = new Map()   // wrapper-row _id -> [internal ids]
     for (const r of groups.posLevel) {
-      const kids = groups.byContainer.get(etOf(r))
+      const kids = groups.byContainer.get(etRefOf(r))
       if (kids) map.set(idOf(r), kids.map(idOf))
     }
     return map
@@ -71,7 +71,7 @@ export default function ForkPositionModal({ show, sourceRef, onHide }) {
   const targetOptions = useMemo(() => {
     const rowCount = {}
     for (const r of recipes) {
-      if ((r.IsDeleted || r.isDeleted) === 'Y') continue
+      if (!live(r)) continue
       const p = r.PositionTypeRef || r.positionTypeRef
       if (p) rowCount[p] = (rowCount[p] || 0) + 1
     }
@@ -118,7 +118,7 @@ export default function ForkPositionModal({ show, sourceRef, onHide }) {
         style={{ fontSize: 11, marginLeft: indent ? 18 : 0 }}
         label={
           <span className="d-inline-flex align-items-center gap-1">
-            <span style={{ fontFamily: 'monospace' }}>{etOf(r)}</span>
+            <span style={{ fontFamily: 'monospace' }}>{etRefOf(r)}</span>
             {r.IsDesign === 'Y' && <span className="badge bg-primary" style={{ fontSize: 8 }}>design</span>}
             {wrapper && <span className="text-muted" style={{ fontSize: 9 }}>wrapper</span>}
           </span>
@@ -183,7 +183,7 @@ export default function ForkPositionModal({ show, sourceRef, onHide }) {
                   Position level
                 </div>
                 {groups.posLevel.map(r => {
-                  const kids = groups.byContainer.get(etOf(r))
+                  const kids = groups.byContainer.get(etRefOf(r))
                   return (
                     <React.Fragment key={idOf(r)}>
                       <Row r={r} />
@@ -195,7 +195,7 @@ export default function ForkPositionModal({ show, sourceRef, onHide }) {
             )}
             {/* Internals whose container is NOT a position-level row here (shared, stored elsewhere) */}
             {[...groups.byContainer.entries()]
-              .filter(([cref]) => !groups.posLevel.some(r => lc(etOf(r)) === lc(cref)))
+              .filter(([cref]) => !groups.posLevel.some(r => lc(etRefOf(r)) === lc(cref)))
               .map(([cref, kids]) => (
                 <div key={cref} className="mt-1">
                   <div className="text-uppercase text-muted fw-semibold" style={{ fontSize: 9 }}>Inside {cref}</div>

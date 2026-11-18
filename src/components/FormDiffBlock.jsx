@@ -9,6 +9,7 @@ import { buildMaster } from '../utils/productCodes'
 import { buildRefMap, targetFor } from '../utils/ptResolve'
 import { C } from '../styles/tokens'
 import { registerTrace } from '../utils/trace'
+import { live } from '../utils/derived'
 
 const mono = { fontFamily: 'monospace' }
 const list = refs => refs.join(', ')
@@ -162,7 +163,7 @@ export default function FormDiffBlock({ posRef }) {
               <div><span style={mono}>{c.fromEt}</span> is no longer in the Form here</div>
               {c.inRecipe && !c.container && (
                 <Button size="sm" variant="outline-danger" className="mt-1 py-0" style={{ fontSize: 10 }} data-testid="diff-remove"
-                  onClick={() => recipes.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y' && r.PositionTypeRef === posRef
+                  onClick={() => recipes.filter(r => live(r) && r.PositionTypeRef === posRef
                     && String(r.ElementTypeRef || '').toLowerCase() === String(c.fromEt).toLowerCase())
                     .forEach(r => removeRecipeRow(posRef, r._id))}>
                   Remove from {posRef}

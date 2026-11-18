@@ -1,6 +1,7 @@
 import React from 'react'
 import { Modal, Button } from 'react-bootstrap'
 import useStore from '../store/useStore'
+import { live, etRefOf } from '../utils/derived'
 
 /**
  * DesignPickerModal — every position recipe has one IsDesign item. Leaving a position whose
@@ -14,7 +15,7 @@ export default function DesignPickerModal() {
   const cancel = useStore(s => s.cancelDesignPrompt)
 
   const rows = prompt ? recipes.filter(r => (r.PositionTypeRef || r.positionTypeRef) === prompt.posRef
-    && (r.IsDeleted || r.isDeleted) !== 'Y' && (r.ContextType || r.contextType) === 'PositionType') : []
+    && live(r) && (r.ContextType || r.contextType) === 'PositionType') : []
 
   return (
     <Modal show={!!prompt} onHide={cancel} centered size="sm">
@@ -29,7 +30,7 @@ export default function DesignPickerModal() {
           {rows.map(r => (
             <Button key={r._id} variant="outline-primary" size="sm" className="text-start"
               style={{ fontFamily: 'monospace' }} onClick={() => resolve(r._id)}>
-              {r.ElementTypeRef || r.elementTypeRef}
+              {etRefOf(r)}
             </Button>
           ))}
         </div>

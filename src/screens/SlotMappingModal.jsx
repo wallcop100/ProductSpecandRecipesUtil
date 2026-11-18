@@ -3,6 +3,7 @@ import { Modal, Button, Form, Badge, Alert, ListGroup } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from '../components/MaterialIcon'
 import { ACTION_ICONS } from '../utils/entityStyle'
+import { etRefOf } from '../utils/derived'
 
 /**
  * SlotMappingModal
@@ -16,10 +17,9 @@ import { ACTION_ICONS } from '../utils/entityStyle'
  *   onApply: (resolvedMappings: { [slotKey]: entityRef }) => void
  *   onCancel: () => void
  */
-export default function SlotMappingModal({ show, template, posRef, onApply, onCancel }) {
+export default function SlotMappingModal({ show, template, onApply, onCancel }) {
   const elementTypes = useStore(s => s.elementTypes)
   const slotMappings = useStore(s => s.slotMappings)
-  const addSlotMapping = useStore(s => s.resolveSlot)
 
   const templateId = template?.id
   const storedMappings = (templateId && slotMappings[templateId]) ? slotMappings[templateId] : {}
@@ -142,7 +142,7 @@ export default function SlotMappingModal({ show, template, posRef, onApply, onCa
                     <ListGroup.Item className="text-muted small">No matches</ListGroup.Item>
                   )}
                   {results.map(et => {
-                    const ref = et.ElementTypeRef || et.elementTypeRef
+                    const ref = etRefOf(et)
                     return (
                       <ListGroup.Item
                         key={ref}

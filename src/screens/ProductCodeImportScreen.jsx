@@ -35,7 +35,7 @@ import ContextColumnChips from '../components/ContextColumnChips'
 import { capturableColumns, captureContext } from '../utils/formColumns'
 import {
   makeRow, deriveCaptures, buildDistinct, buildMaster, classify, duplicateSet,
-  hasNoteCollision, rowConfidence, sortByConfidence, norm, setNoteOverride,
+  hasNoteCollision, setNoteOverride,
   pendingResolutions, groupKey, hasProductIdentity,
 } from '../utils/productCodes'
 import {
@@ -58,6 +58,7 @@ import { groupPositions, positionStatus, mergeCaptures, restrictCaptures } from 
 import { diffCaptures, wrapperDivergence } from '../utils/formSpec'
 import { C } from '../styles/tokens'
 import { askConfirm } from '../components/ConfirmHost'
+import { etRefOf, codeKey } from '../utils/derived'
 
 /** Fuzzy header match: exact normalised hit first, else shortest header containing it. */
 const nh = h => String(h || '').toLowerCase().replace(/[^a-z0-9]/g, '')
@@ -92,7 +93,7 @@ const isExcluded = v => {
 const isTbc = (row, captureOpts) => {
   const caps = deriveCaptures(row, captureOpts).captures
   if (caps.some(c => hasProductIdentity(c.code))) return false
-  return isTbcRow(row) || caps.some(c => norm(c.code) === 'TBC')
+  return isTbcRow(row) || caps.some(c => codeKey(c.code) === 'TBC')
 }
 /** A row's captures that are products: "TBC" / "N/A" painted as a code are not. */
 const productCaptures = (row, captureOpts) => deriveCaptures(row, captureOpts).captures.filter(c => hasProductIdentity(c.code))
@@ -114,7 +115,7 @@ const tbcKey = row => `TBC (${row.positionType || `row ${row.id + 1}`})`
 function freshRef(suggested, elementTypes, psRows, recipes) {
   if (!suggested?.ref) return null
   if (suggested.reason !== 'reuse') return { ref: suggested.ref, family: '' }
-  const et = elementTypes.find(x => norm(x.ElementTypeRef || x.elementTypeRef) === norm(suggested.ref))
+  const et = elementTypes.find(x => codeKey(etRefOf(x)) === codeKey(suggested.ref))
   return { ref: getNextAvailableRef(suggested.ref, [...elementTypes, ...psRows, ...recipes]) || '', family: et?.Family || et?.family || '' }
 }
 
@@ -134,7 +135,6 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   const createElementType = useStore(s => s.createElementType)
   const addPSRow = useStore(s => s.addPSRow)
   const saveImportDraft = useStore(s => s.saveImportDraft)
-  const clearImportDraft = useStore(s => s.clearImportDraft)
 
   const [step, setStep] = useState('pick')
   const [busy, setBusy] = useState(false)
@@ -165,7 +165,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   // Whole Form (the three stages over every row) or By position (a selection end to end).
   const [modeChoice, setModeState] = useState('form')
   const mode = embedded ? 'position' : modeChoice
-  const [selectedRefs, setSelectedRefs] = useState(() => new Set())
+  const [pickedRefs, setSelectedRefs] = useState(() => new Set())
   const [query, setQuery] = useState('')
   const [etFocusCode, setEtFocusCode] = useState(null)
   const [refsOpen, setRefsOpen] = useState(false)
@@ -173,7 +173,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   const [creatingFor, setCreatingFor] = useState(null)
   const [etPending, setEtPending] = useState(null)
   // 2V84PW: the position's codes with no ElementType, one New ElementType each.
-  // { codes: [norm code], i, made: { code: ref }, skipped: [code] }
+  // { codes: [codeKey code], i, made: { code: ref }, skipped: [code] }
   const [etQueue, setEtQueue] = useState(null)
   const [etSeed, setEtSeed] = useState(null)   // ref/family typed on a Form pane card, for the modal
   const [staged, setStaged] = useState(null)
@@ -531,7 +531,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     if (!embedded?.refresh || refreshed.current || step !== 'review' || !rows.length) return
     refreshed.current = true
     refreshFromFile(embedded.refresh).then(n => embedded.onRefreshed?.(n), e => embedded.onRefreshed?.(null, e))
-  })   // eslint-disable-line react-hooks/exhaustive-deps
+  })    
 
   /** Un-paint everything the spec matched, in one step. */
   function undoKnownPaint() {
@@ -539,11 +539,6 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     setRows(applyRules(preKnownRows, rules))
     setPreKnownRows(null)
     setKnownStats(s => (s ? { ...s, exactCount: 0, libraryCount: 0, preCount: 0 } : null))
-  }
-
-  async function discardDraft() {
-    await clearImportDraft()
-    setResumeDismissed(true)
   }
 
   // A saved import always carries on where it left off: no question to answer.
@@ -591,6 +586,20 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   const current = expandedId != null ? resolved.find(r => r.id === expandedId) || null : null
   // The table reads like the sheet: Form order, not confidence order.
   const formOrder = useMemo(() => [...resolved].sort((a, b) => a.id - b.id), [resolved])
+  // Embedded, the selection IS the builder's position: derived here, not copied in by an effect,
+  // so a position switch never renders a frame of the previous position's Form rows.
+  const embeddedRef = embedded?.posRef || null
+  const embeddedPick = useRef(new Set())
+  const embeddedSel = useMemo(() => {
+    if (!embeddedRef) return null
+    const want = groupPositions(formOrder).map(g => g.formRef)
+      .filter(f => String((map.pt ? ptTarget(f) : f) || '').toLowerCase() === embeddedRef.toLowerCase())
+    const prev = embeddedPick.current
+    // Same refs, same Set: effects keyed on the selection only rerun when it really changes.
+    if (want.length !== prev.size || want.some(r => !prev.has(r))) embeddedPick.current = new Set(want)
+    return embeddedPick.current
+  }, [embeddedRef, formOrder, map.pt, ptTarget])
+  const selectedRefs = embeddedSel && step === 'review' ? embeddedSel : pickedRefs
   // Learned continuously, and only from the rows the user has actually taught —
   // painted, edited, or confirmed. Reading every row would feed the tool's own
   // untouched defaults back in as evidence. Never stops: paints, note edits, note
@@ -803,7 +812,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   // choices, never announced (useProjectKnowledge.js).
   const projectNumber = useStore(s => s.projectNumber)
   const knowledge = useProjectKnowledge(projectNumber)
-  const knownRefs = useMemo(() => new Set(elementTypes.map(e => norm(e.ElementTypeRef || e.elementTypeRef || ''))), [elementTypes])
+  const knownRefs = useMemo(() => new Set(elementTypes.map(e => codeKey(etRefOf(e)))), [elementTypes])
 
   const priorEtByCode = useMemo(() => {
     const m = new Map()
@@ -811,9 +820,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       for (const e of entries || []) {
         const ref = e.elementTypeRef
         if (!ref) continue
-        if (e.placeholderKey) { m.set(norm(e.placeholderKey), ref); continue }
-        if (e.code) m.set(norm(e.code), ref)
-        for (const mg of e.merged || []) if (mg.code) m.set(norm(mg.code), ref)
+        if (e.placeholderKey) { m.set(codeKey(e.placeholderKey), ref); continue }
+        if (e.code) m.set(codeKey(e.code), ref)
+        for (const mg of e.merged || []) if (mg.code) m.set(codeKey(mg.code), ref)
       }
     }
     return m
@@ -825,7 +834,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     // A product is (maker, code): the same code from another maker is another product.
     const c = classify(e.text, ctx, e.manufacturers[0] || '')
     // The spec wins; your past decision is only consulted where the spec is silent.
-    const own = c.elementTypeRef || assignments[norm(e.text)] || priorEtByCode.get(norm(e.text))
+    const own = c.elementTypeRef || assignments[codeKey(e.text)] || priorEtByCode.get(codeKey(e.text))
     const fromLearning = own ? null : learnedRef(knowledge, e, knownRefs)
     const etRef = own || fromLearning || null
     const note = e.variants[0]?.note || ''
@@ -860,7 +869,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       const text = tbcKey(r)
       const note = r.rawText.replace(/\s*\n\s*/g, ' ').trim()
       if (!byKey.has(text)) {
-        const etRef = assignments[norm(text)] || priorEtByCode.get(norm(text)) || null
+        const etRef = assignments[codeKey(text)] || priorEtByCode.get(codeKey(text)) || null
         byKey.set(text, {
           text, placeholder: { formRef: r.positionType || text }, status: 'placeholder', etRef,
           rowRefs: [], manufacturers: r.manufacturer ? [r.manufacturer] : [],
@@ -1011,7 +1020,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
    * becomes a batch-wide rule — no re-asking about the same token thirty rows later.
    */
   const assignET = useCallback((codeText, ref) => {
-    setAssignments(a => ({ ...a, [norm(codeText)]: ref }))
+    setAssignments(a => ({ ...a, [codeKey(codeText)]: ref }))
     setRules(rl => learnCodeTokens(rl, codeText))
   }, [])
 
@@ -1022,9 +1031,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     for (const r of resolved) {
       if ((inSelection && !inSelection(r)) || !isTbc(r, captureOpts)) continue
       const key = tbcKey(r)
-      if (assignments[norm(key)] || priorEtByCode.get(norm(key))) continue
+      if (assignments[codeKey(key)] || priorEtByCode.get(codeKey(key))) continue
       const t = embedded.reuseFor(key, r)
-      const code = t?.kind === 'recipe' && psRows.find(p => norm(p.ElementTypeRef || '') === norm(t.ref) && !p.IsDeleted)?.ProductCode
+      const code = t?.kind === 'recipe' && psRows.find(p => codeKey(p.ElementTypeRef || '') === codeKey(t.ref) && !p.IsDeleted)?.ProductCode
       if (code && !/^tbc$/i.test(String(code).trim())) assignET(key, t.ref)
     }
   }, [embedded, resolved, inSelection, captureOpts, assignments, priorEtByCode, psRows, assignET])
@@ -1063,12 +1072,12 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     const leads = new Set()
     for (const r of confirmed) {
       const lead = leadOf(r, productCaptures(r, captureOpts))
-      if (lead) leads.add(norm(lead.code))
+      if (lead) leads.add(codeKey(lead.code))
     }
     return proposeElementTypes(unassigned, {
       elementTypes, psRows, recipes, positionTypes, collectionRefs: dbCollectionRefs,
       ptTarget: map.pt ? ptTarget : r => r, contextFor,
-      roleOf: e => (leads.has(norm(e.text)) ? 'lead' : 'extra'),
+      roleOf: e => (leads.has(codeKey(e.text)) ? 'lead' : 'extra'),
       pageTypeFor,
       // The first exact-code hit wins in etSeed, so order is precedence: this project's own
       // latest decisions (corrections included), then this browser's library, then other projects.
@@ -1076,7 +1085,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       jobs: codeJobsKnown,
       session: sitting,
     })
-  }, [captureOpts, elementTypes, psRows, recipes, positionTypes, dbCollectionRefs, map.pt, ptTarget, styleLibrary, sharedLibrary, codeJobsKnown, sitting])
+  }, [captureOpts, elementTypes, psRows, recipes, positionTypes, dbCollectionRefs, map.pt, ptTarget, styleLibrary, sharedLibrary, codeJobsKnown, sitting, projectNumber])
   const { proposals, newFamilies } = useMemo(() => proposeFor(unassigned, confirmed), [proposeFor, unassigned, confirmed])
 
   // Audit trail: how each proposed family, ref and name was made; settled kept/changed on create.
@@ -1114,7 +1123,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
 
   // What a single "Create" offers: reuse/variant from suggestRef, else the family ref.
   const panelEntries = useMemo(() => {
-    const seed = new Map(proposals.map(p => [norm(p.code), p]))
+    const seed = new Map(proposals.map(p => [codeKey(p.code), p]))
     return entries.map(e => {
       // A supplier's old numbering, from the shipped shape table — worth a look even once assigned.
       const old = matchShape(e.text, e.manufacturers[0] || '', shippedShapes.shapes).superseded
@@ -1122,7 +1131,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       const retired = retiredFor(retiredCodes, e.text)
       if (retired) e = { ...e, retired }
       if (e.etRef || !e.suggested) return e
-      const p = seed.get(norm(e.text))
+      const p = seed.get(codeKey(e.text))
       const ref = e.suggested.reason === 'new' && p?.ref ? p.ref : e.suggested.ref
       return { ...e, suggestedRef: ref, seed: p }
     })
@@ -1131,14 +1140,14 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   // ZAJ889: one code's New ElementType modal, filled from the same proposal Bulk would make.
   useEffect(() => {
     if (!etPending) return
-    const e = codeEntries.find(x => norm(x.text) === norm(etPending))
+    const e = codeEntries.find(x => codeKey(x.text) === codeKey(etPending))
     setEtPending(null)
     const seed = etSeed || {}
     setEtSeed(null)
     // A TBC row (or anything not a plain code) has no entry of its own: Bulk handles those.
     if (!e) { setEtFocusCode(etPending); setBulkOpen(true); return }
     if (e.etRef) return
-    const p = proposals.find(x => norm(x.code) === norm(e.text))
+    const p = proposals.find(x => codeKey(x.code) === codeKey(e.text))
     setMergingGroup(null)
     setCreatingFor({
       text: e.text,
@@ -1161,14 +1170,14 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
    */
   function queueOpen(q, i, dir = 1) {
     while (i >= 0 && i < q.codes.length && !q.made[q.codes[i]]
-      && allEntries.find(x => norm(x.text) === q.codes[i])?.etRef) i += dir
+      && allEntries.find(x => codeKey(x.text) === q.codes[i])?.etRef) i += dir
     setCreatingFor(null)
     setMergingGroup(null)
     if (i < 0 || i >= q.codes.length) { setEtQueue(null); return }
     setEtQueue({ ...q, i })
     const code = q.codes[i], made = q.made[code]
     if (!made) { openETFor(code); return }
-    const e = allEntries.find(x => norm(x.text) === code)
+    const e = allEntries.find(x => codeKey(x.text) === code)
     setCreatingFor({
       text: e?.text || code, editing: made, ref: made,
       manufacturer: e?.manufacturers?.[0] || '', note: e?.variants?.[0]?.note || '',
@@ -1178,7 +1187,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   /** Embedded, a code's Give button starts the queue there; Back reaches the ones before it. */
   function startEtQueue(code) {
     // TBC rows have no code entry and still go to Bulk, so they stay out of the queue.
-    const codes = (selection?.noEtCodes || []).filter(c => !tbcEntries.some(e => norm(e.text) === c)), i = codes.indexOf(norm(code))
+    const codes = (selection?.noEtCodes || []).filter(c => !tbcEntries.some(e => codeKey(e.text) === c)), i = codes.indexOf(codeKey(code))
     if (!embedded || i < 0) { openETFor(code); return }
     queueOpen({ codes, i, made: {}, skipped: [] }, i)
   }
@@ -1191,9 +1200,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     if (!bulkOpen || bulkProposals) return
     // By position: only the selected positions' codes.
     const scoped = mode === 'position'
-      ? new Set(entries.filter(e => (e.positionTypes || []).some(pt => selectedRefs.has(String(pt ?? '').trim()))).map(e => norm(e.text)))
+      ? new Set(entries.filter(e => (e.positionTypes || []).some(pt => selectedRefs.has(String(pt ?? '').trim()))).map(e => codeKey(e.text)))
       : null
-    setBulkProposals({ proposals: scoped ? proposals.filter(p => scoped.has(norm(p.code))) : proposals, newFamilies })
+    setBulkProposals({ proposals: scoped ? proposals.filter(p => scoped.has(codeKey(p.code))) : proposals, newFamilies })
   }, [bulkOpen, bulkProposals, proposals, newFamilies, mode, selectedRefs, entries])
 
   /** Apply the reviewed proposals: new families first, then reuse or create each code. */
@@ -1228,11 +1237,6 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     setBulkProposals(null); setBulkOpen(false)
   }
 
-  /** Assign an existing ElementType to a distinct code — the reuse/dedup win. */
-  function handleReuse(entry, ref) {
-    assignET(entry.text, ref)
-  }
-
   /**
    * handleStage({ only }) — `only` (a Set of Form refs) stages just those positions ("By
    * position" mode): their codes' Product Spec rows, and their captures MERGED into the
@@ -1249,13 +1253,13 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       if (!e.etRef) continue
       // Codes elsewhere in the Form keep their ElementType for the captures below, but
       // only this selection's codes are written to the spec now.
-      if (!entryInScope(e)) { codeToEt.set(norm(e.text), e.etRef); continue }
-      codeToEt.set(norm(e.text), e.etRef)
+      if (!entryInScope(e)) { codeToEt.set(codeKey(e.text), e.etRef); continue }
+      codeToEt.set(codeKey(e.text), e.etRef)
       const note = e.variants[0]?.note || ''
       // N4YCGG / J8F3R4: a code the spec already has for this ElementType (a correction made since,
       // or the product a TBC row was linked to) is kept; only a link made in this import overwrites it.
-      const had = String(useStore.getState().psRows.find(r => norm(r.ElementTypeRef || r.elementTypeRef || '') === norm(e.etRef) && !r.IsDeleted)?.ProductCode || '').trim()
-      const keep = had && !/^tbc$/i.test(had) && norm(had) !== norm(e.text) && (e.placeholder || norm(assignments[norm(e.text)] || '') !== norm(e.etRef))
+      const had = String(useStore.getState().psRows.find(r => codeKey(etRefOf(r)) === codeKey(e.etRef) && !r.IsDeleted)?.ProductCode || '').trim()
+      const keep = had && !/^tbc$/i.test(had) && codeKey(had) !== codeKey(e.text) && (e.placeholder || codeKey(assignments[codeKey(e.text)] || '') !== codeKey(e.etRef))
       if (e.placeholder && keep) continue
       if (e.placeholder) {
         // The placeholder Product Spec row: a product is wanted, not chosen yet.
@@ -1310,7 +1314,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       const caps = productCaptures(row, captureOpts)
       if (isTbc(row, captureOpts)) {
         const key = tbcKey(row)
-        const et = codeToEt.get(norm(key))
+        const et = codeToEt.get(codeKey(key))
         const item = { code: 'TBC', placeholderKey: key, note: row.rawText.replace(/\s*\n\s*/g, ' ').trim(), role: 'lead',
           manufacturer: row.manufacturer || '', formRef: row.positionType }
         const bucket = et ? byPos : pendingByPos
@@ -1322,12 +1326,12 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       const lead = leadOf(row, caps)
       for (const cap of caps) {
         const role = cap === lead ? 'lead' : 'extra'
-        const et = codeToEt.get(norm(cap.code))
+        const et = codeToEt.get(codeKey(cap.code))
         if (!et) {
           // The Form asked for this product. Nobody has said what it is yet.
           if (!pendingByPos.has(target)) pendingByPos.set(target, [])
           const pend = pendingByPos.get(target)
-          if (!pend.some(x => norm(x.code) === norm(cap.code))) {
+          if (!pend.some(x => codeKey(x.code) === codeKey(cap.code))) {
             pend.push({
               code: cap.code, note: cap.note, role,
               manufacturer: row.manufacturer || '', formRef: row.positionType,
@@ -1391,11 +1395,11 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     // Learning, in the background and never awaited: staging does not depend on it. The
     // project's decisions (latest wins), and evidence for the catalogue (reviewed elsewhere).
     // Not a ref made here and not exported yet: only what the DesignDB holds is evidence.
-    const madeHere = new Set(localElementTypes.map(et => norm(et.ref || '')))
-    offerAssignments(companion, allEntries.filter(e => e.status !== 'green' && entryInScope(e) && !madeHere.has(norm(e.etRef || ''))), {
+    const madeHere = new Set(localElementTypes.map(et => codeKey(et.ref || '')))
+    offerAssignments(companion, allEntries.filter(e => e.status !== 'green' && entryInScope(e) && !madeHere.has(codeKey(e.etRef || ''))), {
       project: String(projectNumber || projectLabel),
       familyOf: ref => {
-        const et = useStore.getState().elementTypes.find(x => norm(x.ElementTypeRef || x.elementTypeRef || '') === norm(ref))
+        const et = useStore.getState().elementTypes.find(x => codeKey(etRefOf(x)) === codeKey(ref))
         return et?.Family || et?.family || ''
       },
     })
@@ -1438,17 +1442,17 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   // ---- the table ------------------------------------------------------------
   /** The ElementType a code already has: the spec first, then your choice, then last import's. */
   const etFor = useCallback((code, manufacturer) =>
-    classify(code, ctx, manufacturer).elementTypeRef || assignments[norm(code)] || priorEtByCode.get(norm(code))
+    classify(code, ctx, manufacturer).elementTypeRef || assignments[codeKey(code)] || priorEtByCode.get(codeKey(code))
       || learnedRef(knowledge, { text: code, manufacturers: manufacturer ? [manufacturer] : [] }, knownRefs) || null,
   [ctx, assignments, priorEtByCode, knowledge, knownRefs])
   /** How etFor decided, for a dev report's trace (trace.js). Same order as etFor. */
   const etTrace = useCallback((code, manufacturer, formRef) => {
     const c = classify(code, ctx, manufacturer)
-    const learned = c.elementTypeRef || assignments[norm(code)] || priorEtByCode.get(norm(code)) ? null
+    const learned = c.elementTypeRef || assignments[codeKey(code)] || priorEtByCode.get(codeKey(code)) ? null
       : learnedRef(knowledge, { text: code, manufacturers: manufacturer ? [manufacturer] : [] }, knownRefs)
-    const from = c.elementTypeRef ? 'product spec' : assignments[norm(code)] ? 'this import' : priorEtByCode.get(norm(code)) ? 'an earlier import' : learned ? 'learned' : null
+    const from = c.elementTypeRef ? 'product spec' : assignments[codeKey(code)] ? 'this import' : priorEtByCode.get(codeKey(code)) ? 'an earlier import' : learned ? 'learned' : null
     return { rule: 'etFor', subject: code, inputs: { code, maker: manufacturer, formRef },
-      result: { etRef: c.elementTypeRef || assignments[norm(code)] || priorEtByCode.get(norm(code)) || learned || null, from, status: c.status,
+      result: { etRef: c.elementTypeRef || assignments[codeKey(code)] || priorEtByCode.get(codeKey(code)) || learned || null, from, status: c.status,
         ...(c.status === 'amber' ? { nearest: c.base, nearestRef: c.masterRef } : {}), ...(c.otherMaker ? { otherMaker: c.otherMaker } : {}) } }
   }, [ctx, assignments, priorEtByCode, knowledge, knownRefs])
 
@@ -1459,8 +1463,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       const o = refOverrides[r.formRef]
       const target = o === undefined ? r.target : (o || null)
       const state = !target ? 'missing' : (o === undefined && r.ambiguous?.length) ? 'ambiguous'
-        : norm(target) !== norm(r.formRef) ? 'redirect' : 'ok'
-      m.set(norm(r.formRef), { target, state })
+        : codeKey(target) !== codeKey(r.formRef) ? 'redirect' : 'ok'
+      m.set(codeKey(r.formRef), { target, state })
     }
     return m
   }, [resolutions, refOverrides])
@@ -1470,10 +1474,10 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     if (isTbc(row, captureOpts)) {
       const key = tbcKey(row)
       return {
-        codes: [{ code: key, main: true, etRef: assignments[norm(key)] || priorEtByCode.get(norm(key)) || null }],
+        codes: [{ code: key, main: true, etRef: assignments[codeKey(key)] || priorEtByCode.get(codeKey(key)) || null }],
         status: { tone: 'warn', icon: 'hourglass_empty', label: 'TBC', tip: 'No product chosen yet: it gets a placeholder Product Spec row (TBC) and its own ElementType.' },
         suggested: [],
-        pt: map.pt ? (refState.get(norm(row.positionType)) || { state: 'ok' }) : { state: 'ok' },
+        pt: map.pt ? (refState.get(codeKey(row.positionType)) || { state: 'ok' }) : { state: 'ok' },
       }
     }
     const lead = leadOf(row, caps)
@@ -1489,7 +1493,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       codes, status,
       loose: deriveCaptures(row, captureOpts).unattachedNote,
       suggested: row.confirmed ? [] : suggestCodes(row, rules, signals),
-      pt: map.pt ? (refState.get(norm(row.positionType)) || { state: 'ok' }) : { state: 'ok' },
+      pt: map.pt ? (refState.get(codeKey(row.positionType)) || { state: 'ok' }) : { state: 'ok' },
     }
   }, [captureOpts, etFor, etTrace, ctx, rules, signals, map.pt, refState, assignments, priorEtByCode])
 
@@ -1499,7 +1503,6 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   /** A row still waiting on an ElementType: one of its codes, or its TBC placeholder. */
   const needsEt = useCallback(r => (isTbc(r, captureOpts) ? !etFor(tbcKey(r), r.manufacturer)
     : productCaptures(r, captureOpts).some(c => !etFor(c.code, r.manufacturer))), [captureOpts, etFor])
-  const needsEtCount = useMemo(() => formOrder.filter(needsEt).length, [formOrder, needsEt])
 
   // ---- By position ------------------------------------------------------------
   // Remembered per project; Whole Form unless you chose otherwise.
@@ -1525,9 +1528,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       ? proposeFor([...all.filter(e => !e.etRef && !hasNoteCollision(e)), ...tbcEntries.filter(e => !e.etRef && (e.rowRefs || []).some(id => ids.has(id)))], here).proposals
       : proposals
     // No family (or a reuse guess) means no proposed ref: show what the + window opens with.
-    const fresh = new Map(all.map(e => [norm(e.text), e.fresh]))
+    const fresh = new Map(all.map(e => [codeKey(e.text), e.fresh]))
     return props.map(p => {
-      const f = fresh.get(norm(p.code))
+      const f = fresh.get(codeKey(p.code))
       return p.ref || p.action === 'skip' || !f?.ref ? p : { ...p, ref: f.ref, family: p.family || f.family }
     })
   }, [embedded, scopeRows, captureOpts, proposals, entries, toEntries, confirmed, proposeFor, tbcEntries])
@@ -1550,7 +1553,6 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     status: positionStatus(g, { needsEt, stagedRefs: stagedSet }),
   })), [formOrder, map.pt, ptTarget, needsEt, stagedSet])
   // Nothing (or nothing that still exists) selected: take the next position still to do.
-  const embeddedRef = embedded?.posRef || null
   // Embedded `autoSaveAll` (the builder, once a Form is loaded): every position whose rows
   // are all confirmed and all have an ElementType, in one selection, saved together.
   useEffect(() => {
@@ -1558,12 +1560,6 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     const want = formPositions.filter(p => p.status === 'ready').map(p => p.formRef)
     if (want.length !== selectedRefs.size || want.some(r => !selectedRefs.has(r))) setSelectedRefs(new Set(want))
   }, [embedded, step, formPositions, selectedRefs])
-  useEffect(() => {
-    if (!embeddedRef || step !== 'review') return
-    // Embedded: the Form refs that land on this PositionType, and nothing else.
-    const want = formPositions.filter(p => String(p.target || '').toLowerCase() === embeddedRef.toLowerCase()).map(p => p.formRef)
-    if (want.length !== selectedRefs.size || want.some(r => !selectedRefs.has(r))) setSelectedRefs(new Set(want))
-  }, [embeddedRef, step, formPositions, selectedRefs])
   // …and the painter opens on its first row still to confirm.
   useEffect(() => {
     if (!embeddedRef || step !== 'review') return
@@ -1587,11 +1583,11 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     // Counted from the rows, confirmed or not: the codes they hold with no ElementType yet.
     const missing = new Set()
     for (const r of rowsIn) {
-      if (isTbc(r, captureOpts)) { if (!etFor(tbcKey(r), r.manufacturer)) missing.add(norm(tbcKey(r))) }
-      else for (const c of productCaptures(r, captureOpts)) if (!etFor(c.code, r.manufacturer)) missing.add(norm(c.code))
+      if (isTbc(r, captureOpts)) { if (!etFor(tbcKey(r), r.manufacturer)) missing.add(codeKey(tbcKey(r))) }
+      else for (const c of productCaptures(r, captureOpts)) if (!etFor(c.code, r.manufacturer)) missing.add(codeKey(c.code))
     }
     // The codes counted here are the queue the pane's Open walks through (2V84PW), so the two agree.
-    const noEtCodes = [...new Set([...missing, ...codes.filter(e => !e.etRef).map(e => norm(e.text))])]
+    const noEtCodes = [...new Set([...missing, ...codes.filter(e => !e.etRef).map(e => codeKey(e.text))])]
     const noEt = noEtCodes.length
     const unconfirmedRows = rowsIn.filter(r => !r.confirmed).length
     const clashes = collisions.filter(inSel).length
@@ -1643,7 +1639,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     if (autoSaved.current === key) return
     autoSaved.current = key
     addSelectionAndBuild({ stay: !!embedded.quiet && !(embedded.autoSave || embedded.autoSaveAll || sawWork.current) })
-  })   // eslint-disable-line react-hooks/exhaustive-deps
+  })    
 
   // What changed since the older Form (formDiff.js), per row id, and what it no longer has.
   const formDiff = useMemo(() => {
@@ -1708,8 +1704,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     setEtSeed(seed)
     for (const r of resolved) {
       if (r.confirmed) continue
-      const mine = isTbc(r, captureOpts) ? norm(tbcKey(r)) === norm(code)
-        : deriveCaptures(r, captureOpts).captures.some(c => norm(c.code) === norm(code))
+      const mine = isTbc(r, captureOpts) ? codeKey(tbcKey(r)) === codeKey(code)
+        : deriveCaptures(r, captureOpts).captures.some(c => codeKey(c.code) === codeKey(code))
       if (mine) {
         patchRow(r.id, x => ({ ...acceptSuggestions({ ...x, roles: r.roles }, rules, signals), confirmed: true }))
       }
@@ -1856,7 +1852,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
           onSetRole={setTokenRole}
           onToggleConfirm={toggleConfirm}
           onNeedsET={startEtQueue}
-          proposalFor={code => cardProposals.find(p => norm(p.code) === norm(code))}
+          proposalFor={code => cardProposals.find(p => codeKey(p.code) === codeKey(code))}
           onMoveNoteWord={(rowId, from, to, word) => moveNoteIn(rowId, from, to, word)}
           onEditNote={editNote}
           onMakeMain={(rowId, code) => patchRow(rowId, r => ({ ...r, leadCode: code }))}
@@ -2384,7 +2380,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
           ? (mergingGroup ? `for ${mergingGroup.length} merged codes` : `for ${creatingFor.text}`)
           : null}
         // Closing to compare against a sibling code must not lose what you typed.
-        draftKey={creatingFor ? `${mergingGroup ? mergingGroup.join('|') : ''}::${norm(creatingFor.text)}` : null}
+        draftKey={creatingFor ? `${mergingGroup ? mergingGroup.join('|') : ''}::${codeKey(creatingFor.text)}` : null}
         importContext={creatingFor ? {
           code: creatingFor.text,
           manufacturer: creatingFor.manufacturer,

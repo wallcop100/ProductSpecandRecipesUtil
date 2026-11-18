@@ -5,6 +5,7 @@ import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { looksLikeConnector } from '../utils/connectorGroups'
 import { C } from '../styles/tokens'
+import { live } from '../utils/derived'
 
 const LANES = [
   { id: 'position', label: 'Site', hint: 'Position level, first-fix: goes to site on its own' },
@@ -49,7 +50,7 @@ export default function ConnectorBoard({ parts, onChange }) {
     }
     const query = lc(q.trim())
     return elementTypes
-      .filter(e => (e.IsCollection || e.isCollection) !== 'Y' && (e.IsDeleted || e.isDeleted) !== 'Y' && e.ElementTypeRef)
+      .filter(e => (e.IsCollection || e.isCollection) !== 'Y' && live(e) && e.ElementTypeRef)
       .filter(inFam)
       .filter(e => !query || [e.ElementTypeRef, e.Name, specOf.get(lc(e.ElementTypeRef))].some(v => lc(v).includes(query)))
       .map(e => e.ElementTypeRef)

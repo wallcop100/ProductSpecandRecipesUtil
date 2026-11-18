@@ -14,11 +14,12 @@ import MaterialIcon from './MaterialIcon'
 import IconButton from './IconButton'
 import { familyOf } from '../utils/etRef'
 import { ACTION_ICONS } from '../utils/entityStyle'
-import { CANON_FAMILIES } from '../data/etCanon'
 import { planFamilyMove, tidyRef, refIssues } from '../utils/etSeed'
 import { familyFix, codeElsewhere, refNumberFix } from '../utils/specSuggest'
 import { C } from '../styles/tokens'
+import { familyOptionsOf } from './NewETModal'
 import { looksLikeProductCode } from '../utils/codeHeuristics'
+import { live as isLive, etRefOf } from '../utils/derived'
 
 /**
  * ETSpecEditor — right-panel form for editing a single ET's product spec.
@@ -63,7 +64,7 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
 
   const psRow = useMemo(() =>
     psRows.find(r =>
-      (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === (selectedRef || '').toLowerCase()
+      (etRefOf(r)).toLowerCase() === (selectedRef || '').toLowerCase()
     )
   , [psRows, selectedRef])
 
@@ -72,7 +73,7 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
 
   const etObj = useMemo(() =>
     elementTypes.find(e =>
-      (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === (selectedRef || '').toLowerCase()
+      (etRefOf(e)).toLowerCase() === (selectedRef || '').toLowerCase()
     )
   , [elementTypes, selectedRef])
   const etFamily = selectedRef ? familyOf(selectedRef, etObj) : null
@@ -84,9 +85,9 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
     const mfr  = psRow.Manufacturer || psRow.manufacturer
     if (code && mfr) return null
     return psRows.find(r => {
-      const rRef = r.ElementTypeRef || r.elementTypeRef || ''
+      const rRef = etRefOf(r)
       if (rRef.toLowerCase() === selectedRef.toLowerCase()) return false
-      const rEt = elementTypes.find(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === rRef.toLowerCase())
+      const rEt = elementTypes.find(e => (etRefOf(e)).toLowerCase() === rRef.toLowerCase())
       const rFamily = familyOf(rRef, rEt)
       return rFamily === etFamily && (r.ProductCode || r.productCode) && (r.Manufacturer || r.manufacturer)
     }) || null
@@ -141,8 +142,8 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
           Referenced in recipes but has no product spec entry.
           {/* Where (E2H3QX): each position using it, and the wrapper it sits in, if any. */}
           {(() => {
-            const live = recipes.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y'
-              && String(r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === String(selectedRef).toLowerCase())
+            const live = recipes.filter(r => isLive(r)
+              && String(etRefOf(r)).toLowerCase() === String(selectedRef).toLowerCase())
             const uses = getUsedIn(selectedRef, recipes).map(p => {
               const inside = [...new Set(live.filter(r => (r.PositionTypeRef || r.positionTypeRef) === p && (r.ContextType || r.contextType) === 'ElementType')
                 .map(r => r.ContextRef || r.contextRef))]
@@ -191,7 +192,7 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
   const extNotes      = psRow.ExternalNotesText || psRow.externalNotesText || ''
   const isTBC         = psRow.IsTBC || psRow.isTBC || null
   const isPropTBC     = psRow.IsPropertiesTBC || psRow.isPropertiesTBC || null
-  const isDeleted     = (psRow.IsDeleted || psRow.isDeleted) === 'Y'
+  const isDeleted     = !isLive(psRow)
   const retired       = retiredFor(retiredCodes, productCode)
 
   return (
@@ -273,7 +274,7 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
         {similar && !dismissedSimilar && !(elsewhere && !dismissedElsewhere) && (
           <div className="alert alert-warning py-2 px-3 mb-3 d-flex align-items-center gap-2" style={{ fontSize: 12 }}>
             <div className="flex-grow-1">
-              <strong>{similar.ElementTypeRef || similar.elementTypeRef}</strong>{' '}
+              <strong>{etRefOf(similar)}</strong>{' '}
               has: {similar.Manufacturer || similar.manufacturer} / {similar.ProductCode || similar.productCode}
             </div>
             <Button
@@ -485,7 +486,7 @@ function FamilyAndRef({ et, inDb, onRenamed }) {
   const renameElementType = useStore(s => s.renameElementType)
   const forkElementType = useStore(s => s.forkElementType)
   const createElementType = useStore(s => s.createElementType)
-  const ref = et.ElementTypeRef || et.elementTypeRef
+  const ref = etRefOf(et)
   const family = et.Family || et.family || ''
   // Opened from Find or a hint: already open, with the suggested ref typed in.
   const intent = useStore(s => s.specIntent)
@@ -499,13 +500,11 @@ function FamilyAndRef({ et, inDb, onRenamed }) {
     if (asked.suggest) setNewRef(asked.suggest)
     useStore.getState().consumeSpecIntent()
   }, [asked?.at])   // eslint-disable-line react-hooks/exhaustive-deps
-  const families = useMemo(() => [...new Set([
-    ...elementTypes.map(e => e.Family || e.family).filter(Boolean),
-    ...elementTypes.filter(e => (e.IsCollection || e.isCollection) === 'Y').map(e => e.ElementTypeRef),
-    ...CANON_FAMILIES.map(f => f.ref),
-  ])].sort(), [elementTypes])
+  const dbCollectionRefs = useStore(s => s.dbCollectionRefs)
+  // VHCCAF: the same list the New ElementType dialog offers; a wrapper (ET-DL-01) is not a family.
+  const families = useMemo(() => familyOptionsOf(elementTypes, dbCollectionRefs), [elementTypes, dbCollectionRefs])
   const psRows = useStore(s => s.psRows)
-  const tidy = useMemo(() => tidyRef(ref, [...elementTypes, ...psRows].map(e => e.ElementTypeRef || e.elementTypeRef).filter(Boolean)), [ref, elementTypes, psRows])
+  const tidy = useMemo(() => tidyRef(ref, [...elementTypes, ...psRows].map(e => etRefOf(e)).filter(Boolean)), [ref, elementTypes, psRows])
   const taken = r => r.toLowerCase() !== ref.toLowerCase()
     && elementTypes.some(e => (e.ElementTypeRef || '').toLowerCase() === r.toLowerCase())
 

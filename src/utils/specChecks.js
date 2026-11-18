@@ -6,6 +6,7 @@
  * per project (Product Spec ⋯ → Checks skip), so a family can be turned back on.
  */
 import { familyOf } from './etRef'
+import { etRefOf } from './derived'
 
 const lc = s => String(s ?? '').toLowerCase()
 
@@ -13,7 +14,7 @@ const lc = s => String(s ?? '').toLowerCase()
 export function skippedRefs(refs, elementTypes, families) {
   const skip = new Set((families || []).map(lc))
   if (!skip.size) return new Set()
-  const byRef = new Map((elementTypes || []).map(e => [lc(e.ElementTypeRef || e.elementTypeRef), e]))
+  const byRef = new Map((elementTypes || []).map(e => [lc(etRefOf(e)), e]))
   const out = new Set()
   for (const r of refs) {
     const k = lc(r)

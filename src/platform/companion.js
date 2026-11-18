@@ -180,16 +180,19 @@ export function getCompanion() {
 /** Tests only: forget the probe. */
 export function resetCompanion() {
   probe = null
+  known = null
   proofs.clear()
   proven.clear()
 }
 
 /** React: the companion, or null (also null until the probe answers). */
+// The probe's answer once it is in: a later mount starts with it instead of a null frame (cards blinked on every position switch).
+let known = null
 export function useCompanion() {
-  const [api, setApi] = useState(null)
+  const [api, setApi] = useState(known)
   useEffect(() => {
     let live = true
-    getCompanion().then(c => { if (live) setApi(c) })
+    getCompanion().then(c => { known = c; if (live) setApi(c) })
     return () => { live = false }
   }, [])
   return api

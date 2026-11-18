@@ -22,6 +22,7 @@ import { retiredFor, newerCodes } from '../platform/retired'
 import { useScreenView } from './useScreenView'
 import { noteCodeChange, NotRightModal, sendCorrection, sendNote } from './Corrections'
 import { partMatches } from '../utils/positionQuery'
+import { live, etRefOf, entryRefOf } from '../utils/derived'
 
 // A part's tree line in its wrapper's contents and its card when exploded share this, so one morphs into the other (#74).
 const partTransitionName = (container, ref) => `part-${`${container}-${ref}`.toLowerCase().replace(/[^a-z0-9-]/g, '-')}`
@@ -38,7 +39,7 @@ const partTransitionName = (container, ref) => `part-${`${container}-${ref}`.toL
 function specRowFor(psRows, ref) {
   const lc = String(ref || '').toLowerCase()
   if (!lc) return null
-  const rows = psRows.filter(p => (p.ElementTypeRef || p.elementTypeRef || '').toLowerCase() === lc)
+  const rows = psRows.filter(p => (etRefOf(p)).toLowerCase() === lc)
   return rows.find(p => p.ProductCode || p.productCode) || rows[0] || null
 }
 
@@ -61,7 +62,6 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   const setSelectMode = useStore(s => s.setSelectMode)
   const shiftHeld = useShiftHeld()
   const copyRows = useStore(s => s.copyRows)
-  const suggestNextETRef = useStore(s => s.suggestNextETRef)
   const restoreRecipeRow = useStore(s => s.restoreRecipeRow)
 
   const rowId = row._id
@@ -71,7 +71,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   const showCheck = isSelected || shiftHeld || selectMode
   // Unsynced = this row has a pending change not yet exported to the source file
   const isDirty = useStore(s => s.rsChanges.some(c => c._id === rowId))
-  const isDeleted = (row.IsDeleted || row.isDeleted) === 'Y'
+  const isDeleted = !live(row)
 
   const {
     attributes,
@@ -102,7 +102,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
     }
   }, [lastAddedRowId, rowId])
 
-  const etRef = row.elementTypeRef || row.ElementTypeRef || ''
+  const etRef = entryRefOf(row)
   const isUnresolved = row.resolved === false
   // New = added in-app this session AND not yet synced to the source file.
   const isNewRow = !isUnresolved && row._row_num == null && isDirty
@@ -115,7 +115,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
 
   // ET family for sublabel on the pill
   const etObj = etRef
-    ? elementTypes.find(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === etRef.toLowerCase())
+    ? elementTypes.find(e => (etRefOf(e)).toLowerCase() === etRef.toLowerCase())
     : null
   const etFamily = etRef ? familyOf(etRef, etObj) : null
 
@@ -150,7 +150,6 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
       : 'No wrapper signals')
     : ''
   const usedIn = isContainer ? getUsedIn(etRef, recipes, posRef) : []
-  const nextRef = isContainer ? suggestNextETRef(etRef) : null
   const internalItems = isContainer ? getInternalItems(etRef, recipes, elementTypes) : []
 
   // A plain (non-container) ElementType can still be used across several positions — the
@@ -179,7 +178,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   const container = row.ContextRef || row.contextRef
   const morphName = exploded && sectionKey !== 'position' && container && recipes.find(r =>
     (r.PositionTypeRef || r.positionTypeRef) === posRef && (r.ContextRef || r.contextRef) === container
-    && (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === etRef.toLowerCase())?._id === rowId
+    && (etRefOf(r)).toLowerCase() === etRef.toLowerCase())?._id === rowId
     ? partTransitionName(container, etRef) : undefined
   const wrapKey = (etRef || '').toLowerCase()
   // Wrappers start open (W47AXP): a part inside one is part of the recipe you are reading.
@@ -214,7 +213,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   const showExtraControls = showExtra || extraInUse || qtyToConfirm
   // …and on a wrapper row, the ones waiting inside it (they are confirmed in Edit internals).
   const insidePending = !!teaching && teaching.posRef === posRef && isContainer
-    ? internalItems.map(it => it.ref || it.elementTypeRef || it.ElementTypeRef)
+    ? internalItems.map(it => it.ref || entryRefOf(it))
         .filter(ref => ref && QTY_CONFIRM_ROLES.has(roleOf(ref)) && !(teaching.qtyConfirmed || []).includes(String(ref).toLowerCase()))
     : []
 

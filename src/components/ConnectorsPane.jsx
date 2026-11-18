@@ -6,7 +6,7 @@ import IconButton from './IconButton'
 import CellDetailPanel from './CellDetailPanel'
 import { WagoSuggestion } from './GlobalConnectors'
 import useConnectorGroups from './useConnectorGroups'
-import { templateParts, diffParts, diffSize, describeParts, findGroups, suggestName } from '../utils/connectorGroups'
+import { templateParts, diffParts, diffSize, findGroups, suggestName } from '../utils/connectorGroups'
 import { templateRule, ruleIsEmpty, describeRule, ruleFor, ruleMatchesRecord, TEMPLATE_RULE_COLUMNS } from '../utils/templateRules'
 import { TAG_OPS } from '../utils/tagRules'
 import { C } from '../styles/tokens'
@@ -33,7 +33,6 @@ export default function ConnectorsPane({ posRef, onOpenConnectors }) {
   const restoreToTemplate = useStore(s => s.restoreToTemplate)
   const excludes = useStore(s => s.connectorExcludes)
   const makeTemplateFromGroup = useStore(s => s.makeTemplateFromGroup)
-  const setActivePosition = useStore(s => s.setActivePosition)
 
   const m = groups.members.get(posRef) || { templates: [], pinnedTo: null, clash: false }
   const have = groups.sigs.get(posRef) || []

@@ -33,7 +33,7 @@ import ConnectorAutoJoin from '../components/ConnectorAutoJoin'
 import { connectorGapsForPosition } from '../utils/collectionStatus'
 import { membership } from '../utils/connectorGroups'
 import TemplatesPane from '../components/TemplatesPane'
-import useTemplateMatches, { useHintsOff, hintOff } from '../components/useTemplateMatches'
+import useTemplateMatches, { useHintsOff, hintOff, useTemplateRecOf } from '../components/useTemplateMatches'
 import PasteMergeModal from '../components/PasteMergeModal'
 import ReviewModal from '../components/ReviewModal'
 import FormRecipesModal from '../components/FormRecipesModal'
@@ -53,6 +53,7 @@ import MaterialIcon from '../components/MaterialIcon'
 import { ACTION_ICONS, ICONS } from '../utils/entityStyle'
 import { C } from '../styles/tokens'
 import { askConfirm } from '../components/ConfirmHost'
+import { live as isLive } from '../utils/derived'
 
 /**
  * BuilderScreen — three-column layout.
@@ -69,7 +70,7 @@ const DRAWER_LS = 'builderDrawerWidth'
 const clampDrawer = w => Math.max(280, Math.min(Math.round(window.innerWidth * 0.6), w))
 
 export default function BuilderScreen({
-  onOpenTemplateEditor, onOpenProductSpec, onOpenConnectors, onOpenTags, onOpenCodeImport, onBackToSetup,
+  onOpenTemplateEditor, onOpenProductSpec, onOpenConnectors, onOpenCodeImport, onBackToSetup,
   pendingReviewRefs, onConsumePendingReview, importLoop = null, onNextFromImport, onEndImportLoop,
 }) {
   const rootView = useStore(s => s.rootView)
@@ -80,7 +81,6 @@ export default function BuilderScreen({
   const activeContextType = useStore(s => s.activeContextType)
   const activeETRef = useStore(s => s.activeETRef)
   const recipes = useStore(s => s.recipes)
-  const positionUI = useStore(s => s.positionUI)
   const psChanges = useStore(s => s.psChanges)
   const rsChanges = useStore(s => s.rsChanges)
   const dbChanges = useStore(s => s.dbChanges)
@@ -132,12 +132,12 @@ export default function BuilderScreen({
       startReconcile(pendingReviewRefs)
       onConsumePendingReview?.()
     }
-  }, [pendingReviewRefs, onConsumePendingReview])   // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pendingReviewRefs, onConsumePendingReview])    
   // What to do next on a new project: import the Form first, then build what it imported.
   const [hideNextStep, setHideNextStep] = useState(false)
   const nextStep = useMemo(() => {
     if (hideNextStep) return null
-    const live = recipes.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
+    const live = recipes.filter(r => isLive(r))
     const imported = Object.keys(formCaptures?.byPosition || {}).filter(p => formCaptures.byPosition[p]?.length)
     if (live.length === 0 && imported.length === 0 && onOpenCodeImport) {
       return { icon: 'auto_fix_high', title: 'New project? Start with the Form.',
@@ -239,7 +239,7 @@ export default function BuilderScreen({
 
   function filterDeleted(rows) {
     if (showDeleted) return rows
-    return rows.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
+    return rows.filter(r => isLive(r))
   }
 
   function handleAddRow(posRef, sectionKey) {
@@ -373,16 +373,16 @@ export default function BuilderScreen({
   // Connector gaps on the open position: a dot on the drawer's Connectors tab.
   const connectorPins = useStore(s => s.connectorPins)
   const connectorExcludes = useStore(s => s.connectorExcludes)
+  const recOf = useTemplateRecOf()
   const connectorGaps = useMemo(() => {
     if (!drawerPos) return 0
-    const recOf = useStore.getState()._templateRecOf()
     const member = membership([drawerPos], etCollections, connectorPins, recOf, connectorExcludes).get(drawerPos)
     return connectorGapsForPosition(recipes, drawerPos, recOf(drawerPos), etCollections, containerETRefs, member).length
-  }, [drawerPos, recipes, etCollections, containerETRefs, connectorPins, connectorExcludes])
+  }, [drawerPos, recipes, etCollections, containerETRefs, connectorPins, connectorExcludes, recOf])
   // Dot on the Templates tab: the open position is empty and a template fits it (unless its hint was dismissed).
   const hintsOff = useHintsOff()
   const drawerMatches = useTemplateMatches(drawerPos ? [drawerPos] : [])
-  const templateHint = !!drawerPos && !hintOff(hintsOff, drawerPos) && !recipes.some(r => (r.PositionTypeRef || r.positionTypeRef) === drawerPos && (r.IsDeleted || r.isDeleted) !== 'Y')
+  const templateHint = !!drawerPos && !hintOff(hintsOff, drawerPos) && !recipes.some(r => (r.PositionTypeRef || r.positionTypeRef) === drawerPos && isLive(r))
     && (drawerMatches.get(drawerPos)?.matches.length || 0) > 0
   const activeGrouped = activePositionRef ? getRecipeForPosition(recipes, activePositionRef) : null
   const hasRecipeRows = !!activeGrouped && (

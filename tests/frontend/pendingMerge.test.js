@@ -42,6 +42,15 @@ describe('pendingCandidates', () => {
     expect(out.map(c => c.ref)).toEqual(['ET-A', 'ET-B'])
   })
 
+  // D01r: the Form's profile FPS1715BG2000 was offered the recipe's diffuser ET-LIN-DIFF-02.
+  test('a recipe part that does a different job is not offered; the same job comes first', () => {
+    const prof = { code: 'FPS1715BG2000', manufacturer: 'LEDFlex', note: 'Profile' }
+    const elementTypes = [et('ET-LIN-DIFF-02', 'Diffuser'), et('ET-LIN-PROF-03', 'Profile'), et('ET-MISC-01')]
+    const out = pendingCandidates(prof, { elementTypes,
+      extra: [extra('ET-LIN-DIFF-02', 'internal'), extra('ET-MISC-01', 'internal'), extra('ET-LIN-PROF-03', 'internal')] })
+    expect(out.map(c => c.ref)).toEqual(['ET-LIN-PROF-03', 'ET-MISC-01'])
+  })
+
   test('a Product Spec hit outranks everything — it is a fact, not a guess', () => {
     const out = pendingCandidates(
       p('LL240272024', 'Nichia'),

@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react'
 import { Badge, Button, Form } from 'react-bootstrap'
 import useStore from '../store/useStore'
+import { useTemplateRecOf, useConnectorOpts } from './useTemplateMatches'
 import { useScreenView } from './useScreenView'
 import MaterialIcon from './MaterialIcon'
-import { collectionStatusForPosition, positionRecipeWithWrapperInternals, extraConnectorRows } from '../utils/collectionStatus'
+import { collectionStatusForPosition, positionRecipeWithWrapperInternals } from '../utils/collectionStatus'
 import { positionFamilyOf } from '../utils/positionFamily'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import BulkApplyModal from './BulkApplyModal'
@@ -85,15 +86,17 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
   }), [positionTypes, positionUI, ignoredFamilySet])
 
   // Compute status for every (scoped position, collection) once.
+  const recOf = useTemplateRecOf()
+  const connectorOpts = useConnectorOpts()
   // Pins first, then filters (connectorGroups.membership); two filters on one unpinned
   // position is a clash, flagged on its row.
   const members = useMemo(() => membership(scopedPositions.map(pt => pt.PositionTypeRef), collections, connectorPins,
-    useStore.getState()._templateRecOf(), connectorExcludes), [scopedPositions, collections, connectorPins, positionUI, connectorExcludes, recipes])
+    recOf, connectorExcludes), [scopedPositions, collections, connectorPins, recOf, connectorExcludes])
 
   // Status per (position, template), and the connectors each has that its template
   // doesn't ask for (a template with no parts means: no connectors here).
   const { statusByPos, extrasByPos } = useMemo(() => {
-    const opts = useStore.getState()._connectorOpts()
+    const opts = connectorOpts
     const isConnector = ref => isConnectorPart(ref, opts)
     const map = {}, extras = {}
     for (const pt of scopedPositions) {
@@ -111,7 +114,7 @@ export default function CoverageMatrix({ selectedCell, onCellClick, onNewCollect
       map[posRef] = byColl
     }
     return { statusByPos: map, extrasByPos: extras }
-  }, [scopedPositions, positionUI, recipes, collections, members])
+  }, [scopedPositions, positionUI, recipes, collections, members, connectorOpts])
 
 
   const positions = useMemo(() => {

@@ -11,12 +11,6 @@ const dbData = {
   position_types: [],
 }
 
-// positionUI — { ref: { tags } }
-const positionUI = {
-  'PT-DL-LOCAL-01': { tags: ['DL', 'Local', '5Pin-DALI'] },
-  'PT-LIN-01': { tags: ['LIN', 'Local'] },
-}
-
 // Helper: build a PS row (product spec row)
 function makePsRow(elementTypeRef, productCode) {
   return { elementTypeRef, productCode }

@@ -7,13 +7,13 @@
  */
 import { LATEST } from '../changelog'
 import { reportTraces } from './trace'
+import { live } from './derived'
 
 const KEY = 'bugReports'
 const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev'
 /** Which line of builds this is: 'dev' (the dev branch, before it ships) or 'prod'. */
 export const APP_CHANNEL = typeof __APP_CHANNEL__ !== 'undefined' ? __APP_CHANNEL__ : 'prod'
 const clip = (s, n = 120) => { const t = String(s ?? '').replace(/\s+/g, ' ').trim(); return t.length > n ? `${t.slice(0, n - 1)}…` : t }
-const live = r => (r.IsDeleted || r.isDeleted) !== 'Y'
 
 const ID_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'   // no 0/O, 1/I: read aloud without mix-ups
 

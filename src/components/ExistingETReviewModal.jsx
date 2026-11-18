@@ -5,9 +5,9 @@ import MaterialIcon from './MaterialIcon'
 import { CANON_FAMILIES } from '../data/etCanon'
 import { planFamilyMove } from '../utils/etSeed'
 import { C } from '../styles/tokens'
+import { live, etRefOf } from '../utils/derived'
 
 const lc = s => String(s ?? '').trim().toLowerCase()
-const refOf = e => e.ElementTypeRef || e.elementTypeRef || ''
 const NO_FAMILY = ''
 
 /**
@@ -38,8 +38,8 @@ export default function ExistingETReviewModal({ show, onHide, tabs = null, anima
   const product = useMemo(() => {
     const m = new Map()
     for (const r of psRows) {
-      if ((r.IsDeleted || r.isDeleted) === 'Y') continue
-      const k = lc(r.ElementTypeRef || r.elementTypeRef)
+      if (!live(r)) continue
+      const k = lc(etRefOf(r))
       if (k && !m.has(k)) m.set(k, [r.Manufacturer || r.manufacturer, r.ProductCode || r.productCode].filter(Boolean).join(' · '))
     }
     return m
@@ -48,8 +48,8 @@ export default function ExistingETReviewModal({ show, onHide, tabs = null, anima
   const uses = useMemo(() => {
     const m = new Map()
     for (const r of recipes) {
-      if ((r.IsDeleted || r.isDeleted) === 'Y') continue
-      const k = lc(r.ElementTypeRef || r.elementTypeRef)
+      if (!live(r)) continue
+      const k = lc(etRefOf(r))
       if (!m.has(k)) m.set(k, new Set())
       m.get(k).add(r.PositionTypeRef || r.positionTypeRef)
     }
@@ -57,10 +57,10 @@ export default function ExistingETReviewModal({ show, onHide, tabs = null, anima
   }, [recipes])
 
   const value = (et, field) => {
-    const d = draft[lc(refOf(et))]
+    const d = draft[lc(etRefOf(et))]
     return d && field in d ? d[field] : (et[field] ?? '')
   }
-  const edit = (et, field, v) => setDraft(d => ({ ...d, [lc(refOf(et))]: { ...d[lc(refOf(et))], [field]: v } }))
+  const edit = (et, field, v) => setDraft(d => ({ ...d, [lc(etRefOf(et))]: { ...d[lc(etRefOf(et))], [field]: v } }))
 
   // Families: the project's own plus the company's, so a move is always to a real one.
   const families = useMemo(() => [...new Set([
@@ -69,7 +69,7 @@ export default function ExistingETReviewModal({ show, onHide, tabs = null, anima
   ])].sort(), [elementTypes])
 
   const q = lc(filter)
-  const visible = elementTypes.filter(et => !q || [refOf(et), et.Name, et.Description, et.Family, product.get(lc(refOf(et)))]
+  const visible = elementTypes.filter(et => !q || [etRefOf(et), et.Name, et.Description, et.Family, product.get(lc(etRefOf(et)))]
     .some(v => lc(v).includes(q)))
   const groups = new Map()
   for (const et of visible) {
@@ -81,16 +81,16 @@ export default function ExistingETReviewModal({ show, onHide, tabs = null, anima
   const order = [...groups.keys()].sort((a, b) => (a === NO_FAMILY ? -1 : b === NO_FAMILY ? 1 : a.localeCompare(b)))
 
   const changes = Object.entries(draft).map(([k, d]) => {
-    const et = elementTypes.find(e => lc(refOf(e)) === k)
+    const et = elementTypes.find(e => lc(etRefOf(e)) === k)
     if (!et) return null
     const changed = {}
     for (const [f, v] of Object.entries(d)) if ((et[f] ?? '') !== v) changed[f] = v === '' ? null : v
-    return Object.keys(changed).length ? [refOf(et), changed] : null
+    return Object.keys(changed).length ? [etRefOf(et), changed] : null
   }).filter(Boolean)
 
-  const pickedRefs = elementTypes.filter(e => picked.has(lc(refOf(e)))).map(refOf)
-  const plan = moveTo && pickedRefs.length ? planFamilyMove(pickedRefs, moveTo, elementTypes, { renumber }) : null
-  const inDb = elementTypes.filter(e => picked.has(lc(refOf(e))) && e._row_num != null).length
+  const pickedRefs = elementTypes.filter(e => picked.has(lc(etRefOf(e)))).map(etRefOf)
+  const plan = moveTo && pickedRefs.length ? planFamilyMove(pickedRefs, moveTo, elementTypes, { renumber, collectionRefs: useStore.getState().dbCollectionRefs || [] }) : null
+  const inDb = elementTypes.filter(e => picked.has(lc(etRefOf(e))) && e._row_num != null).length
 
   function move() {
     // Pending edits are keyed by ref, which the move may change: save them first.
@@ -159,30 +159,30 @@ export default function ExistingETReviewModal({ show, onHide, tabs = null, anima
           <div key={f || 'none'} className="mb-3" data-testid={`existing-family-${f || 'none'}`}>
             <div className="fw-semibold mb-1 d-flex align-items-center gap-2" style={{ fontSize: 11, color: f ? C.ink : C.attnInk }}>
               <Form.Check type="checkbox" aria-label={`Select all in ${f || 'no family'}`}
-                checked={groups.get(f).every(et => picked.has(lc(refOf(et))))}
-                onChange={e => setPicked(p => { const n = new Set(p); for (const et of groups.get(f)) { if (e.target.checked) n.add(lc(refOf(et))); else n.delete(lc(refOf(et))) } return n })} />
+                checked={groups.get(f).every(et => picked.has(lc(etRefOf(et))))}
+                onChange={e => setPicked(p => { const n = new Set(p); for (const et of groups.get(f)) { if (e.target.checked) n.add(lc(etRefOf(et))); else n.delete(lc(etRefOf(et))) } return n })} />
               {f ? <span style={{ fontFamily: 'monospace' }}>{f}</span> : <><MaterialIcon name="warning" size={12} /> No family</>}
               <span className="text-muted fw-normal"> · {groups.get(f).length}</span>
             </div>
             {groups.get(f).map(et => {
-              const k = lc(refOf(et))
+              const k = lc(etRefOf(et))
               const n = uses.get(k)?.size || 0
               return (
                 <div key={k} className="d-flex align-items-center gap-2 py-1 border-bottom">
                   <Form.Check type="checkbox" checked={picked.has(k)} onChange={() => togglePick(k)}
-                    aria-label={`Select ${refOf(et)}`} />
+                    aria-label={`Select ${etRefOf(et)}`} />
                   <div style={{ width: 190, flexShrink: 0 }}>
-                    <div style={{ fontFamily: 'monospace', fontWeight: 600 }}>{refOf(et)}</div>
+                    <div style={{ fontFamily: 'monospace', fontWeight: 600 }}>{etRefOf(et)}</div>
                     <div className="text-muted text-truncate" style={{ fontSize: 10 }}>
                       {product.get(k) || 'no product'} · {n ? `${n} position${n === 1 ? '' : 's'}` : 'unused'}
                     </div>
                   </div>
                   <Form.Control size="sm" style={{ fontSize: 11, flex: 1 }} value={value(et, 'Name')}
-                    aria-label={`Name of ${refOf(et)}`} placeholder="Name" onChange={e => edit(et, 'Name', e.target.value)} />
+                    aria-label={`Name of ${etRefOf(et)}`} placeholder="Name" onChange={e => edit(et, 'Name', e.target.value)} />
                   <Form.Control size="sm" style={{ fontSize: 11, flex: 2 }} value={value(et, 'Description')}
-                    aria-label={`Description of ${refOf(et)}`} placeholder="Description" onChange={e => edit(et, 'Description', e.target.value)} />
+                    aria-label={`Description of ${etRefOf(et)}`} placeholder="Description" onChange={e => edit(et, 'Description', e.target.value)} />
                   <Form.Select size="sm" style={{ fontSize: 11, width: 200, flexShrink: 0 }} value={value(et, 'Family')}
-                    aria-label={`Family of ${refOf(et)}`} onChange={e => edit(et, 'Family', e.target.value)}>
+                    aria-label={`Family of ${etRefOf(et)}`} onChange={e => edit(et, 'Family', e.target.value)}>
                     <option value="">(no family)</option>
                     {families.map(x => <option key={x} value={x}>{x}</option>)}
                   </Form.Select>

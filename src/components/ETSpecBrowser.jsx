@@ -9,6 +9,7 @@ import { familyOf } from '../utils/etRef'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { productKey, duplicateProductKeys, hasProductIdentity } from '../utils/productCodes'
 import { C } from '../styles/tokens'
+import { live, etRefOf } from '../utils/derived'
 
 const STATUS_COLOR = {
   complete:  C.success,
@@ -26,7 +27,7 @@ function completenessOf(ref, psRowMap, missingSet, duplicateKeys, skipped = null
   if (missingSet.has(key) && !psRowMap.has(key)) return 'missing'
   const row = psRowMap.get(key)
   if (!row) return 'missing'
-  if ((row.IsDeleted || row.isDeleted) === 'Y') return 'deleted'
+  if (!live(row)) return 'deleted'
   const tbc = (row.IsTBC || row.isTBC) === 'Y'
   const code = (row.ProductCode || row.productCode || '').trim()
   if (!code || tbc) return 'partial'
@@ -83,7 +84,7 @@ export default function ETSpecBrowser({
   const psRowMap = useMemo(() => {
     const m = new Map()
     for (const r of psRows) {
-      const k = (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase()
+      const k = (etRefOf(r)).toLowerCase()
       if (k) m.set(k, r)
     }
     return m
@@ -92,7 +93,7 @@ export default function ETSpecBrowser({
   const etObjMap = useMemo(() => {
     const m = new Map()
     for (const et of elementTypes) {
-      const k = (et.ElementTypeRef || et.elementTypeRef || '').toLowerCase()
+      const k = (etRefOf(et)).toLowerCase()
       if (k) m.set(k, et)
     }
     return m
@@ -103,9 +104,9 @@ export default function ETSpecBrowser({
 
   const allRefs = useMemo(() => {
     const set = new Set()
-    for (const et of elementTypes) { const r = et.ElementTypeRef || et.elementTypeRef; if (r) set.add(r) }
-    for (const r of psRows)        { const ref = r.ElementTypeRef || r.elementTypeRef; if (ref) set.add(ref) }
-    for (const r of recipes)       { const ref = r.ElementTypeRef || r.elementTypeRef; if (ref) set.add(ref) }
+    for (const et of elementTypes) { const r = etRefOf(et); if (r) set.add(r) }
+    for (const r of psRows)        { const ref = etRefOf(r); if (ref) set.add(ref) }
+    for (const r of recipes)       { const ref = etRefOf(r); if (ref) set.add(ref) }
     return [...set].sort()
   }, [elementTypes, psRows, recipes])
 
@@ -127,7 +128,7 @@ export default function ETSpecBrowser({
       const status = completenessOf(ref, psRowMap, missingSet, duplicateCodes, skippedRefs)
       const group = getGroupKey(ref, viewMode, psRowMap, etObjMap)
       const code = (psRow?.ProductCode || psRow?.productCode || '').trim().toUpperCase()
-      const isDeleted = (psRow?.IsDeleted || psRow?.isDeleted) === 'Y'
+      const isDeleted = !live(psRow)
       const isDup = hasProductIdentity(code)
         && duplicateCodes.has(productKey(psRow?.Manufacturer || psRow?.manufacturer, code))
 
@@ -163,7 +164,7 @@ export default function ETSpecBrowser({
         (psRow?.Manufacturer || '').toLowerCase().includes(q) ||
         group.toLowerCase().includes(q)
     }
-  }, [search, groupFilter, statusFilters, usageFilters, psRowMap, missingSet, duplicateCodes, etUsedIn, viewMode, etObjMap])
+  }, [search, groupFilter, statusFilters, usageFilters, psRowMap, missingSet, duplicateCodes, etUsedIn, viewMode, etObjMap, skippedRefs])
 
   const filtered = useMemo(() => allRefs.filter(shows), [allRefs, shows])
   const shownMissing = useMemo(() => missingETs.filter(shows), [missingETs, shows])

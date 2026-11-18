@@ -8,6 +8,7 @@ import IconButton from './IconButton'
 import { familyOf } from '../utils/etRef'
 import { colorsForType, iconForEntity, ACTION_ICONS } from '../utils/entityStyle'
 import { C } from '../styles/tokens'
+import { etRefOf } from '../utils/derived'
 
 const FLAGGED_FAMILY = '⚠ Recipe-only (not in DB or Spec)'
 
@@ -36,7 +37,7 @@ export default function ElementPalette({ pickTarget, onPickET, onPickETMulti, on
   const psRowByET = useMemo(() => {
     const map = new Map()
     for (const row of psRows) {
-      const ref = (row.ElementTypeRef || row.elementTypeRef || '').toLowerCase()
+      const ref = (etRefOf(row)).toLowerCase()
       if (ref && !map.has(ref)) map.set(ref, row)
     }
     return map
@@ -46,11 +47,11 @@ export default function ElementPalette({ pickTarget, onPickET, onPickETMulti, on
   const allETs = useMemo(() => {
     const map = new Map()
     for (const et of elementTypes) {
-      const key = (et.ElementTypeRef || et.elementTypeRef || '').toLowerCase()
+      const key = (etRefOf(et)).toLowerCase()
       if (key) map.set(key, { ...et, _undefinedRef: false })
     }
     for (const row of psRows) {
-      const ref = row.ElementTypeRef || row.elementTypeRef || ''
+      const ref = etRefOf(row)
       const key = ref.toLowerCase()
       if (!key || map.has(key)) continue
       map.set(key, {
@@ -61,7 +62,7 @@ export default function ElementPalette({ pickTarget, onPickET, onPickETMulti, on
       })
     }
     for (const row of recipes) {
-      const ref = row.ElementTypeRef || row.elementTypeRef || ''
+      const ref = etRefOf(row)
       const key = ref.toLowerCase()
       if (!key || map.has(key)) continue
       map.set(key, { ElementTypeRef: ref, Name: null, Family: null, _undefinedRef: true })
@@ -69,7 +70,7 @@ export default function ElementPalette({ pickTarget, onPickET, onPickETMulti, on
 
     return [...map.values()]
       .map(et => {
-        const ref = et.ElementTypeRef || et.elementTypeRef
+        const ref = etRefOf(et)
         const psRow = psRowByET.get((ref || '').toLowerCase())
         return {
           ...et,
@@ -266,7 +267,7 @@ export default function ElementPalette({ pickTarget, onPickET, onPickETMulti, on
               </div>
               {open && ets.map(et => (
                 <DraggableETCard
-                  key={et.ElementTypeRef || et.elementTypeRef}
+                  key={etRefOf(et)}
                   et={et}
                   mode={mode}
                   onPickET={pickTarget ? (multiAdd && onPickETMulti ? onPickETMulti : onPickET) : null}
@@ -288,7 +289,7 @@ function groupKeyFor(et, mode) {
 }
 
 function DraggableETCard({ et, mode, onPickET }) {
-  const ref = et.ElementTypeRef || et.elementTypeRef
+  const ref = etRefOf(et)
   const isCollection = useStore(s => ref ? s.containerETRefs.has(ref.toLowerCase()) : false)
   const isFav = useStore(s => ref ? s.isFavorite('element', ref) : false)
   const favoriteElement = useStore(s => s.favoriteElement)

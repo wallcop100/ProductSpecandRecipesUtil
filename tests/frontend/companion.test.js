@@ -86,7 +86,7 @@ describe('companion discovery', () => {
     expect(c.shareOutcomes).toBeNull()
   })
   it('proves a project with salted hashes, then sends the token on its calls', async () => {
-    const f = vi.fn(async (url, init) => {
+    const f = vi.fn(async (url) => {
       const u = String(url)
       if (u.includes('capabilities')) return json({ protocol: PROTOCOL, features: ['projects', 'proof'] })
       if (u === './api/proof') return json({ nonce: 'N' })

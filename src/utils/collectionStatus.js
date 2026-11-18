@@ -16,6 +16,7 @@ import {
   containerForPosition, normalizeSection, INTERNAL, POSITION, wantedSlots, rowSlot,
 } from './recipePresence'
 import { templateRule, ruleIsEmpty, ruleMatchesRecord, asRecord } from './templateRules'
+import { live, etRefOf } from './derived'
 
 function parseIngredients(collection) {
   if (!collection) return []
@@ -26,7 +27,6 @@ function parseIngredients(collection) {
 const posOf = r => r.PositionTypeRef || r.positionTypeRef
 const ctxOf = r => r.ContextType || r.contextType
 const crefOf = r => r.ContextRef || r.contextRef || ''
-const etOf = r => r.ElementTypeRef || r.elementTypeRef || ''
 
 /**
  * positionRecipeWithWrapperInternals(recipes, posRef)
@@ -57,8 +57,8 @@ export function positionRecipeWithWrapperInternals(recipes, posRef) {
 
   const wrapperRefs = [...new Set(
     own
-      .filter(r => ctxOf(r) === 'PositionType' && (r.IsDeleted || r.isDeleted) !== 'Y')
-      .map(r => etOf(r).toLowerCase())
+      .filter(r => ctxOf(r) === 'PositionType' && live(r))
+      .map(r => etRefOf(r).toLowerCase())
       .filter(ref => ref && internalByCtx.has(ref))
   )]
 
@@ -86,8 +86,8 @@ export function wrapperUsedBy(recipes, wrapperRef) {
   const s = new Set()
   for (const r of recipes || []) {
     if (ctxOf(r) !== 'PositionType') continue
-    if ((r.IsDeleted || r.isDeleted) === 'Y') continue
-    if (etOf(r).toLowerCase() !== lc) continue
+    if (!live(r)) continue
+    if (etRefOf(r).toLowerCase() !== lc) continue
     const p = posOf(r)
     if (p) s.add(p)
   }
@@ -114,7 +114,7 @@ export function wrapperEditContext(recipes, wrapperRef, activePositionRef = null
   const lc = (wrapperRef || '').toLowerCase()
   for (const r of recipes || []) {
     if (ctxOf(r) !== 'ElementType') continue
-    if ((r.IsDeleted || r.isDeleted) === 'Y') continue
+    if (!live(r)) continue
     if (crefOf(r).toLowerCase() !== lc) continue
     const p = posOf(r)
     if (p) return p
@@ -394,8 +394,8 @@ function extrasIn(combined, wrapperRefs, ingredients, isConnector) {
   const wrappers = new Set(wrapperRefs.map(r => String(r).toLowerCase()))
   const out = []
   for (const row of combined) {
-    if ((row.IsDeleted || row.isDeleted) === 'Y') continue
-    const ref = row.ElementTypeRef || row.elementTypeRef || ''
+    if (!live(row)) continue
+    const ref = etRefOf(row)
     if (!ref || !isConnector(ref)) continue
     const { section, container } = rowSlot(row)
     if (section !== POSITION && !(container && wrappers.has(container))) continue

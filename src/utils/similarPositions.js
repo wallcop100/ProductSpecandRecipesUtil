@@ -21,10 +21,10 @@
  */
 
 import { positionFamilyOf } from './positionFamily'
+import { live, etRefOf } from './derived'
 
 const refOf = pt => pt.PositionTypeRef || pt.positionTypeRef || ''
 const posOf = r => r.PositionTypeRef || r.positionTypeRef || ''
-const etOf = r => r.ElementTypeRef || r.elementTypeRef || ''
 
 /** Overlap of two sets, 0..1. Two empty sets share nothing to speak of. */
 export function jaccard(a, b) {
@@ -39,8 +39,8 @@ function etsOf(recipes, ref) {
   const out = new Set()
   for (const r of recipes) {
     if (posOf(r) !== ref) continue
-    if ((r.IsDeleted || r.isDeleted) === 'Y') continue
-    const et = etOf(r).toLowerCase()
+    if (!live(r)) continue
+    const et = etRefOf(r).toLowerCase()
     if (et) out.add(et)
   }
   return out

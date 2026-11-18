@@ -4,6 +4,7 @@ import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { useCompanion } from '../platform/companion'
 import { jobOf, familyForJob, familiesForJob } from '../utils/codeJobs'
+import { familyNames, familyRowRefs, refKey, etRefOf } from '../utils/derived'
 import { C } from '../styles/tokens'
 
 /**
@@ -61,8 +62,7 @@ export default function MasterGapPanel({ gaps }) {
   // No sibling and no house style (DALI-CV-1CH, 5PWQ9L): the job its ref and name describe, filed
   // where this project files that job, else the house family for it if the workbook has it.
   const wordsFamilyOf = useMemo(() => {
-    const rows = new Set([...dbCollectionRefs, ...elementTypes.filter(e => (e.IsCollection || e.isCollection) === 'Y')
-      .map(e => e.ElementTypeRef || e.elementTypeRef)].filter(Boolean).map(f => String(f).toUpperCase()))
+    const rows = familyRowRefs(elementTypes, dbCollectionRefs)
     const m = {}
     for (const p of proposals) {
       const job = jobOf({ ref: p.ref, name: p.name, description: p.details || '' })
@@ -70,7 +70,7 @@ export default function MasterGapPanel({ gaps }) {
       if (!house) continue
       const own = [...familiesForJob(job, { elementTypes, familyRows: rows })].find(f => f !== house.family.toUpperCase())
       // Only a family the workbook has: Apply creates house-style families, not these.
-      if (own) m[p.ref] = elementTypes.map(e => e.ElementTypeRef || e.elementTypeRef).find(r => String(r).toUpperCase() === own) || own
+      if (own) m[p.ref] = elementTypes.map(e => etRefOf(e)).find(r => String(r).toUpperCase() === own) || own
       else if (rows.has(house.family.toUpperCase())) m[p.ref] = house.family
     }
     return m
@@ -101,15 +101,12 @@ export default function MasterGapPanel({ gaps }) {
   // Every collection worth offering: those the workbook already has, those the guesses
   // point at, and the house-style families — so a family stays selectable even after it
   // has been created.
-  // VHCCAF: a collection is a family only once some ElementType names it as its parent.
-  const parents = new Set(elementTypes.map(e => String(e.Family || e.family || '').trim().toUpperCase()).filter(Boolean))
-  const collOptions = [...new Set([
-    ...[...dbCollectionRefs, ...elementTypes.filter(e => (e.IsCollection || e.isCollection) === 'Y').map(e => e.ElementTypeRef || e.elementTypeRef)]
-      .filter(r => parents.has(String(r || '').toUpperCase())),
+  const collOptions = [...new Map([
+    ...familyNames(elementTypes, dbCollectionRefs).values(),
     ...proposals.map(p => p.guess?.parent).filter(Boolean),
     ...families.map(f => f.ref),
     ...Object.values(chosen).filter(Boolean),
-  ].filter(Boolean))].sort()
+  ].filter(Boolean).reverse().map(f => [refKey(f), f])).values()].sort()
 
   const familyLabel = p => {
     if (p.guess?.confident) return CONF.confident

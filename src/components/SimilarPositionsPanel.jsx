@@ -5,6 +5,7 @@ import MaterialIcon from './MaterialIcon'
 import EntityPill from './EntityPill'
 import { similarPositions, similarityReason } from '../utils/similarPositions'
 import { C } from '../styles/tokens'
+import { live, etRefOf } from '../utils/derived'
 
 /**
  * SimilarPositionsPanel — "what do positions like this one do?"
@@ -40,9 +41,9 @@ export default function SimilarPositionsPanel({ posRef, query }) {
   const rowsOf = useMemo(() => {
     const m = {}
     for (const r of recipes) {
-      if ((r.IsDeleted || r.isDeleted) === 'Y') continue
+      if (!live(r)) continue
       const p = r.PositionTypeRef || r.positionTypeRef
-      const et = r.ElementTypeRef || r.elementTypeRef
+      const et = etRefOf(r)
       if (!p || !et) continue
       ;(m[p] ??= []).push({
         et,

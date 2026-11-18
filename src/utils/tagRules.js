@@ -1,3 +1,4 @@
+import { live, etRefOf } from './derived'
 /**
  * tagRules.js — user-defined tag derivation.
  *
@@ -78,14 +79,14 @@ export const RECIPE_TAG_COLUMNS = [
 export function recipeTagIndex({ recipes = [], psRows = [], elementTypes = [] } = {}) {
   const lc = s => String(s ?? '').toLowerCase()
   const ps = new Map()
-  for (const r of psRows) { const k = lc(r.ElementTypeRef || r.elementTypeRef); if (k && !ps.has(k)) ps.set(k, r) }
-  const fam = new Map(elementTypes.map(e => [lc(e.ElementTypeRef || e.elementTypeRef), e.Family || e.family || '']))
+  for (const r of psRows) { const k = lc(etRefOf(r)); if (k && !ps.has(k)) ps.set(k, r) }
+  const fam = new Map(elementTypes.map(e => [lc(etRefOf(e)), e.Family || e.family || '']))
   const out = new Map()
   const add = (m, k, v) => { const t = String(v ?? '').trim(); if (t && !m[k].includes(t)) m[k].push(t) }
   for (const r of recipes) {
-    if ((r.IsDeleted || r.isDeleted) === 'Y') continue
+    if (!live(r)) continue
     const pos = r.PositionTypeRef || r.positionTypeRef
-    const ref = r.ElementTypeRef || r.elementTypeRef
+    const ref = etRefOf(r)
     if (!pos || !ref) continue
     if (!out.has(pos)) out.set(pos, Object.fromEntries(RECIPE_TAG_COLUMNS.map(c => [c.key, []])))
     const m = out.get(pos)

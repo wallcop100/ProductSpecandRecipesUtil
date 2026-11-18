@@ -5,6 +5,7 @@
  */
 
 import { v4 as uuidv4 } from 'uuid'
+import { entryRefOf } from './derived'
 
 /**
  * Parse applicable_tags from a template record.
@@ -139,7 +140,7 @@ export function recipeToTemplate(recipe, templateName, scope = 'project', sugges
 
   for (const { key: section, rows } of sections) {
     rows.forEach((row, idx) => {
-      const etRef = row.elementTypeRef || row.ElementTypeRef || null
+      const etRef = entryRefOf(row) || null
 
       // Generate a slotKey from the ET ref's last segment, or sequential fallback
       let slotKey

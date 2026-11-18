@@ -1,7 +1,7 @@
 import { describe, test, expect } from 'vitest'
 import {
-  conditionMatches, ruleMatches, ruleConditions, migrateRule, migrateRules,
-  evaluateTags, effectiveTags, columnsUsedByRules, computeTagDrift, TAG_OPS,
+  conditionMatches, ruleMatches, ruleConditions, migrateRule,
+  evaluateTags, columnsUsedByRules, computeTagDrift, TAG_OPS,
 } from '../../src/utils/tagRules.js'
 
 const pt = (over = {}) => ({

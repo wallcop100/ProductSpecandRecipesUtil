@@ -41,17 +41,20 @@
  */
 
 import { sharedStem } from './etRefSuggest'
-import { hasProductIdentity, norm } from './productCodes'
+import { hasProductIdentity } from './productCodes'
 import { styleFor, harvestExemplars, codeTokens } from './styleLibrary'
 import { matchShape, makerKey } from './codeShapes'
 import { productLineFor } from '../data/productLines'
-import { CANON_FAMILIES, classifyText } from '../data/etCanon'
-import { jobOf, familyForJob, familiesForJob } from './codeJobs'
+import { CANON_FAMILIES } from '../data/etCanon'
+import { jobOf, jobKey, familyForJob, familiesForJob, classifyText } from './codeJobs'
+import { JOB_LABEL, jobLabel } from './recipeKinds'
+import { familyRefs, familyRowRefs, etRefOf, codeKey } from './derived'
+import { looksLikeContainer } from './containerUtils'
 import shippedShapes from '../data/codeShapes.json'
+import { live } from './derived'
 
 const lc = s => String(s ?? '').trim().toLowerCase()
 const alnum = s => String(s ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '')
-const refOf = e => e.ElementTypeRef || e.elementTypeRef || ''
 const famOf = e => e.Family || e.family || ''
 const ptRefOf = p => p.PositionTypeRef || p.positionTypeRef || ''
 const COUNTER_RE = /^(.*)-(\d+)$/
@@ -60,7 +63,7 @@ const SESSION_OVERRIDES = new Set(['canon', 'job', ''])
 
 export const ACCESSORIES = 'ET-PS-ACCESSORIES'
 /** Wrappers are assembled in the recipe, never a product: ET-DL-NN, ET-LIN-NN. */
-export const isWrapperRef = ref => /^ET-(DL|LIN)-\d+[A-Z]?$/i.test(String(ref ?? '').trim())
+export const isWrapperRef = ref => looksLikeContainer(String(ref ?? '').trim())
 /** The families wrappers live in. A product code never goes here. */
 const isWrapperFamily = f => /^ET-(DL|LIN)$/i.test(String(f ?? '').trim())
 const POINT = 'ET-PS'
@@ -90,26 +93,47 @@ export function familyDescription(parent) {
 const GENERIC = new Set(['ET', 'LIN', 'PS', 'ACCESSORIES', 'ACCESSORY', 'INGREDIENTS', 'COMPONENTS'])
 const coreOf = f => String(f ?? '').toUpperCase().split(/[-/\s]+/).map(t => t.replace(/S$/, '')).filter(t => t && !GENERIC.has(t) && !GENERIC.has(`${t}S`))
 
+// A ref's head: ET-PS-CURVE → ET-PS. Linear parts are ET-LIN-<kind> whatever their family
+// (ET-LIN-CAP-08 under ET-LIN-CAPS, ET-LIN-DIFF-01 under ET-LIN-COMPONENTS), so the kind stays; ET-LIN-48 is ET-LIN.
+export const refHead = body => {
+  const t = String(body).split('-')
+  return t.slice(0, lc(t[1]) === 'lin' && /^[a-z]+$/i.test(t[2] || '') ? 3 : 2).join('-')
+}
+
 /** How this project heads each family's refs, when it has a habit: ET-LIN-PROF → ET-PROF (ET-PROF-1009…). → Map lc family → head */
 export function familyHeads(elementTypes = [], psRows = []) {
   const all = new Map()
-  const makerOf = new Map(psRows.map(r => [lc(refOf(r)), makerKey(r.Manufacturer || r.manufacturer)]))
+  const makerOf = new Map(psRows.map(r => [lc(etRefOf(r)), makerKey(r.Manufacturer || r.manufacturer)]))
+  const psOf = new Map(psRows.map(r => [lc(etRefOf(r)), r]))
   const byMaker = new Set()   // `family|maker|head`: this maker already names members this way
+  const byJob = new Map()     // `family|slot` → heads of members doing that job
+  const byPrefix = new Map()  // `family|maker|prefix` → slot: LEDFlex 021- is a profile, 022- a diffuser
   for (const et of elementTypes) {
-    const f = famOf(et), m = String(refOf(et) || '').match(COUNTER_RE)
+    const f = famOf(et), m = String(etRefOf(et) || '').match(COUNTER_RE)
     if (!f || !m || isWrapperFamily(f)) continue
     const body = m[1]
-    const head = lc(body) === lc(f) || lc(body).startsWith(lc(f) + '-') ? f : body.split('-').slice(0, 2).join('-')
+    const head = lc(body) === lc(f) || lc(body).startsWith(lc(f) + '-') ? f : refHead(body)
     if (!all.has(lc(f))) all.set(lc(f), [])
     all.get(lc(f)).push(head)
-    const mk = makerOf.get(lc(refOf(et)))
+    const mk = makerOf.get(lc(etRefOf(et)))
     if (mk) byMaker.add(`${lc(f)}|${mk}|${lc(head)}`)
+    const ps = psOf.get(lc(etRefOf(et)))
+    const memberCode = ps?.ProductCode || ps?.productCode
+    const slot = jobOf({ ref: etRefOf(et), name: et.Name || et.name, description: et.Description || et.description,
+      maker: ps?.Manufacturer || ps?.manufacturer, code: ps?.ProductCode || ps?.productCode }).slot.replace(/^\w+_DRIVER$/, 'DRIVER')
+    if (slot !== 'OTHER') byJob.set(`${lc(f)}|${slot}`, [...(byJob.get(`${lc(f)}|${slot}`) || []), head])
+    if (slot !== 'OTHER' && mk && memberCode) {
+      const k = `${lc(f)}|${mk}|${codePrefix(memberCode)}`
+      byPrefix.set(k, byPrefix.has(k) && byPrefix.get(k) !== slot ? null : slot)   // 4920's 021- is clips and caps
+    }
   }
   // A habit, not one-off: one ET-GS-WIBRE-01 does not make every accessory ET-GS. (A majority rule
   // cost 4 points of right heads on the mirrors; a mixed family like ET-LIN-INGREDIENTS still heads by its most common kind.)
   const out = new Map()
   out.mixed = new Set()   // families holding more than one kind (ET-FRAME and ET-GS under accessories)
   out.byMaker = byMaker
+  out.byJob = byJob
+  out.byPrefix = byPrefix
   for (const [f, heads] of all) {
     const top = mostCommon(heads)
     if (top.count >= 2) out.set(f, top.value)
@@ -126,6 +150,20 @@ export function familyHeads(elementTypes = [], psRows = []) {
 export function headFor(heads, family, code = '', text = '', maker = '') {
   const head = heads.get(lc(family))
   if (!head || !heads.mixed?.has(lc(family))) return head || null
+  // A family holding several jobs (ET-LIN-PROF: profiles, mounts, diffusers): a code whose job is
+  // known takes the head of members doing that job (a diffuser is ET-DIFF, not ET-MOUNT), and no
+  // head when none does. One job, several heads (ET-CCR, ET-CCL drivers): the checks below decide.
+  // Local vs remote is the ref's to say (ET-CCR-…-L), not a bare code's, so drivers are one job here.
+  const job = jobOf({ maker, code, name: text })
+  let slot = job.slot.replace(/^\w+_DRIVER$/, 'DRIVER')
+  if (slot === 'OTHER' && code) slot = heads.byPrefix?.get(`${lc(family)}|${makerKey(maker)}|${codePrefix(code)}`) || slot
+  const known = slot !== 'OTHER' && !(slot === 'ACCESSORY' && !job.variant)   // a bare accessory names no kind
+  const jobsHere = [...(heads.byJob?.keys() || [])].filter(k => k.startsWith(`${lc(family)}|`))
+  if (known && jobsHere.length > 1) {
+    const same = heads.byJob.get(`${lc(family)}|${slot}`)
+    if (!same) return null
+    if (new Set(same.map(lc)).size === 1) return same[0]
+  }
   // Backtest: of the refs this check would lose (ET-CCR under ET-DRIVER), 142 of 151 had a sibling from the same maker.
   if (heads.byMaker?.has(`${lc(family)}|${makerKey(maker)}|${lc(head)}`)) return head
   const words = lc(`${family} ${code} ${text}`).match(/[a-z]+|[0-9]+/g) || []
@@ -178,6 +216,9 @@ export const seedName = (manufacturer, code) =>
   [String(manufacturer || '').trim(), String(code || '').trim()].filter(Boolean).join(' - ')
 
 /** Most common value, first-seen wins a tie. → { value, count, distinct } */
+// The code up to its first separator: 021-1103 → 021, SL0360A6-350mA → SL0360A6.
+const codePrefix = code => lc(String(code).trim().split(/[-\s./]/)[0])
+
 function mostCommon(values) {
   const n = new Map()
   for (const v of values) if (v) n.set(v, (n.get(v) || 0) + 1)
@@ -205,13 +246,13 @@ export function pickFamily(signals, ctx) {
   // only a guess (tools/backtest-inprogress.py: ~92% right with two that agree, ~80% on one).
   // An extra (frame, louvre…) often shares its luminaire's stem; the luminaire's family is
   // then the wrong answer for it.
-  const kin = new Map()   // norm code -> { code, family, stem }
+  const kin = new Map()   // codeKey code -> { code, family, stem }
   for (const { code, maker, family } of ctx.products || []) {
-    if (!family || maker !== lc(signals.manufacturer) || norm(code) === norm(signals.code)) continue
+    if (!family || maker !== lc(signals.manufacturer) || codeKey(code) === codeKey(signals.code)) continue
     if (signals.role === 'extra' && lc(family) === lc(POINT)) continue
     // Letters and digits only: "NA-" is not a 3-character stem.
     const stem = sharedStem(alnum(signals.code), alnum(code))
-    if (stem >= 3 && !kin.has(norm(code))) kin.set(norm(code), { code, family, stem })
+    if (stem >= 3 && !kin.has(codeKey(code))) kin.set(codeKey(code), { code, family, stem })
   }
   const stems = [...new Set([...kin.values()].map(k => k.stem))].sort((a, b) => b - a)
   for (const n of stems) {
@@ -306,32 +347,32 @@ export function proposeElementTypes(entries = [], project = {}) {
   } = project
   const canonByRef = new Map(families.map(f => [lc(f.ref), f]))
 
-  const etFamily = new Map(elementTypes.map(e => [lc(refOf(e)), famOf(e)]))
-  const existingFamilies = new Set([...collectionRefs, ...elementTypes.map(famOf)].filter(Boolean).map(lc))
+  const etFamily = new Map(elementTypes.map(e => [lc(etRefOf(e)), famOf(e)]))
+  const existingFamilies = new Set([...familyRefs(elementTypes, collectionRefs)].map(lc))
   // A family "exists" for the job check only when it has a row: ET-LIN-COMPONENTS, named by 32
   // ElementTypes on one project and a row on none, must not be copied to the next product.
-  const familyRows = new Set([...collectionRefs, ...elementTypes.map(refOf)].filter(Boolean).map(f => String(f).toUpperCase()))
+  const familyRows = familyRowRefs(elementTypes, collectionRefs)
   const parentOf = new Map(positionTypes.map(p => [lc(ptRefOf(p)), p.ParentRef || p.parentRef || '']))
 
   const products = []
   for (const r of psRows) {
-    const f = etFamily.get(lc(r.ElementTypeRef || r.elementTypeRef))
+    const f = etFamily.get(lc(etRefOf(r)))
     const code = String(r.ProductCode || r.productCode || '').trim()
     if (f && code && code.toUpperCase() !== 'N/A') products.push({ code, maker: lc(r.Manufacturer || r.manufacturer), family: f })
   }
 
   // The design element's family per position. A wrapper (ET-DL-NN, ET-LIN-NN) is assembled
   // here, never bought: look through it to the design element inside it.
-  const liveDesign = recipes.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y' && (r.IsDesign || r.isDesign) === 'Y')
+  const liveDesign = recipes.filter(r => live(r) && (r.IsDesign || r.isDesign) === 'Y')
   const innerDesign = new Map()   // lc wrapper ref -> inner design ET ref
   for (const r of liveDesign) {
     if ((r.ContextType || r.contextType) !== 'ElementType') continue
-    innerDesign.set(lc(r.ContextRef || r.contextRef), r.ElementTypeRef || r.elementTypeRef)
+    innerDesign.set(lc(r.ContextRef || r.contextRef), etRefOf(r))
   }
   const designFamilyOf = new Map()   // lc PositionTypeRef -> [family]
   for (const r of liveDesign) {
     if ((r.ContextType || r.contextType) === 'ElementType') continue
-    let ref = r.ElementTypeRef || r.elementTypeRef
+    let ref = etRefOf(r)
     if (isWrapperRef(ref)) ref = innerDesign.get(lc(ref))
     const f = ref && etFamily.get(lc(ref))
     const pt = lc(r.PositionTypeRef || r.positionTypeRef)
@@ -342,7 +383,8 @@ export function proposeElementTypes(entries = [], project = {}) {
 
   // Taken = any ref the project names anywhere, as NewETModal checks: a Product Spec or recipe ref
   // the DesignDB lacks still exists (4746: ET-PS-ACCESSORIES-02 proposed, then "already exists").
-  const taken = new Set([...elementTypes, ...psRows, ...recipes, ...session.map(s => ({ ElementTypeRef: s.kept?.ref }))].map(refOf).filter(Boolean))
+  const taken = new Set([...elementTypes, ...psRows, ...recipes, ...session.map(s => ({ ElementTypeRef: s.kept?.ref }))].map(etRefOf).filter(Boolean))
+  const takenKeys = new Set([...taken].map(lc))
   const newFamilies = new Map()   // lc ref -> { ref, description, include, from }
   const proposals = []
 
@@ -358,12 +400,14 @@ export function proposeElementTypes(entries = [], project = {}) {
     // No near sibling: the last one you made in this family for this maker, this sitting.
     const last = [...session].reverse().find(s => s.kept?.ref && lc(s.kept.family) === lc(family) && makerKey(s.maker) === makerKey(maker))
     if (last) return { base: String(last.kept.ref).replace(/-\d+[a-z]?$/i, ''), from: 'session', example: last.kept.ref }
-    // A library style that kept a middle (ET-PS-CURVE) is worth more than a bare head, even flagged.
-    if (pick.style && lc(pick.style.family) === lc(family) && lc(pick.style.refBase) !== lc(family)) {
-      return { base: pick.style.refBase, from: 'library', example: pick.style.exemplar.ref }
-    }
+    // A library style that kept a middle (ET-PS-CURVE) beats a bare head when this project wrote it;
+    // another project's style for the product loses to this project's head (Erik, 2026-11-18).
+    const styled = pick.style && lc(pick.style.family) === lc(family) && lc(pick.style.refBase) !== lc(family)
+    const library = styled && { base: pick.style.refBase, from: 'library', example: pick.style.exemplar.ref }
+    if (library && takenKeys.has(lc(pick.style.exemplar.ref))) return library
     const head = headFor(heads, family, code, text, maker)
     if (head) return { base: head, from: 'family' }
+    if (library) return library
     return { base: pick.style?.refBase || pick.head || family, from: 'default' }
   }
 
@@ -420,7 +464,7 @@ export function proposeElementTypes(entries = [], project = {}) {
     // ElementTypes belong to a project, so only when this project has nothing of its own
     // to go on (a sibling product already filed here, or the positions' design element).
     const ownKnowledge = pick.why === 'stem' || pick.why === 'design'
-    const seen = !same && !ownKnowledge && !e.placeholder && library.find(ex => norm(ex.code) === norm(e.text)
+    const seen = !same && !ownKnowledge && !e.placeholder && library.find(ex => codeKey(ex.code) === codeKey(e.text)
       && (!manufacturer || !ex.maker || makerKey(ex.maker) === makerKey(manufacturer)))
     if (seen) Object.assign(pick, { family: seen.family, head: seen.family, why: 'library', flag: false, seen })
     // A TBC placeholder with nothing to go on is still a product wanted: a point source,
@@ -438,11 +482,12 @@ export function proposeElementTypes(entries = [], project = {}) {
     // house family. Only the code's own evidence counts — its maker and code, its own note, a
     // known job or catalogue category — and the row's words only when they name one kind of product.
     if (!e.placeholder && !same) {
-      const known = jobs?.get?.(`${makerKey(manufacturer)}|${norm(e.text)}`)
+      const known = jobs?.get?.(`${makerKey(manufacturer)}|${codeKey(e.text)}`)
       const rowWords = classifyText(context)
       const job = known?.slot ? known : jobOf({
         maker: manufacturer, code: e.text, category: known?.category || '',
         name: [note, rowWords && !rowWords.others.length ? context : ''].join(' '),
+        shapes: [],      // the code's shape was weighed above, with this project's own table
       })
       const house = familyForJob(job)
       if (house && job.slot !== 'CONNECTOR' && job.slot !== 'FITTING') {
@@ -450,8 +495,8 @@ export function proposeElementTypes(entries = [], project = {}) {
         pick.job = job
         if (!ok.has(String(pick.family || '').toUpperCase())) {
           const own = [...ok].find(f => f !== house.family.toUpperCase())
-          const fam = own ? elementTypes.find(x => String(refOf(x)).toUpperCase() === own) : null
-          Object.assign(pick, { family: fam ? refOf(fam) : house.family, head: house.head,
+          const fam = own ? elementTypes.find(x => String(etRefOf(x)).toUpperCase() === own) : null
+          Object.assign(pick, { family: fam ? etRefOf(fam) : house.family, head: house.head,
             why: 'job', flag: false, was: pick.family || null, seen: pick.seen?.family === pick.family ? null : pick.seen })
         }
       }
@@ -543,7 +588,7 @@ export function proposeElementTypes(entries = [], project = {}) {
  */
 export function refamily(proposals, indices, family, elementTypes = [], psRows = []) {
   const pick = new Set(indices)
-  const taken = new Set(elementTypes.map(refOf))
+  const taken = new Set(elementTypes.map(etRefOf))
   const heads = familyHeads(elementTypes, psRows)
   proposals.forEach((p, i) => { if (!pick.has(i) && p.ref) taken.add(p.ref) })
   return proposals.map((p, i) => {
@@ -565,11 +610,12 @@ export function refamily(proposals, indices, family, elementTypes = [], psRows =
  * themselves) keep their refs. The family, and any canon parent the project lacks, is
  * proposed for creation.
  */
-export function planFamilyMove(refs, family, elementTypes = [], { renumber = true, families = CANON_FAMILIES } = {}) {
+export function planFamilyMove(refs, family, elementTypes = [], { renumber = true, families = CANON_FAMILIES, collectionRefs = [] } = {}) {
   const fam = String(family ?? '').trim()
-  const byRef = new Map(elementTypes.map(e => [lc(refOf(e)), e]))
-  const taken = new Set(elementTypes.map(refOf))
-  const known = new Set(elementTypes.flatMap(e => [lc(famOf(e)), (e.IsCollection || e.isCollection) === 'Y' ? lc(refOf(e)) : '']).filter(Boolean))
+  const byRef = new Map(elementTypes.map(e => [lc(etRefOf(e)), e]))
+  const taken = new Set(elementTypes.map(etRefOf))
+  // A family the project has (named, or a stripped DesignDB row like ET-PS) is never proposed for creation.
+  const known = new Set([...familyRefs(elementTypes, collectionRefs), ...familyRowRefs(elementTypes)].map(lc))
   const canon = new Map(families.map(f => [lc(f.ref), f]))
   const newFamilies = []
   const propose = ref => {
@@ -584,7 +630,7 @@ export function planFamilyMove(refs, family, elementTypes = [], { renumber = tru
   for (const r of refs) {
     const et = byRef.get(lc(r))
     if (!et) continue
-    const from = refOf(et)
+    const from = etRefOf(et)
     const collection = (et.IsCollection || et.isCollection) === 'Y'
     let to = from
     if (renumber && fam && !collection && !member(from)) { to = nextRef(fam, taken); taken.add(to) }
@@ -621,12 +667,10 @@ const WHY = {
   you: 'you chose it',
   session: r => `you filed ${r.manufacturer}'s last one (${r.session?.code}) here this sitting${r.wasFamily ? ` (not ${r.wasFamily})` : ''}`,
   kit: r => `usually with ${r.kitOf}`,
-  job: r => `${JOB_LABEL[r.job?.slot === 'TAPE' ? `TAPE:${r.job.variant}` : r.job?.slot] || 'its job'}${r.wasFamily ? ` (not ${r.wasFamily})` : ''}`,
+  job: r => `${r.job && JOB_LABEL[jobKey(r.job)] ? withArticle(jobLabel(jobKey(r.job))) : 'its job'}${r.wasFamily ? ` (not ${r.wasFamily})` : ''}`,
 }
-const JOB_LABEL = { 'TAPE:tape': 'LED tape', 'TAPE:flex': 'neon / flex', 'TAPE:fixed': 'fixed linear', PROFILE: 'a profile', DIFFUSER: 'a diffuser',
-  END_CAPS: 'end caps', CLIPS: 'clips', MOUNT_CHANNEL: 'a mounting channel', MOUNT_COLLAR: 'a mounting collar / frame', LOCAL_DRIVER: 'a driver',
-  REMOTE_DRIVER: 'a driver', EMERGENCY: 'an emergency pack', OPTIC_ACCESSORY: 'an optic accessory', ACCESSORY: 'an accessory', FIRE_HOOD: 'a fire hood',
-  LOCKING_LEVER: 'a locking lever', TRACK_ACCESSORY: 'a track accessory' }
+// "a profile", "an emergency pack"; mass nouns and plurals (LED tape, end caps) take none.
+const withArticle = l => (/s$|tape|flex|linear/.test(l) ? l : `${/^[aeiou]/.test(l) ? 'an' : 'a'} ${l}`)
 export const whyText = r => (typeof WHY[r.why] === 'function' ? WHY[r.why](r.why === 'parent' ? r.parent : r) : WHY[r.why] || '')
 
 /** A proposal's trace (trace.js): what it proposes, why in words, and the fields that decided it. */

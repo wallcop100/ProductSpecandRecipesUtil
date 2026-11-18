@@ -27,7 +27,6 @@ export default function TemplateGroupPanel({ collectionId, groups, onEdit, onSel
   const removeFromTemplate = useStore(s => s.removeFromTemplate)
   const restoreToTemplate = useStore(s => s.restoreToTemplate)
   const excludes = useStore(s => s.connectorExcludes)
-  const positionUI = useStore(s => s.positionUI)
   const allTemplates = useStore(s => s.etCollections)
   const forkTemplate = useStore(s => s.forkTemplate)
   const makeTemplateFromGroup = useStore(s => s.makeTemplateFromGroup)

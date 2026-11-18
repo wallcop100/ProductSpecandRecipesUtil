@@ -12,6 +12,7 @@ import { positionFamilyOf } from '../utils/positionFamily'
 import { familyOf } from '../utils/etRef'
 import { ICONS } from '../utils/entityStyle'
 import { C } from '../styles/tokens'
+import { live, etRefOf } from '../utils/derived'
 
 const EMPTY_FILTERS = { family: '', tag: '', manufacturer: '', containsET: '' }
 
@@ -66,7 +67,7 @@ export default function AddAnywhereModal({ show, onHide, etRef, sectionKey, excl
   const unitNoun = isPos ? 'PositionType' : 'ElementType'
   const unitNounPl = isPos ? 'PositionTypes' : 'ElementTypes'
 
-  const ps        = useMemo(() => psRows.find(p => (p.ElementTypeRef || p.elementTypeRef || '').toLowerCase() === (etRef || '').toLowerCase()), [psRows, etRef])
+  const ps        = useMemo(() => psRows.find(p => (etRefOf(p)).toLowerCase() === (etRef || '').toLowerCase()), [psRows, etRef])
   const mfr       = ps?.Manufacturer  || ps?.manufacturer  || ''
   const code      = ps?.ProductCode   || ps?.productCode   || ''
   const specLabel = [mfr, code].filter(Boolean).join(' – ')
@@ -76,7 +77,7 @@ export default function AddAnywhereModal({ show, onHide, etRef, sectionKey, excl
   const psByRef = useMemo(() => {
     const m = new Map()
     for (const r of psRows) {
-      const ref = (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase()
+      const ref = (etRefOf(r)).toLowerCase()
       if (ref && !m.has(ref)) m.set(ref, r)
     }
     return m
@@ -86,7 +87,7 @@ export default function AddAnywhereModal({ show, onHide, etRef, sectionKey, excl
   const etObjByRef = useMemo(() => {
     const m = new Map()
     for (const e of elementTypes) {
-      const k = (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase()
+      const k = (etRefOf(e)).toLowerCase()
       if (k) m.set(k, e)
     }
     return m
@@ -96,7 +97,7 @@ export default function AddAnywhereModal({ show, onHide, etRef, sectionKey, excl
   const rowsForPos = useMemo(() => {
     const m = new Map()
     for (const r of recipes) {
-      if ((r.IsDeleted || r.isDeleted) === 'Y') continue
+      if (!live(r)) continue
       const ref = r.PositionTypeRef || r.positionTypeRef
       if (!m.has(ref)) m.set(ref, [])
       m.get(ref).push(r)
@@ -109,7 +110,7 @@ export default function AddAnywhereModal({ show, onHide, etRef, sectionKey, excl
     const m = new Map()  // ref → { internalRows:[], posRefs:Set }
     for (const r of recipes) {
       if ((r.ContextType || r.contextType) !== 'ElementType') continue
-      if ((r.IsDeleted || r.isDeleted) === 'Y') continue
+      if (!live(r)) continue
       const cr = r.ContextRef || r.contextRef
       if (!cr) continue
       if (!m.has(cr)) m.set(cr, { internalRows: [], posRefs: new Set() })
@@ -148,9 +149,9 @@ export default function AddAnywhereModal({ show, onHide, etRef, sectionKey, excl
   const allKnownETRefs = useMemo(() => {
     const m = new Map()
     const add = r => { const k = (r || '').toLowerCase(); if (k && !m.has(k)) m.set(k, r) }
-    for (const e of elementTypes) add(e.ElementTypeRef || e.elementTypeRef)
-    for (const r of psRows) add(r.ElementTypeRef || r.elementTypeRef)
-    for (const r of recipes) add(r.ElementTypeRef || r.elementTypeRef)
+    for (const e of elementTypes) add(etRefOf(e))
+    for (const r of psRows) add(etRefOf(r))
+    for (const r of recipes) add(etRefOf(r))
     return [...m.values()].sort((a, b) => a.localeCompare(b))
   }, [elementTypes, psRows, recipes])
 
@@ -188,8 +189,8 @@ export default function AddAnywhereModal({ show, onHide, etRef, sectionKey, excl
           if (f.family && positionFamilyOf(pt) !== f.family) return false
           if (f.tag && !((positionUI[ref]?.tags) || []).includes(f.tag)) return false
           const rows = rowsForPos.get(ref) || []
-          if (f.manufacturer && !rows.some(r => mfrOf(r.ElementTypeRef || r.elementTypeRef) === f.manufacturer)) return false
-          if (f.containsET && !rows.some(r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === f.containsET.toLowerCase())) return false
+          if (f.manufacturer && !rows.some(r => mfrOf(etRefOf(r)) === f.manufacturer)) return false
+          if (f.containsET && !rows.some(r => (etRefOf(r)).toLowerCase() === f.containsET.toLowerCase())) return false
           return true
         })
         .map(pt => ({ kind: 'position', ref: pt.PositionTypeRef, tags: positionUI[pt.PositionTypeRef]?.tags ?? [] }))
@@ -201,12 +202,12 @@ export default function AddAnywhereModal({ show, onHide, etRef, sectionKey, excl
         if (f.family && familyOf(ref, etObjByRef.get(ref.toLowerCase())) !== f.family) return false
         if (f.manufacturer && mfrOf(ref) !== f.manufacturer) return false
         if (f.tag && !tagsForContainer(ref).has(f.tag)) return false
-        if (f.containsET && !entry.internalRows.some(r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === f.containsET.toLowerCase())) return false
+        if (f.containsET && !entry.internalRows.some(r => (etRefOf(r)).toLowerCase() === f.containsET.toLowerCase())) return false
         return true
       })
       .map(ref => ({ kind: 'element', ref, tags: [...tagsForContainer(ref)] }))
       .sort((a, b) => a.ref.localeCompare(b.ref))
-  }, [etRef, isPos, universe, filters, positionUI, rowsForPos, containerData, etObjByRef])
+  }, [etRef, isPos, universe, filters, positionUI, rowsForPos, containerData, etObjByRef, psByRef])
 
   useEffect(() => {
     if (!show) return
@@ -272,7 +273,7 @@ export default function AddAnywhereModal({ show, onHide, etRef, sectionKey, excl
       )
     }
     const entry = containerData.get(ref)
-    return !!entry && entry.internalRows.some(r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === low)
+    return !!entry && entry.internalRows.some(r => (etRefOf(r)).toLowerCase() === low)
   }, [ref, etRef, isPos, recipes, containerData])
 
   const addedThisSession = ref ? sessionAdded.has(ref) : false
@@ -287,15 +288,15 @@ export default function AddAnywhereModal({ show, onHide, etRef, sectionKey, excl
       return recipes.some(r =>
         (r.PositionTypeRef || r.positionTypeRef) === t.ref &&
         (r.ElementTypeRef  || r.elementTypeRef  || '').toLowerCase() === low &&
-        (r.IsDeleted || r.isDeleted) !== 'Y'
+        live(r)
       )
     }
     const entry = containerData.get(t.ref)
-    return !!entry && entry.internalRows.some(r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === low)
+    return !!entry && entry.internalRows.some(r => (etRefOf(r)).toLowerCase() === low)
   }
 
   function setFilter(key, val) { setFilters(prev => ({ ...prev, [key]: val })) }
-  function filterRows(rows) { return (rows || []).filter(r => (r.IsDeleted || r.isDeleted) !== 'Y') }
+  function filterRows(rows) { return (rows || []).filter(r => live(r)) }
 
   function handleDragEnd({ active, over }) {
     if (!over || !current || current.kind !== 'position') return

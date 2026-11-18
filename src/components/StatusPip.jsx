@@ -5,6 +5,7 @@ import MaterialIcon from './MaterialIcon'
 import { positionHealth, STATUS_LABEL } from '../utils/positionHealth'
 import { C } from '../styles/tokens'
 import { retiredFor } from '../platform/retired'
+import { live as isLive, etRefOf } from '../utils/derived'
 
 const COLOR = { red: C.danger, amber: C.attn, green: C.success, purple: C.companion, grey: C.faint }
 const HEAD = { red: 'Needs fixing', amber: 'Needs a decision', green: 'Done', purple: 'Suggestions waiting', grey: '' }
@@ -28,9 +29,9 @@ export default function StatusPip({ posRef, status, size = 9 }) {
   const companion = useStore(s => !!s.companionPending[posRef])
   const newerCode = useStore(s => {
     if (!Object.keys(s.retiredCodes).length) return false
-    const live = r => (r.IsDeleted || r.isDeleted) !== 'Y'
-    const refs = new Set(s.recipes.filter(r => live(r) && (r.PositionTypeRef || r.positionTypeRef) === posRef).map(r => String(r.ElementTypeRef || r.elementTypeRef || '').toUpperCase()))
-    return s.psRows.some(r => live(r) && refs.has(String(r.ElementTypeRef || r.elementTypeRef || '').toUpperCase()) && !!retiredFor(s.retiredCodes, r.ProductCode || r.productCode))
+    const live = isLive
+    const refs = new Set(s.recipes.filter(r => live(r) && (r.PositionTypeRef || r.positionTypeRef) === posRef).map(r => String(etRefOf(r)).toUpperCase()))
+    return s.psRows.some(r => live(r) && refs.has(String(etRefOf(r)).toUpperCase()) && !!retiredFor(s.retiredCodes, r.ProductCode || r.productCode))
   })
   const focusPosition = useStore(s => s.focusPosition)
   const here = useStore(s => s.activePositionRef === posRef && s.rootView === 'positions')
