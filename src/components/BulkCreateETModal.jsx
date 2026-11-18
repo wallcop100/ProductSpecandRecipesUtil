@@ -96,14 +96,14 @@ export default function BulkCreateETModal({
   function moveTo(indices, family) {
     if (!family) return
     setFams(fs => withFamily(fs, family))
-    setRows(rs => refamily(rs, indices, family, elementTypes))
+    setRows(rs => refamily(rs, indices, family, elementTypes, useStore.getState().psRows))
   }
 
   function addFamily() {
     const ref = adding.ref.trim()
     if (!ref || knownFamily(ref)) return
     setFams(fs => withFamily(fs, ref, { description: adding.description.trim(), parent: adding.parent || null, custom: true }))
-    if (adding.moveIndex != null) setRows(rs => refamily(rs, [adding.moveIndex], ref, elementTypes))
+    if (adding.moveIndex != null) setRows(rs => refamily(rs, [adding.moveIndex], ref, elementTypes, useStore.getState().psRows))
     setAdding(null)
   }
 
@@ -224,7 +224,7 @@ export default function BulkCreateETModal({
   function renameFamily(fi, idxs, ref) {
     const old = fams[fi].ref
     setFams(fs => fs.map((f, k) => (k === fi ? { ...f, ref } : f)))
-    setRows(rs => refamily(rs, idxs.filter(i => rs[i].family === old), ref, elementTypes))
+    setRows(rs => refamily(rs, idxs.filter(i => rs[i].family === old), ref, elementTypes, useStore.getState().psRows))
   }
 
   return (

@@ -291,3 +291,28 @@ describe('a Form card Create proposes, and learns from this sitting', () => {
     expect(useStore.getState().sitting).toMatchObject([{ code: 'XK-78', maker: 'LEDFlex', kept: { family: 'ET-LIN-CLIPS', ref: 'ET-CLIP-FLEX-01' } }])
   })
 })
+
+describe('AEST77: the family list', () => {
+  test('an assembly wrapper (ET-LIN-07) is not offered as a family', async () => {
+    const { familyOptionsOf } = await import('../../src/components/NewETModal.jsx')
+    const opts = familyOptionsOf([
+      { ElementTypeRef: 'ET-LIN-07', Family: 'ET-LINEAR', IsCollection: 'Y' },
+      { ElementTypeRef: 'ET-TAPE-01', Family: 'ET-LIN-07' },
+      { ElementTypeRef: 'ET-PS-MOUNTING', IsCollection: 'Y' },
+    ])
+    expect(opts).not.toContain('ET-LIN-07')
+    expect(opts).toContain('ET-PS-MOUNTING')
+    expect(opts).toContain('ET-LINEAR')
+  })
+})
+
+describe('house maker spelling', () => {
+  test('"Light Graphix" is offered as LightGraphix, and one click takes it', () => {
+    setup()
+    const m = document.querySelector('[data-field="manufacturer"]')
+    fireEvent.change(m, { target: { value: 'Light Graphix' } })
+    fireEvent.click(screen.getByRole('button', { name: 'LightGraphix' }))
+    expect(m).toHaveValue('LightGraphix')
+    expect(screen.queryByTestId('house-maker')).toBeNull()
+  })
+})

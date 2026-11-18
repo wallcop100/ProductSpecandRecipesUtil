@@ -30,6 +30,7 @@
 
 import { sharedStem } from './etRefSuggest'
 import { hasProductIdentity } from './productCodes'
+import { sameMaker } from './codeShapes'
 
 const lc = s => String(s ?? '').trim().toLowerCase()
 const refOf = e => e.ElementTypeRef || e.elementTypeRef || ''
@@ -77,7 +78,7 @@ export function nearestExemplars(code, maker, exemplars = []) {
   let best = 0
   let hits = []
   for (const ex of exemplars) {
-    if (lc(ex.maker) !== lc(maker)) continue
+    if (!sameMaker(ex.maker, maker)) continue   // the companion writes "Light Graphix", Forms "LightGraphix"   // the companion writes "Light Graphix", Forms "LightGraphix"
     const stem = sharedStem(code, ex.code)
     if (stem < 4 || stem < best) continue
     if (stem > best) { best = stem; hits = [] }
