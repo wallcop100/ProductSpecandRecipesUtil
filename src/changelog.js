@@ -45,7 +45,6 @@ export const RELEASES = [
       'The finish shows in brackets after both descriptions; DimMult and PackQty show whenever they hold a value',
       'Bad refs (spaces, empty parts) are offered a rename',
       'The right drawer can be resized',
-      'A bug note can include your data, so the problem can be replayed exactly',
     ],
   },
   {
