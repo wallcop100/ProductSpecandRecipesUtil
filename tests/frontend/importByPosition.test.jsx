@@ -106,6 +106,24 @@ describe('import By position', () => {
     expect(Object.keys(useStore.getState().formCaptures.byPosition).sort()).toEqual(['C01', 'C03', 'X99'])
   })
 
+  test('2V84PW: embedded, Open walks only this position\'s codes without an ElementType', async () => {
+    readSheet.mockResolvedValue({ sheets: ['S'], sheet: 'S', headers: HEAD, rows: [...ROWS,
+      { PositionTypeRef: 'C02', ManufacturerName: 'iGuzzini', ProductCode: 'QC53' },
+      { PositionTypeRef: 'C03', ManufacturerName: 'iGuzzini', ProductCode: 'QC54' },
+      { PositionTypeRef: 'C03', ManufacturerName: 'iGuzzini', ProductCode: 'QC55' }] })
+    render(<ProductCodeImportScreen embedded={{ posRef: 'C02', onStaged: vi.fn() }} />)
+    fireEvent.click(await screen.findByText('Choose spreadsheet…'))
+    const give = await screen.findAllByTestId('give-et', {}, { timeout: 4000 })
+    expect(give).toHaveLength(2)                                             // C02's two, not C03's
+    fireEvent.click(give[0])
+    expect(await screen.findByTestId('newet-step')).toHaveTextContent('C02 · code 1 of 2')
+    fireEvent.click(screen.getByTestId('newet-skip'))
+    await waitFor(() => expect(screen.getByTestId('newet-step')).toHaveTextContent('code 2 of 2'))
+    expect([...screen.getByTestId('newet-progress').children].map(c => c.dataset.state)).toEqual(['skipped', 'current'])
+    fireEvent.click(screen.getByTestId('newet-back'))
+    await waitFor(() => expect(screen.getByTestId('newet-step')).toHaveTextContent('code 1 of 2'))
+  })
+
   test('the toggle switches back to the whole Form, and is remembered', async () => {
     render(<ProductCodeImportScreen onBack={vi.fn()} onReviewPositions={vi.fn()} />)
     fireEvent.click(await screen.findByText('Choose spreadsheet…'))

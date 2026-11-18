@@ -212,6 +212,20 @@ export function usuallyMissing(m, kind, min = 0.6) {
   return kind.slots.filter(s => (s.core || s.share >= min) && !m.jobs.has(s.slot) && s.slot !== 'OTHER')
 }
 
+/**
+ * Where this project files parts doing `job` (a jobKey): inside a wrapper or at position level
+ * (2V84PW). → { inside, n, of } with n the winning side's count, or null when it has none yet.
+ */
+export function placementByPrecedent(job, state, idx = indexes(state)) {
+  let inside = 0, pos = 0
+  for (const r of (state.recipes || []).filter(live)) {
+    if ((r.IsDesign || r.isDesign) === 'Y' || jobKey(rowJob(r, idx)) !== job) continue
+    if ((r.ContextType || r.contextType) === 'PositionType') pos++
+    else inside++
+  }
+  return inside + pos ? { inside: inside > pos, n: Math.max(inside, pos), of: inside + pos } : null
+}
+
 /** This project's ElementTypes doing `job` (a jobKey), most used in recipes first. */
 export function elementTypesForJob(job, state, idx = indexes(state)) {
   const uses = new Map()

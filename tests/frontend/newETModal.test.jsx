@@ -198,8 +198,7 @@ test('ZAJ889: a proposal fills the fields with wands; the Form\'s Finish waits, 
   useStore.setState({ importDraft: { map: { mfr: 'ManufacturerName', code: 'ProductCode' }, rows: [
     { positionType: 'H351', rawText: 'LD53', manufacturer: 'LightGraphix', context: { ProductName: 'LD53', Finish: 'Classic bronze' } },
   ] } })
-  const onBulk = vi.fn()
-  setup({ importContext: null, formRefs: ['H351'], draftKey: 'zaj889', onBulk, bulkCount: 4,
+  setup({ importContext: null, formRefs: ['H351'], draftKey: 'zaj889',
     prefill: { ref: 'ET-PS-07', name: 'LightGraphix - LD53', family: 'ET-SPIKE', manufacturer: 'LightGraphix', productCode: 'LD53', description: 'LD53', why: 'like LD51 here' } })
   for (const f of ['ref', 'name', 'family', 'manufacturer', 'productCode']) expect(screen.getByTestId(`wand-${f}`)).toBeInTheDocument()
   expect(screen.getByTestId('wand-ref').title).toBe('Suggested: like LD51 here')
@@ -215,8 +214,7 @@ test('ZAJ889: a proposal fills the fields with wands; the Form\'s Finish waits, 
   expect(screen.getByTestId('wand-finish')).toBeInTheDocument()
   fireEvent.change(document.querySelector('[data-field="name"]'), { target: { value: 'Spike' } })
   expect(screen.queryByTestId('wand-name')).toBeNull()
-  fireEvent.click(screen.getByTestId('newet-do-all'))
-  expect(onBulk).toHaveBeenCalled()
+  expect(screen.queryByText(/at once/)).toBeNull()   // 2V84PW: no bulk jump; the pane walks the codes
   useStore.setState({ importDraft: null })
 })
 
@@ -232,26 +230,99 @@ describe('placeIn: the footer puts the new ElementType where you say', () => {
   }
   const rowsOf = et => useStore.getState().recipes.filter(r => r.ElementTypeRef === et)
 
-  test('no wrapper on the position, no wrapper button', () => {
+  test('no wrapper on the position, no wrapper tick box', () => {
     place([], null)
-    expect(screen.queryByTestId('newet-into-wrapper')).toBeNull()
+    expect(screen.queryByTestId('newet-inside')).toBeNull()
     expect(screen.getByTestId('newet-into-position')).toHaveTextContent('Add into D74')
   })
 
   test('into the position', () => {
-    expect(place(wrapped, 'newet-into-position')).toHaveBeenCalledWith('ET-PROF-02', 'position')
+    expect(place(wrapped, 'newet-into-position')).toHaveBeenCalledWith('ET-PROF-02', 'position', { advance: false })
     expect(rowsOf('ET-PROF-02')).toMatchObject([{ ContextType: 'PositionType', ContextRef: 'D74' }])
   })
 
-  test('into the wrapper', () => {
-    expect(place(wrapped, 'newet-into-wrapper')).toHaveBeenCalledWith('ET-PROF-02', 'wrapper')
+  test('into the wrapper: tick Inside, then Add', () => {
+    const onCreated = place(wrapped, null)
+    expect(screen.getByTestId('newet-inside')).not.toBeChecked()   // no precedent: unticked, not purple
+    expect(screen.queryByTestId('newet-inside-learned')).toBeNull()
+    fireEvent.click(screen.getByLabelText(/Inside/))
+    fireEvent.click(screen.getByTestId('newet-into-position'))
+    expect(onCreated).toHaveBeenCalledWith('ET-PROF-02', 'wrapper', { advance: false })
     expect(rowsOf('ET-PROF-02')).toMatchObject([{ ContextType: 'ElementType', ContextRef: 'ET-DL-04' }])
   })
 
   test('Product Spec only: a spec row, no recipe row', () => {
-    expect(place(wrapped, 'newet-ps-only')).toHaveBeenCalledWith('ET-PROF-02', 'ps')
+    expect(place(wrapped, 'newet-ps-only')).toHaveBeenCalledWith('ET-PROF-02', 'ps', { advance: false })
     expect(rowsOf('ET-PROF-02')).toHaveLength(0)
     expect(useStore.getState().psRows.some(r => r.ElementTypeRef === 'ET-PROF-02')).toBe(true)
+  })
+})
+
+describe('2V84PW: one code of a queue', () => {
+  const wrapper = { PositionTypeRef: 'D74', ContextType: 'PositionType', ContextRef: 'D74', ElementTypeRef: 'ET-DL-04', IsDesign: 'Y' }
+  const base = (over = {}) => useStore.setState({ projectId: 42, elementTypes: [], psRows: [], recipes: [wrapper],
+    containerETRefs: new Set(['et-dl-04']), dbWriteEnabled: false, psChanges: [], rsChanges: [], dbChanges: [], past: [], future: [], ...over })
+  const step = (over = {}) => ({ index: 0, total: 3, states: ['current', 'waiting', 'waiting'], doneRefs: [], onBack: null, onSkip: vi.fn(), ...over })
+  const open = props => render(<NewETModal show onHide={vi.fn()} onCreated={vi.fn()} prefill={prefill} importContext={ctx} placeIn="D74" {...props} />)
+
+  test('progress, no Back on the first, Continue advances, the outline Add stops', () => {
+    base()
+    const onCreated = vi.fn(), s = step()
+    open({ onCreated, step: s, draftKey: '::q1' })
+    expect(screen.getByTestId('newet-step')).toHaveTextContent('D74 · code 1 of 3')
+    expect([...screen.getByTestId('newet-progress').children].map(c => c.dataset.state)).toEqual(['current', 'waiting', 'waiting'])
+    expect(screen.queryByTestId('newet-back')).toBeNull()
+    expect(screen.getByTestId('newet-into-position')).toHaveTextContent('Add into D74 and Continue')
+    fireEvent.click(screen.getByTestId('newet-skip'))
+    expect(s.onSkip).toHaveBeenCalled()
+    expect(useStore.getState().elementTypes).toHaveLength(0)        // Skip makes nothing
+    fireEvent.click(screen.getByTestId('newet-into-position'))
+    expect(onCreated).toHaveBeenLastCalledWith('ET-PROF-02', 'position', { advance: true })
+  })
+
+  test('the last code finishes; Back and Product Spec only carry on', () => {
+    base()
+    const onCreated = vi.fn(), onBack = vi.fn()
+    open({ onCreated, step: step({ index: 2, states: ['done', 'skipped', 'current'], doneRefs: ['ET-PS-01'], onBack }), draftKey: '::q3' })
+    expect(screen.getByTestId('newet-into-position')).toHaveTextContent('Add into D74 and finish')
+    expect(screen.getByTestId('newet-step')).toHaveTextContent('done: ET-PS-01')
+    fireEvent.click(screen.getByTestId('newet-back'))
+    expect(onBack).toHaveBeenCalled()
+    fireEvent.click(screen.getByTestId('newet-ps-only'))
+    expect(onCreated).toHaveBeenLastCalledWith('ET-PROF-02', 'ps', { advance: true })
+  })
+
+  test('Inside is ticked, purple, when the project puts parts doing this job inside a wrapper', () => {
+    base({ recipes: [wrapper, { PositionTypeRef: 'D10', ContextType: 'ElementType', ContextRef: 'ET-DL-01', ElementTypeRef: 'ET-PROF-01' }] })
+    const onCreated = vi.fn()
+    open({ onCreated, draftKey: '::prec' })
+    expect(screen.getByTestId('newet-inside')).toBeChecked()
+    expect(screen.getByTestId('newet-inside-learned').title).toMatch(/1 of 1 .*inside a wrapper/)
+    fireEvent.click(screen.getByTestId('newet-into-position'))
+    expect(onCreated).toHaveBeenCalledWith('ET-PROF-02', 'wrapper', { advance: false })
+    expect(useStore.getState().recipes.filter(r => r.ElementTypeRef === 'ET-PROF-02')).toMatchObject([{ ContextType: 'ElementType', ContextRef: 'ET-DL-04' }])
+  })
+
+  test('Back onto one made earlier: a change updates the ElementType and its Product Spec row, no second one', () => {
+    base({
+      elementTypes: [{ ElementTypeRef: 'ET-PROF-02', Name: 'Old name', Description: 'Profile 2020', Family: 'ET-LIN-PROF', _row_num: null }],
+      psRows: [{ ElementTypeRef: 'ET-PROF-02', Manufacturer: 'Flexalighting', ProductCode: 'FPS2020BG2000', ComponentDescription: 'Profile 2020' }],
+      recipes: [wrapper, { _id: 'r1', PositionTypeRef: 'D74', ContextType: 'PositionType', ContextRef: 'D74', ElementTypeRef: 'ET-PROF-02' }],
+    })
+    const onCreated = vi.fn()
+    open({ onCreated, editing: 'ET-PROF-02', step: step({ index: 0 }), draftKey: '::q1' })
+    expect(document.querySelector('[data-field="name"]')).toHaveValue('Old name')
+    expect(screen.getByTestId('newet-into-position')).not.toBeDisabled()   // its own ref is not "already exists"
+    fireEvent.change(document.querySelector('[data-field="name"]'), { target: { value: 'New name' } })
+    fireEvent.change(document.querySelector('[data-field="finish"]'), { target: { value: 'Black' } })
+    fireEvent.click(screen.getByTestId('newet-into-position'))
+    const st = useStore.getState()
+    const mine = st.elementTypes.filter(e => e.ElementTypeRef === 'ET-PROF-02')
+    expect(mine).toHaveLength(1)
+    expect(mine[0]).toMatchObject({ Name: 'New name', Description: 'Profile 2020 (Black)' })
+    expect(st.psRows.find(r => r.ElementTypeRef === 'ET-PROF-02')).toMatchObject({ ComponentDescription: 'Profile 2020 (Black)', Manufacturer: 'Flexalighting' })
+    expect(st.recipes.filter(r => r.ElementTypeRef === 'ET-PROF-02')).toHaveLength(1)
+    expect(onCreated).toHaveBeenCalledWith('ET-PROF-02', 'position', { advance: true })
   })
 })
 

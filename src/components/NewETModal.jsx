@@ -15,7 +15,9 @@ import { containerForPosition } from '../utils/recipePresence'
 import { proposeElementTypes, refFromText, whyText, seedName, refamily, isWrapperRef, cleanRef, refIssues } from '../utils/etSeed'
 import { houseMaker } from '../utils/codeShapes'
 import { useCompanion } from '../platform/companion'
-import { noteProposal, settleCreated, shareOutcomes } from '../platform/outcomes'
+import { noteProposal, settleCreated, shareOutcomes, notePlacement, settlePlacement } from '../platform/outcomes'
+import { jobOf, jobKey } from '../utils/codeJobs'
+import { placementByPrecedent } from '../utils/recipeKinds'
 const norm = s => String(s ?? '').trim().toLowerCase()
 
 /**
@@ -67,8 +69,13 @@ export default function NewETModal({
   draftKey = null,
   /** Positions whose Form row shows beside the fields (default: importContext.positionTypes). */
   formRefs = null,
-  /** "Do all N at once": closes this and opens Bulk on every code (ZAJ889). */
-  onBulk = null, bulkCount = 0,
+  /**
+   * One code of a queue (2V84PW): { index, total, states: ['done'|'skipped'|'current'|'waiting'],
+   * doneRefs, onBack, onSkip }. Saving calls onCreated(ref, where, { advance }); the caller moves on.
+   */
+  step = null,
+  /** An ElementType made earlier in the queue, reopened by Back: saving updates it (and its spec row). */
+  editing = null,
   /**
    * The position to put it in. Given, the footer offers only the places that exist: Product
    * Spec only, into the position's wrapper, into the position. The modal places it, then
@@ -104,6 +111,9 @@ export default function NewETModal({
   const [finish, setFinish]         = useState('')
   const [extNotes, setExtNotes]     = useState('')
   const [saving, setSaving]         = useState(false)
+  // "Inside {wrapper}": ticked when the project files this job inside (placementByPrecedent).
+  const [inWrapper, setInWrapper]   = useState(false)
+  const placeSeed = useRef(null)    // { value: 'wrapper'|'position', n, of } when precedent chose it
   // The Form's row, beside the fields; a click on a value copies it (LWKL84: never into a field).
   const formRow = useMemo(() => show ? formColumnsFor(importDraft, formRefs || importContext?.positionTypes, importContext?.code || prefill?.productCode, { buildRefMap, targetFor }) : null,
     [show, importDraft, formRefs, importContext, prefill?.productCode])
@@ -148,9 +158,11 @@ export default function NewETModal({
   useEffect(() => {
     if (!show) return
     // The same draft reopens as you left it, unless its opener now hands it another ref or family (the drawer card).
-    const key = `${draftKey ?? prefill.ref ?? prefill.productCode ?? ''}|${prefill.ref || ''}|${prefill.family || ''}`
+    const key = `${editing ? `edit::${editing}` : draftKey ?? prefill.ref ?? prefill.productCode ?? ''}|${prefill.ref || ''}|${prefill.family || ''}`
     if (seededFor.current === key) return
     seededFor.current = key
+    placeSeed.current = null
+    if (editing) { seedFromExisting(editing); return }
     const p = own.current = proposeOne()
     noteProposal(p)
 
@@ -168,8 +180,57 @@ export default function NewETModal({
     seeded.current = prefill.why ? { ref: prefill.ref, name: prefill.name, family: prefill.family, manufacturer: prefill.manufacturer,
       productCode: prefill.productCode, description: norm(prefill.description) === norm(prefill.productCode) ? null : prefill.description }
       : p ? { ref: p.ref, name: p.name, family: p.family } : {}
+    seedPlacement(p)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [show, draftKey, prefill.ref, prefill.family])
+  }, [show, draftKey, editing, prefill.ref, prefill.family])
+
+  /** Back onto one made earlier: its ElementType and Product Spec row as they are now. */
+  function seedFromExisting(r) {
+    const st = useStore.getState()
+    const et = st.elementTypes.find(e => norm(e.ElementTypeRef || e.elementTypeRef) === norm(r)) || {}
+    const ps = st.psRows.find(e => norm(e.ElementTypeRef || e.elementTypeRef) === norm(r)) || {}
+    const desc = String(et.Description ?? et.description ?? '')
+    // The Form's finish was written in brackets at the end (withFinish): show it in its own field again.
+    const tail = finishHint && desc.endsWith(`(${finishHint})`)
+    own.current = null
+    seeded.current = {}
+    setRef(r); refTyped.current = true
+    setName(et.Name || et.name || '')
+    setFamily(et.Family || et.family || '')
+    setDescription(tail ? desc.slice(0, -finishHint.length - 2).trim() : desc)
+    setFinish(tail ? finishHint : '')
+    setMfr(ps.Manufacturer || ps.manufacturer || prefill.manufacturer || '')
+    setCode(ps.ProductCode || ps.productCode || prefill.productCode || '')
+    setTBC(ps.IsTBC === 'Y' || null); setPropTBC(ps.IsPropertiesTBC === 'Y' || null)
+    setNotes(ps.InternalNotesText || ''); setExtNotes(ps.ExternalNotesText || '')
+    setInWrapper(!!placedRows(r).inside)
+    setSaving(false)
+  }
+
+  /** The tick's default: where this project files parts doing the same job. A guess, so it is noted. */
+  function seedPlacement(p) {
+    setInWrapper(false)
+    if (!placeIn || !wrapperRef) return
+    const st = useStore.getState()
+    const j = jobOf({ ref: prefill.ref || p?.ref, family: prefill.family || p?.family, name: prefill.name || p?.name,
+      description: prefill.description, maker: prefill.manufacturer, code: prefill.productCode })
+    const prec = placementByPrecedent(jobKey(j), st)
+    if (!prec) return
+    const value = prec.inside ? 'wrapper' : 'position'
+    placeSeed.current = { value, n: prec.n, of: prec.of }
+    setInWrapper(prec.inside)
+    notePlacement({ manufacturer: prefill.manufacturer, code: prefill.productCode, value, n: prec.n, of: prec.of })
+  }
+
+  /** This ElementType's rows on placeIn: at position level, and inside its wrapper. */
+  function placedRows(r) {
+    const mine = useStore.getState().recipes.filter(x => (x.IsDeleted || x.isDeleted) !== 'Y'
+      && norm(x.ElementTypeRef || x.elementTypeRef) === norm(r) && norm(x.PositionTypeRef || x.positionTypeRef) === norm(placeIn))
+    return {
+      atPos: mine.find(x => (x.ContextType || x.contextType) === 'PositionType'),
+      inside: wrapperRef && mine.find(x => (x.ContextType || x.contextType) === 'ElementType' && norm(x.ContextRef || x.contextRef) === norm(wrapperRef)),
+    }
+  }
 
   /** After a successful create, the next open of this key must seed afresh. */
   const clearSeed = () => { seededFor.current = Symbol('done') }
@@ -238,17 +299,20 @@ export default function NewETModal({
   const alreadyExists = useMemo(() => {
     const k = cleanRef(ref).toLowerCase()
     if (!k) return false
+    if (editing && k === norm(editing)) return false
     return allETObjects.some(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === k)
-  }, [ref, allETObjects])
+  }, [ref, allETObjects, editing])
 
   const emptySegment = refIssues(ref).empty
   const canSave = ref.trim() && !alreadyExists && !emptySegment && !saving
 
   const saveTitle = alreadyExists ? 'Ref already exists' : emptySegment ? 'The ref has an empty part (--, or a - at the end)' : !ref.trim() ? 'Enter a ref first' : ''
-  async function handleSave(where = null) {
+  async function handleSave(where = null, { advance = false } = {}) {
     const trimRef = cleanRef(ref)
     if (!trimRef || alreadyExists || emptySegment) return
     const fam = refIssues(family).fixed
+    // The tick decides between the position and its wrapper.
+    if (where === 'position' && inWrapper && wrapperRef) where = 'wrapper'
     setSaving(true)
     try {
       // Register the ET in the catalogue (staging-backed; queues a DB row when
@@ -258,29 +322,32 @@ export default function NewETModal({
         createElementType({ ref: fam, description: canon?.description || null, family: familyParent.trim() || canon?.parent || null, isCollection: true })
       }
       const fullDesc = finish.trim() ? withFinish(description, finish.trim()) : description.trim()
-      createElementType({
-        ref: trimRef,
-        name: name.trim() || null,
-        // Finish goes in brackets after both descriptions (NQLUFQ).
-        description: fullDesc || null,
-        family: fam || null,
-      })
+      if (editing) saveEdit(trimRef, fam, fullDesc, where)
+      else {
+        createElementType({
+          ref: trimRef,
+          name: name.trim() || null,
+          // Finish goes in brackets after both descriptions (NQLUFQ).
+          description: fullDesc || null,
+          family: fam || null,
+        })
 
-      // Only create a PS row when procurement data was actually entered.
-      const psDefaults = {}
-      if (manufacturer.trim()) psDefaults.Manufacturer = manufacturer.trim()
-      if (productCode.trim())  psDefaults.ProductCode  = productCode.trim()
-      const existing = psRows.find(p => (p.ElementTypeRef || p.elementTypeRef || '').toLowerCase() === trimRef.toLowerCase())
-      // Product Spec and ElementType both get these (92YN3U); addPSRow carries them across.
-      if (isTBC)               psDefaults.IsTBC = 'Y'
-      if (isPropTBC)           psDefaults.IsPropertiesTBC = 'Y'
-      if (notes.trim())        psDefaults.InternalNotesText = notes.trim()
-      if (extNotes.trim())     psDefaults.ExternalNotesText = extNotes.trim()
-      // The description is shared, but alone it does not make a Product Spec row.
-      if (fullDesc && (existing || Object.keys(psDefaults).length)) psDefaults.ComponentDescription = fullDesc
-      if (Object.keys(psDefaults).length) {
-        if (existing) updatePSRow(trimRef, psDefaults)
-        else addPSRow(trimRef, psDefaults)
+        // Only create a PS row when procurement data was actually entered.
+        const psDefaults = {}
+        if (manufacturer.trim()) psDefaults.Manufacturer = manufacturer.trim()
+        if (productCode.trim())  psDefaults.ProductCode  = productCode.trim()
+        const existing = psRows.find(p => (p.ElementTypeRef || p.elementTypeRef || '').toLowerCase() === trimRef.toLowerCase())
+        // Product Spec and ElementType both get these (92YN3U); addPSRow carries them across.
+        if (isTBC)               psDefaults.IsTBC = 'Y'
+        if (isPropTBC)           psDefaults.IsPropertiesTBC = 'Y'
+        if (notes.trim())        psDefaults.InternalNotesText = notes.trim()
+        if (extNotes.trim())     psDefaults.ExternalNotesText = extNotes.trim()
+        // The description is shared, but alone it does not make a Product Spec row.
+        if (fullDesc && (existing || Object.keys(psDefaults).length)) psDefaults.ComponentDescription = fullDesc
+        if (Object.keys(psDefaults).length) {
+          if (existing) updatePSRow(trimRef, psDefaults)
+          else addPSRow(trimRef, psDefaults)
+        }
       }
 
       if (productCode.trim()) {
@@ -290,28 +357,80 @@ export default function NewETModal({
         const project = useStore.getState().projectNumber
         shareOutcomes(companion, project, settleCreated(project, [made]))
       }
+      if (productCode.trim() && where) {
+        const project = useStore.getState().projectNumber
+        shareOutcomes(companion, project, settlePlacement(project, { manufacturer: manufacturer.trim(), code: productCode.trim() }, where))
+      }
       clearSeed()
-      if (where) {
+      if (where && !editing) {
         const st = useStore.getState()
         const row = { elementTypeRef: trimRef, ElementTypeRef: trimRef }
         if (where === 'position') st.addRecipeRow(placeIn, 'position', row, { asPosition: true })
         if (where === 'wrapper') st.addRecipeRow(placeIn, /LIN/i.test(wrapperRef) ? 'lin_internal' : 'dl_internal', row, { asPosition: true })
         st.ensurePSRow(trimRef)
       }
-      onCreated(trimRef, where)
+      onCreated(trimRef, where, { advance })
     } finally {
       setSaving(false)
     }
   }
 
+  /**
+   * Back, then Save: everything changed goes to the ElementType and its Product Spec row, and
+   * the row moves to where it is placed now. Choosing Product Spec only never removes a row.
+   */
+  function saveEdit(newRef, fam, fullDesc, where) {
+    const st = useStore.getState()
+    let r = editing
+    if (norm(newRef) !== norm(editing)) { st.renameElementType(editing, newRef); r = newRef }
+    st.updateElementType(r, { Name: name.trim() || null, Description: fullDesc || null, Family: fam || null })
+    const spec = {
+      Manufacturer: manufacturer.trim() || null, ProductCode: productCode.trim() || null,
+      IsTBC: isTBC ? 'Y' : null, IsPropertiesTBC: isPropTBC ? 'Y' : null,
+      InternalNotesText: notes.trim() || null, ExternalNotesText: extNotes.trim() || null,
+      ComponentDescription: fullDesc || null,
+    }
+    const hasRow = useStore.getState().psRows.some(x => norm(x.ElementTypeRef || x.elementTypeRef) === norm(r))
+    if (hasRow) st.updatePSRow(r, spec)
+    else if (Object.values(spec).some(Boolean)) st.addPSRow(r, Object.fromEntries(Object.entries(spec).filter(([, v]) => v)))
+    if (where !== 'position' && where !== 'wrapper') return
+    const { atPos, inside } = placedRows(r)
+    const row = { elementTypeRef: r, ElementTypeRef: r }
+    if (where === 'position' && !atPos) {
+      if (inside) st.removeRecipeRow(placeIn, inside._id)
+      st.addRecipeRow(placeIn, 'position', row, { asPosition: true })
+    }
+    if (where === 'wrapper' && !inside) {
+      if (atPos) st.removeRecipeRow(placeIn, atPos._id)
+      st.addRecipeRow(placeIn, /LIN/i.test(wrapperRef) ? 'lin_internal' : 'dl_internal', row, { asPosition: true })
+    }
+    st.ensurePSRow(r)
+  }
+
   return (
     <Modal show={show} onHide={onHide} size={formRow ? 'xl' : 'lg'} centered scrollable>
-      <Modal.Header closeButton>
+      <Modal.Header closeButton className={step ? 'flex-wrap' : undefined}>
+        {step && (
+          <div className="w-100 text-muted" style={{ fontSize: 11 }} data-testid="newet-step">
+            {placeIn ? `${placeIn} · ` : ''}code {step.index + 1} of {step.total}
+            {step.doneRefs?.length > 0 && <span className="ms-2">· done: <span style={{ fontFamily: 'monospace' }}>{step.doneRefs.join(', ')}</span></span>}
+          </div>
+        )}
         <Modal.Title style={{ fontSize: 14 }}>
           <MaterialIcon name="add_circle" size={16} style={{ verticalAlign: 'middle', marginRight: 6, color: C.success }} />
           New Element Type
           {contextLabel && <span className="text-muted fw-normal ms-2" style={{ fontSize: 12 }}>{contextLabel}</span>}
         </Modal.Title>
+        {step && (
+          // One segment per code: green made, blue this one, amber-outlined skipped, grey waiting.
+          <div className="w-100 d-flex gap-1 mt-2" style={{ order: 3 }} data-testid="newet-progress">
+            {step.states.map((st, i) => (
+              <div key={i} data-state={st} style={{ flex: 1, height: 4, borderRadius: 2,
+                background: st === 'done' ? C.success : st === 'current' ? C.accent : C.border,
+                outline: st === 'skipped' ? `1px solid ${C.attnInk}` : undefined }} />
+            ))}
+          </div>
+        )}
       </Modal.Header>
 
       <Modal.Body className={formRow ? 'd-flex gap-3' : undefined}>
@@ -357,14 +476,6 @@ export default function NewETModal({
           </div>
         )}
 
-        {onBulk && bulkCount > 1 && (
-          <div className="text-end mb-2" style={{ fontSize: 11 }}>
-            <button type="button" className="btn btn-link p-0" style={{ fontSize: 11 }} onClick={onBulk} data-testid="newet-do-all">
-              Do all {bulkCount} at once →
-            </button>
-          </div>
-        )}
-
         <div className="row g-3 mb-3">
         {/* Ref field */}
         <Form.Group className="col-6">
@@ -376,7 +487,7 @@ export default function NewETModal({
             value={ref}
             data-field="ref" onChange={e => { refTyped.current = true; setRef(e.target.value) }}
             onBlur={() => { if (cleanRef(ref) !== ref) setRef(cleanRef(ref)) /* refs never hold whitespace */ }}
-            onKeyDown={e => { if (e.key === 'Enter' && canSave) handleSave(placeIn ? 'position' : null) }}
+            onKeyDown={e => { if (e.key === 'Enter' && canSave) handleSave(placeIn ? 'position' : null, { advance: !!step }) }}
             placeholder="e.g. ET-TAPE-004"
             isInvalid={alreadyExists || emptySegment}
             style={{ fontSize: 12, fontFamily: 'monospace' }}
@@ -559,7 +670,7 @@ export default function NewETModal({
                   </div>
                   <div className="mt-2 d-flex gap-2 flex-wrap">
                     <Button size="sm" variant="warning" style={{ fontSize: 11 }}
-                      onClick={() => onCreated(dupSpec.ref)}>
+                      onClick={() => onCreated(dupSpec.ref, null, { advance: !!step })}>
                       Use existing {dupSpec.ref}
                     </Button>
                     <Button size="sm" variant="outline-secondary" style={{ fontSize: 11 }}
@@ -595,14 +706,28 @@ export default function NewETModal({
       </Modal.Body>
 
       <Modal.Footer>
-        <Button variant="link" size="sm" onClick={onHide} style={{ fontSize: 12 }}>Cancel</Button>
+        {step && <>
+          {step.onBack && <Button variant="link" size="sm" className="text-muted" style={{ fontSize: 12 }} data-testid="newet-back" onClick={step.onBack}>Back</Button>}
+          <Button variant="link" size="sm" style={{ fontSize: 12 }} data-testid="newet-skip" onClick={step.onSkip}>Skip</Button>
+        </>}
+        <Button variant="link" size="sm" className={step ? 'text-muted me-auto' : undefined} onClick={onHide} style={{ fontSize: 12 }}>Cancel</Button>
         {placeIn ? <>
-          <Button variant="outline-secondary" size="sm" style={{ fontSize: 12 }} className="me-auto order-first" data-testid="newet-ps-only"
-            onClick={() => handleSave('ps')} disabled={!canSave} title={saveTitle}>Product Spec only</Button>
-          {wrapperRef && <Button variant="outline-primary" size="sm" style={{ fontSize: 12 }} data-testid="newet-into-wrapper"
-            onClick={() => handleSave('wrapper')} disabled={!canSave} title={saveTitle}>Add into {wrapperRef}</Button>}
+          <Button variant="outline-secondary" size="sm" style={{ fontSize: 12 }} className={step ? undefined : 'me-auto order-first'} data-testid="newet-ps-only"
+            onClick={() => handleSave('ps', { advance: !!step })} disabled={!canSave} title={saveTitle}>Product Spec only</Button>
+          {wrapperRef && (
+            <Form.Check type="checkbox" id={`newet-inside-${uid}`} className="mb-0 mx-1" style={{ fontSize: 12 }} data-testid="newet-inside"
+              checked={inWrapper} onChange={e => setInWrapper(e.target.checked)}
+              label={<>Inside <span style={{ fontFamily: 'monospace' }}>{wrapperRef}</span>{placeSeed.current && placeSeed.current.value === (inWrapper ? 'wrapper' : 'position') && (
+                <span data-testid="newet-inside-learned" title={`Suggested: this project puts ${placeSeed.current.n} of ${placeSeed.current.of} parts like this ${placeSeed.current.value === 'wrapper' ? 'inside a wrapper' : 'at position level'}`}>
+                  <MaterialIcon name="auto_fix_high" size={12} style={{ color: C.companion, verticalAlign: 'middle', marginLeft: 4 }} /></span>)}</>} />
+          )}
+          {step && <Button variant="outline-primary" size="sm" style={{ fontSize: 12 }} data-testid="newet-into-position-stop"
+            onClick={() => handleSave('position')} disabled={!canSave} title={saveTitle}>Add into {placeIn}</Button>}
           <Button variant="primary" size="sm" style={{ fontSize: 12 }} data-testid="newet-into-position"
-            onClick={() => handleSave('position')} disabled={!canSave} title={saveTitle}>{saving ? 'Creating…' : `Add into ${placeIn}`}</Button>
+            onClick={() => handleSave('position', { advance: !!step })} disabled={!canSave} title={saveTitle}>
+            {saving ? 'Saving…' : !step ? `Add into ${placeIn}`
+              : step.index + 1 < step.total ? `Add into ${placeIn} and Continue →` : `Add into ${placeIn} and finish`}
+          </Button>
         </> : (
           <Button variant="primary" size="sm" style={{ fontSize: 12 }} onClick={() => handleSave()} disabled={!canSave} title={saveTitle}>
             {saving ? 'Creating…' : confirmLabel}

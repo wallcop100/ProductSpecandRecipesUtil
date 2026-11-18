@@ -171,6 +171,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   const [reviewingExisting, setReviewingExisting] = useState(false)
   const [creatingFor, setCreatingFor] = useState(null)
   const [etPending, setEtPending] = useState(null)
+  // 2V84PW: the position's codes with no ElementType, one New ElementType each.
+  // { codes: [norm code], i, made: { code: ref }, skipped: [code] }
+  const [etQueue, setEtQueue] = useState(null)
   const [etSeed, setEtSeed] = useState(null)   // ref/family typed on a Form pane card, for the modal
   const [staged, setStaged] = useState(null)
   const [stagedOpen, setStagedOpen] = useState(false)   // the result surfaces as a modal, not below the fold
@@ -1113,7 +1116,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   // ZAJ889: one code's New ElementType modal, filled from the same proposal Bulk would make.
   useEffect(() => {
     if (!etPending) return
-    const e = entries.find(x => norm(x.text) === norm(etPending))
+    const e = codeEntries.find(x => norm(x.text) === norm(etPending))
     setEtPending(null)
     const seed = etSeed || {}
     setEtSeed(null)
@@ -1135,7 +1138,35 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       why: p ? whyText(p) || 'proposed like Bulk' : '',
       refWhy: p && !seed.ref ? refFromText(p) : '',
     })
-  }, [etPending, entries, proposals, etSeed])
+  }, [etPending, codeEntries, proposals, etSeed])
+
+  /**
+   * Open code `i` of the queue (2V84PW). One made here reopens for editing; one that has an
+   * ElementType from elsewhere meanwhile is passed over in the direction of travel.
+   */
+  function queueOpen(q, i, dir = 1) {
+    while (i >= 0 && i < q.codes.length && !q.made[q.codes[i]]
+      && allEntries.find(x => norm(x.text) === q.codes[i])?.etRef) i += dir
+    setCreatingFor(null)
+    setMergingGroup(null)
+    if (i < 0 || i >= q.codes.length) { setEtQueue(null); return }
+    setEtQueue({ ...q, i })
+    const code = q.codes[i], made = q.made[code]
+    if (!made) { openETFor(code); return }
+    const e = allEntries.find(x => norm(x.text) === code)
+    setCreatingFor({
+      text: e?.text || code, editing: made, ref: made,
+      manufacturer: e?.manufacturers?.[0] || '', note: e?.variants?.[0]?.note || '',
+      positionTypes: e?.positionTypes || [], rowCount: e?.rowRefs?.length || 0,
+    })
+  }
+  /** Embedded, a code's Give button starts the queue there; Back reaches the ones before it. */
+  function startEtQueue(code) {
+    // TBC rows have no code entry and still go to Bulk, so they stay out of the queue.
+    const codes = (selection?.noEtCodes || []).filter(c => !tbcEntries.some(e => norm(e.text) === c)), i = codes.indexOf(norm(code))
+    if (!embedded || i < 0) { openETFor(code); return }
+    queueOpen({ codes, i, made: {}, skipped: [] }, i)
+  }
 
   function openBulkCreate() {
     setEtFocusCode(null)
@@ -1528,11 +1559,13 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       if (isTbc(r, captureOpts)) { if (!etFor(tbcKey(r), r.manufacturer)) missing.add(norm(tbcKey(r))) }
       else for (const c of productCaptures(r, captureOpts)) if (!etFor(c.code, r.manufacturer)) missing.add(norm(c.code))
     }
-    const noEt = Math.max(missing.size, codes.filter(e => !e.etRef).length)
+    // The codes counted here are the queue the pane's Open walks through (2V84PW), so the two agree.
+    const noEtCodes = [...new Set([...missing, ...codes.filter(e => !e.etRef).map(e => norm(e.text))])]
+    const noEt = noEtCodes.length
     const unconfirmedRows = rowsIn.filter(r => !r.confirmed).length
     const clashes = collisions.filter(inSel).length
     return {
-      refs: [...selectedRefs], rows: rowsIn.length, unconfirmedRows, codes: codes.length, noEt, clashes,
+      refs: [...selectedRefs], rows: rowsIn.length, unconfirmedRows, codes: codes.length, noEt, noEtCodes, clashes,
       etRefs: [...new Set(codes.map(e => e.etRef).filter(Boolean).map(r => r.toUpperCase()))].sort(),
       // The ElementTypes window works on confirmed rows' codes.
       canOpenEts: codes.some(e => !e.etRef) || clashes > 0,
@@ -1790,7 +1823,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
           info={rowInfo}
           onSetRole={setTokenRole}
           onToggleConfirm={toggleConfirm}
-          onNeedsET={openETFor}
+          onNeedsET={startEtQueue}
           proposalFor={code => cardProposals.find(p => norm(p.code) === norm(code))}
           onMoveNoteWord={(rowId, from, to, word) => moveNoteIn(rowId, from, to, word)}
           onEditNote={editNote}
@@ -2312,7 +2345,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
 
       <NewETModal
         show={!!creatingFor}
-        onHide={() => { setCreatingFor(null); setMergingGroup(null) }}
+        onHide={() => { setCreatingFor(null); setMergingGroup(null); setEtQueue(null) }}
         contextLabel={creatingFor
           ? (mergingGroup ? `for ${mergingGroup.length} merged codes` : `for ${creatingFor.text}`)
           : null}
@@ -2336,10 +2369,16 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
           why: creatingFor.why,
           refWhy: creatingFor.refWhy,
         } : {}}
-        bulkCount={proposals.length}
         placeIn={embedded?.posRef || null}
-        onBulk={() => { setCreatingFor(null); setMergingGroup(null); openBulkCreate() }}
-        onCreated={etRef => {
+        editing={creatingFor?.editing || null}
+        step={etQueue && creatingFor ? {
+          index: etQueue.i, total: etQueue.codes.length,
+          states: etQueue.codes.map((c, j) => (j === etQueue.i ? 'current' : etQueue.made[c] ? 'done' : etQueue.skipped.includes(c) ? 'skipped' : 'waiting')),
+          doneRefs: Object.values(etQueue.made),
+          onBack: etQueue.i > 0 ? () => queueOpen(etQueue, etQueue.i - 1, -1) : null,
+          onSkip: () => queueOpen({ ...etQueue, skipped: [...new Set([...etQueue.skipped, etQueue.codes[etQueue.i]])] }, etQueue.i + 1),
+        } : null}
+        onCreated={(etRef, where, { advance } = {}) => {
           // Its family may be one the seed proposed and nobody has created yet.
           const et = useStore.getState().elementTypes.find(e => (e.ElementTypeRef || '').toLowerCase() === etRef.toLowerCase())
           const fam = et?.Family || ''
@@ -2353,6 +2392,11 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
           for (const code of mergingGroup || [creatingFor.text]) assignET(code, etRef)
           setCreatingFor(null)
           setMergingGroup(null)
+          if (!etQueue) return
+          const c = etQueue.codes[etQueue.i]
+          const q = { ...etQueue, made: { ...etQueue.made, [c]: etRef }, skipped: etQueue.skipped.filter(x => x !== c) }
+          if (advance) queueOpen(q, q.i + 1)
+          else setEtQueue(null)
         }}
       />
     </div>
