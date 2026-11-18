@@ -28,6 +28,7 @@
  */
 import { useEffect, useState } from 'react'
 import { APP_CHANNEL } from '../utils/bugReports'
+import { keepAnswer } from './replay'
 
 export const PROTOCOL = 'psr-companion/1'
 
@@ -41,7 +42,9 @@ async function getJson(url, init) {
   const type = res.headers.get('content-type') || ''
   // A static host may answer every path with index.html — that is "no companion", not data.
   if (!type.includes('application/json')) return { res, body: null }
-  return { res, body: await res.json().catch(() => null) }
+  const body = await res.json().catch(() => null)
+  if (res.ok) keepAnswer(url, init?.method, body)
+  return { res, body }
 }
 
 const post = (url, body, headers = {}) => getJson(url, {
@@ -153,6 +156,8 @@ function build(features) {
 
     /** One report (bugReports.js shape) → { received, id } | null. */
     report: has('reports') ? report => quiet(post('./api/reports', report)) : null,
+    /** The dev bridge keeps a report's replay snapshot (replay.js); prod never offers it. */
+    snapshots: has('snapshots'),
 
     /** Evidence for the catalogue (reviewed on the other side). Fire-and-forget → accepted? */
     contribute: has('contributions') ? async payload => !!(await quiet(post('./api/contributions', payload))) : null,
