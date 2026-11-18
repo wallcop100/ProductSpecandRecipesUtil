@@ -45,6 +45,7 @@ import {
 } from '../utils/codeLearning'
 import { inferConvention, reuseCandidates, suggestRef } from '../utils/etRefSuggest'
 import { proposeElementTypes, familyDescription, whyText, refFromText } from '../utils/etSeed'
+import { tracing } from '../utils/trace'
 import { matchShape } from '../utils/codeShapes'
 import shippedShapes from '../data/codeShapes.json'
 import { resolveFormRefs, buildRefMap, targetFor } from '../utils/ptResolve'
@@ -1421,6 +1422,16 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     classify(code, ctx, manufacturer).elementTypeRef || assignments[norm(code)] || priorEtByCode.get(norm(code))
       || learnedRef(knowledge, { text: code, manufacturers: manufacturer ? [manufacturer] : [] }, knownRefs) || null,
   [ctx, assignments, priorEtByCode, knowledge, knownRefs])
+  /** How etFor decided, for a dev report's trace (trace.js). Same order as etFor. */
+  const etTrace = useCallback((code, manufacturer, formRef) => {
+    const c = classify(code, ctx, manufacturer)
+    const learned = c.elementTypeRef || assignments[norm(code)] || priorEtByCode.get(norm(code)) ? null
+      : learnedRef(knowledge, { text: code, manufacturers: manufacturer ? [manufacturer] : [] }, knownRefs)
+    const from = c.elementTypeRef ? 'product spec' : assignments[norm(code)] ? 'this import' : priorEtByCode.get(norm(code)) ? 'an earlier import' : learned ? 'learned' : null
+    return { rule: 'etFor', subject: code, inputs: { code, maker: manufacturer, formRef },
+      result: { etRef: c.elementTypeRef || assignments[norm(code)] || priorEtByCode.get(norm(code)) || learned || null, from, status: c.status,
+        ...(c.status === 'amber' ? { nearest: c.base, nearestRef: c.masterRef } : {}), ...(c.otherMaker ? { otherMaker: c.otherMaker } : {}) } }
+  }, [ctx, assignments, priorEtByCode, knowledge, knownRefs])
 
   /** Where each Form ref goes, by ref: 'ok' | 'redirect' | 'missing' | 'ambiguous'. */
   const refState = useMemo(() => {
@@ -1447,7 +1458,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       }
     }
     const lead = leadOf(row, caps)
-    const codes = caps.map(c => ({ code: c.code, note: c.note || '', main: c === lead, etRef: etFor(c.code, row.manufacturer) }))
+    const codes = caps.map(c => ({ code: c.code, note: c.note || '', main: c === lead, etRef: etFor(c.code, row.manufacturer),
+      ...(tracing() ? { trace: etTrace(c.code, row.manufacturer, row.positionType) } : {}) }))
     const st = lead ? classify(lead.code, ctx, row.manufacturer).status : null
     const status = !lead
       ? (isNothingRow(row)
@@ -1460,7 +1472,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       suggested: row.confirmed ? [] : suggestCodes(row, rules, signals),
       pt: map.pt ? (refState.get(norm(row.positionType)) || { state: 'ok' }) : { state: 'ok' },
     }
-  }, [captureOpts, etFor, ctx, rules, signals, map.pt, refState, assignments, priorEtByCode])
+  }, [captureOpts, etFor, etTrace, ctx, rules, signals, map.pt, refState, assignments, priorEtByCode])
 
   const refProblems = useMemo(
     () => [...refState.values()].filter(r => r.state === 'missing' || r.state === 'ambiguous').length, [refState])

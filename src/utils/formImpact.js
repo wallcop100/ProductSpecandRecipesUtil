@@ -36,10 +36,31 @@ import { wrapperUsedBy } from './collectionStatus'
 const up = s => String(s ?? '').trim().toUpperCase()
 const live = r => (r.IsDeleted || r.isDeleted) !== 'Y'
 
+/**
+ * The Product Spec writes a finish into the code ("ZH-INFD-…-54H (Finish: RAL 9010)"); the Form
+ * gives the bare code. Without the bare code every finished product read as "never had an
+ * ElementType", so Update-in-place and Swap never fired. Only an unambiguous bare code (one
+ * ElementType per maker) is added: two finishes of one code are two products.
+ */
+export function withBareCodes(master = []) {
+  const bare = c => String(c).replace(/\s*\([^()]*\)\s*$/, '').trim()
+  const groups = new Map()
+  for (const x of master) {
+    const b = bare(x.code)
+    if (b === x.code || !b) continue
+    const k = `${up(x.manufacturer)} ${up(b)}`
+    groups.set(k, [...(groups.get(k) || []), { ...x, code: b }])
+  }
+  const known = new Set(master.map(x => `${up(x.manufacturer)} ${up(x.code)}`))
+  const extra = [...groups].filter(([k, xs]) => !known.has(k) && new Set(xs.map(x => up(x.ref))).size === 1).map(([, xs]) => xs[0])
+  return extra.length ? [...master, ...extra] : master
+}
+
 /** A row's words: the ones the spec knows (→ ElementType), and unknown code-shaped ones. */
 export function readCodes(row, master) {
   const known = new Map()   // ET → code
   const unknown = []
+  const words = []          // how each word was read, for the trace
   // An "(old code …)" note is not a product; brackets and trailing punctuation are not
   // part of a code: "(FPS2020BG2000)" is FPS2020BG2000 (2EF42C).
   const text = String(row?.rawText || '').replace(/\(\s*old\s+code[^)]*\)/gi, ' ')
@@ -49,8 +70,11 @@ export function readCodes(row, master) {
     const c = classify(w, { master }, row.manufacturer)
     if (c.elementTypeRef) known.set(c.elementTypeRef, w)
     else if (looksLikeProductCode(w)) unknown.push(w)
+    else continue
+    words.push({ word: w, status: c.status, ...(c.elementTypeRef || c.masterRef ? { ref: c.elementTypeRef || c.masterRef } : {}),
+      ...(c.base && c.status !== 'green' ? { nearest: c.base } : {}), ...(c.otherMaker ? { otherMaker: c.otherMaker.manufacturer } : {}) })
   }
-  return { known, unknown }
+  return { known, unknown, words }
 }
 
 /** Rows of a Form (draft rows or base rows) that land on posRef. */
@@ -77,12 +101,12 @@ function rawChanges(posRef, { baseRows, newRows, master, targetOf }) {
   for (const old of m.removed) pairs.push({ now: null, was: old, state: 'removed' })
   for (const { now, was, state } of pairs) {
     if (state === 'unchanged') continue
-    const a = was ? readCodes(was, master) : { known: new Map(), unknown: [] }
-    const b = now ? readCodes(now, master) : { known: new Map(), unknown: [] }
+    const a = was ? readCodes(was, master) : { known: new Map(), unknown: [], words: [] }
+    const b = now ? readCodes(now, master) : { known: new Map(), unknown: [], words: [] }
     const gone = [...a.known.keys()].filter(et => !b.known.has(et))
     const came = [...b.known.keys()].filter(et => !a.known.has(et))
     const fresh = b.unknown.filter(w => !a.unknown.map(up).includes(up(w)) && ![...a.known.values()].map(up).includes(up(w)))
-    const base = { oldText: was?.rawText ?? null, newText: now?.rawText ?? null, maker: now?.manufacturer ?? was?.manufacturer ?? '' }
+    const base = { oldText: was?.rawText ?? null, newText: now?.rawText ?? null, maker: now?.manufacturer ?? was?.manufacturer ?? '', read: { was: a.words, now: b.words } }
     // Pair what left with what came, one for one, in order: a product replaced.
     const n = Math.min(gone.length, came.length)
     for (let i = 0; i < n; i++) out.push({ kind: 'swap', fromEt: gone[i], toEt: came[i], toCode: b.known.get(came[i]), ...base })
@@ -112,6 +136,7 @@ const sameChange = (x, y) => x.kind === y.kind && up(x.fromEt) === up(y.fromEt)
  */
 export function formImpact({ posRef, baseRows = [], newRows = [], recipes = [], master = [], targetOf = r => r }) {
   if (!baseRows.length || !posRef) return []
+  master = withBareCodes(master)
   const ctx = { baseRows, newRows, master, targetOf }
   const held = heldBy(recipes, posRef)
   const memo = new Map()
@@ -119,7 +144,7 @@ export function formImpact({ posRef, baseRows = [], newRows = [], recipes = [], 
   // Every ElementType the NEW Form still names, anywhere.
   const stillNamed = new Set()
   for (const r of newRows) for (const et of readCodes(r, master).known.keys()) stillNamed.add(up(et))
-  return changesOf(posRef).map(c => {
+  return changesOf(posRef).map(c => withTrace(posRef, held, (() => {
     if (c.kind === 'addNew' || c.kind === 'dropNew') return { ...c, inRecipe: false, sharers: [], changing: [], notChanging: [], outsideForm: [], consistent: true, canUpdate: false }
     if (c.kind === 'add') return { ...c, inRecipe: held.has(up(c.toEt)), sharers: [], changing: [], notChanging: [], outsideForm: [], consistent: true, canUpdate: false }
     const inRecipe = held.has(up(c.fromEt))
@@ -138,7 +163,18 @@ export function formImpact({ posRef, baseRows = [], newRows = [], recipes = [], 
     const wrapperUsers = container ? wrapperUsedBy(recipes, container).filter(p => p !== posRef) : []
     return { ...c, inRecipe, sharers, changing, notChanging, outsideForm, consistent, stillInForm,
       canUpdate: consistent && !stillInForm, container, wrapperUsers }
-  })
+  })()))
+}
+
+/** A change with its trace (trace.js): how each word of the old and new row was read, and why it is this kind. */
+function withTrace(posRef, held, { read, ...c }) {
+  const pick = ['kind', 'fromEt', 'toEt', 'toCode', 'fromCode', 'inRecipe', 'container', 'sharers', 'changing', 'notChanging', 'outsideForm', 'stillInForm', 'canUpdate']
+  return { ...c, trace: {
+    rule: 'formImpact', subject: posRef,
+    inputs: { maker: c.maker, was: c.oldText, now: c.newText, recipeHolds: [...held] },
+    result: Object.fromEntries(pick.filter(k => c[k] !== undefined && !(Array.isArray(c[k]) && !c[k].length)).map(k => [k, c[k]])),
+    read,
+  } }
 }
 
 /**
@@ -151,6 +187,7 @@ export function formImpact({ posRef, baseRows = [], newRows = [], recipes = [], 
 export function formDiffStates({ posRefs = [], baseRows = [], newRows = [], targetOf = r => r, master = [] }) {
   const out = new Map()
   if (!baseRows.length) return out
+  master = withBareCodes(master)
   const codesOf = rows => {
     const set = new Map()
     for (const r of rows) {

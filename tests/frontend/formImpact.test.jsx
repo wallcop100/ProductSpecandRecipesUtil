@@ -86,3 +86,28 @@ test('862MB6: per-position diff state for the rail — add / omit / mixed', asyn
   expect(Object.fromEntries([...m].map(([k, v]) => [k, v.state]))).toEqual({ A1: 'add', A2: 'omit', A3: 'mixed' })   // A4: only words around the code
   expect(m.get('A3')).toMatchObject({ added: ['QC63'], dropped: ['QC53'] })
 })
+
+describe('codes the Product Spec writes with a finish', () => {
+  const ps = [
+    { ElementTypeRef: 'ET-PS-05', Manufacturer: 'Orluna', ProductCode: 'ZH-INFD-27-D-W-NA-AWB-54H (Finish: RAL 9010)' },
+    { ElementTypeRef: 'ET-PS-07', Manufacturer: 'Orluna', ProductCode: 'ZH-TWIN-1 (Finish: RAL 9010)' },
+    { ElementTypeRef: 'ET-PS-08', Manufacturer: 'Orluna', ProductCode: 'ZH-TWIN-1 (Finish: Black)' },
+  ]
+  const master = buildMaster(ps)
+  const recipes = [pos('A02hw', 'ET-PS-05'), pos('A02hw-R', 'ET-PS-05')]
+  const was = 'ZH-INFD-27-D-W-NA-AWB-54H', now = 'ZH-INFDT-27DM-X-WB-54 + HNY/31MM'
+
+  test('5642 A02hw: the old code is ET-PS-05, so the new luminaire updates it in place and only the honeycomb is new', () => {
+    const c = formImpact({ posRef: 'A02hw', master, recipes,
+      baseRows: [row('A02hw', was), row('A02hw-R', was)], newRows: [row('A02hw', now), row('A02hw-R', now)] })
+    expect(c).toMatchObject([
+      { kind: 'respec', fromEt: 'ET-PS-05', toCode: 'ZH-INFDT-27DM-X-WB-54', changing: ['A02hw-R'], canUpdate: true },
+      { kind: 'addNew', toCode: 'HNY/31MM' },
+    ])
+  })
+
+  test('one bare code with two finishes is not matched to either', () => {
+    const c = formImpact({ posRef: 'A1', master, recipes: [pos('A1', 'ET-PS-07')], baseRows: [row('A1', 'ZH-TWIN-1')], newRows: [row('A1', 'ZH-OTHER-2')] })
+    expect(c.map(x => x.kind)).toEqual(['addNew', 'dropNew'])
+  })
+})
