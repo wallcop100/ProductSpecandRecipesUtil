@@ -18,6 +18,7 @@
  *   family      (also)                 any new ElementType's proposed family; tier = the rule (stem, session, canon…)
  *   ref         `${MAKER}|${CODE}`     its proposed ref; tier = sibling/session/library/head/default, source = the example
  *   name        `${MAKER}|${CODE}`     its proposed name; tier = seen/sibling/maker-code
+ *   placement   `${MAKER}|${CODE}`     'wrapper' or 'position' by where the project files that job; source = n/of
  *
  * The audit trail of a proposal is these rows: how each field was suggested, and whether it was
  * kept, changed or cleared when the ElementType was created.
@@ -95,6 +96,17 @@ export function noteProposal(p) {
   noteSupplied({ kind: 'family', key, tier: p.why || 'default', source: p.styledOn?.source || p.session?.code || '', value: p.family, code: p.code })
   noteSupplied({ kind: 'ref', key, tier: p.refFrom?.from || 'default', source: p.refFrom?.example || '', value: p.ref, code: p.code })
   noteSupplied({ kind: 'name', key, tier: p.nameFrom || '', value: p.name, code: p.code })
+}
+
+/** The ticked-or-not "Inside {wrapper}" default, when precedent chose it (2V84PW). */
+export function notePlacement({ manufacturer, code, value, n, of }) {
+  noteSupplied({ kind: 'placement', key: keyOf({ manufacturer, code }), tier: 'precedent', source: `${n}/${of}`, value, code })
+}
+
+/** Where it went: 'wrapper' | 'position' | 'ps' → outcome rows (empty when nothing was suggested). */
+export function settlePlacement(project, { manufacturer, code }, where) {
+  const key = keyOf({ manufacturer, code })
+  return settle(project, 'placement', k => (k === key ? where : undefined))
 }
 
 /** What was created for each proposed code: { code, manufacturer, family, ref, name } → outcome rows. */
