@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import MaterialIcon from './MaterialIcon'
 import { C } from '../styles/tokens'
 import { useCompanion } from '../platform/companion'
@@ -46,5 +46,40 @@ export default function WhatsNew({ release }) {
         )}
       </div>
     </div>
+  )
+}
+
+const SEEN = 'psr.whatsNewSeen'
+const seenVersion = () => { try { return localStorage.getItem(SEEN) } catch { return null } }
+/** Remember that this release was opened, so the teaser goes quiet until the next one. */
+export function markSeen(version) { try { localStorage.setItem(SEEN, version) } catch { /* private window: shows again */ } }
+
+/**
+ * The strip under the start page's title that rolls through this release's headlines (356KWQ).
+ * Shown until the release is opened once; purple and glistening with the companion.
+ */
+export function WhatsNewTeaser({ release, onOpen }) {
+  const companion = useCompanion()
+  const lines = [`${release.highlights.filter(h => companion || !h.companion).length} new things in ${release.version}`,
+    ...release.highlights.filter(h => companion || !h.companion).map(h => h.title)]
+  const [i, setI] = useState(0)
+  useEffect(() => {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+    const t = setInterval(() => setI(n => (n + 1) % lines.length), 2600)
+    return () => clearInterval(t)
+  }, [lines.length])
+  if (seenVersion() === release.version) return null
+  if (release.until && new Date().toISOString().slice(0, 10) >= release.until) return null
+  const ink = companion ? C.companion : C.accentInk
+  return (
+    <button type="button" data-testid="whats-new-teaser" onClick={onOpen}
+      className={`w-100 mb-2 d-flex align-items-center gap-2 rounded${companion ? ' companion-card' : ''}`}
+      style={{ border: `1px dashed ${C.accentEdge}`, background: C.accentTint, color: ink, fontSize: 12, padding: '6px 10px', textAlign: 'left' }}>
+      <MaterialIcon name="celebration" size={16} style={{ color: ink }} />
+      <span className="whats-new-roll" style={{ flex: 1, minWidth: 0 }}>
+        <span key={i} className="text-truncate d-block">{lines[i]}</span>
+      </span>
+      <span aria-label="Show details">▾</span>
+    </button>
   )
 }
