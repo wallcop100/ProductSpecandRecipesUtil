@@ -143,6 +143,8 @@ export function familiesForJob(job, { elementTypes = [], familyRows = new Set(),
   for (const e of elementTypes) {
     const fam = U(e.Family || e.family).trim()
     if (!fam || !familyRows.has(fam)) continue
+    // 6K5ACV: a family's own row (ET-LIN-PROF in ET-LIN-INGREDIENTS) is not a member doing its job.
+    if ((e.IsCollection || e.isCollection) === 'Y') continue
     const j = jobOf({ ref: e.ElementTypeRef || e.elementTypeRef, family: fam, name: e.Name || e.name, description: e.Description || e.description })
     const t = tally.get(fam) || [0, 0]
     // Jobs filed together in the house (profile, caps and diffuser in ET-LIN-PROF) count as one.

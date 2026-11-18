@@ -73,11 +73,11 @@ export function rowCells(r, map = {}) {
   const code = r.accFrom === 0 ? '' : cut != null ? raw.slice(0, cut - 1) : raw
   const acc = r.accFrom === 0 ? raw : cut != null ? raw.slice(cut) : ''
   return [
-    [map?.mfr || 'Manufacturer', r.manufacturer],
-    [map?.code || 'Product code', code, false, true],
+    [map?.mfr || 'Manufacturer', r.manufacturer, false, false, 'ManufacturerName'],
+    [map?.code || 'Product code', code, false, true, 'ProductCode'],
     [map?.acc || 'Accessories', acc],
     ...Object.entries(r.context || {}).map(([c, v]) => [c, v, true]),
-  ].map(([col, v, more, isCode]) => ({ col, value: String(v ?? '').trim(), more: !!more, ...(isCode && { code: true }) })).filter(c => c.value)
+  ].map(([col, v, more, isCode, as]) => ({ col, value: String(v ?? '').trim(), more: !!more, ...(isCode && { code: true }), ...(as && { as }) })).filter(c => c.value)
 }
 
 /**

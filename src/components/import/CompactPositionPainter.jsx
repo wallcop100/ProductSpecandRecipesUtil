@@ -141,7 +141,7 @@ function Seg({ value, onChange, options, testid, children }) {
 }
 
 /**
- * Which Form columns the data face shows: few (maker, code, accessories), many (all), or custom
+ * Which Form columns the data face shows: few or many (FEW / MANY), or custom
  * (ticked on the ▾, which opens on hover or focus). Remembered per browser, so across projects.
  */
 function useColPref() {
@@ -150,11 +150,18 @@ function useColPref() {
   return [pref, next => { set(next); try { localStorage.setItem(KEY, JSON.stringify(next)) } catch { /* private window */ } }]
 }
 
+// Erik's lists (2026-11-18), in this order. The maker and code cells answer to these names whatever the Form calls them.
+const FEW = ['ManufacturerName', 'ProductCode', 'ProductName', 'Finish']
+const MANY = ['ManufacturerName', 'ProductCode', 'ProductName', 'PositionTypeDescription', 'FurtherInfo', 'Finish', 'ColourTemp', 'IPRating', 'FirstFixElement', 'MountingMethod']
+const colKey = s => String(s).toLowerCase().replace(/[^a-z0-9]/g, '')
+const pick = (cells, names) => names.map(n => cells.find(c => colKey(c.as || c.col) === colKey(n) || colKey(c.col) === colKey(n))).filter(Boolean)
+  .filter((c, i, a) => a.indexOf(c) === i)
+
 function FormData({ cells, cols: [pref, setPref] }) {
   const [pop, setPop] = useState(false)
-  const few = cells.filter(c => !c.more).map(c => c.col)
+  const few = pick(cells, FEW).map(c => c.col)
   const custom = pref.custom || few
-  const shown = pref.preset === 'many' ? cells : pref.preset === 'custom' ? cells.filter(c => custom.includes(c.col)) : cells.filter(c => !c.more)
+  const shown = pref.preset === 'many' ? pick(cells, MANY) : pref.preset === 'custom' ? cells.filter(c => custom.includes(c.col)) : pick(cells, FEW)
   const tick = col => setPref({ preset: 'custom', custom: custom.includes(col) ? custom.filter(x => x !== col) : [...custom, col] })
   return (
     <div className="pt-1" data-testid="form-raw">
@@ -163,7 +170,7 @@ function FormData({ cells, cols: [pref, setPref] }) {
           options={[['few', 'short_text', 'Few lines'], ['many', 'notes', 'Many lines'], ['custom', 'tune', 'Custom']]}>
           <button type="button" className="border-0 d-inline-flex align-items-center px-0" aria-label="Choose columns" aria-expanded={pop} data-testid="cols-pick"
             style={{ background: pref.preset === 'custom' ? C.accentTint : C.surface, color: C.muted, lineHeight: '18px' }}
-            onMouseEnter={() => setPop(true)} onFocus={() => setPop(true)} onClick={() => setPop(p => !p)}>
+            onMouseEnter={() => setPop(true)} onFocus={() => setPop(true)} onClick={() => setPop(true)} onKeyDown={e => { if (e.key === 'Escape') setPop(false) }}>
             <MaterialIcon name="expand_more" size={12} />
           </button>
         </Seg>

@@ -117,3 +117,46 @@ describe('in-line Form diff actions (design A: ~ groups)', () => {
     expect(useStore.getState().importDraft.compareBase).toBeFalsy()
   })
 })
+
+test('XVZAV8: a row whose old code had no ElementType shows ~ with the old code struck, not a bare +', () => {
+  setup([row(0, 'A1', 'ZH-OLD-1')], [row(0, 'A1', 'ZH-GONE-7')])
+  pane()
+  const line = screen.getByTestId('form-line')
+  expect(within(line).getByTestId('gutter')).toHaveTextContent('~')
+  expect(screen.getByText('ZH-GONE-7').style.textDecoration).toBe('line-through')
+  expect(screen.queryByTestId('gone-code')).toBeNull()
+})
+
+test('XVZAV8: an old code with no ElementType that simply left the Form is a − line', () => {
+  setup([row(0, 'A1', 'ZH-OLD-1'), row(1, 'A1', 'ZH-NEW-9')], [row(0, 'A1', 'ZH-OLD-1'), row(1, 'A1', 'ZH-GONE-7')])
+  pane()
+  expect(screen.getByTestId('gone-code')).toHaveTextContent('ZH-GONE-7')
+})
+
+test('QFRHFW: a missing product of a family the recipe already holds offers Replace, as one Undo', () => {
+  setup([row(0, 'A1', 'ZH-NEW-2')], [row(0, 'A1', 'ZH-NEW-2')])
+  useStore.setState(known2)
+  pane()
+  expect(screen.getByTestId('missing-replace')).toHaveTextContent('Replace ET-PS-01')
+  fireEvent.click(screen.getByTestId('missing-replace'))
+  expect(liveA1()).toEqual(['ET-PS-02'])
+  useStore.getState().undo()
+  expect(liveA1()).toEqual(['ET-PS-01'])
+})
+
+test('XVZAV8 (A02hw): the recipe holds a kit, not the ET the diff swapped to; the line still shows ~ with the old code and ET struck', () => {
+  setup([row(0, 'A1', 'ZH-NEW-2 + ACC-1')], [row(0, 'A1', 'ZH-OLD-1')])
+  useStore.setState({
+    elementTypes: ['ET-PS-01', 'ET-PS-02', 'ET-PS-17'].map(r => ({ ElementTypeRef: r, Family: 'ET-PS' })),
+    psRows: [{ ElementTypeRef: 'ET-PS-01', Manufacturer: 'Orluna', ProductCode: 'ZH-OLD-1' }, { ElementTypeRef: 'ET-PS-02', Manufacturer: 'Orluna', ProductCode: 'ZH-NEW-2' },
+      { ElementTypeRef: 'ET-PS-17', Manufacturer: 'Orluna', ProductCode: 'ZH-NEW-2 + ACC-1' }],
+    recipes: [pos('A1', 'ET-PS-17')],
+    formCaptures: { version: 1, byPosition: { A1: [{ elementTypeRef: 'ET-PS-17', code: 'ZH-NEW-2 + ACC-1', manufacturer: 'Orluna' }] } },
+  })
+  pane()
+  expect(within(screen.getByTestId('form-line')).getByTestId('gutter')).toHaveTextContent('~')
+  const o = screen.getByTestId('old-code')
+  expect(o).toHaveTextContent('ZH-OLD-1')
+  expect(o).toHaveTextContent('ET-PS-01')
+  expect(within(o).queryByTestId('diff-remove')).toBeNull()   // ET-PS-01 is not in the recipe
+})
