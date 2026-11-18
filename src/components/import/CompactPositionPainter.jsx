@@ -3,45 +3,46 @@ import { Button, Form } from 'react-bootstrap'
 import useStore from '../../store/useStore'
 import MaterialIcon from '../MaterialIcon'
 import CellTokens from './CellTokens'
+import ETRefSelect from '../ETRefSelect'
 import { BRUSH } from '../CodeChips'
 import { familyOptionsOf } from '../NewETModal'
-import { refamily, cleanRef, proposalTrace } from '../../utils/etSeed'
+import { refamily, cleanRef, proposalTrace, whyText } from '../../utils/etSeed'
 import { registerTrace, traceIds } from '../../utils/trace'
 import { CopyText } from '../CopyButton'
-import { positionRecipeWithWrapperInternals } from '../../utils/collectionStatus'
+import { rowCells } from '../../utils/formPositions'
+import { EtPill, Gutter, GRAPHITE, btn, card } from '../FormPaneParts'
 import { C } from '../../styles/tokens'
 
 const mono = { fontFamily: 'monospace' }
-const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`
+const norm = s => String(s || '').trim().toUpperCase()
 
 /**
- * CompactPositionPainter — one position's Form, in the builder's Form spec pane (D4Z9CX),
- * reduced to ONE call to action: give each new product code an ElementType.
+ * CompactPositionPainter — one position's Form entries, in the builder's Form spec pane
+ * (D4Z9CX, design A).
  *
- *   - known codes are always listed, one line each: code → ElementType · in the recipe or not;
- *   - each new code has the one primary button, "Give <code> an ElementType" (it confirms
- *     the code's Form entry and opens the ElementTypes window at it);
- *   - no Save: once every code has an ElementType the import screen saves the position
- *     itself (embedded auto-save), and the pane moves on to the recipe check.
- * Clicking a word still switches it code / note / discard, for a code read wrongly. A tick
- * box is only offered where an entry holds no code at all — there it is the one action.
+ *   - each Form entry has two faces, toggled in its header: Form data (its cells, few / many /
+ *     custom columns) and Paint (the brushes and the painted text). It opens in Paint by itself
+ *     when something there still needs painting, else in Form data;
+ *   - a code with no ElementType gets a card: reuse what the recipe already has, or create one
+ *     from the autofilled Ref, Family and Description. Codes with an ElementType are the pane's
+ *     lines, not repeated here;
+ *   - no Save: once every code has an ElementType the import screen saves the position itself.
  * The import screen owns the state; this only draws it.
  */
-export default function CompactPositionPainter({ posRef, rows, info, onSetRole, onToggleConfirm, onNeedsET, onMakeMain, proposalFor, onMoveNoteWord, onEditNote }) {
-  const recipes = useStore(s => s.recipes)
+export default function CompactPositionPainter({ posRef, rows, info, onSetRole, onToggleConfirm, onNeedsET, onMakeMain, proposalFor, onMoveNoteWord, onEditNote,
+  onAssign, hideCodes = [], newCodes = [], reuseFor, since }) {
   const elementTypes = useStore(s => s.elementTypes)
+  const map = useStore(s => s.importDraft?.map)
   const familyOptions = useMemo(() => familyOptionsOf(elementTypes || []), [elementTypes])
   const [brush, setBrush] = useState('code')
   const [pinned, setPinned] = usePinned()
   const [peek, setPeek] = useState(false)
   const [edits, setEdits] = useState({})   // code -> { ref, family } typed on its card
+  const [faces, setFaces] = useState({})   // row id -> 'data' | 'paint', once chosen
+  const cols = useColPref()
   if (!rows.length) {
     return <div className="text-muted fst-italic" style={{ fontSize: 11 }} data-testid="embedded-no-rows">The Form gives no product code for {posRef}.</div>
   }
-  const have = new Set(positionRecipeWithWrapperInternals(recipes, posRef).combined
-    .filter(r => (r.IsDeleted || r.isDeleted) !== 'Y').map(r => String(r.ElementTypeRef || r.elementTypeRef || '').toLowerCase()))
-  const inRecipe = ref => have.has(String(ref).toLowerCase())
-
   const infos = rows.map(r => ({ row: r, inf: info(r) }))
   // Every entry says "n/a", "by others"…: nothing to add, nothing to ask (859SCF).
   if (infos.every(({ inf }) => inf.codes.length === 0 && inf.status?.icon === 'block')) {
@@ -51,89 +52,178 @@ export default function CompactPositionPainter({ posRef, rows, info, onSetRole, 
       </div>
     )
   }
-  const needEt = infos.flatMap(({ inf }) => inf.codes.filter(c => !c.etRef)).length
+  const hide = new Set(hideCodes.map(norm))
+  const fresh = new Set(newCodes.map(norm))
+  const keys = (
+    <BrushKeys brush={brush} setBrush={setBrush} open={pinned || peek} pinned={pinned}
+      onPeek={() => setPeek(true)} onPin={() => { setPinned(!pinned); setPeek(false) }} />
+  )
 
-  // Every Form entry, with its words to paint (5FGNH2: also the ones already settled, so
-  // opening the painter always shows something to paint), then each code it reads:
-  // settled ones as code → ElementType · in the recipe or not, new ones with the button.
   return (
     <div style={{ fontSize: 11 }} data-testid="compact-painter">
-      {needEt > 0 && (
-        <div className="fw-semibold mb-1" style={{ color: C.attnInk }} data-testid="compact-summary">
-          <MaterialIcon name="warning" size={13} /> {plural(needEt, 'code')} need{needEt === 1 ? 's' : ''} an ElementType
-        </div>
-      )}
+      {infos.map(({ row, inf }) => {
+        // Still to paint: a code with no ElementType, or an entry nobody has confirmed.
+        const needs = inf.codes.some(c => !c.etRef) || (!row.confirmed && inf.status?.icon !== 'block')
+        const face = faces[row.id] || (needs ? 'paint' : 'data')
+        const setFace = f => setFaces(m => ({ ...m, [row.id]: f }))
+        const cards = inf.codes.filter(c => !c.etRef && !hide.has(norm(c.code)))
+        return (
+          <div key={row.id} className="py-1 border-bottom" data-testid="compact-row" data-face={face}>
+            <div className="d-flex align-items-center gap-1" style={{ fontSize: 10, color: C.muted, minHeight: 20 }}>
+              {row.manufacturer && <span className="text-truncate">{row.manufacturer}</span>}
+              {face === 'paint' && keys}
+              <span className="ms-auto d-inline-flex align-items-center gap-1">
+                {/* No code in this entry at all: the tick is the only thing to do with it. */}
+                {inf.codes.length === 0 && (
+                  <Form.Check type="checkbox" checked={!!row.confirmed} onChange={() => onToggleConfirm(row.id)}
+                    aria-label={`Confirm row ${row.id + 1}`} title={row.confirmed ? 'Confirmed' : 'Confirm: no product here'} />
+                )}
+                <Seg value={face} onChange={setFace} testid="face" options={[['data', 'table_rows', 'Form data'], ['paint', 'brush', 'Paint']]} />
+              </span>
+            </div>
+            <Face open={face === 'data'} testid="face-data">
+              <FormData cells={rowCells(row, map)} cols={cols} />
+            </Face>
+            <Face open={face === 'paint'} testid="face-paint">
+              <CellTokens row={row} suggested={inf.suggested} brush={pinned || peek ? brush : null} onSetRole={(i, role) => onSetRole(row.id, i, role)} />
+              {inf.codes.length === 0 && inf.suggested?.length > 0 && !row.confirmed && (
+                <div className="text-muted" style={{ fontSize: 10 }}>{inf.status?.label || ''}</div>
+              )}
+            </Face>
+            {cards.length > 0 && (
+              <div className="d-flex flex-column mt-1">
+                {cards.map(c => (
+                  <CodeCard key={c.code} c={c} many={inf.codes.length > 1} familyOptions={familyOptions} elementTypes={elementTypes}
+                    edit={edits[c.code]} proposal={proposalFor?.(c.code)} isNew={fresh.has(norm(c.code))} since={since}
+                    reuse={reuseFor?.(c.code, row)} onAssign={ref => onAssign?.(c.code, ref)}
+                    otherRefs={inf.codes.filter(o => o.code !== c.code).map(o => o.etRef || shownRef(edits[o.code], proposalFor?.(o.code))).filter(Boolean)}
+                    onEdit={v => setEdits(e => ({ ...e, [c.code]: { ...e[c.code], ...v } }))}
+                    onCreate={seed => onNeedsET(c.code, seed)}
+                    onEditNote={text => onEditNote?.(row.id, c.code, text)}
+                    onMakeMain={() => onMakeMain(row.id, c.code)}
+                    onDropWord={(from, word) => from !== c.code && onMoveNoteWord?.(row.id, from, c.code, word)} />
+                ))}
+              </div>
+            )}
+            {face === 'paint' && inf.codes.length > 0 && <LooseWords text={inf.loose} onDropWord={(from, word) => from && onMoveNoteWord?.(row.id, from, '', word)} />}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
-      {/* The main painter's three brushes, small: pick one, then click words (5 FormPane). */}
-      <div className="d-flex align-items-center gap-1 mb-1" data-testid="paint-key">
-        {!pinned && !peek ? (
-          <button type="button" className="d-inline-flex gap-1 align-items-center border-0 bg-transparent px-1" data-testid="brush-peek"
-            onClick={() => setPeek(true)} title="Click a word to cycle code → note → discard. Click here for the brushes.">
-            {['code', 'note', 'discard'].map(r => <span key={r} style={{ width: 9, height: 9, borderRadius: 2, background: BRUSH[r].swatch,
-              border: r === 'note' ? `1px solid ${C.faint}` : 'none' }} />)}
+/** A face that morphs its height and fades as it opens or closes. */
+function Face({ open, testid, children }) {
+  return (
+    <div data-testid={testid} aria-hidden={!open || undefined} inert={open ? undefined : ''}
+      style={{ display: 'grid', gridTemplateRows: open ? '1fr' : '0fr', opacity: open ? 1 : 0, pointerEvents: open ? undefined : 'none',
+        transition: 'grid-template-rows .28s ease, opacity .22s ease' }}>
+      <div style={{ overflow: 'hidden', minHeight: 0 }}>{children}</div>
+    </div>
+  )
+}
+
+/** A row of icon buttons, one lit. options: [value, icon, title]. */
+function Seg({ value, onChange, options, testid, children }) {
+  return (
+    <span className="d-inline-flex rounded overflow-hidden" style={{ border: `1px solid ${C.border}` }}>
+      {options.map(([v, icon, title], i) => (
+        <button key={v} type="button" title={title} aria-label={title} aria-pressed={value === v} data-testid={`${testid}-${v}`}
+          onClick={() => onChange(v)} className="border-0 d-inline-flex align-items-center px-1"
+          style={{ background: value === v ? C.accentTint : C.surface, color: value === v ? C.accent : C.muted, borderLeft: i ? `1px solid ${C.border}` : 'none', lineHeight: '18px' }}>
+          <MaterialIcon name={icon} size={14} />
+        </button>
+      ))}
+      {children}
+    </span>
+  )
+}
+
+/**
+ * Which Form columns the data face shows: few (maker, code, accessories), many (all), or custom
+ * (ticked on the ▾, which opens on hover or focus). Remembered per browser, so across projects.
+ */
+function useColPref() {
+  const KEY = 'psr.formPane.cols'
+  const [pref, set] = useState(() => { try { return JSON.parse(localStorage.getItem(KEY)) || { preset: 'few', custom: null } } catch { return { preset: 'few', custom: null } } })
+  return [pref, next => { set(next); try { localStorage.setItem(KEY, JSON.stringify(next)) } catch { /* private window */ } }]
+}
+
+function FormData({ cells, cols: [pref, setPref] }) {
+  const [pop, setPop] = useState(false)
+  const few = cells.filter(c => !c.more).map(c => c.col)
+  const custom = pref.custom || few
+  const shown = pref.preset === 'many' ? cells : pref.preset === 'custom' ? cells.filter(c => custom.includes(c.col)) : cells.filter(c => !c.more)
+  const tick = col => setPref({ preset: 'custom', custom: custom.includes(col) ? custom.filter(x => x !== col) : [...custom, col] })
+  return (
+    <div className="pt-1" data-testid="form-raw">
+      <div className="d-flex mb-1" style={{ position: 'relative' }}>
+        <Seg value={pref.preset} onChange={v => setPref({ ...pref, preset: v })} testid="cols"
+          options={[['few', 'short_text', 'Few lines'], ['many', 'notes', 'Many lines'], ['custom', 'tune', 'Custom']]}>
+          <button type="button" className="border-0 d-inline-flex align-items-center px-0" aria-label="Choose columns" aria-expanded={pop} data-testid="cols-pick"
+            style={{ background: pref.preset === 'custom' ? C.accentTint : C.surface, color: C.muted, lineHeight: '18px' }}
+            onMouseEnter={() => setPop(true)} onFocus={() => setPop(true)} onClick={() => setPop(p => !p)}>
+            <MaterialIcon name="expand_more" size={12} />
           </button>
-        ) : (
-        <div className="d-flex rounded overflow-hidden" style={{ border: `1px solid ${C.border}` }}>
+        </Seg>
+        {pop && (
+          <div className="shadow-sm rounded p-1" data-testid="cols-list" onMouseLeave={() => setPop(false)} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget)) setPop(false) }}
+            style={{ position: 'absolute', top: 22, left: 0, zIndex: 5, background: C.surface, border: `1px solid ${C.border}`, maxHeight: 220, overflowY: 'auto', fontSize: 10, minWidth: 140 }}>
+            {cells.map(c => (
+              <Form.Check key={c.col} type="checkbox" id={`col-${c.col}`} checked={pref.preset === 'custom' ? custom.includes(c.col) : shown.includes(c)}
+                onChange={() => tick(c.col)} label={c.col} />
+            ))}
+          </div>
+        )}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, max-content) 1fr', columnGap: 8, rowGap: 1 }}>
+        {shown.map(({ col, value, code }) => (
+          <React.Fragment key={col}>
+            <span className="text-muted text-truncate" style={{ fontSize: 10, maxWidth: 120 }} title={col}>{col}</span>
+            <span style={{ ...mono, color: C.ink, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{code ? <CopyText text={value} /> : value}</span>
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/** The three brushes: tucked away as swatches until peeked or pinned. */
+function BrushKeys({ brush, setBrush, open, pinned, onPeek, onPin }) {
+  return (
+    <span className="d-inline-flex align-items-center gap-1" data-testid="paint-key">
+      {!open ? (
+        <button type="button" className="d-inline-flex gap-1 align-items-center border-0 bg-transparent px-1" data-testid="brush-peek"
+          onClick={onPeek} title="Click a word to cycle code → note → discard. Click here for the brushes.">
+          {['code', 'note', 'discard'].map(r => <span key={r} style={{ width: 9, height: 9, borderRadius: 2, background: BRUSH[r].swatch,
+            border: r === 'note' ? `1px solid ${C.faint}` : 'none' }} />)}
+        </button>
+      ) : (
+        <span className="d-inline-flex rounded overflow-hidden" style={{ border: `1px solid ${C.border}` }}>
           {['code', 'note', 'discard'].map((r, i) => {
             const b = BRUSH[r]
             const active = brush === r
             return (
               <button key={r} type="button" onClick={() => setBrush(r)} aria-pressed={active} data-testid={`brush-${r}`}
                 title={`Paint ${b.label.toLowerCase()}: click words to make them ${b.label.toLowerCase()}`}
-                className="d-inline-flex align-items-center gap-1 px-2 border-0"
+                className="d-inline-flex align-items-center gap-1 px-1 border-0"
                 style={{ background: active ? b.swatch : C.surface, color: active ? C.surface : C.ink, fontWeight: active ? 600 : 400,
-                  fontSize: 10, lineHeight: '18px', borderRight: i < 2 ? `1px solid ${C.border}` : 'none' }}>
-                <span style={{ width: 9, height: 9, borderRadius: 2, background: active ? C.surface : b.swatch,
+                  fontSize: 10, lineHeight: '16px', borderRight: i < 2 ? `1px solid ${C.border}` : 'none' }}>
+                <span style={{ width: 8, height: 8, borderRadius: 2, background: active ? C.surface : b.swatch,
                   border: r === 'note' ? `1px solid ${C.faint}` : 'none' }} />
                 {b.label}
               </button>
             )
           })}
-        </div>
-        )}
-        <button type="button" className="border-0 bg-transparent p-0 d-inline-flex" data-testid="brush-pin" aria-pressed={pinned}
-          title={pinned ? 'Brushes stay open. Click to tuck them away.' : 'Keep the brushes open'}
-          style={{ color: pinned ? C.accent : C.muted }} onClick={() => { setPinned(!pinned); setPeek(false) }}>
-          <MaterialIcon name="push_pin" size={13} />
-        </button>
-      </div>
-
-      {infos.map(({ row, inf }) => (
-        <div key={row.id} className="py-1 border-bottom" data-testid="compact-row">
-          <div className="d-flex align-items-start gap-1">
-            <div style={{ flex: 1, minWidth: 0 }}>
-              {row.manufacturer && <div className="text-muted" style={{ fontSize: 10 }}>{row.manufacturer}</div>}
-              <CellTokens row={row} suggested={inf.suggested} brush={pinned || peek ? brush : null} onSetRole={(i, role) => onSetRole(row.id, i, role)} />
-            </div>
-            {/* No code in this entry at all: the tick is the only thing to do with it. */}
-            {inf.codes.length === 0 && (
-              <Form.Check type="checkbox" checked={!!row.confirmed} onChange={() => onToggleConfirm(row.id)}
-                aria-label={`Confirm row ${row.id + 1}`} title={row.confirmed ? 'Confirmed' : 'Confirm: no product here'} />
-            )}
-          </div>
-          {inf.codes.length === 0 && (
-            <div className="text-muted" style={{ fontSize: 10 }}>
-              {inf.suggested?.length && !row.confirmed ? 'Underlined words look like codes: click one to use it' : (inf.status?.label || 'no code')}
-            </div>
-          )}
-          {inf.codes.length > 0 && (
-            <div className="d-flex flex-column gap-1 mt-1" data-testid={inf.codes.some(c => c.etRef) ? 'compact-known' : undefined}>
-              {inf.codes.map(c => (
-                <CodeCard key={c.code} c={c} many={inf.codes.length > 1} inRecipe={inRecipe} familyOptions={familyOptions} elementTypes={elementTypes}
-                  edit={edits[c.code]} proposal={proposalFor?.(c.code)}
-                  otherRefs={inf.codes.filter(o => o.code !== c.code).map(o => o.etRef || shownRef(edits[o.code], proposalFor?.(o.code))).filter(Boolean)}
-                  onEdit={v => setEdits(e => ({ ...e, [c.code]: { ...e[c.code], ...v } }))}
-                  onCreate={seed => onNeedsET(c.code, seed)}
-                  onEditNote={text => onEditNote?.(row.id, c.code, text)}
-                  onMakeMain={() => onMakeMain(row.id, c.code)}
-                  onDropWord={(from, word) => from !== c.code && onMoveNoteWord?.(row.id, from, c.code, word)} />
-              ))}
-              <LooseWords text={inf.loose} onDropWord={(from, word) => from && onMoveNoteWord?.(row.id, from, '', word)} />
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
+        </span>
+      )}
+      <button type="button" className="border-0 bg-transparent p-0 d-inline-flex" data-testid="brush-pin" aria-pressed={pinned}
+        title={pinned ? 'Brushes stay open. Click to tuck them away.' : 'Keep the brushes open'}
+        style={{ color: pinned ? C.accent : C.faint }} onClick={onPin}>
+        <MaterialIcon name="push_pin" size={12} />
+      </button>
+    </span>
   )
 }
 
@@ -157,59 +247,65 @@ function usePinned() {
 }
 
 /**
- * One product code as a card: code (and main star), its ElementType or the proposed ref and
- * family to create it with, and its note as one sentence whose words drag between cards.
+ * A product code with no ElementType, as a card (graphite stripe): reuse what the recipe already
+ * has, or create one from the autofilled Ref, Family and the note as Description (its words drag
+ * between cards). `reuse`: { ref, why } or null.
  */
-function CodeCard({ c, many, inRecipe, familyOptions, elementTypes, edit, proposal, otherRefs = [], onEdit, onCreate, onMakeMain, onDropWord, onEditNote }) {
+function CodeCard({ c, many, familyOptions, elementTypes, edit, proposal, otherRefs = [], isNew, since, reuse, onAssign, onEdit, onCreate, onMakeMain, onDropWord, onEditNote }) {
   const [typing, setTyping] = useState(null)   // the note being typed, or null
+  const [picking, setPicking] = useState(false)
   const [over, drop] = useWordDrop(onDropWord)
   // A family you pick renumbers the ref (famRef) unless you typed the ref yourself (AEST77).
   const ref = shownRef(edit, proposal)
   const family = edit?.family ?? proposal?.family ?? ''
   const fams = family && !familyOptions.includes(family) ? [family, ...familyOptions] : familyOptions
+  const learned = proposal?.family && family === proposal.family && whyText(proposal)
   const ctl = { ...mono, fontSize: 11, height: 24, padding: '1px 5px' }
+  const lbl = { fontSize: 10, color: C.muted }
   return (
-    <div className="rounded p-2" data-testid="code-card" data-code={c.code} {...drop}
+    <div data-testid="code-card" data-code={c.code} {...drop}
       data-trace={traceIds(registerTrace(c.trace), registerTrace(proposalTrace(proposal)))}
-      style={{ borderStyle: 'solid', borderWidth: '1px 1px 1px 3px', borderColor: over ? C.accent : `${C.border} ${C.border} ${C.border} ${C.accent}`, background: over ? C.accentTint : C.surface }}>
+      style={{ ...card(over ? C.accent : GRAPHITE), background: over ? C.accentTint : C.surface }}>
       <div className="d-flex align-items-center gap-1">
+        <Gutter mark={isNew ? '+' : ''} tip={isNew && since ? `New since ${since}` : undefined} />
         {many && <MainStar c={c} onMakeMain={onMakeMain} />}
         <span className="text-truncate" style={{ ...mono, fontWeight: 600 }}><CopyText text={c.code} /></span>
-        {c.etRef ? (
-          <MaterialIcon name="check_circle" size={16} className="ms-auto" style={{ color: C.success }} title="Has an ElementType" />
-        ) : (
-          <Button size="sm" variant="primary" className="ms-auto rounded-circle p-0 d-inline-flex align-items-center justify-content-center flex-shrink-0"
-            style={{ width: 22, height: 22 }} data-testid="give-et" aria-label={`Give ${c.code} an ElementType`} title={`Give ${c.code} an ElementType`}
-            onClick={() => onCreate({ ref: cleanRef(ref), family: cleanRef(family) })}>
-            <MaterialIcon name="add" size={16} />
-          </Button>
-        )}
       </div>
-      {c.etRef ? (
-        <div style={{ fontSize: 10 }} data-testid="known-code">
-          <span style={mono}>{c.code}</span> → <span style={mono}>{c.etRef}</span>
-          <span className="text-muted"> · {inRecipe(c.etRef) ? 'in the recipe' : 'not in the recipe yet'}</span>
+      {reuse && (
+        <>
+          <div className="d-flex align-items-center gap-1 mt-1" data-testid="reuse-row">
+            <EtPill etRef={reuse.ref} />
+            <span className="text-muted text-truncate" style={{ fontSize: 10 }}>{reuse.why}</span>
+            <Button size="sm" variant="primary" className="ms-auto" style={btn} data-testid="reuse-use" onClick={() => onAssign(reuse.ref)}>Use</Button>
+          </div>
+          <div className="d-flex align-items-center gap-1 my-1 text-muted" style={{ fontSize: 10 }}>
+            <span className="flex-grow-1 border-top" /> or create <span className="flex-grow-1 border-top" />
+          </div>
+        </>
+      )}
+      <div className="row g-1 mt-1">
+        <div className="col-7">
+          <div style={lbl}>Ref</div>
+          <Form.Control size="sm" style={ctl} value={ref} onChange={e => onEdit({ ref: e.target.value })} aria-label={`Ref for ${c.code}`}
+            onBlur={() => { if (edit?.ref != null && cleanRef(edit.ref) !== edit.ref) onEdit({ ref: cleanRef(edit.ref) }) }} />
         </div>
-      ) : (
-        <div className="row g-1 mt-1">
-          <div className="col-7">
-            <div style={{ fontSize: 10, color: C.muted }}>Ref</div>
-            <Form.Control size="sm" style={ctl} value={ref} onChange={e => onEdit({ ref: e.target.value })} aria-label={`Ref for ${c.code}`}
-              onBlur={() => { if (edit?.ref != null && cleanRef(edit.ref) !== edit.ref) onEdit({ ref: cleanRef(edit.ref) }) }} />
-          </div>
-          <div className="col-5">
-            <div style={{ fontSize: 10, color: C.muted }}>Family</div>
-            <Form.Select size="sm" style={{ ...ctl, paddingRight: 18, backgroundPosition: 'right 4px center' }} value={family}
-              onChange={e => { const f = e.target.value
-                onEdit({ family: f, famRef: f ? refamily([{ code: c.code, manufacturer: proposal?.manufacturer, name: proposal?.name, description: proposal?.description }, ...otherRefs.map(ref => ({ ref }))], [0], f, elementTypes || [], useStore.getState().psRows)[0].ref : '',
-                  ...(edit?.ref === '' && { ref: undefined }) }) /* a cleared ref is not a typed one */ }} aria-label={`Family for ${c.code}`}>
-              <option value="">(none)</option>
-              {fams.map(f => <option key={f} value={f}>{f}</option>)}
-            </Form.Select>
-          </div>
+        <div className="col-5">
+          <div style={lbl}>Family</div>
+          <Form.Select size="sm" style={{ ...ctl, paddingRight: 18, backgroundPosition: 'right 4px center' }} value={family}
+            onChange={e => { const f = e.target.value
+              onEdit({ family: f, famRef: f ? refamily([{ code: c.code, manufacturer: proposal?.manufacturer, name: proposal?.name, description: proposal?.description }, ...otherRefs.map(ref => ({ ref }))], [0], f, elementTypes || [], useStore.getState().psRows)[0].ref : '',
+                ...(edit?.ref === '' && { ref: undefined }) }) /* a cleared ref is not a typed one */ }} aria-label={`Family for ${c.code}`}>
+            <option value="">(none)</option>
+            {fams.map(f => <option key={f} value={f}>{f}</option>)}
+          </Form.Select>
+        </div>
+      </div>
+      {learned && (
+        <div className="d-flex align-items-center gap-1 text-muted" style={{ fontSize: 10, marginTop: 2 }} data-testid="family-from">
+          <span className="companion-dot" />Family: {learned}
         </div>
       )}
-      <div className="mt-1" style={{ fontSize: 10, color: C.muted }}>Description</div>
+      <div className="mt-1" style={lbl}>Description</div>
       {typing != null ? (
         <Form.Control size="sm" autoFocus className="fst-italic" style={{ fontSize: 11, height: 24, padding: '1px 4px' }} value={typing}
           aria-label={`Note for ${c.code}`} data-testid="code-note-input"
@@ -222,6 +318,21 @@ function CodeCard({ c, many, inRecipe, familyOptions, elementTypes, edit, propos
         <NoteWords text={c.note} from={c.code} empty="no description: click to type one" />
       </div>
       )}
+      <div className="d-flex align-items-center gap-1 mt-1">
+        {picking ? (
+          <div className="flex-grow-1" data-testid="existing-pick">
+            <ETRefSelect onCommit={r => { setPicking(false); if (r) onAssign(r) }} onCancel={() => setPicking(false)} />
+          </div>
+        ) : (
+          <>
+            <Button size="sm" variant={reuse ? 'outline-primary' : 'primary'} style={btn} data-testid="give-et"
+              aria-label={`Give ${c.code} an ElementType`} onClick={() => onCreate({ ref: cleanRef(ref), family: cleanRef(family) })}>
+              Create {cleanRef(ref) || 'ElementType'}
+            </Button>
+            <Button size="sm" variant="outline-secondary" style={btn} data-testid="pick-existing" onClick={() => setPicking(true)}>Existing</Button>
+          </>
+        )}
+      </div>
     </div>
   )
 }

@@ -64,6 +64,23 @@ export function mergeCaptures(prev, next, targets, formRefs = []) {
 }
 
 /**
+ * One Form row's cells under their Form column names (TKJTDE): manufacturer, product code and
+ * accessories (when given) up front; the other columns marked `more`.
+ */
+export function rowCells(r, map = {}) {
+  const raw = String(r.rawText ?? '')
+  const cut = r.accFrom != null && r.accFrom > 0 ? r.accFrom : null
+  const code = r.accFrom === 0 ? '' : cut != null ? raw.slice(0, cut - 1) : raw
+  const acc = r.accFrom === 0 ? raw : cut != null ? raw.slice(cut) : ''
+  return [
+    [map?.mfr || 'Manufacturer', r.manufacturer],
+    [map?.code || 'Product code', code, false, true],
+    [map?.acc || 'Accessories', acc],
+    ...Object.entries(r.context || {}).map(([c, v]) => [c, v, true]),
+  ].map(([col, v, more, isCode]) => ({ col, value: String(v ?? '').trim(), more: !!more, ...(isCode && { code: true }) })).filter(c => c.value)
+}
+
+/**
  * positionPaintStatus(draft, posRef) → { state, rows, unconfirmed, formRefs, texts, cells }
  * Where ONE PositionType stands in the saved import (the builder's Form spec pane):
  * 'noForm' (nothing loaded), 'absent' (the Form has no rows for it), 'todo' (rows to
@@ -82,18 +99,7 @@ export function positionPaintStatus(draft, posRef, { buildRefMap, targetFor, kno
   const texts = rows.map(r => String(r.rawText || '').trim()).filter(Boolean)
   // …and per row, each cell under its Form column name (TKJTDE): manufacturer, product code
   // and accessories (when given) up front; the other columns marked `more`, behind a ⋯.
-  const cells = rows.map(r => {
-    const raw = String(r.rawText ?? '')
-    const cut = r.accFrom != null && r.accFrom > 0 ? r.accFrom : null
-    const code = r.accFrom === 0 ? '' : cut != null ? raw.slice(0, cut - 1) : raw
-    const acc = r.accFrom === 0 ? raw : cut != null ? raw.slice(cut) : ''
-    return [
-      [draft.map?.mfr || 'Manufacturer', r.manufacturer],
-      [draft.map?.code || 'Product code', code, false, true],
-      [draft.map?.acc || 'Accessories', acc],
-      ...Object.entries(r.context || {}).map(([c, v]) => [c, v, true]),
-    ].map(([col, v, more, isCode]) => ({ col, value: String(v ?? '').trim(), more: !!more, ...(isCode && { code: true }) })).filter(c => c.value)
-  })
+  const cells = rows.map(r => rowCells(r, draft.map))
   // No product anywhere in its rows ("n/a", "by others"): nothing to add, nothing to do.
   if (rows.every(r => isNothingText(r.rawText))) return { state: 'nothing', rows: rows.length, unconfirmed: 0, formRefs: groups.map(g => g.formRef), texts, cells }
   const unconfirmed = rows.filter(r => !r.confirmed).length
