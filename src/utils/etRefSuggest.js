@@ -14,19 +14,18 @@
 import { getNextAvailableRef } from './containerUtils'
 import { familyOf } from './etRef'
 import { hasProductIdentity } from './productCodes'
+import { live, etRefOf, refKey } from './derived'
 
-const norm = s => String(s || '').trim().toUpperCase()
-const refOf = e => e.ElementTypeRef || e.elementTypeRef || ''
 const COUNTER_RE = /^(.*)-(\d+)$/
 
 /** Alphanumeric tokens (length ≥ 2), for haystack/token comparisons. */
 function tokens(s) {
-  return norm(s).split(/[^A-Z0-9]+/).filter(t => t.length >= 2)
+  return refKey(s).split(/[^A-Z0-9]+/).filter(t => t.length >= 2)
 }
 
 /** Length of the shared leading run of two strings. */
 export function sharedStem(a, b) {
-  const x = norm(a), y = norm(b)
+  const x = refKey(a), y = refKey(b)
   let i = 0
   while (i < x.length && i < y.length && x[i] === y[i]) i++
   return i
@@ -34,7 +33,7 @@ export function sharedStem(a, b) {
 
 /** Levenshtein ratio in [0,1]; 1 == identical. Compact, no dependency. */
 export function similarity(a, b) {
-  const x = norm(a), y = norm(b)
+  const x = refKey(a), y = refKey(b)
   if (!x && !y) return 1
   if (!x || !y) return 0
   if (x === y) return 1
@@ -107,7 +106,7 @@ export function inferConvention(elementTypes = []) {
   const stems = new Map()
 
   for (const et of elementTypes) {
-    const ref = refOf(et)
+    const ref = etRefOf(et)
     const m = ref.match(COUNTER_RE)
     if (!m) continue
     const stem = m[1]
@@ -144,13 +143,13 @@ export function inferConvention(elementTypes = []) {
  *       'variant' — shares a stem but differs; offer the next counter on that stem
  */
 export function reuseCandidates(code, note, { psRows = [], elementTypes = [], manufacturer = '' } = {}, limit = 3) {
-  const nc = norm(code)
+  const nc = refKey(code)
   if (!hasProductIdentity(code)) return []
-  const nm = norm(manufacturer)
+  const nm = refKey(manufacturer)
 
   const specByRef = new Map()   // ref -> { code, manufacturer }
   for (const r of psRows) {
-    const ref = norm(refOf(r))
+    const ref = refKey(etRefOf(r))
     const pc = (r.ProductCode || r.productCode || '').trim()
     const pm = (r.Manufacturer || r.manufacturer || '').trim()
     if (ref) specByRef.set(ref, { code: pc, manufacturer: pm })
@@ -158,16 +157,16 @@ export function reuseCandidates(code, note, { psRows = [], elementTypes = [], ma
   const noteToks = tokens(note)
 
   /** A blank maker on either side cannot distinguish anything, so it matches. */
-  const sameMaker = other => !norm(other) || !nm || norm(other) === nm
+  const sameMaker = other => !refKey(other) || !nm || refKey(other) === nm
 
-  const familyRefs = new Set(elementTypes.map(e => norm(e.Family || e.family || '')).filter(Boolean))
+  const familyRefs = new Set(elementTypes.map(e => refKey(e.Family || e.family || '')).filter(Boolean))
   const out = []
   for (const et of elementTypes) {
-    const ref = refOf(et)
-    if (!ref || (et.IsDeleted || et.isDeleted) === 'Y') continue
+    const ref = etRefOf(et)
+    if (!ref || !live(et)) continue
     // A family row (ET-DRIVERS) groups products; it is never one to reuse.
-    if ((et.IsCollection || et.isCollection) === 'Y' || familyRefs.has(norm(ref))) continue
-    const spec = specByRef.get(norm(ref)) || { code: '', manufacturer: '' }
+    if ((et.IsCollection || et.isCollection) === 'Y' || familyRefs.has(refKey(ref))) continue
+    const spec = specByRef.get(refKey(ref)) || { code: '', manufacturer: '' }
     // A wrapper's "N/A" is not a code; never let it match or fuzzy-match.
     const pc = hasProductIdentity(spec.code) ? spec.code : ''
     const pm = spec.manufacturer
@@ -180,7 +179,7 @@ export function reuseCandidates(code, note, { psRows = [], elementTypes = [], ma
     // default, so a one-char attribute change (250-1CH vs 250-2CH) is never merged.
     let codeScore = 0
     let kind = 'variant'
-    const codeMatches = pc && norm(pc) === nc
+    const codeMatches = pc && refKey(pc) === nc
 
     if (codeMatches && sameMaker(pm)) { codeScore = 1; kind = 'same' }
     else if (codeMatches) { codeScore = 0 }   // same code, another maker: another product
@@ -188,8 +187,8 @@ export function reuseCandidates(code, note, { psRows = [], elementTypes = [], ma
     // an extra's description says "For 480", and 480GT is not the 480 (73BFE9).
     else if (!pc && haystackToks.has(nc) && sameMaker(pm)) { codeScore = 0.92; kind = 'same' }
     else if (!codeMatches) {
-      const sim = pc ? similarity(nc, norm(pc)) : 0
-      const stem = pc ? sharedStem(nc, norm(pc)) : 0
+      const sim = pc ? similarity(nc, refKey(pc)) : 0
+      const stem = pc ? sharedStem(nc, refKey(pc)) : 0
       const stemScore = stem >= 4 ? 0.5 + Math.min(stem / nc.length, 1) * 0.35 : 0
       codeScore = Math.max(sim, stemScore)   // kind stays 'variant'
     }
@@ -206,7 +205,7 @@ export function reuseCandidates(code, note, { psRows = [], elementTypes = [], ma
 /** A short, alnum, best-effort family token for a brand-new ref (the user edits it). */
 function skeletonToken(note, manufacturer, code) {
   const source = [manufacturer, note, code].map(s => String(s || '').trim()).find(Boolean) || 'NEW'
-  const word = norm(source).match(/[A-Z0-9]+/)?.[0] || 'NEW'
+  const word = refKey(source).match(/[A-Z0-9]+/)?.[0] || 'NEW'
   return word.slice(0, 8)
 }
 

@@ -23,6 +23,7 @@ import { conditionMatches, TAG_COLUMNS, RECIPE_TAG_COLUMNS, recipeTagIndex, with
 import { positionFamilyOf } from './positionFamily'
 import { indexes, positionMakeup, rowJob, DEFINING, jobLabel } from './recipeKinds'
 import { jobKey } from './codeJobs'
+import { etRefOf } from './derived'
 
 const lc = s => String(s ?? '').trim().toLowerCase()
 const parseList = raw => {
@@ -171,7 +172,7 @@ export const asRecord = x => (Array.isArray(x) ? recordFromTags(x) : (x || recor
  * with no recipe rows, Jobs (and LIN, when it has tape or a profile) come from its Form capture.
  */
 export function templateRecords({ positionTypes = [], recipes = [], psRows = [], elementTypes = [], positionUI = {}, isConnector = () => false, formCaptures } = {}) {
-  const live = recipes.filter(r => !isConnector(r.ElementTypeRef || r.elementTypeRef || ''))
+  const live = recipes.filter(r => !isConnector(etRefOf(r)))
   const index = recipeTagIndex({ recipes: live, psRows, elementTypes })
   const kindState = { positionTypes, recipes, psRows, elementTypes }
   const idx = indexes(kindState)

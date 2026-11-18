@@ -1,7 +1,7 @@
 import React, { useRef, useState, useMemo, useEffect, useId } from 'react'
 import { Modal, Button, Form } from 'react-bootstrap'
 import useStore, { withFinish } from '../store/useStore'
-import { familyRowExists } from '../utils/collectionGuess'
+import { familyRowExists, familyNames, refKey, etRefOf } from '../utils/derived'
 import MaterialIcon from './MaterialIcon'
 import FlagPill from './FlagPill'
 import { getNextAvailableRef } from '../utils/containerUtils'
@@ -18,6 +18,7 @@ import { useCompanion } from '../platform/companion'
 import { noteProposal, settleCreated, shareOutcomes, notePlacement, settlePlacement } from '../platform/outcomes'
 import { jobOf, jobKey } from '../utils/codeJobs'
 import { placementByPrecedent } from '../utils/recipeKinds'
+import { live } from '../utils/derived'
 const norm = s => String(s ?? '').trim().toLowerCase()
 
 /**
@@ -39,15 +40,11 @@ const norm = s => String(s ?? '').trim().toLowerCase()
  *                       Any spec prefill opens the Product Spec section expanded.
  */
 /** Every family there is: in use, the project's family rows, and the company's canon ones. */
-export function familyOptionsOf(elementTypes) {
-  const s = new Set()
-  for (const e of elementTypes) {
-    // VHCCAF: a family is a ref other ElementTypes name as their parent, not any IsCollection row.
-    const f = (e.Family || e.family || '').trim(); if (f) s.add(f)
-  }
-  for (const f of CANON_FAMILIES) s.add(f.ref)
+export function familyOptionsOf(elementTypes, collectionRefs = []) {
+  const m = familyNames(elementTypes, collectionRefs)
+  for (const f of CANON_FAMILIES) if (!m.has(refKey(f.ref))) m.set(refKey(f.ref), f.ref)
   // An assembly wrapper (ET-LIN-07, IsCollection) holds one product's parts; it is not a family to file under.
-  return [...s].filter(f => f && !isWrapperRef(f)).sort((a, b) => a.localeCompare(b))
+  return [...m.values()].filter(f => !isWrapperRef(f)).sort((a, b) => a.localeCompare(b))
 }
 
 export default function NewETModal({
@@ -145,7 +142,7 @@ export default function NewETModal({
     const st = useStore.getState()
     const pts = (formRefs || importContext?.positionTypes || []).filter(Boolean)
     // A position that already has its design element wants an extra, not another lead.
-    const hasLead = pts.some(pt => st.recipes.some(r => (r.IsDeleted || r.isDeleted) !== 'Y' && (r.IsDesign || r.isDesign) === 'Y'
+    const hasLead = pts.some(pt => st.recipes.some(r => live(r) && (r.IsDesign || r.isDesign) === 'Y'
       && norm(r.PositionTypeRef || r.positionTypeRef) === norm(pt)))
     const p = proposeElementTypes([{ text: code, manufacturers: [prefill.manufacturer || ''],
       variants: [{ note: importContext?.note || '' }], positionTypes: pts, reuse: [] }], {
@@ -187,8 +184,8 @@ export default function NewETModal({
   /** Back onto one made earlier: its ElementType and Product Spec row as they are now. */
   function seedFromExisting(r) {
     const st = useStore.getState()
-    const et = st.elementTypes.find(e => norm(e.ElementTypeRef || e.elementTypeRef) === norm(r)) || {}
-    const ps = st.psRows.find(e => norm(e.ElementTypeRef || e.elementTypeRef) === norm(r)) || {}
+    const et = st.elementTypes.find(e => norm(etRefOf(e)) === norm(r)) || {}
+    const ps = st.psRows.find(e => norm(etRefOf(e)) === norm(r)) || {}
     const desc = String(et.Description ?? et.description ?? '')
     // The Form's finish was written in brackets at the end (withFinish): show it in its own field again.
     const tail = finishHint && desc.endsWith(`(${finishHint})`)
@@ -224,8 +221,8 @@ export default function NewETModal({
 
   /** This ElementType's rows on placeIn: at position level, and inside its wrapper. */
   function placedRows(r) {
-    const mine = useStore.getState().recipes.filter(x => (x.IsDeleted || x.isDeleted) !== 'Y'
-      && norm(x.ElementTypeRef || x.elementTypeRef) === norm(r) && norm(x.PositionTypeRef || x.positionTypeRef) === norm(placeIn))
+    const mine = useStore.getState().recipes.filter(x => live(x)
+      && norm(etRefOf(x)) === norm(r) && norm(x.PositionTypeRef || x.positionTypeRef) === norm(placeIn))
     return {
       atPos: mine.find(x => (x.ContextType || x.contextType) === 'PositionType'),
       inside: wrapperRef && mine.find(x => (x.ContextType || x.contextType) === 'ElementType' && norm(x.ContextRef || x.contextRef) === norm(wrapperRef)),
@@ -235,7 +232,7 @@ export default function NewETModal({
   /** After a successful create, the next open of this key must seed afresh. */
   const clearSeed = () => { seededFor.current = Symbol('done') }
 
-  const familyOptions = useMemo(() => familyOptionsOf(elementTypes), [elementTypes])
+  const familyOptions = useMemo(() => familyOptionsOf(elementTypes, dbCollectionRefs), [elementTypes, dbCollectionRefs])
   // A family the project has no row for yet is created with the ElementType (GX9RLV).
   // The DesignDB parse files family rows under collection_refs, not elementTypes (#59).
   const familyIsNew = family.trim() !== '' && !familyRowExists(family, elementTypes, dbCollectionRefs)
@@ -247,16 +244,16 @@ export default function NewETModal({
   const allETObjects = useMemo(() => {
     const seen = new Map()
     for (const et of elementTypes) {
-      const r = et.ElementTypeRef || et.elementTypeRef
+      const r = etRefOf(et)
       if (r) seen.set(r.toLowerCase(), et)
     }
     for (const r of psRows) {
-      const k = (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase()
-      if (k && !seen.has(k)) seen.set(k, { ElementTypeRef: r.ElementTypeRef || r.elementTypeRef })
+      const k = (etRefOf(r)).toLowerCase()
+      if (k && !seen.has(k)) seen.set(k, { ElementTypeRef: etRefOf(r) })
     }
     for (const r of recipes) {
-      const k = (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase()
-      if (k && !seen.has(k)) seen.set(k, { ElementTypeRef: r.ElementTypeRef || r.elementTypeRef })
+      const k = (etRefOf(r)).toLowerCase()
+      if (k && !seen.has(k)) seen.set(k, { ElementTypeRef: etRefOf(r) })
     }
     return [...seen.values()]
   }, [elementTypes, psRows, recipes])
@@ -290,17 +287,17 @@ export default function NewETModal({
     const hit = psRows.find(r =>
       (r.Manufacturer || r.manufacturer || '').trim().toLowerCase() === m &&
       (r.ProductCode || r.productCode || '').trim().toLowerCase() === c &&
-      (r.IsDeleted || r.isDeleted) !== 'Y' &&
-      (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() !== ref.trim().toLowerCase()
+      live(r) &&
+      (etRefOf(r)).toLowerCase() !== ref.trim().toLowerCase()
     )
-    return hit ? { ref: hit.ElementTypeRef || hit.elementTypeRef } : null
+    return hit ? { ref: etRefOf(hit) } : null
   }, [manufacturer, productCode, psRows, ref])
 
   const alreadyExists = useMemo(() => {
     const k = cleanRef(ref).toLowerCase()
     if (!k) return false
     if (editing && k === norm(editing)) return false
-    return allETObjects.some(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === k)
+    return allETObjects.some(e => (etRefOf(e)).toLowerCase() === k)
   }, [ref, allETObjects, editing])
 
   const emptySegment = refIssues(ref).empty
@@ -336,7 +333,7 @@ export default function NewETModal({
         const psDefaults = {}
         if (manufacturer.trim()) psDefaults.Manufacturer = manufacturer.trim()
         if (productCode.trim())  psDefaults.ProductCode  = productCode.trim()
-        const existing = psRows.find(p => (p.ElementTypeRef || p.elementTypeRef || '').toLowerCase() === trimRef.toLowerCase())
+        const existing = psRows.find(p => (etRefOf(p)).toLowerCase() === trimRef.toLowerCase())
         // Product Spec and ElementType both get these (92YN3U); addPSRow carries them across.
         if (isTBC)               psDefaults.IsTBC = 'Y'
         if (isPropTBC)           psDefaults.IsPropertiesTBC = 'Y'
@@ -390,7 +387,7 @@ export default function NewETModal({
       InternalNotesText: notes.trim() || null, ExternalNotesText: extNotes.trim() || null,
       ComponentDescription: fullDesc || null,
     }
-    const hasRow = useStore.getState().psRows.some(x => norm(x.ElementTypeRef || x.elementTypeRef) === norm(r))
+    const hasRow = useStore.getState().psRows.some(x => norm(etRefOf(x)) === norm(r))
     if (hasRow) st.updatePSRow(r, spec)
     else if (Object.values(spec).some(Boolean)) st.addPSRow(r, Object.fromEntries(Object.entries(spec).filter(([, v]) => v)))
     if (where !== 'position' && where !== 'wrapper') return

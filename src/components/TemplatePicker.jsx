@@ -4,6 +4,7 @@ import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { C } from '../styles/tokens'
+import { live } from '../utils/derived'
 
 /**
  * TemplatePicker — browsable list of templates. Applying one replaces the full recipe,
@@ -103,7 +104,7 @@ export default function TemplatePicker({ posRef, activeTags, hasRows, onApply, q
         const refs = positionTypes.map(p => p.PositionTypeRef || p.positionTypeRef).filter(Boolean)
         const tagsOf = r => positionUI[r]?.tags || []
         const matches = r => tplTags.length > 0 && tplTags.every(t => tagsOf(r).includes(t))
-        const hasRecipe = r => recipes.some(x => (x.PositionTypeRef || x.positionTypeRef) === r && (x.IsDeleted || x.isDeleted) !== 'Y')
+        const hasRecipe = r => recipes.some(x => (x.PositionTypeRef || x.positionTypeRef) === r && live(x))
         const sorted = [...refs].sort((a, b) => (matches(b) - matches(a)) || a.localeCompare(b))
         const replacing = [...picked].filter(hasRecipe).length
         return (

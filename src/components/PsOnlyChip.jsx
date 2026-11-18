@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import useStore from '../store/useStore'
 import { C } from '../styles/tokens'
+import { live, etRefOf } from '../utils/derived'
 
 const lc = s => String(s || '').toLowerCase()
 
@@ -11,9 +12,9 @@ export function usePsOnlyRefs() {
   const dbCollectionRefs = useStore(s => s.dbCollectionRefs)
   const dbChanges = useStore(s => s.dbChanges)
   return useMemo(() => {
-    const inDb = new Set([...elementTypes.filter(e => e._row_num != null).map(e => lc(e.ElementTypeRef || e.elementTypeRef)),
+    const inDb = new Set([...elementTypes.filter(e => e._row_num != null).map(e => lc(etRefOf(e))),
       ...(dbCollectionRefs || []).map(lc), ...(dbChanges || []).map(c => lc(c.elementTypeRef))])
-    return new Set(psRows.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y').map(r => lc(r.ElementTypeRef || r.elementTypeRef))
+    return new Set(psRows.filter(r => live(r)).map(r => lc(etRefOf(r)))
       .filter(r => r && !inDb.has(r)))
   }, [psRows, elementTypes, dbCollectionRefs, dbChanges])
 }

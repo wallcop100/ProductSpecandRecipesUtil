@@ -25,6 +25,7 @@ import { colorsForType, ICONS, ACTION_ICONS } from '../utils/entityStyle'
 import { CONCEPTS } from './ConceptCard'
 import { C } from '../styles/tokens'
 import { wrapperUsedBy } from '../utils/collectionStatus'
+import { live } from '../utils/derived'
 
 // Group container-internal rows by ContextRef so each container gets a section
 // titled by its ElementTypeRef.
@@ -67,7 +68,7 @@ function setExploded(on, wrappers) {
  *   embedded           — modal mode: no full-height wrapper
  */
 export default function PositionRecipeEditor({
-  posRef, name, tags = [], count = 0, showDeleted = false,
+  posRef, name, count = 0, showDeleted = false,
   onOpenProductSpec, onOpenConnectors,
   onAddRow, onNewET, onReplace,
   showBack = false, onBack,
@@ -102,7 +103,7 @@ export default function PositionRecipeEditor({
   const wrapperRefs = [...new Set([...grouped.dlInternal, ...grouped.linInternal].map(r => r.ContextRef || r.contextRef).filter(Boolean))]
 
   function filterDeleted(rows) {
-    return showDeleted ? rows : rows.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
+    return showDeleted ? rows : rows.filter(r => live(r))
   }
   function flashPaste(msg) {
     setPasteMsg(msg)
@@ -137,7 +138,7 @@ export default function PositionRecipeEditor({
   }, [selectedRowIds, rowClipboard, ref])
 
   // Clear stale selection when switching PositionTypes.
-  useEffect(() => { clearRowSelection() /* eslint-disable-next-line */ }, [ref])
+  useEffect(() => { clearRowSelection()   }, [ref])
 
   const outerStyle = embedded
     ? { display: 'flex', flexDirection: 'column' }

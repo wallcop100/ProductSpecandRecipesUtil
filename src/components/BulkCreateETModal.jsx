@@ -16,6 +16,7 @@ import { CANON_FAMILIES } from '../data/etCanon'
 import { levelOf, saidOf, mayAsk, noteAsked } from '../utils/certainty'
 import { ConfirmLearnedModal } from './ConfirmSuggestionModal'
 import { C } from '../styles/tokens'
+import { etRefOf } from '../utils/derived'
 
 /**
  * BulkCreateETModal — every code that still needs an ElementType, proposed at once.
@@ -67,7 +68,7 @@ export default function BulkCreateETModal({
   }, [show, focusCode])
 
   const existing = useMemo(
-    () => new Set(elementTypes.map(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase())),
+    () => new Set(elementTypes.map(e => (etRefOf(e)).toLowerCase())),
     [elementTypes]
   )
   const famByRef = useMemo(() => new Map(fams.map((f, i) => [f.ref, i])), [fams])
@@ -171,7 +172,7 @@ export default function BulkCreateETModal({
     if (outcome !== 'accepted') return
     const anchorRow = rows.find(r => String(r.code).toUpperCase() === k.anchor.code)
     const house = familyForJob({ slot: k.part.slot }) || { family: ACCESSORIES, head: ACCESSORIES }
-    const taken = [...elementTypes.map(e => e.ElementTypeRef || e.elementTypeRef), ...rows.map(r => r.ref)].filter(Boolean)
+    const taken = [...elementTypes.map(e => etRefOf(e)), ...rows.map(r => r.ref)].filter(Boolean)
     setRows(rs => [...rs, {
       code: k.part.code, manufacturer: anchorRow?.manufacturer || '', include: true, action: 'create', reuseRef: null,
       family: house.family, ref: nextRef(house.head, taken), name: k.part.name || `${anchorRow?.manufacturer || ''} - ${k.part.code}`.trim(),

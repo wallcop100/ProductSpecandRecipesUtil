@@ -27,10 +27,6 @@ const ROWS = [
   { PositionTypeRef: 'C03', ManufacturerName: 'iGuzzini', ProductCode: 'QC52' },
 ]
 // The compact painter shows the cell text; the codes here are unique per position.
-const CODE = { QC50: 'C01', QC51: 'C02', QC52: 'C03' }
-// Rows the spec settles are folded: open the fold, then read the rows.
-const openDone = () => { const b = screen.queryByTestId('compact-done'); if (b && /show/.test(b.textContent)) fireEvent.click(within(b).getByText('show')) }
-const tableRefs = () => (openDone(), screen.getAllByTestId('compact-row')).map(r => CODE[r.textContent.match(/QC5\d/)?.[0]])
 
 beforeEach(() => {
   for (const k of Object.keys(prefs)) delete prefs[k]

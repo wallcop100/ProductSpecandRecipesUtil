@@ -1,3 +1,4 @@
+import { live } from './derived'
 /**
  * positionFamily.js — resolves the "family" a PositionType belongs to, used for
  * family-level ignore (ignored families drop out of the connector matrix and
@@ -36,7 +37,7 @@ export function ignoredPositionRefs({ positionTypes = [], positionUI = {}, ignor
   // A soft-deleted position leaves every total too: its recipe is not wanted.
   for (const pt of positionTypes) {
     const ref = pt.PositionTypeRef || pt.positionTypeRef
-    if (ref && (pt.IsDeleted || pt.isDeleted) === 'Y') out.add(String(ref).toLowerCase())
+    if (ref && !live(pt)) out.add(String(ref).toLowerCase())
   }
   for (const [ref, ui] of Object.entries(positionUI)) {
     if (ui?.ignored) out.add(String(ref).toLowerCase())

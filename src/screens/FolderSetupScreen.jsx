@@ -66,7 +66,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
   const [pendingRestore, setPendingRestore] = useState(null)
   const [showChangelog, setShowChangelog] = useState(false)
   const [libraryMsg, setLibraryMsg] = useState(null)
-  const [styleSummary, setStyleSummary] = useState(null)
+  const [, setStyleSummary] = useState(null)
 
   // Folder access is a Chromium-only API. Say so up front rather than failing at the picker.
   useEffect(() => {

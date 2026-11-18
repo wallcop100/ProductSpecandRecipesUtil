@@ -6,6 +6,7 @@ import MaterialIcon from './MaterialIcon'
 import { buildPsScript, buildRsScript, buildDbScript } from '../utils/patchScript'
 import { CONCEPTS } from './ConceptCard'
 import MasterGapPanel from './MasterGapPanel'
+import { useAlignmentGaps } from './useTemplateMatches'
 import TutorialHint from '../tutorial/TutorialHint'
 import { reportsToMarkdown, reportId } from '../utils/bugReports'
 import { download } from '../platform/fs'
@@ -15,6 +16,7 @@ import { ignoredPositionRefs } from '../utils/positionFamily'
 import { BLOCKING_RULES } from '../utils/validationTasks'
 import { C } from '../styles/tokens'
 import { askConfirm } from './ConfirmHost'
+import { etRefOf } from '../utils/derived'
 
 /**
  * ChangeSummaryModal — review every pending change, then copy the patch scripts.
@@ -29,7 +31,7 @@ import { askConfirm } from './ConfirmHost'
  *   Resolve  — the alignment gaps to close before you export (only when there are any)
  */
 
-const refOf = r => (r?.ElementTypeRef || r?.elementTypeRef || '')
+const refOf = r => (etRefOf(r))
 
 // Human labels for the Product Spec fields we surface.
 const PS_FIELD_LABELS = {
@@ -496,11 +498,12 @@ function BugReportsTab({ reports, copied, onCopy }) {
   )
 }
 
+const NO_GAPS = { specRows: { wrappers: [], products: [] }, dbRows: [] }
+
 export default function ChangeSummaryModal({ show, onHide }) {
   const psChanges = useStore(s => s.psChanges)
   const rsChanges = useStore(s => s.rsChanges)
   const dbChanges = useStore(s => s.dbChanges)
-  const alignmentGaps = useStore(s => s.alignmentGaps)
   const fillWrapperSpecRows = useStore(s => s.fillWrapperSpecRows)
   const bugReports = useStore(s => s.bugReports)
 
@@ -513,10 +516,7 @@ export default function ChangeSummaryModal({ show, onHide }) {
 
   // Two invariants, one selector (see specAlignment): the DesignDB is the master, and a
   // recipe implies a spec.
-  const gaps = useMemo(
-    () => (show ? alignmentGaps() : { specRows: { wrappers: [], products: [] }, dbRows: [] }),
-    [show, psChanges, rsChanges, dbChanges, alignmentGaps]
-  )
+  const gaps = useAlignmentGaps(show) || NO_GAPS
   const overwrites = useMemo(() => dbOverwrites(dbChanges), [dbChanges])
   const sections = useMemo(() => buildSummary({ psChanges, rsChanges, dbChanges }), [psChanges, rsChanges, dbChanges])
   const projectNumber = useStore(s => s.projectNumber)

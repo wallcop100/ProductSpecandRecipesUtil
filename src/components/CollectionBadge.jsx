@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react'
 import useStore from '../store/useStore'
+import { useTemplateRecOf, useConnectorOpts } from './useTemplateMatches'
 import MaterialIcon from './MaterialIcon'
 import { collectionStatusForPosition, overallCollectionStatus, positionRecipeWithWrapperInternals } from '../utils/collectionStatus'
 import { ACTION_ICONS } from '../utils/entityStyle'
@@ -22,14 +23,16 @@ export default function CollectionBadge({ posRef }) {
   const recipes       = useStore(s => s.recipes)
   const connectorPins = useStore(s => s.connectorPins)
   const connectorExcludes = useStore(s => s.connectorExcludes)
+  const recOf = useTemplateRecOf()
+  const connectorOpts = useConnectorOpts()
 
   const { overall, label } = useMemo(() => {
     if (!etCollections.length) return { overall: null, label: '' }
 
     const tags = positionUI[posRef]?.tags ?? []
     const { combined: posRecipe, wrapperRefs } = positionRecipeWithWrapperInternals(recipes, posRef)
-    const member = membership([posRef], etCollections, connectorPins, useStore.getState()._templateRecOf(), connectorExcludes).get(posRef)
-    const opts = useStore.getState()._connectorOpts()
+    const member = membership([posRef], etCollections, connectorPins, recOf, connectorExcludes).get(posRef)
+    const opts = connectorOpts
     const statuses = collectionStatusForPosition(posRef, tags, posRecipe, etCollections, wrapperRefs, member, { isConnector: ref => isConnectorPart(ref, opts) })
     const overall = overallCollectionStatus(statuses)
 
@@ -53,7 +56,7 @@ export default function CollectionBadge({ posRef }) {
       return { overall, label: `Extra connectors: ${extra.map(s => s.collection.Name).slice(0, 2).join(', ')}` }
     }
     return { overall, label: `Partial: ${partial.map(s => s.collection.Name).slice(0, 2).join(', ')}` }
-  }, [posRef, etCollections, positionUI, recipes])
+  }, [posRef, etCollections, positionUI, recipes, connectorPins, connectorExcludes, recOf, connectorOpts])
 
   if (!overall) return null
 

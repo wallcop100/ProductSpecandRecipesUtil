@@ -11,10 +11,9 @@
  * A deleted row counts as absent.
  */
 import { productKey, hasProductIdentity } from './productCodes'
+import { live, etRefOf } from './derived'
 
 const lc = s => String(s ?? '').trim().toLowerCase()
-const live = r => (r.IsDeleted || r.isDeleted) !== 'Y'
-const etOf = r => r.ElementTypeRef || r.elementTypeRef || ''
 const posOf = r => r.PositionTypeRef || r.positionTypeRef || ''
 const ctxOf = r => r.ContextType || r.contextType || ''
 const crefOf = r => r.ContextRef || r.contextRef || ''
@@ -43,7 +42,7 @@ export function planMerge({ recipes = [], psRows = [] }, keepRef, dropRefs = [])
   }
 
   // 1. Same product.
-  const psOf = ref => psRows.find(r => lc(etOf(r)) === ref && !((r.IsDeleted || r.isDeleted) === 'Y'))
+  const psOf = ref => psRows.find(r => lc(etRefOf(r)) === ref && !(!live(r)))
   const keyOf = ref => {
     const r = psOf(ref)
     return r ? productKey(r.Manufacturer ?? r.manufacturer, r.ProductCode ?? r.productCode) : null
@@ -61,7 +60,7 @@ export function planMerge({ recipes = [], psRows = [] }, keepRef, dropRefs = [])
   const rows = recipes.filter(live)
   const inside = ref => rows.filter(r => ctxOf(r) === 'ElementType' && lc(crefOf(r)) === ref)
   const sig = ref => inside(ref)
-    .map(r => [lc(etOf(r)), qtyOf(r), ...FLAGS.map(f => flag(r, f))].join('|')).sort().join(';')
+    .map(r => [lc(etRefOf(r)), qtyOf(r), ...FLAGS.map(f => flag(r, f))].join('|')).sort().join(';')
   const keepSig = sig(keep)
   for (const d of drops) {
     if (sig(d) !== keepSig) {
@@ -73,8 +72,8 @@ export function planMerge({ recipes = [], psRows = [] }, keepRef, dropRefs = [])
   const dropSet = new Set(drops)
   plan.retire = rows.filter(r => ctxOf(r) === 'ElementType' && dropSet.has(lc(crefOf(r)))).map(r => ({ _id: r._id, posRef: posOf(r) }))
   const retiring = new Set(plan.retire.map(r => r._id))
-  const mine = rows.filter(r => !retiring.has(r._id) && (lc(etOf(r)) === keep || dropSet.has(lc(etOf(r)))))
-  plan.rewrites = mine.filter(r => dropSet.has(lc(etOf(r)))).map(r => ({ _id: r._id, posRef: posOf(r) }))
+  const mine = rows.filter(r => !retiring.has(r._id) && (lc(etRefOf(r)) === keep || dropSet.has(lc(etRefOf(r)))))
+  plan.rewrites = mine.filter(r => dropSet.has(lc(etRefOf(r)))).map(r => ({ _id: r._id, posRef: posOf(r) }))
 
   const groups = new Map()
   for (const r of mine) {
@@ -82,12 +81,12 @@ export function planMerge({ recipes = [], psRows = [] }, keepRef, dropRefs = [])
     groups.set(k, [...(groups.get(k) || []), r])
   }
   for (const g of groups.values()) {
-    if (g.length < 2 || !g.some(r => dropSet.has(lc(etOf(r))))) continue
-    const first = g.find(r => lc(etOf(r)) === keep) || g[0]
+    if (g.length < 2 || !g.some(r => dropSet.has(lc(etRefOf(r))))) continue
+    const first = g.find(r => lc(etRefOf(r)) === keep) || g[0]
     const where = ctxOf(first) === 'ElementType' ? `inside ${crefOf(first)}` : `on ${posOf(first)}`
     const bad = g.slice(1).map(r => differsIn(first, r)).find(Boolean)
-    if (bad) { blocked.push({ ref: etOf(first), reason: 'rowsDiffer', detail: `Rows ${where} differ in ${bad}.` }); continue }
-    if (flag(first, DIM)) { blocked.push({ ref: etOf(first), reason: 'rowsDiffer', detail: `Rows ${where} use a dimension multiplier, not a quantity.` }); continue }
+    if (bad) { blocked.push({ ref: etRefOf(first), reason: 'rowsDiffer', detail: `Rows ${where} differ in ${bad}.` }); continue }
+    if (flag(first, DIM)) { blocked.push({ ref: etRefOf(first), reason: 'rowsDiffer', detail: `Rows ${where} use a dimension multiplier, not a quantity.` }); continue }
     plan.collapses.push({
       keepId: first._id, keepPos: posOf(first), where,
       quantity: g.reduce((n, r) => n + qtyOf(r), 0),

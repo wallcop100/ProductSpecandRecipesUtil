@@ -1,7 +1,8 @@
 import { describe, test, expect } from 'vitest'
 import { shapeOf, buildShapes, matchShape, maskCode } from '../../src/utils/codeShapes.js'
 import shipped from '../../src/data/codeShapes.json'
-import { CANON_FAMILIES, classifyText } from '../../src/data/etCanon.js'
+import { CANON_FAMILIES } from '../../src/data/etCanon.js'
+import { classifyText } from '../../src/utils/codeJobs.js'
 
 describe('shapeOf', () => {
   test('fine keeps two letter runs, coarse one; a short leading number is a series', () => {

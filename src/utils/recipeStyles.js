@@ -22,10 +22,8 @@ import { ruleFor, ruleMatchesRecord, mostSpecific, ruleIsEmpty } from './templat
 import { positionRecipeWithWrapperInternals } from './collectionStatus'
 import { rowSlot } from './recipePresence'
 import { TAG_COLUMNS } from './tagRules'
+import { live, etRefOf, refKey } from './derived'
 
-const up = s => String(s ?? '').trim().toUpperCase()
-const refOf = r => r.ElementTypeRef || r.elementTypeRef || ''
-const live = r => (r.IsDeleted || r.isDeleted) !== 'Y'
 const LINEAR = new Set(['TAPE', 'FLEX', 'PROFILE', 'DIFF', 'CAP', 'CLIP', 'MOUNT', 'FIXED'])
 
 /** The fields a style rule can use, grouped for RuleBuilder. */
@@ -50,9 +48,9 @@ export const FIELD_LABEL = Object.fromEntries(STYLE_RULE_COLUMNS.flatMap(g => g.
  * styleRecords({ positionTypes, elementTypes, formCaptures, positionUI }) → Map(posRef → record)
  */
 export function styleRecords({ positionTypes = [], elementTypes = [], formCaptures = null, positionUI = {} } = {}) {
-  const famOf = new Map(elementTypes.map(e => [up(refOf(e)), e.Family || e.family || '']))
-  const ptByRef = new Map(positionTypes.map(p => [up(p.PositionTypeRef || p.positionTypeRef), p]))
-  const parentOf = r => { const p = ptByRef.get(up(r)); return p ? (p.ParentRef || p.parentRef || null) : null }
+  const famOf = new Map(elementTypes.map(e => [refKey(etRefOf(e)), e.Family || e.family || '']))
+  const ptByRef = new Map(positionTypes.map(p => [refKey(p.PositionTypeRef || p.positionTypeRef), p]))
+  const parentOf = r => { const p = ptByRef.get(refKey(r)); return p ? (p.ParentRef || p.parentRef || null) : null }
   const out = new Map()
   for (const pt of positionTypes) {
     const ref = pt.PositionTypeRef || pt.positionTypeRef
@@ -60,14 +58,14 @@ export function styleRecords({ positionTypes = [], elementTypes = [], formCaptur
     for (const [k, v] of Object.entries(pt)) if (!k.startsWith('_') && (v == null || typeof v !== 'object')) rec[k] = v
     const caps = (formCaptures?.byPosition?.[ref] || []).filter(c => c.elementTypeRef)
     const lead = caps.find(c => c.role === 'lead') || caps[0] || null
-    const leadRole = lead ? roleOf(lead.elementTypeRef, famOf.get(up(lead.elementTypeRef))) : ''
+    const leadRole = lead ? roleOf(lead.elementTypeRef, famOf.get(refKey(lead.elementTypeRef))) : ''
     const extras = caps.filter(c => c !== lead)
     Object.assign(rec, {
       'Form.Main': lead?.elementTypeRef || '',
-      'Form.MainFamily': lead ? (famOf.get(up(lead.elementTypeRef)) || '') : '',
+      'Form.MainFamily': lead ? (famOf.get(refKey(lead.elementTypeRef)) || '') : '',
       'Form.Maker': lead?.manufacturer || '',
       // An accessory is named by its family (ET-EM, ET-PS-ACCESSORIES), else its role.
-      'Form.Extras': [...new Set(extras.map(c => famOf.get(up(c.elementTypeRef)) || roleOf(c.elementTypeRef, '')))].sort(),
+      'Form.Extras': [...new Set(extras.map(c => famOf.get(refKey(c.elementTypeRef)) || roleOf(c.elementTypeRef, '')))].sort(),
       'Kind.Product': !lead ? '' : leadRole === 'TRACK' || leadRole === 'TRACK-PS' ? 'track' : LINEAR.has(leadRole) ? 'linear' : 'point',
       'Kind.Driver': driverOf(pt),
       'Kind.Env': envOf(pt, parentOf),
@@ -86,13 +84,13 @@ export function styleRecords({ positionTypes = [], elementTypes = [], formCaptur
  */
 export function recipeShape(recipes, posRef, { formRefs = [], leadRef = null, familyOf = () => '' } = {}) {
   const { combined } = positionRecipeWithWrapperInternals(recipes, posRef)
-  const form = new Set(formRefs.map(up))
+  const form = new Set(formRefs.map(refKey))
   const parts = []
   for (const r of combined.filter(live)) {
-    const ref = up(refOf(r))
+    const ref = refKey(etRefOf(r))
     if (!ref) continue
     const { section } = rowSlot(r)
-    const what = form.has(ref) ? (up(leadRef) === ref ? 'FORM:lead' : 'FORM:extra') : roleOf(ref, familyOf(ref))
+    const what = form.has(ref) ? (refKey(leadRef) === ref ? 'FORM:lead' : 'FORM:extra') : roleOf(ref, familyOf(ref))
     parts.push(`${section}:${what}`)
   }
   return [...new Set(parts)].sort().join(' + ')
@@ -103,12 +101,12 @@ export function recipeShape(recipes, posRef, { formRefs = [], leadRef = null, fa
  * biggest first. ctx: { recipes, formCaptures, elementTypes }.
  */
 export function findStyleGroups(posRefs, { recipes = [], formCaptures = null, elementTypes = [] } = {}) {
-  const famOf = new Map(elementTypes.map(e => [up(refOf(e)), e.Family || e.family || '']))
+  const famOf = new Map(elementTypes.map(e => [refKey(etRefOf(e)), e.Family || e.family || '']))
   const byShape = new Map()
   for (const p of posRefs) {
     const caps = formCaptures?.byPosition?.[p] || []
     const lead = caps.find(c => c.role === 'lead') || caps[0]
-    const shape = recipeShape(recipes, p, { formRefs: caps.map(c => c.elementTypeRef).filter(Boolean), leadRef: lead?.elementTypeRef, familyOf: r => famOf.get(up(r)) || '' })
+    const shape = recipeShape(recipes, p, { formRefs: caps.map(c => c.elementTypeRef).filter(Boolean), leadRef: lead?.elementTypeRef, familyOf: r => famOf.get(refKey(r)) || '' })
     if (!shape) continue
     if (!byShape.has(shape)) byShape.set(shape, [])
     byShape.get(shape).push(p)

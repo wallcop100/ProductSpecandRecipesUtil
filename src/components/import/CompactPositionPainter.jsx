@@ -12,9 +12,9 @@ import { CopyText } from '../CopyButton'
 import { rowCells } from '../../utils/formPositions'
 import { EtPill, Gutter, GRAPHITE, btn, card } from '../FormPaneParts'
 import { C } from '../../styles/tokens'
+import { codeKey } from '../../utils/derived'
 
 const mono = { fontFamily: 'monospace' }
-const norm = s => String(s || '').trim().toUpperCase()
 
 /**
  * CompactPositionPainter — one position's Form entries, in the builder's Form spec pane
@@ -33,7 +33,8 @@ export default function CompactPositionPainter({ posRef, rows, info, onSetRole, 
   onAssign, hideCodes = [], newCodes = [], reuseFor, since }) {
   const elementTypes = useStore(s => s.elementTypes)
   const map = useStore(s => s.importDraft?.map)
-  const familyOptions = useMemo(() => familyOptionsOf(elementTypes || []), [elementTypes])
+  const dbCollectionRefs = useStore(s => s.dbCollectionRefs)
+  const familyOptions = useMemo(() => familyOptionsOf(elementTypes || [], dbCollectionRefs || []), [elementTypes, dbCollectionRefs])
   const [brush, setBrush] = useState('code')
   const [pinned, setPinned] = usePinned()
   const [peek, setPeek] = useState(false)
@@ -52,8 +53,8 @@ export default function CompactPositionPainter({ posRef, rows, info, onSetRole, 
       </div>
     )
   }
-  const hide = new Set(hideCodes.map(norm))
-  const fresh = new Set(newCodes.map(norm))
+  const hide = new Set(hideCodes.map(codeKey))
+  const fresh = new Set(newCodes.map(codeKey))
   const keys = (
     <BrushKeys brush={brush} setBrush={setBrush} open={pinned || peek} pinned={pinned}
       onPeek={() => setPeek(true)} onPin={() => { setPinned(!pinned); setPeek(false) }} />
@@ -66,7 +67,7 @@ export default function CompactPositionPainter({ posRef, rows, info, onSetRole, 
         const needs = inf.codes.some(c => !c.etRef) || (!row.confirmed && inf.status?.icon !== 'block')
         const face = faces[row.id] || (needs ? 'paint' : 'data')
         const setFace = f => setFaces(m => ({ ...m, [row.id]: f }))
-        const cards = inf.codes.filter(c => !c.etRef && !hide.has(norm(c.code)))
+        const cards = inf.codes.filter(c => !c.etRef && !hide.has(codeKey(c.code)))
         return (
           <div key={row.id} className="py-1 border-bottom" data-testid="compact-row" data-face={face}>
             <div className="d-flex align-items-center gap-1" style={{ fontSize: 10, color: C.muted, minHeight: 20 }}>
@@ -94,7 +95,7 @@ export default function CompactPositionPainter({ posRef, rows, info, onSetRole, 
               <div className="d-flex flex-column mt-1">
                 {cards.map(c => (
                   <CodeCard key={c.code} c={c} many={inf.codes.length > 1} familyOptions={familyOptions} elementTypes={elementTypes}
-                    edit={edits[c.code]} proposal={proposalFor?.(c.code)} isNew={fresh.has(norm(c.code))} since={since}
+                    edit={edits[c.code]} proposal={proposalFor?.(c.code)} isNew={fresh.has(codeKey(c.code))} since={since}
                     reuse={reuseFor?.(c.code, row)} onAssign={ref => onAssign?.(c.code, ref)}
                     otherRefs={inf.codes.filter(o => o.code !== c.code).map(o => o.etRef || shownRef(edits[o.code], proposalFor?.(o.code))).filter(Boolean)}
                     onEdit={v => setEdits(e => ({ ...e, [c.code]: { ...e[c.code], ...v } }))}

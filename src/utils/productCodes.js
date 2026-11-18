@@ -1,3 +1,4 @@
+import { etRefOf, codeKey, live } from './derived'
 /**
  * productCodes.js — the "magic wand" mechanism for turning freehand ProductCode
  * fields into distinct product codes.
@@ -218,7 +219,7 @@ export function deriveCaptures(row, opts = {}) {
   // talk about it, not a second product: those words are its note.
   const seen = new Set()
   const runs = codeRuns(row).filter(([a, b]) => {
-    const k = norm(row.rawText.slice(row.tokens[a].start, row.tokens[b].end))
+    const k = codeKey(row.rawText.slice(row.tokens[a].start, row.tokens[b].end))
     return !seen.has(k) && seen.add(k)
   })
   const captures = runs.map(([a, b]) => ({
@@ -267,7 +268,6 @@ export function promoteNoteToCode(row, tokenIdx) {
   return { ...row, roles }
 }
 
-export const norm = c => String(c || '').trim().toUpperCase()
 
 // ---------------------------------------------------------------------------
 // Product identity
@@ -279,7 +279,7 @@ export const norm = c => String(c || '').trim().toUpperCase()
 // ---------------------------------------------------------------------------
 
 /** The identity of a product. Blank manufacturer is a value, not a wildcard. */
-export const productKey = (manufacturer, code) => `${norm(manufacturer)} ${norm(code)}`
+export const productKey = (manufacturer, code) => `${codeKey(manufacturer)} ${codeKey(code)}`
 
 /**
  * Does this code identify a product at all?
@@ -301,7 +301,7 @@ export const productKey = (manufacturer, code) => `${norm(manufacturer)} ${norm(
 const PLACEHOLDER_CODES = new Set(['N/A', 'NA', 'TBC', 'TBA', '-'])
 
 export const hasProductIdentity = code => {
-  const n = norm(code)
+  const n = codeKey(code)
   return n !== '' && !PLACEHOLDER_CODES.has(n)
 }
 
@@ -309,7 +309,6 @@ const notAProduct = code => !hasProductIdentity(code)
 
 const mfrOf = r => r.Manufacturer || r.manufacturer || ''
 const codeOf = r => r.ProductCode || r.productCode || ''
-const etOfRow = r => r.ElementTypeRef || r.elementTypeRef || ''
 
 /**
  * The product identities that appear on more than one live spec row — a genuine
@@ -318,7 +317,7 @@ const etOfRow = r => r.ElementTypeRef || r.elementTypeRef || ''
 export function duplicateProductKeys(psRows) {
   const counts = new Map()
   for (const r of psRows || []) {
-    if ((r.IsDeleted || r.isDeleted) === 'Y') continue
+    if (!live(r)) continue
     if (notAProduct(codeOf(r))) continue
     const k = productKey(mfrOf(r), codeOf(r))
     counts.set(k, (counts.get(k) || 0) + 1)
@@ -337,14 +336,14 @@ export function duplicateProductKeys(psRows) {
  */
 export function findProductET(psRows, manufacturer, code) {
   if (notAProduct(code)) return null
-  const live = (psRows || []).filter(r => (r.IsDeleted || r.isDeleted) !== 'Y' && etOfRow(r))
+  const livePs = (psRows || []).filter(r => live(r) && etRefOf(r))
   const key = productKey(manufacturer, code)
 
-  const exact = live.find(r => productKey(mfrOf(r), codeOf(r)) === key)
-  if (exact) return etOfRow(exact)
+  const exact = livePs.find(r => productKey(mfrOf(r), codeOf(r)) === key)
+  if (exact) return etRefOf(exact)
 
-  const sameCode = live.filter(r => norm(codeOf(r)) === norm(code))
-  return sameCode.length === 1 ? etOfRow(sameCode[0]) : null
+  const sameCode = livePs.filter(r => codeKey(codeOf(r)) === codeKey(code))
+  return sameCode.length === 1 ? etRefOf(sameCode[0]) : null
 }
 
 /**
@@ -374,12 +373,12 @@ export function stampPlan(psRows, etRef, manufacturer, code, { isContainer = fal
 
   // Is this product identity already spoken for by a DIFFERENT ElementType?
   const owner = findProductET(psRows, manufacturer, code)
-  if (owner && norm(owner) !== norm(etRef)) {
+  if (owner && codeKey(owner) !== codeKey(etRef)) {
     return { action: 'taken', otherRef: owner }
   }
 
   const row = (psRows || []).find(
-    r => (r.IsDeleted || r.isDeleted) !== 'Y' && norm(etOfRow(r)) === norm(etRef)
+    r => live(r) && codeKey(etRefOf(r)) === codeKey(etRef)
   )
   const current = { manufacturer: mfrOf(row || {}).trim(), code: codeOf(row || {}).trim() }
 
@@ -415,7 +414,7 @@ export function buildMaster(psRows) {
   const out = []
   for (const r of psRows || []) {
     const code = codeOf(r).trim()
-    const ref = etOfRow(r)
+    const ref = etRefOf(r)
     if (ref && hasProductIdentity(code)) out.push({ code, ref, manufacturer: mfrOf(r).trim() })
   }
   return out
@@ -444,7 +443,7 @@ export function buildCaptures(rows, opts = {}) {
 export function buildDistinct(rows, opts = {}) {
   const map = new Map()
   for (const cap of buildCaptures(rows, opts)) {
-    const key = norm(cap.code)
+    const key = codeKey(cap.code)
     if (!map.has(key)) {
       map.set(key, { text: cap.code, rowRefs: [], manufacturers: [], positionTypes: [], variants: [] })
     }
@@ -494,7 +493,7 @@ const DISTINGUISHING = /^(black|white|silver|gold|brass|bronze|copper|chrome|nic
 
 /** Normalised codes appearing in more than one row of the batch. */
 export function duplicateSet(rows) {
-  return new Set(buildDistinct(rows).filter(e => e.rowRefs.length > 1).map(e => norm(e.text)))
+  return new Set(buildDistinct(rows).filter(e => e.rowRefs.length > 1).map(e => codeKey(e.text)))
 }
 
 /**
@@ -506,8 +505,8 @@ export function duplicateSet(rows) {
  *   grey   novel
  */
 export function classify(code, { master = [], duplicates = new Set() } = {}, manufacturer = '') {
-  const n = norm(code)
-  const m = norm(manufacturer)
+  const n = codeKey(code)
+  const m = codeKey(manufacturer)
   const duplicate = duplicates.has(n)
 
   // "N/A" and blanks name no product, so they can match no product. Without this a
@@ -518,15 +517,15 @@ export function classify(code, { master = [], duplicates = new Set() } = {}, man
 
   // A product is (maker, code). A blank maker on either side cannot distinguish
   // anything, so it matches — but two NAMED makers sharing a code are two products.
-  const sameMaker = other => !norm(other) || !m || norm(other) === m
+  const sameMaker = other => !codeKey(other) || !m || codeKey(other) === m
 
-  const exact = master.find(x => norm(x.code) === n && sameMaker(x.manufacturer))
+  const exact = master.find(x => codeKey(x.code) === n && sameMaker(x.manufacturer))
   if (exact) {
     return { status: 'green', elementTypeRef: exact.ref, base: exact.code, manufacturer: exact.manufacturer, duplicate }
   }
 
   // Same code, a different maker: NOT this product. Say so rather than matching it.
-  const otherMaker = master.find(x => norm(x.code) === n)
+  const otherMaker = master.find(x => codeKey(x.code) === n)
   if (otherMaker) {
     return {
       status: duplicate ? 'blue' : 'grey', elementTypeRef: null, base: null, duplicate,
@@ -536,11 +535,11 @@ export function classify(code, { master = [], duplicates = new Set() } = {}, man
 
   let best = null
   for (const x of master) {
-    const mn = norm(x.code)
+    const mn = codeKey(x.code)
     if (mn === n) continue
     if (!sameMaker(x.manufacturer)) continue
     if (n.startsWith(mn) || mn.startsWith(n)) {
-      if (!best || mn.length > norm(best.code).length) best = x
+      if (!best || mn.length > codeKey(best.code).length) best = x
     }
   }
   if (best) return { status: 'amber', elementTypeRef: null, base: best.code, masterRef: best.ref, duplicate }
@@ -560,8 +559,8 @@ export function clusterSimilar(entries) {
 
   for (let i = 0; i < entries.length; i++) {
     for (let j = i + 1; j < entries.length; j++) {
-      const a = norm(entries[i].text)
-      const b = norm(entries[j].text)
+      const a = codeKey(entries[i].text)
+      const b = codeKey(entries[j].text)
       if (a.startsWith(b) || b.startsWith(a)) union(i, j)
     }
   }
@@ -575,7 +574,7 @@ export function clusterSimilar(entries) {
 }
 
 /** Stable identity for a similar-group, so "keep separate" can be remembered. */
-export const groupKey = entries => entries.map(e => norm(e.text)).sort().join('|')
+export const groupKey = entries => entries.map(e => codeKey(e.text)).sort().join('|')
 
 /**
  * What is blocking the batch, split into the two questions the user actually faces.

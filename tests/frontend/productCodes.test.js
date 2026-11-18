@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest'
 import {
-  tokenize, makeRow, codeRuns, deriveCaptures, deriveCodes, promoteNoteToCode,
+  makeRow, codeRuns, deriveCaptures, deriveCodes, promoteNoteToCode,
   buildMaster, buildDistinct, hasNoteCollision, duplicateSet, classify,
   clusterSimilar, rowConfidence, sortByConfidence, setNoteOverride, segmentsOf,
   pendingResolutions, groupKey, productKey, duplicateProductKeys, findProductET, hasProductIdentity,
@@ -646,7 +646,7 @@ describe('line breaks, phantom codes and glued notes', () => {
   })
 })
 
-import { hasNoteCollision, noteGist } from '../../src/utils/productCodes.js'
+import { noteGist } from '../../src/utils/productCodes.js'
 
 describe('note clashes only when the notes really differ', () => {
   const entry = (...notes) => ({ variants: notes.map(note => ({ note })) })

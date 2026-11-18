@@ -22,8 +22,9 @@
  * Longest match wins, left to right, and matched spans do not overlap.
  */
 
-import { norm, hasProductIdentity } from './productCodes'
+import { hasProductIdentity } from './productCodes'
 import { makerKey } from './codeShapes'
+import { codeKey } from './derived'
 
 /** How many tokens a single product code may span. "MICRO FLIGHT CASE BY IW MLS" is 6. */
 const MAX_SPAN = 8
@@ -42,14 +43,14 @@ export function indexKnownCodes(master = [], library = []) {
   const byCode = new Map()
   for (const m of master) {
     if (!hasProductIdentity(m.code)) continue
-    const key = norm(m.code)
+    const key = codeKey(m.code)
     if (!byCode.has(key)) byCode.set(key, { code: m.code, ref: m.ref, manufacturer: m.manufacturer, from: 'spec' })
   }
   // Every project opened before (the style library): the same product, known elsewhere.
   // This project's spec wins; its ElementType is the one to reuse.
   for (const ex of library) {
     if (!hasProductIdentity(ex.code)) continue
-    const key = norm(ex.code)
+    const key = codeKey(ex.code)
     if (!byCode.has(key)) byCode.set(key, { code: ex.code, ref: null, manufacturer: ex.maker, from: 'library', exemplar: ex })
   }
   return byCode
@@ -86,7 +87,7 @@ export function matchKnownCodes(row, index) {
     for (let j = Math.min(i + MAX_SPAN - 1, n - 1); j >= i; j--) {
       if (!isAlnum(row.tokens[j])) continue
       const text = spanText(row, i, j)
-      const found = index.get(norm(text))
+      const found = index.get(codeKey(text))
       if (found && makerFits(found, row)) { hit = { range: [i, j], ...found }; break }
     }
     if (hit) { exact.push(hit); i = hit.range[1] + 1; continue }
@@ -106,7 +107,7 @@ export function matchKnownCodes(row, index) {
  */
 function variantAt(row, i, index) {
   const text = row.tokens[i].text
-  const nt = norm(text)
+  const nt = codeKey(text)
   if (!hasProductIdentity(text) || nt.length < MIN_VARIANT_BASE) return null
 
   let best = null
@@ -116,7 +117,7 @@ function variantAt(row, i, index) {
     const shorterInLonger = key.startsWith(nt)
     if (!longerHasShorter && !shorterInLonger) continue
     // Prefer the longest shared base — the most specific claim.
-    if (!best || key.length > norm(best.base).length) {
+    if (!best || key.length > codeKey(best.base).length) {
       best = {
         range: [i, i],
         text,

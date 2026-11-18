@@ -24,13 +24,12 @@ import { rowSlot, normalizeSection, POSITION, INTERNAL } from './recipePresence'
 import { roleOf } from './recipePatterns'
 import { connectorRole } from './connectors'
 import { templateRule, ruleIsEmpty, ruleMatchesRecord, ruleConditionsOf, mostSpecific, asRecord } from './templateRules'
+import { live, etRefOf } from './derived'
 
 const lc = s => String(s ?? '').trim().toLowerCase()
 
 /** Families ticked as connector parts until the project chooses its own. */
 export const DEFAULT_CONNECTOR_FAMILIES = ['ET-CONNECTORS']
-const live = r => (r.IsDeleted || r.isDeleted) !== 'Y'
-const etOf = r => r.ElementTypeRef || r.elementTypeRef || ''
 const qtyOf = r => { const q = Number(r.Quantity ?? r.quantity); return Number.isFinite(q) && q > 0 ? q : 1 }
 const parse = v => (Array.isArray(v) ? v : (() => { try { return JSON.parse(v || '[]') } catch { return [] } })())
 
@@ -80,7 +79,7 @@ export function connectorSignature(recipes, posRef, opts = {}) {
   const by = new Map()
   for (const r of combined) {
     if (!live(r)) continue
-    const ref = etOf(r)
+    const ref = etRefOf(r)
     if (!isConnectorPart(ref, opts)) continue
     const { section, container } = rowSlot(r)
     if (section === INTERNAL && container && !wrappers.has(container)) continue

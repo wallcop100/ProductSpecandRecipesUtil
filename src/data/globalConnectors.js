@@ -144,7 +144,7 @@ export function setConnectorLibrary(block) {
   if (!ok) return false
   // A served combo can name a set that is still a draft there (2pin-dali, UJU4XA): take its parts from the bundle, never its rule.
   const missing = (b.combos || []).flatMap(c => c.of || []).filter(k => !keys.has(k))
-  const filled = GLOBAL.connectors.templates.filter(t => missing.includes(t.key)).map(({ rule, why, ...t }) => t)   // eslint-disable-line no-unused-vars
+  const filled = GLOBAL.connectors.templates.filter(t => missing.includes(t.key)).map(({ rule, why, ...t }) => t)    
   C = { combos: [], superseded: {}, source: {}, ...b, templates: [...b.templates, ...filled] }
   WAGO_PAGE = C.source; WAGO_TEMPLATES = C.templates; WAGO_COMBOS = C.combos; WAGO_SUPERSEDED = C.superseded
   return true

@@ -4,7 +4,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 
 // Reports #52/#53: a suggestion popup/chip must not follow you to another position.
 vi.mock('../../src/components/RecipeSuggestions', () => ({
-  default: ({ posRef }) => { const [open, setOpen] = useState(false); return <button onClick={() => setOpen(true)}>{open ? `open ${posRef}` : 'closed'}</button> },
+  default: function Stub({ posRef }) { const [open, setOpen] = useState(false); return <button onClick={() => setOpen(true)}>{open ? `open ${posRef}` : 'closed'}</button> },
 }))
 
 test('RecipeSuggestions state resets when the position changes', async () => {

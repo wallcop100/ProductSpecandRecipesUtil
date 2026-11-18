@@ -47,3 +47,36 @@ export function openTemplates(posRef) {
   if (posRef) st.setActivePosition(posRef)
   st.setDrawerTab('templates')
 }
+
+/**
+ * The store's `_templateRecOf()` / `_connectorOpts()`, subscribed to everything they read. Calling
+ * them through getState() inside a useMemo goes stale: the memo keeps the old answer until an
+ * unrelated dependency changes (a click elsewhere).
+ */
+export function useTemplateRecOf() {
+  const positionTypes = useStore(s => s.positionTypes)
+  const recipes = useStore(s => s.recipes)
+  const psRows = useStore(s => s.psRows)
+  const elementTypes = useStore(s => s.elementTypes)
+  const positionUI = useStore(s => s.positionUI)
+  const connectorFamilies = useStore(s => s.connectorFamilies)
+  const formCaptures = useStore(s => s.formCaptures)
+  return useMemo(() => useStore.getState()._templateRecOf(),
+    [positionTypes, recipes, psRows, elementTypes, positionUI, connectorFamilies, formCaptures])   // eslint-disable-line react-hooks/exhaustive-deps
+}
+
+export function useConnectorOpts() {
+  const elementTypes = useStore(s => s.elementTypes)
+  const connectorFamilies = useStore(s => s.connectorFamilies)
+  return useMemo(() => useStore.getState()._connectorOpts(), [elementTypes, connectorFamilies])   // eslint-disable-line react-hooks/exhaustive-deps
+}
+
+/** The store's alignmentGaps(), recomputed when any slice it reads changes (see useTemplateRecOf). */
+export function useAlignmentGaps(on = true) {
+  const elementTypes = useStore(s => s.elementTypes); const psRows = useStore(s => s.psRows)
+  const recipes = useStore(s => s.recipes); const containerETRefs = useStore(s => s.containerETRefs)
+  const dbCollectionRefs = useStore(s => s.dbCollectionRefs); const positionTypes = useStore(s => s.positionTypes)
+  const positionUI = useStore(s => s.positionUI); const ignored = useStore(s => s.ignoredPositionFamilies)
+  return useMemo(() => (on ? useStore.getState().alignmentGaps() : null),
+    [on, elementTypes, psRows, recipes, containerETRefs, dbCollectionRefs, positionTypes, positionUI, ignored])   // eslint-disable-line react-hooks/exhaustive-deps
+}

@@ -26,6 +26,7 @@ import { EtPill, PosPill, Gutter, Where, GRAPHITE, btn, card, mono } from './For
 import { registerTrace } from '../utils/trace'
 import { C } from '../styles/tokens'
 import { askConfirm } from './ConfirmHost'
+import { live, etRefOf } from '../utils/derived'
 
 /**
  * FormSpecPane — the Form's spec beside the recipe it produced (design A, D4Z9CX).
@@ -219,8 +220,8 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
     [pending, result.extra, psRows, elementTypes])
 
   // This position's recipe rows (at the position or inside its wrapper), by ElementType.
-  const here = recipes.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y' && (r.PositionTypeRef || r.positionTypeRef) === posRef)
-  const rowsOf = ref => here.filter(r => String(r.ElementTypeRef || r.elementTypeRef || '').toUpperCase() === String(ref).toUpperCase())
+  const here = recipes.filter(r => live(r) && (r.PositionTypeRef || r.positionTypeRef) === posRef)
+  const rowsOf = ref => here.filter(r => String(etRefOf(r)).toUpperCase() === String(ref).toUpperCase())
   const holds = ref => rowsOf(ref).length > 0
   const whereOf = ref => {
     const rs = rowsOf(ref)
@@ -382,8 +383,8 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
   const placeCounts = ref => {
     let inside = 0, outside = 0
     for (const r of recipes) {
-      if ((r.IsDeleted || r.isDeleted) === 'Y') continue
-      if (String(r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() !== ref.toLowerCase()) continue
+      if (!live(r)) continue
+      if (String(etRefOf(r)).toLowerCase() !== ref.toLowerCase()) continue
       if ((r.ContextType || r.contextType) === 'ElementType') inside++
       else outside++
     }

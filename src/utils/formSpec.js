@@ -30,10 +30,11 @@ import { positionRecipeWithWrapperInternals, wrapperUsedBy } from './collectionS
 import { isConnector } from './connectors'
 import { findProductET } from './productCodes'
 import { reuseCandidates } from './etRefSuggest'
+import { etRefOf, entryRefOf } from './derived'
+import { jobOf, jobKey } from './codeJobs'
+import { rowJob, indexes } from './recipeKinds'
 
 const lc = s => String(s ?? '').trim().toLowerCase()
-const etOf = r => r.ElementTypeRef || r.elementTypeRef || ''
-const refOfEntry = e => e.elementTypeRef || e.ElementTypeRef || ''
 
 /**
  * Is this ref present ANYWHERE in the position's scope?
@@ -62,7 +63,7 @@ export function formPresence(presence, ref) {
  * what tells you it was derived from the products the Form does name.
  */
 export function classifyExtra(row, container) {
-  const ref = etOf(row)
+  const ref = etRefOf(row)
   if (container && lc(ref) === lc(container)) return 'wrapper'
   if (isConnector(ref)) return 'connector'
   if ((row.IsContractItem || row.isContractItem) === 'Y') return 'contract'
@@ -88,7 +89,7 @@ export function compareFormToRecipe(recipes, posRef, formEts = [], containerETRe
   const specified = new Set()
 
   for (const entry of formEts) {
-    const ref = refOfEntry(entry)
+    const ref = entryRefOf(entry)
     if (!ref) continue
     specified.add(lc(ref))
     const p = formPresence(presence, ref)
@@ -105,7 +106,7 @@ export function compareFormToRecipe(recipes, posRef, formEts = [], containerETRe
     if (specified.has(ref) || seen.has(ref)) continue
     seen.add(ref)
     const row = slot.rows[0]
-    const item = { elementTypeRef: etOf(row), rows: slot.rows, kind: classifyExtra(row, container) }
+    const item = { elementTypeRef: etRefOf(row), rows: slot.rows, kind: classifyExtra(row, container) }
     if (orphanSet.has(ref)) orphaned.push(item)
     else extra.push(item)
   }
@@ -135,6 +136,13 @@ export function formPending(formCaptures, posRef) {
  * either, and merging a Form product onto one would be a category error.
  */
 const MERGEABLE_EXTRA = new Set(['contract', 'internal', 'other'])
+
+const known = job => job && job !== 'OTHER'
+/** The job a Form product does, from its code's shape (FPS…BG… is a profile) and its Form text; null when unknown. */
+function formJob(p) {
+  const job = jobKey(jobOf({ maker: p.manufacturer, code: p.code, description: p.note }))
+  return known(job) ? job : null
+}
 
 /**
  * pendingCandidates(p, { extra, psRows, elementTypes }, limit)
@@ -167,8 +175,14 @@ export function pendingCandidates(p, { extra = [], psRows = [], elementTypes = [
 
   // 2. The recipe holds an ElementType the Form cannot account for, while the Form wants a
   //    product that has none. Invisible to text matching; the strongest evidence there is.
-  for (const x of extra) {
-    if (!MERGEABLE_EXTRA.has(x.kind)) continue
+  //    Only a part that does the same job: a profile code is never offered the recipe's diffuser.
+  //    Same job first; a part whose job either side can't tell comes after.
+  const want = formJob(p)
+  const idx = indexes({ psRows, elementTypes })
+  const jobOfExtra = x => jobKey(rowJob(x.rows?.[0] || { ElementTypeRef: x.elementTypeRef }, idx))
+  const mergeable = extra.filter(x => MERGEABLE_EXTRA.has(x.kind)).map(x => ({ x, job: jobOfExtra(x) }))
+    .filter(({ job }) => !want || !known(job) || job === want)
+  for (const { x } of [...mergeable.filter(m => m.job === want), ...mergeable.filter(m => m.job !== want)]) {
     push(x.elementTypeRef, 'recipe')
   }
 
@@ -260,7 +274,7 @@ export function formProgress(recipes, formCaptures, containerETRefs = new Set())
 // Re-import: what changed since last time
 // ---------------------------------------------------------------------------
 
-const codeKey = e => lc(e.code || refOfEntry(e))
+const codeKey = e => lc(e.code || entryRefOf(e))
 
 /** Flatten byPosition into Map<codeKey, { posRef, entry }>. Last write wins. */
 function indexCaptures(byPosition = {}) {
@@ -400,7 +414,7 @@ export function associations(recipes, captures, { minSupport = 2 } = {}) {
   const withX = new Map()
   for (const posRef of positions) {
     for (const e of byPosition[posRef] || []) {
-      const x = lc(refOfEntry(e))
+      const x = lc(entryRefOf(e))
       if (!x) continue
       if (!withX.has(x)) withX.set(x, new Set())
       withX.get(x).add(posRef)
@@ -419,7 +433,7 @@ export function associations(recipes, captures, { minSupport = 2 } = {}) {
 
     const ys = [...inAll]
       .filter(y => y !== x)
-      .filter(y => !(byPosition[[...ps][0]] || []).some(e => lc(refOfEntry(e)) === y))  // Y is derived, not itself specified
+      .filter(y => !(byPosition[[...ps][0]] || []).some(e => lc(entryRefOf(e)) === y))  // Y is derived, not itself specified
       .filter(y => without.every(p => !holds.get(p).has(y)))                            // and never seen without X
       .map(y => ({ ref: y, support: ps.size }))
 

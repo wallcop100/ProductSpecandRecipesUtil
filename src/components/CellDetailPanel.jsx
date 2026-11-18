@@ -1,12 +1,14 @@
 import React, { useMemo } from 'react'
 import { Button, Badge, Form } from 'react-bootstrap'
 import useStore from '../store/useStore'
+import { useTemplateRecOf, useConnectorOpts } from './useTemplateMatches'
 import { filterMatches, isConnectorPart } from '../utils/connectorGroups'
 import MaterialIcon from './MaterialIcon'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { positionRecipeWithWrapperInternals, wrapperUsedBy, extraConnectorRows } from '../utils/collectionStatus'
 import { buildPresence, ingredientPresence, wantedSlots, containerForPosition } from '../utils/recipePresence'
 import { C } from '../styles/tokens'
+import { live, etRefOf } from '../utils/derived'
 
 const SECTION_LABEL = {
   position: 'free issue',
@@ -33,7 +35,6 @@ function parseIngredients(collection) {
  */
 export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap, onOpenPosition, compact = false, onAddToTemplate = null, onRemoveFromTemplate = null }) {
   const etCollections    = useStore(s => s.etCollections)
-  const positionUI       = useStore(s => s.positionUI)
   const recipes          = useStore(s => s.recipes)
   const addRecipeRow        = useStore(s => s.addRecipeRow)
   const updateRecipeRow     = useStore(s => s.updateRecipeRow)
@@ -42,22 +43,24 @@ export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap,
 
   const collection = etCollections.find(c => c.CollectionId === collectionId)
   const removeRowsById = useStore(s => s.removeRowsById)
+  const recOf = useTemplateRecOf()
+  const connectorOpts = useConnectorOpts()
   const extras = useMemo(() => {
     if (!collection) return []
-    const opts = useStore.getState()._connectorOpts()
+    const opts = connectorOpts
     return extraConnectorRows(recipes, posRef, collection, ref => isConnectorPart(ref, opts))
-  }, [recipes, posRef, collection])
+  }, [recipes, posRef, collection, connectorOpts])
 
-  const applicable = collection ? filterMatches(collection, useStore.getState()._templateRecOf()(posRef)) : false
+  const applicable = collection ? filterMatches(collection, recOf(posRef)) : false
 
   // Active (non-deleted) refs present on this position — wrapper-aware: the
   // wrapper's internals count even when stored under another position.
-  const { presentRefs, sharedWrappers } = useMemo(() => {
+  const { sharedWrappers } = useMemo(() => {
     const { combined, wrapperRefs } = positionRecipeWithWrapperInternals(recipes, posRef)
     const set = new Set()
     for (const r of combined) {
-      if ((r.IsDeleted || r.isDeleted) === 'Y') continue
-      const ref = (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase()
+      if (!live(r)) continue
+      const ref = (etRefOf(r)).toLowerCase()
       if (ref) set.add(ref)
     }
     // Wrappers on this position that other positions also use — shared definitions
@@ -79,7 +82,7 @@ export default function CellDetailPanel({ posRef, collectionId, onClose, onSwap,
       statusOf: ing => ingredientPresence(presence, ing, { wanted }),
       container: containerForPosition(recipes, posRef, containerETRefs),
     }
-  }, [recipes, posRef, containerETRefs, ingredients])   // eslint-disable-line react-hooks/exhaustive-deps
+  }, [recipes, posRef, containerETRefs, ingredients])    
   const states = ingredients.map(i => statusOf(i))
   const presentCount = states.filter(r => r.status === 'present').length
   const missingCount = ingredients.length - presentCount

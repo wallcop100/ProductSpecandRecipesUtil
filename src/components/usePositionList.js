@@ -7,6 +7,7 @@ import { buildRefMap, targetFor } from '../utils/ptResolve'
 import { positionFormDone } from '../utils/formDone'
 import { positionHealth } from '../utils/positionHealth'
 import { queryRefs } from '../utils/positionQuery'
+import { live } from '../utils/derived'
 
 /**
  * usePositionList — the PositionTypes list, filtered, sorted and grouped by family, with a
@@ -38,7 +39,7 @@ export default function usePositionList() {
   const countByRef = useMemo(() => {
     const map = {}
     for (const r of recipes) {
-      if ((r.IsDeleted || r.isDeleted) === 'Y') continue
+      if (!live(r)) continue
       const pr = r.PositionTypeRef || r.positionTypeRef
       if (pr) map[pr] = (map[pr] || 0) + 1
     }

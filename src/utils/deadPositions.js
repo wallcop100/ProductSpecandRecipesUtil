@@ -20,11 +20,10 @@
  */
 
 import { resolveFormRef } from './ptResolve.js'
+import { live, etRefOf } from './derived'
 
 const lc = s => String(s || '').trim().toLowerCase()
-const live = r => (r.IsDeleted || r.isDeleted) !== 'Y'
 const posOf = r => r.PositionTypeRef || r.positionTypeRef || ''
-const etOf = r => r.ElementTypeRef || r.elementTypeRef || ''
 const ctxOf = r => r.ContextType || r.contextType
 const crefOf = r => r.ContextRef || r.contextRef || ''
 
@@ -57,8 +56,7 @@ export function deadPositionRefs({ recipes = [], positions = [], positionTypes =
   return dead
 }
 
-const psRefOf = r => r.ElementTypeRef || r.elementTypeRef || r.EntityRef || r.entityRef || ''
-const dbRefOf = r => r.ElementTypeRef || r.elementTypeRef || ''
+const psRefOf = r => etRefOf(r) || r.EntityRef || r.entityRef || ''
 
 /**
  * retirableElementTypes({ recipes, deadRefs, psRows, elementTypes }) →
@@ -98,14 +96,14 @@ export function retirableElementTypes({ recipes = [], deadRefs = new Set(), psRo
   const keep = new Set()
   const queue = []
   for (const r of liveRows) {
-    if (ctxOf(r) !== 'PositionType' || !etOf(r) || isDead(posOf(r))) continue
-    const k = lc(etOf(r))
+    if (ctxOf(r) !== 'PositionType' || !etRefOf(r) || isDead(posOf(r))) continue
+    const k = lc(etRefOf(r))
     if (!keep.has(k)) { keep.add(k); queue.push(k) }
   }
   while (queue.length) {
     const container = queue.shift()
     for (const r of internalByContainer.get(container) || []) {
-      const k = lc(etOf(r))
+      const k = lc(etRefOf(r))
       if (k && !keep.has(k)) { keep.add(k); queue.push(k) }
     }
   }
@@ -114,7 +112,7 @@ export function retirableElementTypes({ recipes = [], deadRefs = new Set(), psRo
   const psByRef = new Map()   // lc -> live PS row
   for (const p of psRows) { if (live(p) && psRefOf(p)) psByRef.set(lc(psRefOf(p)), p) }
   const dbByRef = new Map()   // lc -> live DB master row
-  for (const e of elementTypes) { if (live(e) && dbRefOf(e)) dbByRef.set(lc(dbRefOf(e)), e) }
+  for (const e of elementTypes) { if (live(e) && etRefOf(e)) dbByRef.set(lc(etRefOf(e)), e) }
 
   const meta = new Map()   // lc ref -> { ref, rsRowIds:Set, onlyIn:Set }
   const ensure = (k, ref) => {
@@ -123,14 +121,14 @@ export function retirableElementTypes({ recipes = [], deadRefs = new Set(), psRo
     if (!m.ref && ref) m.ref = ref
     return m
   }
-  for (const r of liveRows) { const k = lc(etOf(r)); if (k) ensure(k, etOf(r)) }
+  for (const r of liveRows) { const k = lc(etRefOf(r)); if (k) ensure(k, etRefOf(r)) }
   for (const [k, p] of psByRef) ensure(k, psRefOf(p))
 
   const retire = []
   for (const [k, m] of meta) {
     if (keep.has(k)) continue
     for (const r of liveRows) {
-      if (lc(etOf(r)) !== k) continue
+      if (lc(etRefOf(r)) !== k) continue
       if (r._id) m.rsRowIds.add(r._id)
       if (posOf(r)) m.onlyIn.add(posOf(r))
     }

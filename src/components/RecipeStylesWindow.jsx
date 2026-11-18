@@ -11,9 +11,9 @@ import { ruleConditionsOf, ruleSpecificity, specificityText, specificityScope, c
 import { conditionMatches } from '../utils/tagRules'
 import { C } from '../styles/tokens'
 import { askConfirm } from './ConfirmHost'
+import { refKey } from '../utils/derived'
 
 const EMPTY = { match: 'all', conditions: [] }
-const up = s => String(s ?? '').trim().toUpperCase()
 const shown = v => (Array.isArray(v) ? (v.length ? v.join(', ') : '(none)') : (v == null || String(v).trim() === '' ? '(empty)' : String(v)))
 const OP_WORD = { equals: 'is', notEquals: 'is not', contains: 'contains', notContains: "doesn't contain", startsWith: 'starts with', matches: 'matches', isEmpty: 'is empty', isNotEmpty: 'is not empty', gt: '>', lt: '<', between: 'between' }
 /** A shape key, in words: "Wrapper on site · inside: the Form's main product, 2PIN-REMOTE-PLUG". */
@@ -56,13 +56,13 @@ export default function RecipeStylesWindow({ show, onHide, focusId = null, recor
   const recOf = r => records.get(r) || {}
   // Specificity is measured against the project's positions.
   const specScope = useMemo(() => specificityScope(scope.map(recOf)), [scope, records])   // eslint-disable-line react-hooks/exhaustive-deps
-  const famOf = useMemo(() => new Map(elementTypes.map(e => [up(e.ElementTypeRef), e.Family || e.family || ''])), [elementTypes])
+  const famOf = useMemo(() => new Map(elementTypes.map(e => [refKey(e.ElementTypeRef), e.Family || e.family || ''])), [elementTypes])
   const shapeOf = useMemo(() => {
     const m = new Map()
     for (const p of scope) {
       const caps = formCaptures?.byPosition?.[p] || []
       const lead = caps.find(c => c.role === 'lead') || caps[0]
-      m.set(p, recipeShape(recipes, p, { formRefs: caps.map(c => c.elementTypeRef).filter(Boolean), leadRef: lead?.elementTypeRef, familyOf: r => famOf.get(up(r)) || '' }))
+      m.set(p, recipeShape(recipes, p, { formRefs: caps.map(c => c.elementTypeRef).filter(Boolean), leadRef: lead?.elementTypeRef, familyOf: r => famOf.get(refKey(r)) || '' }))
     }
     return m
   }, [scope, recipes, formCaptures, famOf])

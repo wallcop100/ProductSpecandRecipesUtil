@@ -24,9 +24,9 @@
  */
 import { useEffect, useMemo, useState } from 'react'
 import { useCompanion } from '../../platform/companion'
-import { norm } from '../../utils/productCodes'
+import { codeKey } from '../../utils/derived'
 
-export const assignmentKey = (code, maker) => `${norm(maker || '')}|${norm(code)}`
+export const assignmentKey = (code, maker) => `${codeKey(maker || '')}|${codeKey(code)}`
 
 const EMPTY = { items: [], dialect: [] }
 
@@ -38,7 +38,7 @@ export function digest({ items = [], dialect = [] } = EMPTY) {
   }
   for (const it of items) {
     if (it.kind === 'assignment' && it.value?.ref) out.assignments.set(it.key, it.value.ref)
-    else if (it.kind === 'local-et') out.localEts.set(norm(it.key), { ref: it.key, ...(it.value || {}) })
+    else if (it.kind === 'local-et') out.localEts.set(codeKey(it.key), { ref: it.key, ...(it.value || {}) })
     else if (it.kind === 'rule' && it.value?.role) {
       out.rules[String(it.key).toLowerCase()] = it.value.role   // project beats dialect
       out.ruleTiers[String(it.key).toLowerCase()] = 'project'
@@ -93,7 +93,7 @@ export function learnedRef(knowledge, entry, knownRefs) {
   const maker = entry.manufacturers?.length === 1 ? entry.manufacturers[0] : ''
   const ref = knowledge.assignments.get(assignmentKey(entry.text, maker))
   if (!ref) return null
-  return knownRefs.has(norm(ref)) ? ref : null
+  return knownRefs.has(codeKey(ref)) ? ref : null
 }
 
 /**
@@ -105,10 +105,10 @@ export function shareDecisions(api, projectNumber, { entries = [], rules = {}, k
   merged = [], localEts = [] } = {}) {
   const number = String(projectNumber || '').trim()
   if (!api?.shareProjectItems || !number) return Promise.resolve(null)
-  const local = new Set(localEts.map(et => norm(et.ref || '')))
+  const local = new Set(localEts.map(et => codeKey(et.ref || '')))
   const items = []
   for (const e of entries) {
-    if (!e.etRef || e.placeholder || local.has(norm(e.etRef))) continue
+    if (!e.etRef || e.placeholder || local.has(codeKey(e.etRef))) continue
     const maker = e.manufacturers?.length === 1 ? e.manufacturers[0] : ''
     items.push({ kind: 'assignment', key: assignmentKey(e.text, maker), value: { ref: e.etRef, code: e.text, maker } })
   }

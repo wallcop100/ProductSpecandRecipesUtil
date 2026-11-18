@@ -1,3 +1,4 @@
+import { live, etRefOf, refKey } from '../utils/derived'
 /**
  * search.js — Find's matching. Pure: the app's palette and `psr help <query>` both use it.
  *
@@ -144,13 +145,13 @@ export function find(query, { actions = [], state = {}, screen = '', limit = 14,
 export function positionsHolding(word, { recipes = [], psRows = [] } = {}) {
   const spec = new Map()   // the first spec row of each ET, as recipeTagIndex reads it
   for (const p of psRows) {
-    const k = norm(p.ElementTypeRef || p.elementTypeRef)
+    const k = norm(etRefOf(p))
     if (!spec.has(k)) spec.set(k, [p.ProductCode || p.productCode, p.Manufacturer || p.manufacturer, p.ComponentDescription || p.componentDescription].map(norm).join('\n'))
   }
   const hit = new Set()
   for (const r of recipes) {
-    if ((r.IsDeleted || r.isDeleted) === 'Y') continue
-    const et = norm(r.ElementTypeRef || r.elementTypeRef)
+    if (!live(r)) continue
+    const et = norm(etRefOf(r))
     if (et.includes(word) || (spec.get(et) || '').includes(word)) hit.add(r.PositionTypeRef || r.positionTypeRef)
   }
   hit.delete(undefined)
@@ -184,7 +185,7 @@ export function findThings(needle, state = {}) {
   const families = new Map()
   for (const e of state.elementTypes || []) {
     const ps = psBy.get(norm(e.ElementTypeRef)) || {}
-    const f = U(e.Family)
+    const f = refKey(e.Family)
     if (f) families.set(f, (families.get(f) || 0) + 1)
     const best = Math.max(fit(e.ElementTypeRef, needle), fit(ps.ProductCode, needle) * 0.95,
       fit(e.Name, needle) * 0.5, fit(ps.ComponentDescription, needle) * 0.45, fit(e.Description, needle) * 0.4, fit(ps.Manufacturer, needle) * 0.35)
@@ -222,4 +223,3 @@ export function findThings(needle, state = {}) {
   return out.sort((a, b) => b.score - a.score)
 }
 
-const U = s => String(s ?? '').trim().toUpperCase()

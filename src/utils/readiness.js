@@ -1,3 +1,4 @@
+import { live, etRefOf } from './derived'
 /**
  * readiness.js — "Am I done?"
  *
@@ -17,7 +18,6 @@
  */
 
 const lc = s => String(s ?? '').toLowerCase()
-const live = r => (r.IsDeleted || r.isDeleted) !== 'Y'
 const posOf = r => r.PositionTypeRef || r.positionTypeRef || ''
 
 export const CLAUSE = {
@@ -182,7 +182,7 @@ export function exportChecklist({
   const firstPos = ref => {
     if (!ref) return null
     if (posRefs.has(lc(ref))) return ref
-    const row = recipes.find(r => live(r) && lc(r.ElementTypeRef || r.elementTypeRef) === lc(ref) && posOf(r))
+    const row = recipes.find(r => live(r) && lc(etRefOf(r)) === lc(ref) && posOf(r))
     return row ? posOf(row) : null
   }
 

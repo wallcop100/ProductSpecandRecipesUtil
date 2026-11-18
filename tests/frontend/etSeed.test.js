@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest'
 import {
-  proposeElementTypes, pickFamily, familyRefFor, familyDescription, nextRef, refamily, seedName, ACCESSORIES, cleanRef, refIssues,
+  proposeElementTypes, pickFamily, familyRefFor, familyDescription, nextRef, refamily, seedName, ACCESSORIES, cleanRef, refIssues, familyHeads, headFor, refHead,
 } from '../../src/utils/etSeed.js'
 
 // Shaped like 5452 early on: only cable and driver families, and Phos already has a DRIVER.
@@ -80,7 +80,7 @@ describe('an early project: company families, from the Form and the shape table'
   // Similar codes in this project (tools/backtest-inprogress.py): two that agree are an answer,
   // one is a guess to check, and two that disagree leave it to the other rules, flagged.
   const kinProject = (rows) => ({ ...base,
-    elementTypes: [...ETS, ...rows.map(([code, fam], i) => ({ ElementTypeRef: `K${i}`, Family: fam }))],
+    elementTypes: [...ETS, ...rows.map(([, fam], i) => ({ ElementTypeRef: `K${i}`, Family: fam }))],
     psRows: [...PS, ...rows.map(([code], i) => ({ ElementTypeRef: `K${i}`, Manufacturer: 'Acme', ProductCode: code }))] })
 
   test('two similar codes here that agree settle the family, and say which', () => {
@@ -469,4 +469,26 @@ describe('ref hygiene (LOOP_CHECKS_PLAN A)', () => {
     expect(nextRef('ET-PS-', [])).toBe('ET-PS-01')
     expect(nextRef('ET-PS-', ['ET-PS-01'])).toBe('ET-PS-02')
   })
+})
+
+describe('headFor in a family of several jobs', () => {
+  const et = (ref, Name) => ({ ElementTypeRef: ref, Family: 'ET-LIN-PROF', Name })
+  const ps = (ref, ProductCode) => ({ ElementTypeRef: ref, Manufacturer: 'LEDFlex', ProductCode })
+  const ets = [et('ET-MOUNT-01', 'Mounting channel'), et('ET-MOUNT-02', 'Mounting channel'), et('ET-MOUNT-03', 'Mounting channel'),
+    et('ET-DIFF-01', 'Diffuser'), et('ET-DIFF-02', 'Diffuser')]
+  const heads = familyHeads(ets, [ps('ET-DIFF-01', '022-1005'), ps('ET-DIFF-02', '022-3506'), ps('ET-MOUNT-01', '013-0001')])
+
+  test('gives a diffuser code the diffusers\' head, not the family\'s top head', () => {
+    expect(heads.get('et-lin-prof')).toBe('ET-MOUNT')
+    expect(headFor(heads, 'ET-LIN-PROF', '022-1123', '', 'LEDFlex')).toBe('ET-DIFF')   // learnt from the 022- prefix
+    expect(headFor(heads, 'ET-LIN-PROF', 'X1', 'opal diffuser', 'LEDFlex')).toBe('ET-DIFF')
+  })
+})
+
+test('refHead keeps a linear part\'s kind', () => {
+  expect(refHead('ET-LIN-CAP')).toBe('ET-LIN-CAP')
+  expect(refHead('ET-LIN-48')).toBe('ET-LIN')
+  expect(refHead('ET-PS-CURVE')).toBe('ET-PS')
+  const heads = familyHeads([{ ElementTypeRef: 'ET-LIN-CAP-08', Family: 'ET-LIN-CAPS' }, { ElementTypeRef: 'ET-LIN-CAP-09', Family: 'ET-LIN-CAPS' }])
+  expect(heads.get('et-lin-caps')).toBe('ET-LIN-CAP')
 })

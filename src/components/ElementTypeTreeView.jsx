@@ -8,6 +8,7 @@ import { getInternalItems, getUsedIn } from '../utils/containerUtils'
 import { familyOf } from '../utils/etRef'
 import { colorsForType, ICONS } from '../utils/entityStyle'
 import { C } from '../styles/tokens'
+import { etRefOf } from '../utils/derived'
 
 /**
  * ElementTypeTreeView — the Elements root view.
@@ -44,7 +45,7 @@ export default function ElementTypeTreeView() {
   const etMap = useMemo(() => {
     const m = new Map()
     for (const et of elementTypes) {
-      const ref = et.ElementTypeRef || et.elementTypeRef
+      const ref = etRefOf(et)
       if (ref) m.set(ref.toLowerCase(), et)
     }
     return m
@@ -61,7 +62,7 @@ export default function ElementTypeTreeView() {
     )
     // Include flagged containers that don't yet have internal rows
     for (const et of elementTypes) {
-      const r = et.ElementTypeRef || et.elementTypeRef
+      const r = etRefOf(et)
       if (r && containerETRefs.has(r.toLowerCase())) set.add(r)
     }
     const refs = [...set]
@@ -91,7 +92,7 @@ export default function ElementTypeTreeView() {
   const allETs = useMemo(() => {
     return elementTypes
       .map(et => {
-        const ref = et.ElementTypeRef || et.elementTypeRef
+        const ref = etRefOf(et)
         if (!ref) return null
         const c = containerMap.get(ref.toLowerCase())
         return {

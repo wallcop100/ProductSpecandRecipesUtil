@@ -19,6 +19,7 @@
  */
 
 import { CANON_FAMILIES } from '../data/etCanon.js'
+import { etRefOf } from './derived'
 
 const lc = s => String(s ?? '').trim().toLowerCase()
 const segs = ref => String(ref ?? '').toUpperCase().split('-').filter(Boolean)
@@ -68,7 +69,7 @@ export function guessCollection(ref, elementTypes = [], collectionRefs = []) {
   //    ET-LIN-CAP-09 belongs with ET-LIN-CAP-01 (3 segments) under ET-LIN-COMPONENTS,
   //    not with the shallower ET-LIN collection (2).
   for (const e of elementTypes) {
-    const eRef = e.ElementTypeRef || e.elementTypeRef
+    const eRef = etRefOf(e)
     const parent = e.Family || e.family || e.ParentRef || e.parentRef
     if (!eRef || !parent) continue
     if (lc(eRef) === lc(ref)) continue
@@ -114,7 +115,7 @@ export const STYLE_GUIDE = CANON_FAMILIES.map(f => ({
 export function missingFamilies(refs = [], elementTypes = [], collectionRefs = []) {
   const have = new Set([
     ...collectionRefs.map(lc),
-    ...elementTypes.map(e => lc(e.ElementTypeRef || e.elementTypeRef)),
+    ...elementTypes.map(e => lc(etRefOf(e))),
   ])
 
   const out = []
@@ -138,11 +139,4 @@ export function missingFamilies(refs = [], elementTypes = [], collectionRefs = [
     .map(fam => ({ ...fam, adopts: fam.adopts.filter(r => claimed.get(lc(r)) === fam.ref) }))
     .filter(fam => fam.adopts.length > 0)
     .sort((a, b) => segs(a.ref).length - segs(b.ref).length || a.ref.localeCompare(b.ref))
-}
-
-/** True when the project already has a row for this family: an ElementType or a DesignDB collection ref. */
-export function familyRowExists(family, elementTypes = [], collectionRefs = []) {
-  const f = lc(family)
-  return !!f && (collectionRefs.some(r => lc(r) === f)
-    || elementTypes.some(e => lc(e.ElementTypeRef || e.elementTypeRef) === f))
 }

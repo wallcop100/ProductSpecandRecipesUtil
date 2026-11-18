@@ -10,6 +10,7 @@
 import useStore from '../store/useStore'
 import { getCompanion } from './companion'
 import { sharedStem } from '../utils/etRefSuggest'
+import { live as isLive, etRefOf } from '../utils/derived'
 
 const asked = new Set()
 
@@ -35,7 +36,7 @@ let _sweepTimer = null
 useStore.subscribe((state, prev) => {
   if (state.psRows === prev.psRows) return
   clearTimeout(_sweepTimer)
-  _sweepTimer = setTimeout(() => sweepCodes((useStore.getState().psRows || []).filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
+  _sweepTimer = setTimeout(() => sweepCodes((useStore.getState().psRows || []).filter(r => isLive(r))
     .map(r => ({ code: r.ProductCode || r.productCode, manufacturer: r.Manufacturer || r.manufacturer }))).catch(() => {}), 1500)
 })
 
@@ -52,8 +53,8 @@ export const newerCodes = retired => (retired?.options ? retired.options.map(o =
  */
 export function fitsRecipe(options, etRef, recipes, psRows) {
   const key = String(etRef || '').toLowerCase()
-  const lc = r => String(r.ElementTypeRef || r.elementTypeRef || '').toLowerCase()
-  const live = recipes.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
+  const lc = r => String(etRefOf(r)).toLowerCase()
+  const live = recipes.filter(r => isLive(r))
   const positions = new Set(live.filter(r => lc(r) === key).map(r => r.PositionTypeRef || r.positionTypeRef))
   const beside = new Set(live.filter(r => positions.has(r.PositionTypeRef || r.positionTypeRef) && lc(r) !== key).map(lc))
   const codes = psRows.filter(r => beside.has(lc(r))).map(r => r.ProductCode || r.productCode).filter(Boolean)

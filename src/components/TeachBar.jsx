@@ -5,6 +5,7 @@ import MaterialIcon from './MaterialIcon'
 import { positionRecipeWithWrapperInternals } from '../utils/collectionStatus'
 import { roleOf, QTY_CONFIRM_ROLES } from '../utils/recipePatterns'
 import { C } from '../styles/tokens'
+import { live, etRefOf } from '../utils/derived'
 
 const pretty = role => role.toLowerCase().replace(/-/g, ' ')
 
@@ -27,8 +28,8 @@ export default function TeachBar({ onReturn }) {
   const stillEmpty = useMemo(() => {
     if (!teaching) return []
     const have = new Set(positionRecipeWithWrapperInternals(recipes, teaching.posRef).combined
-      .filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
-      .map(r => roleOf(r.ElementTypeRef || r.elementTypeRef)))
+      .filter(r => live(r))
+      .map(r => roleOf(etRefOf(r))))
     return (teaching.missing || []).filter(role => !have.has(role))
   }, [teaching, recipes])
 
@@ -37,8 +38,8 @@ export default function TeachBar({ onReturn }) {
     if (!teaching) return []
     const done = new Set(teaching.qtyConfirmed || [])
     return [...new Set(positionRecipeWithWrapperInternals(recipes, teaching.posRef).combined
-      .filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
-      .map(r => r.ElementTypeRef || r.elementTypeRef)
+      .filter(r => live(r))
+      .map(r => etRefOf(r))
       .filter(ref => ref && QTY_CONFIRM_ROLES.has(roleOf(ref)) && !done.has(ref.toLowerCase())))]
   }, [teaching, recipes])
 

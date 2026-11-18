@@ -1,8 +1,8 @@
 import React from 'react'
 import { Button } from 'react-bootstrap'
 import MaterialIcon from './MaterialIcon'
-import { norm } from '../utils/productCodes'
 import { C } from '../styles/tokens'
+import { codeKey } from '../utils/derived'
 
 /**
  * NeedsResolving — everything blocking the batch, pinned above the code list.
@@ -143,10 +143,10 @@ export default function NeedsResolving({ collisions, similar, resolvedCount, onP
         <MaterialIcon name="warning" size={12} /> Needs resolving ({total})
       </div>
       {collisions.map(e => (
-        <Collision key={norm(e.text)} entry={e} onPromote={onPromote} onUnify={onUnify} onJump={onJump} />
+        <Collision key={codeKey(e.text)} entry={e} onPromote={onPromote} onUnify={onUnify} onJump={onJump} />
       ))}
       {similar.map(g => (
-        <Similar key={g.map(e => norm(e.text)).join('|')} group={g}
+        <Similar key={g.map(e => codeKey(e.text)).join('|')} group={g}
           onMerge={onMerge} onKeepSeparate={onKeepSeparate} onJump={onJump} />
       ))}
     </div>

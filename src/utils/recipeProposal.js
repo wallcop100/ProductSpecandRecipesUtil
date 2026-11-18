@@ -25,11 +25,9 @@ import { matchStyle, groupKeyFor } from './recipeStyles'
 import { specificityScope } from './templateRules'
 import { indexes as kindIndexes, rowJob, anchorOf, fitFor, jobLabel } from './recipeKinds'
 import { jobKey } from './codeJobs'
+import { live, etRefOf, refKey } from './derived'
 
-const up = s => String(s ?? '').trim().toUpperCase()
-const refOf = r => r.ElementTypeRef || r.elementTypeRef || ''
 const posOf = r => r.PositionTypeRef || r.positionTypeRef || ''
-const live = r => (r.IsDeleted || r.isDeleted) !== 'Y'
 
 const LINEAR_ROLES = new Set(['TAPE', 'FLEX', 'PROFILE', 'DIFF', 'CAP', 'CLIP', 'MOUNT', 'FIXED'])
 const DIM_ROLES = new Set(['TAPE', 'FLEX', 'PROFILE', 'DIFF', 'MOUNT'])   // §5.3
@@ -73,11 +71,11 @@ export function pickPart(role, kind, ctx, leadRef = null) {
   // A driver belongs to its fitting (current, channels): only a position with the SAME
   // fitting can vouch for one. Anything else would be a guess.
   if (role === 'DRIVER') {
-    const withLead = new Set(recipes.filter(live).filter(r => up(refOf(r)) === up(leadRef)).map(posOf))
+    const withLead = new Set(recipes.filter(live).filter(r => refKey(etRefOf(r)) === refKey(leadRef)).map(posOf))
     const n = new Map()
     for (const r of recipes.filter(live)) {
-      if (!withLead.has(posOf(r)) || roleOf(refOf(r)) !== 'DRIVER') continue
-      n.set(refOf(r), (n.get(refOf(r)) || 0) + 1)
+      if (!withLead.has(posOf(r)) || roleOf(etRefOf(r)) !== 'DRIVER') continue
+      n.set(etRefOf(r), (n.get(etRefOf(r)) || 0) + 1)
     }
     const ref = [...n.entries()].sort((a, b) => b[1] - a[1])[0]?.[0]
     return ref ? { ref, from: 'this project (same fitting)' } : null
@@ -85,7 +83,7 @@ export function pickPart(role, kind, ctx, leadRef = null) {
   const count = (rows) => {
     const n = new Map()
     for (const r of rows) {
-      const ref = refOf(r)
+      const ref = etRefOf(r)
       if (roleOf(ref) === role) n.set(ref, (n.get(ref) || 0) + 1)
     }
     return [...n.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || null
@@ -95,8 +93,8 @@ export function pickPart(role, kind, ctx, leadRef = null) {
   if (same) return { ref: same, from: 'this project (same kind)' }
   const any = count(liveRows)
   if (any) return { ref: any, from: 'this project' }
-  const et = elementTypes.find(e => roleOf(refOf(e), e.Family || e.family) === role && (e.IsCollection || e.isCollection) !== 'Y')
-  if (et) return { ref: refOf(et), from: 'this project’s ElementTypes' }
+  const et = elementTypes.find(e => roleOf(etRefOf(e), e.Family || e.family) === role && (e.IsCollection || e.isCollection) !== 'Y')
+  if (et) return { ref: etRefOf(et), from: 'this project’s ElementTypes' }
   const ex = exemplars.filter(e => roleOf(e.ref, e.family) === role)
   if (ex.length) {
     const n = new Map()
@@ -113,10 +111,10 @@ export function wrapperContents(recipes, containerRefs) {
   const out = new Map()
   for (const r of recipes.filter(live)) {
     if ((r.ContextType || r.contextType) !== 'ElementType') continue
-    const w = up(r.ContextRef || r.contextRef)
+    const w = refKey(r.ContextRef || r.contextRef)
     if (!containerRefs.has(w.toLowerCase())) continue
     if (!out.has(w)) out.set(w, [])
-    out.get(w).push(up(refOf(r)))
+    out.get(w).push(refKey(etRefOf(r)))
   }
   for (const v of out.values()) v.sort()
   return out
@@ -136,21 +134,21 @@ export function wrapperContents(recipes, containerRefs) {
  */
 export function proposeRecipe(posRef, ctx) {
   const { positionTypes = [], elementTypes = [], recipes = [], formCaptures, sources = [], containerRefs = new Set() } = ctx
-  const ptByRef = new Map(positionTypes.map(p => [up(p.PositionTypeRef || p.positionTypeRef), p]))
-  const pt = ptByRef.get(up(posRef))
+  const ptByRef = new Map(positionTypes.map(p => [refKey(p.PositionTypeRef || p.positionTypeRef), p]))
+  const pt = ptByRef.get(refKey(posRef))
   if (!pt) return { posRef, skip: 'not in the DesignDB' }
   if ((pt.IsCollection || pt.isCollection) === 'Y') return { posRef, skip: 'a parent position: never reciped (§2)' }
-  const famOf = new Map(elementTypes.map(e => [up(refOf(e)), e.Family || e.family || '']))
+  const famOf = new Map(elementTypes.map(e => [refKey(etRefOf(e)), e.Family || e.family || '']))
 
   const caps = (formCaptures?.byPosition?.[posRef] || []).filter(c => c.elementTypeRef)
   if (caps.length === 0) return { posRef, skip: 'no Form product with an ElementType' }
   const lead = caps.find(c => c.role === 'lead') || caps[0]
-  const products = caps.map(c => ({ ref: c.elementTypeRef, code: c.code, lead: c === lead, role: roleOf(c.elementTypeRef, famOf.get(up(c.elementTypeRef))) }))
+  const products = caps.map(c => ({ ref: c.elementTypeRef, code: c.code, lead: c === lead, role: roleOf(c.elementTypeRef, famOf.get(refKey(c.elementTypeRef))) }))
   const leadRole = products.find(p => p.lead).role
   const product = leadRole === 'TRACK' ? 'track' : leadRole === 'TRACK-PS' ? 'track-ps'
     : LINEAR_ROLES.has(leadRole) ? 'linear' : 'point'
 
-  const parentOf = r => { const p = ptByRef.get(up(r)); return p ? (p.ParentRef || p.parentRef || null) : null }
+  const parentOf = r => { const p = ptByRef.get(refKey(r)); return p ? (p.ParentRef || p.parentRef || null) : null }
   const dl = driverOf(pt)
   const env = envOf(pt, parentOf)
   // A group is its product, driver, environment and kinds of product — NOT its wrapper: the
@@ -260,7 +258,7 @@ export function proposeRecipe(posRef, ctx) {
 
 /** A wrapper already holding exactly these internals (shared), else a new one. Sets rows' WRAPPER ref. */
 function resolveWrapper(rows, wk, recipes, containerRefs) {
-  const want = rows.filter(r => r.section === 'internal' && r.ref).map(r => up(r.ref)).sort()
+  const want = rows.filter(r => r.section === 'internal' && r.ref).map(r => refKey(r.ref)).sort()
   const contents = wrapperContents(recipes, containerRefs)
   const prefix = wk === 'DL' ? 'ET-DL-' : 'ET-LIN-'
   const hit = [...contents.entries()].find(([ref, have]) => ref.startsWith(prefix) && want.length > 0
@@ -294,7 +292,7 @@ export function proposalFromTemplate(template, posRef, ctx) {
   })
   const sectionOf = i => (i.section === 'position' ? 'position' : 'internal')
   const idx = kindIndexes(ctx)
-  const etRefs = new Set((ctx.elementTypes || []).map(e => up(refOf(e))))
+  const etRefs = new Set((ctx.elementTypes || []).map(e => refKey(etRefOf(e))))
   const jobOfRef = ref => jobKey(rowJob({ ElementTypeRef: ref, ContextType: 'ElementType' }, idx))
   const fitsSlot = (job, slot) => job === slot || job.split(':')[0] === slot
   const formJobs = new Map()
@@ -317,7 +315,7 @@ export function proposalFromTemplate(template, posRef, ctx) {
     }
     // A job slot (a companion template's "PROFILE"): this position's Form product doing that job, else
     // the part that fits its profile, else empty and flagged. Its label is a name, never a ref.
-    if (i.slotKey && !i.exact && !etRefs.has(up(i.slotLabel))) {
+    if (i.slotKey && !i.exact && !etRefs.has(refKey(i.slotLabel))) {
       const mine = base.products.filter(p => !placed.has(p.ref) && fitsSlot(jobOfRef(p.ref), i.slotKey))
       for (const prod of mine) {
         placed.add(prod.ref)
@@ -417,14 +415,14 @@ function styledGroups(posRefs, ctx, { records, styles = [], by = ['main', 'kind'
  */
 export function proposalContext(state, library = {}) {
   const { positionTypes = [], elementTypes = [], recipes = [], formCaptures = null, containerETRefs = new Set() } = state
-  const ptByRef = new Map(positionTypes.map(p => [up(p.PositionTypeRef || p.positionTypeRef), p]))
-  const parentOf = r => { const p = ptByRef.get(up(r)); return p ? (p.ParentRef || p.parentRef || null) : null }
+  const ptByRef = new Map(positionTypes.map(p => [refKey(p.PositionTypeRef || p.positionTypeRef), p]))
+  const parentOf = r => { const p = ptByRef.get(refKey(r)); return p ? (p.ParentRef || p.parentRef || null) : null }
   const kindOf = new Map()
   for (const r of recipes.filter(live)) {
     if ((r.ContextType || r.contextType) !== 'PositionType' || (r.IsDesign || r.isDesign) !== 'Y') continue
-    const pt = ptByRef.get(up(posOf(r)))
+    const pt = ptByRef.get(refKey(posOf(r)))
     if (!pt) continue
-    const wk = designKind(refOf(r))
+    const wk = designKind(etRefOf(r))
     kindOf.set(posOf(r), `${wk}|${driverOf(pt)}|${envOf(pt, parentOf)}`)
   }
   return {

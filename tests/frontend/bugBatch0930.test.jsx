@@ -1,5 +1,5 @@
-import { describe, test, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, within, act } from '@testing-library/react'
+import { describe, test, expect, vi } from 'vitest'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 
 window.electronAPI = { db: {
   setPref: vi.fn().mockResolvedValue(undefined), getPref: vi.fn().mockResolvedValue(null),

@@ -917,6 +917,19 @@ describe('undo / redo', () => {
     expect(useStore.getState().future).toHaveLength(0)
   })
 
+  test('asOneUndoStep: several snapshotting actions undo as one', () => {
+    resetStore()
+    useStore.getState().asOneUndoStep(() => {
+      useStore.getState().addRecipeRow(POS_REF, 'position', { elementTypeRef: 'ET-X' })
+      useStore.getState().addRecipeRow(POS_REF, 'position', { elementTypeRef: 'ET-Y' })
+    })
+    expect(useStore.getState().past).toHaveLength(1)
+    useStore.getState().undo()
+    expect(useStore.getState().recipes).toHaveLength(0)
+    useStore.getState().addRecipeRow(POS_REF, 'position', { elementTypeRef: 'ET-Z' })
+    expect(useStore.getState().past).toHaveLength(1)   // held flag released
+  })
+
   test('undo and redo are no-ops on empty stacks', () => {
     resetStore()
     expect(() => useStore.getState().undo()).not.toThrow()
@@ -1643,6 +1656,17 @@ describe('form captures persist per project', () => {
     expect(window.electronAPI.db.setPref).toHaveBeenCalledWith(
       PROJECT_ID, 'form_captures', JSON.stringify(captures)
     )
+  })
+
+  test('a re-save with nothing new (only importedAt or key order differ) writes nothing', async () => {
+    const saved = { ...captures, importedAt: 'a', contextByPosition: { C01r: { x: 1, y: 2 } } }
+    resetStore({ formCaptures: saved })
+    const before = useStore.getState().formCaptures
+    await useStore.getState().saveFormCaptures({ contextByPosition: { C01r: { y: 2, x: 1 } }, ...captures, importedAt: 'b' })
+    expect(useStore.getState().formCaptures).toBe(before)
+    expect(window.electronAPI.db.setPref).not.toHaveBeenCalled()
+    await useStore.getState().saveFormCaptures({ ...saved, byPosition: {} })
+    expect(window.electronAPI.db.setPref).toHaveBeenCalledTimes(1)
   })
 
   test('formEtsForPosition reads the RESOLVED position ref', () => {

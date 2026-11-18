@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react'
 import { Button, Dropdown } from 'react-bootstrap'
 import useStore from '../store/useStore'
+import { useTemplateRecOf } from './useTemplateMatches'
 import MaterialIcon from './MaterialIcon'
 import { connectorGapsForPosition } from '../utils/collectionStatus'
 import { membership } from '../utils/connectorGroups'
@@ -37,7 +38,6 @@ const Dots = React.forwardRef(({ onClick }, ref) => (
 export default function ConnectorSuggestions({ posRef }) {
   const recipes = useStore(s => s.recipes)
   const etCollections = useStore(s => s.etCollections)
-  const positionUI = useStore(s => s.positionUI)
   const containerETRefs = useStore(s => s.containerETRefs)
   const addRecipeRow = useStore(s => s.addRecipeRow)
   const moveRecipeRowToSection = useStore(s => s.moveRecipeRowToSection)
@@ -45,12 +45,12 @@ export default function ConnectorSuggestions({ posRef }) {
 
   const connectorPins = useStore(s => s.connectorPins)
   const connectorExcludes = useStore(s => s.connectorExcludes)
+  const recOf = useTemplateRecOf()
 
   const gaps = useMemo(() => {
-    const recOf = useStore.getState()._templateRecOf()
     const member = membership([posRef], etCollections, connectorPins, recOf, connectorExcludes).get(posRef)
     return connectorGapsForPosition(recipes, posRef, recOf(posRef), etCollections, containerETRefs, member)
-  }, [recipes, posRef, positionUI, etCollections, containerETRefs, connectorPins, connectorExcludes])
+  }, [recipes, posRef, recOf, etCollections, containerETRefs, connectorPins, connectorExcludes])
 
   if (gaps.length === 0) return null
 
