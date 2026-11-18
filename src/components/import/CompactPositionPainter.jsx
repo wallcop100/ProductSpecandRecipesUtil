@@ -5,7 +5,8 @@ import MaterialIcon from '../MaterialIcon'
 import CellTokens from './CellTokens'
 import { BRUSH } from '../CodeChips'
 import { familyOptionsOf } from '../NewETModal'
-import { refamily, cleanRef } from '../../utils/etSeed'
+import { refamily, cleanRef, proposalTrace } from '../../utils/etSeed'
+import { registerTrace, traceIds } from '../../utils/trace'
 import { CopyText } from '../CopyButton'
 import { positionRecipeWithWrapperInternals } from '../../utils/collectionStatus'
 import { C } from '../../styles/tokens'
@@ -168,7 +169,8 @@ function CodeCard({ c, many, inRecipe, familyOptions, elementTypes, edit, propos
   const fams = family && !familyOptions.includes(family) ? [family, ...familyOptions] : familyOptions
   const ctl = { ...mono, fontSize: 11, height: 24, padding: '1px 5px' }
   return (
-    <div className="rounded p-2" data-testid="code-card" {...drop}
+    <div className="rounded p-2" data-testid="code-card" data-code={c.code} {...drop}
+      data-trace={traceIds(registerTrace(c.trace), registerTrace(proposalTrace(proposal)))}
       style={{ borderStyle: 'solid', borderWidth: '1px 1px 1px 3px', borderColor: over ? C.accent : `${C.border} ${C.border} ${C.border} ${C.accent}`, background: over ? C.accentTint : C.surface }}>
       <div className="d-flex align-items-center gap-1">
         {many && <MainStar c={c} onMakeMain={onMakeMain} />}

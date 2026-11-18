@@ -6,6 +6,7 @@
  * Nothing here reads file contents: only what the clicked element shows and a few counts.
  */
 import { LATEST } from '../changelog'
+import { reportTraces } from './trace'
 
 const KEY = 'bugReports'
 const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev'
@@ -58,17 +59,20 @@ export function domContext(target) {
   const el = target && target.nodeType === 1 ? target : target?.parentElement
   const areas = []
   const attrs = {}
+  const traces = []
   for (let n = el; n && n !== document.body && areas.length < 6; n = n.parentElement) {
     const id = n.getAttribute?.('data-debug-id') || n.getAttribute?.('data-testid')
     if (id && !areas.includes(id)) areas.push(id)
     for (const a of ['data-code', 'data-active', 'data-source']) if (n.getAttribute?.(a) && !attrs[a]) attrs[a] = n.getAttribute(a)
+    // Every trace up the tree, nearest first: the decision behind what was clicked (dev).
+    for (const t of String(n.getAttribute?.('data-trace') || '').split(' ')) if (t && !traces.includes(t)) traces.push(t)
   }
   const tr = el?.closest?.('tr')
   const row = tr ? [...tr.children].slice(0, 10).map(c => clip(c.textContent, 40)) : null
   const dialogs = [...document.querySelectorAll('.modal.show .modal-title')].map(t => clip(t.textContent, 60))
   const refs = [...new Set([el?.textContent || '', (row || []).join(' '), attrs['data-code'] || '']
     .join(' ').match(REF_RE) || [])].slice(0, 8)
-  return { element: describeElement(el), areas, dialogs, row, refs, code: attrs['data-code'] || null, source: attrs['data-source'] || null }
+  return { element: describeElement(el), areas, dialogs, row, refs, code: attrs['data-code'] || null, source: attrs['data-source'] || null, ...(traces.length ? { traces } : {}) }
 }
 
 /**
@@ -118,6 +122,12 @@ export function appContext(state, screen) {
   }
 }
 
+/** Dev builds: the traces on what was clicked, and the latest others (trace.js). */
+function withTraces(target) {
+  const t = reportTraces(domContext(target).traces || [])
+  return t ? { traces: t } : {}
+}
+
 /** `via: 'last-click'` when no element was pointed at and `target` is the last thing clicked. */
 export function buildReport({ note, kind = 'bug', target, via, state, screen, trail = [], capture = true, companion = false, now = new Date(), taken = [], id }) {
   return {
@@ -134,6 +144,7 @@ export function buildReport({ note, kind = 'bug', target, via, state, screen, tr
       app: appContext(state, screen),
       dom: { ...domContext(target), ...(via ? { via } : {}) },
       trail: trail.slice(-10),
+      ...withTraces(target),
       viewport: typeof window !== 'undefined' ? `${window.innerWidth}×${window.innerHeight}` : null,
     } : {}),
   }
@@ -171,6 +182,9 @@ export function reportsToMarkdown(reports, { title = 'Bug reports' } = {}) {
       line('Viewport', r.viewport),
     ].filter(Boolean)
     if (meta.length) out.push(...meta, '')
+    if (r.traces?.clicked?.length || r.traces?.recent?.length) {
+      out.push('<details><summary>Why (traces)</summary>', '', '```json', JSON.stringify(r.traces, null, 1), '```', '', '</details>', '')
+    }
     if (r.trail?.length) {
       out.push('<details><summary>Last clicks</summary>', '')
       r.trail.forEach(t => out.push(`1. ${t.at?.slice(11, 19) || ''} ${t.screen ? `[${t.screen}] ` : ''}${t.label}`))

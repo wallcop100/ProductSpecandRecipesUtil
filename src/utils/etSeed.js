@@ -628,3 +628,16 @@ const JOB_LABEL = { 'TAPE:tape': 'LED tape', 'TAPE:flex': 'neon / flex', 'TAPE:f
   REMOTE_DRIVER: 'a driver', EMERGENCY: 'an emergency pack', OPTIC_ACCESSORY: 'an optic accessory', ACCESSORY: 'an accessory', FIRE_HOOD: 'a fire hood',
   LOCKING_LEVER: 'a locking lever', TRACK_ACCESSORY: 'a track accessory' }
 export const whyText = r => (typeof WHY[r.why] === 'function' ? WHY[r.why](r.why === 'parent' ? r.parent : r) : WHY[r.why] || '')
+
+/** A proposal's trace (trace.js): what it proposes, why in words, and the fields that decided it. */
+export function proposalTrace(p) {
+  if (!p) return null
+  const { code, manufacturer, ref, family, name, action, description, ...detail } = p
+  return {
+    rule: 'proposeElementTypes', subject: code,
+    inputs: { maker: manufacturer },
+    result: { action, ref, family, name },
+    why: whyText(p), refFrom: refFromText(p),
+    detail,
+  }
+}
