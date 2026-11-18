@@ -15,16 +15,18 @@ export async function copyText(text) {
 /**
  * CopyText — the text itself copies on click, with no icon (43B4AM): a brief tint says it worked.
  */
-export function CopyText({ text, children, style }) {
+export function CopyText({ text, children, style, title }) {
   const [done, setDone] = useState(false)
   async function copy(e) {
     e.stopPropagation()
     if (await copyText(text)) { setDone(true); setTimeout(() => setDone(false), 1200); useStore.getState().toast('Copied to clipboard', { tone: 'warning' }) }
   }
   return (
-    <span role="button" tabIndex={0} title={done ? 'Copied' : 'Click to copy'} data-copied={done || undefined}
+    <span role="button" tabIndex={0} title={done ? 'Copied' : title || 'Click to copy'} data-copied={done || undefined}
       onClick={copy} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); copy(e) } }}
-      style={{ cursor: 'copy', borderRadius: 3, background: done ? C.accentTint : undefined, transition: 'background .2s', ...style }}>
+      // 9EZKT4: a dotted underline says it can be clicked.
+      style={{ cursor: 'copy', borderRadius: 3, background: done ? C.accentTint : undefined, transition: 'background .2s',
+        textDecoration: 'underline dotted', textUnderlineOffset: 2, ...style }}>
       {children ?? text}
     </span>
   )

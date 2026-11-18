@@ -103,3 +103,16 @@ describe('the family review is required, and only the family', () => {
     expect(q).not.toContain('ET-PS-01')
   })
 })
+
+describe('5PWQ9L: no sibling and no house style', () => {
+  test('a driver named only by its ref is filed where the project files drivers', () => {
+    seed({
+      recipes: [pos('P1', 'DALI-CV-1CH')],
+      elementTypes: [dbEt('ET-DRIVERS', null, 4), dbEt('ET-DRV-01', 'ET-DRIVERS', 5)],
+      dbCollectionRefs: ['ET-DRIVERS'],
+    })
+    render(<MasterGapPanel gaps={gapsNow()} />)
+    expect(screen.getByText('from its words')).toBeTruthy()
+    expect(screen.getByRole('combobox')).toHaveValue('ET-DRIVERS')
+  })
+})

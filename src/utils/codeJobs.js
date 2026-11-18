@@ -75,7 +75,9 @@ export function jobOf({ ref = '', family = '', name = '', description = '', make
   const drv = R.match(/^ET-(CC|CV)(L|R)-/)
   if (drv) return job(drv[2] === 'L' ? 'LOCAL_DRIVER' : 'REMOTE_DRIVER', drv[1])
   if (R.includes('EM-PACK') || /\bEMERGENCY\b|LITEPLAN/.test(T)) return job('EMERGENCY')
-  if (F.includes('DRIVER') || R.includes('PSU') || (/\bDRIVER|\bPSU\b|TRANSFORMER/.test(T) && !/PROF|TAPE|CLIP/.test(R))) {
+  // A constant-voltage/current part with a channel count (DALI-CV-1CH, 5PWQ9L) is a driver.
+  const cvch = /\b(CC|CV)\b/.test(T) && /\b\d+CH\b/.test(T)
+  if (F.includes('DRIVER') || R.includes('PSU') || cvch || (/\bDRIVER|\bPSU\b|TRANSFORMER/.test(T) && !/PROF|TAPE|CLIP/.test(R))) {
     return job(T.includes('REMOTE') ? 'REMOTE_DRIVER' : 'LOCAL_DRIVER')
   }
   if (/-CAPS?(-|$)|END\s*-?CAP/.test(R + ' ' + T)) return job('END_CAPS')

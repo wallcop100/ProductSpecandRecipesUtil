@@ -8,7 +8,7 @@ import { getNextAvailableRef } from '../utils/containerUtils'
 import { hasProductIdentity } from '../utils/productCodes'
 import { CANON_FAMILIES } from '../data/etCanon'
 import { C } from '../styles/tokens'
-import { copyText } from './CopyButton'
+import { CopyText } from './CopyButton'
 import { formColumnsFor } from '../utils/formPositions'
 import { buildRefMap, targetFor } from '../utils/ptResolve'
 import { containerForPosition } from '../utils/recipePresence'
@@ -104,13 +104,9 @@ export default function NewETModal({
   const [finish, setFinish]         = useState('')
   const [extNotes, setExtNotes]     = useState('')
   const [saving, setSaving]         = useState(false)
-  // The Form's row, beside the fields; a click on a value puts it into the last field you were in.
+  // The Form's row, beside the fields; a click on a value copies it (LWKL84: never into a field).
   const formRow = useMemo(() => show ? formColumnsFor(importDraft, formRefs || importContext?.positionTypes, importContext?.code || prefill?.productCode, { buildRefMap, targetFor }) : null,
     [show, importDraft, formRefs, importContext, prefill?.productCode])
-  const lastField = useRef('name')
-  const [copied, setCopied] = useState(null)
-  const setters = { ref: setRef, name: setName, description: setDescription, family: setFamily, manufacturer: setMfr, productCode: setCode, notes: setNotes, extNotes: setExtNotes, finish: setFinish }
-  const putValue = v => { const set = setters[lastField.current]; set?.(cur => cur.trim() ? `${cur.trimEnd()} ${v}` : v) }
 
   // Seed on open, but ONLY for a draft we have not started. The modal stays mounted,
   // so re-opening the same draftKey returns you to exactly what you had typed.
@@ -319,7 +315,7 @@ export default function NewETModal({
       </Modal.Header>
 
       <Modal.Body className={formRow ? 'd-flex gap-3' : undefined}>
-       <div style={{ flex: 1, minWidth: 0 }} onFocusCapture={e => { if (setters[e.target.dataset?.field]) lastField.current = e.target.dataset.field }}>
+       <div style={{ flex: 1, minWidth: 0 }}>
         {/* What the Form actually said. Read-only: it is evidence, not a field. The Form row
             panel on the right says it in full, so this shows only without it; a merge still warns. */}
         {importContext && formRow && importContext.mergedCodes?.length > 1 && (
@@ -539,6 +535,15 @@ export default function NewETModal({
                     onClick={() => { if (!finish && finishHint) { seeded.current.finish = finishHint; setFinish(finishHint) } }}
                     title={finishHint && !finish ? `Click to use the Form's finish: ${finishHint}` : undefined}
                     placeholder={finishHint || 'e.g. RAL 9010'} style={{ fontSize: 11 }} />
+                  {finishHint && !finish && (
+                    // E5UVLW: the muted placeholder alone read as already filled in.
+                    <button type="button" className="btn btn-link p-0 text-start" data-testid="newet-use-finish"
+                      style={{ fontSize: 11, marginTop: 2 }}
+                      onClick={() => { seeded.current.finish = finishHint; setFinish(finishHint) }}>
+                      <MaterialIcon name="format_paint" size={12} style={{ verticalAlign: 'middle', marginRight: 3 }} />
+                      Not set yet. Use the Form's: {finishHint}
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -576,17 +581,14 @@ export default function NewETModal({
               {formRow.cols.map(([col, value], i) => (
                 <React.Fragment key={`${col}-${i}`}>
                   <span className="text-muted text-truncate" style={{ fontSize: 10, maxWidth: 120 }} title={col}>{col}</span>
-                  <button type="button" className="btn btn-link p-0 text-start text-reset text-decoration-none"
-                    // Long LINK/ProductCode cells run to 8 lines: show two, the whole value on hover.
-                    style={{ fontSize: 11, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-                      display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
-                    onMouseDown={e => e.preventDefault()} onClick={() => { putValue(value); copyText(value).then(ok => ok && setCopied(value)) }}
-                    title={value}>{value}</button>
+                  {/* Long LINK/ProductCode cells run to 8 lines: show two, the whole value on hover. */}
+                  <CopyText text={value} title={value} style={{ fontSize: 11, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }} />
                 </React.Fragment>
               ))}
             </div>
             <div className="text-muted mt-2" style={{ fontSize: 10 }} data-testid="newet-form-hint">
-              {copied != null ? <>Copied “{copied}”, and put into the field you were in.</> : 'Click a value to copy it and put it into the field you were in.'}
+              Click a value to copy it.
             </div>
           </aside>
         )}

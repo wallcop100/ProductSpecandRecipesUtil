@@ -147,7 +147,7 @@ describe('HYQ246: a placeholder code is not a duplicate', () => {
   })
 })
 
-test('the Form row shows beside the fields (n/a left out), and a click puts a value into the last field', () => {
+test('the Form row shows beside the fields (n/a left out), and a click only copies a value (LWKL84)', async () => {
   useStore.setState({ importDraft: { map: { mfr: 'ManufacturerName', code: 'ProductCode' }, rows: [
     { positionType: 'C03', rawText: 'OTHER1', manufacturer: 'X', context: { ProductName: 'Wrong row' } },
     { positionType: 'C03', rawText: 'LL240272024', manufacturer: 'LEDFlex', context: { SortOrder: 19, ProductName: 'Lumen Line 240', Finish: 'n/a', Codes: 'LL240272024' } },
@@ -160,9 +160,12 @@ test('the Form row shows beside the fields (n/a left out), and a click puts a va
   expect(side).not.toHaveTextContent('Codes')
   expect(side).not.toHaveTextContent('SortOrder')
   const name = document.querySelector('[data-field="name"]')
+  const writeText = vi.fn().mockResolvedValue()
+  Object.assign(navigator, { clipboard: { writeText } })
   fireEvent.focus(name)
-  fireEvent.click(screen.getByRole('button', { name: 'Lumen Line 240' }))
-  expect(name).toHaveValue('Lumen Line 240')
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Lumen Line 240' })) })
+  expect(writeText).toHaveBeenCalledWith('Lumen Line 240')
+  expect(name).not.toHaveValue('Lumen Line 240')
   useStore.setState({ importDraft: null })
 })
 
@@ -205,8 +208,10 @@ test('ZAJ889: a proposal fills the fields with wands; the Form\'s Finish waits, 
   const finish = document.querySelector('[data-field="finish"]')
   expect(finish).toHaveValue('')
   expect(finish.placeholder).toBe('Classic bronze')
+  expect(screen.getByTestId('newet-use-finish')).toHaveTextContent('Classic bronze')   // E5UVLW
   fireEvent.click(finish)
   expect(finish).toHaveValue('Classic bronze')
+  expect(screen.queryByTestId('newet-use-finish')).toBeNull()
   expect(screen.getByTestId('wand-finish')).toBeInTheDocument()
   fireEvent.change(document.querySelector('[data-field="name"]'), { target: { value: 'Spike' } })
   expect(screen.queryByTestId('wand-name')).toBeNull()
