@@ -398,10 +398,57 @@ describe('this sitting: what you kept a moment ago', () => {
     expect(p.why).not.toBe('session')
   })
 
+  test('AEST77: a lead kept as ET-PS does not pull the maker\'s extras out of accessories', () => {
+    const lead = [{ code: 'LD1', maker: 'ATEA', kept: { family: 'ET-PS', ref: 'ET-PS-01', name: '' } }]
+    const [p] = proposeElementTypes([entry('480')], { session: lead, roleOf: () => 'extra', pageTypeFor: () => 'Point' }).proposals
+    expect(p.family).toBe('ET-PS-ACCESSORIES')
+  })
+
   test('evidence from the project still wins over the sitting', () => {
     const elementTypes = [{ ElementTypeRef: 'ET-TAPE-01', Family: 'ET-LIN-TAPE' }]
     const psRows = [{ ElementTypeRef: 'ET-TAPE-01', Manufacturer: 'ATEA', ProductCode: 'A4333.18.927' }]
     const [p] = proposeElementTypes([entry('A4333.18.930')], { elementTypes, psRows, session: sat }).proposals
     expect(p.family).toBe('ET-LIN-TAPE')
+  })
+})
+
+// Drawer odd suggestions on bed 4746, each from its origin.
+describe('AEST77 drawer: suggestions owe their words to the code', () => {
+  // The config sync files three plaster frames under accessories: FRAME becomes the family's habit.
+  const ets = [
+    { ElementTypeRef: 'ET-GS-WIBRE-01', Family: ACCESSORIES },
+    ...['01', '02', '06'].map(n => ({ ElementTypeRef: `ET-FRAME-EYECONIC-${n}`, Family: ACCESSORIES })),
+  ]
+  const extra = { roleOf: () => 'extra', pageTypeFor: () => 'Point', contextFor: () => 'LD10238' }
+
+  test('a louvre is not named after the frames filed beside it', () => {
+    const [p] = proposeElementTypes([entry('HL54', 'LightGraphix')], { elementTypes: ets, ...extra }).proposals
+    expect(p.family).toBe(ACCESSORIES)
+    expect(p.ref).toBe('ET-PS-ACCESSORIES-01')
+    expect(refamily([{ code: 'HL54' }], [0], ACCESSORIES, ets)[0].ref).toBe('ET-PS-ACCESSORIES-01')
+  })
+  test('the same maker\'s habit holds without the word (ET-CCR drivers)', () => {
+    const own = [...ets, { ElementTypeRef: 'ET-FRAME-EYECONIC-07', Family: ACCESSORIES }]
+    const psRows = [{ ElementTypeRef: 'ET-FRAME-EYECONIC-01', Manufacturer: 'Phos', ProductCode: 'TFR-WT' }]
+    expect(refamily([{ code: 'FR-SM-26', manufacturer: 'Phos' }], [0], ACCESSORIES, own, psRows)[0].ref).toBe('ET-FRAME-01')
+  })
+  test('a frame still takes the habit', () => {
+    expect(refamily([{ code: 'TFR-WT', name: 'Phos - Plaster-in frame' }], [0], ACCESSORIES, ets)[0].ref).toBe('ET-FRAME-01')
+  })
+  test("an extra's description says whose it is, not the luminaire's name", () => {
+    const [p] = proposeElementTypes([entry('HL54', 'LightGraphix')], { elementTypes: ets, ...extra }).proposals
+    expect(p.description).toBe('For LD10238')
+  })
+})
+
+describe('maker spellings', async () => {
+  const { sameMaker, houseMaker } = await import('../../src/utils/codeShapes')
+  test('house makers are one maker under every spelling; others stay apart', () => {
+    expect(sameMaker('Light Graphix', 'Lightgraphix')).toBe(true)
+    expect(sameMaker('LED Flex', 'LedFlex')).toBe(true)
+    expect(houseMaker('LED FLex')).toBe('LEDFlex')
+    expect(sameMaker('Sloan LED', 'SloanLED')).toBe(false)
+    expect(houseMaker('Light Graphix')).toBe('LightGraphix')
+    expect(houseMaker('LightGraphix')).toBeNull()
   })
 })

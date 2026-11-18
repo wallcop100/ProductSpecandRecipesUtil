@@ -12,7 +12,8 @@ import { copyText } from './CopyButton'
 import { formColumnsFor } from '../utils/formPositions'
 import { buildRefMap, targetFor } from '../utils/ptResolve'
 import { containerForPosition } from '../utils/recipePresence'
-import { proposeElementTypes, refFromText, whyText, seedName } from '../utils/etSeed'
+import { proposeElementTypes, refFromText, whyText, seedName, refamily, isWrapperRef } from '../utils/etSeed'
+import { houseMaker } from '../utils/codeShapes'
 import { useCompanion } from '../platform/companion'
 import { noteProposal, settleCreated, shareOutcomes } from '../platform/outcomes'
 const norm = s => String(s ?? '').trim().toLowerCase()
@@ -43,7 +44,8 @@ export function familyOptionsOf(elementTypes) {
     if ((e.IsCollection || e.isCollection) === 'Y') s.add(e.ElementTypeRef || e.elementTypeRef)
   }
   for (const f of CANON_FAMILIES) s.add(f.ref)
-  return [...s].filter(Boolean).sort((a, b) => a.localeCompare(b))
+  // An assembly wrapper (ET-LIN-07, IsCollection) holds one product's parts; it is not a family to file under.
+  return [...s].filter(f => f && !isWrapperRef(f)).sort((a, b) => a.localeCompare(b))
 }
 
 export default function NewETModal({
@@ -90,6 +92,7 @@ export default function NewETModal({
   const mfrListId = `newet-mfr-${uid}`
 
   const [ref, setRef]               = useState('')
+  const refTyped = useRef(false)   // AEST77: a family you pick renumbers the ref until you type one
   const [name, setName]             = useState('')
   const [description, setDescription] = useState('')
   const [family, setFamily]         = useState('')
@@ -148,13 +151,15 @@ export default function NewETModal({
   }
   useEffect(() => {
     if (!show) return
-    const key = draftKey ?? prefill.ref ?? prefill.productCode ?? null
+    // The same draft reopens as you left it, unless its opener now hands it another ref or family (the drawer card).
+    const key = `${draftKey ?? prefill.ref ?? prefill.productCode ?? ''}|${prefill.ref || ''}|${prefill.family || ''}`
     if (seededFor.current === key) return
     seededFor.current = key
     const p = own.current = proposeOne()
     noteProposal(p)
 
     setRef(prefill.ref || p?.ref || '')
+    refTyped.current = false
     setName(prefill.name || p?.name || '')
     setDescription(prefill.description || prefill.componentDescription || '')   // one description, shared with the Product Spec
     setFamily(prefill.family || p?.family || '')
@@ -168,7 +173,7 @@ export default function NewETModal({
       productCode: prefill.productCode, description: norm(prefill.description) === norm(prefill.productCode) ? null : prefill.description }
       : p ? { ref: p.ref, name: p.name, family: p.family } : {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [show, draftKey])
+  }, [show, draftKey, prefill.ref, prefill.family])
 
   /** After a successful create, the next open of this key must seed afresh. */
   const clearSeed = () => { seededFor.current = Symbol('done') }
@@ -370,7 +375,7 @@ export default function NewETModal({
           <Form.Control
             size="sm"
             value={ref}
-            data-field="ref" onChange={e => setRef(e.target.value)}
+            data-field="ref" onChange={e => { refTyped.current = true; setRef(e.target.value) }}
             onKeyDown={e => { if (e.key === 'Enter' && canSave) handleSave(placeIn ? 'position' : null) }}
             placeholder="e.g. ET-TAPE-004"
             isInvalid={alreadyExists}
@@ -442,7 +447,8 @@ export default function NewETModal({
             size="sm"
             list={familyListId}
             value={family}
-            data-field="family" onChange={e => setFamily(e.target.value)}
+            data-field="family" onChange={e => { const f = e.target.value; setFamily(f)
+              if (!refTyped.current && familyOptions.includes(f)) setRef(refamily([{ code: productCode, manufacturer, name, description }], [0], f, elementTypes, useStore.getState().psRows)[0].ref) }}
             placeholder="e.g. TAPE, PROFILE, CLIP…"
             style={{ fontSize: 12 }}
           />
@@ -499,6 +505,14 @@ export default function NewETModal({
                   <datalist id={mfrListId}>
                     {mfrOptions.map(m => <option key={m} value={m} />)}
                   </datalist>
+                  {houseMaker(manufacturer) && (
+                    <div style={{ fontSize: 11, marginTop: 4, color: C.accent }} data-testid="house-maker">
+                      <MaterialIcon name="lightbulb" size={12} style={{ verticalAlign: 'middle', marginRight: 3 }} />
+                      House spelling:{' '}
+                      <button className="btn btn-link p-0" style={{ fontSize: 11, verticalAlign: 'baseline' }}
+                        onClick={() => setMfr(houseMaker(manufacturer))}>{houseMaker(manufacturer)}</button>
+                    </div>
+                  )}
                 </div>
                 <div className="col-4">
                   <Form.Label style={{ fontSize: 11, color: C.muted }}>Product Code<Wand field="productCode" value={productCode} /></Form.Label>

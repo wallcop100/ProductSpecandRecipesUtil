@@ -26,6 +26,14 @@ const lc = s => String(s ?? '').trim().toLowerCase()
 /** Makers are compared by letters and digits only: "LightGraphix" = "Light Graphix", "ELdoLED" = "EldoLED". */
 export const makerKey = m => String(m ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
 
+/** The house spelling of a maker, where we have one (Erik, 2026-11-18). */
+const HOUSE_MAKERS = { lightgraphix: 'LightGraphix', ledflex: 'LEDFlex' }
+/** The house spelling when `m` is spelled otherwise ("Light Graphix" → "LightGraphix"), else null. */
+export const houseMaker = m => { const h = HOUSE_MAKERS[makerKey(m)]; return h && h !== String(m ?? '').trim() ? h : null }
+/** One maker under every spelling we have a house name for. Not makerKey for all: a maker with
+ *  no house name keeps its spellings apart until Erik names one. */
+export const sameMaker = (a, b) => { const n = m => (HOUSE_MAKERS[makerKey(m)] || String(m ?? '').trim()).toLowerCase(); return n(a) === n(b) }
+
 /** The shape of a code at a level ('fine' | 'coarse'). '' for a code with nothing to shape. */
 export function shapeOf(code, level = 'coarse') {
   const s = String(code ?? '').toUpperCase().replace(/\s+/g, '')

@@ -5,6 +5,7 @@ import MaterialIcon from '../MaterialIcon'
 import CellTokens from './CellTokens'
 import { BRUSH } from '../CodeChips'
 import { familyOptionsOf } from '../NewETModal'
+import { refamily } from '../../utils/etSeed'
 import { CopyText } from '../CopyButton'
 import { positionRecipeWithWrapperInternals } from '../../utils/collectionStatus'
 import { C } from '../../styles/tokens'
@@ -117,8 +118,9 @@ export default function CompactPositionPainter({ posRef, rows, info, onSetRole, 
           {inf.codes.length > 0 && (
             <div className="d-flex flex-column gap-1 mt-1" data-testid={inf.codes.some(c => c.etRef) ? 'compact-known' : undefined}>
               {inf.codes.map(c => (
-                <CodeCard key={c.code} c={c} many={inf.codes.length > 1} inRecipe={inRecipe} familyOptions={familyOptions}
+                <CodeCard key={c.code} c={c} many={inf.codes.length > 1} inRecipe={inRecipe} familyOptions={familyOptions} elementTypes={elementTypes}
                   edit={edits[c.code]} proposal={proposalFor?.(c.code)}
+                  otherRefs={inf.codes.filter(o => o.code !== c.code).map(o => o.etRef || shownRef(edits[o.code], proposalFor?.(o.code))).filter(Boolean)}
                   onEdit={v => setEdits(e => ({ ...e, [c.code]: { ...e[c.code], ...v } }))}
                   onCreate={seed => onNeedsET(c.code, seed)}
                   onEditNote={text => onEditNote?.(row.id, c.code, text)}
@@ -133,6 +135,8 @@ export default function CompactPositionPainter({ posRef, rows, info, onSetRole, 
     </div>
   )
 }
+
+const shownRef = (edit, proposal) => edit?.ref ?? edit?.famRef ?? proposal?.ref ?? ''
 
 /** Main product or extra, for an entry with several codes: click an extra to make it main. */
 function MainStar({ c, onMakeMain }) {
@@ -155,10 +159,11 @@ function usePinned() {
  * One product code as a card: code (and main star), its ElementType or the proposed ref and
  * family to create it with, and its note as one sentence whose words drag between cards.
  */
-function CodeCard({ c, many, inRecipe, familyOptions, edit, proposal, onEdit, onCreate, onMakeMain, onDropWord, onEditNote }) {
+function CodeCard({ c, many, inRecipe, familyOptions, elementTypes, edit, proposal, otherRefs = [], onEdit, onCreate, onMakeMain, onDropWord, onEditNote }) {
   const [typing, setTyping] = useState(null)   // the note being typed, or null
   const [over, drop] = useWordDrop(onDropWord)
-  const ref = edit?.ref ?? proposal?.ref ?? ''
+  // A family you pick renumbers the ref (famRef) unless you typed the ref yourself (AEST77).
+  const ref = shownRef(edit, proposal)
   const family = edit?.family ?? proposal?.family ?? ''
   const fams = family && !familyOptions.includes(family) ? [family, ...familyOptions] : familyOptions
   const ctl = { ...mono, fontSize: 11, height: 24, padding: '1px 5px' }
@@ -192,7 +197,9 @@ function CodeCard({ c, many, inRecipe, familyOptions, edit, proposal, onEdit, on
           <div className="col-5">
             <div style={{ fontSize: 10, color: C.muted }}>Family</div>
             <Form.Select size="sm" style={{ ...ctl, paddingRight: 18, backgroundPosition: 'right 4px center' }} value={family}
-              onChange={e => onEdit({ family: e.target.value })} aria-label={`Family for ${c.code}`}>
+              onChange={e => { const f = e.target.value
+                onEdit({ family: f, famRef: f ? refamily([{ code: c.code, manufacturer: proposal?.manufacturer, name: proposal?.name, description: proposal?.description }, ...otherRefs.map(ref => ({ ref }))], [0], f, elementTypes || [], useStore.getState().psRows)[0].ref : '',
+                  ...(edit?.ref === '' && { ref: undefined }) }) /* a cleared ref is not a typed one */ }} aria-label={`Family for ${c.code}`}>
               <option value="">(none)</option>
               {fams.map(f => <option key={f} value={f}>{f}</option>)}
             </Form.Select>

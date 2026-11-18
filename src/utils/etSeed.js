@@ -60,7 +60,7 @@ const SESSION_OVERRIDES = new Set(['canon', 'job', ''])
 
 export const ACCESSORIES = 'ET-PS-ACCESSORIES'
 /** Wrappers are assembled in the recipe, never a product: ET-DL-NN, ET-LIN-NN. */
-const isWrapperRef = ref => /^ET-(DL|LIN)-\d+[A-Z]?$/i.test(String(ref ?? '').trim())
+export const isWrapperRef = ref => /^ET-(DL|LIN)-\d+[A-Z]?$/i.test(String(ref ?? '').trim())
 /** The families wrappers live in. A product code never goes here. */
 const isWrapperFamily = f => /^ET-(DL|LIN)$/i.test(String(f ?? '').trim())
 const POINT = 'ET-PS'
@@ -91,8 +91,10 @@ const GENERIC = new Set(['ET', 'LIN', 'PS', 'ACCESSORIES', 'ACCESSORY', 'INGREDI
 const coreOf = f => String(f ?? '').toUpperCase().split(/[-/\s]+/).map(t => t.replace(/S$/, '')).filter(t => t && !GENERIC.has(t) && !GENERIC.has(`${t}S`))
 
 /** How this project heads each family's refs, when it has a habit: ET-LIN-PROF → ET-PROF (ET-PROF-1009…). → Map lc family → head */
-export function familyHeads(elementTypes = []) {
+export function familyHeads(elementTypes = [], psRows = []) {
   const all = new Map()
+  const makerOf = new Map(psRows.map(r => [lc(refOf(r)), makerKey(r.Manufacturer || r.manufacturer)]))
+  const byMaker = new Set()   // `family|maker|head`: this maker already names members this way
   for (const et of elementTypes) {
     const f = famOf(et), m = String(refOf(et) || '').match(COUNTER_RE)
     if (!f || !m || isWrapperFamily(f)) continue
@@ -100,15 +102,35 @@ export function familyHeads(elementTypes = []) {
     const head = lc(body) === lc(f) || lc(body).startsWith(lc(f) + '-') ? f : body.split('-').slice(0, 2).join('-')
     if (!all.has(lc(f))) all.set(lc(f), [])
     all.get(lc(f)).push(head)
+    const mk = makerOf.get(lc(refOf(et)))
+    if (mk) byMaker.add(`${lc(f)}|${mk}|${lc(head)}`)
   }
   // A habit, not one-off: one ET-GS-WIBRE-01 does not make every accessory ET-GS. (A majority rule
   // cost 4 points of right heads on the mirrors; a mixed family like ET-LIN-INGREDIENTS still heads by its most common kind.)
   const out = new Map()
+  out.mixed = new Set()   // families holding more than one kind (ET-FRAME and ET-GS under accessories)
+  out.byMaker = byMaker
   for (const [f, heads] of all) {
     const top = mostCommon(heads)
     if (top.count >= 2) out.set(f, top.value)
+    if (new Set(heads.map(lc)).size > 1) out.mixed.add(f)
   }
   return out
+}
+
+/**
+ * The family's usual head for this code, or null. In a family of several kinds, a head that names one
+ * kind (ET-FRAME, filed under ET-PS-ACCESSORIES) only fits a code whose own words or family say so: 4746 has three plaster
+ * Phos frames in accessories, and that must not make a LightGraphix louvre ET-FRAME-04.
+ */
+export function headFor(heads, family, code = '', text = '', maker = '') {
+  const head = heads.get(lc(family))
+  if (!head || !heads.mixed?.has(lc(family))) return head || null
+  // Backtest: of the refs this check would lose (ET-CCR under ET-DRIVER), 142 of 151 had a sibling from the same maker.
+  if (heads.byMaker?.has(`${lc(family)}|${makerKey(maker)}|${lc(head)}`)) return head
+  const words = lc(`${family} ${code} ${text}`).match(/[a-z]+|[0-9]+/g) || []
+  const fits = p => words.some(w => w === p || w.startsWith(p))   // PROF fits "profile"
+  return lc(head).replace(/^et-/, '').split('-').every(fits) ? head : null
 }
 
 /** The next free `<family>-NN`, counting refs already taken AND refs handed out in this batch. */
@@ -299,7 +321,7 @@ export function proposeElementTypes(entries = [], project = {}) {
   // How this project names each family's members: its products (to style a ref on the nearest
   // sibling) and the most common ref head (ET-PROF for ET-LIN-PROF, ET-GS for ET-PS-ACCESSORIES).
   const ownExemplars = harvestExemplars({ elementTypes, psRows, source: 'project' })
-  const heads = familyHeads(elementTypes)
+  const heads = familyHeads(elementTypes, psRows)
   // The ref base for a new member of `family`, best first: its nearest sibling's ref here, a
   // library product's ref carried over whole, the family's usual head here, the family itself.
   const refBaseFor = (family, code, maker, text, pick) => {
@@ -312,7 +334,8 @@ export function proposeElementTypes(entries = [], project = {}) {
     if (pick.style && lc(pick.style.family) === lc(family) && lc(pick.style.refBase) !== lc(family)) {
       return { base: pick.style.refBase, from: 'library', example: pick.style.exemplar.ref }
     }
-    if (heads.has(lc(family))) return { base: heads.get(lc(family)), from: 'family' }
+    const head = headFor(heads, family, code, text, maker)
+    if (head) return { base: head, from: 'family' }
     return { base: pick.style?.refBase || pick.head || family, from: 'default' }
   }
 
@@ -418,7 +441,9 @@ export function proposeElementTypes(entries = [], project = {}) {
     // Only a default to go on (a lead is ET-PS, a job's house family): the family you kept for
     // this maker's last product this sitting is a better guess. Flagged: it is a guess.
     if (!same && SESSION_OVERRIDES.has(pick.why || '')) {
-      const last = [...session].reverse().find(s => s.kept?.family && makerKey(s.maker) === makerKey(manufacturer))
+      // AEST77: never across roles: a lead you filed as ET-PS does not make its maker's extras ET-PS.
+      const wrong = lc(!e.placeholder && roleOf(e) === 'extra' ? POINT : ACCESSORIES)
+      const last = [...session].reverse().find(s => s.kept?.family && makerKey(s.maker) === makerKey(manufacturer) && lc(s.kept.family) !== wrong)
       if (last && lc(last.kept.family) !== lc(pick.family)) {
         Object.assign(pick, { family: last.kept.family, head: last.kept.family, why: 'session', was: pick.family || null, flag: true, session: last })
       }
@@ -457,7 +482,8 @@ export function proposeElementTypes(entries = [], project = {}) {
       ref,
       name: pick.seen?.name || liked || (e.placeholder ? `${e.placeholder.formRef} TBC${manufacturer ? ` (${manufacturer})` : ''}` : seedName(manufacturer, e.text)),
       placeholder: e.placeholder || null,
-      description: pick.seen?.description || [context, note].map(s => String(s).trim()).filter(Boolean).join(', '),
+      // An extra shares its Form row with the luminaire, so the row's product name is the lead's.
+      description: pick.seen?.description || [context && roleOf(e) === 'extra' ? `For ${context}` : context, note].map(s => String(s).trim()).filter(Boolean).join(', '),
       why: pick.why,
       kin: pick.kin || null,
       parent: pick.parent || null,
@@ -487,17 +513,18 @@ export function proposeElementTypes(entries = [], project = {}) {
  * Move proposals to another family, re-numbering their refs so none collide with the
  * project or each other. Used when the user corrects a whole group at once.
  */
-export function refamily(proposals, indices, family, elementTypes = []) {
+export function refamily(proposals, indices, family, elementTypes = [], psRows = []) {
   const pick = new Set(indices)
   const taken = new Set(elementTypes.map(refOf))
-  const heads = familyHeads(elementTypes)
+  const heads = familyHeads(elementTypes, psRows)
   proposals.forEach((p, i) => { if (!pick.has(i) && p.ref) taken.add(p.ref) })
   return proposals.map((p, i) => {
     if (!pick.has(i)) return p
-    const ref = family ? nextRef(heads.get(lc(family)) || family, taken) : ''
+    const head = family && headFor(heads, family, p.code, `${p.name || ''} ${p.description || ''}`, p.manufacturer)
+    const ref = family ? nextRef(head || family, taken) : ''
     if (ref) taken.add(ref)
     if (family === p.family) return { ...p, family, ref }
-    return { ...p, family, ref, why: 'you', refFrom: { from: heads.has(lc(family)) ? 'family' : 'default', example: null } }
+    return { ...p, family, ref, why: 'you', refFrom: { from: head ? 'family' : 'default', example: null } }
   })
 }
 
