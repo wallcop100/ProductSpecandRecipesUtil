@@ -14,6 +14,7 @@
  */
 
 import * as fsx from '../platform/fs'
+import { keepWorkbook } from '../platform/replay'
 
 let activeKey = null
 let activeDir = null
@@ -147,6 +148,9 @@ export async function importFiles({ db, ps, rs }) {
   const absent = dbNames.filter((_, i) => !dbBytes[i])
   if (absent.length) throw new Error(`db: '${absent.join("', '")}' not found in the project folder`)
 
+  dbNames.forEach((n, i) => keepWorkbook(n, dbBytes[i], 'db'))
+  keepWorkbook(ps, psBytes, 'ps')
+  keepWorkbook(rs, rsBytes, 'rs')
   const missing = [['ps', psBytes], ['rs', rsBytes]].filter(([, bytes]) => !bytes).map(([l]) => l)
 
   const parsed = await Promise.all(dbNames.map(async (name, i) => ({ name, data: await xlsxCall('parseDb', dbBytes[i]) })))
@@ -162,5 +166,7 @@ export async function importFiles({ db, ps, rs }) {
 export async function readSheet(fileToken, sheet, want = null) {
   const handle = fileTokens.get(fileToken)
   if (!handle) throw new Error('That spreadsheet is no longer open — pick it again.')
-  return xlsxCall('readSheet', await fsx.readFileHandle(handle), sheet || null, want)
+  const bytes = await fsx.readFileHandle(handle)
+  keepWorkbook(handle.name, bytes, 'form')
+  return xlsxCall('readSheet', bytes, sheet || null, want)
 }
