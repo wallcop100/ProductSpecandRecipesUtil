@@ -109,11 +109,11 @@ function rawChanges(posRef, { baseRows, newRows, master, targetOf }) {
     const base = { oldText: was?.rawText ?? null, newText: now?.rawText ?? null, maker: now?.manufacturer ?? was?.manufacturer ?? '', read: { was: a.words, now: b.words } }
     // Pair what left with what came, one for one, in order: a product replaced.
     const n = Math.min(gone.length, came.length)
-    for (let i = 0; i < n; i++) out.push({ kind: 'swap', fromEt: gone[i], toEt: came[i], toCode: b.known.get(came[i]), ...base })
+    for (let i = 0; i < n; i++) out.push({ kind: 'swap', fromEt: gone[i], fromCode: a.known.get(gone[i]), toEt: came[i], toCode: b.known.get(came[i]), ...base })
     let rest = gone.slice(n)
     const freshLeft = [...fresh]
     for (const et of rest) {
-      if (freshLeft.length) out.push({ kind: 'respec', fromEt: et, toCode: freshLeft.shift(), ...base })
+      if (freshLeft.length) out.push({ kind: 'respec', fromEt: et, fromCode: a.known.get(et), toCode: freshLeft.shift(), ...base })
       else out.push({ kind: 'remove', fromEt: et, fromCode: a.known.get(et), ...base })
     }
     for (const et of came.slice(n)) out.push({ kind: 'add', toEt: et, toCode: b.known.get(et), ...base })

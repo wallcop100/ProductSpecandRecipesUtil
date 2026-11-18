@@ -1658,8 +1658,9 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     if (map.pt) cols.push({ key: 'pt', label: map.pt })
     if (map.mfr) cols.push({ key: 'mfr', label: map.mfr })
     cols.push({ key: 'code', label: map.acc ? `${map.code} + ${map.acc}` : (map.code || 'ProductCode') })
-    const order = headers.length ? headers : map.context
-    for (const h of order) if (map.context.includes(h) && h !== map.acc) cols.push({ key: `ctx:${h}`, label: h })
+    const ctx = map.context || []
+    const order = headers.length ? headers : ctx
+    for (const h of order) if (ctx.includes(h) && h !== map.acc) cols.push({ key: `ctx:${h}`, label: h })
     return cols
   }, [map, headers])
 
@@ -1840,6 +1841,8 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
           onMoveNoteWord={(rowId, from, to, word) => moveNoteIn(rowId, from, to, word)}
           onEditNote={editNote}
           onMakeMain={(rowId, code) => patchRow(rowId, r => ({ ...r, leadCode: code }))}
+          onAssign={assignET} hideCodes={embedded.hideCodes} newCodes={embedded.newCodes} reuseFor={embedded.reuseFor}
+          since={embedded.since}
         />
       )}
 

@@ -19,7 +19,7 @@ export function CopyText({ text, children, style, title }) {
   const [done, setDone] = useState(false)
   async function copy(e) {
     e.stopPropagation()
-    if (await copyText(text)) { setDone(true); setTimeout(() => setDone(false), 1200); useStore.getState().toast('Copied to clipboard', { tone: 'warning' }) }
+    if (await copyText(text)) { setDone(true); setTimeout(() => setDone(false), 1200); useStore.getState().toast(`Copied ${text}`, { tone: 'primary' }) }
   }
   return (
     <span role="button" tabIndex={0} title={done ? 'Copied' : title || 'Click to copy'} data-copied={done || undefined}

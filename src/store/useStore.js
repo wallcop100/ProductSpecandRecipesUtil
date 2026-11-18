@@ -695,8 +695,6 @@ const useStore = create((set, get) => ({
   formGen: 0,
   // The Form pane starts as a view; once painting is chosen (the brush or pane ⋯) every
   // position opens its painter until it is stopped. Remembered across reloads (KU9NQJ).
-  formPaintMode: (() => { try { return localStorage.getItem('formPaintMode') === '1' } catch { return false } })(),
-  setFormPaintMode(on) { try { localStorage.setItem('formPaintMode', on ? '1' : '0') } catch { /* session only */ } set({ formPaintMode: !!on }) },
 
   // A one-shot screen request from deep in the tree (App consumes it). Mirrors
   // pendingReviewRefs — the pane is nested too far to reach App's navigateTo.
@@ -4414,8 +4412,9 @@ const useStore = create((set, get) => ({
    * `<ref>-FORK`), the same name / description / family, and a copy of its Product Spec row.
    * Recipes are untouched. Returns the new ref.
    */
-  forkElementType(ref) {
-    const { elementTypes, psRows } = get()
+  /** The ref forkElementType(ref) would make, without making it (the pane's preview ref). */
+  forkRefFor(ref) {
+    const { elementTypes } = get()
     const src = elementTypes.find(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === String(ref).toLowerCase())
     if (!src) return null
     const family = src.Family || src.family || null
@@ -4426,6 +4425,15 @@ const useStore = create((set, get) => ({
       if (m) { let n = Number(m[2]); do { n++ } while (taken(`${m[1]}${String(n).padStart(m[2].length, '0')}`)); next = `${m[1]}${String(n).padStart(m[2].length, '0')}` }
       else { next = `${ref}-2`; let k = 2; while (taken(next)) next = `${ref}-${++k}` }
     }
+    return next
+  },
+
+  forkElementType(ref) {
+    const { elementTypes, psRows } = get()
+    const src = elementTypes.find(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === String(ref).toLowerCase())
+    const next = src && get().forkRefFor(ref)
+    if (!next) return null
+    const family = src.Family || src.family || null
     get().createElementType({ ref: next, name: src.Name || src.name || null, description: src.Description || src.description || null, family })
     const ps = psRows.find(p => (p.ElementTypeRef || p.elementTypeRef || '').toLowerCase() === String(ref).toLowerCase())
     if (ps) {
