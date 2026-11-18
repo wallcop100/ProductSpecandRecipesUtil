@@ -5,7 +5,7 @@ import MaterialIcon from '../MaterialIcon'
 import CellTokens from './CellTokens'
 import { BRUSH } from '../CodeChips'
 import { familyOptionsOf } from '../NewETModal'
-import { refamily } from '../../utils/etSeed'
+import { refamily, cleanRef } from '../../utils/etSeed'
 import { CopyText } from '../CopyButton'
 import { positionRecipeWithWrapperInternals } from '../../utils/collectionStatus'
 import { C } from '../../styles/tokens'
@@ -178,7 +178,7 @@ function CodeCard({ c, many, inRecipe, familyOptions, elementTypes, edit, propos
         ) : (
           <Button size="sm" variant="primary" className="ms-auto rounded-circle p-0 d-inline-flex align-items-center justify-content-center flex-shrink-0"
             style={{ width: 22, height: 22 }} data-testid="give-et" aria-label={`Give ${c.code} an ElementType`} title={`Give ${c.code} an ElementType`}
-            onClick={() => onCreate({ ref: ref.trim(), family: family.trim() })}>
+            onClick={() => onCreate({ ref: cleanRef(ref), family: cleanRef(family) })}>
             <MaterialIcon name="add" size={16} />
           </Button>
         )}
@@ -192,7 +192,8 @@ function CodeCard({ c, many, inRecipe, familyOptions, elementTypes, edit, propos
         <div className="row g-1 mt-1">
           <div className="col-7">
             <div style={{ fontSize: 10, color: C.muted }}>Ref</div>
-            <Form.Control size="sm" style={ctl} value={ref} onChange={e => onEdit({ ref: e.target.value })} aria-label={`Ref for ${c.code}`} />
+            <Form.Control size="sm" style={ctl} value={ref} onChange={e => onEdit({ ref: e.target.value })} aria-label={`Ref for ${c.code}`}
+              onBlur={() => { if (edit?.ref != null && cleanRef(edit.ref) !== edit.ref) onEdit({ ref: cleanRef(edit.ref) }) }} />
           </div>
           <div className="col-5">
             <div style={{ fontSize: 10, color: C.muted }}>Family</div>

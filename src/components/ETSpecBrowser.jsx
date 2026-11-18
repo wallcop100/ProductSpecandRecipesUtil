@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import { ButtonGroup, Button } from 'react-bootstrap'
 import { useScreenView, useScrollMemory } from './useScreenView'
 import useStore from '../store/useStore'
@@ -212,6 +212,7 @@ export default function ETSpecBrowser({
     >
       {/* Controls */}
       <div className="px-2 pt-2 pb-1 border-bottom" style={{ flexShrink: 0 }}>
+        <TidyRefs />
         <ButtonGroup size="sm" className="w-100 mb-2">
           <Button
             variant={viewMode === 'family' ? 'primary' : 'outline-secondary'}
@@ -481,6 +482,34 @@ function BrowserRow({ ref_, status, productCode, manufacturer, isTBC, isSelected
           title={specLabel}>
           {specLabel}
         </span>
+      )}
+    </div>
+  )
+}
+
+/** Refs with whitespace or an empty part (ET-PROF-), offered a rename to their tidy form (LOOP_CHECKS_PLAN A). */
+function TidyRefs() {
+  const elementTypes = useStore(s => s.elementTypes)
+  const psRows = useStore(s => s.psRows)
+  const todo = useMemo(() => useStore.getState().untidyRefs(), [elementTypes, psRows])  // eslint-disable-line react-hooks/exhaustive-deps
+  const [open, setOpen] = useState(false)
+  if (!todo.length) return null
+  return (
+    <div className="mb-2" style={{ fontSize: 11 }} data-testid="tidy-refs">
+      <Button variant="link" size="sm" className="p-0" style={{ fontSize: 11 }} onClick={() => setOpen(o => !o)}>
+        <MaterialIcon name="cleaning_services" size={13} /> {todo.length} ref{todo.length === 1 ? '' : 's'} need{todo.length === 1 ? 's' : ''} tidying
+      </Button>
+      {open && (
+        <div className="mt-1 p-1 rounded" style={{ background: C.subtle, border: `1px solid ${C.border}` }}>
+          {todo.map(t => (
+            <div key={t.from} style={{ fontFamily: 'monospace' }}>"{t.from}" → {t.to}</div>
+          ))}
+          <div className="text-muted mt-1">Recipes, the Product Spec and the Form follow. One Undo reverses it.</div>
+          <Button size="sm" variant="primary" className="mt-1" style={{ fontSize: 11 }}
+            onClick={() => { const done = useStore.getState().tidyRefs(); setOpen(false); useStore.getState().toast(`Renamed ${done.length} ref${done.length === 1 ? '' : 's'}.`) }}>
+            Rename all
+          </Button>
+        </div>
       )}
     </div>
   )

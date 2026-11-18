@@ -11,7 +11,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { findBestTemplate, recipeTemplateFromRows, isRecipeTemplate, isFormTemplate } from '../utils/templateLoader.js'
 import { proposeRecipe, proposalFromTemplate, proposalContext } from '../utils/recipeProposal.js'
 import { roleOf } from '../utils/recipePatterns.js'
-import { planFamilyMove, proposeElementTypes } from '../utils/etSeed.js'
+import { planFamilyMove, proposeElementTypes, refIssues, tidyRef } from '../utils/etSeed.js'
 import { reconcileAll, stampExported, hasUnexported } from '../utils/reconcile.js'
 import { jobOf, linearWrapperFamily } from '../utils/codeJobs.js'
 import { loadReports, saveReports } from '../utils/bugReports.js'
@@ -4514,6 +4514,11 @@ const useStore = create((set, get) => ({
   createElementType({ ref, name = null, description = null, family = null, isCollection = false } = {}) {
     const trimmed = (ref || '').trim()
     if (!trimmed) return null
+    // The backstop for every create path (LOOP_CHECKS_PLAN A). It refuses rather than rewrites:
+    // the caller keys its spec rows and recipes on the ref it passed. The forms clean first.
+    const { clean, empty } = refIssues(trimmed)
+    if (empty || clean !== trimmed) { get().toast(`Not created: "${trimmed}" is not a valid ref (try ${refIssues(trimmed).fixed}).`, { ok: false }); return null }
+    if (family) family = refIssues(family).fixed || null
     const { elementTypes, projectId, dbChanges } = get()
     if (elementTypes.some(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === trimmed.toLowerCase())) return null
 
@@ -4608,29 +4613,65 @@ const useStore = create((set, get) => ({
    * touches any other DB sheet (Positions/Elements/LinksMap); those belong to
    * the upstream pipeline and are the user's responsibility (they were warned).
    */
-  renameElementType(oldRef, newRef) {
+  /**
+   * The ElementTypes whose ref has whitespace or an empty part, each with its tidy target
+   * (LOOP_CHECKS_PLAN A). → [{ from, to }]
+   */
+  untidyRefs() {
+    const { elementTypes, psRows } = get()
+    const refs = [...new Set([...elementTypes, ...psRows].map(e => e.ElementTypeRef || e.elementTypeRef).filter(Boolean))]
+    return refs.map(from => ({ from, to: tidyRef(from, refs) })).filter(r => r.to)
+  },
+
+  /** Rename every untidy ref, as one Undo step. → the renames made. */
+  tidyRefs() {
+    const todo = get().untidyRefs()
+    if (!todo.length) return []
+    get()._pushHistory()
+    const done = []
+    for (const { from } of todo) {
+      // Targets are re-read after each rename, so two bad refs can't both claim one free counter.
+      const to = tidyRef(from, [...get().elementTypes, ...get().psRows].map(e => e.ElementTypeRef || e.elementTypeRef).filter(Boolean))
+      if (!to) continue
+      get().renameElementType(from, to, { recordHistory: false })
+      done.push({ from, to })
+    }
+    return done
+  },
+
+  renameElementType(oldRef, newRef, { recordHistory = true } = {}) {
     const from = (oldRef || '').trim()
     const to = (newRef || '').trim()
     if (!from || !to || from === to) return
     const state = get()
     if (state.elementTypes.some(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === to.toLowerCase())) return
 
-    get()._pushHistory()
+    if (recordHistory) get()._pushHistory()
     const lc = from.toLowerCase()
 
-    // 1. elementTypes
-    const elementTypes = state.elementTypes.map(e =>
-      (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === lc
-        ? { ...e, ElementTypeRef: to, elementTypeRef: to } : e
-    )
+    // 1. elementTypes, and the members of a renamed family (else they name a family that is gone)
+    const isFrom = v => String(v || '').trim().toLowerCase() === lc
+    const members = state.elementTypes.filter(e => isFrom(e.Family || e.family))
+    const elementTypes = state.elementTypes.map(e => {
+      const own = (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === lc
+      const member = isFrom(e.Family || e.family)
+      if (!own && !member) return e
+      return { ...e, ...(own && { ElementTypeRef: to, elementTypeRef: to }), ...(member && { Family: to, family: to }) }
+    })
 
     // 2. DB catalogue change (rename by writing the new Ref into the row found
     //    by the old Ref)
-    let dbChanges = mergeDbChanges(state.dbChanges, {
+    // Only a ref the DesignDB has (or has queued) gets a key update; a Product Spec-only one has no row.
+    const inDb = state.elementTypes.some(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === lc)
+    let dbChanges = !inDb ? state.dbChanges : mergeDbChanges(state.dbChanges, {
       elementTypeRef: from,
       updates: { ElementTypeRef: to },
       before: { ElementTypeRef: from },
     })
+    for (const m of members) {
+      const r = m.ElementTypeRef || m.elementTypeRef
+      dbChanges = mergeDbChanges(dbChanges, { elementTypeRef: r, updates: { Family: to }, before: { Family: m.Family || m.family } })
+    }
 
     // 3. PS rows — the ref IS the key, so this is a keyed rename
     let psRows = state.psRows

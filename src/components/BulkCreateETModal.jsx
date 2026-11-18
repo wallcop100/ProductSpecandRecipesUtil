@@ -6,7 +6,7 @@ import {
 } from '@dnd-kit/core'
 import MaterialIcon from './MaterialIcon'
 import IconButton from './IconButton'
-import { refamily, ACCESSORIES, nextRef, whyText, refFromText } from '../utils/etSeed'
+import { refamily, ACCESSORIES, nextRef, whyText, refFromText, cleanRef, refIssues } from '../utils/etSeed'
 import { useCompanion } from '../platform/companion'
 import { shareOutcomes } from '../platform/outcomes'
 import { familyForJob } from '../utils/codeJobs'
@@ -119,15 +119,16 @@ export default function BulkCreateETModal({
   // A ref is bad when blank, already in the project, used twice here, or its family is unticked.
   const problems = useMemo(() => {
     const count = new Map()
-    rows.forEach(r => { if (creating(r)) { const k = r.ref.trim().toLowerCase(); count.set(k, (count.get(k) || 0) + 1) } })
+    rows.forEach(r => { if (creating(r)) { const k = cleanRef(r.ref).toLowerCase(); count.set(k, (count.get(k) || 0) + 1) } })
     const out = new Map()
     rows.forEach((r, i) => {
       if (!creating(r)) return
-      const k = r.ref.trim().toLowerCase()
+      const k = cleanRef(r.ref).toLowerCase()
       const fi = famByRef.get(r.family)
       if (!r.family) out.set(i, 'needs a family')
       else if (fi !== undefined && !fams[fi].include) out.set(i, 'its new family is unticked')
       else if (!k) out.set(i, 'needs a ref')
+      else if (refIssues(r.ref).empty) out.set(i, `has an empty part (use ${nextRef(refIssues(r.ref).fixed.replace(/-\d+$/, ''), [...existing])})`)
       else if (existing.has(k)) out.set(i, 'already exists')
       else if (count.get(k) > 1) out.set(i, 'used twice here')
     })
@@ -179,7 +180,7 @@ export default function BulkCreateETModal({
     setFams(fs => withFamily(fs, house.family))
   }
 
-  const included = rows.filter(r => r.include && r.action !== 'skip')
+  const included = rows.filter(r => r.include && r.action !== 'skip').map(r => (r.ref ? { ...r, ref: cleanRef(r.ref) } : r))
   const notCodes = rows.filter(r => !r.include && r.notCode).map(r => r.code)
   const nCreate = included.filter(r => r.action === 'create').length
   const usedFams = new Set(rows.filter(creating).map(r => r.family))
@@ -409,7 +410,8 @@ export default function BulkCreateETModal({
                                 <Form.Control size="sm" value={r.ref} aria-label={`Ref for ${r.code}`}
                                   isInvalid={!!bad && r.include} placeholder={r.family ? '' : 'pick a family'}
                                   style={{ fontFamily: 'monospace', fontSize: 11 }}
-                                  onChange={e => patch(i, { ref: e.target.value })} />
+                                  onChange={e => patch(i, { ref: e.target.value })}
+                                  onBlur={() => { if (cleanRef(r.ref) !== r.ref) patch(i, { ref: cleanRef(r.ref) }) }} />
                                 {verified(r) && (
                                   <span title={`Family by rule: ${whyText(r)}`} aria-label={`Family placed by rule: ${whyText(r)}`} data-testid="verified">
                                     <MaterialIcon name="verified" size={14} style={{ color: C.success }} />

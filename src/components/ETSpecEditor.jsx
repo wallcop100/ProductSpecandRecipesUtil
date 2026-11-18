@@ -15,7 +15,7 @@ import IconButton from './IconButton'
 import { familyOf } from '../utils/etRef'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { CANON_FAMILIES } from '../data/etCanon'
-import { planFamilyMove } from '../utils/etSeed'
+import { planFamilyMove, tidyRef, refIssues } from '../utils/etSeed'
 import { familyFix, codeElsewhere, refNumberFix } from '../utils/specSuggest'
 import { C } from '../styles/tokens'
 import { looksLikeProductCode } from '../utils/codeHeuristics'
@@ -504,6 +504,8 @@ function FamilyAndRef({ et, inDb, onRenamed }) {
     ...elementTypes.filter(e => (e.IsCollection || e.isCollection) === 'Y').map(e => e.ElementTypeRef),
     ...CANON_FAMILIES.map(f => f.ref),
   ])].sort(), [elementTypes])
+  const psRows = useStore(s => s.psRows)
+  const tidy = useMemo(() => tidyRef(ref, [...elementTypes, ...psRows].map(e => e.ElementTypeRef || e.elementTypeRef).filter(Boolean)), [ref, elementTypes, psRows])
   const taken = r => r.toLowerCase() !== ref.toLowerCase()
     && elementTypes.some(e => (e.ElementTypeRef || '').toLowerCase() === r.toLowerCase())
 
@@ -514,9 +516,11 @@ function FamilyAndRef({ et, inDb, onRenamed }) {
   const ensure = f => { if (!inDb) createElementType({ ref, description: et.Description || null, family: f || null }) }
   function apply() {
     const target = newRef.trim()
-    ensure(fam)
-    if (fam !== family) moveElementTypesToFamily([ref], fam, { renumber: false })
-    if (target && target !== ref) renameElementType(ref, target)
+    const to = target && target !== ref ? target : ref
+    // Rename first: the DesignDB row it lacks is then queued under the new ref (an untidy old one is refused).
+    if (to !== ref) renameElementType(ref, to)
+    if (!inDb) createElementType({ ref: to, description: et.Description || null, family: fam || null })
+    else if (fam !== family) moveElementTypesToFamily([to], fam, { renumber: false })
     setOpen(false)
     if (target && target !== ref) onRenamed?.(target)
   }
@@ -528,6 +532,12 @@ function FamilyAndRef({ et, inDb, onRenamed }) {
           data-testid="family-ref-open">
           <MaterialIcon name="drive_file_move" size={13} /> Change family or ref
         </Button>
+        {tidy && (
+          <Button variant="link" size="sm" className="p-0 ms-3" style={{ fontSize: 11 }} data-testid="tidy-ref"
+            title="Refs never hold whitespace or an empty part" onClick={() => { setNewRef(tidy); setOpen(true) }}>
+            <MaterialIcon name="cleaning_services" size={13} /> Tidy ref → <span style={{ fontFamily: 'monospace' }}>{tidy}</span>
+          </Button>
+        )}
         <Button variant="link" size="sm" className="p-0 ms-3" style={{ fontSize: 11 }} data-testid="fork-et"
           title="Fork: a new ElementType in the same family with a copy of this one's Product Spec, to change on its own"
           onClick={() => { ensure(family); const r = forkElementType(ref); if (r) onRenamed?.(r) }}>
@@ -536,7 +546,7 @@ function FamilyAndRef({ et, inDb, onRenamed }) {
       </div>
     )
   }
-  const bad = !newRef.trim() ? 'needs a ref' : taken(newRef.trim()) ? 'already used' : null
+  const bad = !newRef.trim() ? 'needs a ref' : taken(newRef.trim()) ? 'already used' : refIssues(newRef).clean !== newRef.trim() ? 'no spaces in a ref' : refIssues(newRef).empty && newRef.trim() !== ref ? 'has an empty part (-- or a - at the end)' : null
   return (
     <div className="mb-3 p-2 rounded" style={{ background: C.subtle, border: `1px solid ${C.border}`, fontSize: 12 }} data-testid="family-ref">
       <div className="d-flex gap-2 align-items-end flex-wrap">
