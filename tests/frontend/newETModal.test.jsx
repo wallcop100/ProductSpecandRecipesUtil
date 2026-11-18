@@ -8,7 +8,7 @@ vi.mock('../../src/utils/backend.js', () => ({
 }))
 
 const { default: useStore } = await import('../../src/store/useStore.js')
-const { default: NewETModal } = await import('../../src/components/NewETModal.jsx')
+const { default: NewETModal, familyOptionsOf } = await import('../../src/components/NewETModal.jsx')
 
 const ctx = {
   code: 'FPS2020BG2000',
@@ -424,4 +424,14 @@ describe('ref hygiene (LOOP_CHECKS_PLAN A)', () => {
     fireEvent.click(create())
     expect(useStore.getState().elementTypes.map(e => e.ElementTypeRef)).toContain('ET-TAPE-01')
   })
+})
+
+test('VHCCAF: a wrapper collection nobody files under is not a family', () => {
+  const opts = familyOptionsOf([
+    { ElementTypeRef: 'ET-LIN-08', IsCollection: 'Y', Family: 'ET-LIN' },
+    { ElementTypeRef: 'ET-LIN-XX', IsCollection: 'Y', Family: 'ET-LIN' },
+    { ElementTypeRef: 'ET-LIN-PROF-01', Family: 'ET-LIN-COMPONENTS' },
+  ])
+  expect(opts).toContain('ET-LIN-COMPONENTS')
+  expect(opts).not.toContain('ET-LIN-XX')
 })

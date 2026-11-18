@@ -42,8 +42,8 @@ const norm = s => String(s ?? '').trim().toLowerCase()
 export function familyOptionsOf(elementTypes) {
   const s = new Set()
   for (const e of elementTypes) {
+    // VHCCAF: a family is a ref other ElementTypes name as their parent, not any IsCollection row.
     const f = (e.Family || e.family || '').trim(); if (f) s.add(f)
-    if ((e.IsCollection || e.isCollection) === 'Y') s.add(e.ElementTypeRef || e.elementTypeRef)
   }
   for (const f of CANON_FAMILIES) s.add(f.ref)
   // An assembly wrapper (ET-LIN-07, IsCollection) holds one product's parts; it is not a family to file under.

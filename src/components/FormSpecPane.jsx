@@ -298,7 +298,7 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
       hideCodes: respecs.map(c => c.toCode).filter(Boolean),
       newCodes: formChanges.filter(c => c.kind === 'addNew').map(c => c.toCode),
       reuseFor: (code, r) => { const t = candidate({ code, manufacturer: r?.manufacturer || '', note: '' })
-        return t && t.why !== 'spec' ? { ref: t.ref, why: WHY[t.why] } : null },
+        return t && t.why !== 'spec' ? { ref: t.ref, why: WHY[t.why], kind: t.why } : null },
     }} />
   )
   const header = (

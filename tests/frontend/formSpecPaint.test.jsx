@@ -416,3 +416,30 @@ test('43B4AM: clicking the raw product code copies it, with no icon; the manufac
   expect(writeText).toHaveBeenCalledWith('NEW99')
   expect(within(raw).getByText('iGuzzini').getAttribute('role')).toBeNull()
 })
+
+test('N4YCGG: a code corrected in the spec since is not written back from the Form on the next save', async () => {
+  useStore.setState({
+    elementTypes: ['ET-PS-01', 'ET-PS-02', 'ET-PS-03'].map(r => ({ ElementTypeRef: r })),
+    psRows: [...useStore.getState().psRows, { ElementTypeRef: 'ET-PS-02', Manufacturer: 'iGuzzini', ProductCode: 'QC51-FIXED' }],
+  })
+  const view = render(<FormSpecPane posRef="C01" />)
+  fireEvent.click(screen.getByTestId('paint-position'))
+  fireEvent.click(await screen.findByText('Choose spreadsheet…'))
+  await waitFor(() => expect(useStore.getState().formCaptures?.byPosition?.C01).toBeTruthy())
+  // An earlier import linked the Form's QC51 to ET-PS-02; the spec's code was corrected since.
+  useStore.setState(s => ({ formCaptures: { ...s.formCaptures, byPosition: { ...s.formCaptures.byPosition, X9: [{ elementTypeRef: 'ET-PS-02', code: 'QC51', manufacturer: 'iGuzzini' }] } } }))
+  view.unmount()
+  render(<FormSpecPane posRef="C02" />)
+  await waitFor(() => expect(useStore.getState().formCaptures.byPosition.C02?.[0]?.elementTypeRef).toBe('ET-PS-02'))
+  expect(useStore.getState().psRows.find(r => r.ElementTypeRef === 'ET-PS-02').ProductCode).toBe('QC51-FIXED')
+})
+
+test('J8F3R4: a TBC row where the recipe holds a specific product is that product, and its code is kept', async () => {
+  readSheet.mockResolvedValue({ sheets: ['S'], sheet: 'S', headers: HEAD, rows: [{ PositionTypeRef: 'C01', ManufacturerName: 'Applelec', ProductCode: 'TBC' }] })
+  useStore.setState({ psRows: [...useStore.getState().psRows, { ElementTypeRef: 'ET-PS-OLD', Manufacturer: 'Applelec', ProductCode: 'Light Sheet Panel 1150' }] })
+  render(<FormSpecPane posRef="C01" />)
+  fireEvent.click(screen.getByTestId('paint-position'))
+  fireEvent.click(await screen.findByText('Choose spreadsheet…'))
+  await waitFor(() => expect(useStore.getState().formCaptures?.byPosition?.C01?.[0]?.elementTypeRef).toBe('ET-PS-OLD'))
+  expect(useStore.getState().psRows.find(r => r.ElementTypeRef === 'ET-PS-OLD').ProductCode).toBe('Light Sheet Panel 1150')
+})

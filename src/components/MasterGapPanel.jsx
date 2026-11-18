@@ -101,9 +101,11 @@ export default function MasterGapPanel({ gaps }) {
   // Every collection worth offering: those the workbook already has, those the guesses
   // point at, and the house-style families — so a family stays selectable even after it
   // has been created.
+  // VHCCAF: a collection is a family only once some ElementType names it as its parent.
+  const parents = new Set(elementTypes.map(e => String(e.Family || e.family || '').trim().toUpperCase()).filter(Boolean))
   const collOptions = [...new Set([
-    ...dbCollectionRefs,
-    ...elementTypes.filter(e => (e.IsCollection || e.isCollection) === 'Y').map(e => e.ElementTypeRef || e.elementTypeRef),
+    ...[...dbCollectionRefs, ...elementTypes.filter(e => (e.IsCollection || e.isCollection) === 'Y').map(e => e.ElementTypeRef || e.elementTypeRef)]
+      .filter(r => parents.has(String(r || '').toUpperCase())),
     ...proposals.map(p => p.guess?.parent).filter(Boolean),
     ...families.map(f => f.ref),
     ...Object.values(chosen).filter(Boolean),

@@ -1015,6 +1015,20 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     setRules(rl => learnCodeTokens(rl, codeText))
   }, [])
 
+  // J8F3R4: a TBC row on a position whose recipe already holds a specific product the Form does not
+  // name IS that product: link it, rather than offer a new TBC ElementType.
+  useEffect(() => {
+    if (!embedded?.reuseFor) return
+    for (const r of resolved) {
+      if ((inSelection && !inSelection(r)) || !isTbc(r, captureOpts)) continue
+      const key = tbcKey(r)
+      if (assignments[norm(key)] || priorEtByCode.get(norm(key))) continue
+      const t = embedded.reuseFor(key, r)
+      const code = t?.kind === 'recipe' && psRows.find(p => norm(p.ElementTypeRef || '') === norm(t.ref) && !p.IsDeleted)?.ProductCode
+      if (code && !/^tbc$/i.test(String(code).trim())) assignET(key, t.ref)
+    }
+  }, [embedded, resolved, inSelection, captureOpts, assignments, priorEtByCode, psRows, assignET])
+
   /**
    * An ElementType proposal for EVERY code still without one (etSeed.js): family-based
    * ref, "Maker - Code" name, description seeded from the Form's product name column.
@@ -1238,6 +1252,11 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       if (!entryInScope(e)) { codeToEt.set(norm(e.text), e.etRef); continue }
       codeToEt.set(norm(e.text), e.etRef)
       const note = e.variants[0]?.note || ''
+      // N4YCGG / J8F3R4: a code the spec already has for this ElementType (a correction made since,
+      // or the product a TBC row was linked to) is kept; only a link made in this import overwrites it.
+      const had = String(useStore.getState().psRows.find(r => norm(r.ElementTypeRef || r.elementTypeRef || '') === norm(e.etRef) && !r.IsDeleted)?.ProductCode || '').trim()
+      const keep = had && !/^tbc$/i.test(had) && norm(had) !== norm(e.text) && (e.placeholder || norm(assignments[norm(e.text)] || '') !== norm(e.etRef))
+      if (e.placeholder && keep) continue
       if (e.placeholder) {
         // The placeholder Product Spec row: a product is wanted, not chosen yet.
         ensurePSRow(e.etRef)
@@ -1248,7 +1267,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
         n++
         continue
       }
-      if (e.status !== 'green') {
+      if (e.status !== 'green' && !keep) {
         ensurePSRow(e.etRef)
         updatePSRow(e.etRef, {
           ProductCode: e.text,
