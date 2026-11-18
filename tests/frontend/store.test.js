@@ -1287,6 +1287,34 @@ describe('catalogue — createElementType / rename / delete', () => {
     expect(s.psChanges.some(c => c.updates.ElementTypeRef === 'ET-NEW')).toBe(true)
   })
 
+  test('renaming a family moves its members to the new name (LOOP_CHECKS_PLAN A)', () => {
+    resetStore({
+      dbWriteEnabled: true, dbChanges: [], psChanges: [], rsChanges: [],
+      elementTypes: [{ ElementTypeRef: 'ET-FAM OLD', IsCollection: 'Y' }, { ElementTypeRef: 'ET-M-01', Family: 'ET-FAM OLD' }],
+    })
+    useStore.getState().renameElementType('ET-FAM OLD', 'ET-FAM-OLD')
+    const s = useStore.getState()
+    expect(s.elementTypes[1].Family).toBe('ET-FAM-OLD')
+    expect(s.dbChanges.find(c => c.elementTypeRef === 'ET-M-01').updates.Family).toBe('ET-FAM-OLD')
+  })
+
+  test('tidyRefs renames every untidy ref, as one Undo step; createElementType refuses one', () => {
+    resetStore({
+      dbWriteEnabled: true, dbChanges: [], psChanges: [], rsChanges: [], past: [], future: [],
+      elementTypes: [{ ElementTypeRef: 'ET-PROF-' }, { ElementTypeRef: 'ET- MOUNT-VFWE' }, { ElementTypeRef: 'ET-PROF-01' }],
+      recipes: [{ _id: 'r1', PositionTypeRef: POS_REF, ContextType: 'PositionType', ContextRef: POS_REF, ElementTypeRef: 'ET-PROF-' }],
+    })
+    expect(useStore.getState().untidyRefs()).toEqual([{ from: 'ET-PROF-', to: 'ET-PROF-02' }, { from: 'ET- MOUNT-VFWE', to: 'ET-MOUNT-VFWE' }])
+    useStore.getState().tidyRefs()
+    let s = useStore.getState()
+    expect(s.elementTypes.map(e => e.ElementTypeRef)).toEqual(['ET-PROF-02', 'ET-MOUNT-VFWE', 'ET-PROF-01'])
+    expect(s.recipes[0].ElementTypeRef).toBe('ET-PROF-02')
+    expect(s.past).toHaveLength(1)
+    expect(useStore.getState().createElementType({ ref: 'ET-XX--01' })).toBeNull()
+    expect(useStore.getState().createElementType({ ref: 'ET-A B' })).toBeNull()
+    expect(useStore.getState().createElementType({ ref: ' ET-OK-01 ' })).not.toBeNull()
+  })
+
   test('renameElementType carries the Form, wrappers, slot mappings and the open ElementType with it', () => {
     resetStore({
       dbWriteEnabled: true, dbChanges: [], psChanges: [], rsChanges: [],

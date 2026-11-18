@@ -316,3 +316,36 @@ describe('house maker spelling', () => {
     expect(screen.queryByTestId('house-maker')).toBeNull()
   })
 })
+
+describe('ref hygiene (LOOP_CHECKS_PLAN A)', () => {
+  const refField = () => document.querySelector('[data-field="ref"]')
+  const create = () => screen.getByRole('button', { name: 'Create Element Type' })
+
+  test('ET-XX- suggests ET-XX-01, never ET-XX--01, and cannot be created as typed', () => {
+    setup({ prefill: { ...prefill, ref: '' } })
+    fireEvent.change(refField(), { target: { value: 'ET-XX-' } })
+    expect(screen.getByRole('button', { name: 'ET-XX-01' })).toBeInTheDocument()
+    expect(screen.queryByText(/ET-XX--01/)).toBeNull()
+    expect(create()).toBeDisabled()
+  })
+
+  test('a doubled - is an error, with the fix one click away', () => {
+    setup({ prefill: { ...prefill, ref: '' } })
+    fireEvent.change(refField(), { target: { value: 'ET-XX--01' } })
+    expect(screen.getByTestId('ref-empty-segment')).toBeInTheDocument()
+    expect(create()).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'ET-XX-01' }))
+    expect(refField()).toHaveValue('ET-XX-01')
+    expect(create()).not.toBeDisabled()
+  })
+
+  test('whitespace is fixed when the field is left, and at Create', () => {
+    setup({ prefill: { ...prefill, ref: '' } })
+    fireEvent.change(refField(), { target: { value: ' ET- FRAME-DOWN IN-LINE ' } })
+    fireEvent.blur(refField())
+    expect(refField()).toHaveValue('ET-FRAME-DOWN-IN-LINE')
+    fireEvent.change(refField(), { target: { value: 'ET-TAPE 01' } })
+    fireEvent.click(create())
+    expect(useStore.getState().elementTypes.map(e => e.ElementTypeRef)).toContain('ET-TAPE-01')
+  })
+})

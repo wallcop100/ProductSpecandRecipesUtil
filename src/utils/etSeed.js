@@ -134,7 +134,35 @@ export function headFor(heads, family, code = '', text = '', maker = '') {
 }
 
 /** The next free `<family>-NN`, counting refs already taken AND refs handed out in this batch. */
+/** A ref has no whitespace (Erik, 2026-11-18): spaces beside a `-` go, any other run becomes `-`. */
+export const cleanRef = ref => String(ref ?? '').trim().replace(/\s*-\s*/g, '-').replace(/\s+/g, '-')
+
+/**
+ * What is wrong with a typed ref or family. → { clean, empty, fixed }
+ * `clean` is the silent whitespace fix; `empty` is an empty segment (`ET-XX--01`, `ET-XX-`), which
+ * can't be created; `fixed` is `clean` with the empty segments closed up (`ET-XX-01`, `ET-XX`).
+ */
+export function refIssues(ref) {
+  const clean = cleanRef(ref)
+  return { clean, empty: /^-|--|-$/.test(clean), fixed: clean.replace(/-{2,}/g, '-').replace(/^-|-$/g, '') }
+}
+
+/**
+ * The ref an existing bad ref should be renamed to, or null when it is fine. The clean ref when
+ * it is free; else, and for a ref ending in `-` (whose clean form names the family), the next free
+ * counter: `ET-PROF-` → ET-PROF-01.
+ */
+export function tidyRef(ref, taken) {
+  const { clean, fixed } = refIssues(ref)
+  if (fixed === String(ref ?? '')) return null
+  const used = new Set([...taken].map(r => String(r).toLowerCase()))
+  used.delete(String(ref).toLowerCase())
+  if (!/-$/.test(clean) && !used.has(fixed.toLowerCase())) return fixed
+  return nextRef(fixed.replace(/-\d+$/, ''), [...used])
+}
+
 export function nextRef(family, taken, width = 2) {
+  family = refIssues(family).fixed   // a family typed as ET-PS- must not make ET-PS--01
   const base = lc(family)
   let max = 0
   for (const r of taken) {

@@ -12,7 +12,7 @@ import { copyText } from './CopyButton'
 import { formColumnsFor } from '../utils/formPositions'
 import { buildRefMap, targetFor } from '../utils/ptResolve'
 import { containerForPosition } from '../utils/recipePresence'
-import { proposeElementTypes, refFromText, whyText, seedName, refamily, isWrapperRef } from '../utils/etSeed'
+import { proposeElementTypes, refFromText, whyText, seedName, refamily, isWrapperRef, cleanRef, refIssues } from '../utils/etSeed'
 import { houseMaker } from '../utils/codeShapes'
 import { useCompanion } from '../platform/companion'
 import { noteProposal, settleCreated, shareOutcomes } from '../platform/outcomes'
@@ -213,7 +213,8 @@ export default function NewETModal({
   // Live suggestion: next available ref for the typed prefix. Uppercased so it
   // also nudges the user toward capitalised refs.
   const suggested = useMemo(() => {
-    const trimmed = ref.trim().toUpperCase()
+    // A trailing or doubled `-` is closed up first, so `ET-XX-` probes ET-XX-01, never ET-XX--01.
+    const trimmed = refIssues(ref).fixed.toUpperCase()
     if (!trimmed) return ''
     // Synthesise a probe with a trailing number so getNextAvailableRef can strip it
     const probe = /-\d+$/.test(trimmed) ? trimmed : `${trimmed}-01`
@@ -239,24 +240,26 @@ export default function NewETModal({
   }, [manufacturer, productCode, psRows, ref])
 
   const alreadyExists = useMemo(() => {
-    const k = ref.trim().toLowerCase()
+    const k = cleanRef(ref).toLowerCase()
     if (!k) return false
     return allETObjects.some(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === k)
   }, [ref, allETObjects])
 
-  const canSave = ref.trim() && !alreadyExists && !saving
+  const emptySegment = refIssues(ref).empty
+  const canSave = ref.trim() && !alreadyExists && !emptySegment && !saving
 
-  const saveTitle = alreadyExists ? 'Ref already exists' : !ref.trim() ? 'Enter a ref first' : ''
+  const saveTitle = alreadyExists ? 'Ref already exists' : emptySegment ? 'The ref has an empty part (--, or a - at the end)' : !ref.trim() ? 'Enter a ref first' : ''
   async function handleSave(where = null) {
-    const trimRef = ref.trim()
-    if (!trimRef || alreadyExists) return
+    const trimRef = cleanRef(ref)
+    if (!trimRef || alreadyExists || emptySegment) return
+    const fam = refIssues(family).fixed
     setSaving(true)
     try {
       // Register the ET in the catalogue (staging-backed; queues a DB row when
       // DB writes are on).
       if (familyIsNew) {
-        const canon = CANON_FAMILIES.find(f => f.ref.toLowerCase() === family.trim().toLowerCase())
-        createElementType({ ref: family.trim(), description: canon?.description || null, family: familyParent.trim() || canon?.parent || null, isCollection: true })
+        const canon = CANON_FAMILIES.find(f => f.ref.toLowerCase() === fam.toLowerCase())
+        createElementType({ ref: fam, description: canon?.description || null, family: familyParent.trim() || canon?.parent || null, isCollection: true })
       }
       const fullDesc = finish.trim() ? withFinish(description, finish.trim()) : description.trim()
       createElementType({
@@ -264,7 +267,7 @@ export default function NewETModal({
         name: name.trim() || null,
         // Finish goes in brackets after both descriptions (NQLUFQ).
         description: fullDesc || null,
-        family: family.trim() || null,
+        family: fam || null,
       })
 
       // Only create a PS row when procurement data was actually entered.
@@ -285,7 +288,7 @@ export default function NewETModal({
       }
 
       if (productCode.trim()) {
-        const made = { code: productCode.trim(), manufacturer: manufacturer.trim(), family: family.trim(), ref: trimRef, name: name.trim() }
+        const made = { code: productCode.trim(), manufacturer: manufacturer.trim(), family: fam, ref: trimRef, name: name.trim() }
         useStore.getState().noteKept({ ...made, maker: made.manufacturer })
         // Audit trail: each suggested field, kept or changed.
         const project = useStore.getState().projectNumber
@@ -376,9 +379,10 @@ export default function NewETModal({
             size="sm"
             value={ref}
             data-field="ref" onChange={e => { refTyped.current = true; setRef(e.target.value) }}
+            onBlur={() => { if (cleanRef(ref) !== ref) setRef(cleanRef(ref)) /* refs never hold whitespace */ }}
             onKeyDown={e => { if (e.key === 'Enter' && canSave) handleSave(placeIn ? 'position' : null) }}
             placeholder="e.g. ET-TAPE-004"
-            isInvalid={alreadyExists}
+            isInvalid={alreadyExists || emptySegment}
             style={{ fontSize: 12, fontFamily: 'monospace' }}
             autoFocus
           />
@@ -392,8 +396,16 @@ export default function NewETModal({
               This ref already exists — use "Pick existing" to add it.
             </Form.Text>
           )}
+          {/* A trailing `-` is mid-typing: the Next available nudge below covers it. */}
+          {!alreadyExists && /^-|--/.test(cleanRef(ref)) && suggested && (
+            <Form.Text className="text-danger" style={{ fontSize: 11 }} data-testid="ref-empty-segment">
+              A ref can't have an empty part. Use{' '}
+              <button type="button" className="btn btn-link p-0" style={{ fontSize: 11, fontFamily: 'monospace', verticalAlign: 'baseline' }}
+                onClick={() => { refTyped.current = true; setRef(suggested) }}>{suggested}</button>
+            </Form.Text>
+          )}
           {/* A full free ref is the user's (or a proposal's, numbered past refs other new codes hold): no nudge. */}
-          {!alreadyExists && suggested && suggested !== ref.trim() && (notCapitalised || !/-\d+$/.test(ref.trim())) && (
+          {!alreadyExists && !/^-|--/.test(cleanRef(ref)) && suggested && suggested !== ref.trim() && (notCapitalised || !/-\d+$/.test(ref.trim())) && (
             <div style={{ fontSize: 11, marginTop: 4, color: C.accent }}>
               <MaterialIcon name="lightbulb" size={12} style={{ verticalAlign: 'middle', marginRight: 3 }} />
               {notCapitalised ? 'Suggested (capitalised):' : 'Next available:'}{' '}
@@ -447,6 +459,7 @@ export default function NewETModal({
             size="sm"
             list={familyListId}
             value={family}
+            onBlur={() => { if (cleanRef(family) !== family) setFamily(cleanRef(family)) }}
             data-field="family" onChange={e => { const f = e.target.value; setFamily(f)
               if (!refTyped.current && familyOptions.includes(f)) setRef(refamily([{ code: productCode, manufacturer, name, description }], [0], f, elementTypes, useStore.getState().psRows)[0].ref) }}
             placeholder="e.g. TAPE, PROFILE, CLIP…"

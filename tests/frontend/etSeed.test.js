@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest'
 import {
-  proposeElementTypes, pickFamily, familyRefFor, familyDescription, nextRef, refamily, seedName, ACCESSORIES,
+  proposeElementTypes, pickFamily, familyRefFor, familyDescription, nextRef, refamily, seedName, ACCESSORIES, cleanRef, refIssues,
 } from '../../src/utils/etSeed.js'
 
 // Shaped like 5452 early on: only cable and driver families, and Phos already has a DRIVER.
@@ -450,5 +450,23 @@ describe('maker spellings', async () => {
     expect(sameMaker('Sloan LED', 'SloanLED')).toBe(false)
     expect(houseMaker('Light Graphix')).toBe('LightGraphix')
     expect(houseMaker('LightGraphix')).toBeNull()
+  })
+})
+
+describe('ref hygiene (LOOP_CHECKS_PLAN A)', () => {
+  test('cleanRef: trims, drops spaces beside -, turns other spaces into -', () => {
+    expect(cleanRef('  ET-TAPE-01 ')).toBe('ET-TAPE-01')
+    expect(cleanRef('ET- MOUNT-VFWE')).toBe('ET-MOUNT-VFWE')
+    expect(cleanRef('ET-FRAME-DOWN IN-LINE')).toBe('ET-FRAME-DOWN-IN-LINE')
+    expect(cleanRef('CC DALI Driver Large')).toBe('CC-DALI-Driver-Large')
+  })
+  test('refIssues: empty segments are flagged and closed up', () => {
+    expect(refIssues('ET-XX-')).toMatchObject({ empty: true, fixed: 'ET-XX' })
+    expect(refIssues('ET-XX--01')).toMatchObject({ empty: true, fixed: 'ET-XX-01' })
+    expect(refIssues('ET-XX-01')).toMatchObject({ empty: false, fixed: 'ET-XX-01' })
+  })
+  test('nextRef reads a family typed with a trailing - as its base', () => {
+    expect(nextRef('ET-PS-', [])).toBe('ET-PS-01')
+    expect(nextRef('ET-PS-', ['ET-PS-01'])).toBe('ET-PS-02')
   })
 })
