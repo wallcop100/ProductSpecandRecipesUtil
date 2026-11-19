@@ -544,19 +544,19 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                   label="Contract"
                   value={row.isContractItem || row.IsContractItem || null}
                   onChange={val => handleFlagChange('isContractItem', val)}
-                  activeVariant="primary"
+                  activeVariant="outline-primary"
                 />
                 <FlagPill
                   label="Integer"
                   value={row.isInteger || row.IsInteger || null}
                   onChange={val => handleFlagChange('isInteger', val)}
-                  activeVariant="primary"
+                  activeVariant="outline-primary"
                 />
                 <FlagPill
                   label="TBC"
                   value={row.isTBC || row.IsTBC || null}
                   onChange={val => handleFlagChange('isTBC', val)}
-                  activeVariant="primary"
+                  activeVariant="outline-primary"
                 />
 
                 {/* Qty field with category icon */}
