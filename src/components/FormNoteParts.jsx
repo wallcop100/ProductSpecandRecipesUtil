@@ -17,7 +17,7 @@ const quiet = { ...btn, borderColor: C.border, color: C.muted, background: C.sur
 export const noteHead = (what, text) => (String(text ?? '').trim() ? `${what} · “${String(text).trim()}”` : what)
 
 /** The note editor (`.ed`): `Column · “value”`, an optional Should be, the note, Save / Cancel. */
-export function NoteEditor({ head, shouldBe, shouldBePlaceholder, initial = '', notePlaceholder, requireNote = true, saveLabel = () => 'Save note', onSave, onCancel, onClear }) {
+export function NoteEditor({ head, shouldBe, shouldBePlaceholder, initial = '', notePlaceholder = 'Add a comment', requireNote = true, saveLabel = () => 'Save note', onSave, onCancel, onClear }) {
   const [note, setNote] = useState(initial)
   const [sb, setSb] = useState(shouldBe ?? '')
   const hasSb = shouldBe !== undefined

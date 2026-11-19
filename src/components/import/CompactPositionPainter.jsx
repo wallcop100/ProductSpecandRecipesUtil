@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react'
-import { Button, Form, OverlayTrigger, Popover } from 'react-bootstrap'
+import React, { useMemo, useRef, useState } from 'react'
+import { Button, Form, Overlay, OverlayTrigger, Popover } from 'react-bootstrap'
 import useStore from '../../store/useStore'
 import MaterialIcon from '../MaterialIcon'
 import CellTokens from './CellTokens'
@@ -43,6 +43,7 @@ export default function CompactPositionPainter({ posRef, rows, info, onSetRole, 
   const [peek, setPeek] = useState(false)
   const [edits, setEdits] = useState({})   // code -> { ref, family } typed on its card
   const [faces, setFaces] = useState({})   // row id -> 'data' | 'paint', once chosen
+  const [facePref, setFacePref] = useFacePref()
   const cols = useColPref()
   if (!rows.length) {
     return <div className="text-muted fst-italic" style={{ fontSize: 11 }} data-testid="embedded-no-rows">The Form gives no product code for {posRef}.</div>
@@ -68,8 +69,9 @@ export default function CompactPositionPainter({ posRef, rows, info, onSetRole, 
       {infos.map(({ row, inf }) => {
         // Still to paint: a code with no ElementType, or an entry nobody has confirmed.
         const needs = inf.codes.some(c => !c.etRef) || (!row.confirmed && inf.status?.icon !== 'block')
-        const face = faces[row.id] || (needs ? 'paint' : 'data')
-        const setFace = f => setFaces(m => ({ ...m, [row.id]: f }))
+        // Paint still opens itself where something needs painting; otherwise your last pick, across positions (4FQSWW).
+        const face = faces[row.id] || (needs ? 'paint' : facePref)
+        const setFace = f => { setFaces(m => ({ ...m, [row.id]: f })); setFacePref(f) }
         const cards = inf.codes.filter(c => !c.etRef && !c.settled && !hide.has(codeKey(c.code)))
         return (
           <div key={row.id} className="py-1 border-bottom" data-testid="compact-row" data-face={face}>
@@ -164,6 +166,7 @@ const pick = (cells, names) => names.map(n => cells.find(c => colKey(c.as || c.c
 function FormData({ row, map, posRef, notes = [], cols: [pref, setPref] }) {
   const cells = rowCells(row, map)
   const [pop, setPop] = useState(false)
+  const pickRef = useRef(null)
   const [hover, setHover] = useState(null)
   const [editing, setEditing] = useState(null)   // a column
   // As the Form gave it, before a wrong code was corrected (NAL5HU).
@@ -202,21 +205,24 @@ function FormData({ row, map, posRef, notes = [], cols: [pref, setPref] }) {
       <div className="d-flex mb-1" style={{ position: 'relative' }}>
         <Seg value={pref.preset} onChange={v => setPref({ ...pref, preset: v })} testid="cols"
           options={[['few', 'short_text', 'Few lines'], ['many', 'notes', 'Many lines'], ['custom', 'tune', 'Custom']]}>
-          <button type="button" className="border-0 d-inline-flex align-items-center px-0" aria-label="Choose columns" aria-expanded={pop} data-testid="cols-pick"
+          <button ref={pickRef} type="button" className="border-0 d-inline-flex align-items-center px-0" aria-label="Choose columns" aria-expanded={pop} data-testid="cols-pick"
             style={{ background: pref.preset === 'custom' ? C.accentTint : C.surface, color: C.muted, lineHeight: '18px' }}
             onMouseEnter={() => setPop(true)} onFocus={() => setPop(true)} onClick={() => setPop(true)} onKeyDown={e => { if (e.key === 'Escape') setPop(false) }}>
             <MaterialIcon name="expand_more" size={12} />
           </button>
         </Seg>
-        {pop && (
-          <div className="shadow-sm rounded p-1" data-testid="cols-list" onMouseLeave={() => setPop(false)} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget)) setPop(false) }}
-            style={{ position: 'absolute', top: 22, left: 0, zIndex: 5, background: C.surface, border: `1px solid ${C.border}`, maxHeight: 220, overflowY: 'auto', fontSize: 10, minWidth: 140 }}>
+        {/* In an overlay, not inside the face: the face clips its overflow, which hid the list behind a few lines (QGQ7H2). */}
+        <Overlay target={pickRef.current} show={pop} placement="bottom-start">
+          {({ placement: _p, arrowProps: _a, show: _s, popper: _po, hasDoneInitialMeasure: _h, ...props }) => (
+          <div {...props} className="shadow-sm rounded p-1" data-testid="cols-list" onMouseLeave={() => setPop(false)} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget)) setPop(false) }}
+            style={{ ...props.style, zIndex: 1080, background: C.surface, border: `1px solid ${C.border}`, maxHeight: 220, overflowY: 'auto', fontSize: 10, minWidth: 140 }}>
             {cells.map(c => (
               <Form.Check key={c.col} type="checkbox" id={`col-${c.col}`} checked={pref.preset === 'custom' ? custom.includes(c.col) : shown.includes(c)}
                 onChange={() => tick(c.col)} label={c.col} />
             ))}
           </div>
-        )}
+          )}
+        </Overlay>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, max-content) 1fr', columnGap: 8, rowGap: 1 }}>
         {shown.map(({ col, value, code }) => {
@@ -251,7 +257,7 @@ function FormData({ row, map, posRef, notes = [], cols: [pref, setPref] }) {
         const prior = cellNote(editing)?.note || fixesIn(editing).map(f => f.note).filter(Boolean).join(' ') || ''
         return (
           <NoteEditor key={editing} head={noteHead(editing, rawOf(editing))} initial={prior}
-            shouldBe={isCode ? (cell?.value ?? '') : undefined} notePlaceholder={isCode ? 'Note (optional)' : undefined}
+            shouldBe={isCode ? (cell?.value ?? '') : undefined} notePlaceholder={isCode ? 'Add a comment (optional)' : undefined}
             saveLabel={() => (isCode ? 'Save' : 'Save note')}
             onSave={v => saveCell(editing, isCode, v)} onCancel={() => setEditing(null)}
             onClear={cellNote(editing) || fixesIn(editing).length ? () => clearCell(editing) : undefined} />
@@ -310,6 +316,12 @@ function MainStar({ c, onMakeMain }) {
       <MaterialIcon name={c.main ? 'star' : 'star_border'} size={11} />
     </span>
   )
+}
+
+/** The face you last picked (Form data or Paint); remembered per browser. */
+function useFacePref() {
+  const [pref, set] = useState(() => { try { return localStorage.getItem('psr.formPane.face') === 'paint' ? 'paint' : 'data' } catch { return 'data' } })
+  return [pref, v => { set(v); try { localStorage.setItem('psr.formPane.face', v) } catch { /* private window */ } }]
 }
 
 /** The brushes stay open until you tuck them away; remembered per browser. */

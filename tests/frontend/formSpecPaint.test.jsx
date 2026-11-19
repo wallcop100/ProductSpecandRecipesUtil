@@ -29,6 +29,7 @@ const ROWS = [
 // The compact painter shows the cell text; the codes here are unique per position.
 
 beforeEach(() => {
+  localStorage.removeItem('psr.formPane.face')   // the face you last picked is remembered (4FQSWW)
   for (const k of Object.keys(prefs)) delete prefs[k]
   localStorage.removeItem('psr.formPane.cols')
   readSheet.mockReset().mockResolvedValue({ sheets: ['S'], sheet: 'S', headers: HEAD, rows: ROWS })
