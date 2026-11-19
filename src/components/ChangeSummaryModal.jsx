@@ -3,6 +3,7 @@ import React, { useMemo, useState, useEffect } from 'react'
 import { Modal, Button, Form } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
+import { formNotesMarkdown } from './FormNoteParts'
 import { buildPsScript, buildRsScript, buildDbScript } from '../utils/patchScript'
 import { CONCEPTS } from './ConceptCard'
 import MasterGapPanel from './MasterGapPanel'
@@ -498,6 +499,28 @@ function BugReportsTab({ reports, copied, onCopy }) {
   )
 }
 
+/** Form Template Notes (NAL5HU, mock 6): what to tell whoever owns the Form, as Markdown. */
+function FormNotesTab({ md, count, importedAt, copied, onCopy }) {
+  const project = useStore(s => s.projectNumber)
+  return (
+    <div data-testid="form-notes-tab">
+      <div className="d-flex align-items-center gap-2 mb-2">
+        <Button size="sm" variant="primary" className="d-inline-flex align-items-center gap-1" onClick={onCopy} data-testid="form-notes-copy">
+          <MaterialIcon name="content_copy" size={14} /> {copied ? 'Copied!' : 'Copy as Markdown'}
+        </Button>
+        <Button size="sm" variant="outline-secondary" className="d-inline-flex align-items-center gap-1"
+          onClick={() => download(`form-template-notes-${project || 'project'}-${new Date().toISOString().slice(0, 10)}.md`, md, 'text/markdown')}>
+          <MaterialIcon name="download" size={14} /> Download .md
+        </Button>
+        <span className="ms-auto text-muted" style={{ fontSize: 11 }}>
+          {count} note{count === 1 ? '' : 's'}{importedAt && ` · Form imported ${new Date(importedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`}
+        </span>
+      </div>
+      <pre className="border rounded p-2 mb-0" style={{ fontSize: 11, whiteSpace: 'pre-wrap', background: C.subtle }} data-testid="form-notes-md">{md}</pre>
+    </div>
+  )
+}
+
 const NO_GAPS = { specRows: { wrappers: [], products: [] }, dbRows: [] }
 
 export default function ChangeSummaryModal({ show, onHide }) {
@@ -506,6 +529,9 @@ export default function ChangeSummaryModal({ show, onHide }) {
   const dbChanges = useStore(s => s.dbChanges)
   const fillWrapperSpecRows = useStore(s => s.fillWrapperSpecRows)
   const bugReports = useStore(s => s.bugReports)
+  const formNotes = useStore(s => s.formNotes)
+  const importedAt = useStore(s => s.formCaptures?.importedAt)
+  const notesMd = useMemo(() => (show && formNotes.length ? formNotesMarkdown() : ''), [show, formNotes])
 
   const [tab, setTab] = useState('changes')
   const [copiedKey, setCopiedKey] = useState(null)
@@ -565,13 +591,18 @@ export default function ChangeSummaryModal({ show, onHide }) {
         )}
         <TabBtn id="changes" tab={tab} onClick={setTab} count={changeCount}>Changes</TabBtn>
         <TabBtn id="patches" tab={tab} onClick={setTab} count={patchFiles.length}>Patches</TabBtn>
+        {formNotes.length > 0 && (
+          <TabBtn id="formNotes" tab={tab} onClick={setTab} count={formNotes.length}>Form Template Notes</TabBtn>
+        )}
         {bugReports.length > 0 && (
           <TabBtn id="bugs" tab={tab} onClick={setTab} count={bugReports.length}>Bug reports</TabBtn>
         )}
       </div>
 
       <Modal.Body style={{ minHeight: 260, maxHeight: '58vh' }}>
-        {tab === 'bugs'
+        {tab === 'formNotes'
+          ? <FormNotesTab md={notesMd} count={formNotes.length} importedAt={importedAt} copied={copiedKey === 'formNotes'} onCopy={() => copy(notesMd, 'formNotes')} />
+          : tab === 'bugs'
           ? <BugReportsTab reports={bugReports} copied={copiedKey === 'bugs'} onCopy={() => copy(reportsToMarkdown(bugReports), 'bugs')} />
           : nothing
           ? <div className="text-muted small fst-italic">No pending changes.</div>

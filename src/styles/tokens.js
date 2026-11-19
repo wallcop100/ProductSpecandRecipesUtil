@@ -36,4 +36,6 @@ export const C = {
   refInk:     '#5b3fa8',
   // ✓ only
   success:    '#198754',
+  successTint: '#d1e7dd',   // the added part of a corrected Form code (NAL5HU)
+  hoverTint: '#eef1f4',   // a Form cell under the mouse (NAL5HU)
 }

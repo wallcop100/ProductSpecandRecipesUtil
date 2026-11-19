@@ -111,7 +111,7 @@ export async function openProject({
   try { await pullConfig(projectId, projectNumber) } catch { /* open with what is here */ }
 
   // 3. Load SQLite data
-  const [positionUIArr, templates, slotMappings, containerETPref, containerExcludePref, etCollections, ignoredFamiliesPref, tagRulesPref, tagPalettePref, tagSnapshotsPref, favorites, tagColorsPref, formCapturesPref, importDraftPref, connectorPinsPref, connectorFamiliesPref, connectorExcludesPref, specCheckSkipPref, templateChecksPref] = await Promise.all([
+  const [positionUIArr, templates, slotMappings, containerETPref, containerExcludePref, etCollections, ignoredFamiliesPref, tagRulesPref, tagPalettePref, tagSnapshotsPref, favorites, tagColorsPref, formCapturesPref, importDraftPref, connectorPinsPref, connectorFamiliesPref, connectorExcludesPref, specCheckSkipPref, templateChecksPref, formNotesPref] = await Promise.all([
     window.electronAPI.db.getAllPositionUI(projectId),
     window.electronAPI.db.getAllTemplates(projectId),
     window.electronAPI.db.getAllSlotMappings(projectId), // already { templateId: { slotKey: ref } }
@@ -131,6 +131,7 @@ export async function openProject({
     window.electronAPI.db.getPref(projectId, 'connector_excludes'),
     window.electronAPI.db.getPref(projectId, 'spec_check_skip'),
     window.electronAPI.db.getPref(projectId, 'template_checks'),
+    window.electronAPI.db.getPref(projectId, 'form_notes'),
   ])
 
   let tagColors = {}
@@ -143,6 +144,10 @@ export async function openProject({
   // An unfinished import, offered as "Resume?" on the import screen.
   let importDraft = null
   try { importDraft = importDraftPref ? JSON.parse(importDraftPref) : null } catch { importDraft = null }
+
+  // Form Template Notes (NAL5HU): what the builder says about the Form, for its owner.
+  let formNotes = []
+  try { formNotes = (formNotesPref && JSON.parse(formNotesPref)) || [] } catch { formNotes = [] }
 
   // 3b. Tag rules + palette. Seed from bundled defaults the first time a
   // config is opened, then persist so each config owns its own copy.
@@ -253,6 +258,7 @@ export async function openProject({
     tagColors,
     formCaptures,
     importDraft,
+    formNotes,
     localElementTypes,
   })
 

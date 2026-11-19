@@ -14,11 +14,12 @@ import { findProductET } from './productCodes'
 import { positionPaintStatus } from './formPositions'
 import { buildRefMap, targetFor } from './ptResolve'
 
-export function draftKnownEntries(formRows = [], psRows = []) {
+export function draftKnownEntries(formRows = [], psRows = [], settled = null) {
   const seen = new Set()
   const out = []
   for (const r of formRows) {
     for (const code of String(r.rawText || '').split(/\s+/).filter(Boolean)) {
+      if (settled?.has(code.toUpperCase())) continue
       const et = findProductET(psRows, r.manufacturer, code)
       if (!et || seen.has(et)) continue
       seen.add(et)
@@ -31,9 +32,10 @@ export function draftKnownEntries(formRows = [], psRows = []) {
 export function positionFormDone(ref, { importDraft, formCaptures, recipes = [], psRows = [], containerETRefs = new Set(), incomplete = new Set() }) {
   const st = positionPaintStatus(importDraft, ref, { buildRefMap, targetFor })
   if (st.state === 'todo') return false
+  if (st.state === 'setAside') return true
   if (formCaptures?.byPosition?.[ref]) return !incomplete.has(ref)
   if (st.state === 'ready' || st.state === 'added') {
-    const r = compareFormToRecipe(recipes, ref, draftKnownEntries(st.formRows, psRows), containerETRefs)
+    const r = compareFormToRecipe(recipes, ref, draftKnownEntries(st.formRows, psRows, importDraft.settledCodes?.[String(ref).toUpperCase()]), containerETRefs)
     return r.missing.length === 0
   }
   return !incomplete.has(ref)

@@ -38,6 +38,7 @@ import { deadPositionRefs, retirableElementTypes } from '../utils/deadPositions.
 import { familyOf } from '../utils/etRef.js'
 import { DIM_QTY_COMPONENTS, AUTO_CONTRACT_ITEMS } from '../utils/constants.js'
 import { live as isLive, etRefOf, entryRefOf } from '../utils/derived'
+import { noteKey } from '../utils/formNotes'
 
 /**
  * A row carries EITHER a Quantity OR a Dim_QuantityMultiplier, never both: a dimensioned
@@ -702,6 +703,8 @@ const useStore = create((set, get) => ({
   // screen's useState, so Back or the Review hand-off destroyed it silently. Saved
   // on a debounce, offered as "Resume?", cleared once staging lands the work.
   importDraft: null,
+  // Form Template Notes (NAL5HU, utils/formNotes): pref `form_notes`, this project only. Kept on Detach.
+  formNotes: [],
   // Bumped by Detach: an import screen still open (the painter, a hidden auto-save) holds
   // the old Form in memory and must not write it back (S3JLGL).
   formGen: 0,
@@ -760,6 +763,7 @@ const useStore = create((set, get) => ({
       tagDrift,
       formCaptures,
       importDraft,
+      formNotes,
     } = data
 
     const stampedPsRows = stampIds(psRows ?? [])
@@ -823,6 +827,7 @@ const useStore = create((set, get) => ({
       localElementTypes: data.localElementTypes ?? [],
       formCaptures: formCaptures ?? null,
       importDraft: importDraft ?? null,
+      formNotes: Array.isArray(formNotes) ? formNotes : [],
       pendingScreen: null,
       // Reset transient state: nothing held for the last project carries into this one.
       designPrompt: null, recipeError: null, pendingPaste: null, pendingPaletteTab: null,
@@ -2244,6 +2249,20 @@ const useStore = create((set, get) => ({
     set({ formGen: get().formGen + 1 })
     await get().clearFormCaptures()
     await get().clearImportDraft()
+  },
+
+  /** Add or replace a Form Template Note (by its key). */
+  async saveFormNote(note) {
+    const n = { ...note, key: noteKey(note) }
+    await get().setFormNotes([...get().formNotes.filter(x => x.key !== n.key), n])
+  },
+  async removeFormNote(key) {
+    await get().setFormNotes(get().formNotes.filter(x => x.key !== key))
+  },
+  async setFormNotes(formNotes) {
+    const { projectId } = get()
+    set({ formNotes })
+    if (projectId != null) await window.electronAPI.db.setPref(projectId, 'form_notes', JSON.stringify(formNotes))
   },
 
   /** The Form's entries for one PositionType, or [] when it says nothing about it. */
@@ -4748,8 +4767,10 @@ const useStore = create((set, get) => ({
       ? { ...state.importDraft, assignments: renameRefDeep(state.importDraft.assignments, from, to) }
       : state.importDraft
     const slotMappings = renameRefDeep(state.slotMappings || {}, from, to)
+    const formNotes = state.formNotes?.some(n => sameRef(n.et)) ? state.formNotes.map(n => (sameRef(n.et) ? { ...n, et: to, key: noteKey({ ...n, et: to }) } : n)) : state.formNotes
 
     set({
+      formNotes,
       elementTypes, dbChanges, psRows, psChanges, recipes, rsChanges,
       containerETManualRefs, containerETExcludeRefs,
       containerETRefs: containerInfo.refs, containerReasons: containerInfo.reasons,
@@ -4767,6 +4788,7 @@ const useStore = create((set, get) => ({
       if (containerETExcludeRefs.some((r, i) => r !== state.containerETExcludeRefs[i])) pref('container_ets_exclude', containerETExcludeRefs)
       if (formCaptures !== state.formCaptures) pref('form_captures', formCaptures)
       if (importDraft !== state.importDraft) pref('form_import_draft', importDraft)
+      if (formNotes !== state.formNotes) pref('form_notes', formNotes)
       for (const [templateId, slots] of Object.entries(slotMappings)) {
         for (const [slotKey, ref] of Object.entries(slots || {})) {
           if (ref !== state.slotMappings?.[templateId]?.[slotKey]) db.upsertSlotMapping?.(projectId, templateId, slotKey, ref)?.catch?.(() => {})

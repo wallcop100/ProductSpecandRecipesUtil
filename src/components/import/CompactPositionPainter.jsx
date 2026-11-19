@@ -13,6 +13,8 @@ import { rowCells } from '../../utils/formPositions'
 import { EtPill, Gutter, GRAPHITE, btn, card } from '../FormPaneParts'
 import { C } from '../../styles/tokens'
 import { codeKey } from '../../utils/derived'
+import { changedWord, wordAt } from '../../utils/formNotes'
+import { NoteEditor, NotNeededButton, CodeDiff } from '../FormNoteParts'
 
 const mono = { fontFamily: 'monospace' }
 
@@ -34,6 +36,7 @@ export default function CompactPositionPainter({ posRef, rows, info, onSetRole, 
   const elementTypes = useStore(s => s.elementTypes)
   const map = useStore(s => s.importDraft?.map)
   const dbCollectionRefs = useStore(s => s.dbCollectionRefs)
+  const formNotes = useStore(s => s.formNotes)
   const familyOptions = useMemo(() => familyOptionsOf(elementTypes || [], dbCollectionRefs || []), [elementTypes, dbCollectionRefs])
   const [brush, setBrush] = useState('code')
   const [pinned, setPinned] = usePinned()
@@ -67,7 +70,7 @@ export default function CompactPositionPainter({ posRef, rows, info, onSetRole, 
         const needs = inf.codes.some(c => !c.etRef) || (!row.confirmed && inf.status?.icon !== 'block')
         const face = faces[row.id] || (needs ? 'paint' : 'data')
         const setFace = f => setFaces(m => ({ ...m, [row.id]: f }))
-        const cards = inf.codes.filter(c => !c.etRef && !hide.has(codeKey(c.code)))
+        const cards = inf.codes.filter(c => !c.etRef && !c.settled && !hide.has(codeKey(c.code)))
         return (
           <div key={row.id} className="py-1 border-bottom" data-testid="compact-row" data-face={face}>
             <div className="d-flex align-items-center gap-1" style={{ fontSize: 10, color: C.muted, minHeight: 20 }}>
@@ -83,7 +86,7 @@ export default function CompactPositionPainter({ posRef, rows, info, onSetRole, 
               </span>
             </div>
             <Face open={face === 'data'} testid="face-data">
-              <FormData cells={rowCells(row, map)} cols={cols} />
+              <FormData row={row} map={map} posRef={posRef} notes={formNotes} cols={cols} />
             </Face>
             <Face open={face === 'paint'} testid="face-paint">
               <CellTokens row={row} suggested={inf.suggested} brush={pinned || peek ? brush : null} onSetRole={(i, role) => onSetRole(row.id, i, role)} />
@@ -94,7 +97,7 @@ export default function CompactPositionPainter({ posRef, rows, info, onSetRole, 
             {cards.length > 0 && (
               <div className="d-flex flex-column mt-1">
                 {cards.map(c => (
-                  <CodeCard key={c.code} c={c} many={inf.codes.length > 1} familyOptions={familyOptions} elementTypes={elementTypes}
+                  <CodeCard key={c.code} c={c} posRef={posRef} row={row} many={inf.codes.length > 1} familyOptions={familyOptions} elementTypes={elementTypes}
                     edit={edits[c.code]} proposal={proposalFor?.(c.code)} isNew={fresh.has(codeKey(c.code))} since={since}
                     reuse={reuseFor?.(c.code, row)} onAssign={ref => onAssign?.(c.code, ref)}
                     otherRefs={inf.codes.filter(o => o.code !== c.code).map(o => o.etRef || shownRef(edits[o.code], proposalFor?.(o.code))).filter(Boolean)}
@@ -158,8 +161,38 @@ const colKey = s => String(s).toLowerCase().replace(/[^a-z0-9]/g, '')
 const pick = (cells, names) => names.map(n => cells.find(c => colKey(c.as || c.col) === colKey(n) || colKey(c.col) === colKey(n))).filter(Boolean)
   .filter((c, i, a) => a.indexOf(c) === i)
 
-function FormData({ cells, cols: [pref, setPref] }) {
+function FormData({ row, map, posRef, notes = [], cols: [pref, setPref] }) {
+  const cells = rowCells(row, map)
   const [pop, setPop] = useState(false)
+  const [hover, setHover] = useState(null)
+  const [editing, setEditing] = useState(null)   // a column
+  // As the Form gave it, before a wrong code was corrected (NAL5HU).
+  const rawCells = row._fixes ? rowCells({ ...row, rawText: row._rawText, accFrom: row._rawAccFrom }, map) : cells
+  const rawOf = col => rawCells.find(c => c.col === col)?.value ?? cells.find(c => c.col === col)?.value ?? ''
+  const cellNote = col => notes.find(n => n.kind === 'cell' && n.posRef === posRef && n.column === col && n.formText === rawOf(col))
+  const fixesIn = col => (row._fixes ? notes.filter(n => n.kind === 'wrongCode' && n.posRef === posRef && codeKey(n.formRef) === codeKey(row.positionType)
+    && wordAt(rawOf(col), n.code) >= 0) : [])
+  const { saveFormNote, removeFormNote } = useStore.getState()
+  const saveCell = async (col, isCode, { note, shouldBe }) => {
+    const raw = rawOf(col)
+    if (isCode) {
+      for (const f of fixesIn(col)) await removeFormNote(f.key)
+      if (shouldBe && shouldBe !== raw) {
+        const [code, to] = changedWord(raw, shouldBe)
+        await saveFormNote({ posRef, formRef: row.positionType, kind: 'wrongCode', column: col, code, shouldBe: to, manufacturer: row.manufacturer || '', formText: String(row._rawText ?? row.rawText ?? ''), note })
+        if (cellNote(col)) await removeFormNote(cellNote(col).key)
+        return setEditing(null)
+      }
+    }
+    if (note) await saveFormNote({ posRef, formRef: row.positionType, kind: 'cell', column: col, formText: raw, note })
+    else if (cellNote(col)) await removeFormNote(cellNote(col).key)
+    setEditing(null)
+  }
+  const clearCell = async col => {
+    for (const f of fixesIn(col)) await removeFormNote(f.key)
+    if (cellNote(col)) await removeFormNote(cellNote(col).key)
+    setEditing(null)
+  }
   const few = pick(cells, FEW).map(c => c.col)
   const custom = pref.custom || few
   const shown = pref.preset === 'many' ? pick(cells, MANY) : pref.preset === 'custom' ? cells.filter(c => custom.includes(c.col)) : pick(cells, FEW)
@@ -186,13 +219,44 @@ function FormData({ cells, cols: [pref, setPref] }) {
         )}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, max-content) 1fr', columnGap: 8, rowGap: 1 }}>
-        {shown.map(({ col, value, code }) => (
-          <React.Fragment key={col}>
-            <span className="text-muted text-truncate" style={{ fontSize: 10, maxWidth: 120 }} title={col}>{col}</span>
-            <span style={{ ...mono, color: C.ink, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{code ? <CopyText text={value} /> : value}</span>
-          </React.Fragment>
-        ))}
+        {shown.map(({ col, value, code }) => {
+          const fixes = code ? fixesIn(col) : []
+          const note = cellNote(col)
+          const noted = !!(note || fixes.length)
+          const raw = rawOf(col)
+          const tip = [note?.note, ...fixes.map(f => f.note)].filter(Boolean).join(' · ')
+          return (
+            <React.Fragment key={col}>
+              <span className="text-muted text-truncate" style={{ fontSize: 10, maxWidth: 120 }} title={col}>{col}</span>
+              <span className="d-flex align-items-start gap-1 rounded" data-testid="form-cell" data-col={col} data-noted={noted || undefined}
+                onMouseEnter={() => setHover(col)} onMouseLeave={() => setHover(h => (h === col ? null : h))}
+                style={{ minWidth: 0, padding: '0 2px', margin: '0 -2px', background: hover === col ? C.hoverTint : undefined }}>
+                <span style={{ ...mono, color: C.ink, whiteSpace: 'pre-wrap', wordBreak: 'break-word', minWidth: 0,
+                  ...(noted && { textDecoration: `underline dotted ${C.accent}`, textUnderlineOffset: 3 }) }} title={tip || undefined}>
+                  {fixes.length && raw !== value ? <CodeDiff from={raw} to={value} /> : code ? <CopyText text={value} /> : value}
+                </span>
+                <button type="button" className="border-0 bg-transparent p-0 ms-auto d-inline-flex" data-testid="cell-note"
+                  aria-label={`Note on ${col}`} title={tip || undefined} onClick={() => setEditing(e => (e === col ? null : col))}
+                  style={{ color: noted ? C.accent : hover === col ? C.muted : C.faint, visibility: noted || hover === col || editing === col ? 'visible' : 'hidden', flexShrink: 0 }}>
+                  <MaterialIcon name="rate_review" size={14} />
+                </button>
+              </span>
+            </React.Fragment>
+          )
+        })}
       </div>
+      {editing && (() => {
+        const cell = cells.find(c => c.col === editing)
+        const isCode = !!cell?.code
+        const prior = cellNote(editing)?.note || fixesIn(editing).map(f => f.note).filter(Boolean).join(' ') || ''
+        return (
+          <NoteEditor key={editing} head={`${editing} · “${rawOf(editing)}”`} initial={prior}
+            shouldBe={isCode ? (cell?.value ?? '') : undefined} notePlaceholder={isCode ? 'Note (optional)' : undefined}
+            saveLabel={() => (isCode ? 'Save' : 'Save note')}
+            onSave={v => saveCell(editing, isCode, v)} onCancel={() => setEditing(null)}
+            onClear={cellNote(editing) || fixesIn(editing).length ? () => clearCell(editing) : undefined} />
+        )
+      })()}
     </div>
   )
 }
@@ -259,9 +323,10 @@ function usePinned() {
  * has, or create one from the autofilled Ref, Family and the note as Description (its words drag
  * between cards). `reuse`: { ref, why } or null.
  */
-function CodeCard({ c, many, familyOptions, elementTypes, edit, proposal, otherRefs = [], isNew, since, reuse, onAssign, onEdit, onCreate, onMakeMain, onDropWord, onEditNote }) {
+function CodeCard({ c, posRef, row, many, familyOptions, elementTypes, edit, proposal, otherRefs = [], isNew, since, reuse, onAssign, onEdit, onCreate, onMakeMain, onDropWord, onEditNote }) {
   const [typing, setTyping] = useState(null)   // the note being typed, or null
   const [picking, setPicking] = useState(false)
+  const [notNeeded, setNotNeeded] = useState(false)
   const [over, drop] = useWordDrop(onDropWord)
   // A family you pick renumbers the ref (famRef) unless you typed the ref yourself (AEST77).
   const ref = shownRef(edit, proposal)
@@ -339,9 +404,19 @@ function CodeCard({ c, many, familyOptions, elementTypes, edit, proposal, otherR
               Create {cleanRef(ref) || 'ElementType'}
             </Button>
             <Button size="sm" variant="outline-secondary" style={btn} data-testid="pick-existing" onClick={() => setPicking(true)}>Existing</Button>
+            {row && <NotNeededButton on={notNeeded} onClick={() => setNotNeeded(v => !v)} />}
           </>
         )}
       </div>
+      {notNeeded && row && (
+        <NoteEditor head={`${c.code} · “${c.note || ''}”`} shouldBe="" shouldBePlaceholder="leave blank if it isn't needed at all"
+          saveLabel={fixing => (fixing ? 'Save' : 'Not needed · save note')} onCancel={() => setNotNeeded(false)}
+          onSave={({ note, shouldBe }) => {
+            const base = { posRef, formRef: row.positionType, code: c.code, manufacturer: row.manufacturer || '', desc: c.note || '', formText: String(row._rawText ?? row.rawText ?? ''), note }
+            useStore.getState().saveFormNote(shouldBe ? { ...base, kind: 'wrongCode', column: 'ProductCode', shouldBe } : { ...base, kind: 'notNeeded' })
+            setNotNeeded(false)
+          }} />
+      )}
     </div>
   )
 }

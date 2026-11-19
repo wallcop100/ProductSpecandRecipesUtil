@@ -228,7 +228,7 @@ test('TKJTDE: ⋯ shows and hides the other Form columns', async () => {
   expect(raw()).toHaveTextContent(/ProductCode\s*QC50/)
   expect(raw()).not.toHaveTextContent('white finish')
   fireEvent.click(screen.getByLabelText('Many lines'))
-  expect(raw()).toHaveTextContent(/Maker\s*iGuzzini\s*ProductCode\s*QC50\s*FurtherInfo\s*white finish/)
+  expect(raw()).toHaveTextContent(/Maker\s*iGuzzini(rate_review)?\s*ProductCode\s*QC50(rate_review)?\s*FurtherInfo\s*white finish/)
   expect(raw()).not.toHaveTextContent('never shown')
   // A click after the hover that opened the list keeps it open.
   fireEvent.mouseEnter(screen.getByTestId('cols-pick'))

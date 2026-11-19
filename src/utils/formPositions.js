@@ -84,7 +84,7 @@ export function rowCells(r, map = {}) {
  * positionPaintStatus(draft, posRef) → { state, rows, unconfirmed, formRefs, texts, cells }
  * Where ONE PositionType stands in the saved import (the builder's Form spec pane):
  * 'noForm' (nothing loaded), 'absent' (the Form has no rows for it), 'todo' (rows to
- * confirm), 'ready' (confirmed, not added yet), 'added', or 'nothing' (no product in its rows). A Form ref lands on posRef
+ * confirm), 'ready' (confirmed, not added yet), 'added', 'nothing' (no product in its rows), or 'setAside' (a note says the Form entry is wrong). A Form ref lands on posRef
  * through the import's resolutions (ptResolve), as Import itself routes it.
  */
 export function positionPaintStatus(draft, posRef, { buildRefMap, targetFor, knows = null } = {}) {
@@ -100,6 +100,11 @@ export function positionPaintStatus(draft, posRef, { buildRefMap, targetFor, kno
   // …and per row, each cell under its Form column name (TKJTDE): manufacturer, product code
   // and accessories (when given) up front; the other columns marked `more`, behind a ⋯.
   const cells = rows.map(r => rowCells(r, draft.map))
+  // Set aside by a Form Template Note (NAL5HU): the Form entry is wrong here, the recipe alone decides.
+  if (draft.setAside?.has(String(posRef || '').toUpperCase())) return { state: 'setAside', rows: rows.length, unconfirmed: 0, newCodes: 0, formRefs: groups.map(g => g.formRef), texts, cells, formRows: rows }
+  // Codes a note marked not needed count as nobody's job (NAL5HU).
+  const settled = draft.settledCodes?.[String(posRef || '').toUpperCase()]
+  const open = w => !settled?.has(String(w).trim().toUpperCase())
   // No product anywhere in its rows ("n/a", "by others"): nothing to add, nothing to do.
   if (rows.every(r => isNothingText(r.rawText))) return { state: 'nothing', rows: rows.length, unconfirmed: 0, formRefs: groups.map(g => g.formRef), texts, cells }
   const unconfirmed = rows.filter(r => !r.confirmed).length
@@ -107,7 +112,7 @@ export function positionPaintStatus(draft, posRef, { buildRefMap, targetFor, kno
   // code at all counts as one). With `knows(manufacturer, code)`, codes the Product Spec
   // already names are not counted: only the ones that need an ElementType (44VCYZ).
   const newCodes = rows.filter(r => !r.confirmed).reduce((n, r) => {
-    const ws = String(r.rawText || '').split(/\s+/).filter(w => w && looksLikeProductCode(w))
+    const ws = String(r.rawText || '').split(/\s+/).filter(w => w && looksLikeProductCode(w) && open(w))
     if (!ws.length) return n + 1
     return n + (knows ? ws.filter(w => !knows(r.manufacturer, w)).length : ws.length)
   }, 0)
@@ -116,7 +121,7 @@ export function positionPaintStatus(draft, posRef, { buildRefMap, targetFor, kno
   const codesOf = r => (r.tokens && r.roles ? deriveCaptures(r).captures.map(c => c.code).filter(hasProductIdentity)
     : String(r.rawText || '').split(/\s+/).filter(w => w && looksLikeProductCode(w)))
   const waitingEt = knows ? rows.filter(r => r.confirmed)
-    .reduce((n, r) => n + codesOf(r).filter(c => !knows(r.manufacturer, c)).length, 0) : 0
+    .reduce((n, r) => n + codesOf(r).filter(c => open(c) && !knows(r.manufacturer, c)).length, 0) : 0
   const staged = new Set(draft.stagedRefs || [])
   const formRefs = groups.map(g => g.formRef)
   const added = formRefs.every(f => staged.has(f))
