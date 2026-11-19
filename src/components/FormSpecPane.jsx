@@ -28,7 +28,7 @@ import { C } from '../styles/tokens'
 import { askConfirm } from './ConfirmHost'
 import { live, etRefOf } from '../utils/derived'
 import useFormView from './useFormView'
-import { NoteEditor, NoteLine, NotNeededButton, SettledLine, StaleBox, settledIcon, formNotesMarkdown } from './FormNoteParts'
+import { NoteEditor, noteHead, NoteLine, NotNeededButton, SettledLine, StaleBox, settledIcon, formNotesMarkdown } from './FormNoteParts'
 import { liveNotes, wordAt } from '../utils/formNotes'
 import { rowCells } from '../utils/formPositions'
 
@@ -334,7 +334,7 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
   const copyNotes = () => navigator.clipboard?.writeText(formNotesMarkdown())
   /** Not needed (blank Should be) or a wrong code, for one Form code: the card's third button. */
   const codeNoteEditor = ({ code, manufacturer = '', desc = '', et = null }) => noting === `code:${code}` && (
-    <NoteEditor head={`${code} · “${desc}”`} shouldBe="" shouldBePlaceholder="leave blank if it isn't needed at all"
+    <NoteEditor head={noteHead(code, desc)} shouldBe="" shouldBePlaceholder="if the Form's code is wrong"
       saveLabel={fixing => (fixing ? 'Save' : 'Not needed · save note')} onCancel={() => setNoting(null)}
       onSave={({ note, shouldBe }) => {
         const base = { posRef, formRef: formRefOf(code), code, manufacturer, desc, formText: formTextOf(code, `${code} ${desc}`), note, ...(et && { et }) }
@@ -409,6 +409,8 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
           {header}
           <FormStrip base={base} />
           {paintBar}
+          {/* Marked before anything is saved: still shown, so it can be read or undone. */}
+          {settledHere.map(n => <SettledLine key={n.key} n={n} label={n.code} />)}
           {!importDraft && (
             <Button size="sm" variant="link" className="p-0 text-muted" style={{ fontSize: 10 }} onClick={handleReimport}>
               or go through the whole Form in Import →

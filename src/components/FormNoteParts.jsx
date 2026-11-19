@@ -13,6 +13,9 @@ import { C } from '../styles/tokens'
 
 const quiet = { ...btn, borderColor: C.border, color: C.muted, background: C.surface }
 
+/** The editor's head: what the note is on, and the Form's words for it when it has any (2EE4XL). */
+export const noteHead = (what, text) => (String(text ?? '').trim() ? `${what} · “${String(text).trim()}”` : what)
+
 /** The note editor (`.ed`): `Column · “value”`, an optional Should be, the note, Save / Cancel. */
 export function NoteEditor({ head, shouldBe, shouldBePlaceholder, initial = '', notePlaceholder, requireNote = true, saveLabel = () => 'Save note', onSave, onCancel, onClear }) {
   const [note, setNote] = useState(initial)
@@ -28,9 +31,9 @@ export function NoteEditor({ head, shouldBe, shouldBePlaceholder, initial = '', 
       <div style={{ ...mono, fontSize: 10, color: C.muted }} className="text-truncate">{head}</div>
       {hasSb && (
         <div className="d-grid align-items-center" style={{ gridTemplateColumns: 'max-content minmax(0,1fr)', gap: 6, fontSize: 11 }}>
-          <span className="text-muted">Should be</span>
+          <span className="text-muted">Correct code</span>
           <Form.Control size="sm" value={sb} onChange={e => setSb(e.target.value)} placeholder={shouldBePlaceholder} data-testid="note-should-be"
-            aria-label="Should be" style={{ ...mono, fontSize: 11, height: 22, padding: '0 5px' }} className="note-sb" />
+            aria-label="Correct code" style={{ ...mono, fontSize: 11, height: 22, padding: '0 5px' }} className="note-sb" />
         </div>
       )}
       <Form.Control as="textarea" rows={2} autoFocus={!hasSb} value={note} onChange={e => setNote(e.target.value)} data-testid="note-text"
@@ -120,7 +123,7 @@ export function SettledLine({ n, label }) {
         <span className="text-truncate" style={{ ...mono, fontWeight: n.kind === 'missing' ? 600 : 400, color: n.kind === 'missing' ? C.ink : C.muted }}>{label}</span>
       </div>
       {editing ? (
-        <NoteEditor head={n.kind === 'missing' ? `${n.et} · in the recipe` : `${n.code} · “${n.desc || n.formText || ''}”`} initial={n.note}
+        <NoteEditor head={n.kind === 'missing' ? `${n.et} · in the recipe` : noteHead(n.code, n.desc)} initial={n.note}
           saveLabel={() => 'Save note'} onCancel={() => setEditing(false)}
           onSave={({ note }) => { saveFormNote({ ...n, note }); setEditing(false) }}
           onClear={() => removeFormNote(n.key)} />

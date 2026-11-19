@@ -31,3 +31,21 @@ describe('AEST77: a family picked on one card skips the refs its neighbours show
     expect(fam.value).toBe('ET-PS-LOUVRE')
   })
 })
+
+describe('YBLJSW: why a family was learned sits on the Family field, in a popup', () => {
+  beforeEach(() => useStore.setState({ recipes: [], psRows: [], elementTypes: [{ ElementTypeRef: 'ET-PS-ACCESSORIES', IsCollection: 'Y' }, { ElementTypeRef: 'ET-PS-MOUNTING', IsCollection: 'Y' }] }))
+
+  test('no line under the card; hovering the dot says why; changing the family drops it', async () => {
+    const props = { HL54: { ref: 'ET-PS-ACCESSORIES-01', family: 'ET-PS-ACCESSORIES', why: 'canon', canon: 'extra code on a Point page' } }
+    render(<CompactPositionPainter posRef="XT1" rows={[{ id: 0, manufacturer: 'LightGraphix', tokens: [], roles: [], rawText: '' }]}
+      info={() => ({ codes: [{ code: 'HL54' }], loose: '' })}
+      proposalFor={c => props[c]} onSetRole={() => {}} onToggleConfirm={() => {}} onNeedsET={() => {}} onMakeMain={() => {}} />)
+    expect(screen.queryByText(/^Family: /)).toBeNull()
+    const dot = screen.getByRole('button', { name: 'Why ET-PS-ACCESSORIES' })
+    expect(screen.getByLabelText('Family for HL54').parentElement).toContainElement(dot)
+    fireEvent.focus(dot)
+    expect(await screen.findByTestId('family-why')).toHaveTextContent('HL54 goes in ET-PS-ACCESSORIES: company family — extra code on a Point page.')
+    fireEvent.change(screen.getByLabelText('Family for HL54'), { target: { value: 'ET-PS-MOUNTING' } })
+    expect(screen.queryByTestId('family-from')).toBeNull()
+  })
+})
