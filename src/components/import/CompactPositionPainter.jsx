@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { Button, Form } from 'react-bootstrap'
+import { Button, Form, OverlayTrigger, Popover } from 'react-bootstrap'
 import useStore from '../../store/useStore'
 import MaterialIcon from '../MaterialIcon'
 import CellTokens from './CellTokens'
@@ -367,18 +367,29 @@ function CodeCard({ c, posRef, row, many, familyOptions, elementTypes, edit, pro
         <div className="col-5">
           <div style={lbl}>Family</div>
           {/* Type a family the project lacks, or pick one (T6FDCM); the New ElementType dialog creates it. */}
-          <Form.Control size="sm" style={ctl} value={family} list={`fams-${c.code}`} aria-label={`Family for ${c.code}`} placeholder="(none)"
+          <div className="position-relative">
+          {/* The why sits on the field it filled, in a popup (YBLJSW): a line under the card read like news from another project. */}
+          {learned && (
+            <OverlayTrigger placement="bottom-end" trigger={['hover', 'focus']} overlay={
+              <Popover id={`fam-why-${c.code}`} style={{ borderColor: C.companion, maxWidth: 260 }}>
+                <Popover.Body className="p-2" style={{ fontSize: 11 }} data-testid="family-why">
+                  <div className="fw-semibold mb-1">Why {family}</div>
+                  <span style={{ fontFamily: 'monospace' }}>{c.code}</span> goes in {family}: {learned}.
+                  <div className="text-muted border-top mt-1 pt-1 d-flex align-items-center gap-1"><span className="companion-dot" />Learned · pick another family to override</div>
+                </Popover.Body>
+              </Popover>}>
+              <span tabIndex={0} role="button" aria-label={`Why ${family}`} data-testid="family-from" className="position-absolute d-flex align-items-center"
+                style={{ left: 6, top: 0, bottom: 0, cursor: 'help', zIndex: 1 }}><span className="companion-dot" /></span>
+            </OverlayTrigger>
+          )}
+          <Form.Control size="sm" style={learned ? { ...ctl, paddingLeft: 19 } : ctl} value={family} list={`fams-${c.code}`} aria-label={`Family for ${c.code}`} placeholder="(none)"
             onChange={e => { const f = e.target.value
               onEdit(familyOptions.includes(f) || !f ? pickFam(f) : { family: f }) }}
             onBlur={() => { if (edit?.family && !familyOptions.includes(edit.family)) onEdit(pickFam(cleanRef(edit.family).toUpperCase())) }} />
+          </div>
           <datalist id={`fams-${c.code}`}>{fams.map(f => <option key={f} value={f} />)}</datalist>
         </div>
       </div>
-      {learned && (
-        <div className="d-flex align-items-center gap-1 text-muted" style={{ fontSize: 10, marginTop: 2 }} data-testid="family-from">
-          <span className="companion-dot" />Family: {learned}
-        </div>
-      )}
       <div className="mt-1" style={lbl}>Description</div>
       {typing != null ? (
         <Form.Control size="sm" autoFocus className="fst-italic" style={{ fontSize: 11, height: 24, padding: '1px 4px' }} value={typing}
