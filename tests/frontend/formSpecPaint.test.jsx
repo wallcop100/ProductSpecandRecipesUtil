@@ -439,3 +439,13 @@ test('J8F3R4: a TBC row where the recipe holds a specific product is that produc
   await waitFor(() => expect(useStore.getState().formCaptures?.byPosition?.C01?.[0]?.elementTypeRef).toBe('ET-PS-OLD'))
   expect(useStore.getState().psRows.find(r => r.ElementTypeRef === 'ET-PS-OLD').ProductCode).toBe('Light Sheet Panel 1150')
 })
+
+test('a code marked Not needed before anything is saved still shows, to read or undo', () => {
+  useStore.setState({
+    importDraft: { rows: [{ id: 0, positionType: 'C02', manufacturer: 'iGuzzini', rawText: 'QC51 + 480GT' }] },
+    formNotes: [{ posRef: 'C02', formRef: 'C02', code: '480GT', kind: 'notNeeded', note: 'By the electrician', formText: 'QC51 + 480GT', key: 'C02|code|480GT' }],
+  })
+  render(<FormSpecPane posRef="C02" />)
+  expect(screen.getByTestId('settled-line').dataset.code).toBe('480GT')
+  expect(screen.getByText('By the electrician')).toBeInTheDocument()
+})

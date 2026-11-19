@@ -14,7 +14,7 @@ import { EtPill, Gutter, GRAPHITE, btn, card } from '../FormPaneParts'
 import { C } from '../../styles/tokens'
 import { codeKey } from '../../utils/derived'
 import { changedWord, wordAt } from '../../utils/formNotes'
-import { NoteEditor, NotNeededButton, CodeDiff } from '../FormNoteParts'
+import { NoteEditor, NotNeededButton, CodeDiff, noteHead } from '../FormNoteParts'
 
 const mono = { fontFamily: 'monospace' }
 
@@ -250,7 +250,7 @@ function FormData({ row, map, posRef, notes = [], cols: [pref, setPref] }) {
         const isCode = !!cell?.code
         const prior = cellNote(editing)?.note || fixesIn(editing).map(f => f.note).filter(Boolean).join(' ') || ''
         return (
-          <NoteEditor key={editing} head={`${editing} · “${rawOf(editing)}”`} initial={prior}
+          <NoteEditor key={editing} head={noteHead(editing, rawOf(editing))} initial={prior}
             shouldBe={isCode ? (cell?.value ?? '') : undefined} notePlaceholder={isCode ? 'Note (optional)' : undefined}
             saveLabel={() => (isCode ? 'Save' : 'Save note')}
             onSave={v => saveCell(editing, isCode, v)} onCancel={() => setEditing(null)}
@@ -409,7 +409,7 @@ function CodeCard({ c, posRef, row, many, familyOptions, elementTypes, edit, pro
         )}
       </div>
       {notNeeded && row && (
-        <NoteEditor head={`${c.code} · “${c.note || ''}”`} shouldBe="" shouldBePlaceholder="leave blank if it isn't needed at all"
+        <NoteEditor head={noteHead(c.code, c.note)} shouldBe="" shouldBePlaceholder="if the Form's code is wrong"
           saveLabel={fixing => (fixing ? 'Save' : 'Not needed · save note')} onCancel={() => setNotNeeded(false)}
           onSave={({ note, shouldBe }) => {
             const base = { posRef, formRef: row.positionType, code: c.code, manufacturer: row.manufacturer || '', desc: c.note || '', formText: String(row._rawText ?? row.rawText ?? ''), note }

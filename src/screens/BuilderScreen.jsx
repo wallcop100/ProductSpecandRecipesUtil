@@ -21,7 +21,8 @@ import DuplicateETModal from '../components/DuplicateETModal'
 import ElementTypesWindow from '../components/ElementTypesWindow'
 import Breadcrumbs from '../components/Breadcrumbs'
 import ProjectIdPill from '../components/ProjectIdPill'
-import FormProgressChip from '../components/FormProgressChip'
+import FormProgressChip, { positionsInForm } from '../components/FormProgressChip'
+import useFormView from '../components/useFormView'
 import ElementPalette from '../components/ElementPalette'
 import SimilarPositionsPanel from '../components/SimilarPositionsPanel'
 import TutorialHint from '../tutorial/TutorialHint'
@@ -124,6 +125,8 @@ export default function BuilderScreen({
   // Arriving with positions to review (e.g. from the product-code import): the rail filters
   // to them. Consume once so it doesn't refilter on its own.
   const formCaptures = useStore(s => s.formCaptures)
+  const { importDraft: formView } = useFormView()
+  const positionTypesAll = useStore(s => s.positionTypes)
   const [formBuild, setFormBuild] = useState(null)   // { refs, thenReview }
   const [showStyles, setShowStyles] = useState(false)
   useEffect(() => {
@@ -138,7 +141,9 @@ export default function BuilderScreen({
   const nextStep = useMemo(() => {
     if (hideNextStep) return null
     const live = recipes.filter(r => isLive(r))
-    const imported = Object.keys(formCaptures?.byPosition || {}).filter(p => formCaptures.byPosition[p]?.length)
+    // Every position the loaded Form names, not only those whose codes already have ElementTypes (SG2LS9).
+    const imported = [...new Set([...positionsInForm(formView, positionTypesAll),
+      ...Object.keys(formCaptures?.byPosition || {}).filter(p => formCaptures.byPosition[p]?.length)])]
     if (live.length === 0 && imported.length === 0 && onOpenCodeImport) {
       return { icon: 'auto_fix_high', title: 'New project? Start with the Form.',
         text: 'Import its product codes: they fill the Product Spec and ElementTypes, then the recipes build from them.',
@@ -153,7 +158,7 @@ export default function BuilderScreen({
         action: `Open ${unbuilt[0]}`, go: () => useStore.getState().setActivePosition(unbuilt[0]) }
     }
     return null
-  }, [hideNextStep, recipes, formCaptures, onOpenCodeImport])
+  }, [hideNextStep, recipes, formCaptures, formView, positionTypesAll, onOpenCodeImport])
   const closeFormBuild = () => setFormBuild(null)
   const [addRowTarget, setAddRowTarget] = useState(null)      // { posRef, sectionKey }
   const [addAnywhereState, setAddAnywhereState] = useState(null) // { etRef, sectionKey, excludePosRef, startPosRef }

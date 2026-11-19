@@ -8,7 +8,7 @@ vi.mock('../../src/utils/backend.js', () => ({
 }))
 
 const { default: useStore } = await import('../../src/store/useStore.js')
-const { default: FormProgressChip } = await import('../../src/components/FormProgressChip.jsx')
+const { default: FormProgressChip, positionsInForm } = await import('../../src/components/FormProgressChip.jsx')
 
 const pos = (posRef, ref, extra = {}) => ({
   _id: `${posRef}-p-${ref}`, PositionTypeRef: posRef, ContextType: 'PositionType',
@@ -102,5 +102,17 @@ describe('the chip reports Form progress, and only that', () => {
       ], stagedRefs: ['C03r'] },
     }, { onReconcile })
     expect(screen.getByLabelText(/^Form 2\/2:/)).toBeInTheDocument()
+  })
+})
+
+describe('SG2LS9: positions in the Form are every position it names, not only those with ElementTypes', () => {
+  test('an unstaged Form still counts all its positions, and never one it does not name', () => {
+    const draft = { rows: [
+      { id: 0, positionType: 'G357', rawText: 'LD43DR GS43 480GT' },
+      { id: 1, positionType: 'X351', rawText: 'N103DBRHGL24' },
+    ] }
+    const pts = [{ PositionTypeRef: 'G357' }, { PositionTypeRef: 'X351' }, { PositionTypeRef: 'Z999' }]
+    expect(positionsInForm(draft, pts)).toEqual(['G357', 'X351'])
+    expect(positionsInForm(null, pts)).toEqual([])
   })
 })
