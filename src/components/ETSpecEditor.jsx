@@ -554,7 +554,7 @@ function FamilyAndRef({ et, inDb, onRenamed }) {
           <Form.Label className="mb-0" style={{ fontSize: 11 }}>Family</Form.Label>
           {/* Pick one, or type a family the project lacks: Apply creates it (T6FDCM). */}
           <Form.Control size="sm" aria-label="Family" value={fam} list={`fams-${ref}`} placeholder="(no family)"
-            onChange={e => pickFamily(e.target.value)} onBlur={() => setFam(f => cleanRef(f))} style={{ fontSize: 12, width: 230 }} />
+            onChange={e => pickFamily(e.target.value)} onBlur={() => setFam(f => cleanRef(f).toUpperCase())} style={{ fontSize: 12, width: 230 }} />
           <datalist id={`fams-${ref}`}>{families.map(f => <option key={f} value={f} />)}</datalist>
         </Form.Group>
         <Form.Group>

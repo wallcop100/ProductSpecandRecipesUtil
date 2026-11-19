@@ -62,7 +62,8 @@ describe('Product Spec: family only, and fork', () => {
     base()
     render(<ETSpecEditor selectedRef="ET-2PIN-ORLUNA" onRenamed={vi.fn()} />)
     fireEvent.click(screen.getByTestId('family-ref-open'))
-    fireEvent.change(screen.getByLabelText('Family'), { target: { value: 'ET-PS-SOCKETS' } })
+    fireEvent.change(screen.getByLabelText('Family'), { target: { value: 'et-ps-sockets' } })
+    fireEvent.blur(screen.getByLabelText('Family'))
     fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
     const ets = useStore.getState().elementTypes
     expect(ets.find(e => e.ElementTypeRef === 'ET-2PIN-ORLUNA').Family).toBe('ET-PS-SOCKETS')

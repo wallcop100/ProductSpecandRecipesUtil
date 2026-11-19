@@ -24,9 +24,10 @@ describe('AEST77: a family picked on one card skips the refs its neighbours show
       info={() => ({ codes: [{ code: 'GS10238/PCBRZ' }, { code: 'HL54' }], loose: '' })}
       proposalFor={c => props[c]} onSetRole={() => {}} onToggleConfirm={() => {}} onNeedsET={() => {}} onMakeMain={() => {}} />)
     const fam = screen.getByLabelText('Family for HL54')
-    fireEvent.change(fam, { target: { value: 'ET-PS-LOUVRE' } })
-    expect(fam.value).toBe('ET-PS-LOUVRE')
+    fireEvent.change(fam, { target: { value: 'et-ps-louvre' } })
+    expect(fam.value).toBe('et-ps-louvre')
     fireEvent.blur(fam)
     expect(screen.getByLabelText('Ref for HL54').value).toBe('ET-PS-LOUVRE-01')
+    expect(fam.value).toBe('ET-PS-LOUVRE')
   })
 })

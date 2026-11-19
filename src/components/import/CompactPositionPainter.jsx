@@ -305,7 +305,7 @@ function CodeCard({ c, many, familyOptions, elementTypes, edit, proposal, otherR
           <Form.Control size="sm" style={ctl} value={family} list={`fams-${c.code}`} aria-label={`Family for ${c.code}`} placeholder="(none)"
             onChange={e => { const f = e.target.value
               onEdit(familyOptions.includes(f) || !f ? pickFam(f) : { family: f }) }}
-            onBlur={() => { if (edit?.family && !familyOptions.includes(edit.family)) onEdit(pickFam(cleanRef(edit.family))) }} />
+            onBlur={() => { if (edit?.family && !familyOptions.includes(edit.family)) onEdit(pickFam(cleanRef(edit.family).toUpperCase())) }} />
           <datalist id={`fams-${c.code}`}>{fams.map(f => <option key={f} value={f} />)}</datalist>
         </div>
       </div>
@@ -335,7 +335,7 @@ function CodeCard({ c, many, familyOptions, elementTypes, edit, proposal, otherR
         ) : (
           <>
             <Button size="sm" variant={reuse ? 'outline-primary' : 'primary'} style={btn} data-testid="give-et"
-              aria-label={`Give ${c.code} an ElementType`} onClick={() => onCreate({ ref: cleanRef(ref), family: cleanRef(family) })}>
+              aria-label={`Give ${c.code} an ElementType`} onClick={() => onCreate({ ref: cleanRef(ref), family: cleanRef(family).toUpperCase() })}>
               Create {cleanRef(ref) || 'ElementType'}
             </Button>
             <Button size="sm" variant="outline-secondary" style={btn} data-testid="pick-existing" onClick={() => setPicking(true)}>Existing</Button>

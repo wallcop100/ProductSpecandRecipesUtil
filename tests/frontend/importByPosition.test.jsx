@@ -124,6 +124,18 @@ describe('import By position', () => {
     await waitFor(() => expect(screen.getByTestId('newet-step')).toHaveTextContent('code 1 of 2'))
   })
 
+  test('AEST77: embedded, the card\'s typed Ref seeds its step of the queue', async () => {
+    readSheet.mockResolvedValue({ sheets: ['S'], sheet: 'S', headers: HEAD, rows: [...ROWS,
+      { PositionTypeRef: 'C02', ManufacturerName: 'iGuzzini', ProductCode: 'QC53' }] })
+    render(<ProductCodeImportScreen embedded={{ posRef: 'C02', onStaged: vi.fn() }} />)
+    fireEvent.click(await screen.findByText('Choose spreadsheet…'))
+    await screen.findAllByTestId('give-et', {}, { timeout: 4000 })
+    fireEvent.change(screen.getByLabelText('Ref for QC51'), { target: { value: 'ET-PS-MINE-01' } })
+    fireEvent.click(screen.getByLabelText('Give QC51 an ElementType'))
+    expect(await screen.findByTestId('newet-step')).toHaveTextContent('C02 · code 1 of 2')
+    await waitFor(() => expect(document.querySelector('.modal [data-field="ref"]').value).toBe('ET-PS-MINE-01'))
+  })
+
   test('the toggle switches back to the whole Form, and is remembered', async () => {
     render(<ProductCodeImportScreen onBack={vi.fn()} onReviewPositions={vi.fn()} />)
     fireEvent.click(await screen.findByText('Choose spreadsheet…'))
