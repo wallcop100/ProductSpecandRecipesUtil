@@ -396,6 +396,22 @@ test('2K4TCY: every known position is saved at once; the chip counts the whole F
   expect(screen.getByText(/Form \d\/3/)).toBeInTheDocument()
 })
 
+test('the background save never rewrites an ElementType Description from the Form note', async () => {
+  const { default: FormAutoSaveAll } = await import('../../src/components/FormAutoSaveAll.jsx')
+  const r = (id, rawText, pt) => ({ id, rawText, positionType: pt, manufacturer: 'iGuzzini', context: {}, overrides: { 0: 'code' }, noteOverride: {}, confirmed: true })
+  useStore.setState({ formCaptures: null,
+    elementTypes: [{ ElementTypeRef: 'ET-PS-01', Description: '360mm' }, { ElementTypeRef: 'ET-PS-03' }, { ElementTypeRef: 'ET-PS-OLD' }],
+    importDraft: {
+      version: 1, step: 'review', source: { name: 'form.xlsx', sheet: 'S' },
+      map: { pt: '', code: 'ProductCode', mfr: 'ManufacturerName', exclude: '', acc: '', context: [] },
+      rules: {}, assignments: {}, resolutions: [], refOverrides: {}, dirStats: { forward: 0, backward: 0 }, stagedRefs: [], keptSeparate: [],
+      rows: [r(0, 'QC50 (Joinery Bush 20mm diameter)', 'C01')],
+    } })
+  render(<FormAutoSaveAll />)
+  await waitFor(() => expect(useStore.getState().formCaptures?.byPosition?.C01).toBeTruthy())
+  expect(useStore.getState().elementTypes.find(e => e.ElementTypeRef === 'ET-PS-01').Description).toBe('360mm')
+})
+
 test('43B4AM: clicking the raw product code copies it, with no icon; the manufacturer does not copy', async () => {
   const writeText = vi.fn().mockResolvedValue(undefined)
   Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })

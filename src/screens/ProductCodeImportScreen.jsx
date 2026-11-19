@@ -1285,7 +1285,10 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
         })
         n++
       }
-      if (note) updateElementType(e.etRef, { Description: note })
+      // A hidden save (the builder's background auto-save, a painter nobody worked in) never
+      // rewrites an ElementType's Description: the Form note is often about one variant
+      // ("Joinery Bush 20mm") or an alias ("old code"), and the spec's own words are better.
+      if (note && (!embedded || sawWork.current)) updateElementType(e.etRef, { Description: note })
     }
 
     // 2. Collect what the Form says each PositionType uses. THIS IS ALL IT DOES.
