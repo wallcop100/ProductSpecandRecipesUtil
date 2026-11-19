@@ -266,6 +266,8 @@ function CodeCard({ c, many, familyOptions, elementTypes, edit, proposal, otherR
   // A family you pick renumbers the ref (famRef) unless you typed the ref yourself (AEST77).
   const ref = shownRef(edit, proposal)
   const family = edit?.family ?? proposal?.family ?? ''
+  const pickFam = f => ({ family: f, famRef: f ? refamily([{ code: c.code, manufacturer: proposal?.manufacturer, name: proposal?.name, description: proposal?.description }, ...otherRefs.map(ref => ({ ref }))], [0], f, elementTypes || [], useStore.getState().psRows)[0].ref : '',
+    ...(edit?.ref === '' && { ref: undefined }) })   // a cleared ref is not a typed one
   const fams = family && !familyOptions.includes(family) ? [family, ...familyOptions] : familyOptions
   const learned = proposal?.family && family === proposal.family && whyText(proposal)
   const ctl = { ...mono, fontSize: 11, height: 24, padding: '1px 5px' }
@@ -299,13 +301,12 @@ function CodeCard({ c, many, familyOptions, elementTypes, edit, proposal, otherR
         </div>
         <div className="col-5">
           <div style={lbl}>Family</div>
-          <Form.Select size="sm" style={{ ...ctl, paddingRight: 18, backgroundPosition: 'right 4px center' }} value={family}
+          {/* Type a family the project lacks, or pick one (T6FDCM); the New ElementType dialog creates it. */}
+          <Form.Control size="sm" style={ctl} value={family} list={`fams-${c.code}`} aria-label={`Family for ${c.code}`} placeholder="(none)"
             onChange={e => { const f = e.target.value
-              onEdit({ family: f, famRef: f ? refamily([{ code: c.code, manufacturer: proposal?.manufacturer, name: proposal?.name, description: proposal?.description }, ...otherRefs.map(ref => ({ ref }))], [0], f, elementTypes || [], useStore.getState().psRows)[0].ref : '',
-                ...(edit?.ref === '' && { ref: undefined }) }) /* a cleared ref is not a typed one */ }} aria-label={`Family for ${c.code}`}>
-            <option value="">(none)</option>
-            {fams.map(f => <option key={f} value={f}>{f}</option>)}
-          </Form.Select>
+              onEdit(familyOptions.includes(f) || !f ? pickFam(f) : { family: f }) }}
+            onBlur={() => { if (edit?.family && !familyOptions.includes(edit.family)) onEdit(pickFam(cleanRef(edit.family))) }} />
+          <datalist id={`fams-${c.code}`}>{fams.map(f => <option key={f} value={f} />)}</datalist>
         </div>
       </div>
       {learned && (

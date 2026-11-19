@@ -58,6 +58,17 @@ describe('Product Spec: family only, and fork', () => {
     expect(et.Family).toBe('ET-PS-MOUNTING-FRAME')
   })
 
+  test('T6FDCM: a typed family the project lacks is created, as a family', () => {
+    base()
+    render(<ETSpecEditor selectedRef="ET-2PIN-ORLUNA" onRenamed={vi.fn()} />)
+    fireEvent.click(screen.getByTestId('family-ref-open'))
+    fireEvent.change(screen.getByLabelText('Family'), { target: { value: 'ET-PS-SOCKETS' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
+    const ets = useStore.getState().elementTypes
+    expect(ets.find(e => e.ElementTypeRef === 'ET-2PIN-ORLUNA').Family).toBe('ET-PS-SOCKETS')
+    expect(ets.find(e => e.ElementTypeRef === 'ET-PS-SOCKETS')?.IsCollection).toBe('Y')
+  })
+
   test('Fork makes a new ElementType with a copy of the spec, and selects it', () => {
     base()
     const onRenamed = vi.fn()

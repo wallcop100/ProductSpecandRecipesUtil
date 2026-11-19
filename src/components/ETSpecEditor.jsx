@@ -14,7 +14,7 @@ import MaterialIcon from './MaterialIcon'
 import IconButton from './IconButton'
 import { familyOf } from '../utils/etRef'
 import { ACTION_ICONS } from '../utils/entityStyle'
-import { planFamilyMove, tidyRef, refIssues } from '../utils/etSeed'
+import { planFamilyMove, tidyRef, refIssues, cleanRef } from '../utils/etSeed'
 import { familyFix, codeElsewhere, refNumberFix } from '../utils/specSuggest'
 import { C } from '../styles/tokens'
 import { familyOptionsOf } from './NewETModal'
@@ -518,8 +518,9 @@ function FamilyAndRef({ et, inDb, onRenamed }) {
     const to = target && target !== ref ? target : ref
     // Rename first: the DesignDB row it lacks is then queued under the new ref (an untidy old one is refused).
     if (to !== ref) renameElementType(ref, to)
-    if (!inDb) createElementType({ ref: to, description: et.Description || null, family: fam || null })
-    else if (fam !== family) moveElementTypesToFamily([to], fam, { renumber: false })
+    // The move creates a family the project lacks (T6FDCM), so a new row joins its family through it too.
+    if (!inDb) createElementType({ ref: to, description: et.Description || null, family: null })
+    if (fam ? fam !== family || !inDb : inDb && fam !== family) moveElementTypesToFamily([to], fam, { renumber: false })
     setOpen(false)
     if (target && target !== ref) onRenamed?.(target)
   }
@@ -551,10 +552,10 @@ function FamilyAndRef({ et, inDb, onRenamed }) {
       <div className="d-flex gap-2 align-items-end flex-wrap">
         <Form.Group>
           <Form.Label className="mb-0" style={{ fontSize: 11 }}>Family</Form.Label>
-          <Form.Select size="sm" aria-label="Family" value={fam} onChange={e => pickFamily(e.target.value)} style={{ fontSize: 12, width: 230 }}>
-            <option value="">(no family)</option>
-            {families.map(f => <option key={f} value={f}>{f}</option>)}
-          </Form.Select>
+          {/* Pick one, or type a family the project lacks: Apply creates it (T6FDCM). */}
+          <Form.Control size="sm" aria-label="Family" value={fam} list={`fams-${ref}`} placeholder="(no family)"
+            onChange={e => pickFamily(e.target.value)} onBlur={() => setFam(f => cleanRef(f))} style={{ fontSize: 12, width: 230 }} />
+          <datalist id={`fams-${ref}`}>{families.map(f => <option key={f} value={f} />)}</datalist>
         </Form.Group>
         <Form.Group>
           <Form.Label className="mb-0" style={{ fontSize: 11 }}>Ref</Form.Label>

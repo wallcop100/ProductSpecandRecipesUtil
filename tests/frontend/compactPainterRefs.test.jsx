@@ -17,4 +17,16 @@ describe('AEST77: a family picked on one card skips the refs its neighbours show
     fireEvent.change(fam, { target: { value: 'ET-PS-ACCESSORIES' } })
     expect(screen.getByLabelText('Ref for HL54').value).toBe('ET-PS-ACCESSORIES-02')
   })
+
+  test('T6FDCM: a family the project lacks can be typed; leaving the box numbers the ref into it', () => {
+    const props = { 'GS10238/PCBRZ': { ref: 'ET-PS-ACCESSORIES-01', family: 'ET-PS-ACCESSORIES' }, HL54: { ref: 'ET-PS-ACCESSORIES-02', family: 'ET-PS-ACCESSORIES' } }
+    render(<CompactPositionPainter posRef="XT1" rows={[{ id: 0, manufacturer: 'LightGraphix', tokens: [], roles: [], rawText: '' }]}
+      info={() => ({ codes: [{ code: 'GS10238/PCBRZ' }, { code: 'HL54' }], loose: '' })}
+      proposalFor={c => props[c]} onSetRole={() => {}} onToggleConfirm={() => {}} onNeedsET={() => {}} onMakeMain={() => {}} />)
+    const fam = screen.getByLabelText('Family for HL54')
+    fireEvent.change(fam, { target: { value: 'ET-PS-LOUVRE' } })
+    expect(fam.value).toBe('ET-PS-LOUVRE')
+    fireEvent.blur(fam)
+    expect(screen.getByLabelText('Ref for HL54').value).toBe('ET-PS-LOUVRE-01')
+  })
 })
