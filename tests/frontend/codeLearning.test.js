@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest'
-import { makeRow, deriveCodes } from '../../src/utils/productCodes.js'
+import { makeRow, deriveCodes, deriveCaptures } from '../../src/utils/productCodes.js'
 import {
   shapeOf, isPunctuation, setRule, revokeRule, resolveRoles, applyRules,
   ruleImpact, learnedRules, tokenFrequency, learnedCodeShapes, learnedSignals,
@@ -455,4 +455,28 @@ import { looksLikeProductCode } from '../../src/utils/codeHeuristics.js'
 describe('spec values are not product codes', () => {
   test.each(['AISI316L', 'L360', '2700K', 'IP67', '10x60'])('%s', w => expect(looksLikeProductCode(w)).toBe(false))
   test.each(['AR413', 'QC50', '7A3194.4XG'])('%s is a code', w => expect(looksLikeProductCode(w)).toBe(true))
+})
+
+test('ZAJ889: a lone bracket joins the code it balances, so the code is not split', () => {
+  const caps = text => {
+    const r = acceptSuggestions(makeRow(0, text, { manufacturer: 'LightGraphix' }))
+    return deriveCaptures({ ...r, roles: r.tokens.map((_, i) => r.overrides[i] || r.roles[i]) }).captures.map(c => c.code)
+  }
+  expect(caps('LD53 (LT2000)/927/PCBRZ/GSAT53-9\nSpike')).toEqual(['LD53 (LT2000)/927/PCBRZ/GSAT53-9'])
+  expect(caps('LD38C-C1-350/LW27/EOB/PFAB + GS38(PFAB )')).toEqual(['LD38C-C1-350/LW27/EOB/PFAB', 'GS38(PFAB )'])
+  expect(caps('(FPSN0809BG2000)')).toEqual(['FPSN0809BG2000'])
+})
+
+test('Villa Form: a lamp base is not a code, a code repeated in its note is one capture, "+" stays out of notes', () => {
+  const caps = text => {
+    const r = acceptSuggestions(makeRow(0, text, { manufacturer: 'M' }))
+    return deriveCaptures({ ...r, roles: r.tokens.map((_, i) => r.overrides[i] || r.roles[i]) }).captures.map(c => [c.code, c.note])
+  }
+  expect(caps('1317003 + 6004162\nLED Lamp GU10').map(c => c[0])).toEqual(['1317003', '6004162'])
+  expect(caps('4.0050.30.12 + 9.0050.00.70\n1/2 Anti-glare ring 9.0050.00.70,')).toEqual([
+    ['4.0050.30.12', ''], ['9.0050.00.70', '1/2 Anti-glare ring 9.0050.00.70'],
+  ])
+  expect(caps('LD51-C1-700/LW27/WB/PCBRZ + HC51/PCBRZ\nGround spike')).toEqual([
+    ['LD51-C1-700/LW27/WB/PCBRZ', ''], ['HC51/PCBRZ', 'Ground spike'],
+  ])
 })

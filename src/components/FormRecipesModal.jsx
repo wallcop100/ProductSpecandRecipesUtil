@@ -8,6 +8,7 @@ import { styleRecords, styleRuleOf, ruleForDims, GROUP_DIMS } from '../utils/rec
 import RecipeStylesWindow from './RecipeStylesWindow'
 import ProposalTable from './ProposalTable'
 import { C } from '../styles/tokens'
+import { live } from '../utils/derived'
 
 /**
  * FormRecipesModal — recipes for the imported positions, the way process.md builds them:
@@ -26,7 +27,7 @@ import { C } from '../styles/tokens'
 
 const groupTag = key => `form-group:${key}`
 const tagsOf = t => { const a = t.applicable_tags; if (Array.isArray(a)) return a; try { return JSON.parse(a || '[]') } catch { return [] } }
-const hasRecipe = (recipes, pos) => recipes.some(r => (r.PositionTypeRef || r.positionTypeRef) === pos && (r.IsDeleted || r.isDeleted) !== 'Y')
+const hasRecipe = (recipes, pos) => recipes.some(r => (r.PositionTypeRef || r.positionTypeRef) === pos && live(r))
 
 export default function FormRecipesModal({ show, onHide, posRefs, onOpenPosition, focusGroup = null }) {
   const state = useStore(s => s)
@@ -53,7 +54,7 @@ export default function FormRecipesModal({ show, onHide, posRefs, onOpenPosition
     // recipes, the company style guide when it is new (the company rule).
     const pid = useStore.getState().projectId
     Promise.resolve(pid != null ? window.electronAPI?.db?.getPref?.(pid, 'recipe_source') : null).then(v => {
-      const has = useStore.getState().recipes.some(r => (r.IsDeleted || r.isDeleted) !== 'Y')
+      const has = useStore.getState().recipes.some(r => live(r))
       useStore.setState({ recipeSource: v === 'guide' || v === 'styles' ? v : (has ? 'styles' : 'guide') })
     }).catch(() => {})
   }, [show])   // eslint-disable-line react-hooks/exhaustive-deps

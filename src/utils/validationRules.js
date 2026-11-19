@@ -12,6 +12,8 @@ import { productKey, hasProductIdentity } from './productCodes'
 import { DIM_QTY_COMPONENTS } from './constants.js'
 import { connectorGapsForPosition } from './collectionStatus.js'
 import { alignmentGaps } from './specAlignment.js'
+import { jobOf } from './codeJobs.js'
+import { live as isLive, etRefOf, entryRefOf } from './derived'
 
 // Ref-token vocabularies for tag-driven recipe checks. Tokens are matched as
 // hyphen-delimited segments of the (uppercased) ElementTypeRef, which avoids the
@@ -45,7 +47,6 @@ function allRowsFor(rsRows, ref) {
   return rsRows.filter(r => (r.positionTypeRef || r.PositionTypeRef) === ref)
 }
 
-const refOf = r => r.elementTypeRef || r.ElementTypeRef || ''
 
 /**
  * Run all validation rules against the current data.
@@ -61,7 +62,7 @@ const refOf = r => r.elementTypeRef || r.ElementTypeRef || ''
 const SPEC_RULES = new Set(['DUPLICATE_PRODUCT_CODE', 'MISSING_PRODUCT_CODE', 'MISSING_PRODUCT_SPEC_ROW', 'ELEMENT_TYPE_NOT_IN_DB'])
 
 export function runValidation(dbData, psRows, rsRows, positionUI,
-  { collections = [], containerETRefs = new Set(), collectionRefs = [], ignoredPosRefs = new Set(), recOf = null, members = null } = {}) {
+  { collections = [], containerETRefs = new Set(), collectionRefs = [], ignoredPosRefs = new Set(), recOf = null, members = null, codeSays = {} } = {}) {
   const issues = []
 
   issues.push(...checkMissingIsDesign(rsRows, positionUI))
@@ -78,12 +79,48 @@ export function runValidation(dbData, psRows, rsRows, positionUI,
   issues.push(...checkExteriorIPConnectors(rsRows, positionUI))
   issues.push(...checkMissingProductSpecs(psRows))
   issues.push(...checkDanglingElementTypeRefs(dbData, psRows, rsRows))
+  issues.push(...checkCurrentMismatch(dbData, psRows, rsRows))
   issues.push(...checkBlankRecipeContainer(rsRows))
+  issues.push(...checkTrimMismatch(dbData, psRows, rsRows, codeSays))
   issues.push(...checkSpecAlignment(dbData, psRows, rsRows, ignoredPosRefs, containerETRefs, collectionRefs))
 
   // Tag each issue with where its "fix" lives so the UI can route correctly.
   for (const i of issues) i.fixKind = SPEC_RULES.has(i.rule) ? 'spec' : 'position'
 
+  return issues
+}
+
+// ---------------------------------------------------------------------------
+// Rule — TRIM_MISMATCH
+// The position is described as trimless and a part's code is a trimmed one, or the
+// other way round. What a code says comes from a companion (codeSays); without one
+// the rule is silent. On 5642 this difference had the wrong fittings ordered.
+// ---------------------------------------------------------------------------
+const TRIM_WORDS = [['trimless', /\btrim\s?-?\s?less\b/i], ['trimmed', /\btrimmed\b/i]]
+function checkTrimMismatch(dbData, psRows, rsRows, codeSays) {
+  if (!Object.keys(codeSays || {}).length) return []
+  const live = isLive
+  const codeOf = new Map(psRows.filter(live).map(r => [String(etRefOf(r)).toUpperCase(), String(r.ProductCode || r.productCode || '').trim()]))
+  const issues = []
+  for (const pt of dbData?.position_types || []) {
+    const pos = pt.PositionTypeRef || pt.positionTypeRef
+    const said = TRIM_WORDS.filter(([, rx]) => rx.test(pt.Description || pt.description || '')).map(([w]) => w)
+    if (!pos || said.length !== 1) continue
+    const seen = new Set()
+    for (const r of rsRows) {
+      const ref = etRefOf(r)
+      if ((r.PositionTypeRef || r.positionTypeRef) !== pos || !live(r) || seen.has(ref.toUpperCase())) continue
+      seen.add(ref.toUpperCase())
+      const code = codeOf.get(ref.toUpperCase()) || ''
+      // Only the fitting: a plaster-in frame is named trimless whatever sits in it.
+      if (jobOf({ ref, code }).slot !== 'FITTING') continue
+      const c = codeSays[code.toUpperCase()]
+      if (c && c.says !== said[0]) issues.push({
+        severity: 'warning', rule: 'TRIM_MISMATCH', ref: pos,
+        message: `${pos} is described as ${said[0]}, but ${ref} has a ${c.says} code (${code}${c.segment ? `: ${c.segment} is the ${c.says} body` : ''}). Check the code before it is ordered.`,
+      })
+    }
+  }
   return issues
 }
 
@@ -97,13 +134,13 @@ function checkBlankRecipeContainer(rsRows) {
   const issues = []
   const seen = new Set()
   for (const r of rsRows || []) {
-    if ((r.IsDeleted || r.isDeleted) === 'Y') continue
+    if (!isLive(r)) continue
     if ((r.ContextType || r.contextType) !== 'ElementType') continue
     const container = String(r.ContextRef || r.contextRef || '').trim()
     if (container) continue
 
     const posRef = r.PositionTypeRef || r.positionTypeRef || null
-    const etRef = r.ElementTypeRef || r.elementTypeRef || '(unnamed)'
+    const etRef = etRefOf(r) || '(unnamed)'
     const key = `${posRef}::${etRef}`
     if (seen.has(key)) continue
     seen.add(key)
@@ -213,7 +250,7 @@ function checkRowRole(rsRows, positionUI) {
   const inScope = new Set(Object.keys(positionUI || {}))
   const issues = []
   for (const r of rsRows) {
-    if ((r.IsDeleted || r.isDeleted) === 'Y') continue
+    if (!isLive(r)) continue
     const posRef = r.positionTypeRef || r.PositionTypeRef
     if (!inScope.has(posRef)) continue
     const design = (r.isDesign || r.IsDesign) === 'Y'
@@ -222,7 +259,7 @@ function checkRowRole(rsRows, positionUI) {
       issues.push({
         severity: 'error',
         rule: 'ROW_HAS_BOTH_ROLES',
-        message: `${r.ElementTypeRef || r.elementTypeRef || 'A row'} in "${posRef}" is marked both the design element and a contract item.`,
+        message: `${etRefOf(r) || 'A row'} in "${posRef}" is marked both the design element and a contract item.`,
         ref: posRef,
       })
       continue
@@ -231,7 +268,7 @@ function checkRowRole(rsRows, positionUI) {
     issues.push({
       severity: 'error',
       rule: 'ROW_HAS_NO_ROLE',
-      message: `${r.ElementTypeRef || r.elementTypeRef || 'A row'} in "${posRef}" is neither the design element nor a contract item.`,
+      message: `${etRefOf(r) || 'A row'} in "${posRef}" is neither the design element nor a contract item.`,
       ref: posRef,
     })
   }
@@ -280,7 +317,7 @@ function checkDuplicateProductCode(psRows) {
   const seen = new Map()
 
   for (const row of psRows) {
-    if ((row.IsDeleted || row.isDeleted) === 'Y') continue
+    if (!isLive(row)) continue
     const code = (row.productCode || row.ProductCode || '').trim()
     if (!hasProductIdentity(code)) continue   // "N/A" names no product
     if (/\b(tbc|tba|tbd)\b|custom/i.test(code)) continue   // "TBC Custom" twice is two products not chosen yet
@@ -288,7 +325,7 @@ function checkDuplicateProductCode(psRows) {
     const manufacturer = (row.Manufacturer || row.manufacturer || '').trim()
     const key = productKey(manufacturer, code)
     if (seen.has(key)) seen.get(key).count++
-    else seen.set(key, { count: 1, code, manufacturer, ref: row.elementTypeRef || row.ElementTypeRef || null })
+    else seen.set(key, { count: 1, code, manufacturer, ref: entryRefOf(row) || null })
   }
 
   for (const info of seen.values()) {
@@ -324,7 +361,7 @@ function checkMissingLockingLever(rsRows, positionUI) {
     )
 
     const hasLever = posRows.some(r => {
-      const etRef = ((r.elementTypeRef || r.ElementTypeRef) || '').toUpperCase()
+      const etRef = ((entryRefOf(r)) || '').toUpperCase()
       return etRef.includes('LLOCK') || etRef.includes('LEVER')
     })
 
@@ -349,11 +386,11 @@ function checkQtyAndDimMult(rsRows) {
   const issues = []
   const set = v => v !== null && v !== undefined && v !== ''
   for (const row of rsRows || []) {
-    if ((row.IsDeleted || row.isDeleted) === 'Y') continue
+    if (!isLive(row)) continue
     const qty = row.Quantity ?? row.quantity
     const mult = row.Dim_QuantityMultiplier ?? row.dimQtyMultiplier ?? row.DimQtyMultiplier
     if (!set(qty) || !set(mult)) continue
-    const etRef = row.ElementTypeRef || row.elementTypeRef || '(unnamed)'
+    const etRef = etRefOf(row) || '(unnamed)'
     issues.push({
       severity: 'error',
       rule: 'QTY_AND_DIM_MULT',
@@ -373,7 +410,7 @@ function checkDimQtyMultNotOne(rsRows) {
   const issues = []
 
   for (const row of rsRows) {
-    const etRef = ((row.elementTypeRef || row.ElementTypeRef) || '').toUpperCase()
+    const etRef = ((entryRefOf(row)) || '').toUpperCase()
     const isDimComponent = DIM_QTY_COMPONENTS.some(token => etRef.includes(token))
     if (!isDimComponent) continue
 
@@ -405,7 +442,7 @@ function checkMissingClipsDimQty(rsRows, positionUI) {
 
     const clipRows = rsRows.filter(r => {
       const ptRef = r.positionTypeRef || r.PositionTypeRef
-      const etRef = ((r.elementTypeRef || r.ElementTypeRef) || '').toUpperCase()
+      const etRef = ((entryRefOf(r)) || '').toUpperCase()
       return ptRef === ref && etRef.includes('CLIP')
     })
 
@@ -462,7 +499,7 @@ function checkLocalDriverRequirements(rsRows, positionUI) {
 
     const posRows = positionLevelRows(rsRows, ref)
 
-    if (!allRows.some(r => refHasToken(refOf(r), DRIVER_TOKENS))) {
+    if (!allRows.some(r => refHasToken(entryRefOf(r), DRIVER_TOKENS))) {
       issues.push({
         severity: 'warning',
         rule: 'LOCAL_MISSING_DRIVER',
@@ -472,9 +509,9 @@ function checkLocalDriverRequirements(rsRows, positionUI) {
     }
 
     // Does THIS position do connectors? If not, it is not missing half a kit.
-    if (!allRows.some(r => refHasToken(refOf(r), CONNECTOR_KIT_TOKENS))) continue
+    if (!allRows.some(r => refHasToken(entryRefOf(r), CONNECTOR_KIT_TOKENS))) continue
 
-    if (!posRows.some(r => refHasToken(refOf(r), SOCKET_TOKENS))) {
+    if (!posRows.some(r => refHasToken(entryRefOf(r), SOCKET_TOKENS))) {
       issues.push({
         severity: 'warning',
         rule: 'LOCAL_MISSING_SITE_SOCKET',
@@ -482,7 +519,7 @@ function checkLocalDriverRequirements(rsRows, positionUI) {
         ref,
       })
     }
-    if (!posRows.some(r => refHasToken(refOf(r), STRAIN_RELIEF_TOKENS))) {
+    if (!posRows.some(r => refHasToken(entryRefOf(r), STRAIN_RELIEF_TOKENS))) {
       issues.push({
         severity: 'warning',
         rule: 'LOCAL_MISSING_STRAIN_RELIEF',
@@ -535,7 +572,7 @@ function checkUnresolvedTemplateSlots(rsRows) {
   const byPos = new Map()
   for (const r of rsRows) {
     if (r.resolved !== false) continue
-    if ((r.IsDeleted || r.isDeleted) === 'Y') continue
+    if (!isLive(r)) continue
     const ref = r.positionTypeRef || r.PositionTypeRef
     if (!ref) continue
     if (!byPos.has(ref)) byPos.set(ref, [])
@@ -556,7 +593,7 @@ function checkUnresolvedTemplateSlots(rsRows) {
 function checkMissingProductSpecs(psRows) {
   return psRows
     .filter(r => {
-      if ((r.IsDeleted || r.isDeleted) === 'Y') return false
+      if (!isLive(r)) return false
       if ((r.IsTBC || r.isTBC) === 'Y') return false
       const code = (r.ProductCode || r.productCode || '').trim()
       return !code
@@ -564,9 +601,40 @@ function checkMissingProductSpecs(psRows) {
     .map(r => ({
       severity: 'warning',
       rule: 'MISSING_PRODUCT_CODE',
-      message: `"${r.ElementTypeRef || r.elementTypeRef}" has no ProductCode and is not marked TBC.`,
-      ref: r.ElementTypeRef || r.elementTypeRef || null,
+      message: `"${etRefOf(r)}" has no ProductCode and is not marked TBC.`,
+      ref: etRefOf(r) || null,
     }))
+}
+
+// ---------------------------------------------------------------------------
+// Rule — CURRENT_MISMATCH
+// A driver's code ends in the current it is set to (SL0560A3-700mA). When the
+// ElementType's ref (ET-CCR-D-350-…) or its description ("mA: 350") names another,
+// one of them is wrong and the code is what gets ordered (5489, 5351).
+// ---------------------------------------------------------------------------
+function checkCurrentMismatch(dbData, psRows, rsRows) {
+  const descOf = new Map(((dbData && dbData.element_types) || []).map(e =>
+    [String(etRefOf(e)).toUpperCase(), String(e.Description || e.description || '')]))
+  const issues = []
+  for (const r of psRows) {
+    if (!isLive(r)) continue
+    const ref = String(etRefOf(r))
+    const code = String(r.ProductCode || r.productCode || '').trim()
+    const mA = /-(\d{2,4})\s*mA\b/i.exec(code)?.[1]
+    if (!mA) continue
+    const inRef = /^ET-CC\w*-\w-(\d{2,4})-/i.exec(ref)?.[1]
+    // one current in the description, or it is a range and says nothing about the setting
+    const inDesc = [...new Set([...(descOf.get(ref.toUpperCase()) || '').matchAll(/\bmA\s*:\s*(\d{2,4})\b|(?<![\d-])(\d{2,4})\s*mA\b/gi)].map(m => m[1] || m[2]))]
+    const other = inRef && inRef !== mA ? ['ref', inRef] : inDesc.length === 1 && inDesc[0] !== mA ? ['description', inDesc[0]] : null
+    // one per position that uses it: the position's pip is where a warning is seen
+    const users = new Set(rsRows.filter(x => isLive(x) && String(etRefOf(x)).toUpperCase() === ref.toUpperCase())
+      .map(x => x.PositionTypeRef || x.positionTypeRef).filter(Boolean))
+    if (other) for (const pos of users) issues.push({
+      severity: 'warning', rule: 'CURRENT_MISMATCH', ref: pos,
+      message: `${ref} has a ${mA}mA code (${code}), but its ${other[0]} says ${other[1]}mA. Check the code before it is ordered.`,
+    })
+  }
+  return issues
 }
 
 // ---------------------------------------------------------------------------
@@ -583,9 +651,9 @@ function checkDanglingElementTypeRefs(dbData, psRows, rsRows) {
   const live = new Set()
   const deleted = new Set()
   for (const e of ets) {
-    const ref = (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase()
+    const ref = (etRefOf(e)).toLowerCase()
     if (!ref) continue
-    if ((e.IsDeleted || e.isDeleted) === 'Y') deleted.add(ref)
+    if (!isLive(e)) deleted.add(ref)
     else live.add(ref)
   }
 
@@ -610,15 +678,15 @@ function checkDanglingElementTypeRefs(dbData, psRows, rsRows) {
   }
 
   for (const r of rsRows) {
-    if ((r.IsDeleted || r.isDeleted) === 'Y') continue
-    check(r.ElementTypeRef || r.elementTypeRef, 'A recipe row')
+    if (!isLive(r)) continue
+    check(etRefOf(r), 'A recipe row')
     if ((r.ContextType || r.contextType) === 'ElementType') {
       check(r.ContextRef || r.contextRef, 'A recipe container')
     }
   }
   for (const r of psRows) {
-    if ((r.IsDeleted || r.isDeleted) === 'Y') continue
-    check(r.ElementTypeRef || r.elementTypeRef, 'A product-spec row')
+    if (!isLive(r)) continue
+    check(etRefOf(r), 'A product-spec row')
   }
 
   return issues
@@ -637,10 +705,10 @@ function checkExteriorIPConnectors(rsRows, positionUI) {
     if (!tags.includes('Exterior') && !tags.includes('IP-Rated')) continue
 
     const connectorRows = allRowsFor(rsRows, ref)
-      .filter(r => refHasToken(refOf(r), CONNECTOR_TOKENS))
+      .filter(r => refHasToken(entryRefOf(r), CONNECTOR_TOKENS))
     if (connectorRows.length === 0) continue
 
-    const nonIp = connectorRows.filter(r => !refHasToken(refOf(r), ['IP']))
+    const nonIp = connectorRows.filter(r => !refHasToken(entryRefOf(r), ['IP']))
     if (nonIp.length > 0) {
       issues.push({
         severity: 'warning',

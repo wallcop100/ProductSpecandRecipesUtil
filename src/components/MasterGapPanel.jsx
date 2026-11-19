@@ -3,6 +3,8 @@ import { Button, Form } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { useCompanion } from '../platform/companion'
+import { jobOf, familyForJob, familiesForJob } from '../utils/codeJobs'
+import { familyNames, familyRowRefs, refKey, etRefOf } from '../utils/derived'
 import { C } from '../styles/tokens'
 
 /**
@@ -25,6 +27,7 @@ const CONF = {
   confident: { bg: C.subtle, fg: C.ink, label: 'confident' },
   house:     { bg: C.accentTint, fg: C.accentInk, label: 'house style' },
   guess:     { bg: C.attnTint, fg: C.attnInk, label: 'guess' },
+  words:     { bg: C.attnTint, fg: C.attnInk, label: 'from its words' },
   none:      { bg: C.subtle, fg: C.muted, label: 'no family' },
 }
 
@@ -56,6 +59,23 @@ export default function MasterGapPanel({ gaps }) {
     return m
   }, [families])
 
+  // No sibling and no house style (DALI-CV-1CH, 5PWQ9L): the job its ref and name describe, filed
+  // where this project files that job, else the house family for it if the workbook has it.
+  const wordsFamilyOf = useMemo(() => {
+    const rows = familyRowRefs(elementTypes, dbCollectionRefs)
+    const m = {}
+    for (const p of proposals) {
+      const job = jobOf({ ref: p.ref, name: p.name, description: p.details || '' })
+      const house = familyForJob(job)
+      if (!house) continue
+      const own = [...familiesForJob(job, { elementTypes, familyRows: rows })].find(f => f !== house.family.toUpperCase())
+      // Only a family the workbook has: Apply creates house-style families, not these.
+      if (own) m[p.ref] = elementTypes.map(e => etRefOf(e)).find(r => String(r).toUpperCase() === own) || own
+      else if (rows.has(house.family.toUpperCase())) m[p.ref] = house.family
+    }
+    return m
+  }, [proposals, elementTypes, dbCollectionRefs])
+
   // Which family each ref gets: a confident sibling guess, else the house-style family.
   // Never clobber a choice the user has already made.
   const [chosen, setChosen] = useState({})
@@ -67,10 +87,11 @@ export default function MasterGapPanel({ gaps }) {
         if (p.guess?.confident) next[p.ref] = p.guess.parent
         else if (styleFamilyOf[p.ref]) next[p.ref] = styleFamilyOf[p.ref]
         else if (p.guess) next[p.ref] = p.guess.parent
+        else if (wordsFamilyOf[p.ref]) next[p.ref] = wordsFamilyOf[p.ref]
       }
       return next
     })
-  }, [proposals, styleFamilyOf])
+  }, [proposals, styleFamilyOf, wordsFamilyOf])
 
   if (proposals.length === 0) return null
 
@@ -80,18 +101,18 @@ export default function MasterGapPanel({ gaps }) {
   // Every collection worth offering: those the workbook already has, those the guesses
   // point at, and the house-style families — so a family stays selectable even after it
   // has been created.
-  const collOptions = [...new Set([
-    ...dbCollectionRefs,
-    ...elementTypes.filter(e => (e.IsCollection || e.isCollection) === 'Y').map(e => e.ElementTypeRef || e.elementTypeRef),
+  const collOptions = [...new Map([
+    ...familyNames(elementTypes, dbCollectionRefs).values(),
     ...proposals.map(p => p.guess?.parent).filter(Boolean),
     ...families.map(f => f.ref),
     ...Object.values(chosen).filter(Boolean),
-  ].filter(Boolean))].sort()
+  ].filter(Boolean).reverse().map(f => [refKey(f), f])).values()].sort()
 
   const familyLabel = p => {
     if (p.guess?.confident) return CONF.confident
     if (chosen[p.ref] && chosen[p.ref] === styleFamilyOf[p.ref]) return CONF.house
     if (p.guess) return CONF.guess
+    if (chosen[p.ref] && chosen[p.ref] === wordsFamilyOf[p.ref]) return CONF.words
     return CONF.none
   }
 
@@ -173,7 +194,8 @@ export default function MasterGapPanel({ gaps }) {
                     </div>
                     <span className="rounded px-1" style={{ background: style.bg, color: style.fg, flexShrink: 0 }}
                       title={p.guess ? `matched ${p.guess.segments} ref segments against ${p.guess.via}`
-                        : chosen[p.ref] ? 'from the house style guide' : 'nothing in the DesignDB resembles this ref'}>
+                        : chosen[p.ref] && chosen[p.ref] === wordsFamilyOf[p.ref] ? 'from what its ref and name describe; check it'
+                          : chosen[p.ref] ? 'from the house style guide' : 'nothing in the DesignDB resembles this ref'}>
                       {style.label}
                     </span>
                     <Form.Select size="sm" style={{ width: 190, fontSize: 10, flexShrink: 0 }}

@@ -163,3 +163,15 @@ describe('the page is sticky across visits', () => {
     expect(useStore.getState().screenView).toEqual({})
   })
 })
+
+describe('a spent open-spec intent does not hijack Edit (ECCFDK)', () => {
+  test('an intent with nothing to open is consumed on arrival', () => {
+    useStore.getState().openSpec('ET-B')
+    const { unmount } = render1()
+    expect(useStore.getState().specIntent).toBeNull()
+    unmount()
+    // Later, Edit on ET-A's card opens the Product Spec on ET-A, not ET-B.
+    render(<ProductSpecScreen onBack={() => {}} scrollToRef="ET-A" />)
+    expect(useStore.getState().screenView['product-spec'].selectedRef).toBe('ET-A')
+  })
+})

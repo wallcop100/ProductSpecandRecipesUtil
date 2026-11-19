@@ -16,10 +16,9 @@
  */
 
 import { wrapperUsedBy } from './collectionStatus'
+import { live, etRefOf } from './derived'
 
 const lc = s => String(s ?? '').trim().toLowerCase()
-const live = r => (r.IsDeleted || r.isDeleted) !== 'Y'
-const etOf = r => r.ElementTypeRef || r.elementTypeRef || ''
 const posOf = r => r.PositionTypeRef || r.positionTypeRef || ''
 const ctxOf = r => r.ContextType || r.contextType
 const crefOf = r => r.ContextRef || r.contextRef || ''
@@ -46,7 +45,7 @@ export function planSwap(recipes = [], fromRef, toRef, { scope = SCOPE.EVERYWHER
   const empty = { rows: [], positions: [], sharedWrappers: [], skipped: [], counts: { rows: 0, positions: 0, shared: 0, skipped: 0 } }
   if (!from || !to || from === to) return empty
 
-  const candidates = recipes.filter(r => live(r) && lc(etOf(r)) === from)
+  const candidates = recipes.filter(r => live(r) && lc(etRefOf(r)) === from)
 
   const inScope = r => {
     if (scope === SCOPE.ROW) return r._id === rowId
@@ -113,7 +112,7 @@ export function planSwap(recipes = [], fromRef, toRef, { scope = SCOPE.EVERYWHER
 export function alreadySwapped(recipes = [], toRef, { scope = SCOPE.EVERYWHERE, posRef = null } = {}) {
   const to = lc(toRef)
   return recipes.filter(r => {
-    if (!live(r) || lc(etOf(r)) !== to) return false
+    if (!live(r) || lc(etRefOf(r)) !== to) return false
     if (scope === SCOPE.POSITION) return posOf(r) === posRef
     return scope !== SCOPE.ROW
   }).length

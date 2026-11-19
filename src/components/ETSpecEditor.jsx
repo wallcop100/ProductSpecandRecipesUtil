@@ -8,16 +8,18 @@ import { getCompanion, useCompanion } from '../platform/companion'
 import { retiredFor, fitsRecipe, newerCodes } from '../platform/retired'
 import { MaybeReplaced, NotRightModal, sendCorrection, sendNote, noteCodeChange } from './Corrections'
 import CopyButton from './CopyButton'
+import PsOnlyChip, { usePsOnlyRefs } from './PsOnlyChip'
 import EntityPill from './EntityPill'
 import MaterialIcon from './MaterialIcon'
 import IconButton from './IconButton'
 import { familyOf } from '../utils/etRef'
 import { ACTION_ICONS } from '../utils/entityStyle'
-import { CANON_FAMILIES } from '../data/etCanon'
-import { planFamilyMove } from '../utils/etSeed'
+import { planFamilyMove, tidyRef, refIssues, cleanRef } from '../utils/etSeed'
 import { familyFix, codeElsewhere, refNumberFix } from '../utils/specSuggest'
 import { C } from '../styles/tokens'
+import { familyOptionsOf } from './NewETModal'
 import { looksLikeProductCode } from '../utils/codeHeuristics'
+import { live as isLive, etRefOf } from '../utils/derived'
 
 /**
  * ETSpecEditor — right-panel form for editing a single ET's product spec.
@@ -39,6 +41,7 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
   const psRows      = useStore(s => s.psRows)
   const recipes     = useStore(s => s.recipes)
   const updatePSRow = useStore(s => s.updatePSRow)
+  const applyFinish = useStore(s => s.applyFinish)
   const addPSRow    = useStore(s => s.addPSRow)
   const elementTypes = useStore(s => s.elementTypes)
   const mfrInputRef = useRef(null)
@@ -61,7 +64,7 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
 
   const psRow = useMemo(() =>
     psRows.find(r =>
-      (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === (selectedRef || '').toLowerCase()
+      (etRefOf(r)).toLowerCase() === (selectedRef || '').toLowerCase()
     )
   , [psRows, selectedRef])
 
@@ -70,10 +73,11 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
 
   const etObj = useMemo(() =>
     elementTypes.find(e =>
-      (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === (selectedRef || '').toLowerCase()
+      (etRefOf(e)).toLowerCase() === (selectedRef || '').toLowerCase()
     )
   , [elementTypes, selectedRef])
   const etFamily = selectedRef ? familyOf(selectedRef, etObj) : null
+  const psOnly = usePsOnlyRefs()
 
   const similar = useMemo(() => {
     if (!selectedRef || !etFamily || !psRow) return null
@@ -81,9 +85,9 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
     const mfr  = psRow.Manufacturer || psRow.manufacturer
     if (code && mfr) return null
     return psRows.find(r => {
-      const rRef = r.ElementTypeRef || r.elementTypeRef || ''
+      const rRef = etRefOf(r)
       if (rRef.toLowerCase() === selectedRef.toLowerCase()) return false
-      const rEt = elementTypes.find(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === rRef.toLowerCase())
+      const rEt = elementTypes.find(e => (etRefOf(e)).toLowerCase() === rRef.toLowerCase())
       const rFamily = familyOf(rRef, rEt)
       return rFamily === etFamily && (r.ProductCode || r.productCode) && (r.Manufacturer || r.manufacturer)
     }) || null
@@ -138,8 +142,8 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
           Referenced in recipes but has no product spec entry.
           {/* Where (E2H3QX): each position using it, and the wrapper it sits in, if any. */}
           {(() => {
-            const live = recipes.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y'
-              && String(r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === String(selectedRef).toLowerCase())
+            const live = recipes.filter(r => isLive(r)
+              && String(etRefOf(r)).toLowerCase() === String(selectedRef).toLowerCase())
             const uses = getUsedIn(selectedRef, recipes).map(p => {
               const inside = [...new Set(live.filter(r => (r.PositionTypeRef || r.positionTypeRef) === p && (r.ContextType || r.contextType) === 'ElementType')
                 .map(r => r.ContextRef || r.contextRef))]
@@ -185,9 +189,10 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
   const manufacturer  = psRow.Manufacturer || psRow.manufacturer || ''
   const description   = psRow.ComponentDescription || psRow.componentDescription || ''
   const notes         = psRow.InternalNotesText || psRow.internalNotesText || ''
+  const extNotes      = psRow.ExternalNotesText || psRow.externalNotesText || ''
   const isTBC         = psRow.IsTBC || psRow.isTBC || null
   const isPropTBC     = psRow.IsPropertiesTBC || psRow.isPropertiesTBC || null
-  const isDeleted     = (psRow.IsDeleted || psRow.isDeleted) === 'Y'
+  const isDeleted     = !isLive(psRow)
   const retired       = retiredFor(retiredCodes, productCode)
 
   return (
@@ -196,7 +201,8 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
         {/* Header row */}
         <div className="d-flex align-items-start gap-2 mb-3">
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="fw-semibold" style={{ fontSize: 14, wordBreak: 'break-all' }}>{selectedRef}</div>
+            <div className="fw-semibold" style={{ fontSize: 14, wordBreak: 'break-all' }}>{selectedRef}
+              {psOnly.has(String(selectedRef).toLowerCase()) && <span className="ms-2 align-middle"><PsOnlyChip /></span>}</div>
             {etFamily && <div className="text-muted" style={{ fontSize: 11 }}>{etFamily}
               {fix && (
                 <Button variant="link" size="sm" className="p-0 ms-2 align-baseline" style={{ fontSize: 11 }} data-testid="family-fix"
@@ -268,7 +274,7 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
         {similar && !dismissedSimilar && !(elsewhere && !dismissedElsewhere) && (
           <div className="alert alert-warning py-2 px-3 mb-3 d-flex align-items-center gap-2" style={{ fontSize: 12 }}>
             <div className="flex-grow-1">
-              <strong>{similar.ElementTypeRef || similar.elementTypeRef}</strong>{' '}
+              <strong>{etRefOf(similar)}</strong>{' '}
               has: {similar.Manufacturer || similar.manufacturer} / {similar.ProductCode || similar.productCode}
             </div>
             <Button
@@ -384,6 +390,12 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
             style={{ fontSize: 12, resize: 'vertical' }}
             disabled={isDeleted}
           />
+          {/* Finish: appended in brackets to this and the ElementType's Description (NQLUFQ). */}
+          {!isDeleted && (
+            <Form.Control size="sm" className="mt-1" key={`finish-${selectedRef}-${description}`} aria-label="Finish"
+              placeholder="Add finish, e.g. RAL 9010 ↵" style={{ fontSize: 11, maxWidth: 260 }}
+              onKeyDown={e => { if (e.key === 'Enter' && e.target.value.trim()) { e.preventDefault(); applyFinish(selectedRef, e.target.value) } }} />
+          )}
         </Form.Group>
 
         {/* Flags + delete */}
@@ -399,24 +411,27 @@ export default function ETSpecEditor({ selectedRef, etUsedIn = {}, missingETs = 
           </div>
         </div>
 
-        {/* Internal notes (collapsed) */}
+        {/* Internal and external notes (collapsed) */}
         <div className="mb-3">
           <button
             className="btn btn-link btn-sm p-0 d-inline-flex align-items-center gap-1"
             style={{ fontSize: 11, textDecoration: 'none', color: C.muted }}
             onClick={() => setShowNotes(v => !v)}
           >
-            <MaterialIcon name={showNotes ? ACTION_ICONS.expand : ACTION_ICONS.collapse} size={14} /> Internal notes
+            <MaterialIcon name={showNotes ? ACTION_ICONS.expand : ACTION_ICONS.collapse} size={14} /> Notes
           </button>
-          {showNotes && (
-            <Form.Control
-              as="textarea" rows={3} size="sm"
-              key={`notes-${selectedRef}-${showNotes}`}
-              defaultValue={notes}
-              onBlur={e => { const v = e.target.value.trim(); if (v !== notes) updatePSRow(selectedRef, { InternalNotesText: v }) }}
-              style={{ fontSize: 12, resize: 'vertical', marginTop: 6 }}
-            />
-          )}
+          {showNotes && [['Internal notes', 'InternalNotesText', notes], ['External notes', 'ExternalNotesText', extNotes]].map(([label, col, val]) => (
+            <Form.Group key={col} className="mt-2">
+              <Form.Label className="text-muted mb-1" style={{ fontSize: 11 }}>{label}</Form.Label>
+              <Form.Control
+                as="textarea" rows={3} size="sm" aria-label={label}
+                key={`${col}-${selectedRef}`}
+                defaultValue={val}
+                onBlur={e => { const v = e.target.value.trim(); if (v !== val) updatePSRow(selectedRef, { [col]: v }) }}
+                style={{ fontSize: 12, resize: 'vertical' }}
+              />
+            </Form.Group>
+          ))}
         </div>
 
         {/* Used-in */}
@@ -471,7 +486,7 @@ function FamilyAndRef({ et, inDb, onRenamed }) {
   const renameElementType = useStore(s => s.renameElementType)
   const forkElementType = useStore(s => s.forkElementType)
   const createElementType = useStore(s => s.createElementType)
-  const ref = et.ElementTypeRef || et.elementTypeRef
+  const ref = etRefOf(et)
   const family = et.Family || et.family || ''
   // Opened from Find or a hint: already open, with the suggested ref typed in.
   const intent = useStore(s => s.specIntent)
@@ -485,11 +500,11 @@ function FamilyAndRef({ et, inDb, onRenamed }) {
     if (asked.suggest) setNewRef(asked.suggest)
     useStore.getState().consumeSpecIntent()
   }, [asked?.at])   // eslint-disable-line react-hooks/exhaustive-deps
-  const families = useMemo(() => [...new Set([
-    ...elementTypes.map(e => e.Family || e.family).filter(Boolean),
-    ...elementTypes.filter(e => (e.IsCollection || e.isCollection) === 'Y').map(e => e.ElementTypeRef),
-    ...CANON_FAMILIES.map(f => f.ref),
-  ])].sort(), [elementTypes])
+  const dbCollectionRefs = useStore(s => s.dbCollectionRefs)
+  // VHCCAF: the same list the New ElementType dialog offers; a wrapper (ET-DL-01) is not a family.
+  const families = useMemo(() => familyOptionsOf(elementTypes, dbCollectionRefs), [elementTypes, dbCollectionRefs])
+  const psRows = useStore(s => s.psRows)
+  const tidy = useMemo(() => tidyRef(ref, [...elementTypes, ...psRows].map(e => etRefOf(e)).filter(Boolean)), [ref, elementTypes, psRows])
   const taken = r => r.toLowerCase() !== ref.toLowerCase()
     && elementTypes.some(e => (e.ElementTypeRef || '').toLowerCase() === r.toLowerCase())
 
@@ -500,9 +515,12 @@ function FamilyAndRef({ et, inDb, onRenamed }) {
   const ensure = f => { if (!inDb) createElementType({ ref, description: et.Description || null, family: f || null }) }
   function apply() {
     const target = newRef.trim()
-    ensure(fam)
-    if (fam !== family) moveElementTypesToFamily([ref], fam, { renumber: false })
-    if (target && target !== ref) renameElementType(ref, target)
+    const to = target && target !== ref ? target : ref
+    // Rename first: the DesignDB row it lacks is then queued under the new ref (an untidy old one is refused).
+    if (to !== ref) renameElementType(ref, to)
+    // The move creates a family the project lacks (T6FDCM), so a new row joins its family through it too.
+    if (!inDb) createElementType({ ref: to, description: et.Description || null, family: null })
+    if (fam ? fam !== family || !inDb : inDb && fam !== family) moveElementTypesToFamily([to], fam, { renumber: false })
     setOpen(false)
     if (target && target !== ref) onRenamed?.(target)
   }
@@ -514,6 +532,12 @@ function FamilyAndRef({ et, inDb, onRenamed }) {
           data-testid="family-ref-open">
           <MaterialIcon name="drive_file_move" size={13} /> Change family or ref
         </Button>
+        {tidy && (
+          <Button variant="link" size="sm" className="p-0 ms-3" style={{ fontSize: 11 }} data-testid="tidy-ref"
+            title="Refs never hold whitespace or an empty part" onClick={() => { setNewRef(tidy); setOpen(true) }}>
+            <MaterialIcon name="cleaning_services" size={13} /> Tidy ref → <span style={{ fontFamily: 'monospace' }}>{tidy}</span>
+          </Button>
+        )}
         <Button variant="link" size="sm" className="p-0 ms-3" style={{ fontSize: 11 }} data-testid="fork-et"
           title="Fork: a new ElementType in the same family with a copy of this one's Product Spec, to change on its own"
           onClick={() => { ensure(family); const r = forkElementType(ref); if (r) onRenamed?.(r) }}>
@@ -522,16 +546,16 @@ function FamilyAndRef({ et, inDb, onRenamed }) {
       </div>
     )
   }
-  const bad = !newRef.trim() ? 'needs a ref' : taken(newRef.trim()) ? 'already used' : null
+  const bad = !newRef.trim() ? 'needs a ref' : taken(newRef.trim()) ? 'already used' : refIssues(newRef).clean !== newRef.trim() ? 'no spaces in a ref' : refIssues(newRef).empty && newRef.trim() !== ref ? 'has an empty part (-- or a - at the end)' : null
   return (
     <div className="mb-3 p-2 rounded" style={{ background: C.subtle, border: `1px solid ${C.border}`, fontSize: 12 }} data-testid="family-ref">
       <div className="d-flex gap-2 align-items-end flex-wrap">
         <Form.Group>
           <Form.Label className="mb-0" style={{ fontSize: 11 }}>Family</Form.Label>
-          <Form.Select size="sm" aria-label="Family" value={fam} onChange={e => pickFamily(e.target.value)} style={{ fontSize: 12, width: 230 }}>
-            <option value="">(no family)</option>
-            {families.map(f => <option key={f} value={f}>{f}</option>)}
-          </Form.Select>
+          {/* Pick one, or type a family the project lacks: Apply creates it (T6FDCM). */}
+          <Form.Control size="sm" aria-label="Family" value={fam} list={`fams-${ref}`} placeholder="(no family)"
+            onChange={e => pickFamily(e.target.value)} onBlur={() => setFam(f => cleanRef(f).toUpperCase())} style={{ fontSize: 12, width: 230 }} />
+          <datalist id={`fams-${ref}`}>{families.map(f => <option key={f} value={f} />)}</datalist>
         </Form.Group>
         <Form.Group>
           <Form.Label className="mb-0" style={{ fontSize: 11 }}>Ref</Form.Label>

@@ -5,6 +5,7 @@ import { Button, Form, Popover, Overlay, Dropdown } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import ETSpecBrowser from '../components/ETSpecBrowser'
 import { useScreenView } from '../components/useScreenView'
+import { useAlignmentGaps } from '../components/useTemplateMatches'
 import { skippedRefs } from '../utils/specChecks'
 import ETSpecEditor  from '../components/ETSpecEditor'
 import ChangeSummaryModal from '../components/ChangeSummaryModal'
@@ -17,6 +18,7 @@ import SurfaceSwitch from '../components/SurfaceSwitch'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { duplicateProductKeys } from '../utils/productCodes'
 import { C } from '../styles/tokens'
+import { live, etRefOf } from '../utils/derived'
 
 /**
  * ProductSpecScreen — split-panel product spec editor.
@@ -35,7 +37,6 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
   const deleteElementType = useStore(s => s.deleteElementType)
   const elementTypes = useStore(s => s.elementTypes)
   const positionTypes = useStore(s => s.positionTypes)
-  const alignmentGaps = useStore(s => s.alignmentGaps)
 
   const undo = useStore(s => s.undo)
   const redo = useStore(s => s.redo)
@@ -77,18 +78,24 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
   useEffect(() => { if (scrollToRef) setSelectedRef(scrollToRef) }, [scrollToRef])
   // Find (src/help) opens the Product Spec on an ElementType; the editor opens the part asked for.
   const specIntent = useStore(s => s.specIntent)
-  useEffect(() => { if (specIntent?.ref) setSelectedRef(specIntent.ref) }, [specIntent])
+  // An intent with nothing to open is spent here; left in the store it re-selected its ET on the
+  // next visit, over the ET the Edit button asked for (ECCFDK). One with `open` is spent by ETSpecEditor.
+  useEffect(() => {
+    if (!specIntent?.ref) return
+    setSelectedRef(specIntent.ref)
+    if (!specIntent.open) useStore.getState().consumeSpecIntent()
+  }, [specIntent])   // eslint-disable-line react-hooks/exhaustive-deps
 
   // Usage map: ET ref (lower) → { positions: Set, elements: Set }
   const etUsedIn = useMemo(() => {
     const map = {}
-    const deletedPos = new Set(positionTypes.filter(p => (p.IsDeleted || p.isDeleted) === 'Y')
+    const deletedPos = new Set(positionTypes.filter(p => !live(p))
       .map(p => String(p.PositionTypeRef || p.positionTypeRef).toLowerCase()))
     for (const row of recipes) {
       // Deleted rows and deleted positions use nothing (report #61).
-      if ((row.IsDeleted || row.isDeleted) === 'Y') continue
+      if (!live(row)) continue
       if (deletedPos.has(String(row.PositionTypeRef || row.positionTypeRef || '').toLowerCase())) continue
-      const etRef      = row.ElementTypeRef || row.elementTypeRef
+      const etRef      = etRefOf(row)
       const ctxType    = row.ContextType    || row.contextType
       const ctxRef     = row.ContextRef     || row.contextRef
       if (!etRef || !ctxRef) continue
@@ -103,10 +110,7 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
   // ETs a recipe uses with no PS row. One definition, shared with validation and
   // the export summary (specAlignment) — this screen used to compute its own and
   // disagree with both, not least by counting deleted rows.
-  const gaps = useMemo(
-    () => alignmentGaps(),
-    [psRows, recipes, elementTypes, alignmentGaps]
-  )
+  const gaps = useAlignmentGaps()
   // Families the checks skip (cables by default; ⋯ → Checks skip).
   const specCheckSkip = useStore(s => s.specCheckSkip)
   const setSpecCheckSkip = useStore(s => s.setSpecCheckSkip)
@@ -114,7 +118,7 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
     ...elementTypes.map(e => e.Family || e.family).filter(Boolean), ...specCheckSkip,
   ])].sort(), [elementTypes, specCheckSkip])
   const skipped = useMemo(() => skippedRefs([
-    ...psRows.map(r => r.ElementTypeRef || r.elementTypeRef || ''),
+    ...psRows.map(r => etRefOf(r)),
     ...[...gaps.specRows.wrappers, ...gaps.specRows.products].map(g => g.ref),
   ], elementTypes, specCheckSkip), [psRows, gaps, elementTypes, specCheckSkip])
   const missingPsETs = useMemo(
@@ -130,8 +134,8 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
     // are two products, not a duplicate. See productCodes.duplicateProductKeys.
     const dupSet = duplicateProductKeys(psRows)
     for (const r of psRows) {
-      if ((r.IsDeleted || r.isDeleted) === 'Y') { deleted++; continue }
-      if (skipped.has((r.ElementTypeRef || r.elementTypeRef || '').toLowerCase())) { complete++; continue }
+      if (!live(r)) { deleted++; continue }
+      if (skipped.has((etRefOf(r)).toLowerCase())) { complete++; continue }
       const tbc  = (r.IsTBC || r.isTBC) === 'Y'
       const code = (r.ProductCode || r.productCode || '').trim()
       const mfr  = (r.Manufacturer || r.manufacturer || '').trim()
@@ -150,8 +154,8 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
   // as a fallback — ETSpecBrowser ↑/↓ keys are the primary keyboard nav)
   function handleNavigate(direction) {
     const allRefs = psRows
-      .filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
-      .map(r => r.ElementTypeRef || r.elementTypeRef)
+      .filter(r => live(r))
+      .map(r => etRefOf(r))
       .sort()
     const idx = allRefs.findIndex(r => r.toLowerCase() === (selectedRef || '').toLowerCase())
     if (direction === 'prev' && idx > 0) setSelectedRef(allRefs[idx - 1])
@@ -167,13 +171,13 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
   const incompleteRefs = useMemo(() => {
     const used = new Set()
     for (const r of recipes) {
-      if ((r.IsDeleted || r.isDeleted) === 'Y') continue
-      const ref = (r.ElementTypeRef || r.elementTypeRef || '').trim()
+      if (!live(r)) continue
+      const ref = (etRefOf(r)).trim()
       if (ref) used.add(ref)
     }
     const byRef = new Map()
     for (const r of psRows) {
-      const k = (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase()
+      const k = (etRefOf(r)).toLowerCase()
       if (k && !byRef.has(k)) byRef.set(k, r)
     }
     const has = v => String(v ?? '').trim() !== ''
@@ -181,7 +185,7 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
       .filter(ref => !skipped.has(ref.toLowerCase()))
       .filter(ref => {
         const ps = byRef.get(ref.toLowerCase())
-        if (ps && ((ps.IsDeleted || ps.isDeleted) === 'Y' || (ps.IsTBC || ps.isTBC) === 'Y')) return false
+        if (ps && (!live(ps) || (ps.IsTBC || ps.isTBC) === 'Y')) return false
         return !(ps && has(ps.Manufacturer || ps.manufacturer) && has(ps.ProductCode || ps.productCode))
       })
       .sort((a, b) => a.localeCompare(b))
@@ -218,9 +222,9 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
 
   function bulkSetNA() {
     for (const key of bulkSelected) {
-      const ref = psRows.find(r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === key)
+      const ref = psRows.find(r => (etRefOf(r)).toLowerCase() === key)
       if (ref) {
-        updatePSRow(ref.ElementTypeRef || ref.elementTypeRef, { Manufacturer: 'Ideaworks', ProductCode: 'N/A' })
+        updatePSRow(etRefOf(ref), { Manufacturer: 'Ideaworks', ProductCode: 'N/A' })
       } else {
         // Missing ET — create it
         addPSRow(
@@ -236,8 +240,8 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
     const trimmed = mfr.trim()
     if (!trimmed) return
     for (const key of bulkSelected) {
-      const ref = psRows.find(r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === key)
-      if (ref) updatePSRow(ref.ElementTypeRef || ref.elementTypeRef, { Manufacturer: trimmed })
+      const ref = psRows.find(r => (etRefOf(r)).toLowerCase() === key)
+      if (ref) updatePSRow(etRefOf(ref), { Manufacturer: trimmed })
     }
     clearBulk()
     setShowBulkMfr(false)
@@ -246,16 +250,16 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
 
   // Ticked ETs that are one product (same maker + code): the Merge… offer.
   const mergeRefs = useMemo(() => {
-    const rows = [...bulkSelected].map(k => psRows.find(r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === k)).filter(Boolean)
+    const rows = [...bulkSelected].map(k => psRows.find(r => (etRefOf(r)).toLowerCase() === k)).filter(Boolean)
     const key = r => productKey(r.Manufacturer || r.manufacturer, r.ProductCode || r.productCode)
     const same = rows.length > 1 && rows.every(r => key(r) === key(rows[0])) && hasProductIdentity(rows[0].ProductCode || rows[0].productCode)
-    return same ? rows.map(r => r.ElementTypeRef || r.elementTypeRef) : []
+    return same ? rows.map(r => etRefOf(r)) : []
   }, [bulkSelected, psRows])
 
   function bulkDelete() {
     for (const key of bulkSelected) {
-      const ref = psRows.find(r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === key)
-      if (ref) { deletePSRow(ref.ElementTypeRef || ref.elementTypeRef); deleteElementType(ref.ElementTypeRef || ref.elementTypeRef) }
+      const ref = psRows.find(r => (etRefOf(r)).toLowerCase() === key)
+      if (ref) { deletePSRow(etRefOf(ref)); deleteElementType(etRefOf(ref)) }
     }
     clearBulk()
   }

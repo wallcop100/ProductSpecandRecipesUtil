@@ -24,9 +24,9 @@
  */
 import { useEffect, useMemo, useState } from 'react'
 import { useCompanion } from '../../platform/companion'
-import { norm } from '../../utils/productCodes'
+import { codeKey } from '../../utils/derived'
 
-export const assignmentKey = (code, maker) => `${norm(maker || '')}|${norm(code)}`
+export const assignmentKey = (code, maker) => `${codeKey(maker || '')}|${codeKey(code)}`
 
 const EMPTY = { items: [], dialect: [] }
 
@@ -38,7 +38,7 @@ export function digest({ items = [], dialect = [] } = EMPTY) {
   }
   for (const it of items) {
     if (it.kind === 'assignment' && it.value?.ref) out.assignments.set(it.key, it.value.ref)
-    else if (it.kind === 'local-et') out.localEts.set(norm(it.key), { ref: it.key, ...(it.value || {}) })
+    else if (it.kind === 'local-et') out.localEts.set(codeKey(it.key), { ref: it.key, ...(it.value || {}) })
     else if (it.kind === 'rule' && it.value?.role) {
       out.rules[String(it.key).toLowerCase()] = it.value.role   // project beats dialect
       out.ruleTiers[String(it.key).toLowerCase()] = 'project'
@@ -57,11 +57,30 @@ export default function useProjectKnowledge(projectNumber) {
     setData(null)
     if (!api?.projectItems || !number) return
     let live = true
-    api.projectItems(number).then(d => { if (live && d) setData(d) })
+    api.projectItems(number).then(d => { if (live && d) setData(sinceDiscard(d, number)) })
     return () => { live = false }
   }, [api, number])
 
   return useMemo(() => (data ? { ready: true, ...digest(data) } : { ready: false, ...digest() }), [data])
+}
+
+const discardKey = n => `rb-discarded-${n}`
+
+/** Discard is scorched earth: what this project learned up to now is ignored in this browser. */
+export async function forgetLearning(api, projectNumber) {
+  const n = String(projectNumber || '').trim()
+  if (!api?.projectItems || !n) return
+  const d = await api.projectItems(n)
+  // The server's own clock, so the cut compares like with like.
+  const cut = (d?.items || []).reduce((m, it) => (it.updated_at > m ? it.updated_at : m), '')
+  if (cut) try { localStorage.setItem(discardKey(n), cut) } catch { /* learning comes back */ }
+}
+
+/** The learning without what came before this project's last Discard. Pure apart from the read. */
+export function sinceDiscard(data, projectNumber) {
+  let cut = ''
+  try { cut = localStorage.getItem(discardKey(String(projectNumber || '').trim())) || '' } catch { /* none */ }
+  return cut ? { ...data, items: (data.items || []).filter(it => (it.updated_at || '') > cut) } : data
 }
 
 /**
@@ -74,30 +93,22 @@ export function learnedRef(knowledge, entry, knownRefs) {
   const maker = entry.manufacturers?.length === 1 ? entry.manufacturers[0] : ''
   const ref = knowledge.assignments.get(assignmentKey(entry.text, maker))
   if (!ref) return null
-  return knownRefs.has(norm(ref)) ? ref : null
+  return knownRefs.has(codeKey(ref)) ? ref : null
 }
 
-/** Learned local ElementTypes this Form's codes need and this project does not have yet. */
-export function localEtsNeeded(knowledge, entries, knownRefs) {
-  if (!knowledge?.ready) return []
-  const out = new Map()
-  for (const e of entries) {
-    const maker = e.manufacturers?.length === 1 ? e.manufacturers[0] : ''
-    const ref = knowledge.assignments.get(assignmentKey(e.text, maker))
-    const et = ref && !knownRefs.has(norm(ref)) ? knowledge.localEts.get(norm(ref)) : null
-    if (et) out.set(norm(ref), et)
-  }
-  return [...out.values()]
-}
-
-/** What this session decided, for the next session on the project. Background; latest wins. */
+/**
+ * What this session decided, for the next session on the project. Background; latest wins.
+ * Only what the DesignDB holds is learned: a code given an ElementType made here (`localEts`,
+ * not exported yet) is not, so a fresh import or a Discard never brings that ref back.
+ */
 export function shareDecisions(api, projectNumber, { entries = [], rules = {}, keptSeparate = new Set(),
   merged = [], localEts = [] } = {}) {
   const number = String(projectNumber || '').trim()
   if (!api?.shareProjectItems || !number) return Promise.resolve(null)
+  const local = new Set(localEts.map(et => codeKey(et.ref || '')))
   const items = []
   for (const e of entries) {
-    if (!e.etRef || e.placeholder) continue
+    if (!e.etRef || e.placeholder || local.has(codeKey(e.etRef))) continue
     const maker = e.manufacturers?.length === 1 ? e.manufacturers[0] : ''
     items.push({ kind: 'assignment', key: assignmentKey(e.text, maker), value: { ref: e.etRef, code: e.text, maker } })
   }
@@ -107,9 +118,6 @@ export function shareDecisions(api, projectNumber, { entries = [], rules = {}, k
   }
   for (const k of keptSeparate) items.push({ kind: 'pair', key: k, value: { verdict: 'different' } })
   for (const k of merged) items.push({ kind: 'pair', key: k, value: { verdict: 'same' } })
-  for (const et of localEts) {
-    if (et.ref) items.push({ kind: 'local-et', key: et.ref, value: { name: et.name || '', description: et.description || '', family: et.family || '' } })
-  }
   return items.length ? api.shareProjectItems(number, items.slice(0, 2000)) : Promise.resolve(null)
 }
 

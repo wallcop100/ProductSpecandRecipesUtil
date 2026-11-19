@@ -4,6 +4,20 @@ import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { positionHealth, STATUS_LABEL } from '../utils/positionHealth'
 import { C } from '../styles/tokens'
+import { retiredFor } from '../platform/retired'
+import { live as isLive, etRefOf } from '../utils/derived'
+import { liveNotes } from '../utils/formNotes'
+
+// Form Template Notes in the popover (NAL5HU, mock 5): icon and words per kind.
+const NOTE_ICON = { notNeeded: 'do_not_disturb_on', wrongCode: 'do_not_disturb_on', wholeEntry: 'do_not_disturb_on', missing: 'playlist_add', cell: 'rate_review' }
+const mono = { fontFamily: 'monospace' }
+const noteText = n => ({
+  notNeeded: <><span style={mono}>{n.code}</span> not needed</>,
+  wrongCode: <><span style={mono}>{n.code}</span> → <span style={mono}>{n.shouldBe}</span></>,
+  wholeEntry: <>whole entry set aside</>,
+  missing: <><span style={mono}>{n.et}</span> missing from the Form</>,
+  cell: <>{n.column} · {n.formText}</>,
+}[n.kind])
 
 const COLOR = { red: C.danger, amber: C.attn, green: C.success, purple: C.companion, grey: C.faint }
 const HEAD = { red: 'Needs fixing', amber: 'Needs a decision', green: 'Done', purple: 'Suggestions waiting', grey: '' }
@@ -25,15 +39,26 @@ const CHECKED = [
 export default function StatusPip({ posRef, status, size = 9 }) {
   const results = useStore(s => s.validationResults)
   const companion = useStore(s => !!s.companionPending[posRef])
+  const newerCode = useStore(s => {
+    if (!Object.keys(s.retiredCodes).length) return false
+    const live = isLive
+    const refs = new Set(s.recipes.filter(r => live(r) && (r.PositionTypeRef || r.positionTypeRef) === posRef).map(r => String(etRefOf(r)).toUpperCase()))
+    return s.psRows.some(r => live(r) && refs.has(String(etRefOf(r)).toUpperCase()) && !!retiredFor(s.retiredCodes, r.ProductCode || r.productCode))
+  })
   const focusPosition = useStore(s => s.focusPosition)
+  const formNotes = useStore(s => s.formNotes)
+  const importDraft = useStore(s => s.importDraft)
+  const formCaptures = useStore(s => s.formCaptures)
   const here = useStore(s => s.activePositionRef === posRef && s.rootView === 'positions')
   const [show, setShow] = useState(false)
   const timer = useRef(null)
   const open = () => { clearTimeout(timer.current); setShow(true) }
   const later = () => { timer.current = setTimeout(() => setShow(false), 150) }
+  const notes = useMemo(() => (show ? liveNotes(formNotes.filter(n => n.posRef === posRef), importDraft, formCaptures) : []),
+    [show, formNotes, posRef, importDraft, formCaptures])
 
   const issues = useMemo(() => results.filter(i => i.fixKind !== 'spec' && i.ref === posRef), [results, posRef])
-  const { level, reasons } = positionHealth({ status, issues, companion })
+  const { level, reasons } = positionHealth({ status, issues, companion, newerCode })
   const half = level === 'amber' && reasons.every(r => r.kind !== 'validation')
   const head = HEAD[level] || STATUS_LABEL[status] || ''
   const go = () => { setShow(false); focusPosition(posRef) }
@@ -42,7 +67,7 @@ export default function StatusPip({ posRef, status, size = 9 }) {
     <Popover style={{ maxWidth: 340 }} onMouseEnter={open} onMouseLeave={later}>
       <Popover.Header style={{ fontSize: 12 }}>{head || posRef}{head && ` — ${posRef}`}</Popover.Header>
       <Popover.Body className="p-2" style={{ fontSize: 11 }}>
-        {reasons.length === 0 && level === 'green' && (
+        {reasons.length === 0 && level === 'green' && !notes.length && (
           <div className="text-muted">Passed every check:
             <ul className="mb-0 ps-3">{CHECKED.map(c => <li key={c}>{c}</li>)}</ul>
           </div>
@@ -56,6 +81,17 @@ export default function StatusPip({ posRef, status, size = 9 }) {
             <span>{r.message}</span>
           </div>
         ))}
+        {notes.length > 0 && (
+          <div className="d-grid gap-1" data-testid="pip-form-notes">
+            <div className="fw-semibold text-muted" style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '.06em' }}>Form Template Notes</div>
+            {notes.map(n => (
+              <div key={n.key} className="d-flex align-items-start gap-1 p-1 rounded pip-note" role="button" onClick={go}>
+                <MaterialIcon name={NOTE_ICON[n.kind]} size={14} style={{ color: C.accent, flexShrink: 0 }} />
+                <span>{noteText(n)}</span>
+              </div>
+            ))}
+          </div>
+        )}
         {reasons.length > 0 && !here && (
           <button className="btn btn-link btn-sm p-0 d-flex align-items-center gap-1 mt-1" style={{ fontSize: 11, color: C.accent, textDecoration: 'none' }} onClick={go}>
             <MaterialIcon name="open_in_new" size={13} /> Open {posRef}

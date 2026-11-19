@@ -1,6 +1,7 @@
 import { describe, test, expect } from 'vitest'
 import * as XLSX from 'xlsx'
-import { parseDb, parsePs, parseRs, readSheet, detectFileType, detectFiles, mergeDbs } from '../../src/platform/xlsx.js'
+import { unzipSync, zipSync, strToU8, strFromU8 } from 'fflate'
+import { parseDb, parsePs, parseRs, readSheet, detectFileType, detectFiles, mergeDbs, slimXlsx } from '../../src/platform/xlsx.js'
 
 /**
  * The browser xlsx parser is a port of the old backend/parser.py. Its output was
@@ -291,5 +292,37 @@ describe('mergeDbs — one project across several DesignDBs', () => {
     const m = mergeDbs([house('only.xlsx', ['A1'], ['A1'])])
     expect(m.position_types).toHaveLength(1)
     expect(m.positions).toHaveLength(1)
+  })
+})
+
+describe('big Form Templates (ink, wide used range, product codes on a later sheet)', () => {
+  // A workbook carrying an ink part, as the 11,562-ink Villa template did.
+  const inked = sheets => {
+    const parts = unzipSync(new Uint8Array(wbOf(sheets)))
+    parts['xl/ink/ink1.xml'] = strToU8('<inkml:ink/>')
+    parts['[Content_Types].xml'] = strToU8(strFromU8(parts['[Content_Types].xml'])
+      .replace('</Types>', '<Override PartName="/xl/ink/ink1.xml" ContentType="application/inkml+xml"/></Types>'))
+    return zipSync(parts)
+  }
+
+  test('slimXlsx drops ink parts and their content-type entries', () => {
+    const slim = unzipSync(slimXlsx(inked({ A: aoa([['x']]) })))
+    expect(Object.keys(slim).some(n => n.startsWith('xl/ink/'))).toBe(false)
+    expect(strFromU8(slim['[Content_Types].xml'])).not.toMatch(/ink1/)
+  })
+
+  test('readSheet with `want` picks the first sheet with a product-code column', () => {
+    const out = readSheet(inked({ Guide: aoa([['How to']]), Spec: aoa([['PositionTypeRef', 'Product Code'], ['P1', 'C1']]) }),
+      null, { key: 'productcode' })
+    expect(out.sheet).toBe('Spec')
+    expect(out.rows).toEqual([{ _row_num: 2, PositionTypeRef: 'P1', 'Product Code': 'C1' }])
+  })
+
+  test('a used range out to column XFB still yields only the real columns', () => {
+    const ws = aoa([['a', 'b'], [1, 2]])
+    ws['!ref'] = 'A1:XFB152'
+    const out = readSheet(wbOf({ S: ws }))
+    expect(out.headers).toEqual(['a', 'b'])
+    expect(out.rows).toEqual([{ _row_num: 2, a: 1, b: 2 }])
   })
 })

@@ -6,6 +6,7 @@ import { formProgress, formWorklist } from '../utils/formSpec'
 import { positionPaintStatus } from '../utils/formPositions'
 import { buildRefMap, targetFor } from '../utils/ptResolve'
 import { positionFormDone } from '../utils/formDone'
+import useFormView from './useFormView'
 
 /**
  * FormProgressChip — how much of the Form is reconciled, and a way into what's left.
@@ -21,20 +22,21 @@ import { positionFormDone } from '../utils/formDone'
  * Props:
  *   onReconcile(refs) — start a step-through of the incomplete positions
  */
+/** Every position the loaded Form gives products for (X4AN58): to do, ready, added or set aside. */
+export const positionsInForm = (importDraft, positionTypes = []) => (importDraft?.rows?.length ? positionTypes.map(p => p.PositionTypeRef).filter(ref =>
+  ['todo', 'ready', 'added', 'setAside'].includes(positionPaintStatus(importDraft, ref, { buildRefMap, targetFor }).state)) : [])
+
 export default function FormProgressChip({ onReconcile, onLoad }) {
   const recipes = useStore(s => s.recipes)
   const containerETRefs = useStore(s => s.containerETRefs)
-  const formCaptures = useStore(s => s.formCaptures)
-  const importDraft = useStore(s => s.importDraft)
+  const { importDraft, formCaptures } = useFormView()   // as Form Template Notes say to read it
   const positionTypes = useStore(s => s.positionTypes)
   const psRows = useStore(s => s.psRows)
   const loaded = !!importDraft?.rows?.length
 
   // Every position the loaded Form gives products for (X4AN58): to do, ready or added.
   // Not the ones it never mentions, nor the ones where it says n/a.
-  const inForm = useMemo(() => (loaded ? positionTypes.map(p => p.PositionTypeRef).filter(ref =>
-    ['todo', 'ready', 'added'].includes(positionPaintStatus(importDraft, ref, { buildRefMap, targetFor }).state)) : []),
-  [loaded, importDraft, positionTypes])
+  const inForm = useMemo(() => positionsInForm(importDraft, positionTypes), [importDraft, positionTypes])
   const incomplete = useMemo(() => new Set(formWorklist(recipes, formCaptures, containerETRefs)
     .filter(w => w.missing > 0 || w.pending > 0).map(w => w.posRef)), [recipes, formCaptures, containerETRefs])
   const progress = useMemo(() => formProgress(recipes, formCaptures, containerETRefs), [recipes, formCaptures, containerETRefs])

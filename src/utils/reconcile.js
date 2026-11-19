@@ -1,3 +1,4 @@
+import { etRefOf, refKey } from './derived'
 /**
  * reconcile.js — which pending changes a workbook already holds. Pure.
  *
@@ -24,7 +25,6 @@
  *     `keep` includes the conflicts (flagged `conflict`), with bases moved where a batch landed.
  */
 
-const U = s => String(s ?? '').trim().toUpperCase()
 const lc = s => String(s ?? '').trim().toLowerCase()
 
 // SortOrder is the patch's to set: the DesignDB patch re-sorts the whole sheet (tree order),
@@ -34,17 +34,18 @@ const IGNORED = new Set(['SortOrder', 'ElementTypeRef'])
 // What the app's parsers read back (platform/xlsx.js). A column a patch writes but the parser
 // never reads (the DesignDB's Details) cannot be checked, so it never decides either.
 const READS = {
-  ps: new Set(['Manufacturer', 'ProductCode', 'ComponentDescription', 'InternalNotesText', 'IsTBC', 'IsDeleted', 'IsPropertiesTBC']),
-  db: new Set(['Name', 'Description', 'Family', 'IsCollection', 'IsDeleted']),
+  ps: new Set(['Manufacturer', 'ProductCode', 'ComponentDescription', 'InternalNotesText', 'ExternalNotesText', 'IsTBC', 'IsDeleted', 'IsPropertiesTBC']),
+  db: new Set(['Name', 'Description', 'Family', 'IsCollection', 'IsDeleted', 'IsTBC', 'IsPropertiesTBC', 'InternalNotesText', 'ExternalNotesText']),
 }
 
 const RS_KEY_FIELDS = ['ContextType', 'ContextRef', 'RecipeIndex', 'ElementTypeRef']
 const RS_FIELDS = ['ContextType', 'ContextRef', 'RecipeIndex', 'ElementTypeRef', 'Quantity', 'PackQuantity',
-  'IsDeleted', 'IsDesign', 'IsContractItem', 'IsTRItem', 'Dim_QuantityMultiplier', 'IsInteger']
+  'IsDeleted', 'IsDesign', 'IsContractItem', 'IsTRItem', 'Dim_QuantityMultiplier', 'IsInteger', 'Notes']
 const RS_ALIASES = {
   ContextType: 'contextType', ContextRef: 'contextRef', RecipeIndex: 'recipeIndex', ElementTypeRef: 'elementTypeRef',
   Quantity: 'quantity', PackQuantity: 'packQuantity', IsDeleted: 'isDeleted', IsDesign: 'isDesign',
   IsContractItem: 'isContractItem', IsTRItem: 'isTRItem', Dim_QuantityMultiplier: 'dimQtyMultiplier', IsInteger: 'isInteger',
+  Notes: 'notes',
 }
 const rsv = (row, f) => (row?.[f] !== undefined ? row[f] : row?.[RS_ALIASES[f]])
 
@@ -65,7 +66,7 @@ function reconcileKeyed(entries = [], rows = [], { familyRefs = [], reads = null
   const families = new Set(familyRefs.map(lc))
   const byRef = new Map()
   for (const r of rows) {
-    const k = lc(r.ElementTypeRef || r.elementTypeRef)
+    const k = lc(etRefOf(r))
     if (k && !byRef.has(k)) byRef.set(k, r)
   }
   const out = { keep: [], applied: [], conflicts: [] }
@@ -85,7 +86,7 @@ function reconcileKeyed(entries = [], rows = [], { familyRefs = [], reads = null
       if (families.has(lc(to || from))) { out.applied.push(e); continue }
       // A soft delete: the DesignDB parse leaves IsDeleted rows out, so gone is done (a new row
       // deleted before it was written too: report #55, it waited for ever).
-      if (U(e.updates?.IsDeleted) === 'Y') { out.applied.push(e); continue }
+      if (refKey(e.updates?.IsDeleted) === 'Y') { out.applied.push(e); continue }
       out.keep.push(stripConflict(e)); continue  // a new row the file does not have yet (or a rename not run)
     }
     const states = {}, moved = {}
@@ -129,7 +130,7 @@ function restamp(kept, fieldsKey, exported, moved) {
 /** A conflict stays one until a person settles it (resolveConflict), while the file still says what it said. */
 const stillConflict = (e, f, file) => (e.conflict || []).some(c => c.field === f && same(c.file, file))
 
-const stripConflict = e => { const { conflict, ...rest } = e; return rest }   // eslint-disable-line no-unused-vars
+const stripConflict = e => { const { conflict, ...rest } = e; return rest }    
 
 // ---- the Recipe Spec: rows by composite key ----------------------------------------------------
 
@@ -140,7 +141,7 @@ function reconcileRs(entries = [], recipes = []) {
   const byKey = new Map()
   for (const r of recipes) {
     const k = rsKey(keyOf(r))
-    if (!byKey.has(k) || U(rsv(byKey.get(k), 'IsDeleted')) === 'Y') byKey.set(k, r)
+    if (!byKey.has(k) || refKey(rsv(byKey.get(k), 'IsDeleted')) === 'Y') byKey.set(k, r)
   }
   const out = { keep: [], applied: [], conflicts: [], dropped: [] }
   for (const e of entries) {
@@ -151,7 +152,7 @@ function reconcileRs(entries = [], recipes = []) {
 
     if (action === 'delete') {
       const at = byKey.get(rsKey(oldKey))
-      if (!at || U(rsv(at, 'IsDeleted')) === 'Y') out.applied.push(e)
+      if (!at || refKey(rsv(at, 'IsDeleted')) === 'Y') out.applied.push(e)
       else out.keep.push(stripConflict(e))
       continue
     }

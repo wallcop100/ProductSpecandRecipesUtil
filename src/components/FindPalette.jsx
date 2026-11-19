@@ -113,7 +113,7 @@ export default function FindPalette({ screen }) {
 
   const hostedEl = hosted?.kind === 'swap' ? <SwapEverywhereModal show fromRef={hosted.props.fromRef} onHide={() => setHosted(null)} />
     : hosted?.kind === 'forkPosition' ? <ForkPositionModal show sourceRef={hosted.props.sourceRef} onHide={() => setHosted(null)} />
-      : hosted?.kind === 'newET' ? <NewETWizardModal show posRef={hosted.props.posRef} onHide={() => setHosted(null)} onDone={() => setHosted(null)} />
+      : hosted?.kind === 'newET' ? <NewETWizardModal show posRef={hosted.props.posRef} placeIn={hosted.props.posRef} onHide={() => setHosted(null)} onDone={() => setHosted(null)} />
         : hosted?.kind === 'shortcuts' ? (
           <Modal show centered onHide={() => setHosted(null)} size="sm">
             <Modal.Header closeButton><Modal.Title style={{ fontSize: 15 }}>Keyboard shortcuts</Modal.Title></Modal.Header>

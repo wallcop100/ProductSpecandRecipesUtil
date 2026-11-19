@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { Button, Dropdown, Form } from 'react-bootstrap'
 import { membership } from '../utils/connectorGroups'
 import useStore from '../store/useStore'
+import { useTemplateRecOf } from './useTemplateMatches'
 import MaterialIcon from './MaterialIcon'
 import { useCompanion } from '../platform/companion'
 import { shareOutcomes } from '../platform/outcomes'
@@ -11,6 +12,7 @@ import ConfirmSuggestionModal from './ConfirmSuggestionModal'
 import { NotRightModal, sendNote } from './Corrections'
 import { familiesForJob, familyForJob, jobOf } from '../utils/codeJobs'
 import { nextRef } from '../utils/etSeed'
+import { familyRowRefs, etRefOf } from '../utils/derived'
 import {
   indexes, positionMakeup, sameKindAs, matchKind, usuallyMissing, elementTypesForJob, sectionFor, rowFromSlot,
   jobLabel, ruleText, usualConnectors, anchorOf, fitFor, pickRangePart, rangeStem, codeIsTbc, hasRealCode, FITS_PROFILE,
@@ -87,6 +89,8 @@ function sendKits(companion, mine) {
   }
 }
 const chipMemory = new Map()   // `${project}|${posRef}` → chips
+// Kits per profile, past a remount: refetched each time, a line they decide arrived a frame late and shoved the rows down.
+const kitsMemory = new WeakMap()   // companion → (kitsKey → kits)
 const DISMISSED = n => `psr-suggestions-dismissed:${n || '-'}`
 export function readDismissed(n) {
   try { return new Set(JSON.parse(localStorage.getItem(DISMISSED(n)) || '[]')) } catch { return new Set() }
@@ -116,8 +120,8 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
   const kinds = useStore(s => s.library?.kinds)
   const companion = useCompanion()
   const [dismissed, setDismissed] = useState(() => readDismissed(projectNumber))
-  const [kits, setKits] = useState([])
-  const [kitsLoaded, setKitsLoaded] = useState(false)   // until then a profile's lines are unknown: showing them would flash
+  // The maker's kits, keyed by the profile they were looked up for: until they arrive a profile's lines are unknown (showing them would flash).
+  const [kitsGot, setKitsGot] = useState({ key: null, kits: [] })
   const [pick, setPick] = useState({})
   const [hidden, setHidden] = useState(() => new Set())   // × — for now, this position
   const [asking, setAsking] = useState(null)              // the line whose Add is waiting on the check popup
@@ -145,24 +149,28 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
   const etCollections = useStore(s => s.etCollections)
   const connectorPins = useStore(s => s.connectorPins)
   const connectorExcludes = useStore(s => s.connectorExcludes)
+  const recOf = useTemplateRecOf()
   const templated = useMemo(() => {
-    const m = membership([posRef], etCollections, connectorPins, useStore.getState()._templateRecOf(), connectorExcludes).get(posRef)
+    const m = membership([posRef], etCollections, connectorPins, recOf, connectorExcludes).get(posRef)
     return !!m && (m.templates.length > 0 || !!m.pinnedTo || Object.values(connectorExcludes || {}).some(r => r.includes(posRef)))
-  }, [posRef, etCollections, connectorPins, connectorExcludes])
+  }, [posRef, etCollections, connectorPins, connectorExcludes, recOf])
   const connectors = useMemo(() => (templated ? null : usualConnectors(me, kind, state, idx)), [templated, me, kind, idx])   // eslint-disable-line react-hooks/exhaustive-deps
 
   // The profile / channel this recipe is built on: its kit and its range are looked up by maker + code.
   const profile = useMemo(() => anchorOf(me, idx), [me, idx])
   const anchor = profile?.code ? { code: profile.code, manufacturer: profile.maker } : null
+  // Derived, not reset by an effect: a position with nothing to look up renders its lines in its first frame.
+  const kitsKey = companion?.kits && anchor ? `${projectNumber}|${anchor.manufacturer}|${anchor.code}` : null
+  const got = kitsGot.key === kitsKey ? kitsGot.kits : kitsMemory.get(companion)?.get(kitsKey)
+  const kitsLoaded = !kitsKey || !!got
+  const kits = kitsKey && got ? got : []
   useEffect(() => {
-    setKits([])
-    setKitsLoaded(!companion?.kits || !anchor)
-    if (!companion?.kits || !anchor) return
+    if (!kitsKey) return
     let live = true
     // A failed lookup leaves the profile's lines unknown: shown unfiltered they lit the rail's pip for nothing
-    kitsFor(companion, anchor, projectNumber).then(k => { if (live && k) { setKits(k); setKitsLoaded(true) } }, () => {})
+    kitsFor(companion, anchor, projectNumber).then(k => { if (k) { if (!kitsMemory.has(companion)) kitsMemory.set(companion, new Map()); kitsMemory.get(companion).set(kitsKey, k) } if (live && k) setKitsGot({ key: kitsKey, kits: k }) }, () => {})
     return () => { live = false }
-  }, [companion, anchor?.code, anchor?.manufacturer, projectNumber])   // eslint-disable-line react-hooks/exhaustive-deps
+  }, [companion, kitsKey])   // eslint-disable-line react-hooks/exhaustive-deps
 
   /** The ElementType for a catalogue part: the project's own (same code) or a new one, with its spec row. */
   function elementTypeFor(job, part, { fromRange = false } = {}) {
@@ -171,7 +179,7 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
     if (have) return have.ElementTypeRef
     const j = jobOf({ maker: anchor?.manufacturer, code: part.code, name: part.name })
     const house = familyForJob(j.slot === 'OTHER' ? { slot: job } : j) || {}
-    const own = [...familiesForJob({ slot: job }, { elementTypes: st.elementTypes, familyRows: new Set(st.elementTypes.map(e => String(e.ElementTypeRef || '').toUpperCase())) })]
+    const own = [...familiesForJob({ slot: job }, { elementTypes: st.elementTypes, familyRows: familyRowRefs(st.elementTypes, st.dbCollectionRefs) })]
       .find(f => f !== String(house.family || '').toUpperCase())
     const ref = nextRef(house.head || 'ET-LIN', st.elementTypes.map(e => e.ElementTypeRef))
     const named = `${anchor?.manufacturer || ''} - ${part.code}`.replace(/^ - /, '')
@@ -202,7 +210,7 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
         : <span title={`${s.posRef} is built the same way (${built}) on another profile: only parts that do not depend on the profile are offered`}>
             Built like <b>{s.posRef}</b> <span className="text-muted">({built})</span>: {what}</span>,
       add: () => useStore.getState().copyRecipeFrom(s.posRef, posRef, {
-        merge: true, etRefs: s.adds.flatMap(a => a.rows.map(r => r.ElementTypeRef || r.elementTypeRef)),
+        merge: true, etRefs: s.adds.flatMap(a => a.rows.map(r => etRefOf(r))),
       }) })
   }
   const kitFor = new Map()
@@ -304,7 +312,7 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
   if (profile?.code && kits.some(k => k.range)) {
     for (const job of FITS_PROFILE) {
       for (const r of me.jobs.get(job) || []) {
-        const ref = r.ElementTypeRef || r.elementTypeRef
+        const ref = etRefOf(r)
         if (!codeIsTbc(ref, idx)) continue
         // Flagged TBC but already holding a code (an opal diffuser, say): replacing it would be an unmonitored spec change.
         if (hasRealCode(ref, idx)) continue
@@ -359,7 +367,8 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
       if (level === 'unsure' && mayAsk(projectNumber, c.vkey, c.votes)) { setAsking(l); return }
       if (level !== 'sure') setChips(cs => [...cs.filter(x => x.key !== l.key), l])
     }
-    if (outcome === 'accepted') (chosen ? chosen.add : l.add)?.()
+    const add = chosen ? chosen.add : l.add
+    if (outcome === 'accepted' && add) useStore.getState().asOneUndoStep(add)
     // Only a dismissal hides a line for good: an added part's line goes because the part is there.
     if (outcome === 'dismissed') {
       const next = new Set(dismissed); next.add(here(l))
@@ -376,7 +385,7 @@ export default function RecipeSuggestions({ posRef, watch = false }) {
     const l = asking
     setAsking(null)
     noteAsked(projectNumber, l.check.vkey, l.check.votes, vote)
-    l.check.apply(vote, code)
+    useStore.getState().asOneUndoStep(() => l.check.apply(vote, code))
     if (vote === 'rejected' && !code) setHidden(h => new Set(h).add(here(l)))
     const rows = [voteRow(l, vote, { code, note })]
     // The line's own outcome as well, unless it is the same row (a kit line is keyed by its pair).

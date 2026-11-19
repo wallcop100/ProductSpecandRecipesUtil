@@ -21,7 +21,8 @@ import DuplicateETModal from '../components/DuplicateETModal'
 import ElementTypesWindow from '../components/ElementTypesWindow'
 import Breadcrumbs from '../components/Breadcrumbs'
 import ProjectIdPill from '../components/ProjectIdPill'
-import FormProgressChip from '../components/FormProgressChip'
+import FormProgressChip, { positionsInForm } from '../components/FormProgressChip'
+import useFormView from '../components/useFormView'
 import ElementPalette from '../components/ElementPalette'
 import SimilarPositionsPanel from '../components/SimilarPositionsPanel'
 import TutorialHint from '../tutorial/TutorialHint'
@@ -33,7 +34,7 @@ import ConnectorAutoJoin from '../components/ConnectorAutoJoin'
 import { connectorGapsForPosition } from '../utils/collectionStatus'
 import { membership } from '../utils/connectorGroups'
 import TemplatesPane from '../components/TemplatesPane'
-import useTemplateMatches, { useHintsOff, hintOff } from '../components/useTemplateMatches'
+import useTemplateMatches, { useHintsOff, hintOff, useTemplateRecOf } from '../components/useTemplateMatches'
 import PasteMergeModal from '../components/PasteMergeModal'
 import ReviewModal from '../components/ReviewModal'
 import FormRecipesModal from '../components/FormRecipesModal'
@@ -53,6 +54,7 @@ import MaterialIcon from '../components/MaterialIcon'
 import { ACTION_ICONS, ICONS } from '../utils/entityStyle'
 import { C } from '../styles/tokens'
 import { askConfirm } from '../components/ConfirmHost'
+import { live as isLive } from '../utils/derived'
 
 /**
  * BuilderScreen — three-column layout.
@@ -63,11 +65,13 @@ import { askConfirm } from '../components/ConfirmHost'
  * supporting tabs. Drilling into a container element's internal recipe swaps the
  * centre for a focused ET editor.
  */
-// The right drawer: wide enough for the Form spec pane (K3LGUL).
+// The right drawer: wide enough for the Form spec pane (K3LGUL); drag its left edge to resize.
 const DRAWER_W = 340
+const DRAWER_LS = 'builderDrawerWidth'
+const clampDrawer = w => Math.max(280, Math.min(Math.round(window.innerWidth * 0.6), w))
 
 export default function BuilderScreen({
-  onOpenTemplateEditor, onOpenProductSpec, onOpenConnectors, onOpenTags, onOpenCodeImport, onBackToSetup,
+  onOpenTemplateEditor, onOpenProductSpec, onOpenConnectors, onOpenCodeImport, onBackToSetup,
   pendingReviewRefs, onConsumePendingReview, importLoop = null, onNextFromImport, onEndImportLoop,
 }) {
   const rootView = useStore(s => s.rootView)
@@ -78,9 +82,10 @@ export default function BuilderScreen({
   const activeContextType = useStore(s => s.activeContextType)
   const activeETRef = useStore(s => s.activeETRef)
   const recipes = useStore(s => s.recipes)
-  const positionUI = useStore(s => s.positionUI)
   const psChanges = useStore(s => s.psChanges)
   const rsChanges = useStore(s => s.rsChanges)
+  const dbChanges = useStore(s => s.dbChanges)
+  const localEtCount = useStore(s => s.localElementTypes.length)
   const past = useStore(s => s.past)
   const future = useStore(s => s.future)
 
@@ -120,6 +125,8 @@ export default function BuilderScreen({
   // Arriving with positions to review (e.g. from the product-code import): the rail filters
   // to them. Consume once so it doesn't refilter on its own.
   const formCaptures = useStore(s => s.formCaptures)
+  const { importDraft: formView } = useFormView()
+  const positionTypesAll = useStore(s => s.positionTypes)
   const [formBuild, setFormBuild] = useState(null)   // { refs, thenReview }
   const [showStyles, setShowStyles] = useState(false)
   useEffect(() => {
@@ -128,13 +135,15 @@ export default function BuilderScreen({
       startReconcile(pendingReviewRefs)
       onConsumePendingReview?.()
     }
-  }, [pendingReviewRefs, onConsumePendingReview])   // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pendingReviewRefs, onConsumePendingReview])    
   // What to do next on a new project: import the Form first, then build what it imported.
   const [hideNextStep, setHideNextStep] = useState(false)
   const nextStep = useMemo(() => {
     if (hideNextStep) return null
-    const live = recipes.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
-    const imported = Object.keys(formCaptures?.byPosition || {}).filter(p => formCaptures.byPosition[p]?.length)
+    const live = recipes.filter(r => isLive(r))
+    // Every position the loaded Form names, not only those whose codes already have ElementTypes (SG2LS9).
+    const imported = [...new Set([...positionsInForm(formView, positionTypesAll),
+      ...Object.keys(formCaptures?.byPosition || {}).filter(p => formCaptures.byPosition[p]?.length)])]
     if (live.length === 0 && imported.length === 0 && onOpenCodeImport) {
       return { icon: 'auto_fix_high', title: 'New project? Start with the Form.',
         text: 'Import its product codes: they fill the Product Spec and ElementTypes, then the recipes build from them.',
@@ -149,7 +158,7 @@ export default function BuilderScreen({
         action: `Open ${unbuilt[0]}`, go: () => useStore.getState().setActivePosition(unbuilt[0]) }
     }
     return null
-  }, [hideNextStep, recipes, formCaptures, onOpenCodeImport])
+  }, [hideNextStep, recipes, formCaptures, formView, positionTypesAll, onOpenCodeImport])
   const closeFormBuild = () => setFormBuild(null)
   const [addRowTarget, setAddRowTarget] = useState(null)      // { posRef, sectionKey }
   const [addAnywhereState, setAddAnywhereState] = useState(null) // { etRef, sectionKey, excludePosRef, startPosRef }
@@ -162,6 +171,22 @@ export default function BuilderScreen({
   const [addQuery, setAddQuery] = useState('')
   const showDeleted = useStore(s => s.showDeleted)
   const rightOpen = useStore(s => s.drawerOpen)
+  const [drawerW, setDrawerW] = useState(() => { try { return clampDrawer(Number(localStorage.getItem(DRAWER_LS)) || DRAWER_W) } catch { return DRAWER_W } })
+  const [resizing, setResizing] = useState(false)
+  const startDrawerResize = e => {
+    e.preventDefault()
+    const x0 = e.clientX, w0 = drawerW
+    let w = w0
+    setResizing(true)
+    const move = ev => { w = clampDrawer(w0 + x0 - ev.clientX); setDrawerW(w) }
+    const up = () => {
+      window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up)
+      setResizing(false)
+      try { localStorage.setItem(DRAWER_LS, String(w)) } catch { /* not remembered */ }
+    }
+    window.addEventListener('mousemove', move)
+    window.addEventListener('mouseup', up)
+  }
   const setDrawerOpen = useStore(s => s.setDrawerOpen)
   const setRightOpen = v => setDrawerOpen(typeof v === 'function' ? v(useStore.getState().drawerOpen) : v)
   const [changeSummary, setChangeSummary] = useState(false)   // open the review + copy-patches modal
@@ -219,7 +244,7 @@ export default function BuilderScreen({
 
   function filterDeleted(rows) {
     if (showDeleted) return rows
-    return rows.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
+    return rows.filter(r => isLive(r))
   }
 
   function handleAddRow(posRef, sectionKey) {
@@ -291,8 +316,14 @@ export default function BuilderScreen({
     setNewETTarget({ posRef, sectionKey, ...(extra || {}) })
   }
 
-  function handleNewETDone(etRef) {
+  function handleNewETDone(etRef, where) {
     if (!newETTarget) return
+    if (where) {   // the modal placed it (or kept it to the Product Spec)
+      const posRef = newETTarget.posRef || activePositionRef
+      setNewETTarget(null)
+      if (where !== 'ps') { setRightOpen(true); setRightTab('palette'); setJustAdded({ etRef, posRef, sectionKey: where === 'wrapper' ? 'dl_internal' : 'position' }) }
+      return
+    }
     if (newETTarget.mode === 'replace') { doReplace(newETTarget, etRef); setNewETTarget(null); return }
     if (newETTarget.mode === 'slot') {
       // Fill a primed template slot with the freshly created ET (T-R1)
@@ -347,16 +378,16 @@ export default function BuilderScreen({
   // Connector gaps on the open position: a dot on the drawer's Connectors tab.
   const connectorPins = useStore(s => s.connectorPins)
   const connectorExcludes = useStore(s => s.connectorExcludes)
+  const recOf = useTemplateRecOf()
   const connectorGaps = useMemo(() => {
     if (!drawerPos) return 0
-    const recOf = useStore.getState()._templateRecOf()
     const member = membership([drawerPos], etCollections, connectorPins, recOf, connectorExcludes).get(drawerPos)
     return connectorGapsForPosition(recipes, drawerPos, recOf(drawerPos), etCollections, containerETRefs, member).length
-  }, [drawerPos, recipes, etCollections, containerETRefs, connectorPins, connectorExcludes])
+  }, [drawerPos, recipes, etCollections, containerETRefs, connectorPins, connectorExcludes, recOf])
   // Dot on the Templates tab: the open position is empty and a template fits it (unless its hint was dismissed).
   const hintsOff = useHintsOff()
   const drawerMatches = useTemplateMatches(drawerPos ? [drawerPos] : [])
-  const templateHint = !!drawerPos && !hintOff(hintsOff, drawerPos) && !recipes.some(r => (r.PositionTypeRef || r.positionTypeRef) === drawerPos && (r.IsDeleted || r.isDeleted) !== 'Y')
+  const templateHint = !!drawerPos && !hintOff(hintsOff, drawerPos) && !recipes.some(r => (r.PositionTypeRef || r.positionTypeRef) === drawerPos && isLive(r))
     && (drawerMatches.get(drawerPos)?.matches.length || 0) > 0
   const activeGrouped = activePositionRef ? getRecipeForPosition(recipes, activePositionRef) : null
   const hasRecipeRows = !!activeGrouped && (
@@ -440,7 +471,7 @@ export default function BuilderScreen({
     setChangeSummary(true)
   }
 
-  const hasDirtyChanges = psChanges.length > 0 || rsChanges.length > 0
+  const hasDirtyChanges = psChanges.length > 0 || rsChanges.length > 0 || dbChanges.length > 0
 
   // -------------------------------------------------------------------------
   // Render
@@ -529,10 +560,12 @@ export default function BuilderScreen({
             <Dropdown.Item onClick={saveBackup}>
               <MaterialIcon name="save_alt" size={14} /> Save project settings (.config.yaml)…
             </Dropdown.Item>
-            {psChanges.length + rsChanges.length > 0 && (
+            {/* Everything made here goes, the ElementTypes made in the app included: they are kept apart and would come back. */}
+            {psChanges.length + rsChanges.length + dbChanges.length + localEtCount > 0 && (
               <Dropdown.Item className="text-danger" onClick={async () => {
-                const n = psChanges.length + rsChanges.length
-                if (await askConfirm(`Discard all ${n} unexported changes? This cannot be undone.`, { ok: 'Discard', danger: true })) useStore.getState().discardPendingChanges()
+                const n = psChanges.length + rsChanges.length + dbChanges.length
+                const ets = localEtCount ? ` and the ${localEtCount} ElementType${localEtCount === 1 ? '' : 's'} made here` : ''
+                if (await askConfirm(`Discard all ${n} unexported changes${ets}, and reopen from the workbooks? This cannot be undone.`, { ok: 'Discard', danger: true })) useStore.getState().discardPendingChanges()
               }}>
                 <MaterialIcon name="delete_sweep" size={14} /> Discard unexported changes…
               </Dropdown.Item>
@@ -581,10 +614,10 @@ export default function BuilderScreen({
           title={rightOpen ? 'Close palette' : 'Open palette'}
           style={{
             position: 'absolute',
-            right: rightOpen ? DRAWER_W : 0,
+            right: rightOpen ? drawerW : 0,
             top: '50%',
             transform: 'translateY(-50%)',
-            transition: 'right 0.2s ease',
+            transition: resizing ? 'none' : 'right 0.2s ease',
             zIndex: 10,
             background: C.subtle,
             border: `1px solid ${C.border}`,
@@ -703,16 +736,22 @@ export default function BuilderScreen({
         <div
           data-debug-id="BuilderScreen/RightDrawer"
           style={{
-            width: rightOpen ? DRAWER_W : 0,
+            width: rightOpen ? drawerW : 0,
             flexShrink: 0,
+            position: 'relative',
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
             background: C.surface,
             borderLeft: rightOpen ? `1px solid ${C.border}` : 'none',
-            transition: 'width 0.2s ease',
+            transition: resizing ? 'none' : 'width 0.2s ease',
           }}
         >
+          {rightOpen && (
+            <div onMouseDown={startDrawerResize} title="Drag to resize" data-testid="drawer-resize"
+              role="separator" aria-orientation="vertical" aria-label="Resize the side pane"
+              style={{ position: 'absolute', top: 0, left: 0, width: 6, height: '100%', cursor: 'col-resize', zIndex: 5 }} />
+          )}
           {/* The drawer: this position's Form spec first (K3LGUL), then the ways to add rows —
               ElementTypes and positions like this one — under one search box. */}
           <div style={{ flexShrink: 0, borderBottom: `1px solid ${C.border}` }} className="px-2 pt-2 pb-1">
@@ -841,6 +880,7 @@ export default function BuilderScreen({
         onHide={() => setNewETTarget(null)}
         posRef={newETTarget?.posRef}
         sectionKey={newETTarget?.sectionKey}
+        placeIn={newETTarget && !newETTarget.mode ? (newETTarget.posRef || activePositionRef || null) : null}
         onDone={handleNewETDone}
       />
 

@@ -3,9 +3,11 @@ import React, { useMemo, useState, useEffect } from 'react'
 import { Modal, Button, Form } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
+import { formNotesMarkdown } from './FormNoteParts'
 import { buildPsScript, buildRsScript, buildDbScript } from '../utils/patchScript'
 import { CONCEPTS } from './ConceptCard'
 import MasterGapPanel from './MasterGapPanel'
+import { useAlignmentGaps } from './useTemplateMatches'
 import TutorialHint from '../tutorial/TutorialHint'
 import { reportsToMarkdown, reportId } from '../utils/bugReports'
 import { download } from '../platform/fs'
@@ -15,6 +17,7 @@ import { ignoredPositionRefs } from '../utils/positionFamily'
 import { BLOCKING_RULES } from '../utils/validationTasks'
 import { C } from '../styles/tokens'
 import { askConfirm } from './ConfirmHost'
+import { etRefOf } from '../utils/derived'
 
 /**
  * ChangeSummaryModal — review every pending change, then copy the patch scripts.
@@ -29,7 +32,7 @@ import { askConfirm } from './ConfirmHost'
  *   Resolve  — the alignment gaps to close before you export (only when there are any)
  */
 
-const refOf = r => (r?.ElementTypeRef || r?.elementTypeRef || '')
+const refOf = r => (etRefOf(r))
 
 // Human labels for the Product Spec fields we surface.
 const PS_FIELD_LABELS = {
@@ -37,6 +40,7 @@ const PS_FIELD_LABELS = {
   Manufacturer: 'Manufacturer',
   ComponentDescription: 'Description',
   InternalNotesText: 'Notes',
+  ExternalNotesText: 'External notes',
 }
 
 // DesignDB ElementTypes columns.
@@ -443,8 +447,9 @@ function PreExportChecklist({ show, onHide }) {
       {items.map(it => (
         <Button key={it.key} variant="link" size="sm" className="p-0 text-start text-decoration-none"
           style={{ fontSize: 12, color: it.blocking ? C.danger : C.ink }} disabled={!it.posRef}
+          title={it.posRef ? `Closes this and opens ${it.posRef}${it.count > 1 ? ', the first of them' : ''}` : undefined}
           onClick={() => { onHide(); useStore.getState().focusPosition(it.posRef) }}>
-          {it.label}{it.posRef && ' →'}
+          {it.label}{it.posRef && ` → ${it.posRef}`}
         </Button>
       ))}
     </div>
@@ -494,27 +499,50 @@ function BugReportsTab({ reports, copied, onCopy }) {
   )
 }
 
+/** Form Template Notes (NAL5HU, mock 6): what to tell whoever owns the Form, as Markdown. */
+function FormNotesTab({ md, count, importedAt, copied, onCopy }) {
+  const project = useStore(s => s.projectNumber)
+  return (
+    <div data-testid="form-notes-tab">
+      <div className="d-flex align-items-center gap-2 mb-2">
+        <Button size="sm" variant="primary" className="d-inline-flex align-items-center gap-1" onClick={onCopy} data-testid="form-notes-copy">
+          <MaterialIcon name="content_copy" size={14} /> {copied ? 'Copied!' : 'Copy as Markdown'}
+        </Button>
+        <Button size="sm" variant="outline-secondary" className="d-inline-flex align-items-center gap-1"
+          onClick={() => download(`form-template-notes-${project || 'project'}-${new Date().toISOString().slice(0, 10)}.md`, md, 'text/markdown')}>
+          <MaterialIcon name="download" size={14} /> Download .md
+        </Button>
+        <span className="ms-auto text-muted" style={{ fontSize: 11 }}>
+          {count} note{count === 1 ? '' : 's'}{importedAt && ` · Form imported ${new Date(importedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`}
+        </span>
+      </div>
+      <pre className="border rounded p-2 mb-0" style={{ fontSize: 11, whiteSpace: 'pre-wrap', background: C.subtle }} data-testid="form-notes-md">{md}</pre>
+    </div>
+  )
+}
+
+const NO_GAPS = { specRows: { wrappers: [], products: [] }, dbRows: [] }
+
 export default function ChangeSummaryModal({ show, onHide }) {
   const psChanges = useStore(s => s.psChanges)
   const rsChanges = useStore(s => s.rsChanges)
   const dbChanges = useStore(s => s.dbChanges)
-  const alignmentGaps = useStore(s => s.alignmentGaps)
   const fillWrapperSpecRows = useStore(s => s.fillWrapperSpecRows)
   const bugReports = useStore(s => s.bugReports)
+  const formNotes = useStore(s => s.formNotes)
+  const importedAt = useStore(s => s.formCaptures?.importedAt)
+  const notesMd = useMemo(() => (show && formNotes.length ? formNotesMarkdown() : ''), [show, formNotes])
 
   const [tab, setTab] = useState('changes')
   const [copiedKey, setCopiedKey] = useState(null)
   const [previewKey, setPreviewKey] = useState(null)
   useEffect(() => { if (show) { setCopiedKey(null); setPreviewKey(null); setTab('changes') } }, [show])
   // The patch adds every ElementType the DesignDB lacks; only a family that is not certain is left to review.
-  useEffect(() => { if (show) useStore.getState().autoQueueDbRows() }, [show])
+  useEffect(() => { if (show) { useStore.getState().autoQueueDbRows(); useStore.getState().queuePsOnlyETs() } }, [show])
 
   // Two invariants, one selector (see specAlignment): the DesignDB is the master, and a
   // recipe implies a spec.
-  const gaps = useMemo(
-    () => (show ? alignmentGaps() : { specRows: { wrappers: [], products: [] }, dbRows: [] }),
-    [show, psChanges, rsChanges, dbChanges, alignmentGaps]
-  )
+  const gaps = useAlignmentGaps(show) || NO_GAPS
   const overwrites = useMemo(() => dbOverwrites(dbChanges), [dbChanges])
   const sections = useMemo(() => buildSummary({ psChanges, rsChanges, dbChanges }), [psChanges, rsChanges, dbChanges])
   const projectNumber = useStore(s => s.projectNumber)
@@ -558,10 +586,13 @@ export default function ChangeSummaryModal({ show, onHide }) {
 
       {/* The patch is one click away on its own tab, never a long scroll past warnings. */}
       <div className="d-flex gap-1 px-3 pt-2" style={{ borderBottom: `1px solid ${C.border}` }}>
-        <TabBtn id="changes" tab={tab} onClick={setTab} count={changeCount}>Changes</TabBtn>
-        <TabBtn id="patches" tab={tab} onClick={setTab} count={patchFiles.length}>Patches</TabBtn>
         {resolveCount > 0 && (
           <TabBtn id="resolve" tab={tab} onClick={setTab} count={resolveCount} warn>Resolve first</TabBtn>
+        )}
+        <TabBtn id="changes" tab={tab} onClick={setTab} count={changeCount}>Changes</TabBtn>
+        <TabBtn id="patches" tab={tab} onClick={setTab} count={patchFiles.length}>Patches</TabBtn>
+        {formNotes.length > 0 && (
+          <TabBtn id="formNotes" tab={tab} onClick={setTab} count={formNotes.length}>Form Template Notes</TabBtn>
         )}
         {bugReports.length > 0 && (
           <TabBtn id="bugs" tab={tab} onClick={setTab} count={bugReports.length}>Bug reports</TabBtn>
@@ -569,7 +600,9 @@ export default function ChangeSummaryModal({ show, onHide }) {
       </div>
 
       <Modal.Body style={{ minHeight: 260, maxHeight: '58vh' }}>
-        {tab === 'bugs'
+        {tab === 'formNotes'
+          ? <FormNotesTab md={notesMd} count={formNotes.length} importedAt={importedAt} copied={copiedKey === 'formNotes'} onCopy={() => copy(notesMd, 'formNotes')} />
+          : tab === 'bugs'
           ? <BugReportsTab reports={bugReports} copied={copiedKey === 'bugs'} onCopy={() => copy(reportsToMarkdown(bugReports), 'bugs')} />
           : nothing
           ? <div className="text-muted small fst-italic">No pending changes.</div>

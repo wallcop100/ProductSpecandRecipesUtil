@@ -93,7 +93,7 @@ function splitMaker(s) {
 }
 
 const out = new Map()
-let kept = 0, dropped = 0
+let dropped = 0
 for (const l of lines) {
   const [notes, ref, parent, name, desc] = l.split('|')
   for (const part of String(notes || '').split(' ;; ').map(x => x.trim()).filter(Boolean)) {
@@ -106,7 +106,7 @@ for (const l of lines) {
     const fam = familyOf(ownParent, ownRef, `${name || ''} ${desc || ''} ${ownRef}`)
     if (!fam) { dropped++; continue }
     const key = `${makerKey(mc.maker)}|${code.toUpperCase()}`
-    if (!out.has(key)) { out.set(key, { maker: mc.maker, code, family: fam.family, head: fam.head || fam.family }); kept++ }
+    if (!out.has(key)) { out.set(key, { maker: mc.maker, code, family: fam.family, head: fam.head || fam.family }) }
   }
 }
 process.stderr.write(`${lines.length} rows → ${out.size} distinct lighting products (${dropped} parts dropped: not lighting, no maker, or placeholder)\n`)

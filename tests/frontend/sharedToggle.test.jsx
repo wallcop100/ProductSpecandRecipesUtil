@@ -163,3 +163,19 @@ test('#46: discarding flushes the browser DB before the reload', async () => {
   expect(useStore.getState().rsChanges).toEqual([])
   delete window.electronAPI.db.flush
 })
+
+describe('92YN3U: a note on a recipe row', () => {
+  test('⋯ → Add note writes the row\'s Notes and shows it on the card', () => {
+    useStore.setState({ rsChanges: [], past: [], future: [] })
+    const r = () => useStore.getState().recipes.find(x => x._id === 'c')
+    const { rerender } = render(<IngredientCard row={r()} posRef="A01" sectionKey="position" />)
+    fireEvent.click(screen.getByLabelText('Row actions'))
+    fireEvent.click(screen.getByText(/Add note/))
+    fireEvent.change(screen.getByLabelText('Recipe row note'), { target: { value: 'Query: 3 or 5 pin?' } })
+    fireEvent.blur(screen.getByLabelText('Recipe row note'))
+    expect(r().Notes).toBe('Query: 3 or 5 pin?')
+    expect(useStore.getState().rsChanges.length).toBe(1)
+    rerender(<IngredientCard row={r()} posRef="A01" sectionKey="position" />)
+    expect(screen.getByTestId('row-note')).toHaveTextContent('Query: 3 or 5 pin?')
+  })
+})

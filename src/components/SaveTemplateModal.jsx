@@ -4,6 +4,7 @@ import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { seedRule } from '../utils/templateRules'
 import { C } from '../styles/tokens'
+import { live, etRefOf } from '../utils/derived'
 
 const lc = s => String(s ?? '').trim().toLowerCase()
 
@@ -23,7 +24,7 @@ export default function SaveTemplateModal({ show, onHide, posRef, name: posName 
     .map(c => [lc(c.elementTypeRef), c.role === 'lead' ? 'main product' : 'extra'])), [formCaptures, posRef])
 
   const rows = useMemo(() => recipes.filter(r => (r.PositionTypeRef || r.positionTypeRef) === posRef
-    && (r.IsDeleted || r.isDeleted) !== 'Y'), [recipes, posRef])
+    && live(r)), [recipes, posRef])
   const design = rows.find(r => (r.IsDesign || r.isDesign) === 'Y')
 
   const [name, setName] = useState('')
@@ -35,7 +36,7 @@ export default function SaveTemplateModal({ show, onHide, posRef, name: posName 
 
   useEffect(() => {
     if (!show) return
-    setName(posName && posName !== posRef ? posName : (design?.ElementTypeRef || design?.elementTypeRef || posRef || ''))
+    setName(posName && posName !== posRef ? posName : (etRefOf(design) || posRef || ''))
     setScope('project')
     setTags((positionUI[posRef]?.tags || []).join(', '))
     setSkip(new Set()); setError(null); setSaving(false)
@@ -60,7 +61,7 @@ export default function SaveTemplateModal({ show, onHide, posRef, name: posName 
   }
 
   const line = r => {
-    const ref = r.ElementTypeRef || r.elementTypeRef
+    const ref = etRefOf(r)
     const inside = (r.ContextType || r.contextType) === 'ElementType'
     const wrapper = !inside && containerETRefs.has(lc(ref))
     const qty = r.Dim_QuantityMultiplier ?? r.dimQtyMultiplier

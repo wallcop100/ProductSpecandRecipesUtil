@@ -25,7 +25,7 @@ import { C } from '../styles/tokens'
  */
 
 export const BRUSH = {
-  code:    { label: 'Code',    bg: C.subtle, fg: C.ink, swatch: C.accent },
+  code:    { label: 'Code',    bg: C.accentTint, fg: C.accentInk, swatch: C.accent },
   note:    { label: 'Note',    bg: 'transparent', fg: C.ink, swatch: C.faint },
   discard: { label: 'Discard', bg: 'transparent', fg: C.faint, swatch: C.danger },
 }

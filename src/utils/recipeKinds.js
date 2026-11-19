@@ -17,17 +17,15 @@
  * project's most used one.
  */
 import { jobOf, jobKey } from './codeJobs'
+import { live, etRefOf, refKey } from './derived'
 
-const U = s => String(s ?? '').trim().toUpperCase()
-const refOf = r => r.ElementTypeRef || r.elementTypeRef || ''
 const posOf = r => r.PositionTypeRef || r.positionTypeRef || ''
-const live = r => (r.IsDeleted || r.isDeleted) !== 'Y'
 export const DEFINING = new Set(['TAPE:tape', 'TAPE:flex', 'TAPE:fixed', 'PROFILE', 'MOUNT_CHANNEL', 'LOCAL_DRIVER', 'REMOTE_DRIVER', 'FITTING'])
 
 /** Driver location and secondary power, as the DesignDB's free text means them. */
 export function powerOf(pt = {}) {
-  const loc = U(pt.DriverLocation ?? pt.driverLocation)
-  const sec = U(pt.SecondaryPowerType ?? pt.secondaryPowerType)
+  const loc = refKey(pt.DriverLocation ?? pt.driverLocation)
+  const sec = refKey(pt.SecondaryPowerType ?? pt.secondaryPowerType)
   return {
     driver: loc.startsWith('REMOTE') ? 'remote' : loc.startsWith('LOCAL') ? 'local' : loc.startsWith('INTEGR') ? 'integral' : '',
     secondary: sec === 'CC' || sec === 'CV' ? sec : '',
@@ -36,9 +34,9 @@ export function powerOf(pt = {}) {
 
 /** The job of one recipe row, from its ElementType and that ElementType's Product Spec row. */
 export function rowJob(row, { etByRef, psByRef }) {
-  const ref = refOf(row)
-  const et = etByRef.get(U(ref)) || {}
-  const ps = psByRef.get(U(ref)) || {}
+  const ref = etRefOf(row)
+  const et = etByRef.get(refKey(ref)) || {}
+  const ps = psByRef.get(refKey(ref)) || {}
   const section = (row.ContextType || row.contextType) === 'PositionType' ? 'position' : 'internal'
   return jobOf({
     ref, family: et.Family || et.family, name: et.Name || et.name, description: et.Description || et.description,
@@ -49,9 +47,9 @@ export function rowJob(row, { etByRef, psByRef }) {
 
 export function indexes(state) {
   return {
-    etByRef: new Map((state.elementTypes || []).map(e => [U(refOf(e)), e])),
-    psByRef: new Map((state.psRows || []).filter(live).map(r => [U(refOf(r)), r])),
-    ptByRef: new Map((state.positionTypes || []).map(p => [U(p.PositionTypeRef || p.positionTypeRef), p])),
+    etByRef: new Map((state.elementTypes || []).map(e => [refKey(etRefOf(e)), e])),
+    psByRef: new Map((state.psRows || []).filter(live).map(r => [refKey(etRefOf(r)), r])),
+    ptByRef: new Map((state.positionTypes || []).map(p => [refKey(p.PositionTypeRef || p.positionTypeRef), p])),
   }
 }
 
@@ -68,7 +66,7 @@ export function positionMakeup(posRef, state, idx = indexes(state)) {
     if (!jobs.has(k)) jobs.set(k, [])
     jobs.get(k).push(r)
   }
-  const { driver, secondary } = powerOf(idx.ptByRef.get(U(posRef)) || {})
+  const { driver, secondary } = powerOf(idx.ptByRef.get(refKey(posRef)) || {})
   const defining = [...jobs.keys()].filter(k => DEFINING.has(k)).sort()
   return { posRef, design, driver, secondary, jobs, defining, rows: rows.length }
 }
@@ -79,21 +77,21 @@ const sig = m => `${m.design}|${m.driver}|${m.secondary}|${m.defining.join('+')}
 export const FITS_PROFILE = new Set(['END_CAPS', 'DIFFUSER', 'CLIPS'])
 
 /** The range a profile code belongs to: its letters and first run of digits (FPS1709BG2000 → FPS1709). */
-export const rangeStem = code => (U(code).match(/^[A-Z]*\d{3,}/) || [''])[0]
+export const rangeStem = code => (refKey(code).match(/^[A-Z]*\d{3,}/) || [''])[0]
 
 /** The profile (else mounting channel) a recipe is built on → { ref, code, maker } | null. */
 export function anchorOf(m, idx) {
   for (const k of ['PROFILE', 'MOUNT_CHANNEL']) {
     const r = (m.jobs.get(k) || [])[0]
     if (!r) continue
-    const ps = idx.psByRef.get(U(refOf(r))) || {}
-    const code = U(ps.ProductCode || ps.productCode)
-    return { ref: refOf(r), code: /^(TBC|N\/?A|-)?$/.test(code) ? '' : code, maker: ps.Manufacturer || ps.manufacturer || '' }
+    const ps = idx.psByRef.get(refKey(etRefOf(r))) || {}
+    const code = refKey(ps.ProductCode || ps.productCode)
+    return { ref: etRefOf(r), code: /^(TBC|N\/?A|-)?$/.test(code) ? '' : code, maker: ps.Manufacturer || ps.manufacturer || '' }
   }
   return null
 }
-const sameAnchor = (a, b) => !!a && !!b && (U(a.ref) === U(b.ref) || (!!a.code && a.code === b.code))
-const codeOf = (ref, idx) => U(idx.psByRef.get(U(ref))?.ProductCode || idx.psByRef.get(U(ref))?.productCode)
+const sameAnchor = (a, b) => !!a && !!b && (refKey(a.ref) === refKey(b.ref) || (!!a.code && a.code === b.code))
+const codeOf = (ref, idx) => refKey(idx.psByRef.get(refKey(ref))?.ProductCode || idx.psByRef.get(refKey(ref))?.productCode)
 
 /**
  * The positions of this project with the same design, power and make-up whose recipe has jobs this
@@ -113,15 +111,15 @@ export function sameKindAs(posRef, state, idx = indexes(state)) {
   // On another profile, only a job most alike positions have: one emergency pack or collar is that position's own.
   const usual = k => alike.filter(o => o.jobs.has(k)).length * 2 > alike.length
   // ...and one done by the same part everywhere: a frame or fire hood that differs by fitting is made for that fitting.
-  const varies = k => new Set(alike.flatMap(o => (o.jobs.get(k) || []).map(r => U(refOf(r))))).size > 1
-  const have = new Set([...me.jobs.values()].flat().map(r => U(refOf(r))))
-  const family = p => U(idx.ptByRef.get(U(p))?.ParentRef ?? idx.ptByRef.get(U(p))?.parentRef)
+  const varies = k => new Set(alike.flatMap(o => (o.jobs.get(k) || []).map(r => refKey(etRefOf(r))))).size > 1
+  const have = new Set([...me.jobs.values()].flat().map(r => refKey(etRefOf(r))))
+  const family = p => refKey(idx.ptByRef.get(refKey(p))?.ParentRef ?? idx.ptByRef.get(refKey(p))?.parentRef)
   for (const other of alike) {
     const p = other.posRef
     const anchor = anchorOf(other, idx)
     const basis = sameAnchor(mine, anchor) ? 'profile' : 'makeup'
     const adds = [...other.jobs.entries()].filter(([k]) => !me.jobs.has(k))
-      .map(([k, rows]) => [k, rows.filter(r => !have.has(U(refOf(r))))]).filter(([, rows]) => rows.length)   // never offer a part already in this recipe, whatever job it is filed under
+      .map(([k, rows]) => [k, rows.filter(r => !have.has(refKey(etRefOf(r))))]).filter(([, rows]) => rows.length)   // never offer a part already in this recipe, whatever job it is filed under
       .filter(([k]) => basis === 'profile' || (family(p) === family(posRef) && !FITS_PROFILE.has(k) && usual(k) && !varies(k))).map(([job, rows]) => ({ job, rows }))
     if (adds.length) out.push({ posRef: p, adds, basis, anchor })
   }
@@ -144,35 +142,35 @@ export function fitFor(job, anchor, state, idx = indexes(state)) {
   for (const p of posRefs) {
     const m = positionMakeup(p, state, idx)
     const r = (m.jobs.get(job) || [])[0]
-    if (r && sameAnchor(anchor, anchorOf(m, idx))) return { etRef: refOf(r), why: `used with ${anchor.ref} on ${p}` }
+    if (r && sameAnchor(anchor, anchorOf(m, idx))) return { etRef: etRefOf(r), why: `used with ${anchor.ref} on ${p}` }
   }
   const stem = rangeStem(anchor.code)
   const cands = elementTypesForJob(job, state, idx)
   if (stem.length >= 5) {
-    const fits = cands.filter(e => rangeStem(codeOf(refOf(e), idx)) === stem)
-    if (fits.length) return { etRef: refOf(fits[0]), why: `${stem} range` }
+    const fits = cands.filter(e => rangeStem(codeOf(etRefOf(e), idx)) === stem)
+    if (fits.length) return { etRef: etRefOf(fits[0]), why: `${stem} range` }
   }
   // Codes still TBC: the words say which profile a part is for ("End cap, Half Moon 0808").
   const size = sizeOf(textOf(anchor.ref, state, idx))
   if (size) {
-    const named = cands.filter(e => !rangeStem(codeOf(refOf(e), idx)) && sizeOf(textOf(refOf(e), state, idx)) === size)
-    if (named.length) return { etRef: refOf(named[0]), why: `named for the ${size} profile` }
+    const named = cands.filter(e => !rangeStem(codeOf(etRefOf(e), idx)) && sizeOf(textOf(etRefOf(e), state, idx)) === size)
+    if (named.length) return { etRef: etRefOf(named[0]), why: `named for the ${size} profile` }
   }
   return null
 }
 
 /** An ElementType's words: name, description and its Product Spec description. */
 function textOf(ref, state, idx) {
-  const e = idx.etByRef.get(U(ref)) || {}, ps = idx.psByRef.get(U(ref)) || {}
-  return U([e.Name, e.Description, ps.ComponentDescription].filter(Boolean).join(' '))
+  const e = idx.etByRef.get(refKey(ref)) || {}, ps = idx.psByRef.get(refKey(ref)) || {}
+  return refKey([e.Name, e.Description, ps.ComponentDescription].filter(Boolean).join(' '))
 }
 /** A profile size in words ("Half Moon 0808" → 0808, "2020 profile" → 2020): four digits on their own. */
 const sizeOf = t => (t.match(/(?:^|[^\d])(\d{4})(?!\d)/) || [])[1] || ''
 
 /** True when the ElementType's Product Spec row has no real code yet (TBC, N/A or blank). */
 export const codeIsTbc = (ref, idx) => {
-  const ps = idx.psByRef.get(U(ref))
-  return !!ps && (/^(TBC|-)?$/.test(codeOf(ref, idx)) || U(ps.IsTBC) === 'Y')
+  const ps = idx.psByRef.get(refKey(ref))
+  return !!ps && (/^(TBC|-)?$/.test(codeOf(ref, idx)) || refKey(ps.IsTBC) === 'Y')
 }
 
 /** True when the Product Spec row already carries a real code, even if flagged TBC (a held spec, e.g. an opal diffuser). */
@@ -186,9 +184,9 @@ export const hasRealCode = (ref, idx) => !/^(TBC|N\/?A|-)?$/.test(codeOf(ref, id
 export function pickRangePart(parts, anchor, job, state, idx = indexes(state)) {
   if (!parts.length) return null
   const stem = rangeStem(anchor?.code)
-  const tail = c => U(c).slice(rangeStem(c).length)
+  const tail = c => refKey(c).slice(rangeStem(c).length)
   const finish = (tail(anchor?.code || '').match(/^B([A-Z])/) || [])[1]
-  const used = new Set(elementTypesForJob(job, state, idx).map(e => tail(codeOf(refOf(e), idx))).filter(Boolean))
+  const used = new Set(elementTypesForJob(job, state, idx).map(e => tail(codeOf(etRefOf(e), idx))).filter(Boolean))
   const score = p => (used.has(tail(p.code)) ? 2 : 0) + (finish && /[A-Z]+/.exec(tail(p.code))?.[0].endsWith(finish) ? 1 : 0)
   return [...parts].filter(p => !stem || rangeStem(p.code) === stem).sort((a, b) => score(b) - score(a))[0] || null
 }
@@ -212,13 +210,27 @@ export function usuallyMissing(m, kind, min = 0.6) {
   return kind.slots.filter(s => (s.core || s.share >= min) && !m.jobs.has(s.slot) && s.slot !== 'OTHER')
 }
 
+/**
+ * Where this project files parts doing `job` (a jobKey): inside a wrapper or at position level
+ * (2V84PW). → { inside, n, of } with n the winning side's count, or null when it has none yet.
+ */
+export function placementByPrecedent(job, state, idx = indexes(state)) {
+  let inside = 0, pos = 0
+  for (const r of (state.recipes || []).filter(live)) {
+    if ((r.IsDesign || r.isDesign) === 'Y' || jobKey(rowJob(r, idx)) !== job) continue
+    if ((r.ContextType || r.contextType) === 'PositionType') pos++
+    else inside++
+  }
+  return inside + pos ? { inside: inside > pos, n: Math.max(inside, pos), of: inside + pos } : null
+}
+
 /** This project's ElementTypes doing `job` (a jobKey), most used in recipes first. */
 export function elementTypesForJob(job, state, idx = indexes(state)) {
   const uses = new Map()
-  for (const r of (state.recipes || []).filter(live)) uses.set(U(refOf(r)), (uses.get(U(refOf(r))) || 0) + 1)
+  for (const r of (state.recipes || []).filter(live)) uses.set(refKey(etRefOf(r)), (uses.get(refKey(etRefOf(r))) || 0) + 1)
   return (state.elementTypes || []).filter(live).filter(e => (e.IsCollection || e.isCollection) !== 'Y')
-    .filter(e => jobKey(rowJob({ ElementTypeRef: refOf(e), ContextType: 'ElementType' }, idx)) === job)
-    .sort((a, b) => (uses.get(U(refOf(b))) || 0) - (uses.get(U(refOf(a))) || 0) || refOf(a).localeCompare(refOf(b)))
+    .filter(e => jobKey(rowJob({ ElementTypeRef: etRefOf(e), ContextType: 'ElementType' }, idx)) === job)
+    .sort((a, b) => (uses.get(refKey(etRefOf(b))) || 0) - (uses.get(refKey(etRefOf(a))) || 0) || etRefOf(a).localeCompare(etRefOf(b)))
 }
 
 /** Where a kind's slot goes on this position: position level, or inside its wrapper. */
@@ -243,7 +255,7 @@ export const JOB_LABEL = {
   END_CAPS: 'end caps', CLIPS: 'clips', MOUNT_CHANNEL: 'mounting channel', MOUNT_COLLAR: 'mounting collar / frame',
   LOCAL_DRIVER: 'driver', REMOTE_DRIVER: 'driver', EMERGENCY: 'emergency pack', OPTIC_ACCESSORY: 'optic accessory',
   ACCESSORY: 'accessory', FIRE_HOOD: 'fire hood', LOCKING_LEVER: 'locking lever', FITTING: 'fitting', CABLE_TAIL: 'cable tail',
-  TRACK_ACCESSORY: 'track accessory', ENCLOSURE: 'enclosure', DOOR_SWITCH: 'door switch',
+  TRACK_ACCESSORY: 'track accessory', ENCLOSURE: 'enclosure', DOOR_SWITCH: 'door switch', CONTROLLER: 'controller',
 }
 export const jobLabel = k => JOB_LABEL[k] || String(k).toLowerCase().replace(/_/g, ' ')
 
@@ -283,7 +295,7 @@ export function formKindGaps(entries, { kinds = [], positionTypes = [], elementT
   const lines = new Map()
   for (const [pos, { jobs, linear }] of byPos) {
     if (!linear) continue
-    const { driver, secondary } = powerOf(idx.ptByRef.get(U(pos)) || {})
+    const { driver, secondary } = powerOf(idx.ptByRef.get(refKey(pos)) || {})
     const m = { design: 'LIN', driver: driver || 'remote', secondary: secondary || 'CV', jobs: new Map([...jobs].map(j => [j, []])),
       defining: [...jobs].filter(j => DEFINING.has(j)).sort() }
     const kind = matchKind(m, kinds)
@@ -315,18 +327,18 @@ export function usualConnectors(m, kind, state, idx = indexes(state), min = 0.3)
   for (const r of (state.recipes || []).filter(live)) {
     const j = rowJob(r, idx)
     if (j.slot !== 'CONNECTOR') continue
-    const ref = refOf(r)
+    const ref = etRefOf(r)
     if (!byJob.has(j.variant)) byJob.set(j.variant, new Map())
     byJob.get(j.variant).set(ref, (byJob.get(j.variant).get(ref) || 0) + 1)
     const w = (r.ContextType || r.contextType) === 'PositionType' ? 'position' : 'internal'
-    const k = `${U(ref)}|${w}`
+    const k = `${refKey(ref)}|${w}`
     where.set(k, (where.get(k) || 0) + 1)
   }
   for (const e of (state.elementTypes || []).filter(live)) {
-    const j = rowJob({ ElementTypeRef: refOf(e), ContextType: 'PositionType' }, idx)
-    if (j.slot === 'CONNECTOR' && !byJob.get(j.variant)?.has(refOf(e))) {
+    const j = rowJob({ ElementTypeRef: etRefOf(e), ContextType: 'PositionType' }, idx)
+    if (j.slot === 'CONNECTOR' && !byJob.get(j.variant)?.has(etRefOf(e))) {
       if (!byJob.has(j.variant)) byJob.set(j.variant, new Map())
-      byJob.get(j.variant).set(refOf(e), 0)
+      byJob.get(j.variant).set(etRefOf(e), 0)
     }
   }
   const rows = []
@@ -336,7 +348,7 @@ export function usualConnectors(m, kind, state, idx = indexes(state), min = 0.3)
     const cands = [...(byJob.get(d) || new Map()).entries()].sort((a, b) => b[1] - a[1])
     if (!cands.length) continue
     const etRef = cands[0][0]
-    const pos = where.get(`${U(etRef)}|position`) || 0, inside = where.get(`${U(etRef)}|internal`) || 0
+    const pos = where.get(`${refKey(etRef)}|position`) || 0, inside = where.get(`${refKey(etRef)}|internal`) || 0
     const section = inside > pos && (m.design === 'LIN' || m.design === 'DL') ? (m.design === 'LIN' ? 'lin_internal' : 'dl_internal') : 'position'
     for (let i = 0; i < missing; i++) rows.push({ descriptor: d, etRef, section })
   }

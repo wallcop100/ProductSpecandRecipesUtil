@@ -30,9 +30,10 @@
 
 import { sharedStem } from './etRefSuggest'
 import { hasProductIdentity } from './productCodes'
+import { sameMaker } from './codeShapes'
+import { live, etRefOf } from './derived'
 
 const lc = s => String(s ?? '').trim().toLowerCase()
-const refOf = e => e.ElementTypeRef || e.elementTypeRef || ''
 const famOf = e => e.Family || e.family || ''
 const COUNTER_RE = /^(.*)-(\d+)$/
 
@@ -46,12 +47,12 @@ export const codeTokens = code => String(code ?? '').match(/[A-Za-z]+|[0-9]+/g) 
 export function harvestExemplars({ elementTypes = [], psRows = [], source = '' } = {}) {
   const spec = new Map()
   for (const r of psRows) {
-    if ((r.IsDeleted || r.isDeleted) === 'Y') continue
-    spec.set(lc(r.ElementTypeRef || r.elementTypeRef), r)
+    if (!live(r)) continue
+    spec.set(lc(etRefOf(r)), r)
   }
   const out = []
   for (const et of elementTypes) {
-    const ref = refOf(et)
+    const ref = etRefOf(et)
     const family = famOf(et)
     const p = spec.get(lc(ref))
     if (!ref || !family || !p) continue
@@ -77,7 +78,7 @@ export function nearestExemplars(code, maker, exemplars = []) {
   let best = 0
   let hits = []
   for (const ex of exemplars) {
-    if (lc(ex.maker) !== lc(maker)) continue
+    if (!sameMaker(ex.maker, maker)) continue   // the companion writes "Light Graphix", Forms "LightGraphix"   // the companion writes "Light Graphix", Forms "LightGraphix"
     const stem = sharedStem(code, ex.code)
     if (stem < 4 || stem < best) continue
     if (stem > best) { best = stem; hits = [] }

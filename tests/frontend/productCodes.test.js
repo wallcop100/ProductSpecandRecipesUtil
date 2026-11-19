@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest'
 import {
-  tokenize, makeRow, codeRuns, deriveCaptures, deriveCodes, promoteNoteToCode,
+  makeRow, codeRuns, deriveCaptures, deriveCodes, promoteNoteToCode,
   buildMaster, buildDistinct, hasNoteCollision, duplicateSet, classify,
   clusterSimilar, rowConfidence, sortByConfidence, setNoteOverride, segmentsOf,
   pendingResolutions, groupKey, productKey, duplicateProductKeys, findProductET, hasProductIdentity,
@@ -646,7 +646,7 @@ describe('line breaks, phantom codes and glued notes', () => {
   })
 })
 
-import { hasNoteCollision, noteGist } from '../../src/utils/productCodes.js'
+import { noteGist } from '../../src/utils/productCodes.js'
 
 describe('note clashes only when the notes really differ', () => {
   const entry = (...notes) => ({ variants: notes.map(note => ({ note })) })
@@ -661,4 +661,12 @@ describe('note clashes only when the notes really differ', () => {
   test('gist folds plurals and drops filler', () => {
     expect([...noteGist('with Clips & caps')].sort()).toEqual(['cap', 'clip'])
   })
+})
+
+test("noteOverride[''] replaces the words on no code, once a code exists", () => {
+  const row = { ...makeRow(0, 'QC50 + QC51'), roles: ['code', 'note', 'code'] }
+  const plain = { ...makeRow(1, 'Ground spike'), roles: ['note', 'note'] }
+  expect(deriveCaptures(setNoteOverride(row, '', 'spike'), {}).unattachedNote).toBe('spike')
+  // With no code at all there is nothing to move words onto: the Form's words stand.
+  expect(deriveCaptures(setNoteOverride(plain, '', ''), {}).unattachedNote).toBe('Ground spike')
 })

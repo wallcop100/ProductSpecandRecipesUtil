@@ -5,6 +5,7 @@ import MaterialIcon from './MaterialIcon'
 import { positionFamilyOf } from '../utils/positionFamily'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { C } from '../styles/tokens'
+import { live } from '../utils/derived'
 
 /**
  * EmptyPositionWizard — steps through position types that have no recipe rows so
@@ -26,7 +27,7 @@ export default function EmptyPositionWizard({ show, onHide, onOpenPosition }) {
   const countByRef = useMemo(() => {
     const map = {}
     for (const r of recipes) {
-      if ((r.IsDeleted || r.isDeleted) === 'Y') continue
+      if (!live(r)) continue
       const pr = r.PositionTypeRef || r.positionTypeRef
       if (pr) map[pr] = (map[pr] || 0) + 1
     }

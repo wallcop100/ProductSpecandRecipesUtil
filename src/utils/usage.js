@@ -14,14 +14,13 @@
  */
 
 import { getInternalItems } from './containerUtils'
-import { findProductET, norm } from './productCodes'
+import { findProductET } from './productCodes'
+import { live, etRefOf, codeKey } from './derived'
 
 const lc = s => String(s ?? '').trim().toLowerCase()
-const etOf = r => r.ElementTypeRef || r.elementTypeRef || ''
 const posOf = r => r.PositionTypeRef || r.positionTypeRef || ''
 const ctxOf = r => r.ContextType || r.contextType
 const crefOf = r => r.ContextRef || r.contextRef || ''
-const live = r => (r.IsDeleted || r.isDeleted) !== 'Y'
 
 /**
  * elementTypeUsage(ref, { recipes, psRows, elementTypes, formCaptures, containerETRefs })
@@ -44,7 +43,7 @@ export function elementTypeUsage(ref, { recipes = [], psRows = [], elementTypes 
   const containers = new Set()
 
   for (const r of recipes) {
-    if (!live(r) || lc(etOf(r)) !== key) continue
+    if (!live(r) || lc(etRefOf(r)) !== key) continue
     if (posOf(r)) recipePositions.add(posOf(r))
     if (ctxOf(r) === 'ElementType' && crefOf(r)) containers.add(crefOf(r))
   }
@@ -64,7 +63,7 @@ export function elementTypeUsage(ref, { recipes = [], psRows = [], elementTypes 
     }
   }
 
-  const specRow = psRows.find(r => live(r) && lc(etOf(r)) === key)
+  const specRow = psRows.find(r => live(r) && lc(etRefOf(r)) === key)
   const spec = specRow
     ? { manufacturer: specRow.Manufacturer || specRow.manufacturer || '', productCode: specRow.ProductCode || specRow.productCode || '' }
     : null
@@ -114,7 +113,7 @@ export function divergingRefs({ recipes = [], formCaptures = null, posRef = null
   const inRecipe = new Map()   // lc(etRef) -> Set of lc(posRef)
   for (const r of recipes) {
     if (!live(r)) continue
-    const key = lc(etOf(r))
+    const key = lc(etRefOf(r))
     const pos = lc(posOf(r))
     if (!key || !pos) continue
     if (!inRecipe.has(key)) inRecipe.set(key, new Set())
@@ -190,4 +189,4 @@ export function unmatchedFormPositions(resolutions = [], recipes = []) {
 export const productLabel = (manufacturer, code) =>
   manufacturer ? `${manufacturer} · ${code}` : String(code ?? '')
 
-export { norm }
+export { codeKey }

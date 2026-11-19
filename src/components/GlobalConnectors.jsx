@@ -12,6 +12,7 @@ import { levelOf, saidOf, mayAsk, noteAsked } from '../utils/certainty'
 import ConfirmSuggestionModal from './ConfirmSuggestionModal'
 import { Dots } from './RecipeSuggestions'
 import { NotRightModal, sendNote } from './Corrections'
+import { etRefOf } from '../utils/derived'
 
 const pill = { fontSize: 10, lineHeight: '18px', background: C.surface, border: `1px solid ${C.border}`, fontFamily: 'monospace' }
 const ruleFor = key => [...WAGO_COMBOS, ...WAGO_TEMPLATES].find(e => e.key === key)?.rule || SUGGESTIONS.find(s => s.keys.includes(key))?.rule || null
@@ -121,7 +122,7 @@ export function WagoSuggestion({ posRef, inRecipe = false }) {
   const applyGlobalConnector = useStore(s => s.applyGlobalConnector)
   const [busy, setBusy] = useState(false)
   const rec = groups.recOf(posRef)
-  const codeOf = new Map((psRows || []).map(r => [String(r.ElementTypeRef || r.elementTypeRef || '').toLowerCase(), String(r.ProductCode || '').toUpperCase()]))
+  const codeOf = new Map((psRows || []).map(r => [String(etRefOf(r)).toLowerCase(), String(r.ProductCode || '').toUpperCase()]))
   const codesHere = ref => (groups.sigs.get(ref) || []).map(p => codeOf.get(p.ref.toLowerCase())).filter(Boolean)
   const mine = codesHere(posRef).sort().join('|')
   // Connectors in the recipe decide which set this is; the position's columns only suggest one for an empty recipe.
@@ -200,7 +201,7 @@ export function WagoSuggestion({ posRef, inRecipe = false }) {
     vote(o.key, v, note)
     if (v !== 'rejected') apply(o)
   }
-  const useButton = o => (
+  const buttonFor = o => (
     <Button size="sm" variant="primary" className="py-0" style={{ fontSize: 10 }} disabled={busy} onClick={() => use(o)} data-testid="wago-use">Use</Button>
   )
   const report = e => useStore.getState().requestBugNote(e.currentTarget.closest('[data-testid="wago-suggestion"]'))
@@ -235,7 +236,7 @@ export function WagoSuggestion({ posRef, inRecipe = false }) {
         <div className="d-flex align-items-center gap-1">
           <MaterialIcon name="auto_awesome" size={13} style={{ color: C.accent }} />
           <span style={{ flex: 1 }}>Suggested: <strong>{plan.collection?.Name || s.name}</strong></span>
-          {useButton(s)}
+          {buttonFor(s)}
           {reportButton}
         </div>
         <div className="text-muted" style={{ fontSize: 10 }}>
@@ -271,7 +272,7 @@ export function WagoSuggestion({ posRef, inRecipe = false }) {
           <div key={o.key} className="mt-1 pt-1 border-top" data-testid="wago-option">
             <div className="d-flex align-items-center gap-1">
               <strong style={{ flex: 1 }}>{planOf(o).collection?.Name || o.name}</strong>
-              {useButton(o)}
+              {buttonFor(o)}
             </div>
             <CodePills parts={globalConnectors().find(g => g.key === o.key).parts} />
             {creates(o).length > 0 && (
@@ -296,7 +297,7 @@ export function WagoSuggestion({ posRef, inRecipe = false }) {
 
 /** "Wago 5-pin…" when a project template's parts are a library entry (by their Product Spec codes). */
 export function wagoNameOf(collection, psRows) {
-  const codeOf = new Map((psRows || []).map(r => [String(r.ElementTypeRef || r.elementTypeRef || '').toLowerCase(), r.ProductCode]))
+  const codeOf = new Map((psRows || []).map(r => [String(etRefOf(r)).toLowerCase(), r.ProductCode]))
   const codes = templateParts(collection).map(p => ({ code: codeOf.get(p.ref.toLowerCase()) || '', section: p.section }))
   if (codes.some(c => !c.code)) return null
   return recogniseCodes(codes)?.name || null

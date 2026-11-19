@@ -13,6 +13,7 @@ describe('positionHealth: worst of', () => {
     [{ status: 'form' }, 'amber'],   // drawn half-filled (StatusPip)
     [{ status: 'done', issues: [warn] }, 'amber'],
     [{ status: 'done', companion: true }, 'purple'],
+    [{ status: 'done', newerCode: true }, 'purple'],   // a part with a newer code: the card's purple, on the rail too
     [{ status: 'empty', companion: true }, 'purple'],
     [{ status: 'done', issues: [warn], companion: true }, 'purple'],   // purple outranks amber
     [{ status: 'empty', issues: [{ severity: 'error', rule: 'MISSING_IS_DESIGN', message: 'x' }] }, 'grey'],   // no recipe is not red

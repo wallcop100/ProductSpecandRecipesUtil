@@ -19,25 +19,10 @@
  * Roles are read from tokens in the ref (SOCKET/PLUG by substring, SR by hyphen-segment, so
  * it cannot match inside a word like DRIVER).
  */
+import { connectorPart } from './codeJobs'
 
-/** Hyphen-delimited, uppercased segments of a ref. */
-function segments(ref) {
-  return ((ref || '').toUpperCase()).split('-')
-}
-
-/**
- * connectorRole(ref) → 'socket' | 'plug' | 'sr' | null
- * SR is checked first (as a whole segment) so an SR ref isn't mis-read as a
- * socket/plug if it also carries those words.
- */
-export function connectorRole(ref) {
-  if (!ref) return null
-  const upper = ref.toUpperCase()
-  if (segments(ref).includes('SR') || upper.includes('STRAINRELIEF')) return 'sr'
-  if (upper.includes('SOCKET') || segments(ref).includes('SOCK')) return 'socket'
-  if (upper.includes('PLUG')) return 'plug'
-  return null
-}
+/** connectorRole(ref) → 'sr' | 'socket' | 'plug' | null. The rule is codeJobs' connectorPart. */
+export const connectorRole = ref => connectorPart(ref)
 
 /** True if the ref looks like any kind of connector. */
 export function isConnector(ref) {

@@ -58,6 +58,18 @@ describe('Product Spec: family only, and fork', () => {
     expect(et.Family).toBe('ET-PS-MOUNTING-FRAME')
   })
 
+  test('T6FDCM: a typed family the project lacks is created, as a family', () => {
+    base()
+    render(<ETSpecEditor selectedRef="ET-2PIN-ORLUNA" onRenamed={vi.fn()} />)
+    fireEvent.click(screen.getByTestId('family-ref-open'))
+    fireEvent.change(screen.getByLabelText('Family'), { target: { value: 'et-ps-sockets' } })
+    fireEvent.blur(screen.getByLabelText('Family'))
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
+    const ets = useStore.getState().elementTypes
+    expect(ets.find(e => e.ElementTypeRef === 'ET-2PIN-ORLUNA').Family).toBe('ET-PS-SOCKETS')
+    expect(ets.find(e => e.ElementTypeRef === 'ET-PS-SOCKETS')?.IsCollection).toBe('Y')
+  })
+
   test('Fork makes a new ElementType with a copy of the spec, and selects it', () => {
     base()
     const onRenamed = vi.fn()
@@ -116,4 +128,19 @@ describe('Product Spec: a row the DesignDB lacks', () => {
     expect(s.elementTypes.find(e => e.ElementTypeRef === 'ET-CCR-D-500-1CH-01')).toMatchObject({ Family: 'ET-REMOTE-DRIVERS', Description: 'SOLODrive' })
     expect(s.dbChanges.some(c => c.elementTypeRef === 'ET-CCR-D-500-1CH-01' && c._isNew)).toBe(true)
   })
+})
+
+test('External notes can be edited on the Product Spec, beside Internal notes', () => {
+  useStore.setState({
+    projectId: 1, dbChanges: [], psChanges: [], rsChanges: [], past: [], future: [], recipes: [],
+    elementTypes: [{ ElementTypeRef: 'ET-EXT-02' }],
+    psRows: [{ ElementTypeRef: 'ET-EXT-02', Manufacturer: 'Acme', ExternalNotesText: 'Old' }],
+  })
+  render(<ETSpecEditor selectedRef="ET-EXT-02" />)
+  fireEvent.click(screen.getByRole('button', { name: /Notes/ }))
+  const ext = screen.getByLabelText('External notes')
+  expect(ext).toHaveValue('Old')
+  fireEvent.change(ext, { target: { value: 'Supplied by others' } })
+  fireEvent.blur(ext)
+  expect(useStore.getState().psRows[0].ExternalNotesText).toBe('Supplied by others')
 })

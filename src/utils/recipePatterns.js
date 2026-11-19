@@ -4,7 +4,7 @@
  * process.md §7 gives the shape of a recipe; real projects show what that shape is in
  * practice, and they disagree with each other in the details (4343 puts remote exterior
  * fittings straight at position level with a frame; another job wraps them in a DL). So
- * the shape a new recipe gets is PRECEDENT, looked up in this order:
+ * the shape a new recipe gets is PRECEDENT, looked refKey in this order:
  *
  *   1. project — this project's own finished recipes of the same kind
  *   2. library — projects opened in this tool before (harvested on open)
@@ -24,10 +24,9 @@
  */
 
 import shipped from '../data/recipePatterns.json'
+import { live, etRefOf, refKey } from './derived'
 
-const up = s => String(s ?? '').trim().toUpperCase()
-const live = r => (r.IsDeleted || r.isDeleted) !== 'Y'
-const refOf = r => r.ElementTypeRef || r.elementTypeRef || r.EntityRef || r.entityRef || ''
+const refOf = r => etRefOf(r) || r.EntityRef || r.entityRef || ''
 const posOf = r => r.PositionTypeRef || r.positionTypeRef || ''
 const ctxTypeOf = r => r.ContextType || r.contextType || ''
 const ctxRefOf = r => r.ContextRef || r.contextRef || ''
@@ -39,8 +38,8 @@ const flag = v => (v === 'Y' || v === true ? 'Y' : null)
  * same way on every job (process.md §6.1), so the name IS the role.
  */
 export function roleOf(ref, family = '') {
-  const u = up(ref)
-  const f = up(family)
+  const u = refKey(ref)
+  const f = refKey(family)
   if (/^ET-DL-\d/.test(u) || /^ET-LIN-\d/.test(u)) return 'WRAPPER'
   // Track: the run itself, or a fitting on it (ET-TRACK / ET-TRACK-PS). Its caps, feed
   // heads and frames fall through to their own roles below.
@@ -70,7 +69,7 @@ export const PRODUCT_ROLES = new Set(['PS', 'ACCESSORY', 'TAPE', 'FLEX', 'PROFIL
 
 /** LOCAL / REMOTE / INTEGRAL / NONE from the DesignDB's DriverLocation. */
 export function driverOf(pt) {
-  const d = up(pt?.DriverLocation ?? pt?.driverLocation)
+  const d = refKey(pt?.DriverLocation ?? pt?.driverLocation)
   if (d.startsWith('LOCAL')) return 'LOCAL'
   if (d.startsWith('REMOTE')) return 'REMOTE'
   if (d.startsWith('INTEGRAL')) return 'INTEGRAL'
@@ -85,7 +84,7 @@ export function envOf(pt, parentOf = () => null) {
   const chain = [pt?.PositionTypeRef ?? pt?.positionTypeRef, pt?.ParentRef ?? pt?.parentRef]
   let p = pt?.ParentRef ?? pt?.parentRef
   for (let i = 0; i < 4 && p; i++) { p = parentOf(p); if (p) chain.push(p) }
-  return chain.some(x => /EXTERIOR/.test(up(x))) ? 'EXT' : 'INT'
+  return chain.some(x => /EXTERIOR/.test(refKey(x))) ? 'EXT' : 'INT'
 }
 
 /**
@@ -94,18 +93,18 @@ export function envOf(pt, parentOf = () => null) {
  *      isInteger, n, of }]
  */
 export function harvestPatterns({ recipes = [], positionTypes = [], elementTypes = [], source = '' } = {}) {
-  const famOf = new Map(elementTypes.map(e => [up(e.ElementTypeRef || e.elementTypeRef), e.Family || e.family || '']))
-  const ptByRef = new Map(positionTypes.map(p => [up(p.PositionTypeRef || p.positionTypeRef), p]))
-  const parentOf = r => { const p = ptByRef.get(up(r)); return p ? (p.ParentRef || p.parentRef || null) : null }
+  const famOf = new Map(elementTypes.map(e => [refKey(etRefOf(e)), e.Family || e.family || '']))
+  const ptByRef = new Map(positionTypes.map(p => [refKey(p.PositionTypeRef || p.positionTypeRef), p]))
+  const parentOf = r => { const p = ptByRef.get(refKey(r)); return p ? (p.ParentRef || p.parentRef || null) : null }
   const rows = recipes.filter(live)
   const kinds = new Map()   // pos -> kind key
   const design = new Map()  // pos -> design ref
   for (const r of rows) {
     if (ctxTypeOf(r) !== 'PositionType' || flag(r.IsDesign ?? r.isDesign) !== 'Y') continue
     const pos = posOf(r) || ctxRefOf(r)
-    const pt = ptByRef.get(up(pos))
+    const pt = ptByRef.get(refKey(pos))
     if (!pt || (pt.IsCollection || pt.isCollection) === 'Y') continue
-    const de = up(refOf(r))
+    const de = refKey(refOf(r))
     const wk = designKind(de)
     design.set(pos, de)
     kinds.set(pos, `${wk}|${driverOf(pt)}|${envOf(pt, parentOf)}`)
@@ -119,13 +118,13 @@ export function harvestPatterns({ recipes = [], positionTypes = [], elementTypes
     let pos, lvl
     if (ct === 'PositionType') { pos = posOf(r) || ctxRefOf(r); lvl = 'P' }
     else if (ct === 'ElementType') {
-      pos = [...design.entries()].find(([p, de]) => de === up(ctxRefOf(r)) && (!posOf(r) || posOf(r) === p))?.[0]
+      pos = [...design.entries()].find(([p, de]) => de === refKey(ctxRefOf(r)) && (!posOf(r) || posOf(r) === p))?.[0]
       lvl = 'I'
     }
     if (!pos || !kinds.has(pos)) continue
     const ref = refOf(r)
     const shape = {
-      role: roleOf(ref, famOf.get(up(ref))), lvl,
+      role: roleOf(ref, famOf.get(refKey(ref))), lvl,
       isDesign: flag(r.IsDesign ?? r.isDesign), isContractItem: flag(r.IsContractItem ?? r.isContractItem),
       quantity: r.Quantity ?? r.quantity ?? null, dimQtyMultiplier: r.Dim_QuantityMultiplier ?? r.dimQtyMultiplier ?? null,
       isInteger: flag(r.IsInteger ?? r.isInteger),
@@ -144,7 +143,7 @@ export function harvestPatterns({ recipes = [], positionTypes = [], elementTypes
 
 /** The kind of wrapper a design element makes: DL / LIN / PS / TRACK / TRACKPS / OTHER. */
 export function designKind(ref) {
-  const de = up(ref)
+  const de = refKey(ref)
   if (/^ET-DL-/.test(de)) return 'DL'
   if (/^ET-LIN-\d/.test(de)) return 'LIN'
   if (de.startsWith('ET-TRACK-PS')) return 'TRACKPS'

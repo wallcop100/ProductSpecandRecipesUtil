@@ -27,9 +27,34 @@ jobs:
           cache: npm
 
       - run: npm ci
+        env:
+          COMPANION_KIT_TOKEN: ${{ secrets.COMPANION_KIT_TOKEN }}   # companion-kit is private (.npmrc)
 
       - name: Test
         run: npx vitest run
 
       - name: Build
         run: npm run build
+
+  # Users' unexported work lives in their browser, saved by whatever build they last used (prod).
+  # Prod's own code saves real edits; this build must reopen them with nothing lost or in conflict.
+  upgrade-from-prod:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0              # the prod code (origin/master) is checked out beside this one
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+        env:
+          COMPANION_KIT_TOKEN: ${{ secrets.COMPANION_KIT_TOKEN }}
+
+      - name: Prod-saved work opens on this build
+        run: scripts/upgrade-check.sh origin/master
+        env:
+          COMPANION_KIT_TOKEN: ${{ secrets.COMPANION_KIT_TOKEN }}

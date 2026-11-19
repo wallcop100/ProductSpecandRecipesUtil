@@ -55,50 +55,18 @@ function setup(over = {}) {
   return render(<FormSpecPane posRef="C01r" />)
 }
 
-/**
- * The pane's default view is the comparison and nothing else. Reference — the Form's own
- * columns, derived rows, departed codes — is one click away on the rail, and the rare acts
- * (re-import, detach, choose columns) are one click away in the ⋮ menu.
- */
-const RAIL = {
-  context: 'What the Form itself says about this position',
-  extra: 'In the recipe, not specified by the Form — derived detail, not a problem',
-  orphaned: 'No longer in the Form',
-}
-const openRail = id => fireEvent.click(screen.getByLabelText(RAIL[id]))
 const openMenu = () => fireEvent.click(screen.getByTitle('Form template options'))
 
 describe('FormSpecPane renders the Form beside the recipe', () => {
   beforeEach(() => { vi.clearAllMocks() })
 
-  test('the Form\'s own columns are reference: behind the rail, not in your face', () => {
+  test('design A: no rail, no column picker, no X/Y count', () => {
     setup()
-    expect(screen.queryByText('Linear LED')).not.toBeInTheDocument()
-
-    openRail('context')
-    expect(screen.getByText('ProductName')).toBeInTheDocument()
-    expect(screen.getByText('Linear LED')).toBeInTheDocument()
-    expect(screen.getByText('Black anodised')).toBeInTheDocument()
-  })
-
-  test('the rail says how many are hiding, so nothing is silently lost', () => {
-    setup()
-    // Two context columns, two extras (the socket and the wrapper), no orphans.
-    expect(screen.getByLabelText(RAIL.context)).toHaveTextContent('2')
-    expect(screen.getByLabelText(RAIL.extra)).toHaveTextContent('2')
-    expect(screen.getByLabelText(RAIL.orphaned)).toBeDisabled()
-  })
-
-  test('which columns show is a preference, changeable without re-importing', () => {
-    setup()
+    expect(screen.queryByLabelText('What the Form itself says about this position')).toBeNull()
+    expect(screen.queryByText(/present$/)).toBeNull()
     openMenu()
-    fireEvent.click(screen.getByText('Show columns…'))
-    fireEvent.click(screen.getByLabelText('Finish'))     // untick it
-    fireEvent.click(screen.getByText('Done'))
-
-    openRail('context')
-    expect(screen.getByText('Linear LED')).toBeInTheDocument()
-    expect(screen.queryByText('Black anodised')).not.toBeInTheDocument()
+    expect(screen.queryByText('Show columns…')).toBeNull()
+    expect(screen.queryByText('Paint from the Form')).toBeNull()
   })
 
   test('names the source workbook', () => {
@@ -109,21 +77,15 @@ describe('FormSpecPane renders the Form beside the recipe', () => {
   test('a Form product INSIDE the wrapper reads as present, not misplaced', () => {
     setup()
     expect(screen.getByText('FPS2020BG2000')).toBeInTheDocument()
-    expect(screen.getByText('inside ET-LIN-01')).toBeInTheDocument()
+    expect(screen.getByTitle('Inside ET-LIN-01')).toBeInTheDocument()
     expect(screen.queryByText(/misplaced/i)).toBeNull()
   })
 
   test('an absent Form product is missing and offers one-click adds', () => {
     setup()
-    expect(screen.getByText('LL240272024')).toBeInTheDocument()
-    expect(screen.getByText('missing from the recipe')).toBeInTheDocument()
+    expect(within(screen.getByTestId('missing-card')).getByText('LL240272024')).toBeInTheDocument()
     expect(screen.getByLabelText('Add ET-TAPE-01 at position level')).toBeInTheDocument()
     expect(screen.getByLabelText('Add ET-TAPE-01 inside ET-LIN-01')).toBeInTheDocument()
-  })
-
-  test('coverage counts what the Form specified', () => {
-    setup()
-    expect(screen.getByText('1/2 present')).toBeInTheDocument()
   })
 
   /**
@@ -146,11 +108,11 @@ describe('FormSpecPane renders the Form beside the recipe', () => {
 
   test('recipe rows absent from the Form are derived detail, never errors', () => {
     setup()
-    openRail('extra')
-    expect(screen.getByText('Not specified by the Form')).toBeInTheDocument()
-    expect(screen.getByText('ET-2PIN-SOCK')).toBeInTheDocument()
-    expect(screen.getByText('connector')).toBeInTheDocument()
-    expect(screen.getByText('the wrapper')).toBeInTheDocument()   // ET-LIN-01 itself
+    // Folded behind "show N": the socket and the wrapper itself.
+    expect(screen.queryByText('ET-2PIN-SOCK')).toBeNull()
+    fireEvent.click(screen.getByText('show 2'))
+    expect(within(screen.getByTestId('not-from-form')).getByText('ET-2PIN-SOCK')).toBeInTheDocument()
+    expect(screen.queryByTestId('missing-card') && screen.getAllByTestId('missing-card').some(c => c.textContent.includes('ET-2PIN-SOCK'))).toBe(false)
   })
 
   test('one click adds at position level — no preview', () => {
@@ -193,7 +155,6 @@ describe('FormSpecPane renders the Form beside the recipe', () => {
     const before = useStore.getState().recipes.length
     fireEvent.click(screen.getByText(/Add all 2/))
     expect(useStore.getState().recipes).toHaveLength(before + 2)
-    expect(screen.getByTestId('form-all-present')).toBeInTheDocument()
     fireEvent.click(within(screen.getByTestId('form-added')).getByText('Undo'))
     expect(useStore.getState().recipes).toHaveLength(before)
   })
@@ -223,10 +184,9 @@ describe('FormSpecPane renders the Form beside the recipe', () => {
 
   test('a blank position offers a wrapper; the kind that fits the Form is filled', () => {
     setup({ recipes: [], containerETRefs: new Set(), elementTypes: [{ ElementTypeRef: 'ET-LIN-04' }] })
-    // One small icon; its menu lists the kind that fits the Form first.
-    fireEvent.click(screen.getByLabelText('Add a wrapper'))
-    const lin = screen.getByText(/\+ LIN wrapper/)
-    expect(lin.textContent).toMatch(/fits these products/)   // tape + profile → linear
+    // [+ DL] [+ LIN]: the kind that fits the Form (tape + profile → linear) is filled.
+    const lin = within(screen.getByTestId('no-wrapper')).getByText('+ LIN')
+    expect(lin.className).toMatch(/btn-primary/)
     fireEvent.click(lin)
     const st = useStore.getState()
     const row = st.recipes.find(r => r.PositionTypeRef === 'C01r')
@@ -241,8 +201,7 @@ describe('FormSpecPane renders the Form beside the recipe', () => {
 
   test('adding a wrapper is one undo step', () => {
     setup({ recipes: [], containerETRefs: new Set() })
-    fireEvent.click(screen.getByLabelText('Add a wrapper'))
-    fireEvent.click(screen.getByText(/\+ DL wrapper/))
+    fireEvent.click(within(screen.getByTestId('no-wrapper')).getByText('+ DL'))
     expect(useStore.getState().recipes).toHaveLength(1)
     useStore.getState().undo()
     expect(useStore.getState().recipes).toHaveLength(0)
@@ -251,9 +210,9 @@ describe('FormSpecPane renders the Form beside the recipe', () => {
 
   test('a code that left the Form is flagged, never deleted for you', () => {
     setup({ formCaptures: { ...captures, byPosition: { C01r: [] }, orphansByPosition: { C01r: ['ET-PROF-01'] } } })
-    openRail('orphaned')
-    expect(screen.getByText('No longer in the Form')).toBeInTheDocument()
-    expect(screen.getByText('Remove')).toBeInTheDocument()
+    const row = screen.getByTestId('gone-row')
+    expect(within(row).getByTestId('gutter')).toHaveTextContent('−')
+    expect(within(row).getByText('Remove')).toBeInTheDocument()
     expect(useStore.getState().recipes.find(r => r.ElementTypeRef === 'ET-PROF-01')).toBeTruthy()
   })
 
@@ -266,7 +225,6 @@ describe('FormSpecPane renders the Form beside the recipe', () => {
     setup({ formCaptures: null })
     expect(screen.getByText('No Form template yet')).toBeInTheDocument()
     expect(screen.getByText(/Import the whole Form template/)).toBeInTheDocument()
-    expect(screen.getByText(/Identify codes/)).toBeInTheDocument()   // the 1-2-3
     expect(screen.getByTestId('paint-position').textContent).toMatch(/Load the Form and paint this position/)
   })
 
@@ -284,27 +242,18 @@ describe('FormSpecPane renders the Form beside the recipe', () => {
 })
 
 describe('manufacturer + product code are one identity', () => {
-  test('the manufacturer is always shown beside the code', () => {
+  test('the manufacturer is on the code, on hover (the entry header shows it too)', () => {
     setup()
-    expect(screen.getByText('FPS2020BG2000')).toBeInTheDocument()
-    expect(screen.getByText('Flexalighting')).toBeInTheDocument()
-    expect(screen.getByText('LL240272024')).toBeInTheDocument()
-    expect(screen.getByText('Nichia')).toBeInTheDocument()
-  })
-
-  test('a product with no manufacturer says so rather than showing nothing', () => {
-    setup({
-      formCaptures: { ...captures, byPosition: { C01r: [{ elementTypeRef: 'ET-X', code: 'ABC', formRef: 'C01' }] } },
-    })
-    expect(screen.getByText('no manufacturer')).toBeInTheDocument()
+    expect(screen.getByTitle('Flexalighting')).toHaveTextContent('FPS2020BG2000')
+    expect(screen.getByTitle('Nichia')).toHaveTextContent('LL240272024')
   })
 
   test('a maker+code already in the spec is offered as a shopping-list add', () => {
     // The spec already names ET-TAPE-99 for Nichia / LL240272024.
     setup({ psRows: [{ ElementTypeRef: 'ET-TAPE-99', Manufacturer: 'Nichia', ProductCode: 'LL240272024' }] })
     expect(screen.queryByText('in the spec')).toBeNull()                       // VCYTLE: no badge
-    expect(screen.getByText('already an ElementType — add it')).toBeInTheDocument()
-    expect(screen.getByText('ET-TAPE-99')).toBeInTheDocument()   // the spec's ET, not the captured one
+    // the spec's ET, not the captured one, as an orange pill on a missing card
+    expect(within(screen.getByTestId('missing-card')).getByText('ET-TAPE-99')).toBeInTheDocument()
   })
 
   test('adding it adds the SPEC\'s ElementType, not the stale captured one', () => {
@@ -320,7 +269,7 @@ describe('manufacturer + product code are one identity', () => {
       { ElementTypeRef: 'ET-OTHER', Manufacturer: 'Phos', ProductCode: 'LL240272024' },
       { ElementTypeRef: 'ET-DECOY', Manufacturer: 'Acme', ProductCode: 'LL240272024' },
     ] })
-    expect(screen.getByText('missing from the recipe')).toBeInTheDocument()
+    expect(within(screen.getByTestId('missing-card')).getByText('ET-TAPE-01')).toBeInTheDocument()
     expect(screen.queryByText('ET-OTHER')).toBeNull()
   })
 })
@@ -373,7 +322,9 @@ describe('the fork decision is durable and actionable', () => {
 
   test('an inconsistent shared wrapper is surfaced on the position, with a Fork', () => {
     setup({ recipes: shared(), formCaptures: withDivergence })
-    expect(screen.getByText(/is\s+shared by C01r, C03r/)).toBeInTheDocument()
+    const box = screen.getByTestId('divergence')
+    expect(within(box).getByText('ET-LIN-01')).toBeInTheDocument()
+    expect(within(box).getByText('C03r')).toBeInTheDocument()   // a position pill
     expect(screen.getByText(/Fork it for C01r/)).toBeInTheDocument()
   })
 
@@ -396,64 +347,12 @@ describe('the fork decision is durable and actionable', () => {
   })
 })
 
-describe('Next unreconciled', () => {
-  // C01r is complete; C03r still misses the profile.
-  const recipes2 = () => [
-    pos('C01r', 'ET-LIN-01', { IsDesign: 'Y' }), inside('C01r', 'ET-LIN-01', 'ET-PROF-01'),
-    pos('C01r', 'ET-TAPE-01'),
-    pos('C03r', 'ET-LAMP', { IsDesign: 'Y' }),
-  ]
-  const caps = {
-    ...captures,
-    byPosition: {
-      C01r: [{ elementTypeRef: 'ET-PROF-01', code: 'A', manufacturer: 'M' }, { elementTypeRef: 'ET-TAPE-01', code: 'B', manufacturer: 'M' }],
-      C03r: [{ elementTypeRef: 'ET-PROF-01', code: 'A', manufacturer: 'M' }],
-    },
-  }
-
-  test('a finished position says so at the top, with Next as the button', () => {
-    setup({ recipes: recipes2(), formCaptures: caps })
-    const bar = screen.getByTestId('form-all-present')
-    fireEvent.click(within(bar).getByText(/Next:/))
-    expect(useStore.getState().activePositionRef).toBe('C03r')
+describe('design A drops Next / Back', () => {
+  test('no Next unreconciled, no Back, no All present', () => {
+    setup({ positionHistory: ['C09r'] })
     expect(screen.queryByText(/Next unreconciled/)).toBeNull()
-  })
-
-  test('an unfinished position keeps Next unreconciled at the bottom', () => {
-    setup({ recipes: recipes2().filter(r => r.ElementTypeRef !== 'ET-TAPE-01'), formCaptures: caps })
-    fireEvent.click(screen.getByText(/Next unreconciled/))
-    expect(useStore.getState().activePositionRef).toBe('C03r')
-  })
-
-  test('Next can be undone: Back returns to where you were', () => {
-    setup({ recipes: recipes2(), formCaptures: caps, activePositionRef: 'C01r', positionHistory: [] })
-    fireEvent.click(within(screen.getByTestId('form-all-present')).getByText(/Next:/))
-    expect(useStore.getState().activePositionRef).toBe('C03r')
-    useStore.getState().goBackPosition()
-    expect(useStore.getState().activePositionRef).toBe('C01r')
-    expect(useStore.getState().positionHistory).toEqual([])
-  })
-
-  test('the pane offers Back once you have moved', () => {
-    setup({ recipes: recipes2(), formCaptures: caps, positionHistory: ['C09r'] })
-    fireEvent.click(screen.getByText(/Back to/))
-    expect(useStore.getState().activePositionRef).toBe('C09r')
-  })
-
-  test('hidden when everything is reconciled', () => {
-    const done = { ...captures, byPosition: { C01r: [{ elementTypeRef: 'ET-PROF-01', code: 'A' }] } }
-    setup({ recipes: recipes2(), formCaptures: done })
-    expect(screen.queryByText(/Next unreconciled/)).toBeNull()
-  })
-
-  test('hidden in embedded mode — ReviewModal owns its own prev/next', () => {
-    useStore.setState({
-      projectId: 42, recipes: recipes2(), containerETRefs: new Set(['et-lin-01']),
-      formCaptures: caps, psRows: [], elementTypes: [], rsChanges: [], past: [], future: [],
-      activeContextType: 'PositionType', activeETRef: null, recipeError: null, dbWriteEnabled: false,
-    })
-    render(<FormSpecPane posRef="C01r" embedded />)
-    expect(screen.queryByText(/Next unreconciled/)).toBeNull()
+    expect(screen.queryByText(/Back to/)).toBeNull()
+    expect(screen.queryByTestId('form-all-present')).toBeNull()
   })
 })
 
@@ -478,9 +377,10 @@ describe('a pending Form product can be merged into an ElementType you already h
 
   test('the unaccounted-for recipe row is offered as the answer', () => {
     setup({ recipes: withLS(), containerETRefs: new Set(), formCaptures: pendingCaps })
-    expect(screen.getByText('1 product with no ElementType')).toBeInTheDocument()
-    expect(screen.getByText('already in this recipe, not accounted for by the Form')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /That's it/ })).toBeInTheDocument()
+    const c = screen.getByTestId('pending-card')
+    expect(within(c).getByText('in the recipe, no Form code')).toBeInTheDocument()
+    expect(within(c).getByText('ET-LS-01')).toBeInTheDocument()
+    expect(within(c).getByRole('button', { name: 'Use' })).toBeInTheDocument()
   })
 
   test("clicking \"That's it\" links it, and stamps the identity so it survives a re-import", async () => {
@@ -488,7 +388,7 @@ describe('a pending Form product can be merged into an ElementType you already h
       recipes: withLS(), containerETRefs: new Set(), formCaptures: pendingCaps,
       psRows: [{ _id: 'p1', ElementTypeRef: 'ET-LS-01', Manufacturer: '', ProductCode: '' }],
     })
-    fireEvent.click(screen.getByRole('button', { name: /That's it/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Use' }))
 
     await vi.waitFor(() => {
       const fc = useStore.getState().formCaptures
@@ -508,12 +408,12 @@ describe('a pending Form product can be merged into an ElementType you already h
       containerETRefs: new Set(['et-lin-01']),
       formCaptures: pendingCaps,
     })
-    expect(screen.getByText('1 product with no ElementType')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /That's it/ })).toBeNull()
+    expect(screen.getByTestId('pending-card')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Use' })).toBeNull()
   })
 
   test('there is always a manual way out', () => {
     setup({ recipes: withLS(), containerETRefs: new Set(), formCaptures: pendingCaps })
-    expect(screen.getByRole('button', { name: /Pick existing/ })).toBeInTheDocument()
+    expect(within(screen.getByTestId('pending-card')).getByRole('button', { name: /Existing/ })).toBeInTheDocument()
   })
 })

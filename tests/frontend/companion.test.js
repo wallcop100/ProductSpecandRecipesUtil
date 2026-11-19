@@ -27,14 +27,27 @@ describe('companion discovery', () => {
     vi.stubGlobal('fetch', vi.fn(async url => (String(url).includes('capabilities')
       ? json({ protocol: PROTOCOL, features: ['sweep'] })
       : json({ retired: [{ code: 'OLD-1', replacement: 'NEW-1' }],
-        maybe: [{ code: '021-1102', options: [{ option: 'FPS2020BG2000', used: 2 }, { option: 'FPS2021BG2000', used: 0 }] }] }))))
+        maybe: [{ code: '021-1102', options: [{ option: 'FPS2020BG2000', used: 2 }, { option: 'FPS2021BG2000', used: 0 }] }],
+        says: [{ code: 'zh-infd-27', says: 'trimmed', segment: 'INFD', projects: 1 }] }))))
     await sweepCodes([{ code: 'OLD-1' }, { code: '021-1102' }])
     const { retiredCodes } = useStore.getState()
+    expect(useStore.getState().codeSays).toEqual({ 'ZH-INFD-27': { says: 'trimmed', segment: 'INFD' } })
+    expect(retiredFor(retiredCodes, 'zh-infd-27')).toBeNull()
     expect(retiredFor(retiredCodes, 'OLD-1')).toEqual({ replacement: 'NEW-1', retired: null, tier: null })
     const m = retiredFor(retiredCodes, '021-1102')
     expect(m.replacement).toBeNull()
     expect(m.options).toEqual([{ code: 'FPS2020BG2000', used: 2 }, { code: 'FPS2021BG2000', used: 0 }])
     expect(newerCodes(m)).toBe('FPS2020BG2000 or FPS2021BG2000')
+  })
+  it('a code typed after the project opened is asked about', async () => {
+    const { default: useStore } = await import('../../src/store/useStore')
+    const { resetRetired } = await import('../../src/platform/retired')
+    resetRetired()
+    vi.stubGlobal('fetch', vi.fn(async url => (String(url).includes('capabilities')
+      ? json({ protocol: PROTOCOL, features: ['sweep'] })
+      : json({ retired: [], maybe: [], says: [{ code: 'NT-INXD-T1', says: 'trimmed', segment: 'INXD', projects: 1 }] }))))
+    useStore.setState({ psRows: [{ ElementTypeRef: 'ET-PS-01', ProductCode: 'NT-INXD-T1', Manufacturer: 'Orluna' }] })
+    await vi.waitFor(() => expect(useStore.getState().codeSays['NT-INXD-T1']?.says).toBe('trimmed'), { timeout: 4000 })
   })
   it('is null for an unknown protocol', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => json({ protocol: 'something-else/9', features: ['sweep'] })))
@@ -73,7 +86,7 @@ describe('companion discovery', () => {
     expect(c.shareOutcomes).toBeNull()
   })
   it('proves a project with salted hashes, then sends the token on its calls', async () => {
-    const f = vi.fn(async (url, init) => {
+    const f = vi.fn(async (url) => {
       const u = String(url)
       if (u.includes('capabilities')) return json({ protocol: PROTOCOL, features: ['projects', 'proof'] })
       if (u === './api/proof') return json({ nonce: 'N' })
@@ -92,5 +105,37 @@ describe('companion discovery', () => {
     expect(sent.hashes).toEqual(['N|A1|T', 'N|B2|'].map(t => createHash('sha256').update(t).digest('hex').slice(0, 16)))
     await c.projectItems('4343')
     expect(f.mock.calls[4][1].headers['X-PSR-Proof']).toBe('1761200000.' + 'a'.repeat(32))
+  })
+
+  it('proves again and retries once when a project call is refused (the token ran out)', async () => {
+    let token = 0, refuse = false
+    const f = vi.fn(async (url, init) => {
+      const u = String(url)
+      if (u.includes('capabilities')) return json({ protocol: PROTOCOL, features: ['projects', 'proof'] })
+      if (u === './api/proof') return json({ nonce: 'N' })
+      if (u.endsWith('/proof')) return json({ token: `t${++token}` })
+      if (refuse && init.headers['X-PSR-Proof'] === 't1') return json({ error: 'forbidden' }, { status: 403 })
+      return json({ items: [init.headers['X-PSR-Proof']] })
+    })
+    vi.stubGlobal('fetch', f)
+    const c = await getCompanion()
+    await c.prove('4343', [{ Ref: 'A1', TypeRef: 'T' }])
+    refuse = true
+    expect(await c.projectItems('4343')).toEqual({ items: ['t2'] })
+    // never proven here: a refusal stays a quiet null, with no proof attempt
+    const before = f.mock.calls.length
+    refuse = false
+    vi.stubGlobal('fetch', vi.fn(async () => json({}, { status: 403 })))
+    expect(await c.projectItems('9999')).toBeNull()
+    expect(before).toBe(f.mock.calls.length)
+  })
+
+  it('gives up on a call that never answers', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url, init) => {
+      if (String(url).includes('capabilities')) return json({ protocol: PROTOCOL, features: ['kinds'] })
+      expect(init.signal).toBeInstanceOf(AbortSignal)
+      throw new DOMException('timed out', 'TimeoutError')
+    }))
+    expect(await (await getCompanion()).kinds()).toBeNull()
   })
 })

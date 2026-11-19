@@ -3,6 +3,7 @@ import { Modal, Button } from 'react-bootstrap'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { C } from '../styles/tokens'
+import { live, etRefOf } from '../utils/derived'
 
 /**
  * ConceptCard — the four ideas this tool cannot be used without, explained where each
@@ -153,9 +154,9 @@ function useExample() {
 
   const byWrapper = new Map()
   for (const r of recipes) {
-    if ((r.IsDeleted || r.isDeleted) === 'Y') continue
+    if (!live(r)) continue
     if ((r.ContextType || r.contextType) !== 'PositionType') continue
-    const ref = r.ElementTypeRef || r.elementTypeRef || ''
+    const ref = etRefOf(r)
     if (!containerETRefs.has(ref.toLowerCase())) continue
     if (!byWrapper.has(ref)) byWrapper.set(ref, new Set())
     byWrapper.get(ref).add(r.PositionTypeRef || r.positionTypeRef)

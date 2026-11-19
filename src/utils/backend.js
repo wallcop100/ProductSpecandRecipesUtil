@@ -5,7 +5,8 @@
  * read-only xlsx parsing, so they now run in the browser against the project's
  * File System Access directory handle. There is no server.
  *
- * SheetJS is imported dynamically so it stays out of the initial page load.
+ * SheetJS runs in a worker (or is imported dynamically where there's none), so it stays
+ * out of the initial page load and off the main thread.
  *
  * Identity note: a browser never exposes an absolute path. `folderKey` is the
  * opaque id of a persisted directory handle, and `paths` hold plain FILENAMES
@@ -13,6 +14,7 @@
  */
 
 import * as fsx from '../platform/fs'
+import { keepWorkbook } from '../platform/replay'
 
 let activeKey = null
 let activeDir = null
@@ -20,7 +22,49 @@ let activeDir = null
 /** File handles picked ad hoc (the product-code import), addressed by token. */
 const fileTokens = new Map()
 
-const xlsxModule = () => import('../platform/xlsx')
+// --- xlsx parsing, in a worker ------------------------------------------------
+// A big workbook takes seconds to parse; on the main thread that froze the tab. Where
+// there is no Worker (tests), the parsers run inline.
+let worker = null
+let inlineXlsx = null
+let seq = 0
+const pending = new Map()
+
+function getWorker() {
+  if (worker === null && typeof Worker !== 'undefined') {
+    worker = new Worker(new URL('../platform/xlsx.worker.js', import.meta.url), { type: 'module' })
+    worker.onmessage = ({ data: { id, result, error } }) => {
+      const p = pending.get(id)
+      pending.delete(id)
+      if (error) p.reject(new Error(error)); else p.resolve(result)
+      setParsing(-1)
+    }
+    worker.onerror = e => {   // a worker that failed to load: fail what's waiting, retry inline
+      for (const p of pending.values()) p.reject(new Error(e.message || 'Spreadsheet reader failed to start'))
+      setParsing(-pending.size); pending.clear(); worker = false
+    }
+  }
+  return worker || null
+}
+
+/** Run `fn` from platform/xlsx.js on `args`, off the main thread when possible. */
+async function xlsxCall(fn, ...args) {
+  const w = getWorker()
+  if (!w) {
+    setParsing(1)
+    try { return (await (inlineXlsx ||= import('../platform/xlsx')))[fn](...args) } finally { setParsing(-1) }
+  }
+  const id = ++seq
+  setParsing(1)
+  return new Promise((resolve, reject) => { pending.set(id, { resolve, reject }); w.postMessage({ id, fn, args }) })
+}
+
+// How many parses are in flight, for the loading bar (components/ParsingBar.jsx).
+let parsing = 0
+const parsingListeners = new Set()
+function setParsing(delta) { parsing += delta; parsingListeners.forEach(l => l()) }
+export const parsingCount = () => parsing
+export function onParsing(listener) { parsingListeners.add(listener); return () => parsingListeners.delete(listener) }
 
 export async function setActiveDirectory(folderKey) {
   if (folderKey && folderKey === activeKey && activeDir) return activeDir
@@ -70,11 +114,10 @@ export async function detectFiles(folderKey) {
   const dir = folderKey ? await setActiveDirectory(folderKey) : requireDir()
   if (!dir) throw new Error('That project folder is no longer available.')
 
-  const { detectFiles: classify } = await xlsxModule()
   const entries = await fsx.listXlsx(dir)
   const files = []
   for (const e of entries) files.push({ name: e.name, data: await fsx.readFileHandle(e.handle) })
-  return classify(files)
+  return xlsxCall('detectFiles', files)
 }
 
 /**
@@ -94,7 +137,6 @@ export async function detectFiles(folderKey) {
  */
 export async function importFiles({ db, ps, rs }) {
   const dir = requireDir()
-  const { parseDb, parsePs, parseRs, mergeDbs } = await xlsxModule()
 
   const dbNames = (Array.isArray(db) ? db : [db]).filter(Boolean)
   if (dbNames.length === 0) throw new Error("db: 'DesignDB' not found in the project folder")
@@ -106,21 +148,25 @@ export async function importFiles({ db, ps, rs }) {
   const absent = dbNames.filter((_, i) => !dbBytes[i])
   if (absent.length) throw new Error(`db: '${absent.join("', '")}' not found in the project folder`)
 
+  dbNames.forEach((n, i) => keepWorkbook(n, dbBytes[i], 'db'))
+  keepWorkbook(ps, psBytes, 'ps')
+  keepWorkbook(rs, rsBytes, 'rs')
   const missing = [['ps', psBytes], ['rs', rsBytes]].filter(([, bytes]) => !bytes).map(([l]) => l)
 
-  const parsed = dbNames.map((name, i) => ({ name, data: parseDb(dbBytes[i]) }))
+  const parsed = await Promise.all(dbNames.map(async (name, i) => ({ name, data: await xlsxCall('parseDb', dbBytes[i]) })))
   return {
-    db: mergeDbs(parsed),
-    ps: psBytes ? parsePs(psBytes) : [],
-    rs: rsBytes ? parseRs(rsBytes) : [],
+    db: await xlsxCall('mergeDbs', parsed),
+    ps: psBytes ? await xlsxCall('parsePs', psBytes) : [],
+    rs: rsBytes ? await xlsxCall('parseRs', rsBytes) : [],
     missing,
   }
 }
 
 /** Read one sheet of an arbitrary workbook picked via `openXlsxDialog`. */
-export async function readSheet(fileToken, sheet) {
+export async function readSheet(fileToken, sheet, want = null) {
   const handle = fileTokens.get(fileToken)
   if (!handle) throw new Error('That spreadsheet is no longer open — pick it again.')
-  const { readSheet: read } = await xlsxModule()
-  return read(await fsx.readFileHandle(handle), sheet || null)
+  const bytes = await fsx.readFileHandle(handle)
+  keepWorkbook(handle.name, bytes, 'form')
+  return xlsxCall('readSheet', bytes, sheet || null, want)
 }

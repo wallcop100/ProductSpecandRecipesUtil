@@ -4,6 +4,7 @@ import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { planSwap, alreadySwapped, SCOPE } from '../utils/swapPlan'
 import { C } from '../styles/tokens'
+import { etRefOf } from '../utils/derived'
 
 /**
  * SwapEverywhereModal — substitute one product for another, everywhere it appears.
@@ -29,7 +30,7 @@ export default function SwapEverywhereModal({ show, onHide, fromRef, posRef = nu
 
   // Every ElementType the project knows, minus the one being replaced.
   const options = useMemo(() => {
-    const refs = new Set(elementTypes.map(e => e.ElementTypeRef || e.elementTypeRef).filter(Boolean))
+    const refs = new Set(elementTypes.map(e => etRefOf(e)).filter(Boolean))
     refs.delete(fromRef)
     return [...refs].sort()
   }, [elementTypes, fromRef])

@@ -8,10 +8,10 @@
 import { create } from 'zustand'
 import { importFiles } from '../utils/backend'
 import { v4 as uuidv4 } from 'uuid'
-import { findBestTemplate, recipeTemplateFromRows, isRecipeTemplate, isFormTemplate } from '../utils/templateLoader.js'
+import { recipeTemplateFromRows, isRecipeTemplate, isFormTemplate } from '../utils/templateLoader.js'
 import { proposeRecipe, proposalFromTemplate, proposalContext } from '../utils/recipeProposal.js'
 import { roleOf } from '../utils/recipePatterns.js'
-import { planFamilyMove } from '../utils/etSeed.js'
+import { planFamilyMove, proposeElementTypes, refIssues, tidyRef } from '../utils/etSeed.js'
 import { reconcileAll, stampExported, hasUnexported } from '../utils/reconcile.js'
 import { jobOf, linearWrapperFamily } from '../utils/codeJobs.js'
 import { loadReports, saveReports } from '../utils/bugReports.js'
@@ -28,7 +28,7 @@ import { runValidation } from '../utils/validationRules.js'
 import { computeContainerInfo, looksLikeContainer, getNextAvailableRef } from '../utils/containerUtils.js'
 import { containerForPosition, rowSlot, normalizeSection } from '../utils/recipePresence.js'
 import { planCollectionBulk, effectiveActions, positionRecipeWithWrapperInternals, wrapperUsedBy } from '../utils/collectionStatus.js'
-import { positionFamilyOf, ignoredPositionRefs } from '../utils/positionFamily.js'
+import { ignoredPositionRefs } from '../utils/positionFamily.js'
 import { alignmentGaps } from '../utils/specAlignment.js'
 import { planSwap, swapPatch } from '../utils/swapPlan.js'
 import { planMerge } from '../utils/mergePlan.js'
@@ -37,6 +37,8 @@ import { hasProductIdentity, findProductET } from '../utils/productCodes.js'
 import { deadPositionRefs, retirableElementTypes } from '../utils/deadPositions.js'
 import { familyOf } from '../utils/etRef.js'
 import { DIM_QTY_COMPONENTS, AUTO_CONTRACT_ITEMS } from '../utils/constants.js'
+import { live as isLive, etRefOf, entryRefOf } from '../utils/derived'
+import { noteKey } from '../utils/formNotes'
 
 /**
  * A row carries EITHER a Quantity OR a Dim_QuantityMultiplier, never both: a dimensioned
@@ -62,9 +64,9 @@ const HISTORY_LIMIT = 50
 /** Collects all ET refs from elementTypes, psRows, and recipes into an array. */
 export function collectAllETRefs(elementTypes = [], psRows = [], recipes = []) {
   const set = new Set()
-  for (const et of elementTypes) { const r = et.ElementTypeRef || et.elementTypeRef; if (r) set.add(r) }
-  for (const row of psRows)      { const r = row.ElementTypeRef || row.elementTypeRef; if (r) set.add(r) }
-  for (const row of recipes)     { const r = row.ElementTypeRef || row.elementTypeRef; if (r) set.add(r) }
+  for (const et of elementTypes) { const r = etRefOf(et); if (r) set.add(r) }
+  for (const row of psRows)      { const r = etRefOf(row); if (r) set.add(r) }
+  for (const row of recipes)     { const r = etRefOf(row); if (r) set.add(r) }
   return [...set]
 }
 
@@ -92,7 +94,7 @@ function stampIds(rows) {
 const RS_EXPORT_FIELDS = [
   'ContextType', 'ContextRef', 'RecipeIndex', 'ElementTypeRef', 'SortOrder',
   'Quantity', 'PackQuantity', 'IsDeleted', 'IsDesign', 'IsContractItem',
-  'IsTRItem', 'Dim_QuantityMultiplier', 'IsInteger',
+  'IsTRItem', 'Dim_QuantityMultiplier', 'IsInteger', 'Notes',
 ]
 
 const RS_FIELD_ALIASES = {
@@ -100,7 +102,7 @@ const RS_FIELD_ALIASES = {
   ElementTypeRef: 'elementTypeRef', SortOrder: 'sortOrder', Quantity: 'quantity',
   PackQuantity: 'packQuantity', IsDeleted: 'isDeleted', IsDesign: 'isDesign',
   IsContractItem: 'isContractItem', IsTRItem: 'isTRItem',
-  Dim_QuantityMultiplier: 'dimQtyMultiplier', IsInteger: 'isInteger',
+  Dim_QuantityMultiplier: 'dimQtyMultiplier', IsInteger: 'isInteger', Notes: 'notes',
 }
 
 function rsValue(row, field) {
@@ -135,6 +137,14 @@ function normalizeRsUpdates(updates = {}) {
   }
   return out
 }
+
+/**
+ * The ElementType and its Product Spec row both define the product, so these stay in step
+ * (92YN3U). The Product Spec is where they are edited; updatePSRow / addPSRow carry them on.
+ */
+export const DEFINITION_SYNCED = ['IsTBC', 'IsPropertiesTBC', 'InternalNotesText', 'ExternalNotesText']
+const definitionFields = updates => Object.fromEntries(
+  DEFINITION_SYNCED.filter(k => updates && k in updates).map(k => [k, updates[k] ?? null]))
 
 /** Loose equality: null == '' , 1 == '1'. */
 function looseEqual(a, b) {
@@ -247,9 +257,9 @@ function mergePsChanges(prevChanges, change) {
  */
 function applyPsPending(psRows, psChanges) {
   if (!psChanges || psChanges.length === 0) return psRows
-  const present = new Set(psRows.map(r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase()))
+  const present = new Set(psRows.map(r => (etRefOf(r)).toLowerCase()))
   const rows = psRows.map(r => {
-    const ref = (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase()
+    const ref = (etRefOf(r)).toLowerCase()
     const entry = psChanges.find(c => (c.elementTypeRef || '').toLowerCase() === ref)
     return entry ? { ...r, ...entry.updates } : r
   })
@@ -285,11 +295,11 @@ function renameRefDeep(value, from, to) {
 function oneEachRef(ets) {
   const best = new Map()
   for (const e of ets) {
-    const k = String(e.ElementTypeRef || e.elementTypeRef || '').toLowerCase()
+    const k = String(etRefOf(e)).toLowerCase()
     const had = best.get(k)
     if (!had || (had._row_num == null && e._row_num != null)) best.set(k, e)
   }
-  return ets.filter(e => best.get(String(e.ElementTypeRef || e.elementTypeRef || '').toLowerCase()) === e)
+  return ets.filter(e => best.get(String(etRefOf(e)).toLowerCase()) === e)
 }
 
 /**
@@ -349,12 +359,12 @@ export function getRecipeForPosition(recipes, posRef) {
     ),
     dlInternal: rows.filter(r => {
       const ct = r.ContextType || r.contextType
-      const etRef = r.ElementTypeRef || r.elementTypeRef || ''
+      const etRef = etRefOf(r)
       return ct === 'ElementType' && !etRef.toUpperCase().includes('LIN')
     }),
     linInternal: rows.filter(r => {
       const ct = r.ContextType || r.contextType
-      const etRef = r.ElementTypeRef || r.elementTypeRef || ''
+      const etRef = etRefOf(r)
       return ct === 'ElementType' && etRef.toUpperCase().includes('LIN')
     }),
   }
@@ -390,13 +400,13 @@ export function wrapperCopies(recipes, row) {
   if (!row || (row.ContextType || row.contextType) !== 'ElementType') return []
   const cr = row.ContextRef || row.contextRef
   const ri = row.RecipeIndex ?? row.recipeIndex
-  const et = String(row.ElementTypeRef || row.elementTypeRef || '').toLowerCase()
+  const et = String(etRefOf(row)).toLowerCase()
   const pr = row.PositionTypeRef ?? row.positionTypeRef
   return recipes.filter(r => r._id !== row._id
     && (r.ContextType || r.contextType) === 'ElementType'
     && (r.ContextRef || r.contextRef) === cr
     && (r.RecipeIndex ?? r.recipeIndex) === ri
-    && String(r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === et
+    && String(etRefOf(r)).toLowerCase() === et
     && (r.PositionTypeRef ?? r.positionTypeRef) !== pr)
 }
 
@@ -444,7 +454,7 @@ function arrayMove(arr, fromIndex, toIndex) {
 function sectionOfRow(row) {
   const ct = row.contextType || row.ContextType
   if (ct === 'PositionType') return 'position'
-  const etRef = (row.elementTypeRef || row.ElementTypeRef || '').toUpperCase()
+  const etRef = (entryRefOf(row)).toUpperCase()
   return etRef.includes('LIN') ? 'lin_internal' : 'dl_internal'
 }
 
@@ -472,6 +482,26 @@ function sameSlotAs(row, partSection, partContainer = null) {
 // ---------------------------------------------------------------------------
 // Store
 // ---------------------------------------------------------------------------
+
+let libraryLoading = null
+let _checkRun = 0   // checkFiles: the latest run
+
+/** `<text> (<finish>)`; already there → unchanged. */
+export const withFinish = (text, finish) => {
+  const t = (text || '').trim(), tail = `(${finish})`
+  return t.endsWith(tail) ? t : (t ? `${t} ${tail}` : tail)
+}
+
+let _historyHeld = false   // inside asOneUndoStep: inner _pushHistory calls are part of the step already
+
+/** Same Form captures, ignoring importedAt and key order. */
+function sameCaptures(a, b) {
+  if (!a || !b) return a === b
+  const canon = v => Array.isArray(v) ? v.map(canon)
+    : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map(k => [k, canon(v[k])])) : v
+  const { importedAt: _a, ...x } = a, { importedAt: _b, ...y } = b
+  return JSON.stringify(canon(x)) === JSON.stringify(canon(y))
+}
 
 const useStore = create((set, get) => ({
   // -------------------------------------------------------------------------
@@ -556,6 +586,7 @@ const useStore = create((set, get) => ({
   },
   deleteBugReport(id) { const next = get().bugReports.filter(r => r.id !== id); saveReports(next); set({ bugReports: next }) },
   clearBugReports() { saveReports([]); set({ bugReports: [] }) },
+  setBugReports(list) { saveReports(list); set({ bugReports: list }) },
   positionList: { text: '', tags: [], formOnly: false, emptyOnly: false, showIgnored: false, showTags: false, sort: 'ref', collapsed: [], query: null },
   setPositionList(patch) { set(s => ({ positionList: { ...s.positionList, ...(typeof patch === 'function' ? patch(s.positionList) : patch) } })) },
   /**
@@ -600,9 +631,12 @@ const useStore = create((set, get) => ({
 
   // DesignDB writes are opt-in per project (off by default, easily enabled).
   dbCollectionRefs: [],   // ElementType collections parseDb strips; still in the master
+  dbDeletedRefs: [],      // ElementTypes the DesignDB has marked IsDeleted
 
   // Locally-created ETs (SQLite staging) — kept to re-merge after a DB reload.
   localElementTypes: [],
+  // This sitting's new products as kept, oldest first: what proposals learn from live (etSeed `session`).
+  sitting: [],
 
   // _id of the most recently added recipe row — the card scrolls itself into view.
   lastAddedRowId: null,
@@ -613,7 +647,7 @@ const useStore = create((set, get) => ({
 
   // One app-wide toast (SaveShortcut renders it): { text, ok, at }. `at` re-shows a repeat.
   toastMsg: null,
-  toast(text, { ok = true } = {}) { set({ toastMsg: { text, ok, at: Date.now() } }) },
+  toast(text, { ok = true, tone } = {}) { set({ toastMsg: { text, ok, tone, at: Date.now() } }) },
   /** Builder: "shared with" on every row, not only wrappers (5GLMMQ). Remembered in this browser. */
   // The builder's right drawer (K3LGUL): open unless closed (remembered), and its tab. A
   // banner elsewhere can open it at a tab (the Connector suggestions' "details →").
@@ -645,10 +679,17 @@ const useStore = create((set, get) => ({
     try {
       await window.electronAPI?.db?.clearPendingChanges?.(projectId)
       await window.electronAPI?.db?.setPref?.(projectId, 'pending_db_changes', '[]')
+      await window.electronAPI?.db?.setPref?.(projectId, 'patch_batch', 'null')
       // The browser DB persists on a debounce; without this the reload restores what was discarded.
       await window.electronAPI?.db?.flush?.()
     } catch { /* best-effort */ }
-    set({ psChanges: [], rsChanges: [], dbChanges: [] })
+    // What this project learned so far would make the same ElementTypes again on reopen.
+    try {
+      const { getCompanion } = await import('../platform/companion.js')
+      const { forgetLearning } = await import('../screens/import/useProjectKnowledge.js')
+      await forgetLearning(await getCompanion(), get().projectNumber)
+    } catch { /* no companion: nothing learned */ }
+    set({ psChanges: [], rsChanges: [], dbChanges: [], localElementTypes: [], past: [], future: [] })
     // The rows on screen still carry them: reopen from the workbooks.
     if (typeof window !== 'undefined' && window.location && import.meta.env?.MODE !== 'test') window.location.reload()
   },
@@ -662,9 +703,13 @@ const useStore = create((set, get) => ({
   // screen's useState, so Back or the Review hand-off destroyed it silently. Saved
   // on a debounce, offered as "Resume?", cleared once staging lands the work.
   importDraft: null,
+  // Form Template Notes (NAL5HU, utils/formNotes): pref `form_notes`, this project only. Kept on Detach.
+  formNotes: [],
   // Bumped by Detach: an import screen still open (the painter, a hidden auto-save) holds
   // the old Form in memory and must not write it back (S3JLGL).
   formGen: 0,
+  // The Form pane starts as a view; once painting is chosen (the brush or pane ⋯) every
+  // position opens its painter until it is stopped. Remembered across reloads (KU9NQJ).
 
   // A one-shot screen request from deep in the tree (App consumes it). Mirrors
   // pendingReviewRefs — the pane is nested too far to reach App's navigateTo.
@@ -718,6 +763,7 @@ const useStore = create((set, get) => ({
       tagDrift,
       formCaptures,
       importDraft,
+      formNotes,
     } = data
 
     const stampedPsRows = stampIds(psRows ?? [])
@@ -727,7 +773,7 @@ const useStore = create((set, get) => ({
 
     // Merge locally-created ETs (SQLite) that aren't yet in the imported DB.
     const dbEts = elementTypes ?? []
-    const dbRefSet = new Set(dbEts.map(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase()))
+    const dbRefSet = new Set(dbEts.map(e => (etRefOf(e)).toLowerCase()))
     const localOnly = (data.localElementTypes ?? []).filter(
       e => !dbRefSet.has((e.ElementTypeRef || '').toLowerCase())
     )
@@ -777,11 +823,17 @@ const useStore = create((set, get) => ({
       containerETRefs: containerInfo.refs,
       containerReasons: containerInfo.reasons,
       dbCollectionRefs: data.dbCollectionRefs ?? [],
+      dbDeletedRefs: data.dbDeletedRefs ?? [],
       localElementTypes: data.localElementTypes ?? [],
       formCaptures: formCaptures ?? null,
       importDraft: importDraft ?? null,
+      formNotes: Array.isArray(formNotes) ? formNotes : [],
       pendingScreen: null,
-      // Reset transient state
+      // Reset transient state: nothing held for the last project carries into this one.
+      designPrompt: null, recipeError: null, pendingPaste: null, pendingPaletteTab: null,
+      uiRequest: null, specIntent: null, teaching: null, lastAddedRowId: null, sitting: [],
+      selectedRowIds: [], selectMode: false, companionPending: {}, offeredJobs: {},
+      patchBatch: null, syncStatus: null,
       psChanges: [],
       rsChanges: [],
       dbChanges: [],
@@ -809,10 +861,19 @@ const useStore = create((set, get) => ({
    * Called at the start of every recipe/PS-mutating action.
    */
   _pushHistory() {
+    if (_historyHeld) return
     const { past } = get()
     const nextPast = [...past, get()._historySnapshot()]
     if (nextPast.length > HISTORY_LIMIT) nextPast.shift()
     set({ past: nextPast, future: [] })
+  },
+
+  /** Run `fn` as ONE Undo step, however many actions inside it snapshot (an ElementType plus the row that uses it). */
+  asOneUndoStep(fn) {
+    if (_historyHeld) return fn()
+    get()._pushHistory()
+    _historyHeld = true
+    try { return fn() } finally { _historyHeld = false }
   },
 
   /**
@@ -829,7 +890,7 @@ const useStore = create((set, get) => ({
     const { projectId } = get()
     const db = window.electronAPI?.db
     if (projectId == null || !db) return
-    const key = e => String(e.ElementTypeRef || e.elementTypeRef || e.ref || '').toLowerCase()
+    const key = e => String(etRefOf(e) || e.ref || '').toLowerCase()
     const had = new Map(before.map(e => [key(e), e]))
     const has = new Map(after.map(e => [key(e), e]))
     for (const [k, e] of had) if (!has.has(k)) db.deleteLocalET?.(projectId, e.ElementTypeRef || e.ref)?.catch?.(() => {})
@@ -876,7 +937,7 @@ const useStore = create((set, get) => ({
   settleDesign(posRef) {
     if (!posRef) return 'ok'
     const rows = get().recipes.filter(r => (r.PositionTypeRef || r.positionTypeRef) === posRef
-      && (r.IsDeleted || r.isDeleted) !== 'Y' && (r.ContextType || r.contextType) === 'PositionType')
+      && isLive(r) && (r.ContextType || r.contextType) === 'PositionType')
     if (rows.length === 0 || rows.some(r => (r.IsDesign || r.isDesign) === 'Y')) return 'ok'
     if (rows.length === 1) {
       // Design-or-contract: the design item is not also a contract item.
@@ -915,7 +976,6 @@ const useStore = create((set, get) => ({
   goBackPosition() {
     const h = get().positionHistory
     if (h.length === 0) return
-    set({ positionHistory: h.slice(0, -1) })
     get().setActivePosition(h[h.length - 1], { back: true })
   },
 
@@ -929,21 +989,27 @@ const useStore = create((set, get) => ({
 
   /** Open a position from another screen, remembering that screen for Back. */
   openPositionFrom(screen, ref) {
-    get().setActivePosition(ref)
-    set({ positionHistory: [], returnScreen: screen })
+    get().setActivePosition(ref, { returnScreen: screen })
   },
 
-  setActivePosition(ref, { back = false } = {}) {
+  /**
+   * `back`: this is Back, so the position gone back to leaves the history. `returnScreen`: opened
+   * from another screen, which Back returns to. Nothing changes until the move happens: held at
+   * the design prompt, "Stay" leaves the history, the return screen and any error as they were.
+   */
+  setActivePosition(ref, { back = false, returnScreen } = {}) {
     const from = get().activePositionRef
+    if (from && ref !== from && get().settleDesign(from) === 'choose') {
+      set({ designPrompt: { posRef: from, then: () => get().setActivePosition(ref, { back, returnScreen }) } })
+      return
+    }
     if (!ref) set({ returnScreen: null })
     // An error about another position (a refused add) must not follow you here (Y7QVN4).
     if (ref !== from && get().recipeError) set({ recipeError: null })
-    if (from && ref !== from && get().settleDesign(from) === 'choose') {
-      set({ designPrompt: { posRef: from, then: () => get().setActivePosition(ref, { back }) } })
-      return
-    }
+    if (returnScreen !== undefined) set({ positionHistory: [], returnScreen })
+    else if (back) set(s => ({ positionHistory: s.positionHistory.slice(0, -1) }))
     // Where you came from, so Next can be undone with Back.
-    if (from && ref !== from && !back) {
+    else if (from && ref !== from) {
       set(s => ({ positionHistory: [...s.positionHistory, from].slice(-50) }))
     }
     // Going to another position leaves any ElementType editor. Left open, it kept
@@ -1165,16 +1231,20 @@ const useStore = create((set, get) => ({
   // Product codes their manufacturer has replaced: CODE -> { replacement, retired }. Filled
   // quietly by platform/retired.js when a companion knows; empty otherwise.
   retiredCodes: {},
+  // What a code's own body says of the fitting: CODE -> { says: 'trimmed' | 'trimless', segment }. Same source.
+  codeSays: {},
   noteRetired(rows = []) {
     set(s => {
       const next = { ...s.retiredCodes }
+      const says = { ...s.codeSays }
       for (const r of rows) {
+        if (r?.code && r.says) { says[String(r.code).trim().toUpperCase()] = { says: r.says, segment: r.segment || '' }; continue }
         // "Replaced by TBC" is a code being blanked, not a maker's renumbering (#64, #65).
         const options = (r?.maybe ? r.options || [] : []).filter(o => o.option && !/^tbc$/i.test(o.option))
         if (r?.code && options.length) next[String(r.code).trim().toUpperCase()] = { replacement: null, options: options.map(o => ({ code: o.option, used: o.used || 0 })) }
         else if (r?.code && r.replacement && !/^tbc$/i.test(String(r.replacement).trim())) next[String(r.code).trim().toUpperCase()] = { replacement: r.replacement, retired: r.retired || null, tier: r.tier || null }
       }
-      return { retiredCodes: next }
+      return { retiredCodes: next, codeSays: says }
     })
   },
 
@@ -1196,7 +1266,9 @@ const useStore = create((set, get) => ({
 
   // The tool-wide library: recipe patterns and products of every project opened before.
   library: { patterns: [], exemplars: [] },
-  async loadLibrary() {
+  // Asked for from several places as a project opens: one load at a time serves them all.
+  loadLibrary() { return (libraryLoading ||= get()._loadLibrary().finally(() => { libraryLoading = null })) },
+  async _loadLibrary() {
     try {
       const [patterns, exemplars] = await Promise.all([
         window.electronAPI?.db?.getRecipePatterns?.() ?? [],
@@ -1274,9 +1346,9 @@ const useStore = create((set, get) => ({
     }
     return elementTypes
       .filter(e => (e.IsCollection || e.isCollection) === 'Y')
-      .map(e => e.ElementTypeRef || e.elementTypeRef)
+      .map(e => etRefOf(e))
       .filter(ref => /-\d+$/.test(ref) && !looksLikeContainer(ref) && !inside.has(lc(ref)))
-      .filter(ref => psRows.some(r => lc(r.ElementTypeRef || r.elementTypeRef) === lc(ref)
+      .filter(ref => psRows.some(r => lc(etRefOf(r)) === lc(ref)
         && lc(r.Manufacturer || r.manufacturer) === 'ideaworks' && lc(r.ProductCode || r.productCode) === 'n/a'))
       .map(ref => ({ ref, product: fromForm.get(lc(ref)) || null }))
   },
@@ -1309,14 +1381,14 @@ const useStore = create((set, get) => ({
     if (!p || p.skip) return null
     const posRef = p.posRef
     const lc = x => String(x || '').toLowerCase()
-    const hasRecipe = get().recipes.some(r => (r.PositionTypeRef || r.positionTypeRef) === posRef && (r.IsDeleted || r.isDeleted) !== 'Y')
+    const hasRecipe = get().recipes.some(r => (r.PositionTypeRef || r.positionTypeRef) === posRef && isLive(r))
     if (hasRecipe) return null
     set({ activeContextType: 'PositionType', activeETRef: null })
     // Only what was asked for: a suggestion left unticked is not written, nor created.
     p = { ...p, rows: p.rows.filter(r => r.include !== false) }
     for (const r of p.rows) {
       if (!r.ref || !r.exemplar) continue
-      if (get().elementTypes.some(e => lc(e.ElementTypeRef || e.elementTypeRef) === lc(r.ref))) continue
+      if (get().elementTypes.some(e => lc(etRefOf(e)) === lc(r.ref))) continue
       get().createElementType({ ref: r.ref, name: r.exemplar.name || null, description: r.exemplar.description || null, family: r.exemplar.family || null })
       get().addPSRow(r.ref, { Manufacturer: r.exemplar.maker, ProductCode: r.exemplar.code }, { recordHistory: false })
     }
@@ -1348,7 +1420,7 @@ const useStore = create((set, get) => ({
         get().addRecipeRow(posRef, section, data(r), { recordHistory: false, asPosition: true })
       }
     }
-    if (wrapperRef && !get().psRows.some(r => lc(r.ElementTypeRef || r.elementTypeRef) === lc(wrapperRef))) {
+    if (wrapperRef && !get().psRows.some(r => lc(etRefOf(r)) === lc(wrapperRef))) {
       get().addPSRow(wrapperRef, { Manufacturer: 'Ideaworks', ProductCode: 'N/A' }, { recordHistory: false })
     }
     return { wrapperRef, skipped }
@@ -1393,7 +1465,7 @@ const useStore = create((set, get) => ({
   _applyRecipeTemplate(posRef, template) {
     set({ activeContextType: 'PositionType', activeETRef: null })
     const own = get().recipes.filter(r => (r.PositionTypeRef || r.positionTypeRef) === posRef
-      && (r.IsDeleted || r.isDeleted) !== 'Y')
+      && isLive(r))
     for (const r of own) get().removeRecipeRow(posRef, r._id, { recordHistory: false })
 
     const data = ing => ({
@@ -1461,7 +1533,7 @@ const useStore = create((set, get) => ({
     if (isFormTemplate(template)) {
       const p = proposalFromTemplate(template, posRef, proposalContext(get(), get().library))
       if (!p.skip) {
-        const own = get().recipes.filter(r => (r.PositionTypeRef || r.positionTypeRef) === posRef && (r.IsDeleted || r.isDeleted) !== 'Y')
+        const own = get().recipes.filter(r => (r.PositionTypeRef || r.positionTypeRef) === posRef && isLive(r))
         for (const r of own) get().removeRecipeRow(posRef, r._id, { recordHistory: false })
         get()._writeProposal(proposalFromTemplate(template, posRef, proposalContext(get(), get().library)))
         return
@@ -1583,7 +1655,7 @@ const useStore = create((set, get) => ({
     let slotCounter = 1
     const ingredients = (slotDefs || []).map((d, idx) => {
       const row = d.row || {}
-      const etRef = row.elementTypeRef || row.ElementTypeRef || null
+      const etRef = entryRefOf(row) || null
       // slotKey from the ET ref's last segment (unique-suffixed), or sequential
       let slotKey = null
       if (etRef) {
@@ -1740,8 +1812,8 @@ const useStore = create((set, get) => ({
     )
     const existingResolutions = {}
     for (const row of existingRows) {
-      if (row.slotKey && row.resolved && (row.elementTypeRef || row.ElementTypeRef)) {
-        existingResolutions[row.slotKey] = row.elementTypeRef || row.ElementTypeRef
+      if (row.slotKey && row.resolved && (entryRefOf(row))) {
+        existingResolutions[row.slotKey] = entryRefOf(row)
       }
     }
 
@@ -1791,7 +1863,7 @@ const useStore = create((set, get) => ({
     // delete. An add whose target was lost (a pick started where no position was open) is
     // refused here, whichever button started it.
     if (!etMode && !String(posRef ?? '').trim()) {
-      const ref = ingredientData?.elementTypeRef || ingredientData?.ElementTypeRef || 'this element'
+      const ref = entryRefOf(ingredientData) || 'this element'
       set({ recipeError: `Cannot add ${ref}: no position is open to add it to.` })
       return null
     }
@@ -1812,8 +1884,7 @@ const useStore = create((set, get) => ({
 
     // === ET MODE: add rows for all positions that use this ET ===
     if (etMode) {
-      const etRef = ingredientData.elementTypeRef || ingredientData.ElementTypeRef || null
-      const etToken = etRef ? etRef.toUpperCase() : ''
+      const etRef = entryRefOf(ingredientData) || null
 
       // Find all positions that have rows for this ET's internal recipe
       const existingETRows = recipes.filter(r =>
@@ -1861,7 +1932,7 @@ const useStore = create((set, get) => ({
     }
     // === END ET MODE ===
 
-    const etRef = ingredientData.elementTypeRef || ingredientData.ElementTypeRef || null
+    const etRef = entryRefOf(ingredientData) || null
     const etToken = etRef ? etRef.toUpperCase() : ''
 
     // Auto-derived fields
@@ -1980,7 +2051,9 @@ const useStore = create((set, get) => ({
   },
 
   async saveFormCaptures(captures) {
-    const { projectId } = get()
+    const { projectId, formCaptures } = get()
+    // A re-save with nothing new (opening a position re-stages it) must not re-render every pane or bump "saved … ago".
+    if (sameCaptures(captures, formCaptures)) return
     set({ formCaptures: captures })
     if (projectId != null) {
       await window.electronAPI.db.setPref(projectId, 'form_captures', JSON.stringify(captures))
@@ -2146,8 +2219,9 @@ const useStore = create((set, get) => ({
     const swapIn = newRef => {
       for (const p of targets) {
         const { recipes, elementTypes } = get()
-        const row = recipes.find(r => (r.IsDeleted || r.isDeleted) !== 'Y' && (r.PositionTypeRef || r.positionTypeRef) === p
-          && String(r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === String(change.fromEt).toLowerCase())
+        // QFRHFW: a shared wrapper's internals are stored under another position.
+        const row = positionRecipeWithWrapperInternals(recipes, p).combined.find(r => isLive(r)
+          && String(etRefOf(r)).toLowerCase() === String(change.fromEt).toLowerCase())
         if (!row) continue
         const w = (row.ContextType || row.contextType) === 'ElementType' ? (row.ContextRef || row.contextRef) : null
         if (w && wrapperUsedBy(recipes, w).some(u => !targets.includes(u))) {
@@ -2175,6 +2249,20 @@ const useStore = create((set, get) => ({
     set({ formGen: get().formGen + 1 })
     await get().clearFormCaptures()
     await get().clearImportDraft()
+  },
+
+  /** Add or replace a Form Template Note (by its key). */
+  async saveFormNote(note) {
+    const n = { ...note, key: noteKey(note) }
+    await get().setFormNotes([...get().formNotes.filter(x => x.key !== n.key), n])
+  },
+  async removeFormNote(key) {
+    await get().setFormNotes(get().formNotes.filter(x => x.key !== key))
+  },
+  async setFormNotes(formNotes) {
+    const { projectId } = get()
+    set({ formNotes })
+    if (projectId != null) await window.electronAPI.db.setPref(projectId, 'form_notes', JSON.stringify(formNotes))
   },
 
   /** The Form's entries for one PositionType, or [] when it says nothing about it. */
@@ -2278,14 +2366,14 @@ const useStore = create((set, get) => ({
 
     const { contextType, contextRef } = contextForSection(section, posRef, recipes, containerETRefs)
     if (contextType === 'ElementType' && !contextRef) {
-      set({ recipeError: `Cannot move ${row.ElementTypeRef || row.elementTypeRef} inside a wrapper: ${posRef} has no design element.` })
+      set({ recipeError: `Cannot move ${etRefOf(row)} inside a wrapper: ${posRef} has no design element.` })
       return null
     }
     if ((row.ContextType || row.contextType) === contextType &&
         (row.ContextRef || row.contextRef) === contextRef) return row   // already there
     const refused = sharedWrapperRefusal(recipes, posRef,
       [(row.ContextType || row.contextType) === 'ElementType' && (row.ContextRef || row.contextRef), contextType === 'ElementType' && contextRef],
-      `move ${row.ElementTypeRef || row.elementTypeRef}`)
+      `move ${etRefOf(row)}`)
     if (refused) { set({ recipeError: refused }); return null }
 
     if (recordHistory) get()._pushHistory()
@@ -2405,10 +2493,10 @@ const useStore = create((set, get) => ({
 
     // The DesignDB is the master: an ElementType we are about to spec must exist in
     // it. Unconditional — there is no "DB write" to opt into, only a patch script.
-    const known = elementTypes.some(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === key)
+    const known = elementTypes.some(e => (etRefOf(e)).toLowerCase() === key)
     if (!known) get().createElementType({ ref: etRef, isCollection: isContainer })
 
-    const exists = psRows.some(r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === key)
+    const exists = psRows.some(r => (etRefOf(r)).toLowerCase() === key)
     if (exists) return null
 
     const defaults = isContainer ? { Manufacturer: 'Ideaworks', ProductCode: 'N/A' } : {}
@@ -2432,9 +2520,9 @@ const useStore = create((set, get) => ({
       (r.PositionTypeRef || r.positionTypeRef) === posRef &&
       (r.ContextType || r.contextType) === 'PositionType' &&
       (r.IsDesign || r.isDesign) === 'Y' &&
-      (r.IsDeleted || r.isDeleted) !== 'Y'
+      isLive(r)
     )
-    const wrapperRef = designRow ? (designRow.ElementTypeRef || designRow.elementTypeRef || '') : ''
+    const wrapperRef = designRow ? (etRefOf(designRow)) : ''
     if (wrapperRef) {
       const internalSection = wrapperRef.toUpperCase().includes('LIN') ? 'lin_internal' : 'dl_internal'
       valid = valid.map(p =>
@@ -2455,8 +2543,8 @@ const useStore = create((set, get) => ({
       if (merge) {
         const existing = get().recipes.find(r =>
           (r.PositionTypeRef || r.positionTypeRef) === posRef &&
-          (r.IsDeleted || r.isDeleted) !== 'Y' &&
-          (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === part.elementTypeRef.toLowerCase() &&
+          isLive(r) &&
+          (etRefOf(r)).toLowerCase() === part.elementTypeRef.toLowerCase() &&
           sameSlotAs(r, part.section, partContainer)
         )
         if (existing) {
@@ -2506,10 +2594,10 @@ const useStore = create((set, get) => ({
   _rowsToParts(rows) {
     const pick = (r, Pascal, camel) => r[Pascal] ?? r[camel] ?? null
     return rows
-      .filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
+      .filter(r => isLive(r))
       .map(r => ({
         section: sectionOfRow(r),
-        elementTypeRef: r.ElementTypeRef || r.elementTypeRef,
+        elementTypeRef: etRefOf(r),
         quantity: r.Quantity ?? r.quantity ?? null,
         isDesign: pick(r, 'IsDesign', 'isDesign'),
         isContractItem: pick(r, 'IsContractItem', 'isContractItem'),
@@ -2553,7 +2641,7 @@ const useStore = create((set, get) => ({
     const rows = recipes.filter(r => {
       if ((r.PositionTypeRef || r.positionTypeRef) !== sourceRef) return false
       if (!want) return true
-      return want.has((r.ElementTypeRef || r.elementTypeRef || '').toLowerCase())
+      return want.has((etRefOf(r)).toLowerCase())
     })
     const parts = get()._rowsToParts(rows)
     if (parts.length === 0) return 0
@@ -2613,8 +2701,8 @@ const useStore = create((set, get) => ({
       const partContainer = normalizeSection(p.section) === 'internal' ? targetContainer : null
       const hit = recipes.some(r =>
         (r.PositionTypeRef || r.positionTypeRef) === posRef &&
-        (r.IsDeleted || r.isDeleted) !== 'Y' &&
-        (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === (p.elementTypeRef || '').toLowerCase() &&
+        isLive(r) &&
+        (etRefOf(r)).toLowerCase() === (p.elementTypeRef || '').toLowerCase() &&
         sameSlotAs(r, p.section, partContainer)
       )
       if (hit) dups++
@@ -2683,8 +2771,8 @@ const useStore = create((set, get) => ({
       return
     }
     const { psRows, elementTypes } = get()
-    const psRow = psRows.find(r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === etRef.toLowerCase())
-    const etObj = elementTypes.find(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === etRef.toLowerCase())
+    const psRow = psRows.find(r => (etRefOf(r)).toLowerCase() === etRef.toLowerCase())
+    const etObj = elementTypes.find(e => (etRefOf(e)).toLowerCase() === etRef.toLowerCase())
     const data = {
       Manufacturer: psRow?.Manufacturer || psRow?.manufacturer || '',
       ProductCode: psRow?.ProductCode || psRow?.productCode || '',
@@ -2698,7 +2786,7 @@ const useStore = create((set, get) => ({
   drawFavoriteElement(posRef, fav, section = 'position') {
     if (!posRef || !fav?.ref) return
     get().addRecipeRow(posRef, section, { elementTypeRef: fav.ref, ElementTypeRef: fav.ref })
-    const psRow = get().psRows.find(r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === fav.ref.toLowerCase())
+    const psRow = get().psRows.find(r => (etRefOf(r)).toLowerCase() === fav.ref.toLowerCase())
     const hasSpec = psRow && (psRow.ProductCode || psRow.productCode) && (psRow.Manufacturer || psRow.manufacturer)
     if (!hasSpec && fav.data) {
       const upd = {}
@@ -2855,13 +2943,13 @@ const useStore = create((set, get) => ({
     const entry = globalConnector(key)
     if (!entry) return null
     const { psRows, elementTypes, etCollections } = get()
-    const live = psRows.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
+    const live = psRows.filter(r => isLive(r))
     const taken = new Set(elementTypes.map(e => (e.ElementTypeRef || '').toLowerCase()))
     const parts = entry.parts.map(part => {
       const have = findProductET(psRows, WAGO, part.code)
       if (have) return { part, ref: have, action: 'reuse' }
       const old = live.find(r => supersededBy(r.ProductCode) === part.code)
-      if (old) return { part, ref: old.ElementTypeRef || old.elementTypeRef, action: 'old', oldCode: old.ProductCode }
+      if (old) return { part, ref: etRefOf(old), action: 'old', oldCode: old.ProductCode }
       let ref = suggestRef(part)
       if (taken.has(ref.toLowerCase())) ref = `ET-CONN-WAGO-${part.code.replace(/[^0-9A-Z]+/gi, '-')}`
       taken.add(ref.toLowerCase())
@@ -2903,8 +2991,8 @@ const useStore = create((set, get) => ({
   /** Product Spec rows still on a superseded Wago code: [{ ref, code, to }]. */
   supersededWagoParts() {
     return get().psRows
-      .filter(r => (r.IsDeleted || r.isDeleted) !== 'Y' && supersededBy(r.ProductCode))
-      .map(r => ({ ref: r.ElementTypeRef || r.elementTypeRef, code: r.ProductCode, to: supersededBy(r.ProductCode) }))
+      .filter(r => isLive(r) && supersededBy(r.ProductCode))
+      .map(r => ({ ref: etRefOf(r), code: r.ProductCode, to: supersededBy(r.ProductCode) }))
   },
 
   /** Move those rows to the current code. The ElementTypes and recipes stay; one Undo step. */
@@ -2929,8 +3017,8 @@ const useStore = create((set, get) => ({
     return posRefs.map(posRef => {
       const have = connectorSignature(recipes, posRef, connectorOpts)
       const diff = diffParts(have, want)
-      const ownRows = recipes.filter(r => (r.PositionTypeRef || r.positionTypeRef) === posRef && (r.IsDeleted || r.isDeleted) !== 'Y')
-      const own = p => ownRows.some(r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === p.ref.toLowerCase()
+      const ownRows = recipes.filter(r => (r.PositionTypeRef || r.positionTypeRef) === posRef && isLive(r))
+      const own = p => ownRows.some(r => (etRefOf(r)).toLowerCase() === p.ref.toLowerCase()
         && normalizeSection(sectionOfRow(r)) === p.section)
       const shared = [...diff.remove, ...diff.qty].filter(p => !own(p))
       return { posRef, diff, shared }
@@ -2948,8 +3036,8 @@ const useStore = create((set, get) => ({
     get()._pushHistory()
     for (const { posRef, diff } of plan) {
       const rowsFor = p => get().recipes.filter(r => (r.PositionTypeRef || r.positionTypeRef) === posRef
-        && (r.IsDeleted || r.isDeleted) !== 'Y'
-        && (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === p.ref.toLowerCase()
+        && isLive(r)
+        && (etRefOf(r)).toLowerCase() === p.ref.toLowerCase()
         && normalizeSection(sectionOfRow(r)) === p.section)
       for (const p of diff.remove) for (const r of rowsFor(p)) get().removeRecipeRow(posRef, r._id, { recordHistory: false })
       for (const p of diff.qty) {
@@ -3122,7 +3210,7 @@ const useStore = create((set, get) => ({
     const updatedRecipes = recipes.map(row => {
       const ptRef = row.PositionTypeRef || row.positionTypeRef
       if (ptRef !== posRef) return row
-      const etRef = (row.ElementTypeRef || row.elementTypeRef || '').toLowerCase()
+      const etRef = (etRefOf(row)).toLowerCase()
       if (refsToRemove.has(etRef)) {
         const updated = { ...row, IsDeleted: 'Y', isDeleted: 'Y' }
         newChanges.push({ _id: row._id, positionTypeRef: posRef, action: 'upsert', row: updated })
@@ -3149,8 +3237,8 @@ const useStore = create((set, get) => ({
     const wantInside = section !== 'position'
     const revivable = recipes.find(row =>
       (row.PositionTypeRef || row.positionTypeRef) === posRef &&
-      (row.ElementTypeRef || row.elementTypeRef || '').toLowerCase() === target &&
-      (row.IsDeleted || row.isDeleted) === 'Y' &&
+      (etRefOf(row)).toLowerCase() === target &&
+      !isLive(row) &&
       ((row.ContextType || row.contextType) === 'ElementType') === wantInside
     )
     if (revivable) {
@@ -3181,8 +3269,8 @@ const useStore = create((set, get) => ({
     const updated = recipes.map(row => {
       const pr = row.PositionTypeRef || row.positionTypeRef
       if (pr !== posRef) return row
-      const rRef = (row.ElementTypeRef || row.elementTypeRef || '').toLowerCase()
-      const isDel = (row.IsDeleted || row.isDeleted) === 'Y'
+      const rRef = (etRefOf(row)).toLowerCase()
+      const isDel = !isLive(row)
       if (rRef === target && !isDel) {
         const u = { ...row, IsDeleted: 'Y', isDeleted: 'Y' }
         newChanges.push({ _id: row._id, positionTypeRef: posRef, action: 'upsert', row: u })
@@ -3213,8 +3301,8 @@ const useStore = create((set, get) => ({
     const updated = recipes.map(row => {
       const pr = row.PositionTypeRef || row.positionTypeRef
       if (pr !== posRef) return row
-      const rRef = (row.ElementTypeRef || row.elementTypeRef || '').toLowerCase()
-      const isDel = (row.IsDeleted || row.isDeleted) === 'Y'
+      const rRef = (etRefOf(row)).toLowerCase()
+      const isDel = !isLive(row)
       if (refSet.has(rRef) && !isDel) {
         const u = { ...row, IsDeleted: 'Y', isDeleted: 'Y' }
         newChanges.push({ _id: row._id, positionTypeRef: posRef, action: 'upsert', row: u })
@@ -3360,7 +3448,7 @@ const useStore = create((set, get) => ({
     const { contextType, contextRef } = contextForSection(targetSection, posRef, recipes)
     const refused = sharedWrapperRefusal(recipes, posRef,
       [(rowToMove.ContextType || rowToMove.contextType) === 'ElementType' && (rowToMove.ContextRef || rowToMove.contextRef), contextType === 'ElementType' && contextRef],
-      `move ${rowToMove.ElementTypeRef || rowToMove.elementTypeRef}`)
+      `move ${etRefOf(rowToMove)}`)
     if (refused) { set({ recipeError: refused }); return }
 
     get()._pushHistory()
@@ -3426,10 +3514,21 @@ const useStore = create((set, get) => ({
    * updatePSRow(elementTypeRef, updates)
    * Updates a PS row and records it in psChanges (with before/after for change log).
    */
+  /** Finish goes in brackets after both descriptions, one Undo step (NQLUFQ). */
+  applyFinish(elementTypeRef, finish) {
+    const f = (finish || '').trim(), lc = (elementTypeRef || '').trim().toLowerCase()
+    if (!f || !lc) return
+    const ps = get().psRows.find(r => (etRefOf(r)).toLowerCase() === lc)
+    const et = get().elementTypes.find(e => (etRefOf(e)).toLowerCase() === lc)
+    get()._pushHistory()
+    get().updatePSRow(ps?.ElementTypeRef || elementTypeRef, { ComponentDescription: withFinish(ps?.ComponentDescription, f) }, { recordHistory: false })
+    if (et) get().updateElementType(elementTypeRef, { Description: withFinish(et.Description, f) }, { recordHistory: false })
+  },
+
   updatePSRow(elementTypeRef, updates, { recordHistory = true } = {}) {
     const { psRows, psChanges, containerETManualRefs, containerETExcludeRefs, elementTypes, recipes } = get()
 
-    const existingRow = psRows.find(r => (r.ElementTypeRef || r.elementTypeRef) === elementTypeRef)
+    const existingRow = psRows.find(r => (etRefOf(r)) === elementTypeRef)
     // Nothing changes (a field left as it was): no Undo step, so Redo is not wiped (WJ8TEG).
     const same = (a, b) => String(a ?? '') === String(b ?? '')
     if (existingRow && Object.entries(updates || {}).every(([k, v]) => same(existingRow[k], v))) return
@@ -3447,12 +3546,12 @@ const useStore = create((set, get) => ({
       ElementTypeRef: elementTypeRef,
       elementTypeRef,
       ProductCode: null, Manufacturer: null, ComponentDescription: null,
-      InternalNotesText: null, IsTBC: null, IsDeleted: null, IsPropertiesTBC: null,
+      InternalNotesText: null, ExternalNotesText: null, IsTBC: null, IsDeleted: null, IsPropertiesTBC: null,
       _id: uuidv4(), _row_num: null,
     }]
 
     const updatedPsRows = basePsRows.map(row => {
-      const ref = row.ElementTypeRef || row.elementTypeRef
+      const ref = etRefOf(row)
       if (ref !== elementTypeRef) return row
       return { ...row, ...updates }
     })
@@ -3467,6 +3566,7 @@ const useStore = create((set, get) => ({
       containerReasons: containerInfo.reasons,
       psChanges: mergePsChanges(psChanges, { elementTypeRef, updates, before }),
     })
+    get().updateElementType(elementTypeRef, definitionFields(updates), { recordHistory: false })
   },
 
   /**
@@ -3476,7 +3576,7 @@ const useStore = create((set, get) => ({
    */
   deletePSRow(elementTypeRef, { recordHistory = true } = {}) {
     const { psRows, psChanges, containerETManualRefs, containerETExcludeRefs, elementTypes, recipes } = get()
-    const row = psRows.find(r => (r.ElementTypeRef || r.elementTypeRef) === elementTypeRef)
+    const row = psRows.find(r => (etRefOf(r)) === elementTypeRef)
     if (!row) return
     if (row._row_num == null) {
       if (recordHistory) get()._pushHistory()
@@ -3507,7 +3607,7 @@ const useStore = create((set, get) => ({
     if (!trimmed) return null
 
     const alreadyExists = psRows.some(
-      r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === trimmed.toLowerCase()
+      r => (etRefOf(r)).toLowerCase() === trimmed.toLowerCase()
     )
     if (alreadyExists) return null
 
@@ -3519,7 +3619,8 @@ const useStore = create((set, get) => ({
       ProductCode: defaults.ProductCode ?? null,
       Manufacturer: defaults.Manufacturer ?? null,
       ComponentDescription: defaults.ComponentDescription ?? null,
-      InternalNotesText: null,
+      InternalNotesText: defaults.InternalNotesText ?? null,
+      ExternalNotesText: defaults.ExternalNotesText ?? null,
       IsTBC: defaults.IsTBC ?? null,
       IsDeleted: null,
       IsPropertiesTBC: defaults.IsPropertiesTBC ?? null,
@@ -3543,12 +3644,15 @@ const useStore = create((set, get) => ({
           ProductCode: newRow.ProductCode,
           Manufacturer: newRow.Manufacturer,
           ComponentDescription: newRow.ComponentDescription,
+          InternalNotesText: newRow.InternalNotesText,
+          ExternalNotesText: newRow.ExternalNotesText,
           IsTBC: newRow.IsTBC,
           IsPropertiesTBC: newRow.IsPropertiesTBC,
         },
         _isNew: true,
       }),
     })
+    get().updateElementType(trimmed, definitionFields(newRow), { recordHistory: false })
 
     return newRow
   },
@@ -3681,13 +3785,12 @@ const useStore = create((set, get) => ({
     const ctxOf = r => r.ContextType || r.contextType
     const crefOf = r => r.ContextRef || r.contextRef
     const posOf = r => r.PositionTypeRef || r.positionTypeRef
-    const etOf = r => r.ElementTypeRef || r.elementTypeRef
 
     // Collect unique internal rows for the source ET (deduplicate across position copies)
     const allETRows = recipes.filter(r => ctxOf(r) === 'ElementType' && crefOf(r) === etRef)
     const seen = new Set()
     const uniqueRows = allETRows.filter(r => {
-      const key = `${etOf(r)}-${r.RecipeIndex ?? r.recipeIndex}`
+      const key = `${etRefOf(r)}-${r.RecipeIndex ?? r.recipeIndex}`
       if (seen.has(key)) return false
       seen.add(key); return true
     })
@@ -3703,8 +3806,8 @@ const useStore = create((set, get) => ({
 
     // 2. repoint this position onto the fork
     const repointed = recipes
-      .filter(r => posOf(r) === targetPos && ctxOf(r) === 'PositionType' && etOf(r) === etRef
-        && (r.IsDeleted || r.isDeleted) !== 'Y')
+      .filter(r => posOf(r) === targetPos && ctxOf(r) === 'PositionType' && etRefOf(r) === etRef
+        && isLive(r))
       .map(r => ({ ...r, ElementTypeRef: trimmedRef, elementTypeRef: trimmedRef }))
     const repointedById = new Map(repointed.map(r => [r._id, r]))
 
@@ -3752,10 +3855,9 @@ const useStore = create((set, get) => ({
     const lc = s => String(s || '').toLowerCase()
     const ctxOf = r => r.ContextType || r.contextType
     const crefOf = r => r.ContextRef || r.contextRef || ''
-    const etOf = r => r.ElementTypeRef || r.elementTypeRef || ''
 
     const { combined } = positionRecipeWithWrapperInternals(get().recipes, sourceRef)
-    const sourceRows = combined.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y' && !excluded.has(r._id))
+    const sourceRows = combined.filter(r => isLive(r) && !excluded.has(r._id))
     if (sourceRows.length === 0) return 0
 
     // The wrappers this recipe uses — their internals are what a fork gives a private copy of.
@@ -3780,7 +3882,7 @@ const useStore = create((set, get) => ({
       // Overwrite: a non-empty target's recipe is replaced (on-disk rows soft-delete, unsynced
       // rows drop). Empty target → no-op. removeRecipeRow with no history, batched under ours.
       const existing = get().recipes.filter(
-        r => (r.PositionTypeRef || r.positionTypeRef) === target && (r.IsDeleted || r.isDeleted) !== 'Y'
+        r => (r.PositionTypeRef || r.positionTypeRef) === target && isLive(r)
       )
       for (const r of existing) get().removeRecipeRow(target, r._id, { recordHistory: false })
 
@@ -3805,8 +3907,8 @@ const useStore = create((set, get) => ({
           clone.ContextRef = nref; clone.contextRef = nref
         }
         // A position-level row whose ElementType IS a forked wrapper: swap it.
-        if (ctxOf(row) === 'PositionType' && wrapperMap.has(lc(etOf(row)))) {
-          const nref = wrapperMap.get(lc(etOf(row)))
+        if (ctxOf(row) === 'PositionType' && wrapperMap.has(lc(etRefOf(row)))) {
+          const nref = wrapperMap.get(lc(etRefOf(row)))
           clone.ElementTypeRef = nref; clone.elementTypeRef = nref
         }
         return clone
@@ -3838,7 +3940,7 @@ const useStore = create((set, get) => ({
     const posRefs = [...new Set(recipes.map(r => r.PositionTypeRef || r.positionTypeRef).filter(Boolean))]
     const results = runValidation(dbData, psRows, recipes, positionUI, {
       recOf, members: membership(posRefs, etCollections, get().connectorPins, recOf, get().connectorExcludes),
-      collections: etCollections, containerETRefs, collectionRefs: dbCollectionRefs, ignoredPosRefs,
+      collections: etCollections, containerETRefs, collectionRefs: dbCollectionRefs, ignoredPosRefs, codeSays: get().codeSays,
     })
 
     // Ignored positions/families are out-of-scope — drop their issues so they
@@ -3902,16 +4004,27 @@ const useStore = create((set, get) => ({
    * → counts, or null when the files could not be read (a half-synced file: try again).
    */
   async checkFiles() {
-    const { paths, localElementTypes = [] } = get()
+    const { paths } = get()
     if (!paths?.ps && !paths?.rs && !paths?.db) return null
+    // Only the latest check of the project still open settles: a slower, older read (two
+    // workbooks settling apart, or a project opened meanwhile) must not put its rows in.
+    const run = ++_checkRun
+    const stale = () => run !== _checkRun || get().paths !== paths
     set(s => ({ syncStatus: { ...(s.syncStatus || {}), checking: true, error: null } }))
+    const failed = err => {
+      if (!stale()) set(s => ({ syncStatus: { ...(s.syncStatus || {}), checking: false, error: err?.message || String(err) } }))
+      return null
+    }
     let data
     try {
       data = await importFiles({ db: paths.dbs || (paths.db ? [paths.db] : []), ps: paths.ps, rs: paths.rs })
-    } catch (err) {
-      set(s => ({ syncStatus: { ...(s.syncStatus || {}), checking: false, error: err?.message || String(err) } }))
-      return null
-    }
+    } catch (err) { return failed(err) }
+    if (stale()) return null
+    try { return get()._applyCheck(data) } catch (err) { return failed(err) }   // never left "checking"
+  },
+
+  _applyCheck(data) {
+    const { localElementTypes = [] } = get()
     const dbEts = data.db?.element_types ?? []
     const dbRefs = new Set(dbEts.map(e => String(e.ElementTypeRef || '').toLowerCase()))
     const fresh = {
@@ -3922,8 +4035,9 @@ const useStore = create((set, get) => ({
     const { psChanges, rsChanges, dbChanges } = get()
     const r = reconcileAll({ ps: psChanges, rs: rsChanges, db: dbChanges }, fresh)
     if (data.db?.position_types) set({ positionTypes: data.db.position_types })
-    set({ dbCollectionRefs: fresh.collectionRefs })
+    set({ dbCollectionRefs: fresh.collectionRefs, dbDeletedRefs: data.db?.deleted_et_refs ?? [] })
     get()._settle(fresh, r)
+    get().queuePsOnlyETs()
     return r.counts
   },
 
@@ -3940,7 +4054,7 @@ const useStore = create((set, get) => ({
       manualInclude: containerETManualRefs, manualExclude: containerETExcludeRefs })
     const conflicts = ['ps', 'db', 'rs'].flatMap(file => r[file].conflicts.map(c => ({
       file, key: file === 'rs' ? c.entry._id : c.entry.elementTypeRef,
-      ref: file === 'rs' ? `${c.entry.row?.ContextRef || c.entry.positionTypeRef || ''} · ${c.entry.row?.ElementTypeRef || c.entry.row?.elementTypeRef || ''}` : c.entry.elementTypeRef,
+      ref: file === 'rs' ? `${c.entry.row?.ContextRef || c.entry.positionTypeRef || ''} · ${etRefOf(c.entry.row)}` : c.entry.elementTypeRef,
       fields: c.fields,
     })))
     // The batch is done when nothing it carried is still waiting.
@@ -4076,11 +4190,11 @@ const useStore = create((set, get) => ({
   dbRowProposals(refs) {
     const wanted = refs && refs.length ? new Set(refs.map(r => r.toLowerCase())) : null
     const gaps = get().alignmentGaps().dbRows.filter(d => !wanted || wanted.has(d.ref.toLowerCase()))
-    const { psRows, elementTypes, dbCollectionRefs, containerETRefs } = get()
+    const { psRows, elementTypes, dbCollectionRefs } = get()
 
     const specOf = ref => psRows.find(
-      r => (r.IsDeleted || r.isDeleted) !== 'Y' &&
-           (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === ref.toLowerCase()
+      r => isLive(r) &&
+           (etRefOf(r)).toLowerCase() === ref.toLowerCase()
     )
 
     return gaps.map(gap => {
@@ -4243,7 +4357,7 @@ const useStore = create((set, get) => ({
    */
   fixBlankRowRoles() {
     const blanks = get().recipes.filter(r =>
-      (r.IsDeleted || r.isDeleted) !== 'Y' &&
+      isLive(r) &&
       (r.IsDesign || r.isDesign) !== 'Y' &&
       (r.IsContractItem || r.isContractItem) !== 'Y'
     )
@@ -4321,7 +4435,7 @@ const useStore = create((set, get) => ({
    */
   addWrapper(posRef, kind = 'LIN', { name = null } = {}) {
     const k = String(kind).toUpperCase() === 'DL' ? 'DL' : 'LIN'
-    const live = r => (r.IsDeleted || r.isDeleted) !== 'Y'
+    const live = isLive
     const hasDesign = get().recipes.some(r => live(r) && (r.PositionTypeRef || r.positionTypeRef) === posRef
       && (r.ContextType || r.contextType) === 'PositionType' && (r.IsDesign || r.isDesign) === 'Y')
     if (!posRef || hasDesign) return null
@@ -4338,20 +4452,30 @@ const useStore = create((set, get) => ({
    * `<ref>-FORK`), the same name / description / family, and a copy of its Product Spec row.
    * Recipes are untouched. Returns the new ref.
    */
-  forkElementType(ref) {
-    const { elementTypes, psRows } = get()
-    const src = elementTypes.find(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === String(ref).toLowerCase())
+  /** The ref forkElementType(ref) would make, without making it (the pane's preview ref). */
+  forkRefFor(ref) {
+    const { elementTypes } = get()
+    const src = elementTypes.find(e => (etRefOf(e)).toLowerCase() === String(ref).toLowerCase())
     if (!src) return null
     const family = src.Family || src.family || null
-    const taken = r => elementTypes.some(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === r.toLowerCase())
+    const taken = r => elementTypes.some(e => (etRefOf(e)).toLowerCase() === r.toLowerCase())
     let next = family ? planFamilyMove([ref], family, elementTypes).moves[0]?.to : null
     if (!next || next.toLowerCase() === String(ref).toLowerCase() || taken(next)) {
       const m = String(ref).match(/^(.*?)(\d+)$/)
       if (m) { let n = Number(m[2]); do { n++ } while (taken(`${m[1]}${String(n).padStart(m[2].length, '0')}`)); next = `${m[1]}${String(n).padStart(m[2].length, '0')}` }
       else { next = `${ref}-2`; let k = 2; while (taken(next)) next = `${ref}-${++k}` }
     }
+    return next
+  },
+
+  forkElementType(ref) {
+    const { elementTypes, psRows } = get()
+    const src = elementTypes.find(e => (etRefOf(e)).toLowerCase() === String(ref).toLowerCase())
+    const next = src && get().forkRefFor(ref)
+    if (!next) return null
+    const family = src.Family || src.family || null
     get().createElementType({ ref: next, name: src.Name || src.name || null, description: src.Description || src.description || null, family })
-    const ps = psRows.find(p => (p.ElementTypeRef || p.elementTypeRef || '').toLowerCase() === String(ref).toLowerCase())
+    const ps = psRows.find(p => (etRefOf(p)).toLowerCase() === String(ref).toLowerCase())
     if (ps) {
       const copy = {}
       for (const [k, v] of Object.entries(ps)) if (!k.startsWith('_') && !/^elementTypeRef$/i.test(k) && v != null && v !== '') copy[k] = v
@@ -4360,11 +4484,91 @@ const useStore = create((set, get) => ({
     return next
   },
 
+  /**
+   * Every live Product Spec row whose ElementType the DesignDB lacks is queued for it, so the next
+   * patch adds it: Product Spec ✓ with DesignDB ✗ is never left to a separate step. Its family is
+   * estimated the way a Form import's is (etSeed), and a family the project lacks is queued too.
+   * Idempotent: a queued row is in dbChanges from then on. → refs queued
+   */
+  queuePsOnlyETs() {
+    const { psRows, recipes, elementTypes, dbCollectionRefs = [], dbDeletedRefs = [], positionTypes, library } = get()
+    // A row the DesignDB marked deleted is not re-added: the patch upserts by ref and never clears
+    // IsDeleted, so it would stay deleted and be queued again on every open. It keeps the mark.
+    // Only real DesignDB rows and queued changes count: a local ET kept from an earlier session
+    // (no _row_num, nothing queued) is still missing from the DesignDB.
+    const { dbChanges } = get()
+    const known = new Set([...elementTypes.filter(e => e._row_num != null).map(e => etRefOf(e)),
+      ...dbChanges.map(c => c.elementTypeRef), ...dbCollectionRefs, ...dbDeletedRefs]
+      .filter(Boolean).map(r => String(r).toLowerCase()))
+    const missing = new Map()   // lc ref -> psRow
+    for (const r of psRows) {
+      const ref = String(etRefOf(r)).trim()
+      if (ref && isLive(r) && !known.has(ref.toLowerCase())) missing.set(ref.toLowerCase(), r)
+    }
+    if (!missing.size) return []
+    const live = recipes.filter(r => isLive(r))
+    const entries = [...missing.values()].map(r => {
+      const ref = String(etRefOf(r)).trim()
+      const uses = live.filter(x => String(etRefOf(x)).toLowerCase() === ref.toLowerCase())
+      const code = String(r.ProductCode || r.productCode || '').trim()
+      return {
+        ref, row: r, text: code, manufacturers: [r.Manufacturer || r.manufacturer || ''],
+        variants: [{ note: r.Description || r.description || '' }],
+        positionTypes: [...new Set(uses.filter(x => (x.ContextType || x.contextType) !== 'ElementType')
+          .map(x => x.PositionTypeRef || x.positionTypeRef).filter(Boolean))],
+        lead: uses.some(x => (x.IsDesign || x.isDesign) === 'Y'),
+        // No product code yet: estimated as a wanted product, like a TBC placeholder.
+        placeholder: hasProductIdentity(code) ? null : { formRef: ref },
+      }
+    })
+    const { proposals, newFamilies } = proposeElementTypes(entries, {
+      elementTypes, psRows, recipes, positionTypes, collectionRefs: dbCollectionRefs,
+      roleOf: e => (e.lead ? 'lead' : 'extra'), library: library?.exemplars || [],
+    })
+    // Parents first, so a family's own row is in place before its members.
+    for (const f of [...newFamilies].reverse()) {
+      get().createElementType({ ref: f.ref, description: f.description, family: f.parent, isCollection: true })
+    }
+    entries.forEach((e, i) => {
+      const description = e.row.Description || e.row.description || null
+      const local = get().elementTypes.find(x => String(etRefOf(x)).toLowerCase() === e.ref.toLowerCase())
+      if (!local) return get().createElementType({ ref: e.ref, description, family: proposals[i]?.family || null })
+      // Already local: queue it as it stands, filling only what it lacks.
+      const fill = {
+        Family: local.Family || proposals[i]?.family || null,
+        Description: local.Description || description,
+      }
+      set(s => ({
+        elementTypes: s.elementTypes.map(x => x === local ? { ...x, ...fill } : x),
+        dbChanges: mergeDbChanges(s.dbChanges, {
+          elementTypeRef: etRefOf(local),
+          updates: {
+            ElementTypeRef: etRefOf(local), Name: local.Name ?? null,
+            IsCollection: local.IsCollection ?? null, SortOrder: local.SortOrder ?? get().suggestSortOrder(fill.Family), ...fill,
+          },
+          _isNew: true,
+        }),
+      }))
+    })
+    return entries.map(e => e.ref)
+  },
+
+  /** A new product as you kept it: the next proposal this sitting starts from it. */
+  noteKept({ code, maker, family, ref, name }) {
+    if (!code || !ref) return
+    set(s => ({ sitting: [...s.sitting.slice(-49), { code, maker: maker || '', kept: { family: family || '', ref, name: name || '' } }] }))
+  },
+
   createElementType({ ref, name = null, description = null, family = null, isCollection = false } = {}) {
     const trimmed = (ref || '').trim()
     if (!trimmed) return null
+    // The backstop for every create path (LOOP_CHECKS_PLAN A). It refuses rather than rewrites:
+    // the caller keys its spec rows and recipes on the ref it passed. The forms clean first.
+    const { clean, empty } = refIssues(trimmed)
+    if (empty || clean !== trimmed) { get().toast(`Not created: "${trimmed}" is not a valid ref (try ${refIssues(trimmed).fixed}).`, { ok: false }); return null }
+    if (family) family = refIssues(family).fixed || null
     const { elementTypes, projectId, dbChanges } = get()
-    if (elementTypes.some(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === trimmed.toLowerCase())) return null
+    if (elementTypes.some(e => (etRefOf(e)).toLowerCase() === trimmed.toLowerCase())) return null
 
     const sortOrder = get().suggestSortOrder(family)
     const etObj = {
@@ -4408,12 +4612,12 @@ const useStore = create((set, get) => ({
    * Like every catalogue write, the DesignDB row is only queued when DB writes
    * are enabled — otherwise the change stays project-local.
    */
-  updateElementType(ref, updates = {}) {
+  updateElementType(ref, updates = {}, { recordHistory = true } = {}) {
     const trimmed = (ref || '').trim()
     if (!trimmed || Object.keys(updates).length === 0) return
     const { elementTypes, dbChanges, projectId } = get()
     const lc = trimmed.toLowerCase()
-    const hit = elementTypes.find(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === lc)
+    const hit = elementTypes.find(e => (etRefOf(e)).toLowerCase() === lc)
     if (!hit) return
 
     // Drop no-op fields so we never register a change that writes the same value.
@@ -4423,11 +4627,11 @@ const useStore = create((set, get) => ({
     }
     if (Object.keys(changed).length === 0) return
 
-    get()._pushHistory()
+    if (recordHistory) get()._pushHistory()
 
     const patch = {
       elementTypes: elementTypes.map(e =>
-        (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === lc ? { ...e, ...changed } : e
+        (etRefOf(e)).toLowerCase() === lc ? { ...e, ...changed } : e
       ),
     }
     // `before` is what the DesignDB holds today. Keep it: the export summary reads it
@@ -4457,37 +4661,73 @@ const useStore = create((set, get) => ({
    * touches any other DB sheet (Positions/Elements/LinksMap); those belong to
    * the upstream pipeline and are the user's responsibility (they were warned).
    */
-  renameElementType(oldRef, newRef) {
+  /**
+   * The ElementTypes whose ref has whitespace or an empty part, each with its tidy target
+   * (LOOP_CHECKS_PLAN A). → [{ from, to }]
+   */
+  untidyRefs() {
+    const { elementTypes, psRows } = get()
+    const refs = [...new Set([...elementTypes, ...psRows].map(e => etRefOf(e)).filter(Boolean))]
+    return refs.map(from => ({ from, to: tidyRef(from, refs) })).filter(r => r.to)
+  },
+
+  /** Rename every untidy ref, as one Undo step. → the renames made. */
+  tidyRefs() {
+    const todo = get().untidyRefs()
+    if (!todo.length) return []
+    get()._pushHistory()
+    const done = []
+    for (const { from } of todo) {
+      // Targets are re-read after each rename, so two bad refs can't both claim one free counter.
+      const to = tidyRef(from, [...get().elementTypes, ...get().psRows].map(e => etRefOf(e)).filter(Boolean))
+      if (!to) continue
+      get().renameElementType(from, to, { recordHistory: false })
+      done.push({ from, to })
+    }
+    return done
+  },
+
+  renameElementType(oldRef, newRef, { recordHistory = true } = {}) {
     const from = (oldRef || '').trim()
     const to = (newRef || '').trim()
     if (!from || !to || from === to) return
     const state = get()
-    if (state.elementTypes.some(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === to.toLowerCase())) return
+    if (state.elementTypes.some(e => (etRefOf(e)).toLowerCase() === to.toLowerCase())) return
 
-    get()._pushHistory()
+    if (recordHistory) get()._pushHistory()
     const lc = from.toLowerCase()
 
-    // 1. elementTypes
-    const elementTypes = state.elementTypes.map(e =>
-      (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === lc
-        ? { ...e, ElementTypeRef: to, elementTypeRef: to } : e
-    )
+    // 1. elementTypes, and the members of a renamed family (else they name a family that is gone)
+    const isFrom = v => String(v || '').trim().toLowerCase() === lc
+    const members = state.elementTypes.filter(e => isFrom(e.Family || e.family))
+    const elementTypes = state.elementTypes.map(e => {
+      const own = (etRefOf(e)).toLowerCase() === lc
+      const member = isFrom(e.Family || e.family)
+      if (!own && !member) return e
+      return { ...e, ...(own && { ElementTypeRef: to, elementTypeRef: to }), ...(member && { Family: to, family: to }) }
+    })
 
     // 2. DB catalogue change (rename by writing the new Ref into the row found
     //    by the old Ref)
-    let dbChanges = mergeDbChanges(state.dbChanges, {
+    // Only a ref the DesignDB has (or has queued) gets a key update; a Product Spec-only one has no row.
+    const inDb = state.elementTypes.some(e => (etRefOf(e)).toLowerCase() === lc)
+    let dbChanges = !inDb ? state.dbChanges : mergeDbChanges(state.dbChanges, {
       elementTypeRef: from,
       updates: { ElementTypeRef: to },
       before: { ElementTypeRef: from },
     })
+    for (const m of members) {
+      const r = etRefOf(m)
+      dbChanges = mergeDbChanges(dbChanges, { elementTypeRef: r, updates: { Family: to }, before: { Family: m.Family || m.family } })
+    }
 
     // 3. PS rows — the ref IS the key, so this is a keyed rename
     let psRows = state.psRows
     let psChanges = state.psChanges
-    const psHit = state.psRows.find(r => (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === lc)
+    const psHit = state.psRows.find(r => (etRefOf(r)).toLowerCase() === lc)
     if (psHit) {
       psRows = state.psRows.map(r =>
-        (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === lc
+        (etRefOf(r)).toLowerCase() === lc
           ? { ...r, ElementTypeRef: to, elementTypeRef: to } : r
       )
       psChanges = mergePsChanges(psChanges, {
@@ -4500,7 +4740,7 @@ const useStore = create((set, get) => ({
     // 4. RS rows — EntityRef and ContextRef (container refs)
     const rsNew = []
     const recipes = state.recipes.map(r => {
-      const isEntity = (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === lc
+      const isEntity = (etRefOf(r)).toLowerCase() === lc
       const isContext = (r.ContextType || r.contextType) === 'ElementType' &&
                         (r.ContextRef || r.contextRef || '').toLowerCase() === lc
       if (!isEntity && !isContext) return r
@@ -4527,8 +4767,10 @@ const useStore = create((set, get) => ({
       ? { ...state.importDraft, assignments: renameRefDeep(state.importDraft.assignments, from, to) }
       : state.importDraft
     const slotMappings = renameRefDeep(state.slotMappings || {}, from, to)
+    const formNotes = state.formNotes?.some(n => sameRef(n.et)) ? state.formNotes.map(n => (sameRef(n.et) ? { ...n, et: to, key: noteKey({ ...n, et: to }) } : n)) : state.formNotes
 
     set({
+      formNotes,
       elementTypes, dbChanges, psRows, psChanges, recipes, rsChanges,
       containerETManualRefs, containerETExcludeRefs,
       containerETRefs: containerInfo.refs, containerReasons: containerInfo.reasons,
@@ -4546,6 +4788,7 @@ const useStore = create((set, get) => ({
       if (containerETExcludeRefs.some((r, i) => r !== state.containerETExcludeRefs[i])) pref('container_ets_exclude', containerETExcludeRefs)
       if (formCaptures !== state.formCaptures) pref('form_captures', formCaptures)
       if (importDraft !== state.importDraft) pref('form_import_draft', importDraft)
+      if (formNotes !== state.formNotes) pref('form_notes', formNotes)
       for (const [templateId, slots] of Object.entries(slotMappings)) {
         for (const [slotKey, ref] of Object.entries(slots || {})) {
           if (ref !== state.slotMappings?.[templateId]?.[slotKey]) db.upsertSlotMapping?.(projectId, templateId, slotKey, ref)?.catch?.(() => {})
@@ -4562,7 +4805,7 @@ const useStore = create((set, get) => ({
    * below). → the moves made.
    */
   moveElementTypesToFamily(refs, family, { renumber = true } = {}) {
-    const { moves, newFamilies } = planFamilyMove(refs, family, get().elementTypes, { renumber })
+    const { moves, newFamilies } = planFamilyMove(refs, family, get().elementTypes, { renumber, collectionRefs: get().dbCollectionRefs || [] })
     // Undo snapshots recipes and the spec, not ElementTypes: undoing half a move would leave
     // recipes pointing at refs that no longer exist. A move is reversed by moving back.
     const pastBefore = get().past
@@ -4589,13 +4832,13 @@ const useStore = create((set, get) => ({
     if (!trimmed) return
     const { elementTypes, dbChanges, projectId } = get()
     const lc = trimmed.toLowerCase()
-    const hit = elementTypes.find(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === lc)
+    const hit = elementTypes.find(e => (etRefOf(e)).toLowerCase() === lc)
     // The browser never loads DesignDB Elements, so an unseen ET is still queued: the patch finds its row by ref.
 
     if (recordHistory) get()._pushHistory()
 
     const nextEts = elementTypes.map(e =>
-      (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === lc
+      (etRefOf(e)).toLowerCase() === lc
         ? { ...e, IsDeleted: 'Y' } : e
     )
     const patch = { elementTypes: nextEts }
@@ -4624,7 +4867,7 @@ let _validateTimer = null
 useStore.subscribe((state, prev) => {
   if (state.recipes === prev.recipes && state.psRows === prev.psRows && state.elementTypes === prev.elementTypes
     && state.positionTypes === prev.positionTypes && state.positionUI === prev.positionUI
-    && state.ignoredPositionFamilies === prev.ignoredPositionFamilies) return
+    && state.ignoredPositionFamilies === prev.ignoredPositionFamilies && state.codeSays === prev.codeSays) return
   if (!state.positionTypes?.length) return
   clearTimeout(_validateTimer)
   _validateTimer = setTimeout(() => { try { useStore.getState().runValidation() } catch { /* the next change retries */ } }, 400)
@@ -4656,10 +4899,15 @@ export async function savePendingNow() {
     await api.setPendingChanges(projectId, psChanges, rsChanges)
     if (api.setPref) await api.setPref(projectId, 'pending_db_changes', JSON.stringify(dbChanges))
     if (api.flush) await api.flush()
-    useStore.setState({ saveStatus: 'saved', savedAt: Date.now() })
+    // Changed while it was being written (or another project opened): what is on screen is not
+    // saved yet. The change's own timer saves it; until then the indicator stays on "Saving…".
+    const now = useStore.getState()
+    if (now.projectId === projectId && now.psChanges === psChanges && now.rsChanges === rsChanges && now.dbChanges === dbChanges) {
+      useStore.setState({ saveStatus: 'saved', savedAt: Date.now() })
+    }
     return true
   } catch {
-    useStore.setState({ saveStatus: 'error' })
+    if (useStore.getState().projectId === projectId) useStore.setState({ saveStatus: 'error' })
     return false
   }
 }

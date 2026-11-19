@@ -6,7 +6,7 @@ import {
 } from '@dnd-kit/core'
 import MaterialIcon from './MaterialIcon'
 import IconButton from './IconButton'
-import { refamily, ACCESSORIES, nextRef } from '../utils/etSeed'
+import { refamily, ACCESSORIES, nextRef, whyText, refFromText, cleanRef, refIssues } from '../utils/etSeed'
 import { useCompanion } from '../platform/companion'
 import { shareOutcomes } from '../platform/outcomes'
 import { familyForJob } from '../utils/codeJobs'
@@ -16,6 +16,7 @@ import { CANON_FAMILIES } from '../data/etCanon'
 import { levelOf, saidOf, mayAsk, noteAsked } from '../utils/certainty'
 import { ConfirmLearnedModal } from './ConfirmSuggestionModal'
 import { C } from '../styles/tokens'
+import { etRefOf } from '../utils/derived'
 
 /**
  * BulkCreateETModal — every code that still needs an ElementType, proposed at once.
@@ -40,27 +41,6 @@ import { C } from '../styles/tokens'
  *   onApply({ families, items }) — the ticked new families and proposals, as edited
  */
 
-const WHY = {
-  // Its own words would hide the code: "ZH-INFD-… (Finish: RAL 9010)".
-  stem: r => (r.kin?.length ? `like ${r.kin.map(c => c.split(' (')[0]).join(', ')} here` : 'same product line'),
-  shape: r => `code shaped like ${r.shapedOn?.example} (${r.shapedOn?.n} known)`,
-  canon: r => `company family — ${r.canon}`,
-  style: r => `styled like ${r.styledOn?.ref}${r.styledOn?.source ? ` (${r.styledOn.source})` : ''}`,
-  line: 'known product line',
-  track: r => `track — ${r.canon}`,
-  library: r => `same product on ${r.styledOn?.source || 'an earlier project'} (${r.styledOn?.ref})`,
-  design: "position's design element",
-  parent: p => `position parent ${p} (not a company family)`,
-  extra: 'extra code in its cell',
-  you: 'you chose it',
-  kit: r => `usually with ${r.kitOf}`,
-  job: r => `${JOB_LABEL[r.job?.slot === 'TAPE' ? `TAPE:${r.job.variant}` : r.job?.slot] || 'its job'}${r.wasFamily ? ` (not ${r.wasFamily})` : ''}`,
-}
-const JOB_LABEL = { 'TAPE:tape': 'LED tape', 'TAPE:flex': 'neon / flex', 'TAPE:fixed': 'fixed linear', PROFILE: 'a profile', DIFFUSER: 'a diffuser',
-  END_CAPS: 'end caps', CLIPS: 'clips', MOUNT_CHANNEL: 'a mounting channel', MOUNT_COLLAR: 'a mounting collar / frame', LOCAL_DRIVER: 'a driver',
-  REMOTE_DRIVER: 'a driver', EMERGENCY: 'an emergency pack', OPTIC_ACCESSORY: 'an optic accessory', ACCESSORY: 'an accessory', FIRE_HOOD: 'a fire hood',
-  LOCKING_LEVER: 'a locking lever', TRACK_ACCESSORY: 'a track accessory' }
-const whyText = r => (typeof WHY[r.why] === 'function' ? WHY[r.why](r.why === 'parent' ? r.parent : r) : WHY[r.why] || '')
 /** Placed by a firm rule: shown as a tick, not a sentence. */
 const verified = r => !!r.why && !r.checkRef && r.why !== 'parent' && r.why !== 'you'
 const canonByRef = new Map(CANON_FAMILIES.map(f => [f.ref.toLowerCase(), f]))
@@ -88,7 +68,7 @@ export default function BulkCreateETModal({
   }, [show, focusCode])
 
   const existing = useMemo(
-    () => new Set(elementTypes.map(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase())),
+    () => new Set(elementTypes.map(e => (etRefOf(e)).toLowerCase())),
     [elementTypes]
   )
   const famByRef = useMemo(() => new Map(fams.map((f, i) => [f.ref, i])), [fams])
@@ -117,14 +97,14 @@ export default function BulkCreateETModal({
   function moveTo(indices, family) {
     if (!family) return
     setFams(fs => withFamily(fs, family))
-    setRows(rs => refamily(rs, indices, family, elementTypes))
+    setRows(rs => refamily(rs, indices, family, elementTypes, useStore.getState().psRows))
   }
 
   function addFamily() {
     const ref = adding.ref.trim()
     if (!ref || knownFamily(ref)) return
     setFams(fs => withFamily(fs, ref, { description: adding.description.trim(), parent: adding.parent || null, custom: true }))
-    if (adding.moveIndex != null) setRows(rs => refamily(rs, [adding.moveIndex], ref, elementTypes))
+    if (adding.moveIndex != null) setRows(rs => refamily(rs, [adding.moveIndex], ref, elementTypes, useStore.getState().psRows))
     setAdding(null)
   }
 
@@ -140,15 +120,16 @@ export default function BulkCreateETModal({
   // A ref is bad when blank, already in the project, used twice here, or its family is unticked.
   const problems = useMemo(() => {
     const count = new Map()
-    rows.forEach(r => { if (creating(r)) { const k = r.ref.trim().toLowerCase(); count.set(k, (count.get(k) || 0) + 1) } })
+    rows.forEach(r => { if (creating(r)) { const k = cleanRef(r.ref).toLowerCase(); count.set(k, (count.get(k) || 0) + 1) } })
     const out = new Map()
     rows.forEach((r, i) => {
       if (!creating(r)) return
-      const k = r.ref.trim().toLowerCase()
+      const k = cleanRef(r.ref).toLowerCase()
       const fi = famByRef.get(r.family)
       if (!r.family) out.set(i, 'needs a family')
       else if (fi !== undefined && !fams[fi].include) out.set(i, 'its new family is unticked')
       else if (!k) out.set(i, 'needs a ref')
+      else if (refIssues(r.ref).empty) out.set(i, `has an empty part (use ${nextRef(refIssues(r.ref).fixed.replace(/-\d+$/, ''), [...existing])})`)
       else if (existing.has(k)) out.set(i, 'already exists')
       else if (count.get(k) > 1) out.set(i, 'used twice here')
     })
@@ -191,7 +172,7 @@ export default function BulkCreateETModal({
     if (outcome !== 'accepted') return
     const anchorRow = rows.find(r => String(r.code).toUpperCase() === k.anchor.code)
     const house = familyForJob({ slot: k.part.slot }) || { family: ACCESSORIES, head: ACCESSORIES }
-    const taken = [...elementTypes.map(e => e.ElementTypeRef || e.elementTypeRef), ...rows.map(r => r.ref)].filter(Boolean)
+    const taken = [...elementTypes.map(e => etRefOf(e)), ...rows.map(r => r.ref)].filter(Boolean)
     setRows(rs => [...rs, {
       code: k.part.code, manufacturer: anchorRow?.manufacturer || '', include: true, action: 'create', reuseRef: null,
       family: house.family, ref: nextRef(house.head, taken), name: k.part.name || `${anchorRow?.manufacturer || ''} - ${k.part.code}`.trim(),
@@ -200,7 +181,7 @@ export default function BulkCreateETModal({
     setFams(fs => withFamily(fs, house.family))
   }
 
-  const included = rows.filter(r => r.include && r.action !== 'skip')
+  const included = rows.filter(r => r.include && r.action !== 'skip').map(r => (r.ref ? { ...r, ref: cleanRef(r.ref) } : r))
   const notCodes = rows.filter(r => !r.include && r.notCode).map(r => r.code)
   const nCreate = included.filter(r => r.action === 'create').length
   const usedFams = new Set(rows.filter(creating).map(r => r.family))
@@ -245,7 +226,7 @@ export default function BulkCreateETModal({
   function renameFamily(fi, idxs, ref) {
     const old = fams[fi].ref
     setFams(fs => fs.map((f, k) => (k === fi ? { ...f, ref } : f)))
-    setRows(rs => refamily(rs, idxs.filter(i => rs[i].family === old), ref, elementTypes))
+    setRows(rs => refamily(rs, idxs.filter(i => rs[i].family === old), ref, elementTypes, useStore.getState().psRows))
   }
 
   return (
@@ -279,7 +260,7 @@ export default function BulkCreateETModal({
           <div className="text-muted d-flex align-items-center gap-2" style={{ fontSize: 11 }}>
             <span><MaterialIcon name="check_box" size={12} /> untick what is wrong</span>
             <span><MaterialIcon name="drag_indicator" size={12} /> drag to another family</span>
-            <span><MaterialIcon name="verified" size={12} style={{ color: C.success }} /> firm rule</span>
+            <span><MaterialIcon name="verified" size={12} style={{ color: C.success }} /> family by firm rule</span>
             <InfoTip>
               Drag a code by its grip onto another family, or move a whole group from its header;
               refs renumber as you go. Edit any ref, name or description in place. A green tick means
@@ -351,7 +332,7 @@ export default function BulkCreateETModal({
                       onChange={() => setFams(fs => fs.map((f, k) => (k === fi ? { ...f, include: !f.include } : f)))} />
                     <Form.Control size="sm" value={fams[fi].ref} aria-label={`Family ref ${key}`}
                       style={{ width: 260, fontFamily: 'monospace', fontSize: 11 }}
-                      onChange={e => renameFamily(fi, idxs, e.target.value)} />
+                      onChange={e => renameFamily(fi, idxs, e.target.value.toUpperCase())} />
                     <Form.Control size="sm" value={fams[fi].description} aria-label={`Family description ${key}`}
                       style={{ width: 220, fontSize: 11 }} placeholder="description"
                       onChange={e => setFams(fs => fs.map((f, k) => (k === fi ? { ...f, description: e.target.value } : f)))} />
@@ -430,9 +411,10 @@ export default function BulkCreateETModal({
                                 <Form.Control size="sm" value={r.ref} aria-label={`Ref for ${r.code}`}
                                   isInvalid={!!bad && r.include} placeholder={r.family ? '' : 'pick a family'}
                                   style={{ fontFamily: 'monospace', fontSize: 11 }}
-                                  onChange={e => patch(i, { ref: e.target.value })} />
+                                  onChange={e => patch(i, { ref: e.target.value })}
+                                  onBlur={() => { if (cleanRef(r.ref) !== r.ref) patch(i, { ref: cleanRef(r.ref) }) }} />
                                 {verified(r) && (
-                                  <span title={whyText(r)} aria-label={`Placed by rule: ${whyText(r)}`} data-testid="verified">
+                                  <span title={`Family by rule: ${whyText(r)}`} aria-label={`Family placed by rule: ${whyText(r)}`} data-testid="verified">
                                     <MaterialIcon name="verified" size={14} style={{ color: C.success }} />
                                   </span>
                                 )}
@@ -462,6 +444,11 @@ export default function BulkCreateETModal({
                                   title="A guess worth checking: part of an example's ref could not be confirmed, examples disagree, or no rule placed it firmly">
                                   <MaterialIcon name="warning" size={10} /> check ref
                                   {r.alternatives?.length > 0 && <> — or {r.alternatives.join(', ')}</>}
+                                </div>
+                              )}
+                              {refFromText(r) && (
+                                <div className="text-muted d-flex align-items-center gap-1" style={{ fontSize: 9, fontStyle: r.refFrom?.from === 'default' ? 'italic' : undefined }} data-testid="ref-from">
+                                  {r.refFrom?.from !== 'default' && <span className="companion-dot" />}{refFromText(r)}
                                 </div>
                               )}
                               {(!verified(r) || r.kin?.length > 0) && whyText(r) && (

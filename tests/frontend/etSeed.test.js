@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest'
 import {
-  proposeElementTypes, pickFamily, familyRefFor, familyDescription, nextRef, refamily, seedName, ACCESSORIES,
+  proposeElementTypes, pickFamily, familyRefFor, familyDescription, nextRef, refamily, seedName, ACCESSORIES, cleanRef, refIssues, familyHeads, headFor, refHead,
 } from '../../src/utils/etSeed.js'
 
 // Shaped like 5452 early on: only cable and driver families, and Phos already has a DRIVER.
@@ -63,10 +63,12 @@ describe('an early project: company families, from the Form and the shape table'
     expect(proposals[0].superseded).toMatchObject({ shape: '021-9' })
   })
 
-  test('with no Form page type, the position parent is a flagged last resort', () => {
-    const { proposals, newFamilies } = proposeElementTypes([entry('EYP-TA-R-CR-WT', 'Phos', ['A1b'])], base)
-    expect(proposals[0]).toMatchObject({ family: 'ET-DOWNLIGHT', why: 'parent', checkRef: true })
-    expect(newFamilies[0]).toMatchObject({ ref: 'ET-DOWNLIGHT', description: 'Downlight family' })
+  // The position's parent (DOWNLIGHT) is not a family: 2% right on the mirrors (tools/backtest-forms.mjs).
+  test('with no other clue, a product on a position is a flagged point source; an extra, an accessory', () => {
+    const { proposals } = proposeElementTypes([entry('EYP-TA-R-CR-WT', 'Phos', ['A1b'])], base)
+    expect(proposals[0]).toMatchObject({ family: 'ET-PS', why: 'canon', checkRef: true })
+    const extra = proposeElementTypes([entry('EYP-TA-R-CR-WT', 'Phos', ['A1b'])], { ...base, roleOf: () => 'extra' })
+    expect(extra.proposals[0]).toMatchObject({ family: 'ET-PS-ACCESSORIES', checkRef: true })
   })
 
   test('the same product line wins: a stem-sharing code joins its sibling\'s family', () => {
@@ -78,7 +80,7 @@ describe('an early project: company families, from the Form and the shape table'
   // Similar codes in this project (tools/backtest-inprogress.py): two that agree are an answer,
   // one is a guess to check, and two that disagree leave it to the other rules, flagged.
   const kinProject = (rows) => ({ ...base,
-    elementTypes: [...ETS, ...rows.map(([code, fam], i) => ({ ElementTypeRef: `K${i}`, Family: fam }))],
+    elementTypes: [...ETS, ...rows.map(([, fam], i) => ({ ElementTypeRef: `K${i}`, Family: fam }))],
     psRows: [...PS, ...rows.map(([code], i) => ({ ElementTypeRef: `K${i}`, Manufacturer: 'Acme', ProductCode: code }))] })
 
   test('two similar codes here that agree settle the family, and say which', () => {
@@ -111,14 +113,9 @@ describe('an early project: company families, from the Form and the shape table'
     expect(proposals[0]).toMatchObject({ family: 'ET-CABLES', why: 'design' })
   })
 
-  test('a Form ref resolves through ptTarget before its parent is read', () => {
+  test('a Form ref resolves through ptTarget before its position is read', () => {
     const { proposals } = proposeElementTypes([entry('X-1', 'Acme', ['C01'])], { ...base, ptTarget: r => (r === 'C01' ? 'W1' : r) })
-    expect(proposals[0].family).toBe('ET-WALL-LIGHT')
-  })
-
-  test('mixed parents: the most common wins, and the spread is reported', () => {
-    const { proposals } = proposeElementTypes([entry('X-1', 'Acme', ['A1b', 'A2a', 'W1'])], base)
-    expect(proposals[0]).toMatchObject({ family: 'ET-DOWNLIGHT', spread: 2 })
+    expect(proposals[0].family).toBe('ET-PS')
   })
 
   test('no parent (a PositionType missing from the DB) → no family, never a guess', () => {
@@ -141,7 +138,7 @@ describe('an early project: company families, from the Form and the shape table'
 
   test('refs never collide within a batch', () => {
     const { proposals } = proposeElementTypes([entry('X-1', 'Acme', ['A1b']), entry('X-2', 'Acme', ['A2a'])], base)
-    expect(proposals.map(p => p.ref)).toEqual(['ET-DOWNLIGHT-01', 'ET-DOWNLIGHT-02'])
+    expect(proposals.map(p => p.ref)).toEqual(['ET-PS-01', 'ET-PS-02'])
   })
 })
 
@@ -179,6 +176,12 @@ describe('the tool-wide style library', () => {
       styledOn: { ref: 'ET-LIN-TAPE-NANO160-01', code: 'NFS160-27-2009', source: 'P2' },
     })
     expect(newFamilies.map(f => f.ref)).toEqual(['ET-LIN-TAPE', 'ET-LIN-INGREDIENTS'])   // with its canon parent
+  })
+
+  test('the very same product elsewhere lends its family, never its number', () => {
+    const lib = [{ maker: 'LightGraphix', code: 'LD53', ref: 'ET-PS-22', family: 'ET-PS', name: '', description: '', source: '4746' }]
+    const { proposals } = proposeElementTypes([entry('LD53', 'LightGraphix', ['H254'])], { ...base, library: lib })
+    expect(proposals[0]).toMatchObject({ family: 'ET-PS', ref: 'ET-PS-01', why: 'library' })
   })
 
   test('this project\'s own product line still wins over the library', () => {
@@ -330,4 +333,162 @@ describe('the job settles the family (5642: everything linear under a family wit
     const { proposals: [p] } = one('UN16GFSLW1000', 'Flexible grip silicone profile', { jobs })
     expect(p.family).toBe('ET-LIN-MOUNT')
   })
+})
+
+// Refs in the project's own style (FORMFILL_PLAN.md P1, P3, P4).
+describe('a ref, family and name the way this project writes them', () => {
+  const project = {
+    elementTypes: [
+      { ElementTypeRef: 'ET-PROF-1009', Family: 'ET-LIN-PROF', Name: 'LED Flex - 1009 Profile' },
+      { ElementTypeRef: 'ET-PROF-3509', Family: 'ET-LIN-PROF', Name: 'LED Flex - 3509 Profile' },
+      // A family's head counts once it is a habit (2+ members): one ET-GS-WIBRE-01 alone is not.
+      { ElementTypeRef: 'ET-GS-WIBRE-01', Family: 'ET-PS-ACCESSORIES' },
+      { ElementTypeRef: 'ET-GS-WIBRE-02', Family: 'ET-PS-ACCESSORIES' },
+      { ElementTypeRef: 'ET-DRV-01', Family: 'ET-DRIVER' },
+      { ElementTypeRef: 'ET-DRV-02', Family: 'ET-DRIVER' },
+    ],
+    psRows: [
+      { ElementTypeRef: 'ET-PROF-1009', Manufacturer: 'LEDFlex', ProductCode: '021-1009' },
+      { ElementTypeRef: 'ET-PROF-3509', Manufacturer: 'LEDFlex', ProductCode: '021-3509' },
+      { ElementTypeRef: 'ET-GS-WIBRE-01', Manufacturer: 'Wibre', ProductCode: 'GS-1' },
+    ],
+  }
+  const one = (code, maker, extra = {}) => proposeElementTypes([{ text: code, manufacturers: [maker], variants: [{}], positionTypes: [] }],
+    { ...project, ...extra }).proposals[0]
+
+  // shortcut: a ref that ends in the product number (ET-PROF-1009, no counter) is read as
+  // ET-PROF + counter, so the new one is ET-PROF-01, not ET-PROF-1019; teach refShape if it matters.
+  test('a sibling here lends its ref and its name, with the code swapped', () => {
+    const p = one('021-1019', 'LEDFlex')
+    expect(p).toMatchObject({ family: 'ET-LIN-PROF', ref: 'ET-PROF-01', name: 'LED Flex - 1019 Profile', refFrom: { from: 'sibling', example: 'ET-PROF-1009' } })
+  })
+
+  test('with no sibling, the family\'s usual head', () => {
+    const p = one('HC51', 'LightGraphix', { library: [{ maker: 'LightGraphix', code: 'HC5100', family: 'ET-PS-ACCESSORIES', ref: 'ET-PS-ACCESSORIES-04' }] })
+    expect(p).toMatchObject({ family: 'ET-PS-ACCESSORIES', ref: 'ET-GS-01', refFrom: { from: 'family' } })
+  })
+
+  test('a borrowed family spelled differently here takes this project\'s spelling', () => {
+    const p = one('DRV-77', 'Acme', { library: [{ maker: 'Acme', code: 'DRV-7700', family: 'ET-DRIVERS', ref: 'ET-DRIVERS-01' }] })
+    expect(p).toMatchObject({ family: 'ET-DRIVER', ref: 'ET-DRV-03', checkRef: true })
+  })
+
+  test('one member is not a habit: no head from it', () => {
+    const p = one('HC51', 'LightGraphix', { elementTypes: [{ ElementTypeRef: 'ET-GS-WIBRE-01', Family: 'ET-PS-ACCESSORIES' }], psRows: [] })
+    expect(p.ref).not.toMatch(/^ET-GS-/)
+  })
+
+  test('a 4-digit tail is a product number, not a counter', () => {
+    expect(nextRef('ET-PROF', ['ET-PROF-1009', 'ET-PROF-01'])).toBe('ET-PROF-02')
+  })
+})
+
+describe('this sitting: what you kept a moment ago', () => {
+  const entry = (text, maker = 'ATEA') => ({ text, manufacturers: [maker], variants: [{ note: '' }], positionTypes: [], reuse: [] })
+  const sat = [{ code: 'A4333', maker: 'ATEA', kept: { family: 'ET-LIN-RAIL', ref: 'ET-RAIL-ATEA-01', name: 'ATEA rail' } }]
+
+  test('a maker\'s last family beats a default, flagged, and its ref is followed', () => {
+    const [p] = proposeElementTypes([entry('B9000')], { session: sat }).proposals
+    expect(p).toMatchObject({ family: 'ET-LIN-RAIL', why: 'session', checkRef: true, ref: 'ET-RAIL-ATEA-02' })
+    expect(p.refFrom.from).toBe('session')
+  })
+
+  test('another maker is not affected', () => {
+    const [p] = proposeElementTypes([entry('B9000', 'Other')], { session: sat }).proposals
+    expect(p.why).not.toBe('session')
+  })
+
+  test('AEST77: a lead kept as ET-PS does not pull the maker\'s extras out of accessories', () => {
+    const lead = [{ code: 'LD1', maker: 'ATEA', kept: { family: 'ET-PS', ref: 'ET-PS-01', name: '' } }]
+    const [p] = proposeElementTypes([entry('480')], { session: lead, roleOf: () => 'extra', pageTypeFor: () => 'Point' }).proposals
+    expect(p.family).toBe('ET-PS-ACCESSORIES')
+  })
+
+  test('evidence from the project still wins over the sitting', () => {
+    const elementTypes = [{ ElementTypeRef: 'ET-TAPE-01', Family: 'ET-LIN-TAPE' }]
+    const psRows = [{ ElementTypeRef: 'ET-TAPE-01', Manufacturer: 'ATEA', ProductCode: 'A4333.18.927' }]
+    const [p] = proposeElementTypes([entry('A4333.18.930')], { elementTypes, psRows, session: sat }).proposals
+    expect(p.family).toBe('ET-LIN-TAPE')
+  })
+})
+
+// Drawer odd suggestions on bed 4746, each from its origin.
+describe('AEST77 drawer: suggestions owe their words to the code', () => {
+  // The config sync files three plaster frames under accessories: FRAME becomes the family's habit.
+  const ets = [
+    { ElementTypeRef: 'ET-GS-WIBRE-01', Family: ACCESSORIES },
+    ...['01', '02', '06'].map(n => ({ ElementTypeRef: `ET-FRAME-EYECONIC-${n}`, Family: ACCESSORIES })),
+  ]
+  const extra = { roleOf: () => 'extra', pageTypeFor: () => 'Point', contextFor: () => 'LD10238' }
+
+  test('a louvre is not named after the frames filed beside it', () => {
+    const [p] = proposeElementTypes([entry('HL54', 'LightGraphix')], { elementTypes: ets, ...extra }).proposals
+    expect(p.family).toBe(ACCESSORIES)
+    expect(p.ref).toBe('ET-PS-ACCESSORIES-01')
+    expect(refamily([{ code: 'HL54' }], [0], ACCESSORIES, ets)[0].ref).toBe('ET-PS-ACCESSORIES-01')
+  })
+  test('the same maker\'s habit holds without the word (ET-CCR drivers)', () => {
+    const own = [...ets, { ElementTypeRef: 'ET-FRAME-EYECONIC-07', Family: ACCESSORIES }]
+    const psRows = [{ ElementTypeRef: 'ET-FRAME-EYECONIC-01', Manufacturer: 'Phos', ProductCode: 'TFR-WT' }]
+    expect(refamily([{ code: 'FR-SM-26', manufacturer: 'Phos' }], [0], ACCESSORIES, own, psRows)[0].ref).toBe('ET-FRAME-01')
+  })
+  test('a frame still takes the habit', () => {
+    expect(refamily([{ code: 'TFR-WT', name: 'Phos - Plaster-in frame' }], [0], ACCESSORIES, ets)[0].ref).toBe('ET-FRAME-01')
+  })
+  test("an extra's description says whose it is, not the luminaire's name", () => {
+    const [p] = proposeElementTypes([entry('HL54', 'LightGraphix')], { elementTypes: ets, ...extra }).proposals
+    expect(p.description).toBe('For LD10238')
+  })
+})
+
+describe('maker spellings', async () => {
+  const { sameMaker, houseMaker } = await import('../../src/utils/codeShapes')
+  test('house makers are one maker under every spelling; others stay apart', () => {
+    expect(sameMaker('Light Graphix', 'Lightgraphix')).toBe(true)
+    expect(sameMaker('LED Flex', 'LedFlex')).toBe(true)
+    expect(houseMaker('LED FLex')).toBe('LEDFlex')
+    expect(sameMaker('Sloan LED', 'SloanLED')).toBe(false)
+    expect(houseMaker('Light Graphix')).toBe('LightGraphix')
+    expect(houseMaker('LightGraphix')).toBeNull()
+  })
+})
+
+describe('ref hygiene (LOOP_CHECKS_PLAN A)', () => {
+  test('cleanRef: trims, drops spaces beside -, turns other spaces into -', () => {
+    expect(cleanRef('  ET-TAPE-01 ')).toBe('ET-TAPE-01')
+    expect(cleanRef('ET- MOUNT-VFWE')).toBe('ET-MOUNT-VFWE')
+    expect(cleanRef('ET-FRAME-DOWN IN-LINE')).toBe('ET-FRAME-DOWN-IN-LINE')
+    expect(cleanRef('CC DALI Driver Large')).toBe('CC-DALI-Driver-Large')
+  })
+  test('refIssues: empty segments are flagged and closed up', () => {
+    expect(refIssues('ET-XX-')).toMatchObject({ empty: true, fixed: 'ET-XX' })
+    expect(refIssues('ET-XX--01')).toMatchObject({ empty: true, fixed: 'ET-XX-01' })
+    expect(refIssues('ET-XX-01')).toMatchObject({ empty: false, fixed: 'ET-XX-01' })
+  })
+  test('nextRef reads a family typed with a trailing - as its base', () => {
+    expect(nextRef('ET-PS-', [])).toBe('ET-PS-01')
+    expect(nextRef('ET-PS-', ['ET-PS-01'])).toBe('ET-PS-02')
+  })
+})
+
+describe('headFor in a family of several jobs', () => {
+  const et = (ref, Name) => ({ ElementTypeRef: ref, Family: 'ET-LIN-PROF', Name })
+  const ps = (ref, ProductCode) => ({ ElementTypeRef: ref, Manufacturer: 'LEDFlex', ProductCode })
+  const ets = [et('ET-MOUNT-01', 'Mounting channel'), et('ET-MOUNT-02', 'Mounting channel'), et('ET-MOUNT-03', 'Mounting channel'),
+    et('ET-DIFF-01', 'Diffuser'), et('ET-DIFF-02', 'Diffuser')]
+  const heads = familyHeads(ets, [ps('ET-DIFF-01', '022-1005'), ps('ET-DIFF-02', '022-3506'), ps('ET-MOUNT-01', '013-0001')])
+
+  test('gives a diffuser code the diffusers\' head, not the family\'s top head', () => {
+    expect(heads.get('et-lin-prof')).toBe('ET-MOUNT')
+    expect(headFor(heads, 'ET-LIN-PROF', '022-1123', '', 'LEDFlex')).toBe('ET-DIFF')   // learnt from the 022- prefix
+    expect(headFor(heads, 'ET-LIN-PROF', 'X1', 'opal diffuser', 'LEDFlex')).toBe('ET-DIFF')
+  })
+})
+
+test('refHead keeps a linear part\'s kind', () => {
+  expect(refHead('ET-LIN-CAP')).toBe('ET-LIN-CAP')
+  expect(refHead('ET-LIN-48')).toBe('ET-LIN')
+  expect(refHead('ET-PS-CURVE')).toBe('ET-PS')
+  const heads = familyHeads([{ ElementTypeRef: 'ET-LIN-CAP-08', Family: 'ET-LIN-CAPS' }, { ElementTypeRef: 'ET-LIN-CAP-09', Family: 'ET-LIN-CAPS' }])
+  expect(heads.get('et-lin-caps')).toBe('ET-LIN-CAP')
 })

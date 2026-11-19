@@ -5,6 +5,7 @@ import MaterialIcon from './MaterialIcon'
 import LinWrapperDiagram from './LinWrapperDiagram'
 import { LIN_ARCHETYPES } from '../data/linArchetypes'
 import { C } from '../styles/tokens'
+import { live, etRefOf } from '../utils/derived'
 
 const LENGTH_CHIPS = [0.5, 1, 1.5, 2, 3]
 const COUNT_CHIPS  = [1, 2, 3, 4, 5]
@@ -15,12 +16,12 @@ function parseTags(raw) {
 }
 
 function etKey(row) {
-  return ((row.ElementTypeRef || row.elementTypeRef || '')).toUpperCase()
+  return ((etRefOf(row))).toUpperCase()
 }
 
 // Heuristic: pick archetype from existing non-deleted rows
 function detectArchetype(rows) {
-  const active = rows.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
+  const active = rows.filter(r => live(r))
   const refs = active.map(r => etKey(r))
   if (refs.some(r => r.includes('PROF'))) return LIN_ARCHETYPES.find(a => a.key === 'tape_in_profile')
   if (refs.some(r => r.includes('TAPE'))) return LIN_ARCHETYPES.find(a => a.key === 'encapsulated')
@@ -32,7 +33,7 @@ function detectArchetype(rows) {
 function findExistingRow(step, rows) {
   const token = step.token.toUpperCase()
   return rows.find(r => {
-    if ((r.IsDeleted || r.isDeleted) === 'Y') return false
+    if (!live(r)) return false
     return etKey(r).includes(token)
   })
 }
@@ -42,7 +43,7 @@ function buildSlotValues(arch, rows) {
   for (const step of arch.steps) {
     const existing = findExistingRow(step, rows)
     vals[step.role] = {
-      etRef: existing ? (existing.ElementTypeRef || existing.elementTypeRef || '') : '',
+      etRef: existing ? (etRefOf(existing)) : '',
       dimQtyMultiplier: existing
         ? (existing.Dim_QuantityMultiplier ?? existing.dimQtyMultiplier ?? null)
         : (step.isClip ? null : (step.dimQtyMultiplier ?? null)),
@@ -51,7 +52,7 @@ function buildSlotValues(arch, rows) {
         : (step.quantity ?? null),
       isInteger: step.isClip ? 'Y' : undefined,
       existingRowId: existing ? existing._id : undefined,
-      originalRef: existing ? (existing.ElementTypeRef || existing.elementTypeRef || '') : '',
+      originalRef: existing ? (etRefOf(existing)) : '',
     }
   }
   return vals
@@ -120,7 +121,7 @@ export default function LinWrapperWizardModal({ show, onHide, etRef, posRef, etM
       const existing = findExistingRow(step, etModeRows)
       seeded[step.role] = {
         etRef: existing
-          ? (existing.ElementTypeRef || existing.elementTypeRef || '')
+          ? (etRefOf(existing))
           : (ing?.slotLabel || ''),
         dimQtyMultiplier: existing
           ? (existing.Dim_QuantityMultiplier ?? existing.dimQtyMultiplier ?? null)
@@ -130,7 +131,7 @@ export default function LinWrapperWizardModal({ show, onHide, etRef, posRef, etM
           : (ing?.quantity ?? step.quantity ?? null),
         isInteger: step.isClip ? 'Y' : undefined,
         existingRowId: existing?._id,
-        originalRef: existing ? (existing.ElementTypeRef || existing.elementTypeRef || '') : '',
+        originalRef: existing ? (etRefOf(existing)) : '',
       }
     }
     setSlotValues(seeded)
@@ -210,7 +211,7 @@ export default function LinWrapperWizardModal({ show, onHide, etRef, posRef, etM
   // Lookup helper
   function psRowFor(etref) {
     if (!etref) return null
-    return psRows.find(p => (p.ElementTypeRef || p.elementTypeRef || '').toLowerCase() === etref.toLowerCase())
+    return psRows.find(p => (etRefOf(p)).toLowerCase() === etref.toLowerCase())
   }
 
   return (

@@ -5,6 +5,7 @@ import FlagPill from './FlagPill'
 import { productKey, duplicateProductKeys, hasProductIdentity } from '../utils/productCodes'
 import UsagePopover from './UsagePopover'
 import { C } from '../styles/tokens'
+import { live, etRefOf } from '../utils/derived'
 
 /**
  * ProductSpecTable — table of PS rows with inline editing.
@@ -31,12 +32,12 @@ export default function ProductSpecTable({ showDeleted = false, etUsedIn = {}, s
   const filtered = useMemo(() => {
     const visible = showDeleted
       ? psRows
-      : psRows.filter(row => (row.IsDeleted || row.isDeleted) !== 'Y')
+      : psRows.filter(row => live(row))
 
     const q = search.toLowerCase().trim()
     if (!q) return visible
     return visible.filter(row =>
-      (row.ElementTypeRef || row.elementTypeRef || '').toLowerCase().includes(q) ||
+      (etRefOf(row)).toLowerCase().includes(q) ||
       (row.ProductCode || row.productCode || '').toLowerCase().includes(q) ||
       (row.Manufacturer || row.manufacturer || '').toLowerCase().includes(q) ||
       (row.ComponentDescription || row.componentDescription || '').toLowerCase().includes(q)
@@ -67,7 +68,7 @@ export default function ProductSpecTable({ showDeleted = false, etUsedIn = {}, s
   }
 
   function getRef(row) {
-    return row.ElementTypeRef || row.elementTypeRef || ''
+    return etRefOf(row)
   }
 
   function isDuplicate(row) {
@@ -175,7 +176,7 @@ export default function ProductSpecTable({ showDeleted = false, etUsedIn = {}, s
             {filtered.map(row => {
               const ref = getRef(row)
               const dup = isDuplicate(row)
-              const isDeleted = (row.IsDeleted || row.isDeleted) === 'Y'
+              const isDeleted = !live(row)
               const usageKey = ref.toLowerCase()
               const usage = etUsedIn[usageKey]
               const productCode = row.ProductCode || row.productCode || ''
@@ -283,10 +284,10 @@ export default function ProductSpecTable({ showDeleted = false, etUsedIn = {}, s
       </div>
 
       <div className="px-3 py-1 border-top text-muted small">
-        {filtered.length} of {psRows.filter(r => showDeleted || (r.IsDeleted || r.isDeleted) !== 'Y').length} rows
-        {duplicateCodes.size > 0 && (
+        {filtered.length} of {psRows.filter(r => showDeleted || live(r)).length} rows
+        {duplicateKeys.size > 0 && (
           <span className="text-danger ms-2">
-            ⚠ {duplicateCodes.size} duplicate product code{duplicateCodes.size !== 1 ? 's' : ''}
+            ⚠ {duplicateKeys.size} duplicate product code{duplicateKeys.size !== 1 ? 's' : ''}
           </span>
         )}
       </div>

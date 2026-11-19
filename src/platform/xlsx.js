@@ -18,6 +18,7 @@
  */
 
 import * as XLSX from 'xlsx'
+import { unzipSync, zipSync } from 'fflate'
 
 // --- Column maps  {excel_header: output_field_name} -------------------------
 
@@ -29,6 +30,11 @@ const ET_COLUMN_MAP = {
   IsCollection: 'IsCollection',
   IsDeleted: 'IsDeleted',
   SortOrder: 'SortOrder',
+  // kept in step with the Product Spec row (92YN3U)
+  IsTBC: 'IsTBC',
+  IsPropertiesTBC: 'IsPropertiesTBC',
+  InternalNotesText: 'InternalNotesText',
+  ExternalNotesText: 'ExternalNotesText',
 }
 
 const PT_COLUMN_MAP = {
@@ -55,6 +61,7 @@ const PS_COLUMN_MAP = {
   ProductCode: 'ProductCode',
   ComponentDescription: 'ComponentDescription',
   InternalNotesText: 'InternalNotesText',
+  ExternalNotesText: 'ExternalNotesText',
   IsTBC: 'IsTBC',
   IsDeleted: 'IsDeleted',
   IsPropertiesTBC: 'IsPropertiesTBC',
@@ -74,18 +81,20 @@ const RS_COLUMN_MAP = {
   IsTRItem: 'IsTRItem',
   Dim_QuantityMultiplier: 'Dim_QuantityMultiplier',
   IsInteger: 'IsInteger',
+  // a note per recipe row (92YN3U); the patch adds the column when a sheet lacks it
+  InternalNotesText: 'Notes',
 }
 
 // Identifier and free-text fields are always strings. Excel stores an all-digit value
 // (a ProductCode like 39012025, a Ref like 101) as a NUMBER, and every consumer
 // downstream calls .trim()/.toLowerCase() on these — one numeric cell crashed the load.
-const ET_TEXT_COLS = new Set(['ElementTypeRef', 'Name', 'Description', 'Family'])
+const ET_TEXT_COLS = new Set(['ElementTypeRef', 'Name', 'Description', 'Family', 'InternalNotesText', 'ExternalNotesText'])
 const PT_TEXT_COLS = new Set(['PositionTypeRef', 'Name', 'Description', 'ParentRef', 'DriverLocation', 'SecondaryPowerType', 'ControlTypeRef', 'ExtRef'])
 const POS_TEXT_COLS = new Set(['Ref', 'TypeRef'])
-const PS_TEXT_COLS = new Set(['ElementTypeRef', 'Manufacturer', 'ProductCode', 'ComponentDescription', 'InternalNotesText'])
-const RS_TEXT_COLS = new Set(['ContextType', 'ContextRef', 'ElementTypeRef'])
+const PS_TEXT_COLS = new Set(['ElementTypeRef', 'Manufacturer', 'ProductCode', 'ComponentDescription', 'InternalNotesText', 'ExternalNotesText'])
+const RS_TEXT_COLS = new Set(['ContextType', 'ContextRef', 'ElementTypeRef', 'Notes'])
 
-const ET_FLAG_COLS = new Set(['IsCollection', 'IsDeleted'])
+const ET_FLAG_COLS = new Set(['IsCollection', 'IsDeleted', 'IsTBC', 'IsPropertiesTBC'])
 const PT_FLAG_COLS = new Set(['IsCollection', 'IsDeleted'])
 const PS_FLAG_COLS = new Set(['IsTBC', 'IsDeleted', 'IsPropertiesTBC'])
 const RS_FLAG_COLS = new Set(['IsDesign', 'IsContractItem', 'IsTRItem', 'IsInteger', 'IsDeleted'])
@@ -101,8 +110,32 @@ const RS_FLAG_COLS = new Set(['IsDesign', 'IsContractItem', 'IsTRItem', 'IsInteg
  * of the sheet we actually wanted.
  */
 export function readWorkbook(data, opts = {}) {
+  return parseBytes(slimXlsx(data), opts)
+}
+
+const parseBytes = (bytes, opts) => XLSX.read(bytes, { type: 'array', cellDates: true, ...opts })
+
+// Parts no parser here reads. One Form Template carried 11,562 stray `xl/ink` parts and a
+// 19 MB drawing; SheetJS unzips every part whatever sheet is asked for (~9 s for that file).
+const DEAD_PART = /^xl\/(ink|drawings|media|printerSettings|embeddings)\//
+
+/**
+ * Re-pack an xlsx without its drawing/ink/media parts (stored, not deflated — it's parsed
+ * straight away). Bytes that aren't a zip (tests hand SheetJS other formats) pass through.
+ */
+export function slimXlsx(data) {
   const bytes = data instanceof ArrayBuffer ? new Uint8Array(data) : data
-  return XLSX.read(bytes, { type: 'array', cellDates: true, ...opts })
+  if (!(bytes && bytes[0] === 0x50 && bytes[1] === 0x4B)) return bytes   // not "PK"
+  let dropped = false
+  const parts = unzipSync(bytes, { filter: f => !(DEAD_PART.test(f.name) && (dropped = true)) })
+  if (!dropped) return bytes
+  const ct = '[Content_Types].xml'
+  if (parts[ct]) {   // SheetJS follows Override entries, so they must not name a dropped part
+    const xml = new TextDecoder().decode(parts[ct])
+      .replace(/<Override PartName="\/xl\/(ink|drawings|media|printerSettings|embeddings)\/[^>]*\/>/g, '')
+    parts[ct] = new TextEncoder().encode(xml)
+  }
+  return zipSync(parts, { level: 0 })
 }
 
 /**
@@ -131,13 +164,21 @@ function cellValue(cell) {
  */
 function matrix(ws) {
   if (!ws || !ws['!ref']) return []
-  const range = XLSX.utils.decode_range(ws['!ref'])
-  const out = []
-  for (let r = 0; r <= range.e.r; r++) {
-    const row = new Array(range.e.c + 1)
-    for (let c = 0; c <= range.e.c; c++) row[c] = cellValue(ws[XLSX.utils.encode_cell({ r, c })])
-    out.push(row)
+  // Sized from the cells that hold a value, not `!ref`: a formatted-to-column-XFB sheet
+  // claims 16,382 columns and made this a 2.5M-cell walk for ~2,000 real cells.
+  const cells = []
+  let maxR = -1, maxC = -1
+  for (const key in ws) {
+    if (key[0] === '!') continue
+    const v = cellValue(ws[key])
+    if (v === null) continue
+    const { r, c } = XLSX.utils.decode_cell(key)
+    cells.push([r, c, v])
+    if (r > maxR) maxR = r
+    if (c > maxC) maxC = c
   }
+  const out = Array.from({ length: maxR + 1 }, () => new Array(maxC + 1).fill(null))
+  for (const [r, c, v] of cells) out[r][c] = v
   return out
 }
 
@@ -240,9 +281,10 @@ export function parseDb(data) {
   const rawEts = parseSheetByHeaders(wb.Sheets.ElementTypes, ET_COLUMN_MAP, ET_FLAG_COLS, false, ET_TEXT_COLS)
   const etCollections = collectionRefs(rawEts, 'Family')
   const element_types = []
+  const deleted_et_refs = []
   for (const r of rawEts) {
     if (!r.ElementTypeRef) continue
-    if (r.IsDeleted === 'Y') continue
+    if (r.IsDeleted === 'Y') { deleted_et_refs.push(r.ElementTypeRef); continue }
     if (etCollections.has(r.ElementTypeRef)) continue
     delete r.IsDeleted
     element_types.push(r)
@@ -271,7 +313,7 @@ export function parseDb(data) {
     }
   }
 
-  return { element_types, position_types, positions, collection_refs: [...etCollections] }
+  return { element_types, position_types, positions, collection_refs: [...etCollections], deleted_et_refs }
 }
 
 /** Parse a Product Spec workbook → rows that have an ElementTypeRef. */
@@ -321,11 +363,24 @@ export function parseRs(data) {
 
 /**
  * Read an ARBITRARY sheet — no fixed schema. Exposes raw headers and rows so
- * the caller maps columns itself (the product-code import).
+ * the caller maps columns itself (the product-code import). With no `sheet`, `want`
+ * ({ key, header }) chooses the sheet; none accepted → the first sheet.
  * → { sheets, sheet, headers, rows }
  */
-export function readSheet(data, sheet = null) {
-  const wb = readWorkbook(data, { sheets: sheet ? [sheet] : 0 })   // only the sheet being read
+const nh = h => String(h || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+
+/** `want` is plain data (it crosses into the worker): a header named `header`, or one containing `key`. */
+const accepts = (want, hs) => (want.header && hs.includes(want.header)) || hs.some(h => h && nh(h).includes(want.key))
+
+export function readSheet(data, sheet = null, want = null) {
+  const bytes = slimXlsx(data)
+  // No sheet named: `want` picks the first sheet whose header row it accepts, from one
+  // header-only pass, instead of the caller re-reading the file per sheet.
+  if (!sheet && want) {
+    const heads = parseBytes(bytes, { sheetRows: 1 })
+    sheet = heads.SheetNames.find(n => accepts(want, headerRowOf(matrix(heads.Sheets[n])))) || null
+  }
+  const wb = parseBytes(bytes, { sheets: sheet ? [sheet] : 0 })   // only the sheet being read
   const names = wb.SheetNames.slice()
   if (names.length === 0) throw new Error('No worksheets in workbook')
 
@@ -429,9 +484,11 @@ export function mergeDbs(parsed = []) {
   const ets = union('element_types', 'ElementTypeRef')
   const pts = union('position_types', 'PositionTypeRef')
   const collections = new Set()
+  const deleted = new Set()
   const positions = []
   for (const { data } of parsed) {
     for (const c of data.collection_refs || []) collections.add(c)
+    for (const d of data.deleted_et_refs || []) deleted.add(d)
     positions.push(...(data.positions || []))
   }
 
@@ -440,6 +497,7 @@ export function mergeDbs(parsed = []) {
     position_types: pts.rows,
     positions,
     collection_refs: [...collections],
+    deleted_et_refs: [...deleted],
     sources: parsed.map(({ name, data }) => ({
       name,
       element_types: data.element_types?.length || 0,

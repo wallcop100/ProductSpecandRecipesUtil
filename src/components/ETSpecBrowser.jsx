@@ -1,13 +1,15 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import { ButtonGroup, Button } from 'react-bootstrap'
 import { useScreenView, useScrollMemory } from './useScreenView'
 import useStore from '../store/useStore'
 import { skippedRefs as skippedRefsFor } from '../utils/specChecks'
 import MaterialIcon from './MaterialIcon'
+import PsOnlyChip, { usePsOnlyRefs } from './PsOnlyChip'
 import { familyOf } from '../utils/etRef'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { productKey, duplicateProductKeys, hasProductIdentity } from '../utils/productCodes'
 import { C } from '../styles/tokens'
+import { live, etRefOf } from '../utils/derived'
 
 const STATUS_COLOR = {
   complete:  C.success,
@@ -25,7 +27,7 @@ function completenessOf(ref, psRowMap, missingSet, duplicateKeys, skipped = null
   if (missingSet.has(key) && !psRowMap.has(key)) return 'missing'
   const row = psRowMap.get(key)
   if (!row) return 'missing'
-  if ((row.IsDeleted || row.isDeleted) === 'Y') return 'deleted'
+  if (!live(row)) return 'deleted'
   const tbc = (row.IsTBC || row.isTBC) === 'Y'
   const code = (row.ProductCode || row.productCode || '').trim()
   if (!code || tbc) return 'partial'
@@ -58,6 +60,7 @@ export default function ETSpecBrowser({
   const psRows      = useStore(s => s.psRows)
   const recipes     = useStore(s => s.recipes)
   const psChanges   = useStore(s => s.psChanges)
+  const psOnly      = usePsOnlyRefs()
 
   // ET refs with an unsynced product-spec change (cleared on export)
   const dirtyRefs = useMemo(() => {
@@ -81,7 +84,7 @@ export default function ETSpecBrowser({
   const psRowMap = useMemo(() => {
     const m = new Map()
     for (const r of psRows) {
-      const k = (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase()
+      const k = (etRefOf(r)).toLowerCase()
       if (k) m.set(k, r)
     }
     return m
@@ -90,7 +93,7 @@ export default function ETSpecBrowser({
   const etObjMap = useMemo(() => {
     const m = new Map()
     for (const et of elementTypes) {
-      const k = (et.ElementTypeRef || et.elementTypeRef || '').toLowerCase()
+      const k = (etRefOf(et)).toLowerCase()
       if (k) m.set(k, et)
     }
     return m
@@ -101,9 +104,9 @@ export default function ETSpecBrowser({
 
   const allRefs = useMemo(() => {
     const set = new Set()
-    for (const et of elementTypes) { const r = et.ElementTypeRef || et.elementTypeRef; if (r) set.add(r) }
-    for (const r of psRows)        { const ref = r.ElementTypeRef || r.elementTypeRef; if (ref) set.add(ref) }
-    for (const r of recipes)       { const ref = r.ElementTypeRef || r.elementTypeRef; if (ref) set.add(ref) }
+    for (const et of elementTypes) { const r = etRefOf(et); if (r) set.add(r) }
+    for (const r of psRows)        { const ref = etRefOf(r); if (ref) set.add(ref) }
+    for (const r of recipes)       { const ref = etRefOf(r); if (ref) set.add(ref) }
     return [...set].sort()
   }, [elementTypes, psRows, recipes])
 
@@ -125,7 +128,7 @@ export default function ETSpecBrowser({
       const status = completenessOf(ref, psRowMap, missingSet, duplicateCodes, skippedRefs)
       const group = getGroupKey(ref, viewMode, psRowMap, etObjMap)
       const code = (psRow?.ProductCode || psRow?.productCode || '').trim().toUpperCase()
-      const isDeleted = (psRow?.IsDeleted || psRow?.isDeleted) === 'Y'
+      const isDeleted = !live(psRow)
       const isDup = hasProductIdentity(code)
         && duplicateCodes.has(productKey(psRow?.Manufacturer || psRow?.manufacturer, code))
 
@@ -161,7 +164,7 @@ export default function ETSpecBrowser({
         (psRow?.Manufacturer || '').toLowerCase().includes(q) ||
         group.toLowerCase().includes(q)
     }
-  }, [search, groupFilter, statusFilters, usageFilters, psRowMap, missingSet, duplicateCodes, etUsedIn, viewMode, etObjMap])
+  }, [search, groupFilter, statusFilters, usageFilters, psRowMap, missingSet, duplicateCodes, etUsedIn, viewMode, etObjMap, skippedRefs])
 
   const filtered = useMemo(() => allRefs.filter(shows), [allRefs, shows])
   const shownMissing = useMemo(() => missingETs.filter(shows), [missingETs, shows])
@@ -210,6 +213,7 @@ export default function ETSpecBrowser({
     >
       {/* Controls */}
       <div className="px-2 pt-2 pb-1 border-bottom" style={{ flexShrink: 0 }}>
+        <TidyRefs />
         <ButtonGroup size="sm" className="w-100 mb-2">
           <Button
             variant={viewMode === 'family' ? 'primary' : 'outline-secondary'}
@@ -319,6 +323,7 @@ export default function ETSpecBrowser({
                 isChecked={bulkSelected.has(ref.toLowerCase())}
                 onSelect={() => onSelect(ref)}
                 onCheck={() => onBulkToggle(ref.toLowerCase())}
+                psOnly={psOnly.has(ref.toLowerCase())}
                 rowBg={C.attnTint}
               />
             ))}
@@ -332,7 +337,7 @@ export default function ETSpecBrowser({
           selectedRef={selectedRef} bulkSelected={bulkSelected}
           onSelect={onSelect} onBulkToggle={onBulkToggle}
           statusFor={r => completenessOf(r, psRowMap, missingSet, duplicateCodes, skippedRefs)}
-          psRowMap={psRowMap}
+          psRowMap={psRowMap} psOnly={psOnly}
         />
 
         {/* Duplicate section */}
@@ -342,7 +347,7 @@ export default function ETSpecBrowser({
           selectedRef={selectedRef} bulkSelected={bulkSelected}
           onSelect={onSelect} onBulkToggle={onBulkToggle}
           statusFor={r => completenessOf(r, psRowMap, missingSet, duplicateCodes, skippedRefs)}
-          psRowMap={psRowMap}
+          psRowMap={psRowMap} psOnly={psOnly}
         />
 
         {/* Grouped list */}
@@ -378,6 +383,7 @@ export default function ETSpecBrowser({
                   isNew={!!psRow && psRow._row_num == null && isDirty}
                   onSelect={() => onSelect(ref)}
                   onCheck={() => onBulkToggle(ref.toLowerCase())}
+                  psOnly={psOnly.has(ref.toLowerCase())}
                 />
               )
             })}
@@ -394,7 +400,7 @@ export default function ETSpecBrowser({
 
 // A collapsible problem-state heading section (Partial / Duplicate), mirroring
 // the Missing-spec section.
-function ProblemSection({ title, refs, open, setOpen, headBg, border, textColor, badgeBg, selectedRef, bulkSelected, onSelect, onBulkToggle, statusFor, psRowMap }) {
+function ProblemSection({ title, refs, open, setOpen, headBg, border, textColor, badgeBg, selectedRef, bulkSelected, onSelect, onBulkToggle, statusFor, psRowMap, psOnly }) {
   if (refs.length === 0) return null
   return (
     <div style={{ borderBottom: `1px solid ${border}` }}>
@@ -425,6 +431,7 @@ function ProblemSection({ title, refs, open, setOpen, headBg, border, textColor,
             isChecked={bulkSelected.has(ref.toLowerCase())}
             onSelect={() => onSelect(ref)}
             onCheck={() => onBulkToggle(ref.toLowerCase())}
+            psOnly={psOnly.has(ref.toLowerCase())}
           />
         )
       })}
@@ -432,7 +439,7 @@ function ProblemSection({ title, refs, open, setOpen, headBg, border, textColor,
   )
 }
 
-function BrowserRow({ ref_, status, productCode, manufacturer, isTBC, isSelected, isChecked, isDirty, isNew, onSelect, onCheck, rowBg }) {
+function BrowserRow({ ref_, status, productCode, manufacturer, isTBC, isSelected, isChecked, isDirty, isNew, psOnly, onSelect, onCheck, rowBg }) {
   const specLabel = [manufacturer, productCode].filter(Boolean).join(' – ')
   return (
     <div
@@ -466,6 +473,7 @@ function BrowserRow({ ref_, status, productCode, manufacturer, isTBC, isSelected
         <span className="badge" style={{ background: C.subtle, color: C.ink, border: `1px solid ${C.border}`, fontSize: 9, flexShrink: 0 }}
           title="New — added this session, not yet exported">New</span>
       )}
+      {psOnly && <PsOnlyChip short />}
       {isTBC && (
         <span className="badge" style={{ background: C.attnTint, color: C.attnInk, border: `1px solid ${C.attn}`, fontSize: 9, flexShrink: 0 }}
           title="Marked TBC — spec to be confirmed">TBC</span>
@@ -475,6 +483,34 @@ function BrowserRow({ ref_, status, productCode, manufacturer, isTBC, isSelected
           title={specLabel}>
           {specLabel}
         </span>
+      )}
+    </div>
+  )
+}
+
+/** Refs with whitespace or an empty part (ET-PROF-), offered a rename to their tidy form (LOOP_CHECKS_PLAN A). */
+function TidyRefs() {
+  const elementTypes = useStore(s => s.elementTypes)
+  const psRows = useStore(s => s.psRows)
+  const todo = useMemo(() => useStore.getState().untidyRefs(), [elementTypes, psRows])  // eslint-disable-line react-hooks/exhaustive-deps
+  const [open, setOpen] = useState(false)
+  if (!todo.length) return null
+  return (
+    <div className="mb-2" style={{ fontSize: 11 }} data-testid="tidy-refs">
+      <Button variant="link" size="sm" className="p-0" style={{ fontSize: 11 }} onClick={() => setOpen(o => !o)}>
+        <MaterialIcon name="cleaning_services" size={13} /> {todo.length} ref{todo.length === 1 ? '' : 's'} need{todo.length === 1 ? 's' : ''} tidying
+      </Button>
+      {open && (
+        <div className="mt-1 p-1 rounded" style={{ background: C.subtle, border: `1px solid ${C.border}` }}>
+          {todo.map(t => (
+            <div key={t.from} style={{ fontFamily: 'monospace' }}>"{t.from}" → {t.to}</div>
+          ))}
+          <div className="text-muted mt-1">Recipes, the Product Spec and the Form follow. One Undo reverses it.</div>
+          <Button size="sm" variant="primary" className="mt-1" style={{ fontSize: 11 }}
+            onClick={() => { const done = useStore.getState().tidyRefs(); setOpen(false); useStore.getState().toast(`Renamed ${done.length} ref${done.length === 1 ? '' : 's'}.`) }}>
+            Rename all
+          </Button>
+        </div>
       )}
     </div>
   )

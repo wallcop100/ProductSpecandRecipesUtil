@@ -47,3 +47,14 @@ describe('code jobs', () => {
     expect([...familiesForJob({ slot: 'REMOTE_DRIVER' }, { elementTypes, familyRows })].sort()).toEqual(['ET-DRIVER', 'ET-DRIVERS'])
   })
 })
+
+it('6K5ACV: a family row filed in a parent does not make the parent a profile family', () => {
+  const elementTypes = [
+    { ElementTypeRef: 'ET-LIN-INGREDIENTS', IsCollection: 'Y' },
+    { ElementTypeRef: 'ET-LIN-PROF', IsCollection: 'Y', Family: 'ET-LIN-INGREDIENTS' },
+  ]
+  const job = jobOf({ maker: 'LEDFlex', code: 'FPS1715BG2000', name: 'Flex profile surface' })
+  const ok = familiesForJob(job, { elementTypes, familyRows: new Set(['ET-LIN-INGREDIENTS', 'ET-LIN-PROF']) })
+  expect(ok.has('ET-LIN-INGREDIENTS')).toBe(false)
+  expect(ok.has('ET-LIN-PROF')).toBe(true)
+})

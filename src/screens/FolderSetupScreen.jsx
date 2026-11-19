@@ -1,5 +1,5 @@
 import InfoTip from '../components/InfoTip'
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import {
   Container, Card, Button, Alert, Spinner, Badge, Form, Row, Col, Dropdown,
 } from 'react-bootstrap'
@@ -13,7 +13,7 @@ import StageBar from '../components/StageBar'
 import MaterialIcon from '../components/MaterialIcon'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { LATEST } from '../changelog'
-import WhatsNew from '../components/WhatsNew'
+import WhatsNew, { WhatsNewTeaser, markSeen } from '../components/WhatsNew'
 import BackupPanel from '../components/BackupPanel'
 import { C } from '../styles/tokens'
 import { askConfirm } from '../components/ConfirmHost'
@@ -66,7 +66,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
   const [pendingRestore, setPendingRestore] = useState(null)
   const [showChangelog, setShowChangelog] = useState(false)
   const [libraryMsg, setLibraryMsg] = useState(null)
-  const [styleSummary, setStyleSummary] = useState(null)
+  const [, setStyleSummary] = useState(null)
 
   // Folder access is a Chromium-only API. Say so up front rather than failing at the picker.
   useEffect(() => {
@@ -103,7 +103,15 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
    * a permission request inside the user gesture that triggered it, and any earlier await
    * ends that gesture. Do not reorder this.
    */
+  // One open at a time: `opening` / `detecting` only disable the cards once the browser's
+  // access prompt is answered, and a second click before that opened two projects at once.
+  const openingSaved = useRef(false)
   async function handleOpenSaved(p) {
+    if (openingSaved.current) return
+    openingSaved.current = true
+    try { await openSaved(p) } finally { openingSaved.current = false }
+  }
+  async function openSaved(p) {
     setDetectError(null)
     const granted = await window.electronAPI.requestFolderAccess?.(p.folder_path)
     if (!granted) {
@@ -363,7 +371,7 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
     const absDbs = override?.files?.dbs ?? dbFilenames
     const absPs = override?.files?.ps ?? psFilename
     const absRs = override?.files?.rs ?? rsFilename
-    if (!absDbs.length) return
+    if (!absDbs.length || opening) return
     const restoring = override ? null : restore
 
     setOpening(true)
@@ -423,10 +431,11 @@ export default function FolderSetupScreen({ onProjectLoaded }) {
           <div className="d-flex align-items-baseline gap-2 mb-2">
             <h4 className="mb-1">Recipe Builder</h4>
             <button className="btn btn-link p-0 ms-auto text-muted" style={{ fontSize: 11 }}
-              onClick={() => setShowChangelog(v => !v)} title="What changed recently">
+              onClick={() => { markSeen(LATEST.version); setShowChangelog(v => !v) }} title="What changed recently">
               {LATEST.version} · what’s new {showChangelog ? '▴' : '▾'}
             </button>
           </div>
+          {!showChangelog && <WhatsNewTeaser release={LATEST} onOpen={() => { markSeen(LATEST.version); setShowChangelog(true) }} />}
           {showChangelog && <WhatsNew release={LATEST} />}
 
           {unsupported && <Alert variant="danger" className="py-2"><strong>Unsupported browser:</strong> {unsupported}</Alert>}

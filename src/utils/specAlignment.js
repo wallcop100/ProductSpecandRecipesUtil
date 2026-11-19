@@ -1,3 +1,4 @@
+import { live, etRefOf } from './derived'
 /**
  * specAlignment.js — the one definition of "these three documents disagree".
  *
@@ -21,8 +22,6 @@
  */
 
 const lc = s => String(s ?? '').trim().toLowerCase()
-const live = r => (r.IsDeleted || r.isDeleted) !== 'Y'
-const etOf = r => r.ElementTypeRef || r.elementTypeRef || ''
 const posOf = r => r.PositionTypeRef || r.positionTypeRef || ''
 const ctxTypeOf = r => r.ContextType || r.contextType
 const ctxRefOf = r => r.ContextRef || r.contextRef || ''
@@ -46,7 +45,7 @@ export function masterRefs(elementTypes = [], collectionRefs = []) {
   const set = new Set(collectionRefs.map(lc).filter(Boolean))
   for (const e of elementTypes) {
     if (e._row_num == null) continue
-    const ref = lc(etOf(e))
+    const ref = lc(etRefOf(e))
     if (ref) set.add(ref)
   }
   return set
@@ -80,7 +79,7 @@ export function alignmentGaps({
   const specced = new Set()
   for (const r of psRows) {
     if (!live(r)) continue
-    const ref = lc(etOf(r))
+    const ref = lc(etRefOf(r))
     if (ref) specced.add(ref)
   }
 
@@ -97,7 +96,7 @@ export function alignmentGaps({
     if (!live(r)) continue
     const posRef = posOf(r)
     if (ignoredPosRefs.has(lc(posRef))) continue
-    note(etOf(r), posRef)
+    note(etRefOf(r), posRef)
     if (ctxTypeOf(r) === 'ElementType') note(ctxRefOf(r), posRef)
   }
 
@@ -121,8 +120,8 @@ export function alignmentGaps({
   }
   for (const r of psRows) {
     if (!live(r)) continue
-    const key = lc(etOf(r))
-    considerDb(etOf(r), true, usedBy.has(key))
+    const key = lc(etRefOf(r))
+    considerDb(etRefOf(r), true, usedBy.has(key))
   }
   for (const [, { ref }] of usedBy) considerDb(ref, specced.has(lc(ref)), true)
 

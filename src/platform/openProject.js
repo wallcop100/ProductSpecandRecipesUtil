@@ -19,7 +19,7 @@ import { harvestPatterns } from '../utils/recipePatterns'
 import { getCompanion } from './companion'
 import { sweepCodes } from './retired'
 import { pullConfig } from './projectConfig'
-import { primeLearning } from './learning'
+import { live } from '../utils/derived'
 
 export async function openProject({
   projectNumber, configName, folderPath: folder, folderName: label, files, restoring = null,
@@ -58,6 +58,7 @@ export async function openProject({
   const positions = db_data?.positions ?? []
   // Collections are stripped from element_types but ARE in the master list.
   const dbCollectionRefs = db_data?.collection_refs ?? []
+  const dbDeletedRefs = db_data?.deleted_et_refs ?? []
 
   // Beside a companion, prove this project's DesignDB is open here, so its own rows open to us.
   const proved = projectNumber
@@ -74,9 +75,7 @@ export async function openProject({
     // …and, beside a companion, to the library other projects learn from; and ask which of
     // this spec's codes have since been replaced. Both silent; both need nothing back.
     if (projectNumber) proved.then(() => getCompanion()).then(api => api?.shareLibrary?.(projectNumber, exemplars))
-    // What the project says as it opens is the baseline; only later edits are corrections.
-    primeLearning(projectNumber, { elementTypes, psRows: ps_rows ?? [] })
-    sweepCodes((ps_rows ?? []).filter(r => (r.IsDeleted || r.isDeleted) !== 'Y')
+    sweepCodes((ps_rows ?? []).filter(r => live(r))
       .map(r => ({ code: r.ProductCode || r.productCode, manufacturer: r.Manufacturer || r.manufacturer })))
   } catch { /* the library is a convenience, never a reason not to open */ }
   // …and how it built its recipes, by kind: precedent for the next project's first recipes.
@@ -112,7 +111,7 @@ export async function openProject({
   try { await pullConfig(projectId, projectNumber) } catch { /* open with what is here */ }
 
   // 3. Load SQLite data
-  const [positionUIArr, templates, slotMappings, containerETPref, containerExcludePref, etCollections, ignoredFamiliesPref, tagRulesPref, tagPalettePref, tagSnapshotsPref, favorites, tagColorsPref, formCapturesPref, importDraftPref, connectorPinsPref, connectorFamiliesPref, connectorExcludesPref, specCheckSkipPref, templateChecksPref] = await Promise.all([
+  const [positionUIArr, templates, slotMappings, containerETPref, containerExcludePref, etCollections, ignoredFamiliesPref, tagRulesPref, tagPalettePref, tagSnapshotsPref, favorites, tagColorsPref, formCapturesPref, importDraftPref, connectorPinsPref, connectorFamiliesPref, connectorExcludesPref, specCheckSkipPref, templateChecksPref, formNotesPref] = await Promise.all([
     window.electronAPI.db.getAllPositionUI(projectId),
     window.electronAPI.db.getAllTemplates(projectId),
     window.electronAPI.db.getAllSlotMappings(projectId), // already { templateId: { slotKey: ref } }
@@ -132,6 +131,7 @@ export async function openProject({
     window.electronAPI.db.getPref(projectId, 'connector_excludes'),
     window.electronAPI.db.getPref(projectId, 'spec_check_skip'),
     window.electronAPI.db.getPref(projectId, 'template_checks'),
+    window.electronAPI.db.getPref(projectId, 'form_notes'),
   ])
 
   let tagColors = {}
@@ -144,6 +144,10 @@ export async function openProject({
   // An unfinished import, offered as "Resume?" on the import screen.
   let importDraft = null
   try { importDraft = importDraftPref ? JSON.parse(importDraftPref) : null } catch { importDraft = null }
+
+  // Form Template Notes (NAL5HU): what the builder says about the Form, for its owner.
+  let formNotes = []
+  try { formNotes = (formNotesPref && JSON.parse(formNotesPref)) || [] } catch { formNotes = [] }
 
   // 3b. Tag rules + palette. Seed from bundled defaults the first time a
   // config is opened, then persist so each config owns its own copy.
@@ -211,6 +215,14 @@ export async function openProject({
   let ignoredPositionFamilies = []
   try { ignoredPositionFamilies = JSON.parse(ignoredFamiliesPref || '[]') } catch { /* ignore */ }
 
+  // Read before loadProject: from there to the restore nothing may wait, or the save that
+  // loadProject's empty queues start could write them over the saved changes.
+  let savedBatch = null
+  try {
+    const raw = projectId != null ? await window.electronAPI.db.getPref(projectId, 'patch_batch') : null
+    savedBatch = raw ? JSON.parse(raw) : null
+  } catch { /* no batch */ }
+
   loadProject({
     projectId,
     projectNumber,
@@ -222,6 +234,7 @@ export async function openProject({
     positionTypes,
     positions,
     dbCollectionRefs,
+    dbDeletedRefs,
     psRows: ps_rows,
     recipes: rs_rows,
     templates,
@@ -245,6 +258,7 @@ export async function openProject({
     tagColors,
     formCaptures,
     importDraft,
+    formNotes,
     localElementTypes,
   })
 
@@ -254,12 +268,8 @@ export async function openProject({
   // They meet the workbooks as they are now (reconcile.js): whatever a patch put in while the app
   // was closed leaves the queue here instead of being pushed back in.
   let restored = 0
-  try {
-    const raw = projectId != null ? await window.electronAPI.db.getPref(projectId, 'patch_batch') : null
-    const batch = raw ? JSON.parse(raw) : null
-    // A batch with no saved changes behind it has nothing left to run (UYTZXP: a fresh import showed it).
-    if (batch?.n && pendingChanges) useStore.setState({ patchBatch: batch })
-  } catch { /* no batch */ }
+  // A batch with no saved changes behind it has nothing left to run (UYTZXP: a fresh import showed it).
+  if (savedBatch?.n && pendingChanges) useStore.setState({ patchBatch: savedBatch })
   if (pendingChanges) {
     const counts = useStore.getState().restorePendingChanges(pendingChanges)
     const sum = k => Object.values(counts).reduce((n, c) => n + c[k], 0)
@@ -270,6 +280,9 @@ export async function openProject({
       applied && `${applied} saved change${applied === 1 ? ' is' : 's are'} in the workbooks now, so ${applied === 1 ? 'it' : 'they'} left the queue.`,
     ].filter(Boolean).join(' '))
   }
+
+  // After the restore, so a queued row it brought back is not queued twice.
+  useStore.getState().queuePsOnlyETs()
 
   return { projectId, project, restored }
 }

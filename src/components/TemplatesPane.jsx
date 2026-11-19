@@ -15,9 +15,9 @@ import { jobKey, familyForJob } from '../utils/codeJobs'
 import { nextRef } from '../utils/etSeed'
 import { ACTION_ICONS } from '../utils/entityStyle'
 import { C } from '../styles/tokens'
+import { live, etRefOf } from '../utils/derived'
 
 const mono = { fontFamily: 'monospace' }
-const live = r => (r.IsDeleted || r.isDeleted) !== 'Y'
 const originOf = t => (t._served ? 'Global' : t.scope === 'project' ? 'project' : t.scope === 'global' ? 'built-in' : 'mine')
 const checksOf = p => (p.rows || []).filter(r => r.check || r.missing).map(r => r.check || `${r.role.toLowerCase()} is empty`)
 
@@ -35,7 +35,7 @@ const checksOf = p => (p.rows || []).filter(r => r.check || r.missing).map(r => 
 function alignment(ings, rows, wrapperRefs, idx) {
   const presence = buildPresence(rows, wrapperRefs)
   const wanted = wantedSlots(ings)
-  const jobs = rows.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y').map(r => [jobKey(rowJob(r, idx)), r])
+  const jobs = rows.filter(r => live(r)).map(r => [jobKey(rowJob(r, idx)), r])
   return ings.map(i => {
     if (i.fromForm) return null
     if (i.newWrapper) return { status: wrapperRefs.length ? 'present' : 'missing' }
@@ -80,13 +80,13 @@ export default function TemplatesPane({ posRef }) {
   }, [recipes, posRef, library, positionTypes, state.elementTypes, state.psRows, state.formCaptures, state.containerETRefs, state.recipeChoices])   // eslint-disable-line react-hooks/exhaustive-deps
   // Report #48: the design ingredient names the position's own design ElementType, not "design element".
   const designRef = own.rows.find(r => live(r) && (r.IsDesign || r.isDesign) === 'Y')
-  const designName = designRef && (designRef.ElementTypeRef || designRef.elementTypeRef)
+  const designName = designRef && (etRefOf(designRef))
   const shown = showAll ? [...matches.map(t => ({ t, fits: true })), ...others.map(t => ({ t, fits: false }))] : matches.map(t => ({ t, fits: true }))
   // Report #49: which ET holds a ticked part; for a missing one, the ET and code it would become.
   const makeup = useMemo(() => positionMakeup(posRef, own.ctx, own.idx), [posRef, own])
   const anchor = useMemo(() => anchorOf(makeup, own.idx), [makeup, own])
   const codeOf = ref => { const ps = own.idx.psByRef.get(String(ref).toUpperCase()); return ps ? `${ps.Manufacturer || ps.manufacturer || ''} ${ps.ProductCode || ps.productCode || 'no code'}`.trim() : 'not in the Product Spec' }
-  const holderRef = mark => { const row = mark?.rows?.[0]; return row && (row.ElementTypeRef || row.elementTypeRef) }
+  const holderRef = mark => { const row = mark?.rows?.[0]; return row && (etRefOf(row)) }
   // What a missing part's Add writes: the template's own ElementType, one the project's data points to, or a TBC placeholder.
   function target(i) {
     if (i.newWrapper || i.fromForm || String(i.slotKey || '').startsWith('DESIGN_ELEMENT')) return null
@@ -133,7 +133,7 @@ export default function TemplatesPane({ posRef }) {
   const toCheck = Object.keys(templateChecks || {}).filter(r => !emptyRefs.includes(r) && positionTypes.some(p => p.PositionTypeRef === r))
 
   function start(template, targets) { setPreview({ template, refs: targets }); setSure(false); setMsg(null) }
-  const ctx = useMemo(() => (preview ? proposalContext(useStore.getState(), library) : null), [preview, library])   // eslint-disable-line react-hooks/exhaustive-deps
+  const ctx = useMemo(() => (preview ? proposalContext(useStore.getState(), library) : null), [preview, library])    
   const proposals = useMemo(() => (preview ? preview.refs.map(r => proposalFromTemplate(preview.template, r, ctx)) : []), [preview, ctx])
 
   function confirm() {

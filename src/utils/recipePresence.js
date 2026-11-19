@@ -1,3 +1,4 @@
+import { live, etRefOf } from './derived'
 /**
  * recipePresence.js — the single answer to "is this ingredient actually in?"
  *
@@ -23,8 +24,6 @@
  */
 
 const lc = s => String(s || '').toLowerCase()
-const live = r => (r.IsDeleted || r.isDeleted) !== 'Y'
-const etOf = r => r.ElementTypeRef || r.elementTypeRef || ''
 const ctxOf = r => r.ContextType || r.contextType
 const crefOf = r => r.ContextRef || r.contextRef || ''
 const posOf = r => r.PositionTypeRef || r.positionTypeRef || ''
@@ -76,12 +75,12 @@ export function containersForPosition(recipes, posRef, containerETRefs = new Set
   const own = (recipes || []).filter(r => posOf(r) === posRef && ctxOf(r) === 'PositionType' && live(r))
 
   const out = []
-  const design = own.find(r => isDesign(r) && etOf(r))
-  if (design && (containerETRefs.has(lc(etOf(design))) || hasInternals.has(lc(etOf(design))))) {
-    out.push(etOf(design))
+  const design = own.find(r => isDesign(r) && etRefOf(r))
+  if (design && (containerETRefs.has(lc(etRefOf(design))) || hasInternals.has(lc(etRefOf(design))))) {
+    out.push(etRefOf(design))
   }
   for (const r of own) {
-    if (etOf(r) && hasInternals.has(lc(etOf(r)))) out.push(etOf(r))   // holds rows: proof, not a hint
+    if (etRefOf(r) && hasInternals.has(lc(etRefOf(r)))) out.push(etRefOf(r))   // holds rows: proof, not a hint
   }
   return [...new Set(out)]
 }
@@ -106,7 +105,7 @@ export function buildPresence(rows, wrapperRefs = []) {
 
   for (const row of rows || []) {
     if (!live(row)) continue
-    const ref = lc(etOf(row))
+    const ref = lc(etRefOf(row))
     if (!ref) continue
     const { section, container } = rowSlot(row)
 
@@ -142,7 +141,7 @@ export function buildPresence(rows, wrapperRefs = []) {
  * and forth and never added the second.
  */
 export function ingredientPresence(presence, ingredient, { wanted = null } = {}) {
-  const ref = lc(ingredient.ElementTypeRef || ingredient.elementTypeRef || ingredient.ref || ingredient.slotLabel)
+  const ref = lc(etRefOf(ingredient) || ingredient.ref || ingredient.slotLabel)
   const section = normalizeSection(ingredient.section)
   const need = Number(ingredient.quantity) > 0 ? Number(ingredient.quantity) : 1
   if (!ref) return { status: 'missing', have: 0, need, rows: [], foundAt: null }
@@ -173,7 +172,7 @@ export function ingredientPresence(presence, ingredient, { wanted = null } = {})
 
 /** The slots a template asks for, as ingredientPresence's `wanted`. */
 export function wantedSlots(ingredients) {
-  return new Set((ingredients || []).map(i => `${normalizeSection(i.section)}|${lc(i.ElementTypeRef || i.elementTypeRef || i.ref || i.slotLabel)}`))
+  return new Set((ingredients || []).map(i => `${normalizeSection(i.section)}|${lc(etRefOf(i) || i.ref || i.slotLabel)}`))
 }
 
 /** Ingredient refs, normalised, skipping the blanks. */

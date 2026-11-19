@@ -20,8 +20,9 @@ import { roleOf, QTY_CONFIRM_ROLES } from '../utils/recipePatterns'
 import { C } from '../styles/tokens'
 import { retiredFor, newerCodes } from '../platform/retired'
 import { useScreenView } from './useScreenView'
-import { noteCodeChange } from './Corrections'
+import { noteCodeChange, NotRightModal, sendCorrection, sendNote } from './Corrections'
 import { partMatches } from '../utils/positionQuery'
+import { live, etRefOf, entryRefOf } from '../utils/derived'
 
 // A part's tree line in its wrapper's contents and its card when exploded share this, so one morphs into the other (#74).
 const partTransitionName = (container, ref) => `part-${`${container}-${ref}`.toLowerCase().replace(/[^a-z0-9-]/g, '-')}`
@@ -38,7 +39,7 @@ const partTransitionName = (container, ref) => `part-${`${container}-${ref}`.toL
 function specRowFor(psRows, ref) {
   const lc = String(ref || '').toLowerCase()
   if (!lc) return null
-  const rows = psRows.filter(p => (p.ElementTypeRef || p.elementTypeRef || '').toLowerCase() === lc)
+  const rows = psRows.filter(p => (etRefOf(p)).toLowerCase() === lc)
   return rows.find(p => p.ProductCode || p.productCode) || rows[0] || null
 }
 
@@ -61,7 +62,6 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   const setSelectMode = useStore(s => s.setSelectMode)
   const shiftHeld = useShiftHeld()
   const copyRows = useStore(s => s.copyRows)
-  const suggestNextETRef = useStore(s => s.suggestNextETRef)
   const restoreRecipeRow = useStore(s => s.restoreRecipeRow)
 
   const rowId = row._id
@@ -71,7 +71,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   const showCheck = isSelected || shiftHeld || selectMode
   // Unsynced = this row has a pending change not yet exported to the source file
   const isDirty = useStore(s => s.rsChanges.some(c => c._id === rowId))
-  const isDeleted = (row.IsDeleted || row.isDeleted) === 'Y'
+  const isDeleted = !live(row)
 
   const {
     attributes,
@@ -102,7 +102,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
     }
   }, [lastAddedRowId, rowId])
 
-  const etRef = row.elementTypeRef || row.ElementTypeRef || ''
+  const etRef = entryRefOf(row)
   const isUnresolved = row.resolved === false
   // New = added in-app this session AND not yet synced to the source file.
   const isNewRow = !isUnresolved && row._row_num == null && isDirty
@@ -115,7 +115,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
 
   // ET family for sublabel on the pill
   const etObj = etRef
-    ? elementTypes.find(e => (e.ElementTypeRef || e.elementTypeRef || '').toLowerCase() === etRef.toLowerCase())
+    ? elementTypes.find(e => (etRefOf(e)).toLowerCase() === etRef.toLowerCase())
     : null
   const etFamily = etRef ? familyOf(etRef, etObj) : null
 
@@ -150,7 +150,6 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
       : 'No wrapper signals')
     : ''
   const usedIn = isContainer ? getUsedIn(etRef, recipes, posRef) : []
-  const nextRef = isContainer ? suggestNextETRef(etRef) : null
   const internalItems = isContainer ? getInternalItems(etRef, recipes, elementTypes) : []
 
   // A plain (non-container) ElementType can still be used across several positions — the
@@ -179,7 +178,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   const container = row.ContextRef || row.contextRef
   const morphName = exploded && sectionKey !== 'position' && container && recipes.find(r =>
     (r.PositionTypeRef || r.positionTypeRef) === posRef && (r.ContextRef || r.contextRef) === container
-    && (r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() === etRef.toLowerCase())?._id === rowId
+    && (etRefOf(r)).toLowerCase() === etRef.toLowerCase())?._id === rowId
     ? partTransitionName(container, etRef) : undefined
   const wrapKey = (etRef || '').toLowerCase()
   // Wrappers start open (W47AXP): a part inside one is part of the recipe you are reading.
@@ -196,13 +195,15 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   const [replacing, setReplacing] = useState(false)
   const [keepFields, setKeepFields] = useState(true)
 
-  // Extra fields: show if any are set, or if user manually expanded
-  const extraInUse = (
-    (row.packQuantity != null && row.packQuantity !== '') ||
-    (row.dimQtyMultiplier != null && row.dimQtyMultiplier !== '') ||
-    !!(row.isTRItem || row.IsTRItem)
-  )
+  // Extra fields: never hidden while any holds a value. Rows read from the workbook carry
+  // the sheet's spellings (Dim_QuantityMultiplier, PackQuantity), app-made rows the camelCase.
+  const set = v => v != null && v !== ''
+  const extraInUse = set(row.packQuantity ?? row.PackQuantity) ||
+    set(row.dimQtyMultiplier ?? row.Dim_QuantityMultiplier) || !!(row.isTRItem || row.IsTRItem)
   const [showExtra, setShowExtra] = useState(false)
+  // The row's own InternalNotesText in the Recipes Spec (92YN3U).
+  const note = row.Notes ?? row.notes ?? ''
+  const [editNote, setEditNote] = useState(false)
   // Setting up a group on this position: clips, tape, profile, mount and caps must have
   // their quantity confirmed — it pulses until you do, even if it came prefilled.
   const teaching = useStore(s => s.teaching)
@@ -212,7 +213,7 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
   const showExtraControls = showExtra || extraInUse || qtyToConfirm
   // …and on a wrapper row, the ones waiting inside it (they are confirmed in Edit internals).
   const insidePending = !!teaching && teaching.posRef === posRef && isContainer
-    ? internalItems.map(it => it.ref || it.elementTypeRef || it.ElementTypeRef)
+    ? internalItems.map(it => it.ref || entryRefOf(it))
         .filter(ref => ref && QTY_CONFIRM_ROLES.has(roleOf(ref)) && !(teaching.qtyConfirmed || []).includes(String(ref).toLowerCase()))
     : []
 
@@ -320,6 +321,9 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                 <Dropdown.Item disabled={extraInUse || qtyToConfirm} onClick={() => setShowExtra(v => !v)}>
                   <MaterialIcon name={showExtraControls ? ACTION_ICONS.remove : ACTION_ICONS.more} size={14} />
                   {showExtraControls ? ' Hide DimMult, PackQty, TRItem' : ' Show DimMult, PackQty, TRItem'}
+                </Dropdown.Item>
+                <Dropdown.Item onClick={() => setEditNote(true)}>
+                  <MaterialIcon name="sticky_note_2" size={14} /> {note ? 'Edit note' : 'Add note'}
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown>
@@ -540,19 +544,19 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                   label="Contract"
                   value={row.isContractItem || row.IsContractItem || null}
                   onChange={val => handleFlagChange('isContractItem', val)}
-                  activeVariant="primary"
+                  activeVariant="outline-primary"
                 />
                 <FlagPill
                   label="Integer"
                   value={row.isInteger || row.IsInteger || null}
                   onChange={val => handleFlagChange('isInteger', val)}
-                  activeVariant="primary"
+                  activeVariant="outline-primary"
                 />
                 <FlagPill
                   label="TBC"
                   value={row.isTBC || row.IsTBC || null}
                   onChange={val => handleFlagChange('isTBC', val)}
-                  activeVariant="primary"
+                  activeVariant="outline-primary"
                 />
 
                 {/* Qty field with category icon */}
@@ -600,6 +604,16 @@ export default function IngredientCard({ row, posRef, sectionKey, onOpenProductS
                   </>
                 ) : null}
               </div>
+              {editNote ? (
+                <Form.Control as="textarea" rows={2} size="sm" autoFocus defaultValue={note} aria-label="Recipe row note"
+                  placeholder="Note for this row…" style={{ fontSize: 11, resize: 'vertical' }}
+                  onBlur={e => { const v = e.target.value.trim(); setEditNote(false); if (v !== note) handleFieldChange('Notes', v || null) }} />
+              ) : note ? (
+                <button type="button" className="btn btn-link p-0 text-start text-muted d-flex align-items-start gap-1" data-testid="row-note"
+                  style={{ fontSize: 11, textDecoration: 'none' }} title="Edit note" onClick={() => setEditNote(true)}>
+                  <MaterialIcon name="sticky_note_2" size={12} style={{ marginTop: 1 }} /> <span style={{ whiteSpace: 'pre-wrap' }}>{note}</span>
+                </button>
+              ) : null}
             </div>
 
             {/* Delete / restore */}
@@ -839,6 +853,7 @@ function FieldInput({ label, value, onChange, width = 80, type = 'text', min, st
 function ProductInline({ etRef, manufacturer, productCode, onOpenProductSpec }) {
   const updatePSRow = useStore(s => s.updatePSRow)
   const retired = useStore(s => retiredFor(s.retiredCodes, productCode))
+  const [notRight, setNotRight] = useState(false)
   const [editing, setEditing] = useState(false)
   const [mfr, setMfr] = useState('')
   const [code, setCode] = useState('')
@@ -893,6 +908,19 @@ function ProductInline({ etRef, manufacturer, productCode, onOpenProductSpec }) 
           </span>
         </OverlayTrigger>
       )}
+      {/* the same answer as the Product Spec's, where the line is read (9NDTLH) */}
+      {retired && <>
+        {/* an icon: the words repeated on every card with a newer code (BBGYZD) */}
+        <IconButton icon="thumb_down" title="Not right…" size={12} className="p-0 text-muted flex-shrink-0" style={{ lineHeight: 1 }} data-testid="retired-not-right" onClick={() => setNotRight(true)} />
+        <NotRightModal key={`nr-${productCode}`} show={notRight} onHide={() => setNotRight(false)}
+          title={`What's not right about the newer code for ${productCode}?`} placeholder="e.g. the code to order now"
+          facts={[['Code', <span className="font-monospace">{productCode}</span>], ['Suggested', <span className="font-monospace">{newerCodes(retired)}</span>]]}
+          onSend={a => {
+            if (a.right) updatePSRow(etRef, { ProductCode: a.right })
+            if (a.right) sendCorrection(a, { kind: 'supersession', code: productCode, replacement: a.right, manufacturer })
+            else sendNote(`Not right: ${productCode} → ${newerCodes(retired)}${a.note ? `\n${a.note}` : ''}`, `supersession ${productCode}`)
+          }} />
+      </>}
     </span>
   )
 }

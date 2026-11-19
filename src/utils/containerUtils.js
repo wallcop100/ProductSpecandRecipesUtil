@@ -1,3 +1,4 @@
+import { live, etRefOf } from './derived'
 /**
  * Utilities for virtual container ("wrapper") ElementTypes.
  *
@@ -34,7 +35,7 @@ export function isIdeaworksNA(etRef, psRows = []) {
   const key = (etRef || '').toLowerCase()
   if (!key) return false
   return psRows.some(r => {
-    if ((r.ElementTypeRef || r.elementTypeRef || '').toLowerCase() !== key) return false
+    if ((etRefOf(r)).toLowerCase() !== key) return false
     const mfr  = (r.Manufacturer || r.manufacturer || '').trim().toLowerCase()
     const code = (r.ProductCode  || r.productCode  || '').trim().toLowerCase()
     return mfr === 'ideaworks' && code === 'n/a'
@@ -54,7 +55,7 @@ export function computeContainerInfo({ elementTypes = [], psRows = [], recipes =
 
   const isCollection = new Set()
   for (const et of elementTypes) {
-    const r = (et.ElementTypeRef || et.elementTypeRef || '').toLowerCase()
+    const r = (etRefOf(et)).toLowerCase()
     if (r && (et.IsCollection === 'Y' || et.isCollection === 'Y')) isCollection.add(r)
   }
 
@@ -67,9 +68,9 @@ export function computeContainerInfo({ elementTypes = [], psRows = [], recipes =
 
   // Every ref we know about
   const allRefs = new Set()
-  for (const et of elementTypes) { const r = et.ElementTypeRef || et.elementTypeRef; if (r) allRefs.add(r) }
-  for (const row of psRows)      { const r = row.ElementTypeRef || row.elementTypeRef; if (r) allRefs.add(r) }
-  for (const row of recipes)     { const r = row.ElementTypeRef || row.elementTypeRef; if (r) allRefs.add(r) }
+  for (const et of elementTypes) { const r = etRefOf(et); if (r) allRefs.add(r) }
+  for (const row of psRows)      { const r = etRefOf(row); if (r) allRefs.add(r) }
+  for (const row of recipes)     { const r = etRefOf(row); if (r) allRefs.add(r) }
 
   const refs = new Set()
   const reasons = {}
@@ -109,8 +110,8 @@ export function getUsedIn(etRef, recipes, currentPosRef) {
   const key = (etRef || '').toLowerCase()
   const positions = new Set()
   for (const row of recipes) {
-    const rowET = (row.ElementTypeRef || row.elementTypeRef || '').toLowerCase()
-    if (rowET !== key || (row.IsDeleted || row.isDeleted) === 'Y') continue
+    const rowET = (etRefOf(row)).toLowerCase()
+    if (rowET !== key || !live(row)) continue
     const posRef = row.PositionTypeRef || row.positionTypeRef || ''
     if (posRef && posRef !== currentPosRef) {
       positions.add(posRef)
@@ -129,7 +130,7 @@ export function getInternalItems(etRef, recipes, elementTypes = []) {
   const key = (etRef || '').toLowerCase()
   if (!key) return []
   const etMap = new Map(elementTypes.map(et => [
-    (et.ElementTypeRef || et.elementTypeRef || '').toLowerCase(),
+    (etRefOf(et)).toLowerCase(),
     et,
   ]))
   const items = []
@@ -137,8 +138,8 @@ export function getInternalItems(etRef, recipes, elementTypes = []) {
   for (const row of recipes) {
     const ct = row.ContextType || row.contextType
     const cr = (row.ContextRef || row.contextRef || '').toLowerCase()
-    const er = row.ElementTypeRef || row.elementTypeRef
-    if (ct !== 'ElementType' || cr !== key || !er || (row.IsDeleted || row.isDeleted) === 'Y') continue
+    const er = etRefOf(row)
+    if (ct !== 'ElementType' || cr !== key || !er || !live(row)) continue
     if (seen.has(er)) continue
     seen.add(er)
     const info = etMap.get(er.toLowerCase())
@@ -167,7 +168,7 @@ export function getNextAvailableRef(etRef, elementTypes) {
 
   let maxN = 0
   for (const et of elementTypes) {
-    const ref = et.ElementTypeRef || et.elementTypeRef || ''
+    const ref = etRefOf(et)
     const m = ref.match(/^(.*)-(\d+)$/)
     if (!m) continue
     if (m[1].toLowerCase() !== baseLower) continue

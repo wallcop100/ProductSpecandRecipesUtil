@@ -10,8 +10,9 @@
  *                                      (ET-3Pin-Mains-SR ← ET-3Pin-SR, WAGO 770-503)
  */
 import { jobOf, familyForJob, familiesForJob, linearWrapperFamily } from './codeJobs'
+import { familyRefs, familyRowRefs, etRefOf, refKey } from './derived'
+import { live } from './derived'
 
-const U = s => String(s ?? '').trim().toUpperCase()
 const mk = s => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
 const NO_CODE = /^(TBC|N\/?A|-)?$/
 const NOT_FILED_BY_JOB = new Set(['CONNECTOR', 'FITTING', 'DESIGN_ELEMENT', 'OTHER', 'LOCKING_LEVER'])
@@ -19,37 +20,37 @@ const NOT_FILED_BY_JOB = new Set(['CONNECTOR', 'FITTING', 'DESIGN_ELEMENT', 'OTH
 
 export function familyFix(et, ps, elementTypes = [], { recipes = [], psRows = [] } = {}) {
   if (!et) return null
-  const fam = U(et.Family)
+  const fam = refKey(et.Family)
   // A linear wrapper (ET-LIN-NN): its collection follows what is inside it (page 1409596).
-  if (/^ET-LIN-?\d+$/.test(U(et.ElementTypeRef))) {
+  if (/^ET-LIN-?\d+$/.test(refKey(et.ElementTypeRef))) {
     const inside = recipes.filter(r => (r.ContextType || r.contextType) === 'ElementType'
-      && U(r.ContextRef || r.contextRef) === U(et.ElementTypeRef) && U(r.IsDeleted || r.isDeleted) !== 'Y')
+      && refKey(r.ContextRef || r.contextRef) === refKey(et.ElementTypeRef) && live(r))
     if (!inside.length) return null
-    const psBy = new Map(psRows.map(r => [U(r.ElementTypeRef), r]))
-    const etBy = new Map(elementTypes.map(e => [U(e.ElementTypeRef), e]))
+    const psBy = new Map(psRows.map(r => [refKey(r.ElementTypeRef), r]))
+    const etBy = new Map(elementTypes.map(e => [refKey(e.ElementTypeRef), e]))
     const jobs = inside.map(r => {
-      const ref = r.ElementTypeRef || r.elementTypeRef, e = etBy.get(U(ref)) || {}, p = psBy.get(U(ref)) || {}
+      const ref = etRefOf(r), e = etBy.get(refKey(ref)) || {}, p = psBy.get(refKey(ref)) || {}
       return jobOf({ ref, family: e.Family, name: e.Name, description: e.Description, maker: p.Manufacturer, code: p.ProductCode })
     })
     const want = linearWrapperFamily(jobs)
     return fam === want ? null
       : { family: want, job: { slot: 'DESIGN_ELEMENT', variant: 'LIN' } }
   }
-  if (U(et.IsCollection) === 'Y') return null
+  if (refKey(et.IsCollection) === 'Y') return null
   const job = jobOf({ ref: et.ElementTypeRef, family: fam, name: et.Name, description: et.Description,
     maker: ps?.Manufacturer, code: ps?.ProductCode })
   if (NOT_FILED_BY_JOB.has(job.slot)) return null
   const house = familyForJob(job)
   if (!house) return null
   // A family in use counts here even without a row of its own: only its make-up decides.
-  const familyRows = new Set([...elementTypes.map(e => U(e.ElementTypeRef)), ...elementTypes.map(e => U(e.Family)).filter(Boolean)])
+  const familyRows = new Set([...familyRowRefs(elementTypes), ...familyRefs(elementTypes)])
   const ok = familiesForJob(job, { elementTypes, familyRows })
   if (ok.has(fam)) return null
   // A family of things no house family covers (cables…) is a scheme of its own: an odd member is
   // left alone. A mixed catch-all, or no family at all, gets the hint.
   if (fam) {
     const houses = new Map()
-    const members = elementTypes.filter(e => U(e.Family) === fam)
+    const members = elementTypes.filter(e => refKey(e.Family) === fam)
     for (const e of members) {
       const h = familyForJob(jobOf({ ref: e.ElementTypeRef, family: fam, name: e.Name, description: e.Description }))?.family || '-'
       houses.set(h, (houses.get(h) || 0) + 1)
@@ -57,32 +58,32 @@ export function familyFix(et, ps, elementTypes = [], { recipes = [], psRows = []
     const [top, n] = [...houses.entries()].sort((a, b) => b[1] - a[1])[0] || ['-', 0]
     if (top === '-' && n / Math.max(1, members.length) >= 0.6) return null
   }
-  const own = [...ok].find(f => f !== U(house.family))
-  const ownRow = own && elementTypes.find(e => U(e.ElementTypeRef) === own)
-  return { family: own ? (ownRow ? ownRow.ElementTypeRef : elementTypes.find(e => U(e.Family) === own).Family) : house.family, job }
+  const own = [...ok].find(f => f !== refKey(house.family))
+  const ownRow = own && elementTypes.find(e => refKey(e.ElementTypeRef) === own)
+  return { family: own ? (ownRow ? ownRow.ElementTypeRef : elementTypes.find(e => refKey(e.Family) === own).Family) : house.family, job }
 }
 
 /** A connector's kind without the side it sits on: 3pin-strain-relief@mains → 3pin-strain-relief. */
 const kindOf = j => (j.slot === 'CONNECTOR' ? j.variant.replace(/@.*/, '') : null)
 
 export function codeElsewhere(et, ps, { elementTypes = [], psRows = [], exemplars = [] } = {}) {
-  if (!et || (ps && !NO_CODE.test(U(ps.ProductCode)))) return null
-  const ref = U(et.ElementTypeRef)
+  if (!et || (ps && !NO_CODE.test(refKey(ps.ProductCode)))) return null
+  const ref = refKey(et.ElementTypeRef)
   const want = kindOf(jobOf({ ref, family: et.Family, name: et.Name, description: et.Description }))
-  const psByRef = new Map(psRows.map(r => [U(r.ElementTypeRef), r]))
-  const taken = new Set(psRows.filter(r => U(r.ElementTypeRef) !== ref).map(r => `${mk(r.Manufacturer)}|${U(r.ProductCode)}`))
+  const psByRef = new Map(psRows.map(r => [refKey(r.ElementTypeRef), r]))
+  const taken = new Set(psRows.filter(r => refKey(r.ElementTypeRef) !== ref).map(r => `${mk(r.Manufacturer)}|${refKey(r.ProductCode)}`))
   // The maker it has, else the makers of its own family here (its plug and socket are WAGO: so is it).
   const own = mk(ps?.Manufacturer)
   const famMakers = new Set(elementTypes
-    .filter(e => U(e.Family) && U(e.Family) === U(et.Family) && U(e.ElementTypeRef) !== ref)
-    .map(e => mk(psByRef.get(U(e.ElementTypeRef))?.Manufacturer)).filter(Boolean))
+    .filter(e => refKey(e.Family) && refKey(e.Family) === refKey(et.Family) && refKey(e.ElementTypeRef) !== ref)
+    .map(e => mk(psByRef.get(refKey(e.ElementTypeRef))?.Manufacturer)).filter(Boolean))
   let best = null
   for (const ex of exemplars) {
-    if (!ex.code || NO_CODE.test(U(ex.code))) continue
+    if (!ex.code || NO_CODE.test(refKey(ex.code))) continue
     const m = mk(ex.maker)
     if (own ? m !== own : famMakers.size && !famMakers.has(m)) continue
-    if (taken.has(`${m}|${U(ex.code)}`)) continue
-    const score = U(ex.ref) === ref ? 2
+    if (taken.has(`${m}|${refKey(ex.code)}`)) continue
+    const score = refKey(ex.ref) === ref ? 2
       : want && kindOf(jobOf({ ref: ex.ref, family: ex.family, name: ex.name, description: ex.description })) === want ? 1 : 0
     if (score && (!best || score > best.score)) best = { score, ex }
   }
@@ -99,15 +100,15 @@ export function codeElsewhere(et, ps, { elementTypes = [], psRows = [], exemplar
 export function refNumberFix(et, elementTypes = []) {
   const ref = String(et?.ElementTypeRef || '').trim()
   if (!ref || /-\d+[A-Z]?$/i.test(ref)) return null
-  if (elementTypes.some(e => U(e.Family) === U(ref))) return null          // a family row
+  if (elementTypes.some(e => refKey(e.Family) === refKey(ref))) return null          // a family row
   const head = ref.split('-').slice(0, 2).join('-')
-  const sibs = elementTypes.map(e => String(e.ElementTypeRef || '')).filter(r => U(r).startsWith(U(head) + '-') && U(r) !== U(ref))
+  const sibs = elementTypes.map(e => String(e.ElementTypeRef || '')).filter(r => refKey(r).startsWith(refKey(head) + '-') && refKey(r) !== refKey(ref))
   const numbered = sibs.filter(r => /-\d+[A-Z]?$/i.test(r))
   if (sibs.length < 2 || numbered.length / sibs.length < 0.6) return null
-  const taken = new Set(elementTypes.map(e => U(e.ElementTypeRef)))
+  const taken = new Set(elementTypes.map(e => refKey(e.ElementTypeRef)))
   for (let n = 1; n < 100; n++) {
     const cand = `${ref}-${String(n).padStart(2, '0')}`
-    if (!taken.has(U(cand))) return { ref: cand, head }
+    if (!taken.has(refKey(cand))) return { ref: cand, head }
   }
   return null
 }

@@ -27,13 +27,11 @@ const ROWS = [
   { PositionTypeRef: 'C03', ManufacturerName: 'iGuzzini', ProductCode: 'QC52' },
 ]
 // The compact painter shows the cell text; the codes here are unique per position.
-const CODE = { QC50: 'C01', QC51: 'C02', QC52: 'C03' }
-// Rows the spec settles are folded: open the fold, then read the rows.
-const openDone = () => { const b = screen.queryByTestId('compact-done'); if (b && /show/.test(b.textContent)) fireEvent.click(within(b).getByText('show')) }
-const tableRefs = () => (openDone(), screen.getAllByTestId('compact-row')).map(r => CODE[r.textContent.match(/QC5\d/)?.[0]])
 
 beforeEach(() => {
+  localStorage.removeItem('psr.formPane.face')   // the face you last picked is remembered (4FQSWW)
   for (const k of Object.keys(prefs)) delete prefs[k]
+  localStorage.removeItem('psr.formPane.cols')
   readSheet.mockReset().mockResolvedValue({ sheets: ['S'], sheet: 'S', headers: HEAD, rows: ROWS })
   window.electronAPI.openXlsxDialog.mockClear()
   useStore.setState({
@@ -56,30 +54,31 @@ describe('D4Z9CX: paint one position from the builder', () => {
     // QC50 is in the spec: nothing to ask, no Save to press. C01 is saved and the painter closes.
     await waitFor(() => expect(useStore.getState().formCaptures?.byPosition?.C01?.[0]?.elementTypeRef).toBe('ET-PS-01'))
     expect(Object.keys(useStore.getState().formCaptures.byPosition)).toEqual(['C01'])   // C02, C03 untouched
-    await waitFor(() => expect(screen.queryByTestId('compact-painter')).toBeNull())
-    expect(screen.getByTestId('paint-status')).toHaveTextContent('Codes in Product Spec')
-    expect(screen.getByText(/ET-PS-01/)).toBeInTheDocument()
+    // Nothing left to paint: the entry turns to its Form data face; the code is a line below.
+    await waitFor(() => expect(screen.getByTestId('compact-row').dataset.face).toBe('data'))
+    expect(screen.getAllByText('ET-PS-01').length).toBeGreaterThan(0)
 
     // Next position: from the same session, saved by itself; opened, its known code is listed.
     view.unmount()
     render(<FormSpecPane posRef="C03" />)
     await waitFor(() => expect(useStore.getState().formCaptures.byPosition.C03?.[0]?.elementTypeRef).toBe('ET-PS-03'))
-    await waitFor(() => expect(screen.getByTestId('paint-status')).toHaveTextContent('Codes in Product Spec'))
-    fireEvent.click(screen.getByTestId('paint-position'))
-    expect(await screen.findByTestId('compact-known')).toHaveTextContent('QC52 → ET-PS-03')
-    expect(screen.getAllByTestId('compact-row')).toHaveLength(1)                 // 5FGNH2: its words, to paint
+    expect(screen.getAllByTestId('compact-row')).toHaveLength(1)                 // 5FGNH2: its words
+    fireEvent.click(screen.getByLabelText('Paint'))                              // the face is one click
+    expect(screen.getByTestId('compact-row').dataset.face).toBe('paint')
     expect(screen.queryByTestId('add-and-build')).toBeNull()                  // no Save button
     expect(window.electronAPI.openXlsxDialog).toHaveBeenCalledTimes(1)
   })
 
   test('the Form now gives something else than was saved: saved again, and the dropped product shows to remove', async () => {
-    useStore.setState({ formCaptures: { version: 1, byPosition: { C01: [{ elementTypeRef: 'ET-PS-OLD', code: 'OLD1', manufacturer: 'iGuzzini' }] } } })
+    useStore.setState({ formCaptures: { version: 1, byPosition: { C01: [{ elementTypeRef: 'ET-PS-OLD', code: 'OLD1', manufacturer: 'iGuzzini' }] } },
+      importDraft: { version: 1, step: 'review', source: { name: 'form.xlsx', sheet: 'S' },
+        map: { pt: '', code: 'ProductCode', mfr: 'ManufacturerName', exclude: '', acc: '', context: [] },
+        rules: {}, assignments: {}, resolutions: [], refOverrides: {}, dirStats: { forward: 0, backward: 0 }, stagedRefs: ['C01'], keptSeparate: [],
+        rows: [{ id: 0, rawText: 'QC50', positionType: 'C01', manufacturer: 'iGuzzini', context: {}, overrides: {}, noteOverride: {}, confirmed: true, autoConfirmed: true }] } })
     render(<FormSpecPane posRef="C01" />)
-    fireEvent.click(screen.getByTestId('paint-position'))
-    fireEvent.click(await screen.findByText('Choose spreadsheet…'))
     await waitFor(() => expect(useStore.getState().formCaptures.byPosition.C01?.[0]?.elementTypeRef).toBe('ET-PS-01'))
-    await screen.findByText('No longer in the Form')
-    fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
+    const gone = await screen.findByTestId('gone-row')
+    fireEvent.click(within(gone).getByRole('button', { name: 'Remove' }))
     const r1 = useStore.getState().recipes.find(r => r._id === 'r1')
     expect(!r1 || r1.IsDeleted === 'Y').toBe(true)
   })
@@ -91,6 +90,14 @@ describe('D4Z9CX: paint one position from the builder', () => {
     expect(positionPaintStatus(draft, 'C01r', helpers).state).toBe('added')
     expect(positionPaintStatus(draft, 'C01', helpers).state).toBe('absent')
     expect(positionPaintStatus(null, 'C01r').state).toBe('noForm')
+  })
+
+  test('U737Z6: a confirmed entry whose code has no ElementType is not "ready"', () => {
+    const draft = { rows: [{ positionType: 'H356', rawText: 'LD53', manufacturer: 'X', confirmed: true }] }
+    const st = positionPaintStatus(draft, 'H356', { knows: () => false })
+    expect(st.state).toBe('todo')
+    expect(st.newCodes).toBe(1)
+    expect(positionPaintStatus(draft, 'H356', { knows: () => true }).state).toBe('ready')
   })
 })
 
@@ -154,9 +161,10 @@ describe('known codes save themselves to the position', () => {
     useStore.setState({ importDraft: draft, formCaptures: null })
     render(<FormSpecPane posRef="C01" />)
     await waitFor(() => expect(useStore.getState().formCaptures?.byPosition?.C01?.[0]?.elementTypeRef).toBe('ET-PS-01'))
-    expect(screen.queryByTestId('compact-painter')).toBeNull()
-    expect(await screen.findByText(/ET-PS-01/)).toBeInTheDocument()
-    expect(screen.getByTestId('paint-status')).toHaveTextContent('Codes in Product Spec')
+    // Saved with no Save; the entry shows its Form data, the code is a line with its ET.
+    expect(screen.queryByTestId('add-and-build')).toBeNull()
+    await waitFor(() => expect(screen.getByTestId('compact-row').dataset.face).toBe('data'))
+    expect(screen.getAllByText('ET-PS-01').length).toBeGreaterThan(0)
   })
 
   test('a position with a new code is not saved for you', async () => {
@@ -169,15 +177,15 @@ describe('known codes save themselves to the position', () => {
     useStore.setState({ importDraft: draft, formCaptures: null })
     render(<FormSpecPane posRef="C02" />)
     expect(screen.queryByTestId('form-autosave')).toBeNull()
-    // A code needs an ElementType: the painter is open inline by itself, and is the one call.
+    // A code needs an ElementType: its entry opens in Paint by itself, with the card.
     expect(await screen.findByTestId('compact-painter')).toBeInTheDocument()
-    expect(screen.getByTestId('give-et')).toHaveTextContent('Give QC51 an ElementType')
-    expect(screen.queryByTestId('paint-status')).toBeNull()        // no second call while it is open
+    expect(screen.getByTestId('compact-row').dataset.face).toBe('paint')
+    expect(screen.getByTestId('give-et')).toHaveAttribute('aria-label', 'Give QC51 an ElementType')
     expect(useStore.getState().formCaptures).toBeNull()
   })
 })
 
-test('W24D3V: the Form shows raw; the brush opens the painter and it stays open, even when it re-saves', async () => {
+test('W24D3V: a settled entry shows its Form data; its own toggle flips it to Paint and back, and a re-save keeps the choice', async () => {
   useStore.setState({ importDraft: {
     version: 1, step: 'review', source: { name: 'form.xlsx', sheet: 'S' },
     map: { pt: '', code: 'ProductCode', mfr: 'ManufacturerName', exclude: '', acc: '', context: [] },
@@ -185,18 +193,18 @@ test('W24D3V: the Form shows raw; the brush opens the painter and it stays open,
     rows: [{ id: 0, rawText: 'QC50', positionType: 'C01', manufacturer: 'iGuzzini', context: {}, overrides: {}, noteOverride: {}, confirmed: true, autoConfirmed: true }],
   }, formCaptures: { version: 1, byPosition: { C01: [{ elementTypeRef: 'ET-PS-OLD', code: 'OLD1', manufacturer: 'iGuzzini' }] } } })
   render(<FormSpecPane posRef="C01" />)
+  const row = () => screen.getByTestId('compact-row')
+  expect(row().dataset.face).toBe('data')
   expect(screen.getByTestId('form-raw')).toHaveTextContent(/ProductCode\s*QC50/)
   expect(screen.getByTestId('form-raw')).toHaveTextContent(/ManufacturerName\s*iGuzzini/)
-  fireEvent.click(screen.getByTestId('paint-position'))
-  // Saved for the Form as it is now, quietly: the painter the user opened stays open.
+  fireEvent.click(screen.getByLabelText('Paint'))
   await waitFor(() => expect(useStore.getState().formCaptures.byPosition.C01?.[0]?.elementTypeRef).toBe('ET-PS-01'))
   await new Promise(r => setTimeout(r, 50))
-  expect(screen.getByTestId('compact-painter')).toBeInTheDocument()
-  expect(screen.queryByTestId('form-raw')).toBeNull()
-  // The brush is a toggle.
-  fireEvent.click(screen.getByTestId('paint-position'))
-  expect(screen.queryByTestId('compact-painter')).toBeNull()
-  expect(screen.getByTestId('form-raw')).toBeInTheDocument()
+  expect(row().dataset.face).toBe('paint')                 // the re-save did not flip it back
+  fireEvent.click(screen.getByLabelText('Form data'))
+  expect(row().dataset.face).toBe('data')
+  // No global paint mode: nothing in the store or the ⋯ menu.
+  expect(useStore.getState().formPaintMode).toBeUndefined()
 })
 
 test('TKJTDE: the raw view shows manufacturer, code and accessories; the other columns behind ⋯', () => {
@@ -212,14 +220,73 @@ test('TKJTDE: the raw view shows manufacturer, code and accessories; the other c
 test('TKJTDE: ⋯ shows and hides the other Form columns', async () => {
   const { default: FormPaintBar } = await import('../../src/components/FormPaintBar.jsx')
   useStore.setState({ formCaptures: { byPosition: { C01: [{ elementTypeRef: 'ET-PS-01', code: 'QC50' }] } }, importDraft: {
-    rows: [{ id: 0, rawText: 'QC50', positionType: 'C01', manufacturer: 'iGuzzini', context: { Notes: 'white finish' }, confirmed: true }],
+    rows: [{ id: 0, rawText: 'QC50', positionType: 'C01', manufacturer: 'iGuzzini', context: { FurtherInfo: 'white finish', Notes: 'never shown' }, confirmed: true }],
     map: { code: 'ProductCode', mfr: 'Maker' }, stagedRefs: ['C01'],
   } })
+  localStorage.removeItem('psr.formPane.cols')
+  const view = render(<FormPaintBar posRef="C01" />)
+  const raw = () => screen.getByTestId('form-raw')
+  expect(raw()).toHaveTextContent(/ProductCode\s*QC50/)
+  expect(raw()).not.toHaveTextContent('white finish')
+  fireEvent.click(screen.getByLabelText('Many lines'))
+  expect(raw()).toHaveTextContent(/Maker\s*iGuzzini(rate_review)?\s*ProductCode\s*QC50(rate_review)?\s*FurtherInfo\s*white finish/)
+  expect(raw()).not.toHaveTextContent('never shown')
+  // A click after the hover that opened the list keeps it open.
+  fireEvent.mouseEnter(screen.getByTestId('cols-pick'))
+  fireEvent.click(screen.getByTestId('cols-pick'))
+  expect(screen.getByTestId('cols-list')).toBeInTheDocument()
+  // Custom: the checklist opens on focus; the choice is sticky.
+  fireEvent.click(screen.getByLabelText('Custom'))
+  fireEvent.focus(screen.getByTestId('cols-pick'))
+  const list = await screen.findByTestId('cols-list')
+  fireEvent.click(within(list).getByLabelText('Maker'))
+  expect(raw()).not.toHaveTextContent('iGuzzini')
+  view.unmount()
   render(<FormPaintBar posRef="C01" />)
-  expect(screen.getByTestId('form-raw')).toHaveTextContent(/ProductCode\s*QC50/)
-  expect(screen.getByTestId('form-raw')).not.toHaveTextContent('white finish')
-  fireEvent.click(screen.getByTestId('form-raw-more'))
-  expect(screen.getByTestId('form-raw')).toHaveTextContent(/Notes\s*white finish/)
+  expect(screen.getByTestId('form-raw')).not.toHaveTextContent('iGuzzini')
+  expect(screen.getByLabelText('Custom')).toHaveAttribute('aria-pressed', 'true')
+})
+
+test('4746 G353 480: a code read as the same as an existing ElementType gets a FREE ref on the card, never that one', async () => {
+  useStore.setState({
+    elementTypes: [...useStore.getState().elementTypes, { ElementTypeRef: 'ET-PS-04', Family: 'ET-PS', Description: 'kit with QC51' }],
+    psRows: [...useStore.getState().psRows, { ElementTypeRef: 'ET-PS-04', Manufacturer: 'iGuzzini', ProductCode: 'QC51-KIT' }],
+    formCaptures: null, importDraft: {
+      version: 1, step: 'review', source: { name: 'form.xlsx', sheet: 'S' },
+      map: { pt: '', code: 'ProductCode', mfr: 'ManufacturerName', exclude: '', acc: '', context: [] },
+      rules: {}, assignments: {}, resolutions: [], refOverrides: {}, dirStats: { forward: 0, backward: 0 }, stagedRefs: [], keptSeparate: [],
+      rows: [{ id: 0, rawText: 'QC51', positionType: 'C02', manufacturer: 'iGuzzini', context: {}, overrides: {}, noteOverride: {}, confirmed: false }],
+    } })
+  render(<FormSpecPane posRef="C02" />)
+  await screen.findByTestId('compact-painter')
+  const ref = screen.getByLabelText('Ref for QC51').value
+  expect(ref).toMatch(/^ET-PS-\d+$/)
+  expect(['ET-PS-01', 'ET-PS-03', 'ET-PS-04']).not.toContain(ref)
+})
+
+test('a card ref holds no number for codes elsewhere in the Form: same ref with or without them', async () => {
+  const draft = rows => ({
+    version: 1, step: 'review', source: { name: 'form.xlsx', sheet: 'S' },
+    map: { pt: '', code: 'ProductCode', mfr: 'ManufacturerName', exclude: '', acc: '', context: [] },
+    rules: {}, assignments: {}, resolutions: [], refOverrides: {}, dirStats: { forward: 0, backward: 0 }, stagedRefs: [], keptSeparate: [], rows,
+  })
+  const row = (id, code, pt, confirmed) => ({ id, rawText: code, positionType: pt, manufacturer: 'iGuzzini', context: {}, overrides: {}, noteOverride: {}, confirmed })
+  const refFor = async rows => {
+    useStore.setState({ formCaptures: null, importDraft: draft(rows) })
+    const v = render(<FormSpecPane posRef="C02" />)
+    await screen.findByTestId('compact-painter')
+    const ref = screen.getByLabelText('Ref for QC59').value
+    v.unmount()
+    return ref
+  }
+  useStore.setState({
+    elementTypes: ['ET-PS-01', 'ET-PS-03'].map(r => ({ ElementTypeRef: r, Family: 'ET-PS' })),
+    recipes: ['C01', 'C02', 'C03'].map(pt => ({ _id: pt, PositionTypeRef: pt, ContextType: 'PositionType', ContextRef: pt, ElementTypeRef: 'ET-PS-01', Quantity: 1 })),
+  })
+  const alone = await refFor([row(0, 'QC59', 'C02', false)])
+  const others = await refFor([row(0, 'QC57', 'C01', true), row(1, 'QC58', 'C03', true), row(2, 'QC59', 'C02', false)])
+  expect(alone).toBeTruthy()
+  expect(others).toBe(alone)
 })
 
 test('S3JLGL: Detach with the painter open closes it, and the open painter does not write the Form back', async () => {
@@ -238,7 +305,7 @@ test('S3JLGL: Detach with the painter open closes it, and the open painter does 
   expect(screen.getByTestId('paint-position')).toHaveTextContent('Load the Form')
 })
 
-test('44VCYZ: a code still needs an ElementType; the known ones are compared with the recipe anyway, and the chip counts only the new one', async () => {
+test('44VCYZ: a code still needs an ElementType: its entry opens in Paint, and the known one is compared with the recipe anyway', async () => {
   useStore.setState({ formCaptures: { version: 1, byPosition: { C03: [{ elementTypeRef: 'ET-PS-03', code: 'QC52' }] } }, importDraft: {
     version: 1, step: 'review', source: { name: 'form.xlsx', sheet: 'S' },
     map: { pt: '', code: 'ProductCode', mfr: 'ManufacturerName', exclude: '', acc: '', context: [] },
@@ -248,11 +315,23 @@ test('44VCYZ: a code still needs an ElementType; the known ones are compared wit
   const st = positionPaintStatus(useStore.getState().importDraft, 'C01', { knows: (m, c) => c === 'QC50' })
   expect(st.newCodes).toBe(1)
   render(<FormSpecPane posRef="C01" />)
-  fireEvent.click(screen.getByTestId('paint-position'))          // close the painter
-  await waitFor(() => expect(screen.queryByTestId('compact-painter')).toBeNull())
-  expect(screen.getByTestId('paint-status')).toHaveTextContent('1 code needs an ElementType')
-  expect(screen.getByText('ET-PS-01')).toBeInTheDocument()       // QC50's ElementType, compared with the recipe
-  expect(screen.getByText('already an ElementType — add it')).toBeInTheDocument()
+  // One card, for the new code only; QC50's ElementType is compared with the recipe (a missing card).
+  // Still to paint: the entry opens in Paint by itself; QC50's ElementType is compared with the recipe.
+  await waitFor(() => expect(screen.getByTestId('compact-row').dataset.face).toBe('paint'))
+  expect(within(screen.getByTestId('missing-card')).getByText('ET-PS-01')).toBeInTheDocument()
+})
+
+test('LLVJHU: clicking an ElementType ref in the Form pane opens it in the Product Spec', async () => {
+  const openSpec = vi.fn()
+  useStore.setState({ openSpec, formPaintMode: false, formCaptures: { version: 1, byPosition: { C01: [{ elementTypeRef: 'ET-PS-01', code: 'QC50' }] } }, importDraft: {
+    version: 1, step: 'review', source: { name: 'form.xlsx', sheet: 'S' },
+    map: { pt: '', code: 'ProductCode', mfr: 'ManufacturerName', exclude: '', acc: '', context: [] },
+    rules: {}, assignments: {}, resolutions: [], refOverrides: {}, dirStats: { forward: 0, backward: 0 }, stagedRefs: [], keptSeparate: [],
+    rows: [{ id: 0, rawText: 'QC50', positionType: 'C01', manufacturer: 'iGuzzini', context: {}, overrides: {}, noteOverride: {}, confirmed: true }],
+  } })
+  render(<FormSpecPane posRef="C01" />)
+  fireEvent.click(await screen.findByTestId('form-et-ref'))
+  expect(openSpec).toHaveBeenCalledWith('ET-PS-01')
 })
 
 test('WYZ3NN: an entry whose codes all have ElementTypes (here one given in this import) is confirmed and saved, not "needs an ElementType"', async () => {
@@ -288,6 +367,21 @@ test('4MYUQ7: Detach takes the Form off the whole project, session included', as
   expect(useStore.getState().importDraft).toBeNull()
 })
 
+test('Detach while the background save is running: nothing is written back', async () => {
+  const { default: FormAutoSaveAll } = await import('../../src/components/FormAutoSaveAll.jsx')
+  useStore.setState({ formCaptures: null, importDraft: {
+    version: 1, step: 'review', source: { name: 'form.xlsx', sheet: 'S' },
+    map: { pt: '', code: 'ProductCode', mfr: 'ManufacturerName', exclude: '', acc: '', context: [] },
+    rules: {}, assignments: { QC51: 'ET-PS-03' }, resolutions: [], refOverrides: {}, dirStats: { forward: 0, backward: 0 }, stagedRefs: [], keptSeparate: [],
+    rows: [{ id: 0, rawText: 'QC51', positionType: 'C02', manufacturer: 'iGuzzini', context: {}, overrides: {}, noteOverride: {}, confirmed: false }],
+  } })
+  render(<FormAutoSaveAll />)
+  await act(async () => { await useStore.getState().detachForm() })
+  await act(async () => { await new Promise(r => setTimeout(r, 4500)) })
+  expect(useStore.getState().formCaptures).toBeNull()
+  expect(useStore.getState().importDraft).toBeNull()
+}, 10000)
+
 test('2K4TCY: every known position is saved at once; the chip counts the whole Form', async () => {
   const { default: FormAutoSaveAll } = await import('../../src/components/FormAutoSaveAll.jsx')
   const { default: FormProgressChip } = await import('../../src/components/FormProgressChip.jsx')
@@ -301,4 +395,74 @@ test('2K4TCY: every known position is saved at once; the chip counts the whole F
   render(<><FormAutoSaveAll /><FormProgressChip onReconcile={() => {}} /></>)
   await waitFor(() => expect(Object.keys(useStore.getState().formCaptures?.byPosition || {}).sort()).toEqual(['C01', 'C03']))
   expect(screen.getByText(/Form \d\/3/)).toBeInTheDocument()
+})
+
+test('the background save never rewrites an ElementType Description from the Form note', async () => {
+  const { default: FormAutoSaveAll } = await import('../../src/components/FormAutoSaveAll.jsx')
+  const r = (id, rawText, pt) => ({ id, rawText, positionType: pt, manufacturer: 'iGuzzini', context: {}, overrides: { 0: 'code' }, noteOverride: {}, confirmed: true })
+  useStore.setState({ formCaptures: null,
+    elementTypes: [{ ElementTypeRef: 'ET-PS-01', Description: '360mm' }, { ElementTypeRef: 'ET-PS-03' }, { ElementTypeRef: 'ET-PS-OLD' }],
+    importDraft: {
+      version: 1, step: 'review', source: { name: 'form.xlsx', sheet: 'S' },
+      map: { pt: '', code: 'ProductCode', mfr: 'ManufacturerName', exclude: '', acc: '', context: [] },
+      rules: {}, assignments: {}, resolutions: [], refOverrides: {}, dirStats: { forward: 0, backward: 0 }, stagedRefs: [], keptSeparate: [],
+      rows: [r(0, 'QC50 (Joinery Bush 20mm diameter)', 'C01')],
+    } })
+  render(<FormAutoSaveAll />)
+  await waitFor(() => expect(useStore.getState().formCaptures?.byPosition?.C01).toBeTruthy())
+  expect(useStore.getState().elementTypes.find(e => e.ElementTypeRef === 'ET-PS-01').Description).toBe('360mm')
+})
+
+test('43B4AM: clicking the raw product code copies it, with no icon; the manufacturer does not copy', async () => {
+  const writeText = vi.fn().mockResolvedValue(undefined)
+  Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+  useStore.setState({ importDraft: {
+    version: 1, step: 'review', source: { name: 'form.xlsx', sheet: 'S' },
+    map: { pt: '', code: 'ProductCode', mfr: 'ManufacturerName', exclude: '', acc: '', context: [] },
+    rules: {}, assignments: {}, resolutions: [], refOverrides: {}, dirStats: { forward: 0, backward: 0 }, stagedRefs: [], keptSeparate: [],
+    rows: [{ id: 0, rawText: 'NEW99', positionType: 'C01', manufacturer: 'iGuzzini', context: {}, overrides: {}, noteOverride: {}, confirmed: false }],
+  }, formCaptures: { version: 1, byPosition: { C01: [{ elementTypeRef: 'ET-PS-OLD', code: 'OLD1', manufacturer: 'iGuzzini' }] } } })
+  render(<FormSpecPane posRef="C01" />)
+  const raw = screen.getByTestId('form-raw')
+  expect(raw.textContent).not.toMatch(/content_copy/)
+  await act(async () => { fireEvent.click(within(raw).getByText('NEW99')) })
+  expect(writeText).toHaveBeenCalledWith('NEW99')
+  expect(within(raw).getByText('iGuzzini').getAttribute('role')).toBeNull()
+})
+
+test('N4YCGG: a code corrected in the spec since is not written back from the Form on the next save', async () => {
+  useStore.setState({
+    elementTypes: ['ET-PS-01', 'ET-PS-02', 'ET-PS-03'].map(r => ({ ElementTypeRef: r })),
+    psRows: [...useStore.getState().psRows, { ElementTypeRef: 'ET-PS-02', Manufacturer: 'iGuzzini', ProductCode: 'QC51-FIXED' }],
+  })
+  const view = render(<FormSpecPane posRef="C01" />)
+  fireEvent.click(screen.getByTestId('paint-position'))
+  fireEvent.click(await screen.findByText('Choose spreadsheet…'))
+  await waitFor(() => expect(useStore.getState().formCaptures?.byPosition?.C01).toBeTruthy())
+  // An earlier import linked the Form's QC51 to ET-PS-02; the spec's code was corrected since.
+  useStore.setState(s => ({ formCaptures: { ...s.formCaptures, byPosition: { ...s.formCaptures.byPosition, X9: [{ elementTypeRef: 'ET-PS-02', code: 'QC51', manufacturer: 'iGuzzini' }] } } }))
+  view.unmount()
+  render(<FormSpecPane posRef="C02" />)
+  await waitFor(() => expect(useStore.getState().formCaptures.byPosition.C02?.[0]?.elementTypeRef).toBe('ET-PS-02'))
+  expect(useStore.getState().psRows.find(r => r.ElementTypeRef === 'ET-PS-02').ProductCode).toBe('QC51-FIXED')
+})
+
+test('J8F3R4: a TBC row where the recipe holds a specific product is that product, and its code is kept', async () => {
+  readSheet.mockResolvedValue({ sheets: ['S'], sheet: 'S', headers: HEAD, rows: [{ PositionTypeRef: 'C01', ManufacturerName: 'Applelec', ProductCode: 'TBC' }] })
+  useStore.setState({ psRows: [...useStore.getState().psRows, { ElementTypeRef: 'ET-PS-OLD', Manufacturer: 'Applelec', ProductCode: 'Light Sheet Panel 1150' }] })
+  render(<FormSpecPane posRef="C01" />)
+  fireEvent.click(screen.getByTestId('paint-position'))
+  fireEvent.click(await screen.findByText('Choose spreadsheet…'))
+  await waitFor(() => expect(useStore.getState().formCaptures?.byPosition?.C01?.[0]?.elementTypeRef).toBe('ET-PS-OLD'))
+  expect(useStore.getState().psRows.find(r => r.ElementTypeRef === 'ET-PS-OLD').ProductCode).toBe('Light Sheet Panel 1150')
+})
+
+test('a code marked Not needed before anything is saved still shows, to read or undo', () => {
+  useStore.setState({
+    importDraft: { rows: [{ id: 0, positionType: 'C02', manufacturer: 'iGuzzini', rawText: 'QC51 + 480GT' }] },
+    formNotes: [{ posRef: 'C02', formRef: 'C02', code: '480GT', kind: 'notNeeded', note: 'By the electrician', formText: 'QC51 + 480GT', key: 'C02|code|480GT' }],
+  })
+  render(<FormSpecPane posRef="C02" />)
+  expect(screen.getByTestId('settled-line').dataset.code).toBe('480GT')
+  expect(screen.getByText('By the electrician')).toBeInTheDocument()
 })

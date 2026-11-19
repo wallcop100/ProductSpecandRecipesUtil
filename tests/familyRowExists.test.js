@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { familyRowExists } from '../src/utils/collectionGuess'
+import { familyRowExists } from '../src/utils/derived'
 
 describe('familyRowExists (report #59)', () => {
   it('finds a family row held only in the DesignDB collection_refs', () => {

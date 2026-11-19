@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { Button } from 'react-bootstrap'
-import useStore, { getRecipeForPosition } from '../store/useStore'
+import useStore from '../store/useStore'
 import { useScrollMemory } from './useScreenView'
 import TagBadge from './TagBadge'
 import FilterBar from './FilterBar'
@@ -35,14 +35,12 @@ import { C } from '../styles/tokens'
  */
 export default function ProjectTreeView({ onOpenProductSpec, onOpenConnectors, showDeleted, onAddRow, onNewET, onReplace }) {
   const positionTypes = useStore(s => s.positionTypes)
-  const recipes = useStore(s => s.recipes)
   const positionUI = useStore(s => s.positionUI)
   const validationResults = useStore(s => s.validationResults)
   const activePositionRef = useStore(s => s.activePositionRef)
   const overviewScrollRef = useScrollMemory('builder', 'overviewScroll')
   const setActivePosition = useStore(s => s.setActivePosition)
   const toggleIgnorePosition = useStore(s => s.toggleIgnorePosition)
-  const ignoredPositionFamilies = useStore(s => s.ignoredPositionFamilies)
   const toggleIgnorePositionFamily = useStore(s => s.toggleIgnorePositionFamily)
   const tagDrift = useStore(s => s.tagDrift)
 

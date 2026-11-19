@@ -11,6 +11,7 @@ export const C = {
   // neutrals
   ink:        '#212529',
   muted:      '#6c757d',
+  graphite:   '#495057',   // a code with no ElementType yet (Form spec pane)
   faint:      '#adb5bd',
   border:     '#dee2e6',
   subtle:     '#f8f9fa',
@@ -35,4 +36,6 @@ export const C = {
   refInk:     '#5b3fa8',
   // ✓ only
   success:    '#198754',
+  successTint: '#d1e7dd',   // the added part of a corrected Form code (NAL5HU)
+  hoverTint: '#eef1f4',   // a Form cell under the mouse (NAL5HU)
 }

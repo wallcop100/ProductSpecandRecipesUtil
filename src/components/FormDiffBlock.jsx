@@ -8,6 +8,8 @@ import { formImpact } from '../utils/formImpact'
 import { buildMaster } from '../utils/productCodes'
 import { buildRefMap, targetFor } from '../utils/ptResolve'
 import { C } from '../styles/tokens'
+import { registerTrace } from '../utils/trace'
+import { live } from '../utils/derived'
 
 const mono = { fontFamily: 'monospace' }
 const list = refs => refs.join(', ')
@@ -78,7 +80,7 @@ export default function FormDiffBlock({ posRef }) {
       </div>
       {!shown && <div className="text-muted" style={{ fontSize: 10 }} data-testid="diff-hidden">{changes.length} change{changes.length === 1 ? '' : 's'} hidden</div>}
       {shown && changes.map((c, i) => (
-        <div key={i} className={sameRow(i) ? 'pb-1' : 'py-1 border-top'} style={{ borderColor: C.attnTint }} data-testid="form-diff-line">
+        <div key={i} className={sameRow(i) ? 'pb-1' : 'py-1 border-top'} style={{ borderColor: C.attnTint }} data-testid="form-diff-line" data-trace={registerTrace(c.trace)}>
           {!sameRow(i) && (c.oldText != null || c.newText != null) && (
             <div className="mb-1" data-testid="row-text">
               {/* + added, − omitted, ± changed: the same marks as the PositionRail. */}
@@ -161,7 +163,7 @@ export default function FormDiffBlock({ posRef }) {
               <div><span style={mono}>{c.fromEt}</span> is no longer in the Form here</div>
               {c.inRecipe && !c.container && (
                 <Button size="sm" variant="outline-danger" className="mt-1 py-0" style={{ fontSize: 10 }} data-testid="diff-remove"
-                  onClick={() => recipes.filter(r => (r.IsDeleted || r.isDeleted) !== 'Y' && r.PositionTypeRef === posRef
+                  onClick={() => recipes.filter(r => live(r) && r.PositionTypeRef === posRef
                     && String(r.ElementTypeRef || '').toLowerCase() === String(c.fromEt).toLowerCase())
                     .forEach(r => removeRecipeRow(posRef, r._id))}>
                   Remove from {posRef}

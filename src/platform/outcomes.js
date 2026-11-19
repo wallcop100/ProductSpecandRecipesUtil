@@ -1,3 +1,4 @@
+import { codeKey } from '../utils/derived'
 /**
  * outcomes.js — what became of each default the app filled in from learning.
  *
@@ -15,8 +16,14 @@
  *   family      `${MAKER}|${CODE}`     the family a proposal took from the library
  *   rule        token text             the token's role (code / note / discard)
  *   pair        groupKey(codes)        'different' (a near-miss ruled apart)
+ *   family      (also)                 any new ElementType's proposed family; tier = the rule (stem, session, canon…)
+ *   ref         `${MAKER}|${CODE}`     its proposed ref; tier = sibling/session/library/head/default, source = the example
+ *   name        `${MAKER}|${CODE}`     its proposed name; tier = seen/sibling/maker-code
+ *   placement   `${MAKER}|${CODE}`     'wrapper' or 'position' by where the project files that job; source = n/of
+ *
+ * The audit trail of a proposal is these rows: how each field was suggested, and whether it was
+ * kept, changed or cleared when the ElementType was created.
  */
-import { norm } from '../utils/productCodes'
 
 const supplied = new Map()          // `${kind}|${key}` → { kind, key, tier, source, supplied, code }
 const sent = new Map()              // `${project}|${kind}|${key}` → the outcome last sent
@@ -40,7 +47,7 @@ export const suppliedOf = kind => [...supplied.values()].filter(s => s.kind === 
 /** kept / changed / cleared. Refs and roles compare as the app does: trimmed, case-insensitive. */
 export function outcomeOf(value, final) {
   if (final == null || String(final).trim() === '') return 'cleared'
-  return norm(String(final)) === norm(String(value)) ? 'kept' : 'changed'
+  return codeKey(String(final)) === codeKey(String(value)) ? 'kept' : 'changed'
 }
 
 /**
@@ -71,12 +78,41 @@ export function shareOutcomes(api, project, rows) {
 
 /** For a report: the learned values behind the codes in view. */
 export function learnedInView(codes = []) {
-  const want = new Set(codes.filter(Boolean).map(c => norm(String(c))))
+  const want = new Set(codes.filter(Boolean).map(c => codeKey(String(c))))
   if (!want.size) return []
   return [...supplied.values()]
-    .filter(s => want.has(norm(s.code)) || want.has(norm(s.supplied)) || s.key.split('|').some(p => want.has(norm(p))))
+    .filter(s => want.has(codeKey(s.code)) || want.has(codeKey(s.supplied)) || s.key.split('|').some(p => want.has(codeKey(p))))
     .slice(0, 20)
     .map(s => ({ kind: s.kind, key: s.key, value: s.supplied, tier: s.tier, source: s.source }))
+}
+
+// Same key as an assignment (screens/import/useProjectKnowledge.js assignmentKey).
+const keyOf = p => `${codeKey(p.manufacturer || '')}|${codeKey(p.code || '')}`
+
+/** A proposed new ElementType (utils/etSeed.js): remember how each of its fields was suggested. */
+export function noteProposal(p) {
+  if (!p || p.action !== 'create' || p.placeholder) return
+  const key = keyOf(p)
+  noteSupplied({ kind: 'family', key, tier: p.why || 'default', source: p.styledOn?.source || p.session?.code || '', value: p.family, code: p.code })
+  noteSupplied({ kind: 'ref', key, tier: p.refFrom?.from || 'default', source: p.refFrom?.example || '', value: p.ref, code: p.code })
+  noteSupplied({ kind: 'name', key, tier: p.nameFrom || '', value: p.name, code: p.code })
+}
+
+/** The ticked-or-not "Inside {wrapper}" default, when precedent chose it (2V84PW). */
+export function notePlacement({ manufacturer, code, value, n, of }) {
+  noteSupplied({ kind: 'placement', key: keyOf({ manufacturer, code }), tier: 'precedent', source: `${n}/${of}`, value, code })
+}
+
+/** Where it went: 'wrapper' | 'position' | 'ps' → outcome rows (empty when nothing was suggested). */
+export function settlePlacement(project, { manufacturer, code }, where) {
+  const key = keyOf({ manufacturer, code })
+  return settle(project, 'placement', k => (k === key ? where : undefined))
+}
+
+/** What was created for each proposed code: { code, manufacturer, family, ref, name } → outcome rows. */
+export function settleCreated(project, created) {
+  const by = new Map(created.map(c => [keyOf(c), c]))
+  return ['family', 'ref', 'name'].flatMap(kind => settle(project, kind, k => (by.has(k) ? (by.get(k)[kind] ?? null) : undefined)))
 }
 
 /** Tests only. */

@@ -917,6 +917,19 @@ describe('undo / redo', () => {
     expect(useStore.getState().future).toHaveLength(0)
   })
 
+  test('asOneUndoStep: several snapshotting actions undo as one', () => {
+    resetStore()
+    useStore.getState().asOneUndoStep(() => {
+      useStore.getState().addRecipeRow(POS_REF, 'position', { elementTypeRef: 'ET-X' })
+      useStore.getState().addRecipeRow(POS_REF, 'position', { elementTypeRef: 'ET-Y' })
+    })
+    expect(useStore.getState().past).toHaveLength(1)
+    useStore.getState().undo()
+    expect(useStore.getState().recipes).toHaveLength(0)
+    useStore.getState().addRecipeRow(POS_REF, 'position', { elementTypeRef: 'ET-Z' })
+    expect(useStore.getState().past).toHaveLength(1)   // held flag released
+  })
+
   test('undo and redo are no-ops on empty stacks', () => {
     resetStore()
     expect(() => useStore.getState().undo()).not.toThrow()
@@ -1165,6 +1178,41 @@ describe('dirty registry — coalescing + field-level entries', () => {
 // DesignDB catalogue (EXPORT_PLAN §4)
 // ---------------------------------------------------------------------------
 
+describe('queuePsOnlyETs — Product Spec ✓ · DesignDB ✗', () => {
+  test('queues each live Product Spec row the DesignDB lacks, with an estimated family, once', () => {
+    const et = (ref, n) => ({ ElementTypeRef: ref, Family: 'ET-TAPE', _row_num: n })
+    const ps = (ref, code, extra = {}) => ({ ElementTypeRef: ref, Manufacturer: 'Acme', ProductCode: code, Description: 'Tape', ...extra })
+    resetStore({
+      elementTypes: [et('ET-TAPE-01', 2), et('ET-TAPE-02', 3)], dbCollectionRefs: ['ET-TAPE'], dbChanges: [], recipes: [],
+      psRows: [ps('ET-TAPE-01', 'LT2440A'), ps('ET-TAPE-02', 'LT2440B'), ps('ET-X-99', 'LT2440C'),
+        ps('ET-GONE-01', 'LT2440D', { IsDeleted: 'Y' }), ps('ET-DEL-01', 'LT2440E')],
+      dbDeletedRefs: ['ET-DEL-01'],
+    })
+    expect(useStore.getState().queuePsOnlyETs()).toEqual(['ET-X-99'])
+    const s = useStore.getState()
+    expect(s.dbChanges).toHaveLength(1)
+    expect(s.dbChanges[0]).toMatchObject({ elementTypeRef: 'ET-X-99', _isNew: true })
+    expect(s.dbChanges[0].updates.Family).toBe('ET-TAPE')
+    expect(useStore.getState().queuePsOnlyETs()).toEqual([])
+    expect(useStore.getState().dbChanges).toHaveLength(1)
+  })
+
+  test('a local ET kept from an earlier session, with nothing queued, is queued and its family filled', () => {
+    resetStore({
+      elementTypes: [{ ElementTypeRef: 'ET-TAPE-01', Family: 'ET-TAPE', _row_num: 2 }, { ElementTypeRef: 'ET-X-99', Family: null, _row_num: null }],
+      dbCollectionRefs: ['ET-TAPE'], dbDeletedRefs: [], dbChanges: [], recipes: [],
+      psRows: [{ ElementTypeRef: 'ET-TAPE-01', Manufacturer: 'Acme', ProductCode: 'LT2440A' },
+        { ElementTypeRef: 'ET-X-99', Manufacturer: 'Acme', ProductCode: 'LT2440C', Description: 'Tape' }],
+    })
+    expect(useStore.getState().queuePsOnlyETs()).toEqual(['ET-X-99'])
+    const s = useStore.getState()
+    expect(s.elementTypes).toHaveLength(2)
+    expect(s.dbChanges).toHaveLength(1)
+    expect(s.dbChanges[0]).toMatchObject({ elementTypeRef: 'ET-X-99', _isNew: true })
+    expect(s.dbChanges[0].updates).toMatchObject({ Family: 'ET-TAPE', Description: 'Tape' })
+  })
+})
+
 describe('catalogue — createElementType / rename / delete', () => {
   /**
    * The DesignDB is the master list and a patch script is the only way in. Queuing
@@ -1250,6 +1298,34 @@ describe('catalogue — createElementType / rename / delete', () => {
     expect(s.recipes.find(r => r._id === 'r2').ContextRef).toBe('ET-NEW')  // container ref cascaded
     expect(s.dbChanges.some(c => c.updates.ElementTypeRef === 'ET-NEW')).toBe(true)
     expect(s.psChanges.some(c => c.updates.ElementTypeRef === 'ET-NEW')).toBe(true)
+  })
+
+  test('renaming a family moves its members to the new name (LOOP_CHECKS_PLAN A)', () => {
+    resetStore({
+      dbWriteEnabled: true, dbChanges: [], psChanges: [], rsChanges: [],
+      elementTypes: [{ ElementTypeRef: 'ET-FAM OLD', IsCollection: 'Y' }, { ElementTypeRef: 'ET-M-01', Family: 'ET-FAM OLD' }],
+    })
+    useStore.getState().renameElementType('ET-FAM OLD', 'ET-FAM-OLD')
+    const s = useStore.getState()
+    expect(s.elementTypes[1].Family).toBe('ET-FAM-OLD')
+    expect(s.dbChanges.find(c => c.elementTypeRef === 'ET-M-01').updates.Family).toBe('ET-FAM-OLD')
+  })
+
+  test('tidyRefs renames every untidy ref, as one Undo step; createElementType refuses one', () => {
+    resetStore({
+      dbWriteEnabled: true, dbChanges: [], psChanges: [], rsChanges: [], past: [], future: [],
+      elementTypes: [{ ElementTypeRef: 'ET-PROF-' }, { ElementTypeRef: 'ET- MOUNT-VFWE' }, { ElementTypeRef: 'ET-PROF-01' }],
+      recipes: [{ _id: 'r1', PositionTypeRef: POS_REF, ContextType: 'PositionType', ContextRef: POS_REF, ElementTypeRef: 'ET-PROF-' }],
+    })
+    expect(useStore.getState().untidyRefs()).toEqual([{ from: 'ET-PROF-', to: 'ET-PROF-02' }, { from: 'ET- MOUNT-VFWE', to: 'ET-MOUNT-VFWE' }])
+    useStore.getState().tidyRefs()
+    let s = useStore.getState()
+    expect(s.elementTypes.map(e => e.ElementTypeRef)).toEqual(['ET-PROF-02', 'ET-MOUNT-VFWE', 'ET-PROF-01'])
+    expect(s.recipes[0].ElementTypeRef).toBe('ET-PROF-02')
+    expect(s.past).toHaveLength(1)
+    expect(useStore.getState().createElementType({ ref: 'ET-XX--01' })).toBeNull()
+    expect(useStore.getState().createElementType({ ref: 'ET-A B' })).toBeNull()
+    expect(useStore.getState().createElementType({ ref: ' ET-OK-01 ' })).not.toBeNull()
   })
 
   test('renameElementType carries the Form, wrappers, slot mappings and the open ElementType with it', () => {
@@ -1580,6 +1656,17 @@ describe('form captures persist per project', () => {
     expect(window.electronAPI.db.setPref).toHaveBeenCalledWith(
       PROJECT_ID, 'form_captures', JSON.stringify(captures)
     )
+  })
+
+  test('a re-save with nothing new (only importedAt or key order differ) writes nothing', async () => {
+    const saved = { ...captures, importedAt: 'a', contextByPosition: { C01r: { x: 1, y: 2 } } }
+    resetStore({ formCaptures: saved })
+    const before = useStore.getState().formCaptures
+    await useStore.getState().saveFormCaptures({ contextByPosition: { C01r: { y: 2, x: 1 } }, ...captures, importedAt: 'b' })
+    expect(useStore.getState().formCaptures).toBe(before)
+    expect(window.electronAPI.db.setPref).not.toHaveBeenCalled()
+    await useStore.getState().saveFormCaptures({ ...saved, byPosition: {} })
+    expect(window.electronAPI.db.setPref).toHaveBeenCalledTimes(1)
   })
 
   test('formEtsForPosition reads the RESOLVED position ref', () => {
