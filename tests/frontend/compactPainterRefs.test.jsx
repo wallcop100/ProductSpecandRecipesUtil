@@ -49,3 +49,31 @@ describe('YBLJSW: why a family was learned sits on the Family field, in a popup'
     expect(screen.queryByTestId('family-from')).toBeNull()
   })
 })
+
+describe('4FQSWW / M3965S / QGQ7H2', () => {
+  const draw = (pos = 'XT1', codes = [{ code: 'HL54', etRef: 'ET-PS-01' }]) => render(<CompactPositionPainter key={pos} posRef={pos}
+    rows={[{ id: 0, manufacturer: 'LightGraphix', tokens: [], roles: [], rawText: 'HL54', confirmed: true }]}
+    info={() => ({ codes, loose: '' })} proposalFor={() => null} onSetRole={() => {}} onToggleConfirm={() => {}} onNeedsET={() => {}} onMakeMain={() => {}} />)
+  beforeEach(() => { localStorage.clear(); useStore.setState({ recipes: [], psRows: [], elementTypes: [], formNotes: [] }) })
+
+  test('Paint, once picked, is the face on the next position too', () => {
+    const { unmount } = draw('XT51')
+    expect(screen.getByTestId('compact-row').dataset.face).toBe('data')
+    fireEvent.click(screen.getByRole('button', { name: 'Paint' }))
+    unmount()
+    draw('T352')
+    expect(screen.getByTestId('compact-row').dataset.face).toBe('paint')
+  })
+
+  test('the column list is not inside the face, so the face cannot clip it', () => {
+    draw()
+    fireEvent.click(screen.getByTestId('cols-pick'))
+    expect(document.querySelector('div[data-testid="face-data"]')).not.toContainElement(screen.getByTestId('cols-list'))
+  })
+})
+
+test('M3965S: a comment box says what goes in it', async () => {
+  const { NoteEditor } = await import('../../src/components/FormNoteParts')
+  render(<NoteEditor head="X" onSave={() => {}} onCancel={() => {}} />)
+  expect(screen.getByLabelText('Note').placeholder).toBe('Add a comment')
+})
