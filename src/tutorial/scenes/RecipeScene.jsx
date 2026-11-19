@@ -92,8 +92,8 @@ export default function RecipeScene({ beat }) {
           </div>
           <div className="d-flex gap-1 align-items-center flex-wrap">
             <FlagPill label="Design" value="Y" onChange={() => {}} activeVariant="primary" />
-            <FlagPill label="Contract" value={null} onChange={() => {}} activeVariant="primary" />
-            <FlagPill label="Integer" value={null} onChange={() => {}} activeVariant="primary" />
+            <FlagPill label="Contract" value={null} onChange={() => {}} activeVariant="outline-primary" />
+            <FlagPill label="Integer" value={null} onChange={() => {}} activeVariant="outline-primary" />
             <FlagPill label="TBC" value={null} onChange={() => {}} activeVariant="primary" />
           </div>
         </Card>
@@ -114,7 +114,7 @@ export default function RecipeScene({ beat }) {
               <span className="d-inline-flex gap-1">
                 <FlagPill label="Design" value={null} onChange={() => {}} activeVariant="primary" />
                 <FlagPill label="Contract" value={contract ? 'Y' : null} onChange={() => {}} activeVariant="primary" />
-                <FlagPill label="Integer" value={null} onChange={() => {}} activeVariant="primary" />
+                <FlagPill label="Integer" value={null} onChange={() => {}} activeVariant="outline-primary" />
                 <FlagPill label="TBC" value={null} onChange={() => {}} activeVariant="primary" />
               </span>
             </Pulse>

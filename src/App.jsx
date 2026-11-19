@@ -124,7 +124,7 @@ export default function App() {
             onOpenTemplateEditor={() => navigateTo('template-editor')}
             onOpenProductSpec={(etRef) => {
               // An explicit target opens a fresh view on it; no target returns to the remembered one.
-              if (etRef) useStore.getState().clearScreenView('product-spec')
+              if (etRef) { useStore.getState().clearScreenView('product-spec'); useStore.getState().consumeSpecIntent() }
               setPsScrollToRef(etRef || null)
               navigateTo('product-spec')
             }}

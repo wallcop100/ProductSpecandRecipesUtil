@@ -1176,7 +1176,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     if (i < 0 || i >= q.codes.length) { setEtQueue(null); return }
     setEtQueue({ ...q, i })
     const code = q.codes[i], made = q.made[code]
-    if (!made) { openETFor(code); return }
+    if (!made) { openETFor(code, q.seeds?.[code]); return }
     const e = allEntries.find(x => codeKey(x.text) === code)
     setCreatingFor({
       text: e?.text || code, editing: made, ref: made,
@@ -1185,11 +1185,12 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     })
   }
   /** Embedded, a code's Give button starts the queue there; Back reaches the ones before it. */
-  function startEtQueue(code) {
+  function startEtQueue(code, seed = null) {
     // TBC rows have no code entry and still go to Bulk, so they stay out of the queue.
     const codes = (selection?.noEtCodes || []).filter(c => !tbcEntries.some(e => codeKey(e.text) === c)), i = codes.indexOf(codeKey(code))
-    if (!embedded || i < 0) { openETFor(code); return }
-    queueOpen({ codes, i, made: {}, skipped: [] }, i)
+    if (!embedded || i < 0) { openETFor(code, seed); return }
+    // the card's typed Ref/Family seed its own step (AEST77, T6FDCM)
+    queueOpen({ codes, i, made: {}, skipped: [], seeds: seed ? { [codeKey(code)]: seed } : {} }, i)
   }
 
   function openBulkCreate() {

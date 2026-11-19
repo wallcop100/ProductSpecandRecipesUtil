@@ -332,7 +332,7 @@ export default function BulkCreateETModal({
                       onChange={() => setFams(fs => fs.map((f, k) => (k === fi ? { ...f, include: !f.include } : f)))} />
                     <Form.Control size="sm" value={fams[fi].ref} aria-label={`Family ref ${key}`}
                       style={{ width: 260, fontFamily: 'monospace', fontSize: 11 }}
-                      onChange={e => renameFamily(fi, idxs, e.target.value)} />
+                      onChange={e => renameFamily(fi, idxs, e.target.value.toUpperCase())} />
                     <Form.Control size="sm" value={fams[fi].description} aria-label={`Family description ${key}`}
                       style={{ width: 220, fontSize: 11 }} placeholder="description"
                       onChange={e => setFams(fs => fs.map((f, k) => (k === fi ? { ...f, description: e.target.value } : f)))} />

@@ -27,7 +27,8 @@ describe('BulkCreateETModal — weed out, don\'t build', () => {
 
   test('renaming a new family renumbers its members', () => {
     renderIt([P('A1', 'ET-DOWNLIGHT-01', 'ET-DOWNLIGHT'), P('A2', 'ET-DOWNLIGHT-02', 'ET-DOWNLIGHT')])
-    fireEvent.change(screen.getByLabelText('Family ref ET-DOWNLIGHT'), { target: { value: 'ET-DL' } })
+    fireEvent.change(screen.getByLabelText('Family ref ET-DOWNLIGHT'), { target: { value: 'et-dl' } })
+    expect(screen.getByLabelText('Family ref ET-DL').value).toBe('ET-DL')            // T6FDCM: typed lowercase
     expect(screen.getByLabelText('Ref for A1').value).toBe('ET-DL-01')
     expect(screen.getByLabelText('Ref for A2').value).toBe('ET-DL-02')
   })

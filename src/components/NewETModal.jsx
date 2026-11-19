@@ -718,7 +718,8 @@ export default function NewETModal({
                 <span data-testid="newet-inside-learned" title={`Suggested: this project puts ${placeSeed.current.n} of ${placeSeed.current.of} parts like this ${placeSeed.current.value === 'wrapper' ? 'inside a wrapper' : 'at position level'}`}>
                   <MaterialIcon name="auto_fix_high" size={12} style={{ color: C.companion, verticalAlign: 'middle', marginLeft: 4 }} /></span>)}</>} />
           )}
-          {step && <Button variant="outline-primary" size="sm" style={{ fontSize: 12 }} data-testid="newet-into-position-stop"
+          {/* On the last step "and finish" already stops; a second Add would do the same (RQC5ZU). */}
+          {step && step.index + 1 < step.total && <Button variant="outline-primary" size="sm" style={{ fontSize: 12 }} data-testid="newet-into-position-stop"
             onClick={() => handleSave('position')} disabled={!canSave} title={saveTitle}>Add into {placeIn}</Button>}
           <Button variant="primary" size="sm" style={{ fontSize: 12 }} data-testid="newet-into-position"
             onClick={() => handleSave('position', { advance: !!step })} disabled={!canSave} title={saveTitle}>

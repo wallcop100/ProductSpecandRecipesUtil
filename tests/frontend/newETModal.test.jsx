@@ -273,6 +273,7 @@ describe('2V84PW: one code of a queue', () => {
     expect([...screen.getByTestId('newet-progress').children].map(c => c.dataset.state)).toEqual(['current', 'waiting', 'waiting'])
     expect(screen.queryByTestId('newet-back')).toBeNull()
     expect(screen.getByTestId('newet-into-position')).toHaveTextContent('Add into D74 and Continue')
+    expect(screen.getByTestId('newet-into-position-stop')).toHaveTextContent('Add into D74')
     fireEvent.click(screen.getByTestId('newet-skip'))
     expect(s.onSkip).toHaveBeenCalled()
     expect(useStore.getState().elementTypes).toHaveLength(0)        // Skip makes nothing
@@ -285,6 +286,7 @@ describe('2V84PW: one code of a queue', () => {
     const onCreated = vi.fn(), onBack = vi.fn()
     open({ onCreated, step: step({ index: 2, states: ['done', 'skipped', 'current'], doneRefs: ['ET-PS-01'], onBack }), draftKey: '::q3' })
     expect(screen.getByTestId('newet-into-position')).toHaveTextContent('Add into D74 and finish')
+    expect(screen.queryByTestId('newet-into-position-stop')).toBeNull()   // one Add on the last code (RQC5ZU)
     expect(screen.getByTestId('newet-step')).toHaveTextContent('done: ET-PS-01')
     fireEvent.click(screen.getByTestId('newet-back'))
     expect(onBack).toHaveBeenCalled()

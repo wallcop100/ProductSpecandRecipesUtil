@@ -10,9 +10,11 @@ import { C } from '../styles/tokens'
  *   value: 'Y' | null
  *   onChange?: (newValue: 'Y'|null) => void
  *   readOnly?: bool
+ *   activeVariant?: a Bootstrap colour, or 'outline-<colour>' for a secondary look when on (HAH2FA)
  */
 export default function FlagPill({ label, value, onChange, readOnly = false, activeVariant = 'primary' }) {
   const isActive = value === 'Y'
+  const outline = activeVariant.startsWith('outline-') ? activeVariant.slice(8) : null
 
   function handleClick() {
     if (readOnly || !onChange) return
@@ -21,8 +23,8 @@ export default function FlagPill({ label, value, onChange, readOnly = false, act
 
   return (
     <Badge
-      bg={isActive ? activeVariant : 'light'}
-      text={isActive ? 'white' : 'muted'}
+      bg={isActive ? (outline ? 'transparent' : activeVariant) : 'light'}
+      text={isActive ? (outline || 'white') : 'muted'}
       onClick={handleClick}
       {...(readOnly ? {} : {
         role: 'switch', 'aria-checked': isActive, 'aria-label': label, tabIndex: 0,
@@ -30,7 +32,7 @@ export default function FlagPill({ label, value, onChange, readOnly = false, act
       })}
       style={{
         cursor: readOnly ? 'default' : 'pointer',
-        border: isActive ? 'none' : `1px solid ${C.border}`,
+        border: isActive ? (outline ? `1px solid var(--bs-${outline})` : 'none') : `1px solid ${C.border}`,
         userSelect: 'none',
         fontSize: 10,
         padding: '3px 7px',
