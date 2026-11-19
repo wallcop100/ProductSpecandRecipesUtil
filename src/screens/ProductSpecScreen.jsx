@@ -78,7 +78,13 @@ export default function ProductSpecScreen({ onBack, scrollToRef, onOpenCodeImpor
   useEffect(() => { if (scrollToRef) setSelectedRef(scrollToRef) }, [scrollToRef])
   // Find (src/help) opens the Product Spec on an ElementType; the editor opens the part asked for.
   const specIntent = useStore(s => s.specIntent)
-  useEffect(() => { if (specIntent?.ref) setSelectedRef(specIntent.ref) }, [specIntent])
+  // An intent with nothing to open is spent here; left in the store it re-selected its ET on the
+  // next visit, over the ET the Edit button asked for (ECCFDK). One with `open` is spent by ETSpecEditor.
+  useEffect(() => {
+    if (!specIntent?.ref) return
+    setSelectedRef(specIntent.ref)
+    if (!specIntent.open) useStore.getState().consumeSpecIntent()
+  }, [specIntent])   // eslint-disable-line react-hooks/exhaustive-deps
 
   // Usage map: ET ref (lower) → { positions: Set, elements: Set }
   const etUsedIn = useMemo(() => {
