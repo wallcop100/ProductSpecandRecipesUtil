@@ -14,6 +14,7 @@ import { buildRefMap, targetFor } from '../utils/ptResolve'
 import { C } from '../styles/tokens'
 import { describeQuery } from '../utils/positionQuery'
 import { askConfirm } from './ConfirmHost'
+import useFormView from './useFormView'
 
 /** The Form compared with an older one (862MB6): what moved for each position. */
 export const DIFF_SYMBOL = { add: '+', omit: '−', mixed: '±' }
@@ -33,10 +34,10 @@ export default function PositionRail({ onReviewEmpty, onReviewDrift }) {
   const setActivePosition = useStore(s => s.setActivePosition)
   const setView = useStore(s => s.setPositionList)
   const tagDrift = useStore(s => s.tagDrift)
-  const formCaptures = useStore(s => s.formCaptures)
+  const { formCaptures } = useFormView()   // as Form Template Notes say to read it
+  const importDraft = useStore(s => s.importDraft)   // raw: the Form diff compares Form to Form
   const positionTypes = useStore(s => s.positionTypes)
   const list = usePositionList()
-  const importDraft = useStore(s => s.importDraft)
   const psRows = useStore(s => s.psRows)
   const diffStates = useMemo(() => {
     const base = importDraft?.compareBase?.rows

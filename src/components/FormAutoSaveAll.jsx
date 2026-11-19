@@ -4,6 +4,7 @@ import ProductCodeImportScreen from '../screens/ProductCodeImportScreen'
 import { positionPaintStatus } from '../utils/formPositions'
 import { buildRefMap, targetFor } from '../utils/ptResolve'
 import { draftKnownEntries } from '../utils/formDone'
+import useFormView from './useFormView'
 
 /**
  * FormAutoSaveAll — the Form is loaded for the whole project, so every position is brought
@@ -18,8 +19,7 @@ import { draftKnownEntries } from '../utils/formDone'
  * hidden; tried once per set of positions.
  */
 export default function FormAutoSaveAll() {
-  const importDraft = useStore(s => s.importDraft)
-  const formCaptures = useStore(s => s.formCaptures)
+  const { importDraft, formCaptures } = useFormView()   // as Form Template Notes say to read it
   const positionTypes = useStore(s => s.positionTypes)
   const psRows = useStore(s => s.psRows)
   const tried = useRef(new Set())

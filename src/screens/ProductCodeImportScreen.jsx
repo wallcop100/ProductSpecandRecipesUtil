@@ -59,6 +59,7 @@ import { diffCaptures, wrapperDivergence } from '../utils/formSpec'
 import { C } from '../styles/tokens'
 import { askConfirm } from '../components/ConfirmHost'
 import { etRefOf, codeKey } from '../utils/derived'
+import { correctRows, notNeededIn } from '../utils/formNotes'
 
 /** Fuzzy header match: exact normalised hit first, else shortest header containing it. */
 const nh = h => String(h || '').toLowerCase().replace(/[^a-z0-9]/g, '')
@@ -130,6 +131,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   const formCaptures = useStore(s => s.formCaptures)
   const containerETRefs = useStore(s => s.containerETRefs)
   const importDraft = useStore(s => s.importDraft)
+  const formNotes = useStore(s => s.formNotes)
   const recipes = useStore(s => s.recipes)
   const dbCollectionRefs = useStore(s => s.dbCollectionRefs)
   const createElementType = useStore(s => s.createElementType)
@@ -223,7 +225,10 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
   const ptTarget = useCallback(pt => targetFor(refMap, pt), [refMap])
 
   // Roles are always derived from the learned rules + per-row overrides.
-  const resolved = useMemo(() => applyRules(rows, rules), [rows, rules])
+  // Form Template Notes: a wrong code is read as what it should be; a not-needed one needs no ElementType.
+  // shortcut: painting a corrected row whose token count changed writes its overrides at the corrected indices onto the raw row; fine while a fix keeps the token count (SP4 → SP5), revisit if longer fixes are common.
+  const resolved = useMemo(() => applyRules(correctRows(rows, formNotes), rules), [rows, rules, formNotes])
+  const notNeeded = useMemo(() => notNeededIn(formNotes), [formNotes])
   const duplicates = useMemo(() => duplicateSet(resolved), [resolved])
   const ctx = useMemo(() => ({ master, duplicates }), [master, duplicates])
 
@@ -1482,7 +1487,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       }
     }
     const lead = leadOf(row, caps)
-    const codes = caps.map(c => ({ code: c.code, note: c.note || '', main: c === lead, etRef: etFor(c.code, row.manufacturer),
+    const codes = caps.map(c => ({ code: c.code, note: c.note || '', main: c === lead, etRef: etFor(c.code, row.manufacturer), settled: notNeeded(row.positionType, c.code),
       ...(tracing() ? { trace: etTrace(c.code, row.manufacturer, row.positionType) } : {}) }))
     const st = lead ? classify(lead.code, ctx, row.manufacturer).status : null
     const status = !lead
@@ -1496,14 +1501,14 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       suggested: row.confirmed ? [] : suggestCodes(row, rules, signals),
       pt: map.pt ? (refState.get(codeKey(row.positionType)) || { state: 'ok' }) : { state: 'ok' },
     }
-  }, [captureOpts, etFor, etTrace, ctx, rules, signals, map.pt, refState, assignments, priorEtByCode])
+  }, [captureOpts, etFor, etTrace, ctx, rules, signals, map.pt, refState, assignments, priorEtByCode, notNeeded])
 
   const refProblems = useMemo(
     () => [...refState.values()].filter(r => r.state === 'missing' || r.state === 'ambiguous').length, [refState])
 
   /** A row still waiting on an ElementType: one of its codes, or its TBC placeholder. */
   const needsEt = useCallback(r => (isTbc(r, captureOpts) ? !etFor(tbcKey(r), r.manufacturer)
-    : productCaptures(r, captureOpts).some(c => !etFor(c.code, r.manufacturer))), [captureOpts, etFor])
+    : productCaptures(r, captureOpts).some(c => !etFor(c.code, r.manufacturer) && !notNeeded(r.positionType, c.code))), [captureOpts, etFor, notNeeded])
 
   // ---- By position ------------------------------------------------------------
   // Remembered per project; Whole Form unless you chose otherwise.
@@ -1545,7 +1550,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     for (const r of (embedded.autoSaveAll ? formOrder : scopeRows)) {
       if (r.confirmed) continue
       const inf = rowInfo(r)
-      if (inf.codes.length && inf.codes.every(c => c.etRef)) patchRow(r.id, x => ({ ...x, confirmed: true, autoConfirmed: true }))
+      if (inf.codes.length && inf.codes.every(c => c.etRef || c.settled)) patchRow(r.id, x => ({ ...x, confirmed: true, autoConfirmed: true }))
     }
   }, [embedded, step, scopeRows, formOrder, rowInfo, patchRow])
   const stagedSet = useMemo(() => new Set(stagedRefs), [stagedRefs])
@@ -1585,10 +1590,10 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
     const missing = new Set()
     for (const r of rowsIn) {
       if (isTbc(r, captureOpts)) { if (!etFor(tbcKey(r), r.manufacturer)) missing.add(codeKey(tbcKey(r))) }
-      else for (const c of productCaptures(r, captureOpts)) if (!etFor(c.code, r.manufacturer)) missing.add(codeKey(c.code))
+      else for (const c of productCaptures(r, captureOpts)) if (!etFor(c.code, r.manufacturer) && !notNeeded(r.positionType, c.code)) missing.add(codeKey(c.code))
     }
     // The codes counted here are the queue the pane's Open walks through (2V84PW), so the two agree.
-    const noEtCodes = [...new Set([...missing, ...codes.filter(e => !e.etRef).map(e => codeKey(e.text))])]
+    const noEtCodes = [...new Set([...missing, ...codes.filter(e => !e.etRef && !(e.positionTypes || []).every(pt => notNeeded(pt, e.text))).map(e => codeKey(e.text))])]
     const noEt = noEtCodes.length
     const unconfirmedRows = rowsIn.filter(r => !r.confirmed).length
     const clashes = collisions.filter(inSel).length
@@ -1599,7 +1604,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
       canOpenEts: codes.some(e => !e.etRef) || clashes > 0,
       ready: rowsIn.length > 0 && unconfirmedRows === 0 && noEt === 0 && clashes === 0,
     }
-  }, [mode, formOrder, selectedRefs, allEntries, collisions, captureOpts, etFor])
+  }, [mode, formOrder, selectedRefs, allEntries, collisions, captureOpts, etFor, notNeeded])
   // The code list follows the selection in By position mode.
   const shownEntries = useMemo(() => (mode === 'position'
     ? panelEntries.filter(e => (e.positionTypes || []).some(pt => selectedRefs.has(String(pt ?? '').trim())))
@@ -2029,6 +2034,7 @@ export default function ProductCodeImportScreen({ onBack, onReviewPositions, emb
               </div>
             )}
 
+              {/* shortcut: Form Template Notes are written from the position's Form spec pane only, not this whole-Form table; add a cell pencil here if users note from Import. */}
             <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
               <FormTable
                 rows={tableRows}

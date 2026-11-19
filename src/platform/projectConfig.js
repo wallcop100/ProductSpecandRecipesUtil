@@ -18,7 +18,7 @@ import { dbApi, openDatabase, onPersisted } from './db'
 import { getCompanion } from './companion'
 
 // Work in progress, not configuration: never leaves this browser through here.
-export const EXCLUDED_PREFS = new Set(['pending_db_changes', 'form_import_draft', 'form_captures'])
+export const EXCLUDED_PREFS = new Set(['pending_db_changes', 'form_import_draft', 'form_captures', 'form_notes'])
 const VOLATILE = ['created_at', 'updated_at', 'project_id', 'CreatedAt', 'UpdatedAt', 'id']
 const PUSH_MS = 4000
 

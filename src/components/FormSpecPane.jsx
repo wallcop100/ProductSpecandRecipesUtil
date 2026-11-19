@@ -27,6 +27,10 @@ import { registerTrace } from '../utils/trace'
 import { C } from '../styles/tokens'
 import { askConfirm } from './ConfirmHost'
 import { live, etRefOf } from '../utils/derived'
+import useFormView from './useFormView'
+import { NoteEditor, NoteLine, NotNeededButton, SettledLine, StaleBox, settledIcon, formNotesMarkdown } from './FormNoteParts'
+import { liveNotes, wordAt } from '../utils/formNotes'
+import { rowCells } from '../utils/formPositions'
 
 /**
  * FormSpecPane — the Form's spec beside the recipe it produced (design A, D4Z9CX).
@@ -97,7 +101,7 @@ const codeStyle = { ...mono, fontWeight: 600, minWidth: 0, overflow: 'hidden', t
  * The ⋯ menu. Re-import and Detach are rare, deliberate acts; they must be reachable from
  * EVERY state the pane can be in, hence one component, rendered in each branch.
  */
-function PaneMenu({ onReimport, onDetach, onCompare, onClearCompare }) {
+function PaneMenu({ onReimport, onDetach, onCompare, onClearCompare, onWholeEntry, onCopyNotes }) {
   const [about, setAbout] = useState(false)
   return (
     <>
@@ -117,6 +121,16 @@ function PaneMenu({ onReimport, onDetach, onCompare, onClearCompare }) {
         {onClearCompare && (
           <Dropdown.Item onClick={onClearCompare}>
             <MaterialIcon name="close" size={12} /> Clear comparison
+          </Dropdown.Item>
+        )}
+        {onWholeEntry && (
+          <Dropdown.Item onClick={onWholeEntry} data-testid="whole-entry">
+            <MaterialIcon name="do_not_disturb_on" size={12} style={{ color: C.accent }} /> Whole entry wrong
+          </Dropdown.Item>
+        )}
+        {onCopyNotes && (
+          <Dropdown.Item onClick={onCopyNotes} data-testid="copy-form-notes">
+            <MaterialIcon name="content_copy" size={12} /> Copy Form Template Notes
           </Dropdown.Item>
         )}
         <Dropdown.Item onClick={onDetach} className="text-danger">
@@ -145,7 +159,7 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
   const elementTypes = useStore(s => s.elementTypes)
   const updatePSRow = useStore(s => s.updatePSRow)
   const containerETRefs = useStore(s => s.containerETRefs)
-  const formCaptures = useStore(s => s.formCaptures)
+  const { importDraft, formCaptures } = useFormView()   // as Form Template Notes say to read it
   const addRecipeRow = useStore(s => s.addRecipeRow)
   const removeRecipeRow = useStore(s => s.removeRecipeRow)
   const dismissDivergence = useStore(s => s.dismissDivergence)
@@ -156,7 +170,17 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
   const addWrapper = useStore(s => s.addWrapper)
   const applyFormChange = useStore(s => s.applyFormChange)
   const forkRefFor = useStore(s => s.forkRefFor)
-  const importDraft = useStore(s => s.importDraft)
+  // Form Template Notes (NAL5HU): judged against the Form as it is, not as the notes read it.
+  const formNotes = useStore(s => s.formNotes)
+  const rawDraft = useStore(s => s.importDraft)
+  const rawCaps = useStore(s => s.formCaptures)
+  const saveFormNote = useStore(s => s.saveFormNote)
+  const removeFormNote = useStore(s => s.removeFormNote)
+  const notesHere = useMemo(() => liveNotes(formNotes.filter(n => n.posRef === posRef), rawDraft, rawCaps), [formNotes, posRef, rawDraft, rawCaps])
+  const wholeNote = notesHere.find(n => n.kind === 'wholeEntry') || null
+  const settledHere = notesHere.filter(n => n.kind === 'notNeeded')
+  const missingHere = notesHere.filter(n => n.kind === 'missing')
+  const [noting, setNoting] = useState(null)   // 'entry' | `code:X` | `et:X`: which note editor is open
 
   // The last one-click add, for its "Added … · Undo" line. Cleared when the position changes.
   const [lastAdded, setLastAdded] = useState(null)   // { posRef, refs: [ref], where }
@@ -165,6 +189,7 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
   const [picking, setPicking] = useState(null)     // ...whose ElementType you are choosing by hand
   const [creatingFor, setCreatingFor] = useState(null)   // a ~ change a New ElementType is for
   const [showExtra, setShowExtra] = useState(false)
+  const settledSet = importDraft?.settledCodes?.[String(posRef).toUpperCase()]
 
   const base = importDraft?.compareBase
   const since = base ? dayLabel(base.at) : null
@@ -180,8 +205,8 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
   // already knows are compared with the recipe all the same (44VCYZ).
   const draftKnown = useMemo(() => (formCaptures?.byPosition?.[posRef] ? [] : (paintSt.formRows || []).flatMap(r =>
     String(r.rawText || '').split(/\s+/).filter(Boolean).map(code => ({ code, manufacturer: r.manufacturer || '', elementTypeRef: findProductET(psRows, r.manufacturer, code), formRef: r.positionType }))
-      .filter(e => e.elementTypeRef))
-    .filter((e, i, a) => a.findIndex(x => x.elementTypeRef === e.elementTypeRef) === i)), [formCaptures, posRef, paintSt.formRows, psRows])
+      .filter(e => e.elementTypeRef && !settledSet?.has(e.code.toUpperCase())))
+    .filter((e, i, a) => a.findIndex(x => x.elementTypeRef === e.elementTypeRef) === i)), [formCaptures, posRef, paintSt.formRows, psRows, settledSet])
   const captured = formCaptures?.byPosition?.[posRef] ?? draftKnown
   const orphanRefs = formCaptures?.orphansByPosition?.[posRef] ?? []
   // Products the Form asks for here that nobody has named yet.
@@ -302,13 +327,77 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
         return t && t.why !== 'spec' ? { ref: t.ref, why: WHY[t.why], kind: t.why } : null },
     }} />
   )
+  // The Form's own text for a code here, as the note keeps it to spot a newer Form.
+  const entryRows = (rawDraft?.rows || []).filter(r => (paintSt.formRefs || [posRef]).some(f => String(f).toUpperCase() === String(r.positionType ?? '').trim().toUpperCase()))
+  const formTextOf = (code, fallback = '') => String(entryRows.find(r => wordAt(r.rawText, code) >= 0)?.rawText ?? fallback)
+  const formRefOf = code => entryRows.find(r => wordAt(r.rawText, code) >= 0)?.positionType || paintSt.formRows?.[0]?.positionType || posRef
+  const copyNotes = () => navigator.clipboard?.writeText(formNotesMarkdown())
+  /** Not needed (blank Should be) or a wrong code, for one Form code: the card's third button. */
+  const codeNoteEditor = ({ code, manufacturer = '', desc = '', et = null }) => noting === `code:${code}` && (
+    <NoteEditor head={`${code} · “${desc}”`} shouldBe="" shouldBePlaceholder="leave blank if it isn't needed at all"
+      saveLabel={fixing => (fixing ? 'Save' : 'Not needed · save note')} onCancel={() => setNoting(null)}
+      onSave={({ note, shouldBe }) => {
+        const base = { posRef, formRef: formRefOf(code), code, manufacturer, desc, formText: formTextOf(code, `${code} ${desc}`), note, ...(et && { et }) }
+        saveFormNote(shouldBe ? { ...base, kind: 'wrongCode', column: 'ProductCode', shouldBe } : { ...base, kind: 'notNeeded' })
+        setNoting(null)
+      }} />
+  )
+  const toggleNoting = k => setNoting(v => (v === k ? null : k))
+  /** "The recipe holds it and the Form should list it": one quiet icon button, then its note. */
+  const MissingBtn = ({ etRef: ref }) => (
+    <Button size="sm" variant="light" className="flex-shrink-0" data-testid="missing-from-form" aria-pressed={noting === `et:${ref}`}
+      style={{ ...btn, borderColor: C.border, color: noting === `et:${ref}` ? C.accent : C.muted, background: noting === `et:${ref}` ? C.accentTint : C.surface }}
+      onClick={() => toggleNoting(`et:${ref}`)} title="Missing from the Form" aria-label={`${ref} is missing from the Form`}>
+      <MaterialIcon name="playlist_add" size={12} />
+    </Button>
+  )
+  const missingEditor = ref => noting === `et:${ref}` && (
+    <NoteEditor head={`${ref} · in the recipe`} saveLabel={() => 'Missing from the Form · save note'} onCancel={() => setNoting(null)}
+      onSave={({ note }) => { saveFormNote({ posRef, kind: 'missing', et: ref, formText: '', note }); setNoting(null) }} />
+  )
+  const canSetAside = !wholeNote && (paintSt.formRows?.length > 0 || !!formCaptures?.byPosition?.[posRef] || pending.length > 0)
   const header = (
     <div className="d-flex align-items-center gap-1 mb-1">
       <SectionLabel className="mb-0">Form spec</SectionLabel>
       <TutorialHint id="form-pane" size={12} concept={CONCEPTS.INTENT} />
-      {(formCaptures || importDraft) && <span className="ms-auto"><PaneMenu onReimport={handleReimport} onDetach={handleDetach} {...compareProps} /></span>}
+      {wholeNote && <MaterialIcon name="do_not_disturb_on" size={16} title={settledIcon('wholeEntry').tip} style={{ color: C.success }} />}
+      {wholeNote && (
+        <Button size="sm" variant="light" className="ms-auto" style={{ ...btn, borderColor: C.border, color: C.muted, background: C.surface }}
+          data-testid="use-form-again" onClick={() => removeFormNote(wholeNote.key)}>Use Form again</Button>
+      )}
+      {(formCaptures || importDraft) && <span className={wholeNote ? '' : 'ms-auto'}><PaneMenu onReimport={handleReimport} onDetach={handleDetach} {...(wholeNote ? {} : compareProps)}
+        onWholeEntry={canSetAside ? () => setNoting('entry') : null} onCopyNotes={formNotes.length ? copyNotes : null} /></span>}
     </div>
   )
+  const entryEditor = noting === 'entry' && (
+    <NoteEditor head={`${posRef} · whole entry`} saveLabel={() => 'Set aside · save note'} onCancel={() => setNoting(null)}
+      onSave={({ note }) => {
+        saveFormNote({ posRef, formRef: paintSt.formRows?.[0]?.positionType || posRef, kind: 'wholeEntry', formText: entryRows.map(r => String(r.rawText ?? '').trim()).join(' / '), note })
+        setNoting(null)
+      }} />
+  )
+
+  // Set aside (NAL5HU): the Form stays readable, greyed; the recipe alone decides.
+  if (wholeNote && !embedded) {
+    return (
+      <div className={paneClass} style={paneStyle} data-testid="form-set-aside">
+        {header}
+        <NoteLine text={wholeNote.note} />
+        {wholeNote.state === 'stale' && (
+          <StaleBox n={wholeNote} keepLabel="Still set aside" onKeep={() => saveFormNote({ ...wholeNote, formText: wholeNote.now })} onClear={() => removeFormNote(wholeNote.key)} />
+        )}
+        {entryRows.map(r => (
+          <div key={r.id} className="rounded mt-1 p-1" style={{ opacity: 0.5, border: `1px solid ${C.border}`, background: C.subtle }} data-testid="set-aside-entry">
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,40%) minmax(0,1fr)', overflowWrap: 'anywhere', gap: '3px 10px', fontSize: 11 }}>
+              {rowCells(r, rawDraft?.map).map(c => (
+                <React.Fragment key={c.col}><span className="text-muted">{c.col}</span><span style={c.code ? mono : undefined}>{c.value}</span></React.Fragment>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
 
   // Stage ① has not happened. Say so once, clearly, and offer the one thing to do.
   if (!formCaptures) {
@@ -347,10 +436,11 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
     )
   }
   // A position with ONLY pending products is not a position the Form is silent about.
-  if (formEts.length === 0 && result.orphaned.length === 0 && pending.length === 0 && !formChanges.length) {
+  if (formEts.length === 0 && result.orphaned.length === 0 && pending.length === 0 && !formChanges.length && !settledHere.length && !missingHere.length) {
     return (
       <div className={paneClass} style={paneStyle}>
         {header}
+        {entryEditor}
         <FormStrip formCaptures={formCaptures} base={base} />
         {paintBar}
         {paintSt.state === 'noForm' && (
@@ -370,6 +460,7 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
 
   const { matched, missing, orphaned, extra, container } = result
   const lines = matched.filter(e => !isGrouped(e.elementTypeRef))
+  const extraOpen = extra.filter(x => !missingHere.some(n => n.et.toUpperCase() === x.elementTypeRef.toUpperCase()))
   const toAdd = missing.filter(e => !isGrouped(e.elementTypeRef))
 
   // The fork question, if it is about the wrapper this position actually uses.
@@ -454,6 +545,7 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
   return (
     <div className={paneClass} style={paneStyle}>
       {header}
+      {entryEditor}
       <FormStrip formCaptures={formCaptures} base={base} />
       {paintBar}
 
@@ -563,8 +655,10 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
               <span style={{ width: 14 }} />
               <span style={{ ...codeStyle, ...old, fontWeight: 400, color: C.muted }}>{g.code || ''}</span>
               <span className="ms-auto" /><EtPill etRef={g.ref} style={old} />
+              {!g.code && <MissingBtn etRef={g.ref} />}
               <RemoveBtn etRef={g.ref} />
             </div>
+            {missingEditor(g.ref)}
             {withIt.length > 0 && (
               <div className="d-flex align-items-center gap-1 text-muted ps-3" style={{ fontSize: 10 }}
                 title={`With it in all ${withIt[0].support} positions that use it: check whether it goes too`}>
@@ -606,8 +700,10 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
                 <Button size="sm" variant="outline-secondary" style={btn} data-testid="pending-existing" onClick={() => setPicking(p.code)}>
                   <MaterialIcon name="search" size={12} /> Existing
                 </Button>
+                <NotNeededButton on={noting === `code:${p.code}`} onClick={() => toggleNoting(`code:${p.code}`)} />
               </div>
             )}
+            {codeNoteEditor({ code: p.code, manufacturer: p.manufacturer || '', desc: p.note || '' })}
           </div>
         )
       })}
@@ -677,6 +773,7 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
                   <MaterialIcon name={icon} size={12} /> {label}
                 </Button>
               ))}
+              <NotNeededButton on={noting === `code:${e.code || ref}`} onClick={() => toggleNoting(`code:${e.code || ref}`)} />
               {(inside + outside) > 0 && (
                 <span className="ms-auto text-muted d-inline-flex align-items-center gap-1" style={{ fontSize: 10 }}>
                   {container && <span title={`In wrapper: ${inside}`}><MaterialIcon name="inventory_2" size={11} />{inside}</span>}
@@ -685,6 +782,7 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
                 </span>
               )}
             </div>
+            {codeNoteEditor({ code: e.code || ref, manufacturer: e.manufacturer || '', desc: e.note || '', et: ref })}
           </div>
         )
       })}
@@ -706,20 +804,30 @@ export default function FormSpecPane({ posRef, embedded = false, inDrawer = fals
         </div>
       ))}
 
+      {/* Settled by a note: done, and its mark is the note's, not a ✓. */}
+      {settledHere.map(n => <SettledLine key={n.key} n={n} label={n.code} />)}
+
       {/* Derived detail. The Form never mentions it, and that is correct. */}
-      {extra.length > 0 && (
+      {(extraOpen.length > 0 || missingHere.length > 0) && (
         <div className="mt-2" data-testid="not-from-form">
           <div className="d-flex align-items-center gap-1">
             <SectionLabel className="mb-0">Not from the Form</SectionLabel>
-            <Button size="sm" variant="link" className="p-0 ms-auto" style={{ fontSize: 10 }} onClick={() => setShowExtra(v => !v)}
-              data-testid="extra-toggle">{showExtra ? 'hide' : `show ${extra.length}`}</Button>
+            {extraOpen.length > 0 && (
+              <Button size="sm" variant="link" className="p-0 ms-auto" style={{ fontSize: 10 }} onClick={() => setShowExtra(v => !v)}
+                data-testid="extra-toggle">{showExtra ? 'hide' : `show ${extraOpen.length}`}</Button>
+            )}
           </div>
-          {showExtra && extra.map(x => (
-            <div key={x.elementTypeRef} style={row} className="py-1">
-              <EtPill etRef={x.elementTypeRef} />
-              {diverges(x.elementTypeRef) && <MaterialIcon name="warning" size={11} style={{ color: C.attnInk }} title="The Form and the recipe disagree about where this is used" />}
-              <span className="ms-auto" /><Where foundIn={whereOf(x.elementTypeRef)} container={container} />
-            </div>
+          {missingHere.map(n => <SettledLine key={n.key} n={n} label={n.et} />)}
+          {showExtra && extraOpen.map(x => (
+            <React.Fragment key={x.elementTypeRef}>
+              <div style={row} className="py-1">
+                <EtPill etRef={x.elementTypeRef} />
+                {diverges(x.elementTypeRef) && <MaterialIcon name="warning" size={11} style={{ color: C.attnInk }} title="The Form and the recipe disagree about where this is used" />}
+                <span className="ms-auto" /><Where foundIn={whereOf(x.elementTypeRef)} container={container} />
+                <MissingBtn etRef={x.elementTypeRef} />
+              </div>
+              {missingEditor(x.elementTypeRef)}
+            </React.Fragment>
           ))}
         </div>
       )}

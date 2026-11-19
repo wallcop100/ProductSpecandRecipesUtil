@@ -8,6 +8,7 @@ import { positionFormDone } from '../utils/formDone'
 import { positionHealth } from '../utils/positionHealth'
 import { queryRefs } from '../utils/positionQuery'
 import { live } from '../utils/derived'
+import useFormView from './useFormView'
 
 /**
  * usePositionList — the PositionTypes list, filtered, sorted and grouped by family, with a
@@ -28,12 +29,11 @@ export default function usePositionList() {
   const recipes = useStore(s => s.recipes)
   const positionUI = useStore(s => s.positionUI)
   const ignoredPositionFamilies = useStore(s => s.ignoredPositionFamilies)
-  const formCaptures = useStore(s => s.formCaptures)
+  const { importDraft, formCaptures } = useFormView()   // as Form Template Notes say to read it
   const containerETRefs = useStore(s => s.containerETRefs)
   const view = useStore(s => s.positionList)
   const results = useStore(s => s.validationResults)
   const pending = useStore(s => s.companionPending)
-  const importDraft = useStore(s => s.importDraft)
   const psRows = useStore(s => s.psRows)
 
   const countByRef = useMemo(() => {

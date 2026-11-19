@@ -3,6 +3,7 @@ import React, { useMemo } from 'react'
 import useStore from '../store/useStore'
 import MaterialIcon from './MaterialIcon'
 import { formCoverage } from '../utils/formSpec'
+import useFormView from './useFormView'
 
 /**
  * FormCoverageBadge — how much of the Form's spec this position actually holds.
@@ -17,7 +18,7 @@ import { formCoverage } from '../utils/formSpec'
 export default function FormCoverageBadge({ posRef, size = 13 }) {
   const recipes = useStore(s => s.recipes)
   const containerETRefs = useStore(s => s.containerETRefs)
-  const formCaptures = useStore(s => s.formCaptures)
+  const { formCaptures } = useFormView()   // as Form Template Notes say to read it
 
   const formEts = formCaptures?.byPosition?.[posRef]
   const coverage = useMemo(

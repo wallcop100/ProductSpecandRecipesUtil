@@ -7,6 +7,7 @@ import { positionPaintStatus } from '../utils/formPositions'
 import { buildRefMap, targetFor } from '../utils/ptResolve'
 import { findProductET } from '../utils/productCodes'
 import { C } from '../styles/tokens'
+import useFormView from './useFormView'
 
 /**
  * FormPaintBar — THIS position's Form entries, in the Form spec pane (D4Z9CX, design A).
@@ -18,8 +19,7 @@ import { C } from '../styles/tokens'
  * (`autoSave`), so the comparison below appears without a Save step.
  */
 export default function FormPaintBar({ posRef, onStaged, painter = {} }) {
-  const importDraft = useStore(s => s.importDraft)
-  const formCaptures = useStore(s => s.formCaptures)
+  const { importDraft, formCaptures } = useFormView()   // as Form Template Notes say to read it
   const psRows = useStore(s => s.psRows)
   const [loading, setLoading] = useState(false)   // loading the Form from here, for this position
   const st = positionPaintStatus(importDraft, posRef, { buildRefMap, targetFor, knows: (m, c) => !!findProductET(psRows, m, c) || !!importDraft?.assignments?.[String(c || '').trim().toUpperCase()] })
@@ -28,6 +28,7 @@ export default function FormPaintBar({ posRef, onStaged, painter = {} }) {
   const seenGen = useRef(formGen)
   useEffect(() => { if (formGen !== seenGen.current) { seenGen.current = formGen; setLoading(false) } }, [formGen])
 
+  if (st.state === 'setAside') return null   // the whole entry is set aside: nothing to paint
   if (st.state === 'nothing' || st.state === 'absent') {
     return (
       <div className="mb-2 text-muted d-flex align-items-center gap-1 flex-wrap" style={{ fontSize: 11 }} data-testid="form-paint-bar">
